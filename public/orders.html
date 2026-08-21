@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Đơn hàng — Xưởng Thêu</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="nav"></div>
+<div class="page">
+  <h2>Danh sách đơn hàng</h2>
+  <div class="filters">
+    <select id="loc-trang-thai"><option value="">Tất cả trạng thái</option></select>
+    <input id="loc-kh" placeholder="Tìm theo tên khách hàng">
+  </div>
+  <div id="danh-sach-don" class="order-list">Đang tải...</div>
+</div>
+<script src="/js/api.js"></script>
+<script>
+const TRANG_THAI = ['MOI','CHO_PHOI','CO_PHOI_CHO_FILE','SAN_XUAT','DONG_GOI','SHIPPED','DELIVERED','HUY'];
+
+(async () => {
+  const user = await requireLoginOrRedirect();
+  if (!user) return;
+  renderNav(user, 'orders');
+
+  const sel = document.getElementById('loc-trang-thai');
+  TRANG_THAI.forEach(t => sel.innerHTML += `<option value="${t}">${t}</option>`);
+  sel.onchange = taiDon;
+  document.getElementById('loc-kh').oninput = debounce(taiDon, 400);
+
+  taiDon();
+})();
+
+function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+
+async function taiDon() {
+  const trangThai = document.getElementById('loc-trang-thai').value;
+  const kh = document.getElementById('loc-kh').value;
+  const qs = new URLSearchParams();
+  if (trangThai) qs.set('trangThai', trangThai);
+  if (kh) qs.set('kh', kh);
+
+  const list = await apiFetch('/orders?' + qs.toString());
+  const el = document.getElementById('danh-sach-don');
+  if (list.length === 0) { el.innerHTML = '<p>Không có đơn nào.</p>'; return; }
+
+  el.innerHTML = list.map(o => `
+    <a class="order-card" href="/order.html?stt=${encodeURIComponent(o.STT_Key)}">
+      <img src="${o.URL_Hinh_Anh || ''}" onerror="this.style.display='none'">
+      <div>
+        <strong>${o.Ten_San_Pham || '(chưa đặt tên)'}</strong>
+        <div>${o.Ten_KH || ''} · SL: ${o.So_Luong || ''}</div>
+        <div>Deadline: ${o.Ngay_Giao_Du_Kien || '—'}</div>
+        <span class="badge badge-${o.Trang_Thai}">${o.Trang_Thai || ''}</span>
+      </div>
+    </a>`).join('');
+}
+</script>
+</body>
+</html>

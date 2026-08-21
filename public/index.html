@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Đăng nhập — Xưởng Thêu</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="login-wrap">
+  <h1>🧵 Xưởng Thêu</h1>
+  <p>Chọn tên của bạn để vào</p>
+  <div id="danh-sach-ten" class="ten-list">Đang tải...</div>
+</div>
+<script src="/js/api.js"></script>
+<script>
+async function taiDanhSach() {
+  const list = await apiFetch('/auth/danh-sach');
+  const el = document.getElementById('danh-sach-ten');
+  el.innerHTML = '';
+  if (list.length === 0) { el.textContent = 'Chưa có nhân viên nào. Liên hệ Admin để thêm.'; return; }
+  list.forEach(u => {
+    const btn = document.createElement('button');
+    btn.className = 'btn-ten';
+    btn.textContent = u.ten;
+    btn.onclick = () => dangNhap(u.ten);
+    el.appendChild(btn);
+  });
+}
+
+async function dangNhap(ten) {
+  try {
+    await apiFetch('/auth/dang-nhap', { method: 'POST', body: JSON.stringify({ ten }) });
+    window.location.href = '/orders.html';
+  } catch (e) { alert(e.message); }
+}
+
+taiDanhSach();
+</script>
+</body>
+</html>

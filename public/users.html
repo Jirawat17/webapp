@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nhân viên — Xưởng Thêu</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="nav"></div>
+<div class="page">
+  <h2>Quản lý nhân viên</h2>
+  <form id="form-them" class="inline-form">
+    <input id="ten-moi" placeholder="Tên nhân viên" required>
+    <select id="vaitro-moi">
+      <option value="admin">Admin</option>
+      <option value="quan_ly">Quản lý</option>
+      <option value="ve_file">Vẽ file</option>
+      <option value="chuan_bi_phoi">Chuẩn bị phôi</option>
+      <option value="san_xuat">Sản xuất</option>
+      <option value="dong_goi">Đóng gói</option>
+    </select>
+    <input id="team-moi" placeholder="Team (chỉ cần nếu là Sản xuất)">
+    <button type="submit">Thêm nhân viên</button>
+  </form>
+  <table id="bang-nv" class="info-table"></table>
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+(async () => {
+  const user = await requireLoginOrRedirect();
+  if (!user) return;
+  renderNav(user, 'users');
+  if (user.vaiTro !== 'admin') {
+    document.querySelector('.page').innerHTML = '<p>Bạn không có quyền truy cập trang này.</p>';
+    return;
+  }
+  await taiDanhSach();
+})();
+
+document.getElementById('form-them').onsubmit = async (e) => {
+  e.preventDefault();
+  const ten = document.getElementById('ten-moi').value.trim();
+  const vaiTro = document.getElementById('vaitro-moi').value;
+  const team = document.getElementById('team-moi').value.trim();
+  try {
+    await apiFetch('/users', { method: 'POST', body: JSON.stringify({ ten, vaiTro, team }) });
+    e.target.reset();
+    await taiDanhSach();
+  } catch (err) { alert(err.message); }
+};
+
+async function taiDanhSach() {
+  const list = await apiFetch('/users');
+  document.getElementById('bang-nv').innerHTML = `
+    <tr><th>Tên</th><th>Vai trò</th><th>Team</th><th>Trạng thái</th><th></th></tr>
+    ${list.map(u => `
+      <tr>
+        <td>${u.Ten}</td><td>${u.VaiTro}</td><td>${u.Team || ''}</td>
+        <td>${String(u.KichHoat).toUpperCase() === 'TRUE' ? '✅ Hoạt động' : '🔒 Đã khoá'}</td>
+        <td><button onclick="doiKichHoat('${u.Ten}','${u.KichHoat}')">
+          ${String(u.KichHoat).toUpperCase() === 'TRUE' ? 'Khoá' : 'Mở lại'}
+        </button></td>
+      </tr>`).join('')}`;
+}
+
+async function doiKichHoat(ten, kichHoatHienTai) {
+  const moi = String(kichHoatHienTai).toUpperCase() === 'TRUE' ? 'FALSE' : 'TRUE';
+  await apiFetch('/users/' + encodeURIComponent(ten), { method: 'PUT', body: JSON.stringify({ KichHoat: moi }) });
+  await taiDanhSach();
+}
+</script>
+</body>
+</html>

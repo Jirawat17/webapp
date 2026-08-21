@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chi tiết đơn hàng — Xưởng Thêu</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="nav"></div>
+<div class="page" id="don-hang">Đang tải...</div>
+
+<script src="/js/api.js"></script>
+<script>
+const sttKey = new URLSearchParams(location.search).get('stt');
+let user;
+
+(async () => {
+  user = await requireLoginOrRedirect();
+  if (!user) return;
+  renderNav(user, 'orders');
+  await taiChiTiet();
+})();
+
+async function taiChiTiet() {
+  let don;
+  try {
+    don = await apiFetch('/orders/' + encodeURIComponent(sttKey));
+  } catch (e) {
+    document.getElementById('don-hang').innerHTML = `<p>${e.message}</p>`;
+    return;
+  }
+
+  document.getElementById('don-hang').innerHTML = `
+    <h2>${don.Ten_San_Pham || '(chưa đặt tên)'} <span class="badge badge-${don.Trang_Thai}">${don.Trang_Thai || ''}</span></h2>
+    ${don.URL_Hinh_Anh ? `<img class="anh-mau" src="${don.URL_Hinh_Anh}">` : ''}
+    <table class="info-table">
+      <tr><td>Mã đơn</td><td>${don.STT_Key}</td></tr>
+      <tr><td>Khách hàng</td><td>${don.Ten_KH || ''}</td></tr>
+      <tr><td>Số lượng</td><td>${don.So_Luong || ''}</td></tr>
+      <tr><td>Ngày đặt</td><td>${don.Ngay_Dat || ''}</td></tr>
+      <tr><td>Deadline</td><td>${don.Ngay_Giao_Du_Kien || ''}</td></tr>
+      <tr><td>Team sản xuất</td><td>${don.Team_San_Xuat || '—'}</td></tr>
+      <tr><td>Có phôi</td><td>${don.Co_Phoi === 'TRUE' ? '✅ Có' : '❌ Chưa'}</td></tr>
+      <tr><td>Có file vẽ</td><td>${don.Co_File_Ve === 'TRUE' ? '✅ Có' : '❌ Chưa'}</td></tr>
+      <tr><td>Ghi chú xưởng</td><td>${don.Ghi_Chu_Xuong || ''}</td></tr>
+      <tr><td>Mã vận đơn</td><td>${don.Ma_Van_Don || ''}</td></tr>
+      <tr><td>Cập nhật lần cuối</td><td>${don.NguoiCapNhatCuoi || ''} ${don.ThoiGianCapNhatCuoi ? '· ' + new Date(don.ThoiGianCapNhatCuoi).toLocaleString('vi-VN') : ''}</td></tr>
+    </table>
+
+    <div id="khu-vuc-thao-tac"></div>
+
+    <h3>Lịch sử thay đổi</h3>
+    <div class="timeline">
+      ${(don.lichSu || []).map(l => `
+        <div class="timeline-item">
+          <div class="timeline-time">${new Date(l.ThoiGian).toLocaleString('vi-VN')}</div>
+          <div><strong>${l.NguoiDung}</strong> (${l.VaiTro}) — ${l.HanhDong}</div>
+        </div>`).join('') || '<p>Chưa có lịch sử.</p>'}
+    </div>
+  `;
+  renderKhuVucThaoTac(don);
+}
+
+function renderKhuVucThaoTac(don) {
+  const el = document.getElementById('khu-vuc-thao-tac');
+  let html = '';
+
+  if (user.vaiTro === 'chuan_bi_phoi' || user.vaiTro === 'admin') {
+    const dangCo = don.Co_Phoi === 'TRUE';
+    html += `<button onclick='capNhat({Co_Phoi:"${dangCo ? 'FALSE' : 'TRUE'}"})'>
+      ${dangCo ? 'Bỏ đánh dấu đã có phôi' : '✅ Đánh dấu đã có phôi'}
+    </button>`;
+  }
+  if (user.vaiTro === 've_file' || user.vaiTro === 'admin') {
+    const dangCo = don.Co_File_Ve === 'TRUE';
+    html += `<button onclick='capNhat({Co_File_Ve:"${dangCo ? 'FALSE' : 'TRUE'}"})'>
+      ${dangCo ? 'Bỏ đánh dấu đã vẽ file' : '✅ Đánh dấu đã vẽ file'}
+    </button>`;
+  }
+  if (user.vaiTro === 'dong_goi' || user.vaiTro === 'admin') {
+    html += `
+      <div class="upload-box">
+        <label>📷 Chụp ảnh đóng gói</label>
+        <input type="file" accept="image/*" capture="environment" id="anh-dong-goi">
+        <button onclick="taiAnh('dong_goi')">Tải ảnh lên</button>
+      </div>`;
+  }
+  el.innerHTML = html;
+}
+
+async function capNhat(updates) {
+  try {
+    await apiFetch('/orders/' + encodeURIComponent(sttKey), { method: 'PUT', body: JSON.stringify(updates) });
+    await taiChiTiet();
+  } catch (e) { alert(e.message); }
+}
+
+async function taiAnh(moc) {
+  const input = document.getElementById('anh-' + moc.replace('_', '-'));
+  if (!input.files[0]) return alert('Chưa chọn ảnh');
+
+  const form = new FormData();
+  form.append('photo', input.files[0]);
+  form.append('sttKey', sttKey);
+  form.append('moc', moc);
+
+  try {
+    const res = await fetch('/api/photos/upload', { method: 'POST', body: form, credentials: 'include' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    alert('Đã tải ảnh lên!');
+    await taiChiTiet();
+  } catch (e) { alert(e.message); }
+}
+</script>
+</body>
+</html>

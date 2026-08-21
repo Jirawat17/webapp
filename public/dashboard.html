@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thống kê — Xưởng Thêu</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="nav"></div>
+<div class="page">
+  <h2>Thống kê</h2>
+  <p id="tong-so"></p>
+  <div class="chart-grid">
+    <canvas id="chart-trangthai"></canvas>
+    <canvas id="chart-team"></canvas>
+    <canvas id="chart-nguoive"></canvas>
+    <canvas id="chart-tuan"></canvas>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="/js/api.js"></script>
+<script>
+(async () => {
+  const user = await requireLoginOrRedirect();
+  if (!user) return;
+  renderNav(user, 'dashboard');
+
+  const stats = await apiFetch('/dashboard/thong-ke');
+  document.getElementById('tong-so').textContent = `Tổng số đơn: ${stats.tongSoDon}`;
+
+  veBieuDo('chart-trangthai', 'pie', 'Theo trạng thái', stats.theoTrangThai);
+  veBieuDo('chart-team', 'bar', 'Theo team sản xuất', stats.theoTeam);
+  veBieuDo('chart-nguoive', 'bar', 'Theo người vẽ file', stats.theoNguoiVeFile);
+  veBieuDo('chart-tuan', 'line', 'Đơn theo tuần', stats.theoTuan);
+})();
+
+const MAU = ['#4f46e5','#22c55e','#f59e0b','#ef4444','#06b6d4','#a855f7','#84cc16','#64748b'];
+
+function veBieuDo(canvasId, type, title, dataObj) {
+  const labels = Object.keys(dataObj);
+  const data = Object.values(dataObj);
+  new Chart(document.getElementById(canvasId), {
+    type,
+    data: { labels, datasets: [{ label: title, data, backgroundColor: MAU, borderColor: '#4f46e5' }] },
+    options: { plugins: { title: { display: true, text: title } }, responsive: true },
+  });
+}
+</script>
+</body>
+</html>
