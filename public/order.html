@@ -17,7 +17,7 @@
 <script src="/js/chatbot.js"></script>
 <script>
 const sttKey = new URLSearchParams(location.search).get('stt');
-const NHAN_CANH_BAO = { VANG: 'Cảnh báo Vàng · 3 ngày chưa đủ phôi/file', CAM: 'Cảnh báo Cam · 5 ngày chưa đóng gói', DO: 'Cảnh báo Đỏ · 7 ngày chưa ship' };
+const NHAN_CANH_BAO = { VANG: 'Cảnh báo Vàng · 3 ngày ít tiến triển', CAM: 'Cảnh báo Cam · 5 ngày chưa vào sản xuất', DO: 'Cảnh báo Đỏ · 7 ngày chưa ship' };
 let user;
 
 (async () => {
@@ -26,6 +26,12 @@ let user;
   renderNav(user, 'orders');
   await taiChiTiet();
 })();
+
+function dongDiaChi(don) {
+  const phan = [don.TEN_DIA_CHI, don.DIA_CHI_TEN_DUONG, don.DIA_CHI_TEN_TP, don.DIA_CHI_BANG, don.MA_ZIPCODE, don.DIA_CHI_NUOC]
+    .filter(Boolean);
+  return phan.length ? phan.join(', ') : '(chưa có địa chỉ)';
+}
 
 async function taiChiTiet() {
   let don;
@@ -36,10 +42,14 @@ async function taiChiTiet() {
     return;
   }
 
+  const anh = don.MOCKUP || don.DUONG_DAN_URL;
+  const viTri = (don.ViTriTheu || []).map(escapeHtml).join(' · ') || '—';
+
   document.getElementById('don-hang').innerHTML = `
-    <h2>${escapeHtml(don.Ten_San_Pham || '(chưa đặt tên)')}</h2>
+    <h2>${escapeHtml(don.TieuDeSanPham || don.STT_Key)}</h2>
     <div class="badge-row" style="margin-bottom:16px">
-      <span class="badge badge-${escapeHtml(don.Trang_Thai)}">${escapeHtml(don.Trang_Thai || '')}</span>
+      <span class="badge ${lopTrangThai(don.TINH_TRANG)}">${escapeHtml(don.TINH_TRANG || '')}</span>
+      ${don.DANH_DAU_IN ? `<span class="badge trang-thai-info">${icon('check', {size:14})} Đã đánh dấu in</span>` : ''}
       ${don.CanhBao ? `
         <span class="badge badge-canh-bao ${don.CanhBao.toLowerCase()}">
           ${icon('alert')} ${escapeHtml(NHAN_CANH_BAO[don.CanhBao] || don.CanhBao)}
@@ -48,18 +58,20 @@ async function taiChiTiet() {
 
     <div class="chi-tiet-layout">
       <div>
-        ${don.URL_Hinh_Anh ? `<img class="anh-mau" src="${escapeHtml(don.URL_Hinh_Anh)}" alt="Ảnh mẫu sản phẩm" loading="lazy" onerror="this.remove()">` : ''}
+        ${anh ? `<img class="anh-mau" src="${escapeHtml(anh)}" alt="Ảnh mẫu/mockup" loading="lazy" onerror="this.remove()">` : ''}
         <table class="info-table">
           <tr><td>Mã đơn</td><td>${escapeHtml(don.STT_Key)}</td></tr>
-          <tr><td>Khách hàng</td><td>${escapeHtml(don.Ten_KH || '')}</td></tr>
-          <tr><td>Số lượng</td><td>${escapeHtml(don.So_Luong || '')}</td></tr>
-          <tr><td>Ngày đặt</td><td>${escapeHtml(don.Ngay_Dat || '')}</td></tr>
-          <tr><td>Deadline</td><td>${escapeHtml(don.Ngay_Giao_Du_Kien || '')}</td></tr>
-          <tr><td>Team sản xuất</td><td>${escapeHtml(don.Team_San_Xuat || '—')}</td></tr>
-          <tr><td>Có phôi</td><td>${don.Co_Phoi === 'TRUE' ? '✅ Có' : '— Chưa'}</td></tr>
-          <tr><td>Có file vẽ</td><td>${don.Co_File_Ve === 'TRUE' ? '✅ Có' : '— Chưa'}</td></tr>
-          <tr><td>Ghi chú xưởng</td><td>${escapeHtml(don.Ghi_Chu_Xuong || '')}</td></tr>
-          <tr><td>Mã vận đơn</td><td>${escapeHtml(don.Ma_Van_Don || '')}</td></tr>
+          <tr><td>Mã đơn (sàn TMĐT)</td><td>${escapeHtml(don.MA_DON_HANG_ORDERID || '')}</td></tr>
+          <tr><td>Khách hàng</td><td>${escapeHtml(don.TenKhachHang || '')} <span style="color:var(--color-text-faint)">(${escapeHtml(don.MA_KHACH_HANG || '')})</span></td></tr>
+          <tr><td>Loại / Kích thước / Màu</td><td>${escapeHtml(don.LOAI || '')} · ${escapeHtml(don.KICH_THUOC || '')} · ${escapeHtml(don.MAU_SAC || '')}</td></tr>
+          <tr><td>Vị trí thêu</td><td>${viTri}</td></tr>
+          <tr><td>Số lượng</td><td>${escapeHtml(don.SO_LUONG || '')} ${don.SO_LUONG_AO_TREN_DON ? `(áo trên đơn: ${escapeHtml(don.SO_LUONG_AO_TREN_DON)})` : ''}</td></tr>
+          <tr><td>Ngày lên đơn</td><td>${don.NGAY_LEN_DON ? new Date(don.NGAY_LEN_DON).toLocaleDateString('vi-VN') : ''}</td></tr>
+          <tr><td>Hãng vận chuyển</td><td>${escapeHtml(don.HANG_VAN_CHUYEN || '')}</td></tr>
+          <tr><td>Mã vận đơn</td><td>${escapeHtml(don.MA_VAN_DON_ID || '')}</td></tr>
+          <tr><td>Người nhận</td><td>${escapeHtml(don.TEN || '')} ${don.SDT ? '· ' + escapeHtml(don.SDT) : ''}</td></tr>
+          <tr><td>Địa chỉ giao hàng</td><td>${escapeHtml(dongDiaChi(don))}</td></tr>
+          <tr><td>Ghi chú</td><td>${escapeHtml(don.GHI_CHU || '')}</td></tr>
           <tr><td>Cập nhật lần cuối</td><td>${escapeHtml(don.NguoiCapNhatCuoi || '')}${don.ThoiGianCapNhatCuoi ? ' · ' + new Date(don.ThoiGianCapNhatCuoi).toLocaleString('vi-VN') : ''}</td></tr>
         </table>
         <div id="khu-vuc-thao-tac"></div>
@@ -84,32 +96,52 @@ function renderKhuVucThaoTac(don) {
   const el = document.getElementById('khu-vuc-thao-tac');
   let html = '';
 
-  if (user.vaiTro === 'chuan_bi_phoi' || user.vaiTro === 'admin') {
-    const dangCo = don.Co_Phoi === 'TRUE';
-    html += `<button class="btn-hanh-dong ${dangCo ? 'phu' : ''}" onclick='capNhat({Co_Phoi:"${dangCo ? 'FALSE' : 'TRUE'}"})'>
-      ${icon(dangCo ? 'close' : 'check')} ${dangCo ? 'Bỏ đánh dấu đã có phôi' : 'Đánh dấu đã có phôi'}
-    </button>`;
+  // Nút chuyển giai đoạn — đọc từ chính tab CauHinhKichBan (dùng chung logic với quét QR),
+  // không hardcode nút theo vai trò vì Sheet không định nghĩa vai trò cho từng kịch bản.
+  if (don.kichBanKeTiep && don.kichBanKeTiep.length > 0) {
+    html += don.kichBanKeTiep.map(kb => `
+      <button class="btn-hanh-dong" onclick="chuyenGiaiDoan('${kb.id}', this)">
+        ${icon('arrowRight')} Chuyển sang: ${escapeHtml(kb.label)}
+      </button>`).join('');
+  } else {
+    html += '<p>Không có kịch bản nào áp dụng được cho trạng thái hiện tại (kiểm tra tab CauHinhKichBan).</p>';
   }
-  if (user.vaiTro === 've_file' || user.vaiTro === 'admin') {
-    const dangCo = don.Co_File_Ve === 'TRUE';
-    html += `<button class="btn-hanh-dong ${dangCo ? 'phu' : ''}" onclick='capNhat({Co_File_Ve:"${dangCo ? 'FALSE' : 'TRUE'}"})'>
-      ${icon(dangCo ? 'close' : 'check')} ${dangCo ? 'Bỏ đánh dấu đã vẽ file' : 'Đánh dấu đã vẽ file'}
-    </button>`;
-  }
+
+  html += `
+    <div class="upload-box">
+      <label for="ghi-chu-moi">Ghi chú xưởng</label>
+      <textarea id="ghi-chu-moi" rows="3" style="padding:10px;border-radius:8px;border:1px solid var(--color-border);font:inherit">${escapeHtml(don.GHI_CHU || '')}</textarea>
+      <button class="btn-hanh-dong phu" onclick="luuGhiChu()">${icon('check')} Lưu ghi chú</button>
+    </div>`;
+
   if (user.vaiTro === 'dong_goi' || user.vaiTro === 'admin') {
     html += `
       <div class="upload-box">
         <label for="anh-dong-goi">${icon('camera', { size: 18 })} Chụp ảnh đóng gói</label>
         <input type="file" accept="image/*" capture="environment" id="anh-dong-goi">
         <button class="btn-hanh-dong" onclick="taiAnh('dong_goi')">${icon('download')} Tải ảnh lên</button>
+        <p style="margin:0;font-size:0.8rem">Cần cột <code>Anh_Dong_Goi_URL</code> trong Sheet — nếu chưa có, thao tác này sẽ báo lỗi.</p>
       </div>`;
   }
-  el.innerHTML = html || '<p>Vai trò của bạn không có thao tác nào trên đơn này.</p>';
+
+  el.innerHTML = html;
 }
 
-async function capNhat(updates) {
+async function chuyenGiaiDoan(scenarioId, btn) {
+  btn.disabled = true;
   try {
-    await apiFetch('/orders/' + encodeURIComponent(sttKey), { method: 'PUT', body: JSON.stringify(updates) });
+    await apiFetch(`/qr/kich-ban/${scenarioId}/quet`, { method: 'POST', body: JSON.stringify({ sttKey }) });
+    await taiChiTiet();
+  } catch (e) {
+    alert(e.message);
+    btn.disabled = false;
+  }
+}
+
+async function luuGhiChu() {
+  const ghiChu = document.getElementById('ghi-chu-moi').value;
+  try {
+    await apiFetch('/orders/' + encodeURIComponent(sttKey), { method: 'PUT', body: JSON.stringify({ GHI_CHU: ghiChu }) });
     await taiChiTiet();
   } catch (e) { alert(e.message); }
 }

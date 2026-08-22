@@ -7,16 +7,17 @@ router.use(requireLogin);
 
 router.get('/thong-ke', async (req, res) => {
   const { rows } = await orderService.getAll();
+  const daGanKH = await orderService.ganTenKhachHang(rows);
 
-  const demTheo = (key) => rows.reduce((acc, r) => {
+  const demTheo = (list, key) => list.reduce((acc, r) => {
     const v = r[key] || '(Trống)';
     acc[v] = (acc[v] || 0) + 1;
     return acc;
   }, {});
 
   const theoTuan = rows.reduce((acc, r) => {
-    if (!r.Ngay_Dat) return acc;
-    const d = new Date(r.Ngay_Dat);
+    if (!r.NGAY_LEN_DON) return acc;
+    const d = new Date(r.NGAY_LEN_DON);
     if (isNaN(d)) return acc;
     const dauNam = new Date(d.getFullYear(), 0, 1);
     const soTuan = Math.ceil(((d - dauNam) / 86400000 + dauNam.getDay() + 1) / 7);
@@ -27,9 +28,9 @@ router.get('/thong-ke', async (req, res) => {
 
   res.json({
     tongSoDon: rows.length,
-    theoTrangThai: demTheo('Trang_Thai'),
-    theoTeam: demTheo('Team_San_Xuat'),
-    theoNguoiVeFile: demTheo('Nguoi_Ve_File'),
+    theoTrangThai: demTheo(rows, 'TINH_TRANG'),
+    theoKhachHang: demTheo(daGanKH, 'TenKhachHang'),
+    theoLoaiSanPham: demTheo(rows, 'LOAI'),
     theoTuan,
   });
 });

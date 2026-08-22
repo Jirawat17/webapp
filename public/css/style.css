@@ -182,11 +182,10 @@ a { color: var(--color-primary); }
   padding: 4px 10px; border-radius: var(--radius-full); font-size: 12.5px; font-weight: 600;
   background: var(--color-neutral-bg); color: var(--color-neutral-text); white-space: nowrap;
 }
-.badge-MOI, .badge-CHO_PHOI, .badge-CO_PHOI_CHO_FILE { background: var(--color-info-bg); color: var(--color-info-text); }
-.badge-SAN_XUAT, .badge-DONG_GOI { background: var(--color-success-bg); color: var(--color-success-text); }
-.badge-SHIPPED, .badge-DELIVERED { background: var(--color-neutral-bg); color: var(--color-neutral-text); }
-.badge-HUY { background: var(--color-danger-bg); color: var(--color-danger-text); }
-
+.trang-thai-info    { background: var(--color-info-bg);    color: var(--color-info-text); }
+.trang-thai-warning { background: var(--color-warning-bg); color: var(--color-warning-text); }
+.trang-thai-success { background: var(--color-success-bg); color: var(--color-success-text); }
+.trang-thai-danger  { background: var(--color-danger-bg);  color: var(--color-danger-text); }
 .badge-canh-bao.vang { background: var(--color-warning-bg); color: var(--color-warning-text); }
 .badge-canh-bao.cam  { background: #ffedd5; color: #9a3412; }
 .badge-canh-bao.do   { background: var(--color-danger-bg); color: var(--color-danger-text); }

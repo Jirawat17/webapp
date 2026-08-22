@@ -1,111 +1,141 @@
 # Xưởng Thêu — Web App (thay thế AppSheet)
 
-Web app quản lý đơn hàng xưởng thêu. Dữ liệu vẫn nằm trên Google Sheets (`HanhPhuc99`), ảnh vẫn lưu Google Drive — chỉ thay lớp giao diện AppSheet bằng web app tự host.
+Web app quản lý đơn hàng xưởng thêu. Dữ liệu vẫn nằm trên Google Sheets (`HanhPhuc99`), ảnh vẫn lưu Google Drive.
+
+> **Bản cập nhật này khớp đúng cấu trúc Sheet thật** (dựa trên file `HanhPhuc99.xlsx` bạn cung cấp) — khác với tài liệu AppSheet mẫu ban đầu. Xem mục 9 để biết những chỗ cần bạn tự sửa trong Sheet.
 
 ## 1. Chuẩn bị Google Cloud (làm 1 lần)
 
 1. Vào [Google Cloud Console](https://console.cloud.google.com) → tạo project mới (hoặc dùng project đã có).
 2. Vào **APIs & Services > Library** → bật **Google Sheets API** và **Google Drive API**.
-3. Vào **IAM & Admin > Service Accounts** → **Create Service Account** → đặt tên bất kỳ (vd `xuong-theu-webapp`).
-4. Vào tab **Keys** của service account đó → **Add Key > Create new key > JSON** → tải file JSON về, đặt tên `service-account-key.json`, để vào thư mục gốc dự án này (**KHÔNG** đưa lên git/public).
-5. Copy **email của service account** (dạng `xuong-theu-webapp@ten-project.iam.gserviceaccount.com`).
-6. Mở file `HanhPhuc99` trên Google Sheets → **Share** → dán email service account vào, cấp quyền **Editor**.
-7. Mở thư mục Drive gốc muốn chứa ảnh → **Share** → cũng cấp quyền **Editor** cho email service account đó.
+3. Vào **IAM & Admin > Service Accounts** → **Create Service Account**.
+4. Tab **Keys** → **Add Key > Create new key > JSON** → tải về, đặt tên `service-account-key.json`, để ở thư mục gốc dự án (**KHÔNG** đưa lên git/public).
+5. Copy **email của service account** → **Share** file `HanhPhuc99` trên Google Sheets với email đó, quyền **Editor**.
+6. **Share** thư mục Drive gốc chứa ảnh với email đó, quyền **Editor**.
 
-## 2. Chuẩn bị 2 tab mới trong `HanhPhuc99`
+## 2. Các tab Sheet app này dùng (đã có sẵn trong `HanhPhuc99.xlsx` của bạn)
 
-### Tab `NguoiDung`
-Tạo tab tên chính xác `NguoiDung`, dòng 1 là header với đúng các cột sau:
-
-| Ten | VaiTro | Team | KichHoat |
-|---|---|---|---|
-
-- `VaiTro` nhận 1 trong 6 giá trị: `admin`, `quan_ly`, `ve_file`, `chuan_bi_phoi`, `san_xuat`, `dong_goi`
-- `Team` chỉ cần điền nếu `VaiTro = san_xuat` (phải khớp đúng giá trị cột `Team_San_Xuat` trong tab đơn hàng)
-- `KichHoat` = `TRUE` hoặc `FALSE`
-
-Nhập sẵn ít nhất 1 dòng admin để đăng nhập lần đầu, ví dụ:
-```
-Ten: Bạn | VaiTro: admin | Team: | KichHoat: TRUE
-```
-
-### Tab `LichSuHoatDong`
-Tạo tab tên chính xác `LichSuHoatDong`, dòng 1 là header:
-
-| ThoiGian | NguoiDung | VaiTro | HanhDong | STT_Key | ChiTiet |
-|---|---|---|---|---|---|
-
-Tab này app sẽ tự ghi, không cần nhập gì thêm.
-
-## 3. Thêm các cột mới vào tab `Don_Hang_ALL` (nếu chưa có)
-
-| Cột mới | Dùng để làm gì |
+| Tab | Vai trò trong app |
 |---|---|
-| `NguoiCapNhatCuoi` | Tên người vừa sửa đơn gần nhất |
-| `ThoiGianCapNhatCuoi` | Thời điểm sửa gần nhất |
-| `CanhBaoDaGui` | App tự ghi (`VANG`/`CAM`/`DO`/trống) — chống gửi trùng Telegram, không cần nhập tay |
-| `NhacShipDaGui` | App tự ghi (`TRUE`/trống) — chống nhắc ship lặp lại nhiều lần cùng 1 đơn |
+| `Don_Hang_ALL` | Dữ liệu đơn hàng chính |
+| `Khach_Hang` | Tra mã khách hàng (`MA_KHACH_HANG`) ra tên hiển thị (`TEN_KHACH_HANG`) |
+| `NguoiDung` | Danh sách nhân viên dùng để đăng nhập (Ten, VaiTro, Team, KichHoat) |
+| `LichSuHoatDong` | App tự ghi — nhật ký mọi thao tác (đăng nhập, sửa đơn, quét QR, chatbot...) |
+| `CauHinhKichBan` | **Cấu hình kịch bản quét QR** — sửa/thêm kịch bản ở đây, không cần sửa code |
+| `NhatKyQuetHangLoat` | App tự ghi — nhật ký riêng cho từng lượt quét kịch bản (khớp schema cũ đã có sẵn) |
 
-Các cột còn lại giữ nguyên như trong tài liệu `HuongDan_AppSheet_XuongTheu` (STT_Key, Ten_KH, Ten_San_Pham, So_Luong, Ngay_Dat, Ngay_Giao_Du_Kien, URL_Hinh_Anh, URL_Mockup, Co_Phoi, Co_File_Ve, Team_San_Xuat, Trang_Thai, Nguoi_Ve_File, Ghi_Chu_Xuong, Ma_Van_Don, Trang_Thai_Ship, Anh_Dong_Goi_URL, Ngay_Ship).
+Các tab `Nhan_Vien`, `QuetMa`, `Chatbot`, `B0_Chuan_Bi_Phoi_Ao`, `DATANEW_VIP3`, `B1_Cac_Don_Can_In`, `REFERENCE TABLE`, `BANG_GIA_FUFILL`, `DATA` có trong file bạn gửi nhưng **app này chưa dùng đến** — có thể là tàn dư từ hệ thống cũ (Apps Script/AppSheet) hoặc dự định cho tính năng khác. Không đụng tới nếu chưa cần.
 
-## 4. Cài đặt và chạy
+## 3. Cột thật trong `Don_Hang_ALL` (app đọc/ghi đúng các tên này)
+
+| Cột | Ý nghĩa |
+|---|---|
+| `STT_Key` | Mã đơn — khóa chính, dùng để quét QR |
+| `MA_KHACH_HANG` | Mã khách hàng (tra tên thật qua tab `Khach_Hang`) |
+| `HANG_VAN_CHUYEN` | Hãng vận chuyển |
+| `MA_VAN_DON_ID` | Mã vận đơn |
+| `DANH_DAU_IN` | Đã đánh dấu in (TRUE/FALSE) |
+| `TINH_TRANG` | Trạng thái hiện tại — xem pipeline ở mục 4 |
+| `NGAY_LEN_DON` | Ngày lên đơn — dùng để sắp xếp danh sách và tính cảnh báo |
+| `TEN_DIA_CHI`, `DIA_CHI_TEN_DUONG`, `DIA_CHI_TEN_TP`, `DIA_CHI_BANG`, `MA_ZIPCODE`, `DIA_CHI_NUOC` | Các phần địa chỉ giao hàng |
+| `MA_DON_HANG_ORDERID` | Mã đơn hàng trên sàn TMĐT (Etsy...) |
+| `DUONG_DAN_URL` | Ảnh mẫu / thiết kế gốc |
+| `MOCKUP` | Ảnh mockup thêu |
+| `LOAI`, `KICH_THUOC`, `MAU_SAC` | Loại áo / kích thước / màu — app tự ghép thành tiêu đề hiển thị |
+| `VI_TRI_1`, `VI_TRI_2`, `VI_TRI_3` | Vị trí thêu |
+| `SO_LUONG`, `SO_LUONG_AO_TREN_DON` | Số lượng |
+| `GHI_CHU` | Ghi chú xưởng — mọi vai trò đều sửa được |
+| `TEN`, `SDT` | Tên & SĐT người nhận |
+| `NguoiCapNhatCuoi`, `ThoiGianCapNhatCuoi` | App tự ghi — ai/khi nào sửa đơn gần nhất |
+
+**Cột KHÔNG tồn tại** (khác với bản thiết kế mẫu trước đây, đã bỏ khỏi code): `Ten_KH`, `Ten_San_Pham`, `Co_Phoi`, `Co_File_Ve`, `Team_San_Xuat`, `Ngay_Giao_Du_Kien`, `Nguoi_Ve_File`, `Trang_Thai_Ship`, `Ngay_Ship`. Khái niệm "có phôi/có file" giờ được thể hiện qua **vị trí của đơn trong pipeline `TINH_TRANG`**, không phải checkbox riêng.
+
+## 4. Pipeline `TINH_TRANG` thật
+
+```
+B0_Chờ xác nhận → B1_Đã in → B2_Đã lấy phôi → B3_Đã đủ Phôi và File Vẽ
+→ B4_Đang sản xuất → B5_Đã sản xuất → SHIPPED_Đã gửi vận chuyển
+→ IN TRAINSIT_Tracking đã hoạt động → DELIVERED_Đã giao hàng đến khách
+(hoặc CANCELLED_Đã hủy đơn / REFUNDED_Hoàn đơn — trạng thái kết thúc)
+```
+
+Thứ tự này định nghĩa tại `data/pipelineTinhTrang.js` — sửa file này nếu quy trình thực tế thay đổi. Dùng để:
+- Tính badge cảnh báo (mục 6)
+- Lọc đơn theo vai trò (chuẩn bị phôi thấy đơn chưa tới B2, vẽ file thấy đơn chưa tới B3, sản xuất thấy đơn từ B3 đến trước B5, đóng gói thấy đơn từ B5 trở đi)
+
+## 5. Kịch bản quét QR — đọc trực tiếp từ tab `CauHinhKichBan`
+
+**Thay đổi quan trọng nhất so với bản trước**: kịch bản không còn hardcode trong `data/scenarios.js` (file này đã xoá) — giờ app đọc thẳng 3 cột `Ten_Kich_Ban`, `Trang_Thai_Yeu_Cau`, `Trang_Thai_Sau` từ tab `CauHinhKichBan` mỗi lần cần. **Sửa/thêm kịch bản chỉ cần sửa trực tiếp trên Sheet, không cần sửa code hay deploy lại.**
+
+Mỗi lượt quét kịch bản (thành công hay lỗi) đều được ghi vào:
+- `LichSuHoatDong` (nhật ký chung toàn hệ thống)
+- `NhatKyQuetHangLoat` (nhật ký riêng cho quét QR, đúng schema đã có sẵn trong Sheet của bạn)
+
+### ⚠️ Kịch bản hiện tại trong `CauHinhKichBan` bị LỆCH với dữ liệu thật
+
+| Trong `CauHinhKichBan` ghi | Dữ liệu thật đang dùng | Hậu quả |
+|---|---|---|
+| `B0_HOLD_Chờ xác nhận` | `B0_Chờ xác nhận` (không có `_HOLD`) | Kịch bản "B1_Đã in" sẽ **không bao giờ chạy được** cho đơn đang ở `B0_Chờ xác nhận` |
+| `B4_IN PRODUCTION_Đang sản xuất` | `B4_Đang sản xuất` | Kịch bản "B4..." sẽ không áp dụng được cho đơn đang ở `B3_Đã đủ Phôi và File Vẽ` muốn chuyển tiếp |
+
+**Cách sửa**: mở tab `CauHinhKichBan`, sửa 2 dòng đó cho khớp chính xác với chuỗi đang dùng trong `Don_Hang_ALL` (copy-paste để chắc không lệch dấu cách/chính tả). Tôi không tự sửa vì không có quyền ghi vào Sheet thật của bạn — chỉ đọc được bản `.xlsx` bạn tải lên.
+
+Cũng chưa có kịch bản nào cho các giai đoạn sau `B4`: `B5_Đã sản xuất`, `SHIPPED_Đã gửi vận chuyển`, `IN TRAINSIT...`, `DELIVERED...`. Nếu muốn quét QR để chuyển các giai đoạn này, thêm dòng mới vào `CauHinhKichBan` theo đúng 3 cột hiện có.
+
+## 6. Cảnh báo Telegram 3 tầng + badge trên web
+
+Sheet không có cột deadline riêng, nên cảnh báo tính theo **số ngày kể từ `NGAY_LEN_DON`** kết hợp **vị trí hiện tại trong pipeline**:
+- 🟡 **Vàng**: ≥3 ngày mà chưa tới `B2_Đã lấy phôi`
+- 🟠 **Cam**: ≥5 ngày mà chưa tới `B4_Đang sản xuất`
+- 🔴 **Đỏ**: ≥7 ngày mà chưa `SHIPPED`
+
+Sửa ngưỡng/điều kiện tại `services/alertService.js` nếu cần khác đi. Cấu hình `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHATID_*` trong `.env` (xem `.env.example`).
+
+## 7. Chatbot
+
+Route `POST /api/chatbot/hoi` gọi thẳng LLM nội bộ, ngữ cảnh xây trực tiếp từ `Don_Hang_ALL` (đã gắn tên khách hàng thật + tiêu đề sản phẩm), giới hạn theo đơn mà vai trò người hỏi được xem. Cấu hình `LLM_API_URL`, `LLM_API_KEY`, `LLM_MODEL` trong `.env`.
+
+## 8. Báo cáo Excel/PDF
+
+Trang **Báo cáo** (`admin`/`quan_ly`) lọc theo `NGAY_LEN_DON` và/hoặc `MA_KHACH_HANG`, xuất `.xlsx` hoặc `.pdf` (font Noto Sans nhúng sẵn trong `fonts/`, đã kiểm tra đủ dấu tiếng Việt).
+
+## 9. Việc bạn cần tự làm
+
+1. **Sửa 2 chỗ lệch tên trong `CauHinhKichBan`** (mục 5) — nếu không sửa, 2 trong 4 kịch bản không dùng được.
+2. **Thêm cột nếu muốn dùng tính năng cảnh báo/đóng gói**:
+   - `CanhBaoDaGui` (VANG/CAM/DO/trống) — app tự ghi, chống gửi trùng Telegram
+   - `Anh_Dong_Goi_URL` — nếu muốn dùng nút "Chụp ảnh đóng gói"; chưa có thì thao tác này sẽ báo lỗi rõ ràng thay vì âm thầm ghi sai chỗ
+3. **Kiểm tra lại vai trò trong tab `NguoiDung`**: `Luan` đang có `VaiTro = "operator"` — giá trị này **không khớp** với 6 vai trò app nhận diện (`admin`, `quan_ly`, `ve_file`, `chuan_bi_phoi`, `san_xuat`, `dong_goi`). Nên đổi thành `san_xuat` (dựa theo Team ghi là "San Xuat"), nếu không Luan sẽ không thấy đơn nào cả khi đăng nhập.
+4. Tab `Nhan_Vien` (Cô Thu, Phượng, Chị Hoan...) là hệ thống phân quyền **cũ** (PHAN_QUYEN: NguoiLayPhoi/NguoiVeFile/NguoiChayMay) — app này **không đọc tab đó**, chỉ đọc `NguoiDung`. Nếu muốn các nhân viên này đăng nhập được vào web app mới, cần thêm họ vào tab `NguoiDung` với vai trò tương ứng (Cô Thu → `chuan_bi_phoi`, Phượng → `ve_file`, Chị Hoan → `san_xuat`).
+
+## 10. Cài đặt và chạy
 
 ```bash
 npm install
 cp .env.example .env
-# mở .env, điền SESSION_SECRET, SHEET_ID, DRIVE_ROOT_FOLDER_ID
+# điền SESSION_SECRET, SHEET_ID, DRIVE_ROOT_FOLDER_ID (+ Telegram/LLM nếu dùng)
 npm start
 ```
 
-Mở `http://VPS_IP:3000` (hoặc domain đã trỏ vào VPS).
+## 11. Deploy VPS (gợi ý)
 
-## 5. Deploy thật trên VPS (gợi ý)
+- `pm2 start server.js --name xuong-theu` để giữ app luôn chạy
+- Nginx + Certbot cho HTTPS — **bắt buộc** để mở được camera quét QR trên điện thoại
+- Giữ nguyên thư mục `fonts/` khi deploy (cần cho xuất PDF)
 
-- Dùng `pm2` để giữ app luôn chạy: `npm i -g pm2 && pm2 start server.js --name xuong-theu`
-- Dùng Nginx làm reverse proxy + SSL (Let's Encrypt / Certbot) để truy cập qua HTTPS — **bắt buộc** vì trình duyệt chỉ cho phép mở camera (quét QR) trên trang HTTPS hoặc `localhost`.
-- Mở port tương ứng trên firewall VPS nếu chưa dùng Nginx.
+## 12. Vai trò và quyền (đã cập nhật theo pipeline thật)
 
-## 6. Vai trò và quyền
-
-| Vai trò | Xem đơn nào | Sửa được cột nào |
+| Vai trò | Thấy đơn nào | Sửa được cột nào |
 |---|---|---|
-| `admin` | Tất cả | Tất cả + quản lý nhân viên |
-| `quan_ly` | Tất cả | Tất cả + phân công team |
-| `ve_file` | Đơn thiếu phôi hoặc file | `Co_File_Ve`, `Nguoi_Ve_File`, `Ghi_Chu_Xuong` |
-| `chuan_bi_phoi` | Đơn thiếu phôi hoặc file | `Co_Phoi`, `Ghi_Chu_Xuong` |
-| `san_xuat` | Đơn đủ phôi+file, đúng team, trạng thái `SAN_XUAT` | `Trang_Thai`, `Ghi_Chu_Xuong` |
-| `dong_goi` | Đơn `DONG_GOI` hoặc `SHIPPED` | `Trang_Thai`, `Trang_Thai_Ship`, `Ma_Van_Don`, `Ghi_Chu_Xuong`, upload ảnh đóng gói |
+| `admin` / `quan_ly` | Tất cả | Tất cả |
+| `chuan_bi_phoi` | Chưa tới `B2_Đã lấy phôi` | `GHI_CHU` |
+| `ve_file` | Chưa tới `B3_Đã đủ Phôi và File Vẽ` | `GHI_CHU` |
+| `san_xuat` | Từ `B3` đến trước `SHIPPED` | `GHI_CHU`, `TINH_TRANG` |
+| `dong_goi` | Từ `B5_Đã sản xuất` trở đi | `GHI_CHU`, `HANG_VAN_CHUYEN`, `MA_VAN_DON_ID`, `TINH_TRANG` |
 
-## 7. Kịch bản quét QR hàng loạt
+Mọi vai trò đều có thể bấm nút "Chuyển sang..." trên trang chi tiết đơn (đọc từ `CauHinhKichBan`) — Sheet hiện không có cột phân quyền theo kịch bản nên app chưa giới hạn vai trò nào được dùng kịch bản nào. Nếu cần giới hạn, có thể thêm cột (vd `VaiTro_ChoPhep`) vào `CauHinhKichBan` và báo tôi để cập nhật `scenarioService.js`.
 
-Sửa file `data/scenarios.js` để thêm/sửa kịch bản — không cần sửa code route. Hiện có sẵn 2 kịch bản mẫu:
-- Sản xuất xong → Đóng gói (vai trò `san_xuat`)
-- Xác nhận đã ship (vai trò `dong_goi`)
+## 13. Session & bảo mật (không đổi so với bản trước)
 
-## 8. Cảnh báo Telegram 3 tầng + badge trên web
-
-- App tự quét toàn bộ đơn mỗi 30 phút (`services/canhBaoJob.js`). Quy tắc giữ nguyên bản AppSheet cũ:
-  **Vàng** (≥3 ngày chưa đủ phôi+file) → **Cam** (≥5 ngày chưa đóng gói) → **Đỏ** (≥7 ngày chưa ship), cộng thêm **Nhắc ship** khi còn đúng 1 ngày tới deadline mà chưa ship.
-- Mỗi mức chỉ gửi Telegram 1 lần (không gửi lại mỗi 30 phút) nhờ cột `CanhBaoDaGui`/`NhacShipDaGui` tự ghi.
-- Cấu hình `TELEGRAM_BOT_TOKEN` và 4 biến `TELEGRAM_CHATID_*` trong `.env` (hướng dẫn lấy chat_id có ghi chú ngay trong `.env.example`). Nếu để trống, app vẫn chạy bình thường, chỉ là không gửi được Telegram.
-- Badge cảnh báo hiển thị ngay trên danh sách đơn và trang chi tiết — tính trực tiếp mỗi lần gọi API (`GET /api/orders`), luôn khớp thực tế, độc lập với việc Telegram đã gửi hay chưa.
-- Admin/Quản lý có thể bấm chạy thử ngay: `POST /api/canh-bao/chay-thu` (chưa có nút riêng trên UI, có thể gọi bằng `curl` hoặc Postman kèm cookie session để kiểm tra cấu hình Telegram).
-
-## 9. Chatbot
-
-- Route `POST /api/chatbot/hoi` gọi thẳng LLM nội bộ (`llm.wokushop.com`, định dạng OpenAI-compatible) — **không** đọc/ghi qua tab Chatbot trong Sheet như cách cũ.
-- Ngữ cảnh trả lời được xây trực tiếp từ tab `Don_Hang_ALL` tại thời điểm hỏi, giới hạn trong phạm vi đơn mà vai trò người hỏi được phép xem (dùng lại đúng logic phân quyền của `orderService.filterForRole`).
-- Cấu hình `LLM_API_URL`, `LLM_API_KEY`, `LLM_MODEL` trong `.env`. Nếu thiếu, chatbot trả lỗi rõ ràng thay vì im lặng.
-- Widget chat nổi ở góc dưới phải, tự hiện trên mọi trang đã đăng nhập (`public/js/chatbot.js`), lịch sử hội thoại lưu tạm ở `sessionStorage` (mất khi đóng tab, không lưu lên Sheet).
-
-## 10. Báo cáo Excel/PDF
-
-- Trang **Báo cáo** (chỉ `admin`/`quan_ly` thấy trong menu) cho lọc theo khoảng ngày đặt hàng và/hoặc khách hàng, xuất file `.xlsx` (ExcelJS) hoặc `.pdf` (PDFKit).
-- File PDF nhúng sẵn font Noto Sans (`fonts/NotoSans-Regular.ttf`, `NotoSans-Bold.ttf`) — đã kiểm tra đủ dấu tiếng Việt, không cần cài thêm gì. Giữ nguyên 2 file font này khi deploy.
-
-## 11. Việc còn thiếu / tuỳ chọn thêm sau (không có trong bản này)
-
-- Tích hợp trực tiếp API VNEpacket để tự điền `Ma_Van_Don` (bạn đã có code Apps Script riêng cho việc này — có thể gọi lại API đó từ route `photos.js` hoặc `qr.js` khi cần).
-- Đăng nhập bằng mã PIN thay vì chỉ chọn tên (bạn đã chọn "chỉ chọn tên" cho bản này).
-- Session hiện dùng bộ nhớ (memory store) — nếu restart server thường xuyên, nhân viên phải chọn tên đăng nhập lại. Cân nhắc `connect-sqlite3` hoặc Redis nếu muốn giữ session bền hơn.
-- Chưa có giới hạn tốc độ (rate limit) cho API — vì đăng nhập không mật khẩu, ai biết tên nhân viên đều đăng nhập được. Phù hợp môi trường nội bộ tin cậy; nếu app lộ ra ngoài internet công khai, nên cân nhắc thêm PIN hoặc giới hạn theo IP.
+- Đăng nhập chọn tên, không mật khẩu — phù hợp môi trường nội bộ tin cậy, không nên public ra internet mà không thêm PIN.
+- Session dùng bộ nhớ (memory store) — restart server thì phải chọn tên đăng nhập lại.

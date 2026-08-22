@@ -54,7 +54,7 @@
   try {
     const list = await apiFetch('/reports/khach-hang');
     const sel = document.getElementById('khach-hang');
-    list.forEach(kh => sel.innerHTML += `<option value="${escapeHtml(kh)}">${escapeHtml(kh)}</option>`);
+    list.forEach(kh => sel.innerHTML += `<option value="${escapeHtml(kh.ma)}">${escapeHtml(kh.ten)} (${escapeHtml(kh.ma)})</option>`);
   } catch (e) {
     document.getElementById('thong-bao').textContent = 'Không tải được danh sách khách hàng: ' + e.message;
   }

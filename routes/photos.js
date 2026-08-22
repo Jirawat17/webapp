@@ -10,11 +10,13 @@ const { requireLogin } = require('../middleware/auth');
 
 router.use(requireLogin);
 
-// Mỗi "mốc nghiệp vụ" ghi URL vào đúng cột tương ứng trong Sheet
+// Mỗi "mốc nghiệp vụ" ghi URL vào đúng cột tương ứng trong Sheet.
+// LƯU Ý: Sheet thật KHÔNG có cột Anh_Dong_Goi_URL (khác với bản thiết kế mẫu ban đầu) — muốn dùng
+// mốc "dong_goi" (chụp ảnh đóng gói) cần tự thêm cột này vào Don_Hang_ALL trước (xem README mục 3).
 const COT_ANH_THEO_MOC = {
   dong_goi: 'Anh_Dong_Goi_URL',
-  mau: 'URL_Hinh_Anh',
-  mockup: 'URL_Mockup',
+  mau: 'DUONG_DAN_URL',
+  mockup: 'MOCKUP',
 };
 
 // Vì mã đơn đã lấy từ bước quét QR ngay trước đó trong cùng luồng thao tác (sttKey gửi kèm trong
@@ -29,8 +31,11 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
   const cotAnh = COT_ANH_THEO_MOC[moc];
   if (!cotAnh) return res.status(400).json({ error: 'Mốc ảnh không hợp lệ: ' + moc });
 
-  const { row } = await orderService.getByKey(sttKey);
+  const { headers, row } = await orderService.getByKey(sttKey);
   if (!row) return res.status(404).json({ error: 'Không tìm thấy đơn hàng: ' + sttKey });
+  if (!headers.includes(cotAnh)) {
+    return res.status(400).json({ error: `Sheet chưa có cột '${cotAnh}' — cần thêm cột này vào Don_Hang_ALL trước khi dùng mốc ảnh "${moc}"` });
+  }
 
   // Folder theo ngày, format YYYY-MM-DD để sắp xếp đúng thứ tự trên Drive
   const now = new Date();
@@ -41,9 +46,6 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
   const url = await driveService.uploadImageBuffer(req.file.buffer, tenFile, folderId, req.file.mimetype);
 
   const updates = { [cotAnh]: url, NguoiCapNhatCuoi: user.ten, ThoiGianCapNhatCuoi: new Date().toISOString() };
-  if (moc === 'dong_goi') {
-    updates.Ngay_Ship = now.toLocaleDateString('vi-VN');
-  }
   const updated = await orderService.update(sttKey, updates);
 
   await ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'UPLOAD_ANH', sttKey, chiTiet: { moc, url } });

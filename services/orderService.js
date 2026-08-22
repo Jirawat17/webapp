@@ -1,4 +1,6 @@
 const { readTab, updateCells } = require('./sheetsService');
+const { layBanDoTenKhachHang } = require('./khachHangService');
+const { chiSoGiaiDoan } = require('../data/pipelineTinhTrang');
 
 const TAB = 'Don_Hang_ALL';
 const KEY_COL = 'STT_Key';
@@ -20,27 +22,45 @@ async function update(sttKey, updates) {
   return { ...row, ...updates };
 }
 
-// Mỗi vai trò chỉ thấy đúng phần việc của mình — giữ đúng nguyên tắc thiết kế cũ của AppSheet:
-// team sản xuất chỉ thấy đơn đủ điều kiện, không phí thời gian với đơn thiếu phôi/file
+// Đơn chỉ lưu MA_KHACH_HANG (mã) — gắn thêm tên khách hàng thật để hiển thị, không sửa dữ liệu gốc
+async function ganTenKhachHang(rows) {
+  const banDo = await layBanDoTenKhachHang();
+  return rows.map(r => ({ ...r, TenKhachHang: banDo[r.MA_KHACH_HANG] || r.MA_KHACH_HANG || '' }));
+}
+
+// Không có cột "tên sản phẩm" riêng — ghép từ LOAI + KICH_THUOC + MAU_SAC cho dễ nhận diện trên danh sách
+function tieuDeSanPham(don) {
+  const phan = [don.LOAI, don.KICH_THUOC, don.MAU_SAC].filter(Boolean);
+  return phan.length ? phan.join(' · ') : (don.MA_DON_HANG_ORDERID || don.STT_Key || '');
+}
+
+// Vị trí thêu — gộp 3 cột VI_TRI_1/2/3, bỏ ô trống
+function danhSachViTriTheu(don) {
+  return [don.VI_TRI_1, don.VI_TRI_2, don.VI_TRI_3].filter(Boolean);
+}
+
+// Mỗi vai trò chỉ thấy đúng phần việc của mình, dựa trên vị trí hiện tại trong pipeline TINH_TRANG thật:
+// B0 (chờ xác nhận) → B1 (đã in) → B2 (đã lấy phôi) → B3 (đủ phôi+file) → B4 (đang sx) → B5 (đã sx) → SHIPPED...
+// Sửa data/pipelineTinhTrang.js nếu quy trình thực tế thay đổi.
 function filterForRole(rows, user) {
+  const chiSo = (r) => chiSoGiaiDoan(r.TINH_TRANG);
+  const idxB2 = chiSoGiaiDoan('B2_Đã lấy phôi');
+  const idxB3 = chiSoGiaiDoan('B3_Đã đủ Phôi và File Vẽ');
+  const idxB5 = chiSoGiaiDoan('B5_Đã sản xuất');
+  const idxShipped = chiSoGiaiDoan('SHIPPED_Đã gửi vận chuyển');
+
   switch (user.vaiTro) {
-    case 've_file':
-    case 'chuan_bi_phoi':
-      return rows.filter(r =>
-        String(r.Co_Phoi).toUpperCase() !== 'TRUE' || String(r.Co_File_Ve).toUpperCase() !== 'TRUE'
-      );
-    case 'san_xuat':
-      return rows.filter(r =>
-        String(r.Co_Phoi).toUpperCase() === 'TRUE' &&
-        String(r.Co_File_Ve).toUpperCase() === 'TRUE' &&
-        r.Trang_Thai === 'SAN_XUAT' &&
-        (!user.team || r.Team_San_Xuat === user.team)
-      );
-    case 'dong_goi':
-      return rows.filter(r => r.Trang_Thai === 'DONG_GOI' || r.Trang_Thai === 'SHIPPED');
+    case 'chuan_bi_phoi': // tương đương NguoiLayPhoi — lo phần lấy phôi, quan tâm đơn CHƯA tới B2
+      return rows.filter(r => chiSo(r) === null || chiSo(r) < idxB2);
+    case 've_file': // lo phần vẽ file, quan tâm đơn CHƯA tới B3 (đủ phôi + file)
+      return rows.filter(r => chiSo(r) === null || chiSo(r) < idxB3);
+    case 'san_xuat': // đơn đã đủ điều kiện sản xuất: từ B3 đến B5, chưa ship
+      return rows.filter(r => chiSo(r) !== null && chiSo(r) >= idxB3 && chiSo(r) < idxShipped);
+    case 'dong_goi': // đơn đã sản xuất xong, sắp/đang ship
+      return rows.filter(r => chiSo(r) !== null && chiSo(r) >= idxB5);
     default: // admin, quan_ly — xem tất cả
       return rows;
   }
 }
 
-module.exports = { TAB, KEY_COL, getAll, getByKey, update, filterForRole };
+module.exports = { TAB, KEY_COL, getAll, getByKey, update, filterForRole, ganTenKhachHang, tieuDeSanPham, danhSachViTriTheu };

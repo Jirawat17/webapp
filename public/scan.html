@@ -57,7 +57,7 @@ async function taiKichBan() {
   if (list.length === 0) {
     const btn = document.getElementById('mode-batch');
     btn.disabled = true;
-    btn.title = 'Vai trò của bạn chưa có kịch bản nào';
+    btn.title = 'Chưa có kịch bản nào trong tab CauHinhKichBan';
   }
 }
 
@@ -81,15 +81,15 @@ async function onScanSuccess(sttKey) {
       el.innerHTML = `<div class="ket-qua-box">
         ${icon('package')}
         <div>
-          <strong>${escapeHtml(don.Ten_San_Pham || '')}</strong> — ${escapeHtml(don.Ten_KH || '')}<br>
-          Trạng thái: <span class="badge badge-${escapeHtml(don.Trang_Thai)}">${escapeHtml(don.Trang_Thai || '')}</span><br>
+          <strong>${escapeHtml(don.TieuDeSanPham || don.STT_Key)}</strong> — ${escapeHtml(don.TenKhachHang || '')}<br>
+          Trạng thái: <span class="badge ${lopTrangThai(don.TINH_TRANG)}">${escapeHtml(don.TINH_TRANG || '')}</span><br>
           <a href="/order.html?stt=${encodeURIComponent(sttKey)}">Xem chi tiết ${icon('arrowRight', {size:14})}</a>
         </div>
       </div>`;
     } else {
       const scenarioId = document.getElementById('kich-ban-select').value;
       const res = await apiFetch(`/qr/kich-ban/${scenarioId}/quet`, { method: 'POST', body: JSON.stringify({ sttKey }) });
-      el.innerHTML = `<div class="ket-qua-box ok">${icon('check')} ${escapeHtml(res.don.STT_Key)}: chuyển sang ${escapeHtml(res.don.Trang_Thai)}</div>`;
+      el.innerHTML = `<div class="ket-qua-box ok">${icon('check')} ${escapeHtml(res.don.STT_Key)}: chuyển sang ${escapeHtml(res.don.TINH_TRANG)}</div>`;
     }
   } catch (e) {
     el.innerHTML = `<div class="ket-qua-box loi">${icon('alert')} ${escapeHtml(e.message)}</div>`;

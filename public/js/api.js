@@ -86,3 +86,13 @@ function skeletonList(soDong = 4) {
 function spinnerInline(chuThich = 'Đang xử lý...') {
   return `<span class="inline-loading">${icon('spinner', { className: 'icon-spin', size: 18 })} ${escapeHtml(chuThich)}</span>`;
 }
+
+// TINH_TRANG là chuỗi tự do lấy từ Sheet (không phải enum cố định) — tô màu badge theo từ khoá
+// thay vì theo từng giá trị chính xác, để không vỡ khi Sheet có thêm trạng thái mới.
+function lopTrangThai(tinhTrang) {
+  const s = String(tinhTrang || '').toUpperCase();
+  if (s.includes('CANCELLED') || s.includes('HUY') || s.includes('REFUND')) return 'trang-thai-danger';
+  if (s.includes('SHIPPED') || s.includes('DELIVERED') || s.includes('TRANSIT') || s.startsWith('B4') || s.startsWith('B5')) return 'trang-thai-success';
+  if (s.startsWith('B2') || s.startsWith('B3')) return 'trang-thai-warning';
+  return 'trang-thai-info'; // B0, B1, hoặc giá trị chưa biết
+}

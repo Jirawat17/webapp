@@ -4,6 +4,7 @@ const path = require('path');
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const orderService = require('../services/orderService');
+const { layDanhSachKhachHang } = require('../services/khachHangService');
 const { requireLogin, requireRole } = require('../middleware/auth');
 
 router.use(requireLogin);
@@ -14,38 +15,44 @@ const FONT_BOLD = path.join(__dirname, '..', 'fonts', 'NotoSans-Bold.ttf');
 
 function locDon(rows, { tuNgay, denNgay, khachHang }) {
   return rows.filter(r => {
-    if (!r.Ngay_Dat) return false;
-    const ngay = new Date(r.Ngay_Dat);
+    if (!r.NGAY_LEN_DON) return false;
+    const ngay = new Date(r.NGAY_LEN_DON);
     if (isNaN(ngay)) return false;
     if (tuNgay && ngay < new Date(tuNgay)) return false;
     if (denNgay && ngay > new Date(denNgay)) return false;
-    if (khachHang && r.Ten_KH !== khachHang) return false;
+    if (khachHang && r.MA_KHACH_HANG !== khachHang) return false;
     return true;
   });
 }
 
 const COT_BAO_CAO = [
-  { header: 'Mã đơn', key: 'STT_Key', width: 16 },
-  { header: 'Khách hàng', key: 'Ten_KH', width: 20 },
-  { header: 'Sản phẩm', key: 'Ten_San_Pham', width: 24 },
-  { header: 'Số lượng', key: 'So_Luong', width: 10 },
-  { header: 'Ngày đặt', key: 'Ngay_Dat', width: 12 },
-  { header: 'Deadline', key: 'Ngay_Giao_Du_Kien', width: 12 },
-  { header: 'Trạng thái', key: 'Trang_Thai', width: 16 },
-  { header: 'Team', key: 'Team_San_Xuat', width: 14 },
-  { header: 'Ngày ship', key: 'Ngay_Ship', width: 12 },
+  { header: 'Mã đơn', key: 'STT_Key', width: 14 },
+  { header: 'Mã đơn (sàn TMĐT)', key: 'MA_DON_HANG_ORDERID', width: 18 },
+  { header: 'Khách hàng', key: 'TenKhachHang', width: 20 },
+  { header: 'Loại', key: 'LOAI', width: 12 },
+  { header: 'Kích thước', key: 'KICH_THUOC', width: 10 },
+  { header: 'Màu sắc', key: 'MAU_SAC', width: 16 },
+  { header: 'Số lượng', key: 'SO_LUONG', width: 10 },
+  { header: 'Ngày lên đơn', key: 'NGAY_LEN_DON', width: 14 },
+  { header: 'Trạng thái', key: 'TINH_TRANG', width: 20 },
+  { header: 'Hãng vận chuyển', key: 'HANG_VAN_CHUYEN', width: 16 },
+  { header: 'Mã vận đơn', key: 'MA_VAN_DON_ID', width: 16 },
 ];
 
-// Danh sách khách hàng duy nhất — dùng để đổ vào dropdown lọc ở giao diện
+// Danh sách khách hàng — dùng để đổ vào dropdown lọc ở giao diện (trả cả mã lẫn tên hiển thị)
 router.get('/khach-hang', async (req, res) => {
-  const { rows } = await orderService.getAll();
-  const list = [...new Set(rows.map(r => r.Ten_KH).filter(Boolean))].sort();
+  const list = await layDanhSachKhachHang();
   res.json(list);
 });
 
-router.get('/excel', async (req, res) => {
+async function layDonDaLoc(query) {
   const { rows } = await orderService.getAll();
-  const list = locDon(rows, req.query);
+  const daGanKH = await orderService.ganTenKhachHang(rows);
+  return locDon(daGanKH, query);
+}
+
+router.get('/excel', async (req, res) => {
+  const list = await layDonDaLoc(req.query);
 
   const wb = new ExcelJS.Workbook();
   const sheet = wb.addWorksheet('Báo cáo đơn hàng');
@@ -65,14 +72,13 @@ router.get('/excel', async (req, res) => {
 });
 
 router.get('/pdf', async (req, res) => {
-  const { rows } = await orderService.getAll();
-  const list = locDon(rows, req.query);
+  const list = await layDonDaLoc(req.query);
   const { tuNgay, denNgay, khachHang } = req.query;
 
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', 'attachment; filename="bao-cao-don-hang.pdf"');
 
-  const doc = new PDFDocument({ margin: 30, size: 'A4', layout: 'landscape' });
+  const doc = new PDFDocument({ margin: 24, size: 'A4', layout: 'landscape' });
   doc.registerFont('NotoSans', FONT_REGULAR);
   doc.registerFont('NotoSans-Bold', FONT_BOLD);
   doc.pipe(res);
@@ -92,11 +98,11 @@ router.get('/pdf', async (req, res) => {
   let y = doc.y;
 
   function veHang(values, dam) {
-    doc.font(dam ? 'NotoSans-Bold' : 'NotoSans').fontSize(9);
+    doc.font(dam ? 'NotoSans-Bold' : 'NotoSans').fontSize(8);
     values.forEach((v, i) => {
       doc.text(String(v ?? ''), startX + i * colWidth, y, { width: colWidth - 4, ellipsis: true });
     });
-    y += 16;
+    y += 15;
     if (y > doc.page.height - doc.page.margins.bottom - 20) {
       doc.addPage();
       y = doc.page.margins.top;

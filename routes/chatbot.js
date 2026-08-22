@@ -18,15 +18,16 @@ const TU_KHOA_PHUC_TAP = ['phân tích', 'tổng hợp', 'so sánh', 'dự đoá
 function taoBoiCanh(rows) {
   const rutGon = rows.slice(0, 200).map(r => ({
     ma: r.STT_Key,
-    kh: r.Ten_KH,
-    sp: r.Ten_San_Pham,
-    sl: r.So_Luong,
-    ngayDat: r.Ngay_Dat,
-    deadline: r.Ngay_Giao_Du_Kien,
-    trangThai: r.Trang_Thai,
-    team: r.Team_San_Xuat,
-    coPhoi: r.Co_Phoi,
-    coFile: r.Co_File_Ve,
+    maDonSan: r.MA_DON_HANG_ORDERID,
+    kh: r.TenKhachHang || r.MA_KHACH_HANG,
+    sanPham: r.TieuDeSanPham,
+    viTriTheu: (r.ViTriTheu || []).join(', '),
+    sl: r.SO_LUONG,
+    ngayLenDon: r.NGAY_LEN_DON,
+    trangThai: r.TINH_TRANG,
+    hangVanChuyen: r.HANG_VAN_CHUYEN,
+    maVanDon: r.MA_VAN_DON_ID,
+    ghiChu: r.GHI_CHU,
   }));
   return JSON.stringify(rutGon);
 }
@@ -42,7 +43,9 @@ router.post('/hoi', async (req, res) => {
 
   const { rows } = await orderService.getAll();
   // Chatbot chỉ trả lời trong phạm vi đơn mà vai trò của user được thấy — không lộ dữ liệu ngoài quyền hạn
-  const duLieuChoPhep = orderService.filterForRole(rows, user);
+  const duLieuTheoQuyen = orderService.filterForRole(rows, user);
+  const duLieuDaGanKH = await orderService.ganTenKhachHang(duLieuTheoQuyen);
+  const duLieuChoPhep = duLieuDaGanKH.map(r => ({ ...r, TieuDeSanPham: orderService.tieuDeSanPham(r), ViTriTheu: orderService.danhSachViTriTheu(r) }));
   const boiCanh = taoBoiCanh(duLieuChoPhep);
 
   const messages = [
@@ -50,9 +53,11 @@ router.post('/hoi', async (req, res) => {
       role: 'system',
       content:
         'Bạn là trợ lý của xưởng thêu, trả lời bằng tiếng Việt, ngắn gọn, chỉ dựa trên dữ liệu đơn hàng dạng JSON ' +
-        'được cung cấp dưới đây (mỗi đơn có: ma, kh, sp, sl, ngayDat, deadline, trangThai, team, coPhoi, coFile). ' +
-        'Không bịa số liệu ngoài dữ liệu này. Nếu không tìm thấy thông tin phù hợp, nói rõ là không có.\n\n' +
-        'Dữ liệu:\n' + boiCanh,
+        'được cung cấp dưới đây (mỗi đơn có: ma, maDonSan, kh, sanPham, viTriTheu, sl, ngayLenDon, trangThai, ' +
+        'hangVanChuyen, maVanDon, ghiChu). Trạng thái (trangThai) theo thứ tự pipeline: B0_Chờ xác nhận → ' +
+        'B1_Đã in → B2_Đã lấy phôi → B3_Đã đủ Phôi và File Vẽ → B4_Đang sản xuất → B5_Đã sản xuất → ' +
+        'SHIPPED_Đã gửi vận chuyển. Không bịa số liệu ngoài dữ liệu này. Nếu không tìm thấy thông tin phù hợp, ' +
+        'nói rõ là không có.\n\nDữ liệu:\n' + boiCanh,
     },
     ...(Array.isArray(lichSuHoiThoai) ? lichSuHoiThoai.slice(-6) : []),
     { role: 'user', content: cauHoi },

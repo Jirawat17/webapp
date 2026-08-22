@@ -24,12 +24,6 @@ async function chayKiemTraCanhBao() {
         // Đơn đã xong / bị huỷ → xoá cờ để nếu dòng này được tái sử dụng cho đơn khác thì không dính cờ cũ
         await updateCells(orderService.TAB, headers, don._row, { CanhBaoDaGui: '' });
       }
-
-      if (alertService.sapDenHanShip(don) && String(don.NhacShipDaGui).toUpperCase() !== 'TRUE') {
-        await telegramService.guiCanhBao('NHAC_SHIP', don);
-        await updateCells(orderService.TAB, headers, don._row, { NhacShipDaGui: 'TRUE' });
-        soCanhBaoDaGui++;
-      }
     }
 
     console.log(`[CanhBao] Kiểm tra xong lúc ${new Date().toLocaleString('vi-VN')} — đã gửi ${soCanhBaoDaGui} cảnh báo.`);

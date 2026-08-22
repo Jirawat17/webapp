@@ -13,8 +13,8 @@
   <div class="filters">
     <label class="sr-only" for="loc-trang-thai">Lọc theo trạng thái</label>
     <select id="loc-trang-thai"><option value="">Tất cả trạng thái</option></select>
-    <label class="sr-only" for="loc-kh">Tìm theo tên khách hàng</label>
-    <input id="loc-kh" placeholder="Tìm theo tên khách hàng">
+    <label class="sr-only" for="loc-kh">Tìm theo mã khách hàng</label>
+    <input id="loc-kh" placeholder="Tìm theo mã khách hàng (VD: TeamPQ)">
   </div>
   <div id="danh-sach-don" class="order-list"></div>
 </div>
@@ -23,23 +23,32 @@
 <script src="/js/api.js"></script>
 <script src="/js/chatbot.js"></script>
 <script>
-const TRANG_THAI = ['MOI','CHO_PHOI','CO_PHOI_CHO_FILE','SAN_XUAT','DONG_GOI','SHIPPED','DELIVERED','HUY'];
+// Danh sách trạng thái để đổ vào bộ lọc — lấy trực tiếp từ chính dữ liệu đang có, vì TINH_TRANG
+// là chuỗi tự do (không phải enum cố định), không nên liệt kê cứng trong code.
 const NHAN_CANH_BAO = { VANG: 'Vàng · 3 ngày', CAM: 'Cam · 5 ngày', DO: 'Đỏ · 7 ngày' };
+let danhSachDonGoc = [];
 
 (async () => {
   const user = await requireLoginOrRedirect();
   if (!user) return;
   renderNav(user, 'orders');
 
-  const sel = document.getElementById('loc-trang-thai');
-  TRANG_THAI.forEach(t => sel.innerHTML += `<option value="${t}">${t}</option>`);
-  sel.onchange = taiDon;
+  document.getElementById('loc-trang-thai').onchange = taiDon;
   document.getElementById('loc-kh').oninput = debounce(taiDon, 400);
 
   taiDon();
 })();
 
 function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+
+function capNhatBoLocTrangThai(list) {
+  const sel = document.getElementById('loc-trang-thai');
+  const giaTriDangChon = sel.value;
+  const cacTrangThai = [...new Set(list.map(o => o.TINH_TRANG).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">Tất cả trạng thái</option>' +
+    cacTrangThai.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+  sel.value = giaTriDangChon;
+}
 
 async function taiDon() {
   const el = document.getElementById('danh-sach-don');
@@ -59,19 +68,22 @@ async function taiDon() {
     return;
   }
 
+  // Chỉ đổ lại danh sách trạng thái cho dropdown khi không lọc gì (tránh dropdown tự co lại khi đang lọc)
+  if (!trangThai && !kh) capNhatBoLocTrangThai(list);
+
   if (list.length === 0) { el.innerHTML = '<p>Không có đơn nào khớp bộ lọc.</p>'; return; }
 
   el.innerHTML = list.map(o => `
     <a class="order-card" href="/order.html?stt=${encodeURIComponent(o.STT_Key)}">
-      ${o.URL_Hinh_Anh
-        ? `<img src="${escapeHtml(o.URL_Hinh_Anh)}" alt="" loading="lazy" onerror="this.remove()">`
+      ${o.MOCKUP || o.DUONG_DAN_URL
+        ? `<img src="${escapeHtml(o.MOCKUP || o.DUONG_DAN_URL)}" alt="" loading="lazy" onerror="this.remove()">`
         : ''}
       <div class="thong-tin">
-        <strong>${escapeHtml(o.Ten_San_Pham || '(chưa đặt tên)')}</strong>
-        <div class="meta">${escapeHtml(o.Ten_KH || '')} · SL: ${escapeHtml(o.So_Luong || '')}</div>
-        <div class="meta">Deadline: ${escapeHtml(o.Ngay_Giao_Du_Kien || '—')}</div>
+        <strong>${escapeHtml(o.TieuDeSanPham || o.STT_Key)}</strong>
+        <div class="meta">${escapeHtml(o.TenKhachHang || '')} · SL: ${escapeHtml(o.SO_LUONG || '')}</div>
+        <div class="meta">Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? new Date(o.NGAY_LEN_DON).toLocaleDateString('vi-VN') : '—')}</div>
         <div class="badge-row">
-          <span class="badge badge-${escapeHtml(o.Trang_Thai)}">${escapeHtml(o.Trang_Thai || '')}</span>
+          <span class="badge ${lopTrangThai(o.TINH_TRANG)}">${escapeHtml(o.TINH_TRANG || '')}</span>
           ${o.CanhBao ? `
             <span class="badge badge-canh-bao ${o.CanhBao.toLowerCase()}">
               ${icon('alert')} ${NHAN_CANH_BAO[o.CanhBao] || o.CanhBao}

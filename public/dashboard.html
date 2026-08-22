@@ -13,8 +13,8 @@
   <div id="tong-so" class="tong-so-the">Đang tải...</div>
   <div class="chart-grid">
     <div class="chart-card"><canvas id="chart-trangthai"></canvas></div>
-    <div class="chart-card"><canvas id="chart-team"></canvas></div>
-    <div class="chart-card"><canvas id="chart-nguoive"></canvas></div>
+    <div class="chart-card"><canvas id="chart-khachhang"></canvas></div>
+    <div class="chart-card"><canvas id="chart-loai"></canvas></div>
     <div class="chart-card"><canvas id="chart-tuan"></canvas></div>
   </div>
 </div>
@@ -40,9 +40,9 @@
   document.getElementById('tong-so').textContent = `Tổng số đơn: ${stats.tongSoDon}`;
 
   veBieuDo('chart-trangthai', 'pie', 'Theo trạng thái', stats.theoTrangThai);
-  veBieuDo('chart-team', 'bar', 'Theo team sản xuất', stats.theoTeam);
-  veBieuDo('chart-nguoive', 'bar', 'Theo người vẽ file', stats.theoNguoiVeFile);
-  veBieuDo('chart-tuan', 'line', 'Đơn theo tuần', stats.theoTuan);
+  veBieuDo('chart-khachhang', 'bar', 'Theo khách hàng', stats.theoKhachHang);
+  veBieuDo('chart-loai', 'bar', 'Theo loại sản phẩm', stats.theoLoaiSanPham);
+  veBieuDo('chart-tuan', 'line', 'Đơn theo tuần (theo ngày lên đơn)', stats.theoTuan);
 })();
 
 // Bảng màu đủ tương phản, không chỉ dựa vào màu sắc để phân biệt (mỗi cột/lát đều có nhãn kèm theo)
