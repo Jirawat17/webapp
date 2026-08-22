@@ -3,16 +3,22 @@
   "version": "1.0.0",
   "description": "Web app quản lý xưởng thêu — thay thế AppSheet, dữ liệu vẫn lưu Google Sheets/Drive",
   "main": "server.js",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
+    "exceljs": "^4.4.0",
     "express": "^4.19.2",
     "express-async-errors": "^3.1.1",
     "express-session": "^1.18.0",
     "googleapis": "^140.0.0",
-    "multer": "^1.4.5-lts.1"
+    "multer": "^1.4.5-lts.1",
+    "node-cron": "^3.0.3",
+    "pdfkit": "^0.15.0"
   }
 }

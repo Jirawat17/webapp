@@ -10,24 +10,33 @@
 <div id="nav"></div>
 <div class="page">
   <h2>Thống kê</h2>
-  <p id="tong-so"></p>
+  <div id="tong-so" class="tong-so-the">Đang tải...</div>
   <div class="chart-grid">
-    <canvas id="chart-trangthai"></canvas>
-    <canvas id="chart-team"></canvas>
-    <canvas id="chart-nguoive"></canvas>
-    <canvas id="chart-tuan"></canvas>
+    <div class="chart-card"><canvas id="chart-trangthai"></canvas></div>
+    <div class="chart-card"><canvas id="chart-team"></canvas></div>
+    <div class="chart-card"><canvas id="chart-nguoive"></canvas></div>
+    <div class="chart-card"><canvas id="chart-tuan"></canvas></div>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="/js/icons.js"></script>
 <script src="/js/api.js"></script>
+<script src="/js/chatbot.js"></script>
 <script>
 (async () => {
   const user = await requireLoginOrRedirect();
   if (!user) return;
   renderNav(user, 'dashboard');
 
-  const stats = await apiFetch('/dashboard/thong-ke');
+  let stats;
+  try {
+    stats = await apiFetch('/dashboard/thong-ke');
+  } catch (e) {
+    document.getElementById('tong-so').textContent = 'Không tải được thống kê: ' + e.message;
+    return;
+  }
+
   document.getElementById('tong-so').textContent = `Tổng số đơn: ${stats.tongSoDon}`;
 
   veBieuDo('chart-trangthai', 'pie', 'Theo trạng thái', stats.theoTrangThai);
@@ -36,15 +45,23 @@
   veBieuDo('chart-tuan', 'line', 'Đơn theo tuần', stats.theoTuan);
 })();
 
-const MAU = ['#4f46e5','#22c55e','#f59e0b','#ef4444','#06b6d4','#a855f7','#84cc16','#64748b'];
+// Bảng màu đủ tương phản, không chỉ dựa vào màu sắc để phân biệt (mỗi cột/lát đều có nhãn kèm theo)
+const MAU = ['#4338ca','#22c55e','#f59e0b','#ef4444','#0891b2','#a855f7','#65a30d','#64748b'];
 
 function veBieuDo(canvasId, type, title, dataObj) {
   const labels = Object.keys(dataObj);
   const data = Object.values(dataObj);
   new Chart(document.getElementById(canvasId), {
     type,
-    data: { labels, datasets: [{ label: title, data, backgroundColor: MAU, borderColor: '#4f46e5' }] },
-    options: { plugins: { title: { display: true, text: title } }, responsive: true },
+    data: { labels, datasets: [{ label: title, data, backgroundColor: MAU, borderColor: '#4338ca' }] },
+    options: {
+      responsive: true,
+      plugins: {
+        title: { display: true, text: title, font: { size: 14 } },
+        legend: { display: type === 'pie', position: 'bottom' },
+        tooltip: { enabled: true },
+      },
+    },
   });
 }
 </script>

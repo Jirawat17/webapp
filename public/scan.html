@@ -11,20 +11,26 @@
 <div class="page">
   <h2>Quét mã QR</h2>
   <div class="scan-mode">
-    <button id="mode-lookup" class="active">🔍 Tra cứu</button>
-    <button id="mode-batch">⚡ Quét kịch bản</button>
+    <button id="mode-lookup" class="active"></button>
+    <button id="mode-batch"></button>
   </div>
-  <div id="chon-kich-ban" style="display:none; margin-bottom:12px;">
-    <select id="kich-ban-select" style="width:100%; padding:10px; border-radius:8px;"></select>
+  <div id="chon-kich-ban" style="display:none; margin-bottom:16px;">
+    <label class="sr-only" for="kich-ban-select">Chọn kịch bản quét</label>
+    <select id="kich-ban-select" style="width:100%; padding:12px; border-radius:8px; min-height:44px; border:1px solid var(--color-border)"></select>
   </div>
   <div id="qr-reader" style="width:100%"></div>
   <div id="ket-qua"></div>
 </div>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="/js/icons.js"></script>
 <script src="/js/api.js"></script>
+<script src="/js/chatbot.js"></script>
 <script>
 let user, mode = 'lookup', scanner, dangXuLy = false;
+
+document.getElementById('mode-lookup').innerHTML = icon('scan') + ' Tra cứu';
+document.getElementById('mode-batch').innerHTML = icon('check') + ' Quét kịch bản';
 
 (async () => {
   user = await requireLoginOrRedirect();
@@ -47,10 +53,11 @@ function chuyenMode(m) {
 async function taiKichBan() {
   const list = await apiFetch('/qr/kich-ban');
   const sel = document.getElementById('kich-ban-select');
-  sel.innerHTML = list.map(k => `<option value="${k.id}">${k.label}</option>`).join('');
+  sel.innerHTML = list.map(k => `<option value="${k.id}">${escapeHtml(k.label)}</option>`).join('');
   if (list.length === 0) {
-    document.getElementById('mode-batch').disabled = true;
-    document.getElementById('mode-batch').title = 'Vai trò của bạn chưa có kịch bản nào';
+    const btn = document.getElementById('mode-batch');
+    btn.disabled = true;
+    btn.title = 'Vai trò của bạn chưa có kịch bản nào';
   }
 }
 
@@ -59,7 +66,7 @@ function startScanner() {
   scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: 250 }, onScanSuccess)
     .catch(err => {
       document.getElementById('ket-qua').innerHTML =
-        `<div class="ket-qua-box loi">Không mở được camera: ${err}. Hãy cho phép quyền camera.</div>`;
+        `<div class="ket-qua-box loi">${icon('alert')} Không mở được camera: ${escapeHtml(String(err))}. Hãy cho phép quyền camera.</div>`;
     });
 }
 
@@ -72,17 +79,20 @@ async function onScanSuccess(sttKey) {
     if (mode === 'lookup') {
       const don = await apiFetch('/qr/tra-cuu/' + encodeURIComponent(sttKey));
       el.innerHTML = `<div class="ket-qua-box">
-        <strong>${don.Ten_San_Pham || ''}</strong> — ${don.Ten_KH || ''}<br>
-        Trạng thái: <span class="badge badge-${don.Trang_Thai}">${don.Trang_Thai || ''}</span><br>
-        <a href="/order.html?stt=${encodeURIComponent(sttKey)}">Xem chi tiết →</a>
+        ${icon('package')}
+        <div>
+          <strong>${escapeHtml(don.Ten_San_Pham || '')}</strong> — ${escapeHtml(don.Ten_KH || '')}<br>
+          Trạng thái: <span class="badge badge-${escapeHtml(don.Trang_Thai)}">${escapeHtml(don.Trang_Thai || '')}</span><br>
+          <a href="/order.html?stt=${encodeURIComponent(sttKey)}">Xem chi tiết ${icon('arrowRight', {size:14})}</a>
+        </div>
       </div>`;
     } else {
       const scenarioId = document.getElementById('kich-ban-select').value;
       const res = await apiFetch(`/qr/kich-ban/${scenarioId}/quet`, { method: 'POST', body: JSON.stringify({ sttKey }) });
-      el.innerHTML = `<div class="ket-qua-box ok">✅ ${res.don.STT_Key}: chuyển sang ${res.don.Trang_Thai}</div>`;
+      el.innerHTML = `<div class="ket-qua-box ok">${icon('check')} ${escapeHtml(res.don.STT_Key)}: chuyển sang ${escapeHtml(res.don.Trang_Thai)}</div>`;
     }
   } catch (e) {
-    el.innerHTML = `<div class="ket-qua-box loi">❌ ${e.message}</div>`;
+    el.innerHTML = `<div class="ket-qua-box loi">${icon('alert')} ${escapeHtml(e.message)}</div>`;
   }
 
   setTimeout(() => { dangXuLy = false; }, 1500); // chống quét trùng liên tiếp cùng 1 mã

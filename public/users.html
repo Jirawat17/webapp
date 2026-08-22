@@ -11,22 +11,33 @@
 <div class="page">
   <h2>Quản lý nhân viên</h2>
   <form id="form-them" class="inline-form">
-    <input id="ten-moi" placeholder="Tên nhân viên" required>
-    <select id="vaitro-moi">
-      <option value="admin">Admin</option>
-      <option value="quan_ly">Quản lý</option>
-      <option value="ve_file">Vẽ file</option>
-      <option value="chuan_bi_phoi">Chuẩn bị phôi</option>
-      <option value="san_xuat">Sản xuất</option>
-      <option value="dong_goi">Đóng gói</option>
-    </select>
-    <input id="team-moi" placeholder="Team (chỉ cần nếu là Sản xuất)">
-    <button type="submit">Thêm nhân viên</button>
+    <div class="truong">
+      <label for="ten-moi">Tên nhân viên</label>
+      <input id="ten-moi" required>
+    </div>
+    <div class="truong">
+      <label for="vaitro-moi">Vai trò</label>
+      <select id="vaitro-moi">
+        <option value="admin">Admin</option>
+        <option value="quan_ly">Quản lý</option>
+        <option value="ve_file">Vẽ file</option>
+        <option value="chuan_bi_phoi">Chuẩn bị phôi</option>
+        <option value="san_xuat">Sản xuất</option>
+        <option value="dong_goi">Đóng gói</option>
+      </select>
+    </div>
+    <div class="truong">
+      <label for="team-moi">Team (nếu là Sản xuất)</label>
+      <input id="team-moi">
+    </div>
+    <button type="submit" class="btn-hanh-dong">Thêm nhân viên</button>
   </form>
   <table id="bang-nv" class="info-table"></table>
 </div>
 
+<script src="/js/icons.js"></script>
 <script src="/js/api.js"></script>
+<script src="/js/chatbot.js"></script>
 <script>
 (async () => {
   const user = await requireLoginOrRedirect();
@@ -57,17 +68,19 @@ async function taiDanhSach() {
     <tr><th>Tên</th><th>Vai trò</th><th>Team</th><th>Trạng thái</th><th></th></tr>
     ${list.map(u => `
       <tr>
-        <td>${u.Ten}</td><td>${u.VaiTro}</td><td>${u.Team || ''}</td>
-        <td>${String(u.KichHoat).toUpperCase() === 'TRUE' ? '✅ Hoạt động' : '🔒 Đã khoá'}</td>
-        <td><button onclick="doiKichHoat('${u.Ten}','${u.KichHoat}')">
+        <td>${escapeHtml(u.Ten)}</td>
+        <td>${escapeHtml(NHAN_VAI_TRO[u.VaiTro] || u.VaiTro)}</td>
+        <td>${escapeHtml(u.Team || '')}</td>
+        <td>${String(u.KichHoat).toUpperCase() === 'TRUE' ? 'Đang hoạt động' : 'Đã khoá'}</td>
+        <td><button class="btn-hanh-dong phu" onclick="doiKichHoat('${encodeURIComponent(u.Ten)}','${u.KichHoat}')">
           ${String(u.KichHoat).toUpperCase() === 'TRUE' ? 'Khoá' : 'Mở lại'}
         </button></td>
       </tr>`).join('')}`;
 }
 
-async function doiKichHoat(ten, kichHoatHienTai) {
+async function doiKichHoat(tenMaHoa, kichHoatHienTai) {
   const moi = String(kichHoatHienTai).toUpperCase() === 'TRUE' ? 'FALSE' : 'TRUE';
-  await apiFetch('/users/' + encodeURIComponent(ten), { method: 'PUT', body: JSON.stringify({ KichHoat: moi }) });
+  await apiFetch('/users/' + tenMaHoa, { method: 'PUT', body: JSON.stringify({ KichHoat: moi }) });
   await taiDanhSach();
 }
 </script>

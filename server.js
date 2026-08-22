@@ -21,6 +21,9 @@ app.use('/api/orders', require('./routes/orders'));
 app.use('/api/qr', require('./routes/qr'));
 app.use('/api/photos', require('./routes/photos'));
 app.use('/api/dashboard', require('./routes/dashboard'));
+app.use('/api/canh-bao', require('./routes/canhBao'));
+app.use('/api/chatbot', require('./routes/chatbot'));
+app.use('/api/reports', require('./routes/reports'));
 
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -32,3 +35,6 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Xưởng Thêu app đang chạy tại http://localhost:${PORT}`));
+
+// Bật lịch kiểm tra cảnh báo 3 tầng + nhắc ship — chạy nền, độc lập với request nào đang tới
+require('./services/canhBaoJob').batDauLichCanhBao();

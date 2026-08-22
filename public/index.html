@@ -8,21 +8,33 @@
 </head>
 <body>
 <div class="login-wrap">
-  <h1>🧵 Xưởng Thêu</h1>
+  <div class="logo-mark" aria-hidden="true">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+      <circle cx="12" cy="12" r="9"/><path d="M8 12c1.3-2 2.7-2 4 0s2.7 2 4 0"/>
+    </svg>
+  </div>
+  <h1>Xưởng Thêu</h1>
   <p>Chọn tên của bạn để vào</p>
-  <div id="danh-sach-ten" class="ten-list">Đang tải...</div>
+  <div id="danh-sach-ten" class="ten-list">Đang tải danh sách nhân viên...</div>
 </div>
 <script src="/js/api.js"></script>
 <script>
 async function taiDanhSach() {
-  const list = await apiFetch('/auth/danh-sach');
   const el = document.getElementById('danh-sach-ten');
+  let list;
+  try {
+    list = await apiFetch('/auth/danh-sach');
+  } catch (e) {
+    el.textContent = 'Không tải được danh sách: ' + e.message;
+    return;
+  }
   el.innerHTML = '';
   if (list.length === 0) { el.textContent = 'Chưa có nhân viên nào. Liên hệ Admin để thêm.'; return; }
   list.forEach(u => {
     const btn = document.createElement('button');
     btn.className = 'btn-ten';
     btn.textContent = u.ten;
+    btn.setAttribute('aria-label', 'Đăng nhập với tên ' + u.ten);
     btn.onclick = () => dangNhap(u.ten);
     el.appendChild(btn);
   });

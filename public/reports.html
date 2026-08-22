@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Báo cáo — Xưởng Thêu</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="nav"></div>
+<div class="page">
+  <h2>Xuất báo cáo</h2>
+  <p>Chọn khoảng thời gian và/hoặc khách hàng, sau đó xuất file Excel hoặc PDF.</p>
+
+  <form id="form-bao-cao" class="bao-cao-form">
+    <div class="truong">
+      <label for="tu-ngay">Từ ngày</label>
+      <input type="date" id="tu-ngay">
+    </div>
+    <div class="truong">
+      <label for="den-ngay">Đến ngày</label>
+      <input type="date" id="den-ngay">
+    </div>
+    <div class="truong">
+      <label for="khach-hang">Khách hàng</label>
+      <select id="khach-hang"><option value="">Tất cả khách hàng</option></select>
+    </div>
+    <div class="nut-xuat">
+      <button type="button" class="btn-hanh-dong" id="btn-excel"></button>
+      <button type="button" class="btn-hanh-dong phu" id="btn-pdf"></button>
+    </div>
+  </form>
+
+  <div id="thong-bao" style="margin-top:12px"></div>
+</div>
+
+<script src="/js/icons.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/chatbot.js"></script>
+<script>
+(async () => {
+  const user = await requireLoginOrRedirect();
+  if (!user) return;
+  renderNav(user, 'reports');
+
+  if (user.vaiTro !== 'admin' && user.vaiTro !== 'quan_ly') {
+    document.querySelector('.page').innerHTML = '<p>Bạn không có quyền truy cập trang này.</p>';
+    return;
+  }
+
+  document.getElementById('btn-excel').innerHTML = icon('file') + ' Xuất Excel';
+  document.getElementById('btn-pdf').innerHTML = icon('file') + ' Xuất PDF';
+
+  try {
+    const list = await apiFetch('/reports/khach-hang');
+    const sel = document.getElementById('khach-hang');
+    list.forEach(kh => sel.innerHTML += `<option value="${escapeHtml(kh)}">${escapeHtml(kh)}</option>`);
+  } catch (e) {
+    document.getElementById('thong-bao').textContent = 'Không tải được danh sách khách hàng: ' + e.message;
+  }
+
+  document.getElementById('btn-excel').onclick = () => xuatBaoCao('excel');
+  document.getElementById('btn-pdf').onclick = () => xuatBaoCao('pdf');
+})();
+
+function layThamSo() {
+  const qs = new URLSearchParams();
+  const tuNgay = document.getElementById('tu-ngay').value;
+  const denNgay = document.getElementById('den-ngay').value;
+  const khachHang = document.getElementById('khach-hang').value;
+  if (tuNgay) qs.set('tuNgay', tuNgay);
+  if (denNgay) qs.set('denNgay', denNgay);
+  if (khachHang) qs.set('khachHang', khachHang);
+  return qs.toString();
+}
+
+// Tải file nhị phân (Excel/PDF) qua fetch thay vì mở link trực tiếp — để dùng chung cookie session
+// và bắt được lỗi (vd hết quyền) thay vì trình duyệt hiện trang lỗi JSON thô
+async function xuatBaoCao(loai) {
+  const thongBao = document.getElementById('thong-bao');
+  thongBao.innerHTML = spinnerInline('Đang tạo file...');
+
+  try {
+    const res = await fetch(`/api/reports/${loai}?` + layThamSo(), { credentials: 'include' });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Không xuất được báo cáo');
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = loai === 'excel' ? 'bao-cao-don-hang.xlsx' : 'bao-cao-don-hang.pdf';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    thongBao.innerHTML = `${icon('check')} Đã tải file báo cáo.`;
+  } catch (e) {
+    thongBao.innerHTML = `${icon('alert')} ${escapeHtml(e.message)}`;
+  }
+}
+</script>
+</body>
+</html>
