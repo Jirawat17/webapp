@@ -28,7 +28,7 @@
 
     <div id="ket-qua-tra-cuu"></div>
 
-    <button id="btn-dung-quet" class="btn-dung-quet chi-che-do-kich-ban" style="display:none">Dừng quét → Xem lại</button>
+    <button id="btn-dung-quet" class="btn-dung-quet chi-che-do-kich-ban" style="display:none"></button>
 
     <div class="chi-che-do-kich-ban" style="display:none">
       <h3 style="margin-top:20px">Danh sách đang quét</h3>
@@ -60,6 +60,7 @@ let audioCtx = null;
 
 document.getElementById('mode-lookup').innerHTML = icon('scan') + ' Tra cứu';
 document.getElementById('mode-batch').innerHTML = icon('check') + ' Quét kịch bản';
+document.getElementById('btn-dung-quet').innerHTML = icon('stop', { size: 40 }) + ' Dừng quét → Xem lại';
 
 (async () => {
   user = await requireLoginOrRedirect();
@@ -364,23 +365,24 @@ function renderXemLai() {
   el.innerHTML = `
     <h2>Xem lại kết quả quét — ${escapeHtml(kichBanDangChon.label)}</h2>
 
-    <div class="nhom-xem-lai ok">
-      <div class="tieu-de-nhom">✅ Sẵn sàng cập nhật (${nhomOK.length})</div>
-      <div class="danh-sach-nhom">${nhomOK.length ? nhomOK.map(dongXemLaiOK).join('') : dongTrong()}</div>
-      <button class="btn-xac-nhan-nhom" id="btn-xac-nhan" ${nhomOK.length === 0 ? 'disabled' : ''}>
-        ${icon('check', { size: 48 })} Xác nhận cập nhật (${nhomOK.length})
-      </button>
+    <div class="luoi-3-nhom">
+      <div class="nhom-xem-lai ok">
+        <div class="tieu-de-nhom">✅ Sẵn sàng (${nhomOK.length})</div>
+        <div class="danh-sach-nhom">${nhomOK.length ? nhomOK.map(dongXemLaiOK).join('') : dongTrong()}</div>
+      </div>
+      <div class="nhom-xem-lai canh-bao">
+        <div class="tieu-de-nhom">⚠️ Sai trạng thái (${nhomCanhBao.length})</div>
+        <div class="danh-sach-nhom">${nhomCanhBao.length ? nhomCanhBao.map(dongXemLaiCanBaoLoi).join('') : dongTrong()}</div>
+      </div>
+      <div class="nhom-xem-lai loi">
+        <div class="tieu-de-nhom">❌ Không tìm thấy (${nhomLoi.length})</div>
+        <div class="danh-sach-nhom">${nhomLoi.length ? nhomLoi.map(dongXemLaiCanBaoLoi).join('') : dongTrong()}</div>
+      </div>
     </div>
 
-    <div class="nhom-xem-lai canh-bao">
-      <div class="tieu-de-nhom">⚠️ Sai trạng thái (${nhomCanhBao.length})</div>
-      <div class="danh-sach-nhom">${nhomCanhBao.length ? nhomCanhBao.map(dongXemLaiCanBaoLoi).join('') : dongTrong()}</div>
-    </div>
-
-    <div class="nhom-xem-lai loi">
-      <div class="tieu-de-nhom">❌ Không tìm thấy (${nhomLoi.length})</div>
-      <div class="danh-sach-nhom">${nhomLoi.length ? nhomLoi.map(dongXemLaiCanBaoLoi).join('') : dongTrong()}</div>
-    </div>
+    <button class="btn-xac-nhan-nhom" id="btn-xac-nhan" ${nhomOK.length === 0 ? 'disabled' : ''}>
+      ${icon('check', { size: 48 })} Xác nhận cập nhật (${nhomOK.length})
+    </button>
 
     <button class="btn-tiep-tuc-quet ${coTheThoat ? 'san-sang' : ''}" id="btn-tiep-tuc" ${coTheThoat ? '' : 'disabled'}>
       ${coTheThoat ? 'Tiếp tục quét' : 'Cần xử lý hết nhóm Cảnh báo & Lỗi trước khi tiếp tục'}
@@ -413,8 +415,8 @@ function dongXemLaiCanBaoLoi(item) {
       <div class="ly-do">${escapeHtml(item.lyDo)}</div>
     </div>
     <div class="nhom-nut">
-      <button data-danxem="${item.key}">Đã xem</button>
-      <button data-xoa="${item.key}">Xóa</button>
+      <button class="btn-daxem-xemlai" data-danxem="${item.key}">Đã xem</button>
+      <button class="btn-xoa-xemlai" data-xoa="${item.key}">XÓA</button>
     </div>
   </div>`;
 }

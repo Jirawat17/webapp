@@ -60,12 +60,12 @@
     wrap.id = 'chatbot-wrap';
     wrap.innerHTML = `
       <button id="chatbot-toggle" aria-label="Mở trợ lý xưởng thêu" aria-expanded="false">
-        ${icon('chat', { size: 26 })}
+        ${icon('chat', { size: 24 })}
       </button>
       <div id="chatbot-panel" role="dialog" aria-label="Trợ lý xưởng thêu" hidden>
         <div id="chatbot-header">
           <span>${icon('chat', { size: 18 })} Trợ lý xưởng thêu</span>
-          <button id="chatbot-close" class="icon-btn" aria-label="Đóng cửa sổ chat">${icon('close', { size: 18 })}</button>
+          <button id="chatbot-min" class="icon-btn" aria-label="Thu gọn trợ lý" title="Thu gọn">${icon('minimize', { size: 18 })}</button>
         </div>
         <div id="chatbot-messages"></div>
         <form id="chatbot-form">
@@ -79,16 +79,22 @@
     const panel = document.getElementById('chatbot-panel');
     const toggleBtn = document.getElementById('chatbot-toggle');
 
-    toggleBtn.onclick = () => {
-      const dangMo = !panel.hidden;
-      panel.hidden = dangMo;
-      toggleBtn.setAttribute('aria-expanded', String(!dangMo));
-      if (!dangMo) document.getElementById('chatbot-input').focus();
-    };
-    document.getElementById('chatbot-close').onclick = () => {
+    // "Thu gọn" đưa panel về trạng thái chỉ còn nút tròn nổi — KHÔNG mất lịch sử chat (vẫn lưu ở sessionStorage)
+    function thuGon() {
       panel.hidden = true;
       toggleBtn.setAttribute('aria-expanded', 'false');
+      toggleBtn.classList.remove('dang-mo');
+    }
+
+    toggleBtn.onclick = () => {
+      const dangMo = !panel.hidden;
+      if (dangMo) { thuGon(); return; }
+      panel.hidden = false;
+      toggleBtn.setAttribute('aria-expanded', 'true');
+      toggleBtn.classList.add('dang-mo');
+      document.getElementById('chatbot-input').focus();
     };
+    document.getElementById('chatbot-min').onclick = thuGon;
     document.getElementById('chatbot-form').onsubmit = guiCauHoi;
 
     if (layLichSu().length === 0) {
