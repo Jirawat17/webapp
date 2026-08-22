@@ -56,6 +56,7 @@ let kichBanDaTai = [];
 let kichBanDangChon = null;
 let dsQuet = [];
 let dangQuetKichBan = true;
+let audioCtx = null;
 
 document.getElementById('mode-lookup').innerHTML = icon('scan') + ' Tra cứu';
 document.getElementById('mode-batch').innerHTML = icon('check') + ' Quét kịch bản';
@@ -138,7 +139,44 @@ function chonKichBan(id) {
   kichBanDangChon = kichBanDaTai.find(k => k.id === id) || null;
   dsQuet = [];
   dangQuetKichBan = true;
+  // Khởi tạo/mở khoá AudioContext ngay trong cú bấm này (thao tác người dùng thật) — nhiều trình duyệt
+  // chặn phát âm thanh tự động nếu chưa có tương tác, nên "mồi" trước để tiếng bíp sau này phát được ngay.
+  try { layAudioCtx().resume(); } catch (e) {}
   capNhatManHinh();
+}
+
+// ============================================================
+// ÂM THANH — 3 tiếng bíp khác nhau rõ rệt cho 3 kết quả quét, tự tạo bằng Web Audio API (không cần file âm thanh)
+// ============================================================
+function layAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function phatBeep(tanSo, thoiLuongMs, doTreMs) {
+  try {
+    const ctx = layAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = tanSo;
+    gain.gain.value = 0.18;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    const batDau = ctx.currentTime + (doTreMs || 0) / 1000;
+    osc.start(batDau);
+    osc.stop(batDau + thoiLuongMs / 1000);
+  } catch (e) { /* trình duyệt chặn âm thanh — bỏ qua lặng lẽ, không ảnh hưởng luồng quét */ }
+}
+
+function phatAmThanhKetQua(nhom) {
+  if (nhom === 'OK') {
+    phatBeep(880, 150); // 1 tiếng bíp cao, gọn — dễ chịu, báo hiệu thành công
+  } else if (nhom === 'SAI_TRANG_THAI') {
+    phatBeep(600, 120); phatBeep(600, 120, 180); // 2 tiếng bíp trung — cần chú ý
+  } else if (nhom === 'KHONG_TIM_THAY') {
+    phatBeep(220, 420); // 1 tiếng trầm, kéo dài — cảnh báo lỗi rõ rệt
+  }
 }
 
 async function dieuChinhCamera(muonChay) {
@@ -152,7 +190,7 @@ async function dieuChinhCamera(muonChay) {
 async function batDauCamera(onScan) {
   if (!scanner) scanner = new Html5Qrcode('qr-reader');
   try {
-    await scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: 250 }, onScan);
+    await scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: 260 }, onScan);
   } catch (err) {
     document.getElementById('ket-qua-tra-cuu').innerHTML =
       `<div class="ket-qua-box loi">${icon('alert')} Không mở được camera: ${escapeHtml(String(err))}. Hãy cho phép quyền camera.</div>`;
@@ -245,6 +283,7 @@ async function xuLyQuetKichBan(sttKey) {
   dsQuet.unshift(item);
 
   hienThiToast(item.nhom, item.tieuDe || item.sttKey);
+  phatAmThanhKetQua(item.nhom);
   if (item.nhom === 'KHONG_TIM_THAY' && navigator.vibrate) navigator.vibrate(500);
 
   renderDemNhom();
@@ -277,9 +316,9 @@ function renderDemNhom() {
   const soCanhBao = dsQuet.filter(x => x.nhom === 'SAI_TRANG_THAI' && !x.daXuLy).length;
   const soLoi = dsQuet.filter(x => x.nhom === 'KHONG_TIM_THAY' && !x.daXuLy).length;
   el.innerHTML = `
-    <div class="dem-o ok"><div class="dem-icon">✅</div><span class="dem-so">${soOK}</span><div class="dem-nhan">Sẵn sàng</div></div>
-    <div class="dem-o canh-bao"><div class="dem-icon">⚠️</div><span class="dem-so">${soCanhBao}</span><div class="dem-nhan">Sai trạng thái</div></div>
-    <div class="dem-o loi"><div class="dem-icon">❌</div><span class="dem-so">${soLoi}</span><div class="dem-nhan">Không tìm thấy</div></div>`;
+    <div class="dem-o ok"><div class="hang-tren"><span class="dem-icon">✅</span><span class="dem-so">${soOK}</span></div><div class="dem-nhan">Sẵn sàng</div></div>
+    <div class="dem-o canh-bao"><div class="hang-tren"><span class="dem-icon">⚠️</span><span class="dem-so">${soCanhBao}</span></div><div class="dem-nhan">Sai trạng thái</div></div>
+    <div class="dem-o loi"><div class="hang-tren"><span class="dem-icon">❌</span><span class="dem-so">${soLoi}</span></div><div class="dem-nhan">Không tìm thấy</div></div>`;
 }
 
 function renderDsDangQuet() {
@@ -329,7 +368,7 @@ function renderXemLai() {
       <div class="tieu-de-nhom">✅ Sẵn sàng cập nhật (${nhomOK.length})</div>
       <div class="danh-sach-nhom">${nhomOK.length ? nhomOK.map(dongXemLaiOK).join('') : dongTrong()}</div>
       <button class="btn-xac-nhan-nhom" id="btn-xac-nhan" ${nhomOK.length === 0 ? 'disabled' : ''}>
-        ${icon('check')} Xác nhận cập nhật (${nhomOK.length})
+        ${icon('check', { size: 48 })} Xác nhận cập nhật (${nhomOK.length})
       </button>
     </div>
 
