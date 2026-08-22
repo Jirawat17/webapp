@@ -67,9 +67,22 @@ Thứ tự này định nghĩa tại `data/pipelineTinhTrang.js` — sửa file 
 
 **Thay đổi quan trọng nhất so với bản trước**: kịch bản không còn hardcode trong `data/scenarios.js` (file này đã xoá) — giờ app đọc thẳng 3 cột `Ten_Kich_Ban`, `Trang_Thai_Yeu_Cau`, `Trang_Thai_Sau` từ tab `CauHinhKichBan` mỗi lần cần. **Sửa/thêm kịch bản chỉ cần sửa trực tiếp trên Sheet, không cần sửa code hay deploy lại.**
 
-Mỗi lượt quét kịch bản (thành công hay lỗi) đều được ghi vào:
-- `LichSuHoatDong` (nhật ký chung toàn hệ thống)
-- `NhatKyQuetHangLoat` (nhật ký riêng cho quét QR, đúng schema đã có sẵn trong Sheet của bạn)
+### Luồng quét hàng loạt (2 bước: Kiểm tra → Xác nhận)
+
+Quét **không** ghi Sheet ngay. Mỗi mã quét được gọi qua `POST /api/qr/kich-ban/:id/kiem-tra` — chỉ đọc, phân vào 1 trong 3 nhóm và **luôn ghi log ngay lập tức** (cả `LichSuHoatDong` lẫn `NhatKyQuetHangLoat`) dù kết quả là gì:
+
+| Nhóm | Điều kiện | Xử lý |
+|---|---|---|
+| ✅ OK | Mã tồn tại + đúng `Trang_Thai_Yeu_Cau` | Vào danh sách "Sẵn sàng cập nhật" |
+| ⚠️ Sai trạng thái | Mã tồn tại nhưng `TINH_TRANG` khác yêu cầu | Vào danh sách "cần xem lại", chặn không cho thoát màn Xem lại tới khi bấm "Đã xem" hoặc "Xóa" |
+| ❌ Không tìm thấy | Mã không khớp `STT_Key` nào | Tương tự nhóm trên |
+
+Khi nhân viên bấm "Xác nhận cập nhật", client gọi `POST /api/qr/kich-ban/:id/xac-nhan-hang-loat` với mảng `sttKeys` (chỉ nhóm OK). **Server kiểm tra lại từng mã một lần nữa** trước khi ghi (phòng trường hợp trạng thái đã đổi giữa lúc quét và lúc xác nhận — ví dụ 2 người cùng quét 1 đơn) — mã nào không còn hợp lệ sẽ trả về trong `loi[]` kèm lý do cụ thể, **không âm thầm bỏ qua**, và tự động chuyển sang nhóm "Sai trạng thái" để bắt buộc xử lý tiếp.
+
+Toàn bộ log (kể cả kiểm tra lỗi/cảnh báo chưa xác nhận) nằm trong `NhatKyQuetHangLoat`, cột `Ket_Qua` phân biệt rõ: `KIEM_TRA_OK` / `KIEM_TRA_SAI_TRANG_THAI` / `KIEM_TRA_KHONG_TIM_THAY` (lúc quét) và `THANH_CONG` / `LOI_XAC_NHAN` (lúc xác nhận thật) — dùng để thống kê sau này có bao nhiêu lần quét nhầm, ai quét, mã nào, phục vụ cải thiện việc in/dán QR.
+
+Endpoint `POST /api/qr/kich-ban/:id/quet` (ghi ngay lập tức, không qua bước xác nhận) vẫn giữ nguyên — dùng riêng cho nút "Chuyển sang..." thủ công ở trang chi tiết đơn (`order.html`), không dùng trong màn hình quét camera nữa.
+
 
 ### ⚠️ Kịch bản hiện tại trong `CauHinhKichBan` bị LỆCH với dữ liệu thật
 
@@ -81,6 +94,15 @@ Mỗi lượt quét kịch bản (thành công hay lỗi) đều được ghi v�
 **Cách sửa**: mở tab `CauHinhKichBan`, sửa 2 dòng đó cho khớp chính xác với chuỗi đang dùng trong `Don_Hang_ALL` (copy-paste để chắc không lệch dấu cách/chính tả). Tôi không tự sửa vì không có quyền ghi vào Sheet thật của bạn — chỉ đọc được bản `.xlsx` bạn tải lên.
 
 Cũng chưa có kịch bản nào cho các giai đoạn sau `B4`: `B5_Đã sản xuất`, `SHIPPED_Đã gửi vận chuyển`, `IN TRAINSIT...`, `DELIVERED...`. Nếu muốn quét QR để chuyển các giai đoạn này, thêm dòng mới vào `CauHinhKichBan` theo đúng 3 cột hiện có.
+
+### Giao diện màn quét kịch bản
+
+- 3 ô đếm to (✅ Sẵn sàng / ⚠️ Sai trạng thái / ❌ Không tìm thấy) cập nhật realtime theo từng lượt quét.
+- Toast "vừa quét" nổi ngay dưới camera, tự mờ sau 3.5 giây.
+- Danh sách đang quét hiện ngay dưới, mới nhất trên đầu, mỗi dòng có nút XÓA để sửa lỗi quét nhầm ngay lập tức (không cần đợi màn Xem lại).
+- Rung 1 lần dài (~500ms) khi Không tìm thấy mã — không rung với 2 nhóm còn lại. Dùng `navigator.vibrate`, chỉ hoạt động trên trình duyệt/thiết bị hỗ trợ (Android nói chung; iOS Safari không hỗ trợ).
+- Nút bật/tắt đèn flash dùng `Html5Qrcode.applyVideoConstraints({advanced:[{torch:true}]})` — **không phải thiết bị/trình duyệt nào cũng hỗ trợ** (đặc biệt iPhone/Safari thường không bật được đèn qua web); khi không hỗ trợ, app báo lỗi rõ ràng thay vì im lặng.
+- Màn "Xem lại" khoá nút "Tiếp tục quét" cho tới khi mọi mục trong 2 nhóm Cảnh báo/Lỗi được bấm "Đã xem" hoặc "Xóa" — tránh bỏ sót.
 
 ## 6. Cảnh báo Telegram 3 tầng + badge trên web
 

@@ -14,12 +14,29 @@
     <button id="mode-lookup" class="active"></button>
     <button id="mode-batch"></button>
   </div>
-  <div id="chon-kich-ban" style="display:none; margin-bottom:16px;">
-    <label class="sr-only" for="kich-ban-select">Chọn kịch bản quét</label>
-    <select id="kich-ban-select" style="width:100%; padding:12px; border-radius:8px; min-height:44px; border:1px solid var(--color-border)"></select>
+
+  <div id="chon-kich-ban-wrap" style="display:none"></div>
+
+  <div id="camera-wrap" style="display:none">
+    <button id="btn-flash" class="btn-flash"></button>
+    <div id="dem-nhom" class="dem-nhom chi-che-do-kich-ban" style="display:none"></div>
+
+    <div class="khu-vuc-camera">
+      <div id="qr-reader" style="max-width:480px;margin:0 auto;border-radius:12px;overflow:hidden;"></div>
+      <div id="toast-vua-quet" class="toast-vua-quet"></div>
+    </div>
+
+    <div id="ket-qua-tra-cuu"></div>
+
+    <button id="btn-dung-quet" class="btn-dung-quet chi-che-do-kich-ban" style="display:none">Dừng quét → Xem lại</button>
+
+    <div class="chi-che-do-kich-ban" style="display:none">
+      <h3 style="margin-top:20px">Danh sách đang quét</h3>
+      <div id="ds-dang-quet" class="ds-dang-quet"></div>
+    </div>
   </div>
-  <div id="qr-reader" style="width:100%"></div>
-  <div id="ket-qua"></div>
+
+  <div id="khu-xem-lai" class="man-xem-lai" style="display:none"></div>
 </div>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
@@ -27,7 +44,18 @@
 <script src="/js/api.js"></script>
 <script src="/js/chatbot.js"></script>
 <script>
-let user, mode = 'lookup', scanner, dangXuLy = false;
+let user;
+let mode = 'lookup';
+let scanner = null;
+let cameraDangChayCho = null;
+let dangXuLyQuet = false;
+let denFlashBat = false;
+let toastTimer = null;
+
+let kichBanDaTai = [];
+let kichBanDangChon = null;
+let dsQuet = [];
+let dangQuetKichBan = true;
 
 document.getElementById('mode-lookup').innerHTML = icon('scan') + ' Tra cứu';
 document.getElementById('mode-batch').innerHTML = icon('check') + ' Quét kịch bản';
@@ -37,65 +65,362 @@ document.getElementById('mode-batch').innerHTML = icon('check') + ' Quét kịch
   if (!user) return;
   renderNav(user, 'scan');
   await taiKichBan();
-  startScanner();
+  capNhatManHinh();
 })();
 
-document.getElementById('mode-lookup').onclick = () => chuyenMode('lookup');
-document.getElementById('mode-batch').onclick = () => chuyenMode('batch');
-
-function chuyenMode(m) {
-  mode = m;
-  document.getElementById('mode-lookup').classList.toggle('active', m === 'lookup');
-  document.getElementById('mode-batch').classList.toggle('active', m === 'batch');
-  document.getElementById('chon-kich-ban').style.display = m === 'batch' ? 'block' : 'none';
-}
+document.getElementById('mode-lookup').onclick = () => { mode = 'lookup'; capNhatManHinh(); };
+document.getElementById('mode-batch').onclick = () => { mode = 'batch'; capNhatManHinh(); };
 
 async function taiKichBan() {
-  const list = await apiFetch('/qr/kich-ban');
-  const sel = document.getElementById('kich-ban-select');
-  sel.innerHTML = list.map(k => `<option value="${k.id}">${escapeHtml(k.label)}</option>`).join('');
-  if (list.length === 0) {
-    const btn = document.getElementById('mode-batch');
-    btn.disabled = true;
-    btn.title = 'Chưa có kịch bản nào trong tab CauHinhKichBan';
+  try {
+    kichBanDaTai = await apiFetch('/qr/kich-ban');
+  } catch (e) {
+    kichBanDaTai = [];
   }
 }
 
-function startScanner() {
-  scanner = new Html5Qrcode('qr-reader');
-  scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: 250 }, onScanSuccess)
-    .catch(err => {
-      document.getElementById('ket-qua').innerHTML =
-        `<div class="ket-qua-box loi">${icon('alert')} Không mở được camera: ${escapeHtml(String(err))}. Hãy cho phép quyền camera.</div>`;
-    });
+async function capNhatManHinh() {
+  document.getElementById('mode-lookup').classList.toggle('active', mode === 'lookup');
+  document.getElementById('mode-batch').classList.toggle('active', mode === 'batch');
+
+  document.getElementById('chon-kich-ban-wrap').style.display = 'none';
+  document.getElementById('camera-wrap').style.display = 'none';
+  document.getElementById('khu-xem-lai').style.display = 'none';
+
+  let cameraCanChay = null;
+
+  if (mode === 'lookup') {
+    document.getElementById('camera-wrap').style.display = 'block';
+    document.getElementById('ket-qua-tra-cuu').style.display = 'block';
+    setBatchOnlyVisible(false);
+    cameraCanChay = 'lookup';
+  } else if (!kichBanDangChon) {
+    renderChonKichBan();
+    document.getElementById('chon-kich-ban-wrap').style.display = 'block';
+  } else if (dangQuetKichBan) {
+    document.getElementById('camera-wrap').style.display = 'block';
+    document.getElementById('ket-qua-tra-cuu').style.display = 'none';
+    setBatchOnlyVisible(true);
+    renderDemNhom();
+    renderDsDangQuet();
+    cameraCanChay = 'batch';
+  } else {
+    document.getElementById('khu-xem-lai').style.display = 'block';
+    renderXemLai();
+  }
+
+  await dieuChinhCamera(cameraCanChay);
 }
 
-async function onScanSuccess(sttKey) {
-  if (dangXuLy) return;
-  dangXuLy = true;
-  const el = document.getElementById('ket-qua');
+function setBatchOnlyVisible(hien) {
+  document.querySelectorAll('.chi-che-do-kich-ban').forEach(e => { e.style.display = hien ? '' : 'none'; });
+}
+
+function renderChonKichBan() {
+  const el = document.getElementById('chon-kich-ban-wrap');
+  if (kichBanDaTai.length === 0) {
+    el.innerHTML = '<p>Chưa có kịch bản nào trong tab CauHinhKichBan.</p>';
+    return;
+  }
+  el.innerHTML = `
+    <h3>Chọn kịch bản để bắt đầu quét</h3>
+    <div class="kich-ban-picker">
+      ${kichBanDaTai.map(k => `
+        <button class="kich-ban-btn" data-id="${k.id}">
+          ${escapeHtml(k.label)}
+          ${k.requireStatus ? `<span class="phu-de">Yêu cầu đang ở: ${escapeHtml(k.requireStatus)}</span>` : ''}
+        </button>`).join('')}
+    </div>`;
+  el.querySelectorAll('.kich-ban-btn').forEach(btn => { btn.onclick = () => chonKichBan(btn.dataset.id); });
+}
+
+function chonKichBan(id) {
+  kichBanDangChon = kichBanDaTai.find(k => k.id === id) || null;
+  dsQuet = [];
+  dangQuetKichBan = true;
+  capNhatManHinh();
+}
+
+async function dieuChinhCamera(muonChay) {
+  if (muonChay === cameraDangChayCho) return;
+  if (cameraDangChayCho !== null) await dungCamera();
+  cameraDangChayCho = muonChay;
+  if (muonChay === 'lookup') await batDauCamera(xuLyQuetTraCuu);
+  else if (muonChay === 'batch') await batDauCamera(xuLyQuetKichBan);
+}
+
+async function batDauCamera(onScan) {
+  if (!scanner) scanner = new Html5Qrcode('qr-reader');
+  try {
+    await scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: 250 }, onScan);
+  } catch (err) {
+    document.getElementById('ket-qua-tra-cuu').innerHTML =
+      `<div class="ket-qua-box loi">${icon('alert')} Không mở được camera: ${escapeHtml(String(err))}. Hãy cho phép quyền camera.</div>`;
+  }
+}
+
+async function dungCamera() {
+  if (scanner) {
+    try { await scanner.stop(); } catch (e) {}
+  }
+  cameraDangChayCho = null;
+  denFlashBat = false;
+  capNhatNutFlash();
+}
+
+document.getElementById('btn-flash').onclick = async () => {
+  if (!scanner || !cameraDangChayCho) return;
+  try {
+    denFlashBat = !denFlashBat;
+    await scanner.applyVideoConstraints({ advanced: [{ torch: denFlashBat }] });
+  } catch (e) {
+    denFlashBat = false;
+    alert('Thiết bị hoặc trình duyệt này không hỗ trợ bật đèn flash qua web (thường gặp trên iPhone/Safari).');
+  }
+  capNhatNutFlash();
+};
+
+function capNhatNutFlash() {
+  const btn = document.getElementById('btn-flash');
+  btn.classList.toggle('dang-bat', denFlashBat);
+  btn.innerHTML = `🔦 ${denFlashBat ? 'TẮT ĐÈN FLASH' : 'BẬT ĐÈN FLASH'}`;
+}
+
+async function xuLyQuetTraCuu(sttKey) {
+  if (dangXuLyQuet) return;
+  dangXuLyQuet = true;
+  const el = document.getElementById('ket-qua-tra-cuu');
 
   try {
-    if (mode === 'lookup') {
-      const don = await apiFetch('/qr/tra-cuu/' + encodeURIComponent(sttKey));
-      el.innerHTML = `<div class="ket-qua-box">
-        ${icon('package')}
-        <div>
-          <strong>${escapeHtml(don.TieuDeSanPham || don.STT_Key)}</strong> — ${escapeHtml(don.TenKhachHang || '')}<br>
-          Trạng thái: <span class="badge ${lopTrangThai(don.TINH_TRANG)}">${escapeHtml(don.TINH_TRANG || '')}</span><br>
-          <a href="/order.html?stt=${encodeURIComponent(sttKey)}">Xem chi tiết ${icon('arrowRight', {size:14})}</a>
-        </div>
-      </div>`;
-    } else {
-      const scenarioId = document.getElementById('kich-ban-select').value;
-      const res = await apiFetch(`/qr/kich-ban/${scenarioId}/quet`, { method: 'POST', body: JSON.stringify({ sttKey }) });
-      el.innerHTML = `<div class="ket-qua-box ok">${icon('check')} ${escapeHtml(res.don.STT_Key)}: chuyển sang ${escapeHtml(res.don.TINH_TRANG)}</div>`;
-    }
+    const don = await apiFetch('/qr/tra-cuu/' + encodeURIComponent(sttKey));
+    el.innerHTML = `<div class="ket-qua-box">
+      ${icon('package')}
+      <div>
+        <strong>${escapeHtml(don.TieuDeSanPham || don.STT_Key)}</strong> — ${escapeHtml(don.TenKhachHang || '')}<br>
+        Trạng thái: <span class="badge ${lopTrangThai(don.TINH_TRANG)}">${escapeHtml(don.TINH_TRANG || '')}</span><br>
+        <a href="/order.html?stt=${encodeURIComponent(sttKey)}">Xem chi tiết ${icon('arrowRight', {size:14})}</a>
+      </div>
+    </div>`;
   } catch (e) {
     el.innerHTML = `<div class="ket-qua-box loi">${icon('alert')} ${escapeHtml(e.message)}</div>`;
   }
 
-  setTimeout(() => { dangXuLy = false; }, 1500); // chống quét trùng liên tiếp cùng 1 mã
+  setTimeout(() => { dangXuLyQuet = false; }, 1500);
+}
+
+async function xuLyQuetKichBan(sttKey) {
+  if (dangXuLyQuet) return;
+
+  const daCo = dsQuet.find(x => x.sttKey === sttKey);
+  if (daCo) {
+    hienThiToast('trung', `Mã ${sttKey} đã có trong danh sách`);
+    nhayDong(daCo.key);
+    return;
+  }
+
+  dangXuLyQuet = true;
+  let ketQua;
+  try {
+    ketQua = await apiFetch(`/qr/kich-ban/${kichBanDangChon.id}/kiem-tra`, {
+      method: 'POST', body: JSON.stringify({ sttKey }),
+    });
+  } catch (e) {
+    alert('Lỗi khi kiểm tra mã: ' + e.message);
+    dangXuLyQuet = false;
+    return;
+  }
+
+  const item = {
+    key: sttKey + '_' + Date.now(),
+    sttKey: ketQua.sttKey || sttKey,
+    tieuDe: ketQua.tieuDe || '',
+    tenKhachHang: ketQua.tenKhachHang || '',
+    nhom: ketQua.nhom,
+    lyDo: ketQua.lyDo || '',
+    trangThaiHienTai: ketQua.trangThaiHienTai || '',
+    trangThaiYeuCau: ketQua.trangThaiYeuCau || '',
+    trangThaiSau: ketQua.trangThaiSau || '',
+    daXuLy: false,
+  };
+  dsQuet.unshift(item);
+
+  hienThiToast(item.nhom, item.tieuDe || item.sttKey);
+  if (item.nhom === 'KHONG_TIM_THAY' && navigator.vibrate) navigator.vibrate(500);
+
+  renderDemNhom();
+  renderDsDangQuet();
+
+  setTimeout(() => { dangXuLyQuet = false; }, 700);
+}
+
+function hienThiToast(loai, noiDung) {
+  clearTimeout(toastTimer);
+  const el = document.getElementById('toast-vua-quet');
+  const MAP = {
+    OK: { cls: 'ok', icon: '✅' },
+    SAI_TRANG_THAI: { cls: 'canh-bao', icon: '⚠️' },
+    KHONG_TIM_THAY: { cls: 'loi', icon: '❌' },
+    trung: { cls: 'canh-bao', icon: '🔁' },
+  };
+  const m = MAP[loai] || MAP.trung;
+  el.className = 'toast-vua-quet hien ' + m.cls;
+  el.innerHTML = `<span style="font-size:1.4rem">${m.icon}</span> ${escapeHtml(noiDung)}`;
+  toastTimer = setTimeout(() => { el.classList.remove('hien'); }, 3500);
+}
+
+function lopNhom(nhom) { return nhom === 'OK' ? 'ok' : nhom === 'SAI_TRANG_THAI' ? 'canh-bao' : 'loi'; }
+function nhanIconNhom(nhom) { return nhom === 'OK' ? '✅' : nhom === 'SAI_TRANG_THAI' ? '⚠️' : '❌'; }
+
+function renderDemNhom() {
+  const el = document.getElementById('dem-nhom');
+  const soOK = dsQuet.filter(x => x.nhom === 'OK' && !x.daXuLy).length;
+  const soCanhBao = dsQuet.filter(x => x.nhom === 'SAI_TRANG_THAI' && !x.daXuLy).length;
+  const soLoi = dsQuet.filter(x => x.nhom === 'KHONG_TIM_THAY' && !x.daXuLy).length;
+  el.innerHTML = `
+    <div class="dem-o ok"><div class="dem-icon">✅</div><span class="dem-so">${soOK}</span><div class="dem-nhan">Sẵn sàng</div></div>
+    <div class="dem-o canh-bao"><div class="dem-icon">⚠️</div><span class="dem-so">${soCanhBao}</span><div class="dem-nhan">Sai trạng thái</div></div>
+    <div class="dem-o loi"><div class="dem-icon">❌</div><span class="dem-so">${soLoi}</span><div class="dem-nhan">Không tìm thấy</div></div>`;
+}
+
+function renderDsDangQuet() {
+  const el = document.getElementById('ds-dang-quet');
+  if (dsQuet.length === 0) { el.innerHTML = '<p style="color:var(--color-text-faint)">Chưa quét mã nào.</p>'; return; }
+
+  el.innerHTML = dsQuet.map(item => `
+    <div class="dong-quet ${lopNhom(item.nhom)}" id="dong-${item.key}">
+      <span style="font-size:1.3rem">${nhanIconNhom(item.nhom)}</span>
+      <div class="noi-dung">
+        <strong>${escapeHtml(item.sttKey)}${item.tieuDe ? ' · ' + escapeHtml(item.tieuDe) : ''}</strong>
+        <div class="ly-do">${escapeHtml(item.lyDo || (item.nhom === 'OK' ? `Sẽ chuyển: ${item.trangThaiHienTai} → ${item.trangThaiSau}` : ''))}</div>
+      </div>
+      <button class="btn-xoa-dong" onclick="xoaKhoiDsQuet('${item.key}', false)">XÓA</button>
+    </div>`).join('');
+}
+
+function nhayDong(key) {
+  const el = document.getElementById('dong-' + key);
+  if (!el) return;
+  el.style.outline = '3px solid var(--color-primary)';
+  setTimeout(() => { if (el) el.style.outline = 'none'; }, 700);
+}
+
+function xoaKhoiDsQuet(key, tuManXemLai) {
+  dsQuet = dsQuet.filter(x => x.key !== key);
+  renderDemNhom();
+  if (tuManXemLai) renderXemLai(); else renderDsDangQuet();
+}
+
+document.getElementById('btn-dung-quet').onclick = async () => {
+  dangQuetKichBan = false;
+  await capNhatManHinh();
+};
+
+function renderXemLai() {
+  const el = document.getElementById('khu-xem-lai');
+  const nhomOK = dsQuet.filter(x => x.nhom === 'OK' && !x.daXuLy);
+  const nhomCanhBao = dsQuet.filter(x => x.nhom === 'SAI_TRANG_THAI' && !x.daXuLy);
+  const nhomLoi = dsQuet.filter(x => x.nhom === 'KHONG_TIM_THAY' && !x.daXuLy);
+  const coTheThoat = nhomCanhBao.length === 0 && nhomLoi.length === 0;
+
+  el.innerHTML = `
+    <h2>Xem lại kết quả quét — ${escapeHtml(kichBanDangChon.label)}</h2>
+
+    <div class="nhom-xem-lai ok">
+      <div class="tieu-de-nhom">✅ Sẵn sàng cập nhật (${nhomOK.length})</div>
+      <div class="danh-sach-nhom">${nhomOK.length ? nhomOK.map(dongXemLaiOK).join('') : dongTrong()}</div>
+      <button class="btn-xac-nhan-nhom" id="btn-xac-nhan" ${nhomOK.length === 0 ? 'disabled' : ''}>
+        ${icon('check')} Xác nhận cập nhật (${nhomOK.length})
+      </button>
+    </div>
+
+    <div class="nhom-xem-lai canh-bao">
+      <div class="tieu-de-nhom">⚠️ Sai trạng thái (${nhomCanhBao.length})</div>
+      <div class="danh-sach-nhom">${nhomCanhBao.length ? nhomCanhBao.map(dongXemLaiCanBaoLoi).join('') : dongTrong()}</div>
+    </div>
+
+    <div class="nhom-xem-lai loi">
+      <div class="tieu-de-nhom">❌ Không tìm thấy (${nhomLoi.length})</div>
+      <div class="danh-sach-nhom">${nhomLoi.length ? nhomLoi.map(dongXemLaiCanBaoLoi).join('') : dongTrong()}</div>
+    </div>
+
+    <button class="btn-tiep-tuc-quet ${coTheThoat ? 'san-sang' : ''}" id="btn-tiep-tuc" ${coTheThoat ? '' : 'disabled'}>
+      ${coTheThoat ? 'Tiếp tục quét' : 'Cần xử lý hết nhóm Cảnh báo & Lỗi trước khi tiếp tục'}
+    </button>
+  `;
+
+  document.getElementById('btn-xac-nhan').onclick = xacNhanCapNhatHangLoat;
+  document.getElementById('btn-tiep-tuc').onclick = tiepTucQuet;
+  el.querySelectorAll('[data-danxem]').forEach(btn => { btn.onclick = () => danhDauDaXuLy(btn.dataset.danxem); });
+  el.querySelectorAll('[data-xoa]').forEach(btn => { btn.onclick = () => xoaKhoiDsQuet(btn.dataset.xoa, true); });
+}
+
+function dongTrong() {
+  return '<div class="dong-xem-lai"><span style="color:var(--color-text-faint)">Không có mục nào.</span></div>';
+}
+
+function dongXemLaiOK(item) {
+  return `<div class="dong-xem-lai">
+    <div class="noi-dung">
+      <strong>${escapeHtml(item.sttKey)}${item.tieuDe ? ' · ' + escapeHtml(item.tieuDe) : ''}</strong>
+      <div class="ly-do">${escapeHtml(item.tenKhachHang || '')} · Sẽ chuyển: ${escapeHtml(item.trangThaiHienTai)} → ${escapeHtml(item.trangThaiSau)}</div>
+    </div>
+  </div>`;
+}
+
+function dongXemLaiCanBaoLoi(item) {
+  return `<div class="dong-xem-lai">
+    <div class="noi-dung">
+      <strong>${escapeHtml(item.sttKey)}${item.tieuDe ? ' · ' + escapeHtml(item.tieuDe) : ''}</strong>
+      <div class="ly-do">${escapeHtml(item.lyDo)}</div>
+    </div>
+    <div class="nhom-nut">
+      <button data-danxem="${item.key}">Đã xem</button>
+      <button data-xoa="${item.key}">Xóa</button>
+    </div>
+  </div>`;
+}
+
+function danhDauDaXuLy(key) {
+  const item = dsQuet.find(x => x.key === key);
+  if (item) item.daXuLy = true;
+  renderDemNhom();
+  renderXemLai();
+}
+
+async function xacNhanCapNhatHangLoat() {
+  const nhomOK = dsQuet.filter(x => x.nhom === 'OK' && !x.daXuLy);
+  if (nhomOK.length === 0) return;
+
+  const btn = document.getElementById('btn-xac-nhan');
+  btn.disabled = true;
+  btn.textContent = 'Đang cập nhật...';
+
+  try {
+    const res = await apiFetch(`/qr/kich-ban/${kichBanDangChon.id}/xac-nhan-hang-loat`, {
+      method: 'POST', body: JSON.stringify({ sttKeys: nhomOK.map(x => x.sttKey) }),
+    });
+
+    dsQuet = dsQuet.filter(x => !res.thanhCong.includes(x.sttKey));
+
+    res.loi.forEach(l => {
+      const item = dsQuet.find(x => x.sttKey === l.sttKey);
+      if (item) { item.nhom = 'SAI_TRANG_THAI'; item.lyDo = l.lyDo; item.daXuLy = false; }
+    });
+
+    if (res.loi.length > 0) {
+      alert(`Đã cập nhật ${res.thanhCong.length} đơn. Có ${res.loi.length} đơn KHÔNG cập nhật được — xem lại nhóm "Sai trạng thái" bên dưới.`);
+    }
+  } catch (e) {
+    alert('Lỗi khi xác nhận: ' + e.message);
+  }
+
+  renderDemNhom();
+  renderXemLai();
+}
+
+async function tiepTucQuet() {
+  dangQuetKichBan = true;
+  await capNhatManHinh();
 }
 </script>
 </body>

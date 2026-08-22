@@ -250,6 +250,117 @@ a { color: var(--color-primary); }
 .ket-qua-box.ok { border-left: 4px solid var(--color-success-text); }
 .ket-qua-box.loi { border-left: 4px solid var(--color-danger-text); }
 
+/* --- Chọn kịch bản dạng nút to (phóng ~300% so với dropdown gốc) --- */
+.kich-ban-picker { display: flex; flex-direction: column; gap: var(--space-3); margin-bottom: var(--space-4); }
+.kich-ban-btn {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+  padding: 28px 24px; border-radius: var(--radius-lg); border: 2px solid var(--color-border);
+  background: var(--color-surface); cursor: pointer; text-align: left; min-height: 88px;
+  font-size: 1.5rem; font-weight: 700; color: var(--color-text); box-shadow: var(--shadow-sm);
+}
+.kich-ban-btn:hover { border-color: var(--color-primary); }
+.kich-ban-btn.active { background: var(--color-primary); border-color: var(--color-primary); color: white; }
+.kich-ban-btn .phu-de { font-size: 1rem; font-weight: 500; opacity: 0.8; display: block; margin-top: 4px; }
+.kich-ban-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.doi-kich-ban-khoa { background: var(--color-warning-bg); color: var(--color-warning-text); padding: var(--space-3); border-radius: var(--radius-md); margin-bottom: var(--space-3); font-size: 0.9rem; }
+
+/* --- 3 ô đếm to: OK / cảnh báo / lỗi --- */
+.dem-nhom { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); margin-bottom: var(--space-3); }
+.dem-o {
+  border-radius: var(--radius-md); padding: 14px 8px; text-align: center; box-shadow: var(--shadow-sm);
+}
+.dem-o .dem-icon { font-size: 1.6rem; line-height: 1; }
+.dem-o .dem-so { font-size: 2.4rem; font-weight: 800; line-height: 1.1; display: block; }
+.dem-o .dem-nhan { font-size: 0.78rem; font-weight: 600; opacity: 0.85; }
+.dem-o.ok   { background: var(--color-success-bg); color: var(--color-success-text); }
+.dem-o.canh-bao { background: var(--color-warning-bg); color: var(--color-warning-text); }
+.dem-o.loi  { background: var(--color-danger-bg); color: var(--color-danger-text); }
+
+/* --- Nút bật/tắt đèn flash --- */
+.btn-flash {
+  display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+  padding: 14px; border-radius: var(--radius-md); border: 2px solid var(--color-border);
+  background: var(--color-surface); font-size: 1rem; font-weight: 700; cursor: pointer;
+  min-height: var(--tap-min); margin-bottom: var(--space-3);
+}
+.btn-flash.dang-bat { background: var(--color-warning-bg); border-color: var(--color-warning-text); color: var(--color-warning-text); }
+
+/* --- Khu vực camera + toast "vừa quét" nổi ngay dưới --- */
+.khu-vuc-camera { position: relative; margin-bottom: var(--space-3); }
+.toast-vua-quet {
+  margin-top: var(--space-2); padding: 14px 16px; border-radius: var(--radius-md);
+  display: flex; align-items: center; gap: 10px; font-size: 1.1rem; font-weight: 700;
+  opacity: 0; transform: translateY(-6px); transition: opacity 0.6s ease, transform 0.6s ease;
+  pointer-events: none;
+}
+.toast-vua-quet.hien { opacity: 1; transform: translateY(0); }
+.toast-vua-quet.ok       { background: var(--color-success-bg); color: var(--color-success-text); }
+.toast-vua-quet.canh-bao { background: var(--color-warning-bg); color: var(--color-warning-text); }
+.toast-vua-quet.loi      { background: var(--color-danger-bg); color: var(--color-danger-text); }
+
+/* --- Danh sách đang quét (mới nhất trên đầu), mỗi dòng có nút XÓA to --- */
+.ds-dang-quet { display: flex; flex-direction: column; gap: 8px; }
+.dong-quet {
+  display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: var(--radius-md);
+  background: var(--color-surface); box-shadow: var(--shadow-sm); border-left: 4px solid var(--color-neutral-bg);
+}
+.dong-quet.ok       { border-left-color: var(--color-success-text); }
+.dong-quet.canh-bao { border-left-color: var(--color-warning-text); }
+.dong-quet.loi      { border-left-color: var(--color-danger-text); }
+.dong-quet .noi-dung { flex: 1; min-width: 0; }
+.dong-quet .noi-dung strong { display: block; font-size: 0.95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dong-quet .noi-dung .ly-do { font-size: 0.8rem; color: var(--color-text-muted); }
+.btn-xoa-dong {
+  flex-shrink: 0; padding: 10px 16px; border-radius: var(--radius-sm); border: none;
+  background: var(--color-danger-bg); color: var(--color-danger-text); font-weight: 700; cursor: pointer;
+  min-height: 40px; font-size: 0.85rem;
+}
+
+/* --- Nút "Dừng quét" --- */
+.btn-dung-quet {
+  width: 100%; padding: 16px; border-radius: var(--radius-md); border: none;
+  background: var(--color-text); color: white; font-size: 1.05rem; font-weight: 700; cursor: pointer;
+  min-height: var(--tap-min); margin-top: var(--space-3);
+}
+
+/* --- Màn "Xem lại" theo 3 nhóm --- */
+.man-xem-lai h3 { display: flex; align-items: center; gap: 8px; }
+.nhom-xem-lai { margin-bottom: var(--space-5); }
+.nhom-xem-lai .tieu-de-nhom {
+  font-size: 1.1rem; font-weight: 800; padding: 10px 14px; border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+.nhom-xem-lai.ok .tieu-de-nhom       { background: var(--color-success-bg); color: var(--color-success-text); }
+.nhom-xem-lai.canh-bao .tieu-de-nhom { background: var(--color-warning-bg); color: var(--color-warning-text); }
+.nhom-xem-lai.loi .tieu-de-nhom      { background: var(--color-danger-bg); color: var(--color-danger-text); }
+.nhom-xem-lai .danh-sach-nhom { border: 1px solid var(--color-border); border-top: none; border-radius: 0 0 var(--radius-sm) var(--radius-sm); }
+.dong-xem-lai { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--color-border); background: var(--color-surface); }
+.dong-xem-lai:last-child { border-bottom: none; border-radius: 0 0 var(--radius-sm) var(--radius-sm); }
+.dong-xem-lai .noi-dung { flex: 1; min-width: 0; }
+.dong-xem-lai .noi-dung strong { display: block; }
+.dong-xem-lai .noi-dung .ly-do { font-size: 0.85rem; color: var(--color-text-muted); }
+.dong-xem-lai .nhom-nut { display: flex; gap: 6px; flex-shrink: 0; }
+.dong-xem-lai .nhom-nut button {
+  padding: 10px 14px; border-radius: var(--radius-sm); border: 1.5px solid var(--color-border);
+  background: var(--color-surface); font-weight: 700; font-size: 0.85rem; cursor: pointer; min-height: 40px;
+}
+.dong-xem-lai.da-xu-ly { opacity: 0.5; }
+.dong-xem-lai.da-xu-ly .noi-dung strong { text-decoration: line-through; }
+
+.btn-xac-nhan-nhom {
+  width: 100%; padding: 16px; border-radius: var(--radius-md); border: none;
+  background: var(--color-success-text); color: white; font-size: 1.05rem; font-weight: 700; cursor: pointer;
+  min-height: var(--tap-min); margin-top: var(--space-2);
+}
+.btn-xac-nhan-nhom:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-tiep-tuc-quet {
+  width: 100%; padding: 16px; border-radius: var(--radius-md); border: 2px solid var(--color-border);
+  background: var(--color-surface); color: var(--color-text); font-size: 1.05rem; font-weight: 700; cursor: pointer;
+  min-height: var(--tap-min); margin-top: var(--space-5);
+}
+.btn-tiep-tuc-quet:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-tiep-tuc-quet.san-sang { background: var(--color-primary); border-color: var(--color-primary); color: white; }
+
 /* ============================================================
    DASHBOARD
    ============================================================ */
