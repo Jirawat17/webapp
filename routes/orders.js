@@ -4,6 +4,7 @@ const orderService = require('../services/orderService');
 const alertService = require('../services/alertService');
 const scenarioService = require('../services/scenarioService');
 const { parseNgay } = require('../services/dateUtils');
+const { DANH_SACH_TRANG_THAI_BAO_CAO } = require('../data/pipelineTinhTrang');
 const { ghiLog, layLichSuTheoDon } = require('../services/logService');
 const { requireLogin } = require('../middleware/auth');
 
@@ -34,6 +35,56 @@ router.get('/', async (req, res) => {
 
   list = await lamGiauDon(list);
   res.json(list);
+});
+
+// Chuyển trạng thái HÀNG LOẠT cho nhiều đơn cùng lúc — chọn tự do bất kỳ trong 12 trạng thái,
+// KHÔNG kiểm tra trạng thái hiện tại của từng đơn (khác với kịch bản quét QR — quyết định có chủ ý
+// của người dùng, vì đây là công cụ sửa nhanh/sửa lỗi, không phải luồng vận hành theo pipeline).
+// Mở cho MỌI vai trò, không theo giới hạn cột TRUONG_DUOC_SUA phía dưới (vốn chỉ áp dụng cho sửa
+// từng đơn lẻ) — đây là quyết định có chủ ý, đã thống nhất với người dùng khi thiết kế tính năng này.
+router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
+  const { sttKeys, trangThaiMoi } = req.body;
+  const user = req.session.user;
+
+  if (!Array.isArray(sttKeys) || sttKeys.length === 0) {
+    return res.status(400).json({ error: 'Danh sách đơn trống' });
+  }
+  if (!trangThaiMoi || typeof trangThaiMoi !== 'string') {
+    return res.status(400).json({ error: 'Thiếu trạng thái đích' });
+  }
+  if (!DANH_SACH_TRANG_THAI_BAO_CAO.includes(trangThaiMoi)) {
+    return res.status(400).json({ error: 'Trạng thái đích không hợp lệ' });
+  }
+
+  const thanhCong = [];
+  const loi = [];
+
+  for (const sttKey of sttKeys) {
+    try {
+      const { row } = await orderService.getByKey(sttKey, { fresh: true });
+      if (!row) {
+        loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
+        continue;
+      }
+
+      const trangThaiCu = row.TINH_TRANG;
+      await orderService.update(sttKey, {
+        TINH_TRANG: trangThaiMoi,
+        NguoiCapNhatCuoi: user.ten,
+        ThoiGianCapNhatCuoi: new Date().toISOString(),
+      });
+
+      thanhCong.push(sttKey);
+      ghiLog({
+        nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'CHUYEN_TRANG_THAI_HANG_LOAT',
+        sttKey, chiTiet: { tu: trangThaiCu, sang: trangThaiMoi },
+      }).catch(err => console.error('[Orders] Lỗi ghi log nền:', err.message));
+    } catch (err) {
+      loi.push({ sttKey, lyDo: err.message });
+    }
+  }
+
+  res.json({ ok: true, thanhCong, loi });
 });
 
 // Những kịch bản (trong CauHinhKichBan) có thể áp dụng cho trạng thái hiện tại của đơn —
