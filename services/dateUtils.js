@@ -44,4 +44,17 @@ function dinhDangNgay(giaTri) {
   return `${dd}/${mm}/${d.getFullYear()}`;
 }
 
-module.exports = { parseNgay, dinhDangNgay };
+// Ngày+giờ hiện tại theo ĐÚNG múi giờ Việt Nam (GMT+7) — dùng Intl.DateTimeFormat với timeZone
+// tường minh thay vì new Date().getHours() (vốn đọc theo múi giờ HỆ THỐNG máy chủ, có thể là UTC
+// hoặc múi giờ khác tuỳ VPS cấu hình, không chắc chắn là giờ Việt Nam).
+function dinhDangNgayGioVN(d = new Date()) {
+  const phan = new Intl.DateTimeFormat('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(d);
+  const lay = (type) => phan.find(p => p.type === type)?.value || '';
+  return `${lay('day')}/${lay('month')}/${lay('year')} ${lay('hour')}:${lay('minute')}`;
+}
+
+module.exports = { parseNgay, dinhDangNgay, dinhDangNgayGioVN };

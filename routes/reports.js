@@ -5,7 +5,9 @@ const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const orderService = require('../services/orderService');
 const { layDanhSachKhachHang } = require('../services/khachHangService');
-const { parseNgay, dinhDangNgay } = require('../services/dateUtils');
+const { parseNgay, dinhDangNgay, dinhDangNgayGioVN } = require('../services/dateUtils');
+const { taoQRCodeBuffer } = require('../services/qrService');
+const { taiAnhTuLinkDrive } = require('../services/driveService');
 const { DANH_SACH_TRANG_THAI_BAO_CAO } = require('../data/pipelineTinhTrang');
 const { requireLogin } = require('../middleware/auth');
 
@@ -14,10 +16,11 @@ router.use(requireLogin); // mọi vai trò đăng nhập đều dùng được 
 const FONT_REGULAR = path.join(__dirname, '..', 'fonts', 'NotoSans-Regular.ttf');
 const FONT_BOLD = path.join(__dirname, '..', 'fonts', 'NotoSans-Bold.ttf');
 
-// 2 trạng thái có mẫu xuất RIÊNG — mọi trạng thái khác (kể cả không chọn gì) dùng mẫu mặc định
+// 3 trạng thái có mẫu xuất RIÊNG — mọi trạng thái khác (kể cả không chọn gì) dùng mẫu mặc định
 // (danh sách chi tiết từng đơn). Khớp chính xác chuỗi trong data/pipelineTinhTrang.js.
 const TRANG_THAI_TRACKING = 'B5_Đã sản xuất';
 const TRANG_THAI_GOP_PHOI_AO = 'B1_Đã in';
+const TRANG_THAI_DON_CAN_IN = 'B2_Đã lấy phôi';
 
 function locDon(rows, { tuNgay, denNgay, khachHang, trangThai }) {
   return rows.filter(r => {
@@ -31,8 +34,251 @@ function locDon(rows, { tuNgay, denNgay, khachHang, trangThai }) {
   });
 }
 
-// 3 bộ cột đúng theo mẫu Excel người dùng cung cấp — dùng tên cột THẬT trong Sheet.
-const COT_PHOI_AO_CHI_TIET = [ // mặc định — 1 dòng / 1 đơn
+async function layDonDaLoc(query) {
+  const { rows } = await orderService.getAll();
+  return locDon(rows, query);
+}
+
+function dongThongTinLoc(query, kieu) {
+  const { tuNgay, denNgay, khachHang, trangThai } = query;
+  const khHienThi = khachHang || 'Tất cả khách hàng';
+  const ttHienThi = trangThai || 'Tất cả trạng thái';
+  if (kieu === 'tracking') {
+    return `Khoảng thời gian: ${tuNgay || '(không giới hạn)'} ${denNgay || '(không giới hạn)'} · Khách hàng: ${khHienThi} · Trạng thái: ${ttHienThi}`;
+  }
+  return `Khoảng thời gian: Từ ngày ${tuNgay || '(không giới hạn)'} đến ngày ${denNgay || '(không giới hạn)'} · Khách hàng: ${khHienThi} · Trạng thái: ${ttHienThi}`;
+}
+
+function dongNguoiXuatChuoi(tenNguoiXuat) {
+  return `Người thực hiện trích xuất thông tin: ${tenNguoiXuat} · Thời gian trích xuất thông tin: ${dinhDangNgayGioVN()}`;
+}
+
+// Hậu tố ngày cho tên file tải về — ưu tiên dùng ngày đang lọc, không thì dùng ngày thực xuất file.
+function ngayChoTenFile(query) {
+  const ddmmyyyy = (d) => `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+  const tu = parseNgay(query.tuNgay);
+  const den = parseNgay(query.denNgay);
+  if (tu && den && tu.getTime() !== den.getTime()) return `${ddmmyyyy(tu)}_den_${ddmmyyyy(den)}`;
+  if (tu) return ddmmyyyy(tu);
+  return ddmmyyyy(new Date());
+}
+
+router.get('/khach-hang', async (req, res) => {
+  const list = await layDanhSachKhachHang();
+  res.json(list);
+});
+
+router.get('/trang-thai-theo-loc', async (req, res) => {
+  const { tuNgay, denNgay, khachHang } = req.query;
+  const { rows } = await orderService.getAll();
+  const list = locDon(rows, { tuNgay, denNgay, khachHang });
+
+  const dem = {};
+  list.forEach(r => {
+    const t = r.TINH_TRANG || '(Trống)';
+    dem[t] = (dem[t] || 0) + 1;
+  });
+
+  const ketQua = DANH_SACH_TRANG_THAI_BAO_CAO.map(trangThai => ({ trangThai, soDon: dem[trangThai] || 0 }));
+
+  res.json({ tongSoDon: list.length, trangThai: ketQua });
+});
+
+// ============================================================
+// MẪU "ĐƠN CẦN IN" (B2_Đã lấy phôi) — mỗi đơn 1 thẻ có QR + 2 ảnh thật, khổ giấy 100x150mm
+// (bằng khổ tem in phổ biến), 2 đơn/trang để đỡ tốn giấy khi in.
+// ============================================================
+const MM_TO_PT = 2.834645669;
+function mmToPt(mm) { return mm * MM_TO_PT; }
+const KHO_GIAY_MM = { rong: 100, cao: 150 };
+
+function nhanDangDinhDangAnh(buffer) {
+  if (!buffer || buffer.length < 4) return null;
+  if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) return 'png';
+  if (buffer[0] === 0xff && buffer[1] === 0xd8) return 'jpeg';
+  return null;
+}
+
+async function taiAnhChoDon(don) {
+  const [qr, mauRaw, mockupRaw] = await Promise.all([
+    taoQRCodeBuffer(don.STT_Key || '', 300),
+    taiAnhTuLinkDrive(don.DUONG_DAN_URL),
+    taiAnhTuLinkDrive(don.MOCKUP),
+  ]);
+  const dinhDangMau = nhanDangDinhDangAnh(mauRaw);
+  const dinhDangMockup = nhanDangDinhDangAnh(mockupRaw);
+  return {
+    qr,
+    mau: dinhDangMau ? mauRaw : null,
+    mockup: dinhDangMockup ? mockupRaw : null,
+    mauDinhDang: dinhDangMau,
+    mockupDinhDang: dinhDangMockup,
+  };
+}
+
+function veOTrongPdf(doc, x, y, kichThuoc, chuThich) {
+  doc.rect(x, y, kichThuoc, kichThuoc).stroke('#d1d5db');
+  doc.font('NotoSans').fontSize(5).fillColor('#9ca3af')
+    .text(chuThich, x + 2, y + kichThuoc / 2 - 6, { width: kichThuoc - 4, align: 'center' });
+  doc.fillColor('#000000');
+}
+
+function veTheDonPdf(doc, don, anh, offsetY, caoThe) {
+  const rong = mmToPt(KHO_GIAY_MM.rong);
+  const leTrong = 6;
+  const x0 = leTrong;
+  const rongTrong = rong - leTrong * 2;
+  let y = offsetY + leTrong;
+
+  doc.font('NotoSans-Bold').fontSize(11).text(don.STT_Key || '', x0, y, { width: rongTrong });
+  y += 14;
+  doc.font('NotoSans').fontSize(8.5).text(`${don.LOAI || ''} · ${don.KICH_THUOC || ''} · ${don.MAU_SAC || ''}`, x0, y, { width: rongTrong });
+  y += 13;
+
+  // QR chiếm phần lớn không gian còn lại — ưu tiên "to rõ" theo yêu cầu, tận dụng hết chiều cao thẻ
+  const qrKichThuoc = mmToPt(42);
+  const qrX = x0;
+  const qrY = y;
+  if (anh.qr) doc.image(anh.qr, qrX, qrY, { width: qrKichThuoc, height: qrKichThuoc });
+  else veOTrongPdf(doc, qrX, qrY, qrKichThuoc, 'Không có QR');
+
+  const anhKichThuoc = mmToPt(20); // 2 ảnh xếp chồng + khoảng cách phải khớp chiều cao QR, tránh chồng lên chữ bên dưới
+  const anhX = qrX + qrKichThuoc + 6;
+  const anhY1 = qrY;
+  if (anh.mau) {
+    try { doc.image(anh.mau, anhX, anhY1, { fit: [anhKichThuoc, anhKichThuoc] }); }
+    catch (e) { veOTrongPdf(doc, anhX, anhY1, anhKichThuoc, 'Không tải được ảnh mẫu'); }
+  } else {
+    veOTrongPdf(doc, anhX, anhY1, anhKichThuoc, 'Không tải được ảnh mẫu');
+  }
+
+  const anhY2 = anhY1 + anhKichThuoc + 6;
+  if (anh.mockup) {
+    try { doc.image(anh.mockup, anhX, anhY2, { fit: [anhKichThuoc, anhKichThuoc] }); }
+    catch (e) { veOTrongPdf(doc, anhX, anhY2, anhKichThuoc, 'Không tải được ảnh mockup'); }
+  } else {
+    veOTrongPdf(doc, anhX, anhY2, anhKichThuoc, 'Không tải được ảnh mockup');
+  }
+
+  // Chiều cao thật của khối ảnh = phần cao hơn giữa QR và 2 ảnh xếp chồng — tránh chữ bên dưới
+  // đè lên ảnh nếu 1 trong 2 khối cao hơn khối còn lại (lỗi đã xảy ra khi kích thước lệch nhau).
+  const chieuCaoKhoiAnh = Math.max(qrKichThuoc, anhKichThuoc * 2 + 6);
+  y = qrY + chieuCaoKhoiAnh + 8;
+
+  const viTri = [don.VI_TRI_1, don.VI_TRI_2, don.VI_TRI_3].filter(Boolean).join(' · ');
+  doc.font('NotoSans-Bold').fontSize(7.5).text('Vị trí thêu: ', x0, y, { continued: true, width: rongTrong });
+  doc.font('NotoSans').text(viTri || '—');
+  y += 11;
+  doc.font('NotoSans').fontSize(7.5).text(`SL: ${don.SO_LUONG ?? ''} · SL áo/đơn: ${don.SO_LUONG_AO_TREN_DON ?? ''} · Ngày: ${dinhDangNgay(don.NGAY_LEN_DON)}`, x0, y, { width: rongTrong });
+  y += 11;
+  if (don.GHI_CHU) {
+    doc.font('NotoSans-Bold').fontSize(7.5).text('Ghi chú: ', x0, y, { continued: true, width: rongTrong });
+    doc.font('NotoSans').text(String(don.GHI_CHU), { width: rongTrong });
+  }
+}
+
+async function veTrangDonCanInPdf(doc, list, dongNguoiXuat) {
+  const rong = mmToPt(KHO_GIAY_MM.rong);
+  const cao = mmToPt(KHO_GIAY_MM.cao);
+  const caoFooter = 9;
+  const caoThe = (cao - caoFooter) / 2;
+
+  for (let i = 0; i < list.length; i += 2) {
+    if (i > 0) doc.addPage({ size: [rong, cao], margin: 0 });
+
+    const anh1 = await taiAnhChoDon(list[i]);
+    veTheDonPdf(doc, list[i], anh1, 0, caoThe);
+
+    doc.dash(2, { space: 2 }).moveTo(0, caoThe).lineTo(rong, caoThe).stroke('#9ca3af');
+    doc.undash();
+
+    if (list[i + 1]) {
+      const anh2 = await taiAnhChoDon(list[i + 1]);
+      veTheDonPdf(doc, list[i + 1], anh2, caoThe, caoThe);
+    }
+
+    doc.font('NotoSans').fontSize(5).fillColor('#9ca3af')
+      .text(dongNguoiXuat, 4, cao - caoFooter + 1, { width: rong - 8, align: 'center' });
+    doc.fillColor('#000000');
+  }
+}
+
+async function veSheetDonCanInExcel(wb, list, dongThongTin, dongNguoiXuat) {
+  const sheet = wb.addWorksheet('DonCanIn');
+  [16, 16, 16, 16, 16, 16].forEach((w, i) => { sheet.getColumn(i + 1).width = w; });
+
+  sheet.mergeCells(1, 1, 1, 6);
+  sheet.getCell(1, 1).value = 'PHIẾU THÔNG TIN ĐƠN CẦN IN';
+  sheet.getCell(1, 1).font = { bold: true, size: 13 };
+
+  sheet.mergeCells(2, 1, 2, 6);
+  sheet.getCell(2, 1).value = dongThongTin;
+  sheet.getCell(2, 1).font = { italic: true, size: 10, color: { argb: 'FF52525B' } };
+
+  sheet.mergeCells(3, 1, 3, 6);
+  sheet.getCell(3, 1).value = dongNguoiXuat;
+  sheet.getCell(3, 1).font = { italic: true, size: 9, color: { argb: 'FF9CA3AF' } };
+
+  let hang = 5;
+
+  if (list.length === 0) {
+    sheet.getCell(hang, 1).value = 'Không có đơn nào khớp bộ lọc.';
+    return;
+  }
+
+  for (const don of list) {
+    const anh = await taiAnhChoDon(don);
+
+    sheet.mergeCells(hang, 1, hang, 6);
+    sheet.getCell(hang, 1).value = `Mã đơn: ${don.STT_Key || ''}`;
+    sheet.getCell(hang, 1).font = { bold: true, size: 12 };
+    hang += 1;
+
+    sheet.mergeCells(hang, 1, hang, 6);
+    sheet.getCell(hang, 1).value = `${don.LOAI || ''} · ${don.KICH_THUOC || ''} · ${don.MAU_SAC || ''} · Ngày lên đơn: ${dinhDangNgay(don.NGAY_LEN_DON)}`;
+    hang += 1;
+
+    const hangAnh = hang;
+    for (let i = 0; i < 7; i++) sheet.getRow(hang + i).height = 16;
+
+    if (anh.qr) {
+      const id = wb.addImage({ buffer: anh.qr, extension: 'png' });
+      sheet.addImage(id, { tl: { col: 0, row: hangAnh - 1 }, ext: { width: 110, height: 110 } });
+    }
+    if (anh.mau) {
+      const id = wb.addImage({ buffer: anh.mau, extension: anh.mauDinhDang });
+      sheet.addImage(id, { tl: { col: 2, row: hangAnh - 1 }, ext: { width: 110, height: 110 } });
+    } else {
+      sheet.getCell(hangAnh, 3).value = 'Không tải được ảnh mẫu';
+    }
+    if (anh.mockup) {
+      const id = wb.addImage({ buffer: anh.mockup, extension: anh.mockupDinhDang });
+      sheet.addImage(id, { tl: { col: 4, row: hangAnh - 1 }, ext: { width: 110, height: 110 } });
+    } else {
+      sheet.getCell(hangAnh, 5).value = 'Không tải được ảnh mockup';
+    }
+    hang += 7;
+
+    const viTri = [don.VI_TRI_1, don.VI_TRI_2, don.VI_TRI_3].filter(Boolean).join(' · ');
+    sheet.mergeCells(hang, 1, hang, 6);
+    sheet.getCell(hang, 1).value = `Vị trí thêu: ${viTri || '—'}`;
+    hang += 1;
+
+    sheet.mergeCells(hang, 1, hang, 6);
+    sheet.getCell(hang, 1).value = `Số lượng: ${don.SO_LUONG ?? ''} · SL áo/đơn: ${don.SO_LUONG_AO_TREN_DON ?? ''}`;
+    hang += 1;
+
+    if (don.GHI_CHU) {
+      sheet.mergeCells(hang, 1, hang, 6);
+      sheet.getCell(hang, 1).value = `Ghi chú: ${don.GHI_CHU}`;
+      hang += 1;
+    }
+
+    hang += 2;
+  }
+}
+
+const COT_PHOI_AO_CHI_TIET = [
   { header: 'STT_Key', key: 'STT_Key', width: 14 },
   { header: 'MA_CODE_STT', key: 'MA_CODE_STT', width: 14 },
   { header: 'TINH_TRANG', key: 'TINH_TRANG', width: 24 },
@@ -42,7 +288,7 @@ const COT_PHOI_AO_CHI_TIET = [ // mặc định — 1 dòng / 1 đơn
   { header: 'MAU_SAC', key: 'MAU_SAC', width: 18 },
 ];
 
-const COT_PHOI_AO_GOP = [ // B1_Đã in — đã gộp theo ngày+loại+kích thước+màu, không còn STT_Key
+const COT_PHOI_AO_GOP = [
   { header: 'NGAY_LEN_DON', key: 'NGAY_LEN_DON', width: 14, laNgay: true },
   { header: 'LOAI', key: 'LOAI', width: 12 },
   { header: 'KICH_THUOC', key: 'KICH_THUOC', width: 12 },
@@ -50,7 +296,7 @@ const COT_PHOI_AO_GOP = [ // B1_Đã in — đã gộp theo ngày+loại+kích t
   { header: 'SO_LUONG', key: 'SO_LUONG', width: 10 },
 ];
 
-const COT_TRACKING = [ // B5_Đã sản xuất
+const COT_TRACKING = [
   { header: 'STT_Key', key: 'STT_Key', width: 14 },
   { header: 'MA_CODE_STT', key: 'MA_CODE_STT', width: 14 },
   { header: 'MA_KHACH_HANG', key: 'MA_KHACH_HANG', width: 16 },
@@ -60,9 +306,6 @@ const COT_TRACKING = [ // B5_Đã sản xuất
   { header: 'SO_LUONG', key: 'SO_LUONG', width: 10 },
 ];
 
-// Gộp nhiều đơn CÙNG (ngày lên đơn + loại + kích thước + màu sắc) thành 1 dòng, cộng dồn số lượng.
-// Đúng nguyên tắc trong file mẫu "Danh_sach_phoi_ao_Tong_hop.xlsx" — sắp theo số lượng giảm dần
-// để nhóm cần chuẩn bị nhiều nhất lên đầu, dễ ưu tiên khi lấy phôi.
 function gomNhomPhoiAo(list) {
   const nhom = new Map();
   list.forEach(r => {
@@ -77,41 +320,8 @@ function gomNhomPhoiAo(list) {
   return Array.from(nhom.values()).sort((a, b) => b.SO_LUONG - a.SO_LUONG);
 }
 
-function dongThongTinLoc(query, kieu) {
-  const { tuNgay, denNgay, khachHang, trangThai } = query;
-  const khHienThi = khachHang || 'Tất cả khách hàng';
-  const ttHienThi = trangThai || 'Tất cả trạng thái';
-  if (kieu === 'tracking') {
-    return `Khoảng thời gian: ${tuNgay || '(không giới hạn)'} ${denNgay || '(không giới hạn)'} · Khách hàng: ${khHienThi} · Trạng thái: ${ttHienThi}`;
-  }
-  return `Khoảng thời gian: Từ ngày ${tuNgay || '(không giới hạn)'} đến ngày ${denNgay || '(không giới hạn)'} · Khách hàng: ${khHienThi} · Trạng thái: ${ttHienThi}`;
-}
-
-function dinhDangNgayGio(d) {
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mi = String(d.getMinutes()).padStart(2, '0');
-  return `${dd}/${mm}/${d.getFullYear()} ${hh}:${mi}`;
-}
-
-// Hậu tố ngày cho tên file tải về — ưu tiên dùng ngày đang lọc (dễ phân biệt nhiều lần xuất khác
-// ngày), nếu không lọc ngày thì dùng ngày thực xuất file.
-function ngayChoTenFile(query) {
-  const ddmmyyyy = (d) => `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
-  const tu = parseNgay(query.tuNgay);
-  const den = parseNgay(query.denNgay);
-  if (tu && den && tu.getTime() !== den.getTime()) return `${ddmmyyyy(tu)}_den_${ddmmyyyy(den)}`;
-  if (tu) return ddmmyyyy(tu);
-  return ddmmyyyy(new Date());
-}
-
-// ============================================================
-// HÀM DÙNG CHUNG — xây dữ liệu báo cáo 1 LẦN, dùng lại y hệt cho Excel, PDF, và Xem trước.
-// Tránh 3 nơi tự lặp logic rồi lệch nhau theo thời gian.
-// ============================================================
-function xayDungBaoCao(list, query, tenNguoiXuat) {
-  const dongNguoiXuat = `Người xuất: ${tenNguoiXuat} · Thời gian xuất: ${dinhDangNgayGio(new Date())}`;
+function xayDungBaoCaoDangBang(list, query, tenNguoiXuat) {
+  const dongNguoiXuat = dongNguoiXuatChuoi(tenNguoiXuat);
   const { trangThai } = query;
 
   if (trangThai === TRANG_THAI_TRACKING) {
@@ -155,41 +365,31 @@ function xayDungBaoCao(list, query, tenNguoiXuat) {
   };
 }
 
-// Danh sách khách hàng — dùng để đổ vào dropdown lọc ở giao diện (trả cả mã lẫn tên hiển thị)
-router.get('/khach-hang', async (req, res) => {
-  const list = await layDanhSachKhachHang();
-  res.json(list);
-});
-
-// Danh sách ĐẦY ĐỦ trạng thái (cố định theo pipeline, không chỉ những gì đang có trong dữ liệu) —
-// kèm số lượng đơn thật khớp (ngày+khách hàng) đã chọn, 0 nếu trạng thái đó chưa có đơn nào.
-router.get('/trang-thai-theo-loc', async (req, res) => {
-  const { tuNgay, denNgay, khachHang } = req.query;
-  const { rows } = await orderService.getAll();
-  const list = locDon(rows, { tuNgay, denNgay, khachHang });
-
-  const dem = {};
-  list.forEach(r => {
-    const t = r.TINH_TRANG || '(Trống)';
-    dem[t] = (dem[t] || 0) + 1;
-  });
-
-  const ketQua = DANH_SACH_TRANG_THAI_BAO_CAO.map(trangThai => ({ trangThai, soDon: dem[trangThai] || 0 }));
-
-  res.json({ tongSoDon: list.length, trangThai: ketQua });
-});
-
-async function layDonDaLoc(query) {
-  const { rows } = await orderService.getAll();
-  return locDon(rows, query);
-}
-
-// Xem trước — trả JSON để giao diện tự vẽ bảng, KHÔNG cần tải file mới xem được nội dung.
-// Dùng chung hệt hàm xayDungBaoCao với Excel/PDF nên luôn khớp 100% với file thật sẽ tải về.
 router.get('/xem-truoc', async (req, res) => {
   const list = await layDonDaLoc(req.query);
-  const baoCao = xayDungBaoCao(list, req.query, req.session.user.ten);
 
+  if (req.query.trangThai === TRANG_THAI_DON_CAN_IN) {
+    const dongNguoiXuat = dongNguoiXuatChuoi(req.session.user.ten);
+    const the = [];
+    for (const don of list) {
+      const anh = await taiAnhChoDon(don);
+      the.push({
+        sttKey: don.STT_Key,
+        dongTom: `${don.LOAI || ''} · ${don.KICH_THUOC || ''} · ${don.MAU_SAC || ''}`,
+        viTri: [don.VI_TRI_1, don.VI_TRI_2, don.VI_TRI_3].filter(Boolean).join(' · '),
+        soLuong: don.SO_LUONG,
+        soLuongAoTrenDon: don.SO_LUONG_AO_TREN_DON,
+        ngayLenDon: dinhDangNgay(don.NGAY_LEN_DON),
+        ghiChu: don.GHI_CHU || '',
+        qr: anh.qr ? `data:image/png;base64,${anh.qr.toString('base64')}` : null,
+        mau: anh.mau ? `data:image/${anh.mauDinhDang};base64,${anh.mau.toString('base64')}` : null,
+        mockup: anh.mockup ? `data:image/${anh.mockupDinhDang};base64,${anh.mockup.toString('base64')}` : null,
+      });
+    }
+    return res.json({ kieu: 'don_can_in', dongThongTin: dongThongTinLoc(req.query, 'phoi_ao'), dongNguoiXuat, the });
+  }
+
+  const baoCao = xayDungBaoCaoDangBang(list, req.query, req.session.user.ten);
   const ketQua = baoCao.bang.map(b => ({
     tieuDe: b.tieuDe,
     dongThongTin: b.dongThongTin,
@@ -197,13 +397,9 @@ router.get('/xem-truoc', async (req, res) => {
     cot: b.cot.map(c => c.header),
     rows: b.rows.map(r => b.cot.map(c => (c.laNgay ? dinhDangNgay(r[c.key]) : (r[c.key] ?? '')))),
   }));
-
-  res.json({ tenFileGoc: baoCao.tenFileGoc, bang: ketQua });
+  res.json({ kieu: 'bang', tenFileGoc: baoCao.tenFileGoc, bang: ketQua });
 });
 
-// ============================================================
-// EXCEL
-// ============================================================
 function veSheetExcel(wb, bang) {
   const { tenSheet, tieuDe, dongThongTin, dongNguoiXuat, cot, rows } = bang;
   const sheet = wb.addWorksheet(tenSheet);
@@ -239,20 +435,24 @@ function veSheetExcel(wb, bang) {
 
 router.get('/excel', async (req, res) => {
   const list = await layDonDaLoc(req.query);
-  const baoCao = xayDungBaoCao(list, req.query, req.session.user.ten);
-
-  const wb = new ExcelJS.Workbook();
-  baoCao.bang.forEach(b => veSheetExcel(wb, b));
 
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-  res.setHeader('Content-Disposition', `attachment; filename="${baoCao.tenFileGoc}_${ngayChoTenFile(req.query)}.xlsx"`);
+
+  const wb = new ExcelJS.Workbook();
+
+  if (req.query.trangThai === TRANG_THAI_DON_CAN_IN) {
+    await veSheetDonCanInExcel(wb, list, dongThongTinLoc(req.query, 'phoi_ao'), dongNguoiXuatChuoi(req.session.user.ten));
+    res.setHeader('Content-Disposition', `attachment; filename="DonCanIn_${ngayChoTenFile(req.query)}.xlsx"`);
+  } else {
+    const baoCao = xayDungBaoCaoDangBang(list, req.query, req.session.user.ten);
+    baoCao.bang.forEach(b => veSheetExcel(wb, b));
+    res.setHeader('Content-Disposition', `attachment; filename="${baoCao.tenFileGoc}_${ngayChoTenFile(req.query)}.xlsx"`);
+  }
+
   await wb.xlsx.write(res);
   res.end();
 });
 
-// ============================================================
-// PDF
-// ============================================================
 function veBangPdf(doc, bang, canTrangMoi) {
   const { tieuDe, dongThongTin, dongNguoiXuat, cot, rows } = bang;
   if (canTrangMoi) doc.addPage();
@@ -269,13 +469,21 @@ function veBangPdf(doc, bang, canTrangMoi) {
   const usableWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
   const colWidth = usableWidth / cot.length;
   let y = doc.y;
+  const caoHang = 16;
+
+  function veDuongKeNgang(yHang) {
+    doc.moveTo(startX, yHang + caoHang - 4).lineTo(startX + usableWidth, yHang + caoHang - 4)
+      .lineWidth(0.5).strokeColor('#e5e7eb').stroke();
+    doc.strokeColor('#000000');
+  }
 
   function veHang(values, dam) {
     doc.font(dam ? 'NotoSans-Bold' : 'NotoSans').fontSize(9);
     values.forEach((v, i) => {
       doc.text(String(v ?? ''), startX + i * colWidth, y, { width: colWidth - 4, ellipsis: true });
     });
-    y += 16;
+    veDuongKeNgang(y);
+    y += caoHang;
     if (y > doc.page.height - doc.page.margins.bottom - 20) {
       doc.addPage();
       y = doc.page.margins.top;
@@ -292,9 +500,29 @@ function veBangPdf(doc, bang, canTrangMoi) {
 
 router.get('/pdf', async (req, res) => {
   const list = await layDonDaLoc(req.query);
-  const baoCao = xayDungBaoCao(list, req.query, req.session.user.ten);
 
   res.setHeader('Content-Type', 'application/pdf');
+
+  if (req.query.trangThai === TRANG_THAI_DON_CAN_IN) {
+    res.setHeader('Content-Disposition', `attachment; filename="DonCanIn_${ngayChoTenFile(req.query)}.pdf"`);
+
+    const rong = mmToPt(KHO_GIAY_MM.rong);
+    const cao = mmToPt(KHO_GIAY_MM.cao);
+    const doc = new PDFDocument({ size: [rong, cao], margin: 0 });
+    doc.registerFont('NotoSans', FONT_REGULAR);
+    doc.registerFont('NotoSans-Bold', FONT_BOLD);
+    doc.pipe(res);
+
+    if (list.length === 0) {
+      doc.font('NotoSans').fontSize(9).text('Không có đơn nào khớp bộ lọc.', 10, 10);
+    } else {
+      await veTrangDonCanInPdf(doc, list, dongNguoiXuatChuoi(req.session.user.ten));
+    }
+    doc.end();
+    return;
+  }
+
+  const baoCao = xayDungBaoCaoDangBang(list, req.query, req.session.user.ten);
   res.setHeader('Content-Disposition', `attachment; filename="${baoCao.tenFileGoc}_${ngayChoTenFile(req.query)}.pdf"`);
 
   const doc = new PDFDocument({ margin: 24, size: 'A4', layout: 'landscape' });

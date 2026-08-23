@@ -45,4 +45,31 @@ async function uploadImageBuffer(buffer, fileName, folderId, mimeType = 'image/j
   return `https://drive.google.com/uc?export=view&id=${file.data.id}`;
 }
 
-module.exports = { getOrCreateFolder, uploadImageBuffer };
+// Trích mã file Drive từ 1 link chia sẻ bất kỳ (dạng .../file/d/{ID}/view..., hoặc ...?id={ID}...)
+function layFileIdTuLinkDrive(url) {
+  if (!url) return null;
+  const chuoi = String(url);
+  const m1 = chuoi.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (m1) return m1[1];
+  const m2 = chuoi.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  return m2 ? m2[1] : null;
+}
+
+// Tải NỘI DUNG THẬT (bytes ảnh) của 1 file Drive theo link chia sẻ — dùng để nhúng ảnh thật vào
+// báo cáo Excel/PDF (không chỉ chèn link). LƯU Ý: các link này thường do hệ thống cũ tạo ra
+// (không qua tài khoản dịch vụ của app hiện tại), nên tài khoản dịch vụ CHƯA CHẮC có quyền xem —
+// nếu vậy hàm này trả về null (không ném lỗi), nơi gọi tự xử lý hiển thị "Không tải được ảnh".
+async function taiAnhTuLinkDrive(url) {
+  const fileId = layFileIdTuLinkDrive(url);
+  if (!fileId) return null;
+  try {
+    const drive = await getDriveClient();
+    const res = await drive.files.get({ fileId, alt: 'media' }, { responseType: 'arraybuffer' });
+    return Buffer.from(res.data);
+  } catch (err) {
+    console.error('[Drive] Không tải được ảnh (có thể chưa cấp quyền cho service account):', url, '-', err.message);
+    return null;
+  }
+}
+
+module.exports = { getOrCreateFolder, uploadImageBuffer, layFileIdTuLinkDrive, taiAnhTuLinkDrive };

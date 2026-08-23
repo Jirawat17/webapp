@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Báo cáo — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=20260824b">
+<link rel="stylesheet" href="/css/style.css?v=20260824c">
 <script src="/js/theme.js?v=20260823b"></script>
 </head>
 <body>
@@ -12,7 +12,7 @@
 <div class="page">
   <h2>Xuất báo cáo</h2>
   <p>Mặc định là đơn hàng lên đơn <strong>hôm nay</strong>, tất cả khách hàng. Đổi ngày/khách hàng để mở rộng, hoặc chọn thêm 1 trạng thái để in nhanh đúng nhóm đơn cần thiết.</p>
-  <p>File tự đổi mẫu theo trạng thái đã chọn: <strong>"B1_Đã in"</strong> → danh sách phôi áo <em>đã gộp theo ngày/loại/kích thước/màu</em> (cộng dồn số lượng); <strong>"B5_Đã sản xuất"</strong> → mẫu <em>Thông tin cho Tracking</em>; mọi trạng thái khác → danh sách phôi áo chi tiết từng đơn.</p>
+  <p>File tự đổi mẫu theo trạng thái đã chọn: <strong>"B1_Đã in"</strong> → danh sách phôi áo <em>đã gộp theo ngày/loại/kích thước/màu</em>; <strong>"B2_Đã lấy phôi"</strong> → <em>phiếu từng đơn kèm mã QR + ảnh mẫu/mockup</em>; <strong>"B5_Đã sản xuất"</strong> → mẫu <em>Thông tin cho Tracking</em>; mọi trạng thái khác → danh sách phôi áo chi tiết từng đơn.</p>
 
   <form id="form-bao-cao" class="bao-cao-form">
     <div class="truong">
@@ -145,6 +145,37 @@ async function xemTruoc() {
     ketQua = await apiFetch('/reports/xem-truoc?' + layThamSoLocDayDu().toString());
   } catch (e) {
     khu.innerHTML = `<p>${icon('alert')} ${escapeHtml(e.message)}</p>`;
+    return;
+  }
+
+  if (ketQua.kieu === 'don_can_in') {
+    khu.innerHTML = `
+      <div class="xem-truoc-bang">
+        <h3>PHIẾU THÔNG TIN ĐƠN CẦN IN</h3>
+        <p class="thong-tin-loc">${escapeHtml(ketQua.dongThongTin)}</p>
+        <p class="thong-tin-loc" style="opacity:0.75">${escapeHtml(ketQua.dongNguoiXuat)}</p>
+        ${ketQua.the.length === 0 ? '<p>Không có đơn nào khớp bộ lọc.</p>' : `
+          <div class="luoi-the-don-can-in">
+            ${ketQua.the.map(t => `
+              <div class="the-don-can-in">
+                <div class="the-hang-tren">
+                  ${t.qr ? `<img src="${t.qr}" alt="Mã QR" class="the-qr">` : `<div class="the-anh-loi">Không có QR</div>`}
+                  <div class="the-anh-nho">
+                    ${t.mau ? `<img src="${t.mau}" alt="Ảnh mẫu">` : `<div class="the-anh-loi">Không tải được ảnh mẫu</div>`}
+                    ${t.mockup ? `<img src="${t.mockup}" alt="Mockup">` : `<div class="the-anh-loi">Không tải được ảnh mockup</div>`}
+                  </div>
+                </div>
+                <strong>${escapeHtml(t.sttKey)}</strong>
+                <div class="thong-tin-loc">${escapeHtml(t.dongTom)}</div>
+                <div class="thong-tin-loc">Vị trí thêu: ${escapeHtml(t.viTri || '—')}</div>
+                <div class="thong-tin-loc">SL: ${escapeHtml(t.soLuong)} · SL áo/đơn: ${escapeHtml(t.soLuongAoTrenDon)} · Ngày: ${escapeHtml(t.ngayLenDon)}</div>
+                ${t.ghiChu ? `<div class="thong-tin-loc"><strong>Ghi chú:</strong> ${escapeHtml(t.ghiChu)}</div>` : ''}
+              </div>
+            `).join('')}
+          </div>
+          <p class="thong-tin-loc">Tổng số đơn: ${ketQua.the.length} (file PDF/Excel sẽ xếp 2 đơn/trang, khổ 100x150mm)</p>
+        `}
+      </div>`;
     return;
   }
 
