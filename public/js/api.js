@@ -52,10 +52,8 @@ function renderNav(user, active) {
     { href: '/scan.html', label: 'Quét QR', icon: 'scan', key: 'scan' },
     { href: '/dashboard.html', label: 'Thống kê', icon: 'chart', key: 'dashboard' },
     { href: '/chatbot.html', label: 'Trợ lý', icon: 'chat', key: 'chatbot' },
+    { href: '/reports.html', label: 'Báo cáo', icon: 'download', key: 'reports' },
   ];
-  if (user.vaiTro === 'admin' || user.vaiTro === 'quan_ly') {
-    links.push({ href: '/reports.html', label: 'Báo cáo', icon: 'download', key: 'reports' });
-  }
   if (user.vaiTro === 'admin') {
     links.push({ href: '/users.html', label: 'Nhân viên', icon: 'users', key: 'users' });
   }
@@ -98,3 +96,22 @@ function lopTrangThai(tinhTrang) {
   if (s.startsWith('B2') || s.startsWith('B3')) return 'trang-thai-warning';
   return 'trang-thai-info'; // B0, B1, hoặc giá trị chưa biết
 }
+
+// Hiệu ứng gợn sóng khi bấm các nút chính — áp dụng tự động cho MỌI trang (chỉ cần nạp api.js),
+// không cần sửa từng trang riêng. Chỉ dùng transform/opacity, tự dọn dẹp phần tử sau khi chạy xong,
+// tôn trọng cài đặt "giảm chuyển động" của người dùng.
+document.addEventListener('click', (e) => {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const nut = e.target.closest('.btn-hanh-dong, .btn-ten, .btn-xac-nhan-nhom, .kich-ban-btn, .btn-dung-quet, .mau-swatch, .btn-tiep-tuc-quet');
+  if (!nut || nut.disabled) return;
+
+  const vung = nut.getBoundingClientRect();
+  const gon = document.createElement('span');
+  gon.className = 'gon-song';
+  const kichThuoc = Math.max(vung.width, vung.height) * 1.3;
+  gon.style.width = gon.style.height = kichThuoc + 'px';
+  gon.style.left = (e.clientX - vung.left - kichThuoc / 2) + 'px';
+  gon.style.top = (e.clientY - vung.top - kichThuoc / 2) + 'px';
+  nut.appendChild(gon);
+  gon.addEventListener('animationend', () => gon.remove());
+});

@@ -103,6 +103,19 @@ a { color: var(--color-primary); }
   .icon-spin { animation-duration: 2.4s; }
 }
 
+/* Hiệu ứng xuất hiện từ dưới trượt lên, lần lượt từng phần tử (không bật cùng lúc) — dùng cho
+   danh sách đơn, biểu đồ, lưới chọn kịch bản/màu. CHỈ dùng transform/opacity — mượt, nhẹ máy. */
+@keyframes hienDanTu { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+:is(.order-list, .chart-grid, .kich-ban-picker, .bang-chon-mau) > * {
+  animation: hienDanTu 0.4s ease both;
+}
+:is(.order-list, .chart-grid, .kich-ban-picker, .bang-chon-mau) > *:nth-child(1) { animation-delay: 0s; }
+:is(.order-list, .chart-grid, .kich-ban-picker, .bang-chon-mau) > *:nth-child(2) { animation-delay: 0.04s; }
+:is(.order-list, .chart-grid, .kich-ban-picker, .bang-chon-mau) > *:nth-child(3) { animation-delay: 0.08s; }
+:is(.order-list, .chart-grid, .kich-ban-picker, .bang-chon-mau) > *:nth-child(4) { animation-delay: 0.12s; }
+:is(.order-list, .chart-grid, .kich-ban-picker, .bang-chon-mau) > *:nth-child(5) { animation-delay: 0.16s; }
+:is(.order-list, .chart-grid, .kich-ban-picker, .bang-chon-mau) > *:nth-child(n+6) { animation-delay: 0.2s; }
+
 .icon-btn {
   display: inline-flex; align-items: center; justify-content: center;
   min-width: var(--tap-min); min-height: var(--tap-min);
@@ -124,20 +137,43 @@ button:active:not(:disabled), .btn-ten:active, .kich-ban-btn:active:not(:disable
   transform: scale(0.98);
 }
 
+/* Vùng chứa cho hiệu ứng gợn sóng khi bấm (xem api.js) — không ảnh hưởng bóng đổ sẵn có của nút */
+.btn-hanh-dong, .btn-ten, .btn-xac-nhan-nhom, .kich-ban-btn, .btn-dung-quet, .mau-swatch, .btn-tiep-tuc-quet {
+  position: relative; overflow: hidden;
+}
+.gon-song {
+  position: absolute; border-radius: 50%; background: currentColor; opacity: 0.3;
+  transform: scale(0); animation: lanToa 0.55s ease-out; pointer-events: none;
+}
+@keyframes lanToa { to { transform: scale(1); opacity: 0; } }
+
 .page { max-width: 1100px; margin: 0 auto; padding: var(--space-4); }
 
 /* ============================================================
-   ĐĂNG NHẬP
+   ĐĂNG NHẬP — nền động nhẹ nhàng, nút có ánh sáng lướt qua thu hút nhẹ
    ============================================================ */
+body.trang-dang-nhap {
+  background: radial-gradient(circle at 50% 20%, var(--color-primary-light) 0%, var(--color-bg) 60%);
+  background-attachment: fixed;
+}
 .login-wrap { max-width: 440px; margin: var(--space-8) auto; padding: var(--space-5); text-align: center; }
-.login-wrap .logo-mark { color: var(--color-primary); margin-bottom: var(--space-2); }
+.login-wrap .logo-mark { color: var(--color-primary); margin-bottom: var(--space-2); animation: troiNhe 3.5s ease-in-out infinite; }
+@keyframes troiNhe { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 .ten-list { display: flex; flex-wrap: wrap; gap: var(--space-3); justify-content: center; margin-top: var(--space-5); }
 .btn-ten {
+  position: relative; overflow: hidden;
   padding: 15px 22px; font-size: 16px; font-weight: 700; border-radius: var(--radius-md); border: none;
   background: var(--color-primary); color: white; min-width: 140px; min-height: var(--tap-min); cursor: pointer;
   box-shadow: var(--shadow-sm);
 }
 .btn-ten:hover { background: var(--color-primary-dark); box-shadow: var(--shadow-md); }
+.btn-ten::after {
+  content: ''; position: absolute; top: 0; left: 0; width: 35%; height: 100%;
+  background: linear-gradient(120deg, transparent, rgba(255,255,255,0.4), transparent);
+  transform: translateX(-320%) skewX(-20deg); animation: quetSang 3.6s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes quetSang { 0%, 45% { transform: translateX(-320%) skewX(-20deg); } 100% { transform: translateX(420%) skewX(-20deg); } }
 
 /* ============================================================
    HEADER + ĐIỀU HƯỚNG
@@ -224,7 +260,11 @@ button:active:not(:disabled), .btn-ten:active, .kich-ban-btn:active:not(:disable
 .trang-thai-danger  { background: var(--color-danger-bg);  color: var(--color-danger-text); }
 .badge-canh-bao.vang { background: var(--color-warning-bg); color: var(--color-warning-text); }
 .badge-canh-bao.cam  { background: #ffedd5; color: #9a3412; }
-.badge-canh-bao.do   { background: var(--color-danger-bg); color: var(--color-danger-text); }
+.badge-canh-bao.do   { background: var(--color-danger-bg); color: var(--color-danger-text); animation: nhipCanhBao 1.8s ease-in-out infinite; }
+@keyframes nhipCanhBao {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(153,27,27,0.35); }
+  50% { box-shadow: 0 0 0 5px rgba(153,27,27,0); }
+}
 .badge-canh-bao .icon { width: 14px; height: 14px; }
 
 /* Skeleton loading — thay cho chữ "Đang tải..." */
@@ -432,12 +472,19 @@ button:active:not(:disabled), .btn-ten:active, .kich-ban-btn:active:not(:disable
    DASHBOARD
    ============================================================ */
 .tong-so-the {
+  position: relative; overflow: hidden;
   background: var(--color-primary); color: white; border-radius: var(--radius-lg); padding: var(--space-4);
   box-shadow: var(--shadow-sm); margin-bottom: var(--space-4); font-size: 1.15rem; font-weight: 800;
 }
+.tong-so-the::after {
+  content: ''; position: absolute; top: 0; left: 0; width: 25%; height: 100%;
+  background: linear-gradient(120deg, transparent, rgba(255,255,255,0.3), transparent);
+  transform: translateX(-420%) skewX(-20deg); animation: quetSang 4.5s ease-in-out infinite; pointer-events: none;
+}
 .chart-grid { display: grid; grid-template-columns: 1fr; gap: var(--space-4); }
 @media (min-width: 768px) { .chart-grid { grid-template-columns: repeat(2, 1fr); } }
-.chart-card { background: var(--color-surface); border-radius: var(--radius-lg); padding: var(--space-4); box-shadow: var(--shadow-sm); border: 1px solid var(--color-border); }
+.chart-card { background: var(--color-surface); border-radius: var(--radius-lg); padding: var(--space-4); box-shadow: var(--shadow-sm); border: 1px solid var(--color-border); transition: box-shadow 0.2s, transform 0.2s; }
+.chart-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
 .chart-card canvas { max-height: 280px; }
 
 /* ============================================================
@@ -451,6 +498,7 @@ button:active:not(:disabled), .btn-ten:active, .kich-ban-btn:active:not(:disable
   font-family: inherit;
 }
 .bao-cao-form .nut-xuat { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.thong-tin-loc { font-size: 0.88rem; color: var(--color-text-muted); padding: 8px 0; }
 
 /* ============================================================
    NHÂN VIÊN (Admin)
@@ -498,3 +546,17 @@ button:active:not(:disabled), .btn-ten:active, .kich-ban-btn:active:not(:disable
 }
 .mau-swatch .mau-ten { font-size: 0.88rem; font-weight: 700; color: var(--color-text); }
 .mau-swatch.dang-chon { border-color: var(--mau-xem-truoc); border-width: 3px; }
+
+/* ============================================================
+   TÔN TRỌNG "GIẢM CHUYỂN ĐỘNG" — tắt/giảm mọi hiệu ứng trang trí thêm ở trên cho người dùng đã bật
+   tuỳ chọn này trong hệ điều hành/trình duyệt. Phản hồi chạm cơ bản (scale khi bấm) vẫn giữ vì đó là
+   phản hồi CHỨC NĂNG (biết là đã bấm trúng), không phải hiệu ứng trang trí.
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  body.trang-dang-nhap { background: var(--color-bg); }
+  .login-wrap .logo-mark { animation: none; }
+  .btn-ten::after, .tong-so-the::after { display: none; }
+  .badge-canh-bao.do { animation: none; }
+  :is(.order-list, .chart-grid, .kich-ban-picker, .bang-chon-mau) > * { animation: none; opacity: 1; }
+  .gon-song { display: none; }
+}

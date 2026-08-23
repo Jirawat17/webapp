@@ -5,15 +5,14 @@ const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const orderService = require('../services/orderService');
 const { layDanhSachKhachHang } = require('../services/khachHangService');
-const { requireLogin, requireRole } = require('../middleware/auth');
+const { requireLogin } = require('../middleware/auth');
 
-router.use(requireLogin);
-router.use(requireRole('quan_ly'));
+router.use(requireLogin); // mọi vai trò đăng nhập đều dùng được trang Báo cáo
 
 const FONT_REGULAR = path.join(__dirname, '..', 'fonts', 'NotoSans-Regular.ttf');
 const FONT_BOLD = path.join(__dirname, '..', 'fonts', 'NotoSans-Bold.ttf');
 
-function locDon(rows, { tuNgay, denNgay, khachHang }) {
+function locDon(rows, { tuNgay, denNgay, khachHang, trangThai }) {
   return rows.filter(r => {
     if (!r.NGAY_LEN_DON) return false;
     const ngay = new Date(r.NGAY_LEN_DON);
@@ -21,6 +20,7 @@ function locDon(rows, { tuNgay, denNgay, khachHang }) {
     if (tuNgay && ngay < new Date(tuNgay)) return false;
     if (denNgay && ngay > new Date(denNgay)) return false;
     if (khachHang && r.MA_KHACH_HANG !== khachHang) return false;
+    if (trangThai && r.TINH_TRANG !== trangThai) return false;
     return true;
   });
 }
@@ -43,6 +43,28 @@ const COT_BAO_CAO = [
 router.get('/khach-hang', async (req, res) => {
   const list = await layDanhSachKhachHang();
   res.json(list);
+});
+
+// Danh sách trạng thái ĐANG CÓ THẬT trong phạm vi (ngày + khách hàng) đã chọn, kèm số lượng —
+// dùng để đổ vào dropdown "Trạng thái" mỗi khi người dùng đổi ngày/khách hàng ở giao diện.
+// Cố ý CHỈ nhận tuNgay/denNgay/khachHang (bỏ qua trangThai nếu lỡ có gửi lên) — vì mục đích của
+// endpoint này là liệt kê MỌI trạng thái đang có, không phải lọc theo trạng thái đang chọn.
+router.get('/trang-thai-theo-loc', async (req, res) => {
+  const { tuNgay, denNgay, khachHang } = req.query;
+  const { rows } = await orderService.getAll();
+  const list = locDon(rows, { tuNgay, denNgay, khachHang });
+
+  const dem = {};
+  list.forEach(r => {
+    const t = r.TINH_TRANG || '(Trống)';
+    dem[t] = (dem[t] || 0) + 1;
+  });
+
+  const ketQua = Object.entries(dem)
+    .map(([trangThai, soDon]) => ({ trangThai, soDon }))
+    .sort((a, b) => b.soDon - a.soDon);
+
+  res.json({ tongSoDon: list.length, trangThai: ketQua });
 });
 
 async function layDonDaLoc(query) {
@@ -73,7 +95,7 @@ router.get('/excel', async (req, res) => {
 
 router.get('/pdf', async (req, res) => {
   const list = await layDonDaLoc(req.query);
-  const { tuNgay, denNgay, khachHang } = req.query;
+  const { tuNgay, denNgay, khachHang, trangThai } = req.query;
 
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', 'attachment; filename="bao-cao-don-hang.pdf"');
@@ -87,7 +109,8 @@ router.get('/pdf', async (req, res) => {
   doc.moveDown(0.3);
   doc.font('NotoSans').fontSize(10).text(
     `Khoảng thời gian: ${tuNgay || '(không giới hạn)'} → ${denNgay || '(không giới hạn)'}` +
-    (khachHang ? ` · Khách hàng: ${khachHang}` : ''),
+    (khachHang ? ` · Khách hàng: ${khachHang}` : '') +
+    (trangThai ? ` · Trạng thái: ${trangThai}` : ''),
     { align: 'center' }
   );
   doc.moveDown(1);
