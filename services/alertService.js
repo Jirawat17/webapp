@@ -1,10 +1,10 @@
 const { chiSoGiaiDoan, TRANG_THAI_KET_THUC } = require('../data/pipelineTinhTrang');
+const { parseNgay } = require('./dateUtils');
 
 // Số ngày đã trôi qua kể từ 1 ngày cho trước (so với hôm nay, bỏ qua giờ/phút/giây)
 function soNgayTu(ngayStr) {
-  if (!ngayStr) return null;
-  const ngay = new Date(ngayStr);
-  if (isNaN(ngay)) return null;
+  const ngay = parseNgay(ngayStr);
+  if (!ngay) return null;
   const homNay = new Date();
   homNay.setHours(0, 0, 0, 0);
   ngay.setHours(0, 0, 0, 0);

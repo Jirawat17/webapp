@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const orderService = require('../services/orderService');
+const { parseNgay } = require('../services/dateUtils');
 const { requireLogin } = require('../middleware/auth');
 
 router.use(requireLogin);
@@ -16,9 +17,8 @@ router.get('/thong-ke', async (req, res) => {
   }, {});
 
   const theoTuan = rows.reduce((acc, r) => {
-    if (!r.NGAY_LEN_DON) return acc;
-    const d = new Date(r.NGAY_LEN_DON);
-    if (isNaN(d)) return acc;
+    const d = parseNgay(r.NGAY_LEN_DON);
+    if (!d) return acc;
     const dauNam = new Date(d.getFullYear(), 0, 1);
     const soTuan = Math.ceil(((d - dauNam) / 86400000 + dauNam.getDay() + 1) / 7);
     const key = `${d.getFullYear()}-W${soTuan}`;

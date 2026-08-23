@@ -21,7 +21,7 @@
 </div>
 
 <script src="/js/icons.js?v=20260823b"></script>
-<script src="/js/api.js?v=20260823d"></script>
+<script src="/js/api.js?v=20260823e"></script>
 <script>
 // Danh sách trạng thái để đổ vào bộ lọc — lấy trực tiếp từ chính dữ liệu đang có, vì TINH_TRANG
 // là chuỗi tự do (không phải enum cố định), không nên liệt kê cứng trong code.
@@ -81,7 +81,7 @@ async function taiDon() {
       <div class="thong-tin">
         <strong>${escapeHtml(o.TieuDeSanPham || o.STT_Key)}</strong>
         <div class="meta">${escapeHtml(o.TenKhachHang || '')} · SL: ${escapeHtml(o.SO_LUONG || '')}</div>
-        <div class="meta">Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? new Date(o.NGAY_LEN_DON).toLocaleDateString('vi-VN') : '—')}</div>
+        <div class="meta">Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgay(o.NGAY_LEN_DON) : '—')}</div>
         <div class="badge-row">
           <span class="badge ${lopTrangThai(o.TINH_TRANG)}">${escapeHtml(o.TINH_TRANG || '')}</span>
           ${o.CanhBao ? `

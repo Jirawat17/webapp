@@ -5,6 +5,7 @@ const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const orderService = require('../services/orderService');
 const { layDanhSachKhachHang } = require('../services/khachHangService');
+const { parseNgay } = require('../services/dateUtils');
 const { requireLogin } = require('../middleware/auth');
 
 router.use(requireLogin); // mọi vai trò đăng nhập đều dùng được trang Báo cáo
@@ -14,11 +15,10 @@ const FONT_BOLD = path.join(__dirname, '..', 'fonts', 'NotoSans-Bold.ttf');
 
 function locDon(rows, { tuNgay, denNgay, khachHang, trangThai }) {
   return rows.filter(r => {
-    if (!r.NGAY_LEN_DON) return false;
-    const ngay = new Date(r.NGAY_LEN_DON);
-    if (isNaN(ngay)) return false;
-    if (tuNgay && ngay < new Date(tuNgay)) return false;
-    if (denNgay && ngay > new Date(denNgay)) return false;
+    const ngay = parseNgay(r.NGAY_LEN_DON);
+    if (!ngay) return false;
+    if (tuNgay && ngay < parseNgay(tuNgay)) return false;
+    if (denNgay && ngay > parseNgay(denNgay)) return false;
     if (khachHang && r.MA_KHACH_HANG !== khachHang) return false;
     if (trangThai && r.TINH_TRANG !== trangThai) return false;
     return true;

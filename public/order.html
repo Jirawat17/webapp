@@ -14,7 +14,7 @@
 </div>
 
 <script src="/js/icons.js?v=20260823b"></script>
-<script src="/js/api.js?v=20260823d"></script>
+<script src="/js/api.js?v=20260823e"></script>
 <script>
 const sttKey = new URLSearchParams(location.search).get('stt');
 const NHAN_CANH_BAO = { VANG: 'Cảnh báo Vàng · 3 ngày ít tiến triển', CAM: 'Cảnh báo Cam · 5 ngày chưa vào sản xuất', DO: 'Cảnh báo Đỏ · 7 ngày chưa ship' };
@@ -66,7 +66,7 @@ async function taiChiTiet() {
           <tr><td>Loại / Kích thước / Màu</td><td>${escapeHtml(don.LOAI || '')} · ${escapeHtml(don.KICH_THUOC || '')} · ${escapeHtml(don.MAU_SAC || '')}</td></tr>
           <tr><td>Vị trí thêu</td><td>${viTri}</td></tr>
           <tr><td>Số lượng</td><td>${escapeHtml(don.SO_LUONG || '')} ${don.SO_LUONG_AO_TREN_DON ? `(áo trên đơn: ${escapeHtml(don.SO_LUONG_AO_TREN_DON)})` : ''}</td></tr>
-          <tr><td>Ngày lên đơn</td><td>${don.NGAY_LEN_DON ? new Date(don.NGAY_LEN_DON).toLocaleDateString('vi-VN') : ''}</td></tr>
+          <tr><td>Ngày lên đơn</td><td>${don.NGAY_LEN_DON ? dinhDangNgay(don.NGAY_LEN_DON) : ''}</td></tr>
           <tr><td>Hãng vận chuyển</td><td>${escapeHtml(don.HANG_VAN_CHUYEN || '')}</td></tr>
           <tr><td>Mã vận đơn</td><td>${escapeHtml(don.MA_VAN_DON_ID || '')}</td></tr>
           <tr><td>Người nhận</td><td>${escapeHtml(don.TEN || '')} ${don.SDT ? '· ' + escapeHtml(don.SDT) : ''}</td></tr>

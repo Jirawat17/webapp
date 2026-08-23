@@ -97,6 +97,37 @@ function lopTrangThai(tinhTrang) {
   return 'trang-thai-info'; // B0, B1, hoặc giá trị chưa biết
 }
 
+// Google Sheets trả về cột NGAY_LEN_DON dạng chuỗi DD/MM/YYYY (vd "23/08/2026") — new Date(chuoi)
+// mặc định của trình duyệt đọc SAI định dạng này (Invalid Date nếu ngày > 12, đọc nhầm đảo ngược
+// tháng/ngày nếu ngày ≤ 12). Bản JS này khớp với services/dateUtils.js phía server để hiển thị
+// đúng và nhất quán ở mọi nơi trên giao diện.
+function parseNgay(giaTri) {
+  if (!giaTri) return null;
+  if (giaTri instanceof Date) return isNaN(giaTri) ? null : giaTri;
+
+  const chuoi = String(giaTri).trim();
+
+  let m = chuoi.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (m) {
+    const d = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+    return isNaN(d) ? null : d;
+  }
+
+  m = chuoi.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) {
+    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    return isNaN(d) ? null : d;
+  }
+
+  const thu = new Date(chuoi);
+  return isNaN(thu) ? null : thu;
+}
+
+function dinhDangNgay(giaTri) {
+  const d = parseNgay(giaTri);
+  return d ? d.toLocaleDateString('vi-VN') : '';
+}
+
 // Hiệu ứng gợn sóng khi bấm các nút chính — áp dụng tự động cho MỌI trang (chỉ cần nạp api.js),
 // không cần sửa từng trang riêng. Chỉ dùng transform/opacity, tự dọn dẹp phần tử sau khi chạy xong,
 // tôn trọng cài đặt "giảm chuyển động" của người dùng.

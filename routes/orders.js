@@ -3,6 +3,7 @@ const router = express.Router();
 const orderService = require('../services/orderService');
 const alertService = require('../services/alertService');
 const scenarioService = require('../services/scenarioService');
+const { parseNgay } = require('../services/dateUtils');
 const { ghiLog, layLichSuTheoDon } = require('../services/logService');
 const { requireLogin } = require('../middleware/auth');
 
@@ -29,7 +30,7 @@ router.get('/', async (req, res) => {
   if (kh) list = list.filter(r => (r.MA_KHACH_HANG || '').toLowerCase().includes(kh.toLowerCase()));
 
   // Không có cột deadline riêng — sắp theo ngày lên đơn, đơn cũ nhất (tồn lâu nhất) lên đầu
-  list.sort((a, b) => new Date(a.NGAY_LEN_DON || 0) - new Date(b.NGAY_LEN_DON || 0));
+  list.sort((a, b) => (parseNgay(a.NGAY_LEN_DON) || 0) - (parseNgay(b.NGAY_LEN_DON) || 0));
 
   list = await lamGiauDon(list);
   res.json(list);
