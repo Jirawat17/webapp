@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thiết lập — Xưởng Thêu</title>
+<link rel="stylesheet" href="/css/style.css?v=20260823b">
+<script src="/js/theme.js?v=20260823b"></script>
+</head>
+<body>
+<div id="nav"></div>
+<div class="page">
+  <h2>Thiết lập</h2>
+
+  <h3>Màu chủ đạo</h3>
+  <p>Chọn màu bạn thích — áp dụng ngay cho toàn bộ ứng dụng trên thiết bị này (mỗi máy/trình duyệt lưu riêng).</p>
+  <div id="bang-mau" class="bang-chon-mau"></div>
+</div>
+
+<script src="/js/icons.js?v=20260823b"></script>
+<script src="/js/api.js?v=20260823b"></script>
+<script>
+(async () => {
+  const user = await requireLoginOrRedirect();
+  if (!user) return;
+  renderNav(user, 'settings');
+  renderBangMau();
+})();
+
+function renderBangMau() {
+  const dangChon = layMauDaChon();
+  const el = document.getElementById('bang-mau');
+  el.innerHTML = BANG_MAU_CHU_DAO.map(m => `
+    <button class="mau-swatch ${m.id === dangChon ? 'dang-chon' : ''}" data-id="${m.id}" style="--mau-xem-truoc:${m.primary}">
+      <span class="mau-vien">${m.id === dangChon ? icon('check', { size: 20 }) : ''}</span>
+      <span class="mau-ten">${escapeHtml(m.ten)}</span>
+    </button>`).join('');
+
+  el.querySelectorAll('.mau-swatch').forEach(btn => {
+    btn.onclick = () => {
+      luuMauDaChon(btn.dataset.id);
+      apDungMauChuDao(btn.dataset.id);
+      renderBangMau(); // vẽ lại để cập nhật dấu tích + viền đang chọn
+    };
+  });
+}
+</script>
+</body>
+</html>

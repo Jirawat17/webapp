@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Quét QR — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/style.css?v=20260823b">
+<script src="/js/theme.js?v=20260823b"></script>
 </head>
 <body>
 <div id="nav"></div>
@@ -40,8 +41,8 @@
 </div>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="/js/icons.js"></script>
-<script src="/js/api.js"></script>
+<script src="/js/icons.js?v=20260823b"></script>
+<script src="/js/api.js?v=20260823b"></script>
 <script>
 let user;
 let mode = 'lookup';
@@ -153,12 +154,12 @@ function layAudioCtx() {
   return audioCtx;
 }
 
-function phatBeep(tanSo, thoiLuongMs, doTreMs) {
+function phatBeep(tanSo, thoiLuongMs, doTreMs, loaiSong) {
   try {
     const ctx = layAudioCtx();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    osc.type = 'sine';
+    osc.type = loaiSong || 'sine';
     osc.frequency.value = tanSo;
     gain.gain.value = 0.18;
     osc.connect(gain);
@@ -169,13 +170,25 @@ function phatBeep(tanSo, thoiLuongMs, doTreMs) {
   } catch (e) { /* trình duyệt chặn âm thanh — bỏ qua lặng lẽ, không ảnh hưởng luồng quét */ }
 }
 
+// 3 kết quả phải nghe RÕ RÀNG KHÁC NHAU, đặc biệt "Sẵn sàng" phải khác hẳn 2 trường hợp lỗi để
+// không nhầm khi quét nhanh liên tục: OK dùng sóng sine êm (như chuông); 2 trường hợp lỗi dùng
+// sóng square (âm sắc "còi báo động", khác hẳn về chất âm chứ không chỉ khác cao độ) + có rung.
 function phatAmThanhKetQua(nhom) {
   if (nhom === 'OK') {
-    phatBeep(880, 150); // 1 tiếng bíp cao, gọn — dễ chịu, báo hiệu thành công
+    // 2 nốt sine tăng dần, êm nhẹ — không rung, để phân biệt tuyệt đối với 2 trường hợp lỗi bên dưới
+    phatBeep(880, 120, 0, 'sine');
+    phatBeep(1175, 150, 100, 'sine');
   } else if (nhom === 'SAI_TRANG_THAI') {
-    phatBeep(600, 120); phatBeep(600, 120, 180); // 2 tiếng bíp trung — cần chú ý
+    // Sóng vuông (âm sắc "còi"), 2 tiếng đều nhau mức trung — khác hẳn chất âm của OK
+    phatBeep(520, 130, 0, 'square');
+    phatBeep(520, 130, 190, 'square');
+    if (navigator.vibrate) navigator.vibrate([120, 90, 120]); // rung 2 nhịp ngắn
   } else if (nhom === 'KHONG_TIM_THAY') {
-    phatBeep(220, 420); // 1 tiếng trầm, kéo dài — cảnh báo lỗi rõ rệt
+    // Sóng vuông, trầm hơn, dài hơn, 3 tiếng dồn dập — nặng nhất trong 3 kết quả, không thể nhầm với OK
+    phatBeep(220, 160, 0, 'square');
+    phatBeep(220, 160, 220, 'square');
+    phatBeep(180, 260, 440, 'square');
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]); // rung 3 nhịp dài hơn, khác kiểu với Sai trạng thái
   }
 }
 
@@ -284,7 +297,6 @@ async function xuLyQuetKichBan(sttKey) {
 
   hienThiToast(item.nhom, item.tieuDe || item.sttKey);
   phatAmThanhKetQua(item.nhom);
-  if (item.nhom === 'KHONG_TIM_THAY' && navigator.vibrate) navigator.vibrate(500);
 
   renderDemNhom();
   renderDsDangQuet();

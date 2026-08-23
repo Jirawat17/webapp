@@ -59,6 +59,7 @@ function renderNav(user, active) {
   if (user.vaiTro === 'admin') {
     links.push({ href: '/users.html', label: 'Nhân viên', icon: 'users', key: 'users' });
   }
+  links.push({ href: '/settings.html', label: 'Thiết lập', icon: 'settings', key: 'settings' });
 
   const nav = document.getElementById('nav');
   if (!nav) return;
