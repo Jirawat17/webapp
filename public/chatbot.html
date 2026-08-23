@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trợ lý — Xưởng Thêu</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div id="nav"></div>
+<div class="page trang-chatbot">
+  <h2>Trợ lý xưởng thêu</h2>
+  <p>Hỏi về đơn hàng, deadline, số lượng, trạng thái sản xuất... Trợ lý chỉ trả lời dựa trên đơn hàng bạn có quyền xem.</p>
+
+  <div id="chatbot-messages-page" class="chatbot-messages-page"></div>
+
+  <form id="chatbot-form-page" class="chatbot-form-page">
+    <label class="sr-only" for="chatbot-input-page">Nhập câu hỏi cho trợ lý</label>
+    <input id="chatbot-input-page" placeholder="Hỏi về đơn hàng, deadline, số lượng..." autocomplete="off">
+    <button type="submit" class="btn-hanh-dong">Gửi</button>
+  </form>
+</div>
+
+<script src="/js/icons.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/chatbot.js"></script>
+<script>
+(async () => {
+  const user = await requireLoginOrRedirect();
+  if (!user) return;
+  renderNav(user, 'chatbot');
+  initChatbotPage();
+})();
+</script>
+</body>
+</html>

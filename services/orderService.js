@@ -1,24 +1,27 @@
-const { readTab, updateCells } = require('./sheetsService');
+const { readTab, readTabCached, updateCells } = require('./sheetsService');
 const { layBanDoTenKhachHang } = require('./khachHangService');
 const { chiSoGiaiDoan } = require('../data/pipelineTinhTrang');
 
 const TAB = 'Don_Hang_ALL';
 const KEY_COL = 'STT_Key';
 
-async function getAll() {
-  return readTab(TAB); // { headers, rows }
+// Mặc định đọc qua cache (nhanh, dữ liệu có thể cũ tối đa vài giây) — dùng cho hiển thị/kiểm tra.
+// Truyền { fresh: true } để BẮT BUỘC đọc thật từ Google Sheets — LUÔN dùng trước khi ghi (update())
+// để không bao giờ ghi nhầm dòng nếu vừa có ai thêm/xoá dòng khác ở nơi khác.
+async function getAll({ fresh = false } = {}) {
+  return fresh ? readTab(TAB) : readTabCached(TAB, 5000);
 }
 
-async function getByKey(sttKey) {
-  const { headers, rows } = await getAll();
+async function getByKey(sttKey, opts) {
+  const { headers, rows } = await getAll(opts);
   const row = rows.find(r => r[KEY_COL] === sttKey);
   return { headers, row };
 }
 
 async function update(sttKey, updates) {
-  const { headers, row } = await getByKey(sttKey);
+  const { headers, row } = await getByKey(sttKey, { fresh: true }); // luôn đọc thật trước khi ghi
   if (!row) throw new Error('Không tìm thấy đơn hàng: ' + sttKey);
-  await updateCells(TAB, headers, row._row, updates);
+  await updateCells(TAB, headers, row._row, updates); // tự xoá cache của tab sau khi ghi (xem sheetsService)
   return { ...row, ...updates };
 }
 

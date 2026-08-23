@@ -1,4 +1,4 @@
-const { readTab } = require('./sheetsService');
+const { readTabCached } = require('./sheetsService');
 
 const TAB = 'CauHinhKichBan';
 
@@ -12,9 +12,10 @@ function slugHoa(str) {
     .toLowerCase();
 }
 
-// Đọc toàn bộ kịch bản từ Sheet — sửa/thêm kịch bản chỉ cần sửa tab CauHinhKichBan, không cần sửa code
+// Đọc toàn bộ kịch bản từ Sheet — sửa/thêm kịch bản chỉ cần sửa tab CauHinhKichBan, không cần sửa code.
+// Dùng cache 60s vì bảng này gần như không đổi trong lúc đang thao tác — tránh đọc lại qua mạng mỗi lần quét.
 async function layDanhSachKichBan() {
-  const { rows } = await readTab(TAB);
+  const { rows } = await readTabCached(TAB, 60000);
   return rows
     .filter(r => r.Ten_Kich_Ban && r.Trang_Thai_Sau)
     .map(r => ({

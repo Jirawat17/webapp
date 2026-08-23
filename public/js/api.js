@@ -51,6 +51,7 @@ function renderNav(user, active) {
     { href: '/orders.html', label: 'Đơn hàng', icon: 'orders', key: 'orders' },
     { href: '/scan.html', label: 'Quét QR', icon: 'scan', key: 'scan' },
     { href: '/dashboard.html', label: 'Thống kê', icon: 'chart', key: 'dashboard' },
+    { href: '/chatbot.html', label: 'Trợ lý', icon: 'chat', key: 'chatbot' },
   ];
   if (user.vaiTro === 'admin' || user.vaiTro === 'quan_ly') {
     links.push({ href: '/reports.html', label: 'Báo cáo', icon: 'download', key: 'reports' });

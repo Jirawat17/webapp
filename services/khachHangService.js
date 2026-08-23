@@ -1,10 +1,10 @@
-const { readTab } = require('./sheetsService');
+const { readTabCached } = require('./sheetsService');
 
 const TAB = 'Khach_Hang';
 
-// Trả về danh sách khách hàng {ma, ten, tinhTrang}
+// Trả về danh sách khách hàng {ma, ten, tinhTrang} — cache 60s vì bảng khách hàng rất ít khi đổi
 async function layDanhSachKhachHang() {
-  const { rows } = await readTab(TAB);
+  const { rows } = await readTabCached(TAB, 60000);
   return rows
     .filter(r => r.MA_KHACH_HANG)
     .map(r => ({ ma: r.MA_KHACH_HANG, ten: r.TEN_KHACH_HANG || r.MA_KHACH_HANG, tinhTrang: r.TINH_TRANG || '' }));
