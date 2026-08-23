@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Báo cáo — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=20260824a">
+<link rel="stylesheet" href="/css/style.css?v=20260824b">
 <script src="/js/theme.js?v=20260823b"></script>
 </head>
 <body>
@@ -12,7 +12,7 @@
 <div class="page">
   <h2>Xuất báo cáo</h2>
   <p>Mặc định là đơn hàng lên đơn <strong>hôm nay</strong>, tất cả khách hàng. Đổi ngày/khách hàng để mở rộng, hoặc chọn thêm 1 trạng thái để in nhanh đúng nhóm đơn cần thiết.</p>
-  <p>File xuất ra tự đổi mẫu theo trạng thái đã chọn: <strong>"B5_Đã sản xuất"</strong> → mẫu <em>Thông tin cho Tracking</em> (kèm thêm sheet Danh sách phôi áo); mọi trạng thái khác (kể cả "Tất cả trạng thái") → mẫu <em>Danh sách phôi áo tổng hợp</em>.</p>
+  <p>File tự đổi mẫu theo trạng thái đã chọn: <strong>"B1_Đã in"</strong> → danh sách phôi áo <em>đã gộp theo ngày/loại/kích thước/màu</em> (cộng dồn số lượng); <strong>"B5_Đã sản xuất"</strong> → mẫu <em>Thông tin cho Tracking</em>; mọi trạng thái khác → danh sách phôi áo chi tiết từng đơn.</p>
 
   <form id="form-bao-cao" class="bao-cao-form">
     <div class="truong">
@@ -33,12 +33,14 @@
     </div>
     <div id="thong-tin-loc" class="thong-tin-loc"></div>
     <div class="nut-xuat">
+      <button type="button" class="btn-hanh-dong phu" id="btn-xem-truoc"></button>
       <button type="button" class="btn-hanh-dong" id="btn-excel"></button>
       <button type="button" class="btn-hanh-dong phu" id="btn-pdf"></button>
     </div>
   </form>
 
   <div id="thong-bao" style="margin-top:12px"></div>
+  <div id="khu-xem-truoc" style="margin-top:20px"></div>
 </div>
 
 <script src="/js/icons.js?v=20260823b"></script>
@@ -49,11 +51,11 @@
   if (!user) return;
   renderNav(user, 'reports');
 
+  document.getElementById('btn-xem-truoc').innerHTML = icon('scan') + ' Xem trước';
   document.getElementById('btn-excel').innerHTML = icon('file') + ' Xuất Excel';
   document.getElementById('btn-pdf').innerHTML = icon('file') + ' Xuất PDF';
 
   // Mặc định "hôm nay" cho cả 2 ô ngày — đúng yêu cầu "không chọn thì mặc định hôm nay".
-  // Người dùng vẫn có thể đổi thành khoảng ngày rộng hơn nếu cần báo cáo tổng hợp.
   const homNay = ngayHomNayYYYYMMDD();
   document.getElementById('tu-ngay').value = homNay;
   document.getElementById('den-ngay').value = homNay;
@@ -67,13 +69,22 @@
   }
 
   ['tu-ngay', 'den-ngay', 'khach-hang'].forEach(id => {
-    document.getElementById(id).addEventListener('change', taiDanhSachTrangThai);
+    document.getElementById(id).addEventListener('change', () => {
+      taiDanhSachTrangThai();
+      an_KhuXemTruoc();
+    });
   });
+  document.getElementById('trang-thai').addEventListener('change', an_KhuXemTruoc);
   await taiDanhSachTrangThai();
 
+  document.getElementById('btn-xem-truoc').onclick = xemTruoc;
   document.getElementById('btn-excel').onclick = () => xuatBaoCao('excel');
   document.getElementById('btn-pdf').onclick = () => xuatBaoCao('pdf');
 })();
+
+function an_KhuXemTruoc() {
+  document.getElementById('khu-xem-truoc').innerHTML = '';
+}
 
 function ngayHomNayYYYYMMDD() {
   const d = new Date();
@@ -93,8 +104,15 @@ function layThamSoLoc() {
   return qs;
 }
 
-// Dropdown Trạng thái tự cập nhật theo ngày + khách hàng đang chọn — chỉ hiện trạng thái THẬT SỰ
-// đang có trong phạm vi lọc đó, kèm số lượng đơn, để in nhanh đúng nhóm cần thiết.
+function layThamSoLocDayDu() {
+  const qs = layThamSoLoc();
+  const trangThai = document.getElementById('trang-thai').value;
+  if (trangThai) qs.set('trangThai', trangThai);
+  return qs;
+}
+
+// Dropdown Trạng thái hiện ĐẦY ĐỦ các trạng thái theo pipeline (kể cả trạng thái chưa có đơn nào
+// khớp bộ lọc hiện tại — hiện "(0 đơn)"), không chỉ những gì đang thực sự có trong dữ liệu.
 async function taiDanhSachTrangThai() {
   const selTrangThai = document.getElementById('trang-thai');
   const dangChonTruoc = selTrangThai.value;
@@ -110,15 +128,42 @@ async function taiDanhSachTrangThai() {
 
   selTrangThai.innerHTML = '<option value="">Tất cả trạng thái</option>' +
     ketQua.trangThai.map(t => `<option value="${escapeHtml(t.trangThai)}">${escapeHtml(t.trangThai)} (${t.soDon} đơn)</option>`).join('');
-
-  // Giữ lại lựa chọn cũ nếu trạng thái đó vẫn còn trong danh sách mới; không thì reset về "Tất cả"
-  if (ketQua.trangThai.some(t => t.trangThai === dangChonTruoc)) {
-    selTrangThai.value = dangChonTruoc;
-  }
+  selTrangThai.value = dangChonTruoc;
 
   thongTin.textContent = ketQua.tongSoDon === 0
     ? 'Không có đơn nào khớp ngày/khách hàng đã chọn.'
     : `Có ${ketQua.tongSoDon} đơn khớp bộ lọc hiện tại.`;
+}
+
+// Xem trước — gọi cùng dữ liệu Excel/PDF sẽ dùng, vẽ thành bảng HTML ngay trên trang, không cần tải file
+async function xemTruoc() {
+  const khu = document.getElementById('khu-xem-truoc');
+  khu.innerHTML = spinnerInline('Đang tải xem trước...');
+
+  let ketQua;
+  try {
+    ketQua = await apiFetch('/reports/xem-truoc?' + layThamSoLocDayDu().toString());
+  } catch (e) {
+    khu.innerHTML = `<p>${icon('alert')} ${escapeHtml(e.message)}</p>`;
+    return;
+  }
+
+  khu.innerHTML = ketQua.bang.map(b => `
+    <div class="xem-truoc-bang">
+      <h3>${escapeHtml(b.tieuDe)}</h3>
+      <p class="thong-tin-loc">${escapeHtml(b.dongThongTin)}</p>
+      <p class="thong-tin-loc" style="opacity:0.75">${escapeHtml(b.dongNguoiXuat)}</p>
+      ${b.rows.length === 0 ? '<p>Không có dòng nào khớp bộ lọc.</p>' : `
+        <div class="bang-cuon-ngang">
+          <table class="bang-xem-truoc">
+            <thead><tr>${b.cot.map(c => `<th>${escapeHtml(c)}</th>`).join('')}</tr></thead>
+            <tbody>${b.rows.map(dong => `<tr>${dong.map(o => `<td>${escapeHtml(o)}</td>`).join('')}</tr>`).join('')}</tbody>
+          </table>
+        </div>
+        <p class="thong-tin-loc">Tổng số dòng: ${b.rows.length}</p>
+      `}
+    </div>
+  `).join('');
 }
 
 // Tải file nhị phân (Excel/PDF) qua fetch thay vì mở link trực tiếp — để dùng chung cookie session
@@ -127,12 +172,8 @@ async function xuatBaoCao(loai) {
   const thongBao = document.getElementById('thong-bao');
   thongBao.innerHTML = spinnerInline('Đang tạo file...');
 
-  const qs = layThamSoLoc();
-  const trangThai = document.getElementById('trang-thai').value;
-  if (trangThai) qs.set('trangThai', trangThai);
-
   try {
-    const res = await fetch(`/api/reports/${loai}?` + qs.toString(), { credentials: 'include' });
+    const res = await fetch(`/api/reports/${loai}?` + layThamSoLocDayDu().toString(), { credentials: 'include' });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
       throw new Error(data.error || 'Không xuất được báo cáo');
@@ -141,7 +182,7 @@ async function xuatBaoCao(loai) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    // Lấy đúng tên file server đặt (DSPhoiAoTongHop.xlsx / ThongTinChoTracking.xlsx...) từ header,
+    // Lấy đúng tên file server đặt (đã kèm ngày, vd DSPhoiAoTongHop_23-08-2026.xlsx) từ header,
     // không tự đặt cứng tên ở đây — tránh ghi đè tên file đã đổi theo mẫu ở phía server.
     const contentDisposition = res.headers.get('Content-Disposition') || '';
     const khopTen = contentDisposition.match(/filename="([^"]+)"/);

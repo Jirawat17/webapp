@@ -28,6 +28,25 @@ const TRANG_THAI_KET_THUC = [
   'REFUNDED_Hoàn đơn',
 ];
 
+// Danh sách ĐẦY ĐỦ trạng thái dùng cho dropdown lọc ở trang Báo cáo — tách riêng khỏi
+// THU_TU_TINH_TRANG (dùng cho cảnh báo/phân quyền) để không ảnh hưởng các tính năng khác khi
+// thêm trạng thái mới vào đây. "ĐƠN LỖI CẦN LÀM LẠI" là trạng thái phát sinh, không nằm trong
+// pipeline B0-B5 thông thường.
+const DANH_SACH_TRANG_THAI_BAO_CAO = [
+  'B0_Chờ xác nhận',
+  'B1_Đã in',
+  'B2_Đã lấy phôi',
+  'B3_Đã đủ Phôi và File Vẽ',
+  'B4_Đang sản xuất',
+  'B5_Đã sản xuất',
+  'SHIPPED_Đã gửi vận chuyển',
+  'IN TRAINSIT_Tracking đã hoạt động',
+  'DELIVERED_Đã giao hàng đến khách',
+  'CANCELLED_Đã hủy đơn',
+  'REFUNDED_Hoàn đơn',
+  'ĐƠN LỖI CẦN LÀM LẠI',
+];
+
 // Vị trí của 1 trạng thái trong pipeline — null nếu không nằm trong danh sách đã biết
 // (ví dụ trạng thái lạ mới thêm mà chưa cập nhật mảng trên)
 function chiSoGiaiDoan(tinhTrang) {
@@ -35,4 +54,4 @@ function chiSoGiaiDoan(tinhTrang) {
   return idx === -1 ? null : idx;
 }
 
-module.exports = { THU_TU_TINH_TRANG, TRANG_THAI_KET_THUC, chiSoGiaiDoan };
+module.exports = { THU_TU_TINH_TRANG, TRANG_THAI_KET_THUC, DANH_SACH_TRANG_THAI_BAO_CAO, chiSoGiaiDoan };

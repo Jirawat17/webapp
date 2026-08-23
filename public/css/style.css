@@ -500,6 +500,14 @@ body.trang-dang-nhap {
 .bao-cao-form .nut-xuat { display: flex; gap: var(--space-2); flex-wrap: wrap; }
 .thong-tin-loc { font-size: 0.88rem; color: var(--color-text-muted); padding: 8px 0; }
 
+/* Bảng "Xem trước" báo cáo trên trang Báo cáo */
+.xem-truoc-bang { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-4); margin-bottom: var(--space-4); box-shadow: var(--shadow-sm); }
+.bang-cuon-ngang { overflow-x: auto; margin: var(--space-2) 0; }
+.bang-xem-truoc { width: 100%; border-collapse: collapse; font-size: 0.85rem; white-space: nowrap; }
+.bang-xem-truoc th, .bang-xem-truoc td { padding: 8px 12px; border-bottom: 1px solid var(--color-border); text-align: left; }
+.bang-xem-truoc th { background: var(--color-bg); font-weight: 700; position: sticky; top: 0; }
+.bang-xem-truoc tbody tr:hover { background: var(--color-primary-light); }
+
 /* ============================================================
    NHÂN VIÊN (Admin)
    ============================================================ */
