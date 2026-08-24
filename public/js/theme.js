@@ -1,5 +1,5 @@
-// Áp dụng màu chủ đạo người dùng đã chọn NGAY LẬP TỨC, trước khi phần còn lại của trang vẽ ra —
-// tránh hiện tượng nháy màu mặc định rồi mới đổi sang màu đã chọn. File này PHẢI nạp trong <head>.
+// Áp dụng màu chủ đạo + chế độ sáng/tối người dùng đã chọn NGAY LẬP TỨC, trước khi phần còn lại
+// của trang vẽ ra — tránh hiện tượng nháy màu/nền mặc định rồi mới đổi. File này PHẢI nạp trong <head>.
 const BANG_MAU_CHU_DAO = [
   { id: 'rose',    ten: 'Đỏ mận (mặc định)', primary: '#be123c', dark: '#9f1239', light: '#fff1f2' },
   { id: 'blue',    ten: 'Xanh dương',        primary: '#1d4ed8', dark: '#1e40af', light: '#eff6ff' },
@@ -19,13 +19,38 @@ function luuMauDaChon(id) {
   try { localStorage.setItem('mauChuDao', id); } catch (e) { /* trình duyệt chặn localStorage — bỏ qua */ }
 }
 
+// "primary-light" được thiết kế làm nền nhạt TRÊN NỀN SÁNG (gần trắng) — trên nền tối cần đổi
+// sang phiên bản trong suốt của chính màu nhấn, không thì mảng "đang chọn"/hover sẽ chói và lệch tông.
+function hexSangRgba(hex, alpha) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.substring(0, 2), 16), g = parseInt(h.substring(2, 4), 16), b = parseInt(h.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 function apDungMauChuDao(id) {
   const preset = BANG_MAU_CHU_DAO.find(p => p.id === id) || BANG_MAU_CHU_DAO[0];
   const style = document.documentElement.style;
   style.setProperty('--color-primary', preset.primary);
   style.setProperty('--color-primary-dark', preset.dark);
-  style.setProperty('--color-primary-light', preset.light);
+  style.setProperty('--color-primary-light', dangCheDoToi() ? hexSangRgba(preset.primary, 0.18) : preset.light);
   return preset;
 }
 
-apDungMauChuDao(layMauDaChon()); // chạy ngay khi file này được nạp
+// ============================================================
+// CHẾ ĐỘ TỐI (dark theme) — bật/tắt thủ công, lưu riêng trên từng máy/trình duyệt, KHÔNG tự theo
+// hệ điều hành (theo đúng lựa chọn khi làm tính năng này).
+// ============================================================
+function dangCheDoToi() {
+  try { return localStorage.getItem('cheDoToi') === '1'; } catch (e) { return false; }
+}
+
+function luuCheDoToi(bat) {
+  try { localStorage.setItem('cheDoToi', bat ? '1' : '0'); } catch (e) { /* bỏ qua nếu trình duyệt chặn */ }
+}
+
+function apDungCheDoToi(bat) {
+  document.documentElement.setAttribute('data-theme', bat ? 'dark' : 'light');
+  apDungMauChuDao(layMauDaChon()); // tính lại --color-primary-light cho hợp nền sáng/tối hiện tại
+}
+
+apDungCheDoToi(dangCheDoToi()); // chạy ngay khi file này được nạp

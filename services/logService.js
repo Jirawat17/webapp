@@ -43,4 +43,39 @@ async function ghiNhatKyQuetHangLoat({ nguoiQuet, tenKichBan, sttKey, trangThaiC
   });
 }
 
-module.exports = { ghiLog, layLichSuTheoDon, ghiNhatKyQuetHangLoat };
+// Lấy N hoạt động gần nhất trong toàn hệ thống, lọc tuỳ chọn theo người dùng/loại hành động —
+// dùng cho chatbot (tool tra_cuu_lich_su_gan_day, chỉ mở cho admin/quan_ly, xem routes/chatbot.js).
+// gioiHan chặn trần 50 để không dội quá nhiều dữ liệu vào 1 câu trả lời.
+async function layHoatDongGanDay({ nguoiDung, hanhDong, gioiHan = 20 } = {}) {
+  const { rows } = await readTabCached(TAB, 5000);
+  let list = rows;
+  if (nguoiDung) list = list.filter(r => r.NguoiDung === nguoiDung);
+  if (hanhDong) list = list.filter(r => r.HanhDong === hanhDong);
+  return list
+    .sort((a, b) => new Date(b.ThoiGian) - new Date(a.ThoiGian))
+    .slice(0, Math.min(Number(gioiHan) || 20, 50));
+}
+
+// Tìm mọi lần có đơn được chuyển SANG đúng 1 trạng thái cụ thể — quét cả 4 loại hành động có thể đổi
+// TINH_TRANG (QUET_KICH_BAN, QUET_KICH_BAN_HANG_LOAT, CHUYEN_TRANG_THAI_HANG_LOAT ghi {tu, sang};
+// CAP_NHAT_DON ghi nguyên object các trường đã sửa, có thể có TINH_TRANG). Dùng để dựng báo cáo tỷ lệ
+// lỗi B4.3_ĐƠN LỖI CẦN LÀM LẠI — KHÔNG thể lấy từ TINH_TRANG hiện tại của đơn vì B4.3 là trạng thái
+// thoáng qua (đơn sẽ được xác nhận làm lại và quay về B1.1 sau đó), phải tính từ lịch sử mới đủ.
+const HANH_DONG_CO_THE_DOI_TRANG_THAI = ['QUET_KICH_BAN', 'QUET_KICH_BAN_HANG_LOAT', 'CHUYEN_TRANG_THAI_HANG_LOAT', 'CAP_NHAT_DON'];
+
+async function layLichSuChuyenSangTrangThai(trangThaiDich) {
+  const { rows } = await readTabCached(TAB, 5000);
+  const ketQua = [];
+  for (const r of rows) {
+    if (!HANH_DONG_CO_THE_DOI_TRANG_THAI.includes(r.HanhDong)) continue;
+    let chiTiet;
+    try { chiTiet = JSON.parse(r.ChiTiet); } catch (e) { continue; } // ChiTiet không phải JSON hợp lệ — bỏ qua dòng này
+    const sang = chiTiet && (chiTiet.sang || chiTiet.TINH_TRANG);
+    if (sang === trangThaiDich) {
+      ketQua.push({ sttKey: r.STT_Key, nguoiDung: r.NguoiDung, thoiGian: r.ThoiGian });
+    }
+  }
+  return ketQua;
+}
+
+module.exports = { ghiLog, layLichSuTheoDon, ghiNhatKyQuetHangLoat, layHoatDongGanDay, layLichSuChuyenSangTrangThai };

@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=20260824h">
-<script src="/js/theme.js?v=20260823b"></script>
+<link rel="stylesheet" href="/css/style.css?v=20260824j">
+<script src="/js/theme.js?v=20260824a"></script>
 </head>
 <body>
 <div id="nav"></div>
@@ -23,9 +23,9 @@
   </div>
 
   <div class="in-nhanh-thanh">
-    <button type="button" class="btn-hanh-dong phu" id="btn-in-phoi-ao" onclick="inNhanh('phoi_ao_gop')"></button>
-    <button type="button" class="btn-hanh-dong phu" id="btn-in-don-ao" onclick="inNhanh('don_can_in')"></button>
-    <button type="button" class="btn-hanh-dong phu" id="btn-in-tracking" onclick="inNhanh('tracking')"></button>
+    <button type="button" class="btn-hanh-dong phu" id="btn-in-phoi-ao" onclick="inNhanh('phoi_ao_gop', this)"></button>
+    <button type="button" class="btn-hanh-dong phu" id="btn-in-don-ao" onclick="inNhanh('don_can_in', this)"></button>
+    <button type="button" class="btn-hanh-dong phu" id="btn-in-tracking" onclick="inNhanh('tracking', this)"></button>
   </div>
 
   <label class="chon-tat-ca-hang">
@@ -46,18 +46,22 @@
 </div>
 
 <script src="/js/icons.js?v=20260823c"></script>
-<script src="/js/api.js?v=20260824a"></script>
+<script src="/js/api.js?v=20260824b"></script>
 <script>
 const NHAN_CANH_BAO = { VANG: 'Vàng · 3 ngày', CAM: 'Cam · 5 ngày', DO: 'Đỏ · 7 ngày' };
 
-// Danh sách ĐẦY ĐỦ 12 trạng thái — dùng riêng cho ô "Chuyển đến trạng thái" (chọn tự do, không
+// Danh sách ĐẦY ĐỦ trạng thái — dùng riêng cho ô "Chuyển đến trạng thái" (chọn tự do, không
 // kiểm tra trạng thái hiện tại). PHẢI khớp với DANH_SACH_TRANG_THAI_BAO_CAO trong
 // data/pipelineTinhTrang.js — sửa 1 chỗ thì nhớ sửa chỗ kia.
+// Cập nhật theo pipeline mới (24/08/2026, So_do_logic.pdf) — thay hoàn toàn 12 trạng thái B0-B5 cũ.
 const DANH_SACH_TRANG_THAI_DAY_DU = [
-  'B0_Chờ xác nhận', 'B1_Đã in', 'B2_Đã lấy phôi', 'B3_Đã đủ Phôi và File Vẽ',
-  'B4_Đang sản xuất', 'B5_Đã sản xuất', 'SHIPPED_Đã gửi vận chuyển',
-  'IN TRAINSIT_Tracking đã hoạt động', 'DELIVERED_Đã giao hàng đến khách',
-  'CANCELLED_Đã hủy đơn', 'REFUNDED_Hoàn đơn', 'ĐƠN LỖI CẦN LÀM LẠI',
+  'B1.2_HOLD_Chưa xác nhận', 'B1.1_Đơn đã xác nhận',
+  'B2.2_Không có phôi', 'B2.1_Đã có phôi',
+  'B3.2_Chưa vẽ file', 'B3.1_Đã vẽ file',
+  'B4.2_Đơn chưa sản xuất', 'B4.3_ĐƠN LỖI CẦN LÀM LẠI', 'B4.1_Đơn đã sản xuất',
+  'B5.2_Đơn chưa đóng gói', 'B5.1_Đơn đã đóng gói',
+  'SHIPPED_Đã gửi vận chuyển', 'IN TRAINSIT_Tracking đã hoạt động',
+  'DELIVERED_Đã giao hàng đến khách', 'CANCELLED_Đã hủy đơn', 'REFUNDED_Hoàn đơn',
 ];
 
 let danhSachHienTai = [];
@@ -137,7 +141,7 @@ async function taiDon() {
 function renderDanhSachDon() {
   const el = document.getElementById('danh-sach-don');
 
-  if (danhSachHienTai.length === 0) { el.innerHTML = '<p>Không có đơn nào khớp bộ lọc.</p>'; capNhatThanhHanhDong(); return; }
+  if (danhSachHienTai.length === 0) { el.innerHTML = `<div class="trang-thai-rong">${icon('package')}<p>Không có đơn nào khớp bộ lọc.</p></div>`; capNhatThanhHanhDong(); return; }
 
   el.innerHTML = danhSachHienTai.map(o => {
     const daChon = donDaChonSet.has(o.STT_Key);
@@ -242,7 +246,11 @@ async function apDungChuyenTrangThai() {
 
 // In nhanh theo ĐÚNG bộ lọc trạng thái + ô tìm kiếm đang áp dụng trên trang này (không ép về
 // đúng trạng thái B1/B2/B5 của mẫu) — 'mau' chỉ ép cứng ĐỊNH DẠNG cột hiển thị trong file PDF.
-async function inNhanh(mau) {
+async function inNhanh(mau, nut) {
+  const nhanGoc = nut.innerHTML;
+  nut.disabled = true;
+  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 18 }) + ' Đang tạo file...';
+
   const qs = new URLSearchParams();
   qs.set('mau', mau);
   const trangThai = document.getElementById('loc-trang-thai').value;
@@ -273,6 +281,9 @@ async function inNhanh(mau) {
     URL.revokeObjectURL(url);
   } catch (e) {
     alert('Lỗi: ' + e.message);
+  } finally {
+    nut.disabled = false;
+    nut.innerHTML = nhanGoc;
   }
 }
 </script>

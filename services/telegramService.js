@@ -40,13 +40,17 @@ function guiTinNhan(chatId, text) {
   });
 }
 
+// don ở đây là 1 dòng Sheet gốc (từ orderService.getAll()), có thể kèm thêm TenKhachHang đã gán sẵn
+// (xem services/canhBaoJob.js) — dùng đúng tên cột thật, KHÔNG dùng Ten_San_Pham/Ten_KH/Trang_Thai/
+// Ngay_Dat (không tồn tại trong Sheet — lỗi cũ khiến tin Telegram gửi ra bị rỗng các dòng này).
 async function guiCanhBao(muc, don) {
+  const sanPham = [don.LOAI, don.KICH_THUOC, don.MAU_SAC].filter(Boolean).join(' · ');
   const text =
     `${NHAN_MUC[muc] || muc} — Đơn <b>${don.STT_Key}</b>\n` +
-    `Sản phẩm: ${don.Ten_San_Pham || ''}\n` +
-    `Khách hàng: ${don.Ten_KH || ''}\n` +
-    `Trạng thái: ${don.Trang_Thai || ''}\n` +
-    `Ngày đặt: ${don.Ngay_Dat || ''}`;
+    `Sản phẩm: ${sanPham}\n` +
+    `Khách hàng: ${don.TenKhachHang || don.MA_KHACH_HANG || ''}\n` +
+    `Trạng thái: ${don.TINH_TRANG || ''}\n` +
+    `Ngày đặt: ${don.NGAY_LEN_DON || ''}`;
 
   await guiTinNhan(CHAT_ID_THEO_MUC[muc], text);
 }

@@ -1,6 +1,6 @@
 const { readTab, readTabCached, updateCells } = require('./sheetsService');
 const { layBanDoTenKhachHang } = require('./khachHangService');
-const { chiSoGiaiDoan } = require('../data/pipelineTinhTrang');
+const { chuaXongGiaiDoan, TRANG_THAI_DA_SHIP, TRANG_THAI_KET_THUC } = require('../data/pipelineTinhTrang');
 
 const TAB = 'Don_Hang_ALL';
 const KEY_COL = 'STT_Key';
@@ -44,25 +44,34 @@ function danhSachViTriTheu(don) {
   return [don.VI_TRI_1, don.VI_TRI_2, don.VI_TRI_3].filter(Boolean);
 }
 
-// Mỗi vai trò chỉ thấy đúng phần việc của mình, dựa trên vị trí hiện tại trong pipeline TINH_TRANG thật:
-// B0 (chờ xác nhận) → B1 (đã in) → B2 (đã lấy phôi) → B3 (đủ phôi+file) → B4 (đang sx) → B5 (đã sx) → SHIPPED...
+// true nếu đơn đã ra khỏi phạm vi 5 giai đoạn sản xuất (đã ship/đã giao/đã huỷ/đã hoàn). Dùng để
+// loại các đơn này khỏi màn hình chuan_bi_phoi/ve_file — chuaXongGiaiDoan() coi trạng thái lạ/đã
+// ship là "chưa xong" (an toàn cho việc tính cảnh báo), nhưng ở ĐÂY ý nghĩa cần NGƯỢC LẠI: đơn đã
+// ship rồi thì không còn liên quan gì tới người nhặt phôi/vẽ file nữa — nếu không loại riêng, các
+// đơn này sẽ bị lọt vào danh sách của 2 vai trò đó (lỗi thật đã xảy ra, đã kiểm tra lại bằng cách
+// mô phỏng filterForRole với đủ 16 trạng thái).
+function daRoiKhoiSanXuat(tinhTrang) {
+  return TRANG_THAI_DA_SHIP.includes(tinhTrang) || TRANG_THAI_KET_THUC.includes(tinhTrang);
+}
+
+// Mỗi vai trò chỉ thấy đúng phần việc của mình, dựa trên giai đoạn hiện tại trong pipeline mới:
+// GĐ1 xác nhận -> GĐ2 lấy phôi -> GĐ3 vẽ file -> GĐ4 sản xuất -> GĐ5 đóng gói -> (ship...)
 // Sửa data/pipelineTinhTrang.js nếu quy trình thực tế thay đổi.
 function filterForRole(rows, user) {
-  const chiSo = (r) => chiSoGiaiDoan(r.TINH_TRANG);
-  const idxB2 = chiSoGiaiDoan('B2_Đã lấy phôi');
-  const idxB3 = chiSoGiaiDoan('B3_Đã đủ Phôi và File Vẽ');
-  const idxB5 = chiSoGiaiDoan('B5_Đã sản xuất');
-  const idxShipped = chiSoGiaiDoan('SHIPPED_Đã gửi vận chuyển');
-
   switch (user.vaiTro) {
-    case 'chuan_bi_phoi': // tương đương NguoiLayPhoi — lo phần lấy phôi, quan tâm đơn CHƯA tới B2
-      return rows.filter(r => chiSo(r) === null || chiSo(r) < idxB2);
-    case 've_file': // lo phần vẽ file, quan tâm đơn CHƯA tới B3 (đủ phôi + file)
-      return rows.filter(r => chiSo(r) === null || chiSo(r) < idxB3);
-    case 'san_xuat': // đơn đã đủ điều kiện sản xuất: từ B3 đến B5, chưa ship
-      return rows.filter(r => chiSo(r) !== null && chiSo(r) >= idxB3 && chiSo(r) < idxShipped);
-    case 'dong_goi': // đơn đã sản xuất xong, sắp/đang ship
-      return rows.filter(r => chiSo(r) !== null && chiSo(r) >= idxB5);
+    case 'chuan_bi_phoi': // lo phần lấy phôi — quan tâm đơn CHƯA có phôi (GĐ2 chưa xong), trừ đơn đã ship/huỷ/hoàn
+      return rows.filter(r => chuaXongGiaiDoan(r.TINH_TRANG, 2) && !daRoiKhoiSanXuat(r.TINH_TRANG));
+    case 've_file': // lo phần vẽ file — quan tâm đơn CHƯA vẽ xong file (GĐ3 chưa xong), trừ đơn đã ship/huỷ/hoàn
+      return rows.filter(r => chuaXongGiaiDoan(r.TINH_TRANG, 3) && !daRoiKhoiSanXuat(r.TINH_TRANG));
+    case 'san_xuat': // đơn đã đủ điều kiện sản xuất (đã vẽ xong file, GĐ3 xong) trở đi, tới trước khi ship —
+      // LƯU Ý: !chuaXongGiaiDoan(...,3) một mình đã tự loại đơn ship/huỷ/hoàn (nhờ tác dụng phụ của
+      // "trạng thái lạ = chưa xong"), nhưng vẫn viết tường minh !daRoiKhoiSanXuat() ở đây để không
+      // phải suy luận qua hiệu ứng phụ mới hiểu đúng — tránh lặp lại đúng kiểu lỗi ở 2 vai trò trên.
+      return rows.filter(r => !chuaXongGiaiDoan(r.TINH_TRANG, 3) && !daRoiKhoiSanXuat(r.TINH_TRANG));
+    case 'dong_goi': // đơn đã sản xuất xong (GĐ4 xong) trở đi, gồm cả đã ship/đã giao (để tiện theo dõi
+      // tới lúc giao xong) — nhưng KHÔNG gồm đã huỷ/đã hoàn (TRANG_THAI_DA_SHIP không chứa 2 trạng
+      // thái đó, xem data/pipelineTinhTrang.js).
+      return rows.filter(r => !chuaXongGiaiDoan(r.TINH_TRANG, 4) || TRANG_THAI_DA_SHIP.includes(r.TINH_TRANG));
     default: // admin, quan_ly — xem tất cả
       return rows;
   }

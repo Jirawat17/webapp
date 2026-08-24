@@ -244,11 +244,13 @@ body.trang-dang-nhap {
   display: flex; align-items: flex-start; gap: var(--space-3); background: var(--color-surface); border-radius: var(--radius-md);
   padding: var(--space-3); cursor: pointer; color: inherit; box-shadow: var(--shadow-sm);
   border: 1px solid var(--color-border); transition: border-color 0.15s, box-shadow 0.2s, transform 0.2s, background 0.15s;
+  overflow: hidden;
 }
-.order-card:hover { border-color: var(--color-primary); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.order-card:hover { border-color: var(--color-primary); box-shadow: var(--shadow-lg); transform: translateY(-3px); }
 .order-card.da-chon { border-color: var(--color-primary); background: var(--color-primary-light); }
 .order-checkbox { width: 22px; height: 22px; flex-shrink: 0; margin-top: 2px; cursor: pointer; accent-color: var(--color-primary); }
-.order-card img { width: 72px; height: 72px; object-fit: cover; border-radius: var(--radius-sm); background: var(--color-bg); flex-shrink: 0; }
+.order-card img { width: 72px; height: 72px; object-fit: cover; border-radius: var(--radius-sm); background: var(--color-bg); flex-shrink: 0; transition: transform 0.25s ease; }
+.order-card:hover img { transform: scale(1.06); }
 .order-card .thong-tin { min-width: 0; flex: 1; }
 .order-card strong { display: block; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .order-card .meta { font-size: 0.85rem; color: var(--color-text-muted); margin: 2px 0; }
@@ -320,10 +322,12 @@ body.trang-dang-nhap {
 .btn-hanh-dong {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   padding: 14px; font-size: 15.5px; font-weight: 700; border-radius: var(--radius-md); border: none;
-  background: var(--color-primary); color: white; cursor: pointer; min-height: var(--tap-min);
+  background: linear-gradient(155deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  color: white; cursor: pointer; min-height: var(--tap-min);
   box-shadow: var(--shadow-sm);
+  transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.15s ease;
 }
-.btn-hanh-dong:hover { background: var(--color-primary-dark); box-shadow: var(--shadow-md); }
+.btn-hanh-dong:hover { filter: brightness(1.08); box-shadow: var(--shadow-md); transform: translateY(-1px); }
 .btn-hanh-dong.phu { background: var(--color-surface); color: var(--color-primary); border: 1.5px solid var(--color-primary); box-shadow: none; }
 .btn-hanh-dong.phu:hover { background: var(--color-primary-light); }
 
@@ -565,6 +569,27 @@ body.trang-dang-nhap {
 .chatbot-user { align-self: flex-end; background: var(--color-primary); color: white; border-bottom-right-radius: 4px; }
 .chatbot-bot { align-self: flex-start; background: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-border); border-bottom-left-radius: 4px; }
 .chatbot-dang-go { color: var(--color-text-faint); font-style: italic; }
+
+/* 3 chấm nhấp nhô khi chatbot đang soạn câu trả lời — thay cho chữ "Đang trả lời..." tĩnh */
+.dang-go-cham { display: inline-flex; gap: 4px; align-items: center; padding: 2px 0; }
+.dang-go-cham span { width: 7px; height: 7px; border-radius: 50%; background: currentColor; opacity: 0.5; animation: nhun 1.1s ease-in-out infinite; }
+.dang-go-cham span:nth-child(2) { animation-delay: 0.15s; }
+.dang-go-cham span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes nhun { 0%, 60%, 100% { transform: translateY(0); opacity: 0.5; } 30% { transform: translateY(-5px); opacity: 1; } }
+
+/* Ô trạng thái rỗng dùng chung (không có đơn/không có kết quả...) — icon nổi nhẹ (troiNhe có sẵn) */
+.trang-thai-rong { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-3); padding: var(--space-6) var(--space-4); text-align: center; color: var(--color-text-muted); }
+.trang-thai-rong svg { width: 56px; height: 56px; color: var(--color-text-faint); animation: troiNhe 3.5s ease-in-out infinite; }
+
+/* Thống kê tỷ lệ lỗi sản xuất — thanh ngang CSS thuần, không cần thư viện chart */
+.luoi-thong-ke-loi { display: grid; grid-template-columns: 1fr; gap: var(--space-3); }
+@media (min-width: 900px) { .luoi-thong-ke-loi { grid-template-columns: repeat(3, 1fr); } }
+.thanh-thong-ke { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.thanh-thong-ke-dong { display: grid; grid-template-columns: minmax(80px, 1fr) minmax(60px, 3fr) 30px; align-items: center; gap: 8px; font-size: 0.88rem; }
+.thanh-thong-ke-nhan { color: var(--color-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.thanh-thong-ke-bar { background: var(--color-bg); border-radius: var(--radius-full); height: 10px; overflow: hidden; }
+.thanh-thong-ke-bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--color-primary), var(--color-primary-dark)); border-radius: var(--radius-full); transition: width 0.4s ease; }
+.thanh-thong-ke-so { text-align: right; font-weight: 700; }
 .chatbot-loi { background: var(--color-danger-bg); color: var(--color-danger-text); }
 
 .chatbot-form-page { display: flex; gap: var(--space-2); }
@@ -591,7 +616,80 @@ body.trang-dang-nhap {
 .mau-swatch.dang-chon { border-color: var(--mau-xem-truoc); border-width: 3px; }
 
 /* ============================================================
-   TÔN TRỌNG "GIẢM CHUYỂN ĐỘNG" — tắt/giảm mọi hiệu ứng trang trí thêm ở trên cho người dùng đã bật
+   CHẾ ĐỘ TỐI (dark theme) — bật/tắt thủ công ở trang Cài đặt, lưu riêng từng máy (xem theme.js).
+   Chỉ cần đổi token ở đây vì toàn bộ style trong file đã dùng var(--color-*) nhất quán — mọi
+   thành phần (thẻ, badge, nút, nav, form...) tự động ăn theo, KHÔNG cần sửa từng chỗ.
+   ============================================================ */
+[data-theme="dark"] {
+  --color-bg: #101012;
+  --color-surface: #1b1b1e;
+  --color-border: #2e2e33;
+
+  --color-text: #f4f4f5;
+  --color-text-muted: #a6a6ad;
+  --color-text-faint: #6b6b73;
+
+  --color-success-bg: #072e1e; --color-success-text: #4ade80;
+  --color-warning-bg: #3a2705; --color-warning-text: #fbbf24;
+  --color-danger-bg:  #3a0d0d; --color-danger-text:  #f87171;
+  --color-info-bg:    #1c1a3d; --color-info-text:    #a5b4fc;
+  --color-neutral-bg: #2a2a2e; --color-neutral-text: #d4d4d8;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.45), 0 1px 1px rgba(0,0,0,0.35);
+  --shadow-md: 0 10px 24px -10px rgba(0,0,0,0.65);
+  --shadow-lg: 0 24px 48px -20px rgba(0,0,0,0.75);
+}
+/* 2 chỗ màu viết cứng (không dùng token) — cần override riêng cho nền tối */
+[data-theme="dark"] .badge-canh-bao.cam { background: #431407; color: #fb923c; }
+[data-theme="dark"] .skeleton-card { background: linear-gradient(90deg, #1e1e22 25%, #29292e 37%, #1e1e22 63%); background-size: 400% 100%; }
+/* Vòng nhấp nháy cảnh báo Đỏ dùng rgba(153,27,27,..) — đúng tông cho nền sáng nhưng chìm trên nền
+   tối (badge nền tối #3a0d0d rất gần màu vòng sáng). Nền tối cần vòng sáng hơn để còn thấy rõ. */
+[data-theme="dark"] .badge-canh-bao.do { animation: nhipCanhBaoToi 1.8s ease-in-out infinite; }
+@keyframes nhipCanhBaoToi {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(248,113,113,0.45); }
+  50% { box-shadow: 0 0 0 5px rgba(248,113,113,0); }
+}
+/* Chuyển sáng/tối mượt thay vì đổi phắt — chỉ đổi màu nền/chữ, không đụng transform (đỡ giật) */
+html { transition: background-color 0.25s ease; }
+body, .app-header, .order-card, .btn-hanh-dong, .badge, .mau-swatch, .tab-links {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
+}
+
+/* ============================================================
+   CÔNG TẮC BẬT/TẮT (dùng cho Chế độ tối, có thể tái dùng cho các tuỳ chọn bật/tắt khác sau này)
+   ============================================================ */
+.cong-tac-hang {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+  background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4); margin-bottom: var(--space-5); box-shadow: var(--shadow-sm);
+}
+.cong-tac-nhan { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+.cong-tac { position: relative; width: 48px; height: 28px; flex-shrink: 0; }
+.cong-tac input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; z-index: 1; }
+.cong-tac-slider {
+  position: absolute; inset: 0; background: var(--color-border); border-radius: var(--radius-full);
+  transition: background-color 0.2s ease;
+}
+.cong-tac-slider::before {
+  content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%;
+  background: white; box-shadow: var(--shadow-sm); transition: transform 0.2s ease;
+}
+.cong-tac input:checked + .cong-tac-slider { background: var(--color-primary); }
+.cong-tac input:checked + .cong-tac-slider::before { transform: translateX(20px); }
+
+/* ============================================================
+   TINH CHỈNH GIAO DIỆN CHUNG — thẻ/bảng có bóng đổ mượt hơn khi tương tác, nav mờ kính nhẹ.
+   Nút bấm (.btn-hanh-dong) đã gộp gradient + hover thẳng vào định nghĩa gốc phía trên, không lặp
+   lại ở đây để tránh 2 quy tắc cùng chọn 1 selector chồng lên nhau khó theo dõi.
+   ============================================================ */
+.order-card, .the-don-can-in, .chatbot-messages-page, .info-table, .xem-truoc-bang {
+  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+
+.app-header { backdrop-filter: saturate(1.4) blur(6px); background: color-mix(in srgb, var(--color-surface) 92%, transparent); }
+@supports not (backdrop-filter: blur(1px)) { .app-header { background: var(--color-surface); } }
+
+ — tắt/giảm mọi hiệu ứng trang trí thêm ở trên cho người dùng đã bật
    tuỳ chọn này trong hệ điều hành/trình duyệt. Phản hồi chạm cơ bản (scale khi bấm) vẫn giữ vì đó là
    phản hồi CHỨC NĂNG (biết là đã bấm trúng), không phải hiệu ứng trang trí.
    ============================================================ */
@@ -599,7 +697,10 @@ body.trang-dang-nhap {
   body.trang-dang-nhap { background: var(--color-bg); }
   .login-wrap .logo-mark { animation: none; }
   .btn-ten::after, .tong-so-the::after { display: none; }
-  .badge-canh-bao.do { animation: none; }
+  .badge-canh-bao.do, [data-theme="dark"] .badge-canh-bao.do { animation: none; }
+  .skeleton-card { animation: none; }
   :is(.order-list, .chart-grid, .kich-ban-picker, .bang-chon-mau) > * { animation: none; opacity: 1; }
   .gon-song { display: none; }
+  .dang-go-cham span { animation: none; opacity: 1; }
+  .trang-thai-rong svg { animation: none; }
 }

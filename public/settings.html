@@ -4,28 +4,50 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Thiết lập — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=20260824e">
-<script src="/js/theme.js?v=20260823b"></script>
+<link rel="stylesheet" href="/css/style.css?v=20260824j">
+<script src="/js/theme.js?v=20260824a"></script>
 </head>
 <body>
 <div id="nav"></div>
 <div class="page">
   <h2>Thiết lập</h2>
 
+  <h3>Giao diện</h3>
+  <label class="cong-tac-hang">
+    <span class="cong-tac-nhan"><span id="icon-che-do-toi"></span> Chế độ tối</span>
+    <span class="cong-tac">
+      <input type="checkbox" id="cong-tac-che-do-toi">
+      <span class="cong-tac-slider"></span>
+    </span>
+  </label>
+
   <h3>Màu chủ đạo</h3>
   <p>Chọn màu bạn thích — áp dụng ngay cho toàn bộ ứng dụng trên thiết bị này (mỗi máy/trình duyệt lưu riêng).</p>
   <div id="bang-mau" class="bang-chon-mau"></div>
 </div>
 
-<script src="/js/icons.js?v=20260823b"></script>
-<script src="/js/api.js?v=20260824a"></script>
+<script src="/js/icons.js?v=20260823c"></script>
+<script src="/js/api.js?v=20260824b"></script>
 <script>
 (async () => {
   const user = await requireLoginOrRedirect();
   if (!user) return;
   renderNav(user, 'settings');
   renderBangMau();
+  renderCongTacCheDoToi();
 })();
+
+function renderCongTacCheDoToi() {
+  const bat = dangCheDoToi();
+  document.getElementById('icon-che-do-toi').innerHTML = icon(bat ? 'moon' : 'sun', { size: 18 });
+  const cb = document.getElementById('cong-tac-che-do-toi');
+  cb.checked = bat;
+  cb.onchange = () => {
+    luuCheDoToi(cb.checked);
+    apDungCheDoToi(cb.checked);
+    renderCongTacCheDoToi();
+  };
+}
 
 function renderBangMau() {
   const dangChon = layMauDaChon();

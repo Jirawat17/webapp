@@ -89,12 +89,15 @@ function spinnerInline(chuThich = 'Đang xử lý...') {
 
 // TINH_TRANG là chuỗi tự do lấy từ Sheet (không phải enum cố định) — tô màu badge theo từ khoá
 // thay vì theo từng giá trị chính xác, để không vỡ khi Sheet có thêm trạng thái mới.
+// Cập nhật theo pipeline mới (24/08/2026): mỗi giai đoạn B1-B5 giờ có cặp .1_ (đã xong, xanh) và
+// .2_ (chưa xong, vàng); B4.3_ĐƠN LỖI CẦN LÀM LẠI xếp cùng nhóm màu đỏ với hủy/hoàn đơn.
 function lopTrangThai(tinhTrang) {
   const s = String(tinhTrang || '').toUpperCase();
-  if (s.includes('CANCELLED') || s.includes('HUY') || s.includes('REFUND')) return 'trang-thai-danger';
-  if (s.includes('SHIPPED') || s.includes('DELIVERED') || s.includes('TRANSIT') || s.startsWith('B4') || s.startsWith('B5')) return 'trang-thai-success';
-  if (s.startsWith('B2') || s.startsWith('B3')) return 'trang-thai-warning';
-  return 'trang-thai-info'; // B0, B1, hoặc giá trị chưa biết
+  if (s.includes('CANCELLED') || s.includes('HUY') || s.includes('REFUND') || s.includes('LỖI')) return 'trang-thai-danger';
+  if (s.includes('SHIPPED') || s.includes('DELIVERED') || s.includes('TRANSIT')) return 'trang-thai-success';
+  if (/^B[1-5]\.1_/.test(s)) return 'trang-thai-success';
+  if (/^B[1-5]\.2_/.test(s)) return 'trang-thai-warning';
+  return 'trang-thai-info'; // giá trị chưa biết
 }
 
 // Google Sheets trả về cột NGAY_LEN_DON dạng chuỗi DD/MM/YYYY (vd "23/08/2026") — new Date(chuoi)

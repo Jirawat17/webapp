@@ -5,6 +5,8 @@ const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const orderService = require('../services/orderService');
 const { layDanhSachKhachHang } = require('../services/khachHangService');
+const { layLichSuChuyenSangTrangThai } = require('../services/logService');
+const { readTab } = require('../services/sheetsService');
 const { parseNgay, dinhDangNgay, dinhDangNgayGioVN } = require('../services/dateUtils');
 const { taoQRCodeBuffer } = require('../services/qrService');
 const { taiAnhTuLinkDrive } = require('../services/driveService');
@@ -18,9 +20,11 @@ const FONT_BOLD = path.join(__dirname, '..', 'fonts', 'NotoSans-Bold.ttf');
 
 // 3 trạng thái có mẫu xuất RIÊNG — mọi trạng thái khác (kể cả không chọn gì) dùng mẫu mặc định
 // (danh sách chi tiết từng đơn). Khớp chính xác chuỗi trong data/pipelineTinhTrang.js.
-const TRANG_THAI_TRACKING = 'B5_Đã sản xuất';
-const TRANG_THAI_GOP_PHOI_AO = 'B1_Đã in';
-const TRANG_THAI_DON_CAN_IN = 'B2_Đã lấy phôi';
+// Đã cập nhật theo pipeline mới (24/08/2026): B1_Đã in(cũ)->B1.1, B2_Đã lấy phôi(cũ)->B2.1,
+// B5_Đã sản xuất(cũ)->B5.1 (đóng gói, vì pipeline mới có thêm bước đóng gói riêng).
+const TRANG_THAI_TRACKING = 'B5.1_Đơn đã đóng gói';
+const TRANG_THAI_GOP_PHOI_AO = 'B1.1_Đơn đã xác nhận';
+const TRANG_THAI_DON_CAN_IN = 'B2.1_Đã có phôi';
 
 function locDon(rows, { tuNgay, denNgay, khachHang, trangThai, tuKhoa }) {
   return rows.filter(r => {
@@ -101,8 +105,71 @@ router.get('/trang-thai-theo-loc', async (req, res) => {
   res.json({ tongSoDon: list.length, trangThai: ketQua });
 });
 
+const TRANG_THAI_LOI = 'B4.3_ĐƠN LỖI CẦN LÀM LẠI';
+
+// Số tuần trong năm theo lịch — dùng thống nhất với cách tính "theo tuần" đã có ở Dashboard
+function soTuanTrongNam(d) {
+  const dauNam = new Date(d.getFullYear(), 0, 1);
+  return Math.ceil(((d - dauNam) / 86400000 + dauNam.getDay() + 1) / 7);
+}
+
+// Thống kê tỷ lệ lỗi sản xuất (B4.3_ĐƠN LỖI CẦN LÀM LẠI) theo loại sản phẩm / team sản xuất / tuần.
+// LƯU Ý QUAN TRỌNG: B4.3 là trạng thái THOÁNG QUA — đơn lỗi được xác nhận làm lại sẽ quay về B1.1
+// ngay sau đó, nên KHÔNG thể đếm bằng cách lọc TINH_TRANG hiện tại (hầu hết đơn lỗi trong quá khứ
+// giờ đã không còn ở B4.3 nữa). Phải tính từ LỊCH SỬ (mỗi lần có đơn được CHUYỂN SANG B4.3 tính là
+// 1 lần lỗi, dù sau đó đơn đã được làm lại hay chưa).
+// Đơn hàng không lưu "team sản xuất" trực tiếp — suy ra team bằng cách tra NGƯỜI đã bấm chuyển đơn
+// sang B4.3 (lấy từ lịch sử) rồi tra Team của người đó trong tab NguoiDung. Nếu không tìm được
+// (vd log bị xoá, hoặc trạng thái bị đổi trực tiếp trên Sheet không qua app) thì xếp vào "Không xác định".
+router.get('/thong-ke-loi', async (req, res) => {
+  const { tuNgay, denNgay } = req.query;
+
+  const lanLoi = await layLichSuChuyenSangTrangThai(TRANG_THAI_LOI);
+  const locTheoNgay = lanLoi.filter(l => {
+    const d = new Date(l.thoiGian);
+    if (isNaN(d)) return false;
+    if (tuNgay && d < new Date(tuNgay + 'T00:00:00')) return false;
+    if (denNgay && d > new Date(denNgay + 'T23:59:59')) return false;
+    return true;
+  });
+
+  const { rows: donHang } = await orderService.getAll();
+  const banDoDon = {};
+  donHang.forEach(r => { banDoDon[r.STT_Key] = r; });
+
+  const { rows: nhanVien } = await readTab('NguoiDung');
+  const banDoTeam = {};
+  nhanVien.forEach(nv => { banDoTeam[nv.Ten] = nv.Team || 'Không rõ team'; });
+
+  const theoLoai = {}, theoTeam = {}, theoTuan = {};
+  const chiTiet = [];
+  const locTheoNgaySapXep = [...locTheoNgay].sort((a, b) => (a.thoiGian < b.thoiGian ? 1 : -1)); // sắp theo chuỗi ISO gốc — mới nhất trước
+  for (const l of locTheoNgaySapXep) {
+    const don = banDoDon[l.sttKey];
+    const loai = (don && don.LOAI) || '(Không rõ loại)';
+    const team = banDoTeam[l.nguoiDung] || 'Không xác định';
+    const d = new Date(l.thoiGian);
+    const nhanTuan = `${d.getFullYear()}-T${String(soTuanTrongNam(d)).padStart(2, '0')}`;
+
+    theoLoai[loai] = (theoLoai[loai] || 0) + 1;
+    theoTeam[team] = (theoTeam[team] || 0) + 1;
+    theoTuan[nhanTuan] = (theoTuan[nhanTuan] || 0) + 1;
+
+    chiTiet.push({
+      sttKey: l.sttKey, loai, team, nguoiDung: l.nguoiDung || '(Không rõ)',
+      thoiGian: dinhDangNgayGioVN(d), khachHang: don ? (don.MA_KHACH_HANG || '') : '',
+    });
+  }
+
+  res.json({
+    tongSoLoi: locTheoNgay.length,
+    theoLoai, theoTeam, theoTuan,
+    chiTiet: chiTiet.slice(0, 200),
+  });
+});
+
 // ============================================================
-// MẪU "ĐƠN CẦN IN" (B2_Đã lấy phôi) — mỗi đơn 1 thẻ có QR + 2 ảnh thật, khổ giấy 100x150mm
+// MẪU "ĐƠN CẦN IN" (B2.1_Đã có phôi) — mỗi đơn 1 thẻ có QR + 2 ảnh thật, khổ giấy 100x150mm
 // (bằng khổ tem in phổ biến), 2 đơn/trang để đỡ tốn giấy khi in.
 // ============================================================
 const MM_TO_PT = 2.834645669;

@@ -21,16 +21,20 @@ function themDongChat(vaiTro, noiDung) {
 async function guiCauHoiChat(e) {
   e.preventDefault();
   const input = document.getElementById('chatbot-input-page');
+  const nutGui = document.getElementById('chatbot-nut-gui');
   const cauHoi = input.value.trim();
   if (!cauHoi) return;
   input.value = '';
   input.disabled = true;
+  nutGui.disabled = true;
+  nutGui.innerHTML = icon('spinner', { className: 'icon-spin' });
 
   themDongChat('user', cauHoi);
   const lichSu = layLichSuChat();
   lichSu.push({ role: 'user', content: cauHoi });
 
-  const dongDangTra = themDongChat('bot', 'Đang trả lời...');
+  const dongDangTra = themDongChat('bot', '');
+  dongDangTra.innerHTML = '<span class="dang-go-cham"><span></span><span></span><span></span></span>'; // markup tĩnh do ta viết sẵn, an toàn — KHÁC với câu trả lời thật của LLM (luôn dùng textContent)
   dongDangTra.classList.add('chatbot-dang-go');
 
   try {
@@ -48,12 +52,15 @@ async function guiCauHoiChat(e) {
     dongDangTra.classList.add('chatbot-loi');
   } finally {
     input.disabled = false;
+    nutGui.disabled = false;
+    nutGui.innerHTML = icon('send') + ' Gửi';
     input.focus();
   }
 }
 
 function initChatbotPage() {
   document.getElementById('chatbot-form-page').onsubmit = guiCauHoiChat;
+  document.getElementById('chatbot-nut-gui').innerHTML = icon('send') + ' Gửi';
 
   const lichSu = layLichSuChat();
   if (lichSu.length === 0) {
