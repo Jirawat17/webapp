@@ -1,5 +1,6 @@
 const { readTab, readTabCached, updateCells } = require('./sheetsService');
 const { layBanDoTenKhachHang } = require('./khachHangService');
+const { chiSoTinhTrang } = require('../data/pipelineTinhTrang');
 
 const TAB = 'Don_Hang_ALL';
 const KEY_COL = 'STT_Key';
@@ -17,11 +18,33 @@ async function getByKey(sttKey, opts) {
   return { headers, row };
 }
 
+// TỰ ĐỘNG chuyển TINH_TRANG sang "ĐÃ SẴN SÀNG CHẠY MÁY" khi cả phôi lẫn file vẽ CÙNG xong — nhưng
+// CHỈ áp dụng lần đầu (khi TINH_TRANG đang là "Đã xác nhận"). Sau khi đơn bị lỗi rồi làm lại từ phôi/
+// file, việc quay lại "ĐÃ SẴN SÀNG CHẠY MÁY" lần 2 KHÔNG tự động — người phụ trách phải tự set tay
+// (đã xác nhận rõ với người dùng, xem data/pipelineTinhTrang.js). Hàm này không tự đổi TINH_TRANG
+// nếu người gọi đã tự chỉ định TINH_TRANG trong chính updates đó — tôn trọng giá trị người dùng
+// muốn set tay, không ghi đè.
+function tinhTinhTrangTuDong(rowHienTai, updates) {
+  if ('TINH_TRANG' in updates) return updates; // người gọi đã tự set — không can thiệp
+
+  const phoiMoi = updates.TRANG_THAI_PHOI ?? rowHienTai.TRANG_THAI_PHOI;
+  const veFileMoi = updates.TRANG_THAI_VE_FILE ?? rowHienTai.TRANG_THAI_VE_FILE;
+  const caPhoiVaFileXong = phoiMoi === 'Đã lấy phôi' && veFileMoi === 'Đã vẽ file';
+
+  if (caPhoiVaFileXong && rowHienTai.TINH_TRANG === 'Đã xác nhận') {
+    return { ...updates, TINH_TRANG: 'ĐÃ SẴN SÀNG CHẠY MÁY' };
+  }
+  return updates;
+}
+
 async function update(sttKey, updates) {
   const { headers, row } = await getByKey(sttKey, { fresh: true }); // luôn đọc thật trước khi ghi
   if (!row) throw new Error('Không tìm thấy đơn hàng: ' + sttKey);
-  await updateCells(TAB, headers, row._row, updates); // tự xoá cache của tab sau khi ghi (xem sheetsService)
-  return { ...row, ...updates };
+
+  const updatesDaTinh = tinhTinhTrangTuDong(row, updates);
+
+  await updateCells(TAB, headers, row._row, updatesDaTinh); // tự xoá cache của tab sau khi ghi (xem sheetsService)
+  return { ...row, ...updatesDaTinh };
 }
 
 // Đơn chỉ lưu MA_KHACH_HANG (mã) — gắn thêm tên khách hàng thật để hiển thị, không sửa dữ liệu gốc
@@ -43,14 +66,27 @@ function danhSachViTriTheu(don) {
   return [don.VI_TRI_1, don.VI_TRI_2, don.VI_TRI_3].filter(Boolean);
 }
 
-// CHÍNH SÁCH PHÂN QUYỀN (cập nhật): mọi tài khoản đã đăng nhập đều xem được TOÀN BỘ đơn hàng, giống
-// hệt admin — không còn phân biệt theo vai trò như trước (chuan_bi_phoi/ve_file/san_xuat/dong_goi
-// từng chỉ thấy đúng phần việc của mình). Giới hạn DUY NHẤT còn lại trong toàn hệ thống là: chỉ admin
-// mới Thêm/Sửa/Khóa/Hủy khóa được TÀI KHOẢN người dùng khác (xem routes/users.js, không liên quan gì
-// tới file này). Giữ lại hàm này (thay vì xóa hẳn + sửa mọi nơi gọi tới) để nếu sau này cần khôi phục
-// lọc theo vai trò thì chỉ cần sửa đúng 1 chỗ.
+// CHÍNH SÁCH PHÂN QUYỀN (cập nhật 24/08/2026, theo Prompt_Ver_24.docx — HUỶ chính sách "mọi vai trò
+// như Admin" trước đó): hệ thống giờ có 4 vai trò (admin, nguoi_lay_phoi, ve_file, san_xuat —
+// quan_ly bị xoá hẳn, dong_goi gộp vào nguoi_lay_phoi).
+//   - admin, ve_file: xem TOÀN BỘ đơn, không lọc gì.
+//   - san_xuat: CHỈ thấy đơn đã tới "ĐÃ SẴN SÀNG CHẠY MÁY" trở đi (kể cả trạng thái lỗi
+//     "LỖI SẢN XUẤT CẦN LÀM LẠI"), không thấy đơn còn ở "Chưa xác nhận"/"Đã xác nhận". Đơn đã
+//     CANCELLED/REFUNDED không nằm trong THU_TU_TINH_TRANG (nhánh rẽ) nên tự động bị loại — chỉ
+//     admin/ve_file mới thấy đơn huỷ/hoàn, giữ đúng thói quen cũ (trước đây chỉ admin/quan_ly thấy).
+//   - nguoi_lay_phoi: KHÔNG dùng route GET /orders (danh sách) — vai trò này chỉ có đúng 1 menu
+//     "Quét mã QR" ở giao diện (xem public/js/api.js renderNav), không có trang danh sách đơn để
+//     vào. Không cần lọc riêng ở đây.
 function filterForRole(rows, user) {
-  return rows;
+  if (user.vaiTro === 'san_xuat') {
+    const idxSanSang = chiSoTinhTrang('ĐÃ SẴN SÀNG CHẠY MÁY');
+    return rows.filter(r => {
+      if (r.TINH_TRANG === 'LỖI SẢN XUẤT CẦN LÀM LẠI') return true;
+      const idx = chiSoTinhTrang(r.TINH_TRANG);
+      return idx !== null && idx >= idxSanSang;
+    });
+  }
+  return rows; // admin, ve_file — xem tất cả
 }
 
 module.exports = { TAB, KEY_COL, getAll, getByKey, update, filterForRole, ganTenKhachHang, tieuDeSanPham, danhSachViTriTheu };

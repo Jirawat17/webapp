@@ -25,15 +25,16 @@ const TOI_DA_VONG_LAP = 4;
 // PHẢI khớp với data/pipelineTinhTrang.js — sửa pipeline thì nhớ sửa cả đoạn text này.
 // ============================================================
 const MO_TA_PIPELINE =
-  'Pipeline sản xuất có 5 giai đoạn, mỗi giai đoạn có 1 cặp trạng thái (đã xong / chưa xong):\n' +
-  '1. Xác nhận đơn: B1.1_Đơn đã xác nhận (xong) hoặc B1.2_HOLD_Chưa xác nhận (chưa xong)\n' +
-  '2. Lấy phôi: B2.1_Đã có phôi (xong) hoặc B2.2_Không có phôi (chưa xong)\n' +
-  '3. Vẽ file: B3.1_Đã vẽ file (xong) hoặc B3.2_Chưa vẽ file (chưa xong)\n' +
-  '4. Sản xuất: B4.1_Đơn đã sản xuất (xong), B4.2_Đơn chưa sản xuất (chưa xong), hoặc ' +
-  'B4.3_ĐƠN LỖI CẦN LÀM LẠI (lỗi — đơn sẽ quay lại B1.1 để làm lại từ đầu: lấy phôi mới, vẽ lại file, sản xuất lại)\n' +
-  '5. Đóng gói: B5.1_Đơn đã đóng gói (xong) hoặc B5.2_Đơn chưa đóng gói (chưa xong)\n' +
-  'Sau khi đóng gói xong: SHIPPED_Đã gửi vận chuyển → IN TRAINSIT_Tracking đã hoạt động → ' +
-  'DELIVERED_Đã giao hàng đến khách. Ngoài ra còn CANCELLED_Đã hủy đơn và REFUNDED_Hoàn đơn (đơn dừng hẳn).';
+  'Từ 24/08/2026, hệ thống theo dõi tiến trình đơn hàng bằng 3 CỘT RIÊNG (không còn 1 cột duy nhất ' +
+  'như trước): TINH_TRANG (tiến trình chung), TRANG_THAI_PHOI (lấy phôi), TRANG_THAI_VE_FILE (vẽ file) ' +
+  '— lấy phôi và vẽ file là 2 việc ĐỘC LẬP, làm song song, không phải làm tuần tự.\n\n' +
+  'Giá trị TINH_TRANG theo đúng thứ tự: Chưa xác nhận → Đã xác nhận → ĐÃ SẴN SÀNG CHẠY MÁY (hệ ' +
+  'thống tự động chuyển sang trạng thái này khi TRANG_THAI_PHOI="Đã lấy phôi" VÀ TRANG_THAI_VE_FILE=' +
+  '"Đã vẽ file" cùng lúc) → Đã sản xuất → Đã đóng gói → IN TRANSIT_Tracking đã hoạt động → ' +
+  'DELIVERED_Đã giao đến khách. Nhánh rẽ: LỖI SẢN XUẤT CẦN LÀM LẠI (lỗi khi sản xuất, người phụ ' +
+  'trách set tay, sau đó làm lại từ phôi/file), CANCELLED_Đã hủy, REFUNDED_Hoàn đơn (đơn dừng hẳn).\n\n' +
+  'Giá trị TRANG_THAI_PHOI: "Chưa lấy phôi" hoặc "Đã lấy phôi". Giá trị TRANG_THAI_VE_FILE: ' +
+  '"Chưa vẽ file" hoặc "Đã vẽ file".';
 
 // Rút gọn 1 dòng đơn hàng thành các trường cần thiết cho câu trả lời — dùng chung cho mọi tool trả về đơn hàng
 function lamGonDon(r) {
@@ -65,10 +66,10 @@ function locTheoNgay(list, tuNgay, denNgay) {
 
 // ============================================================
 // KHAI BÁO CÔNG CỤ (function calling, chuẩn OpenAI-compatible) — model tự quyết định gọi công cụ
-// nào khi cần dữ liệu thật thay vì đoán/bịa. CHÍNH SÁCH PHÂN QUYỀN (cập nhật): TOOLS_QUAN_LY giờ
-// cũng mở cho MỌI vai trò như TOOLS — tên biến giữ nguyên vì lịch sử đặt tên, không còn ý nghĩa
-// giới hạn quyền nữa. Giới hạn DUY NHẤT còn lại là quản lý TÀI KHOẢN (routes/users.js, admin-only),
-// không liên quan tới các công cụ tra cứu (chỉ XEM) ở đây.
+// nào khi cần dữ liệu thật thay vì đoán/bịa. CHÍNH SÁCH PHÂN QUYỀN (cập nhật 24/08/2026, Prompt_Ver_24.docx
+// — huỷ chính sách "mọi vai trò như Admin"): TOOLS_QUAN_LY chỉ gửi cho admin — không gửi định nghĩa
+// 2 công cụ đó cho vai trò khác (model sẽ không biết chúng tồn tại); thucThiTool() vẫn kiểm tra
+// quyền 1 lần nữa cho chắc, phòng trường hợp model tự bịa tên công cụ không có trong danh sách được cấp.
 // ============================================================
 const TOOLS = [
   {
@@ -213,8 +214,10 @@ async function thucThiTool(tenHam, thamSo, ctx) {
     }
 
     case 'tra_cuu_nhan_vien': {
-      // Mở cho mọi vai trò (chính sách phân quyền mới) — đây là XEM danh sách, khác với việc
-      // Thêm/Sửa/Khóa/Hủy khóa tài khoản (routes/users.js, vẫn chỉ admin làm được).
+      // CHỈ admin — chính sách "mọi vai trò như Admin" đã bị huỷ (24/08/2026, Prompt_Ver_24.docx),
+      // quay lại phân quyền theo vai trò. Không gửi định nghĩa công cụ này cho vai trò khác admin
+      // (xem TOOLS_QUAN_LY phía dưới) — kiểm tra lại 1 lần nữa ở đây phòng model tự bịa tên công cụ.
+      if (ctx.user.vaiTro !== 'admin') return { loi: 'Không có quyền tra cứu danh sách nhân viên.' };
       const { rows } = await readTab('NguoiDung');
       let list = rows.map(r => ({ ten: r.Ten, vaiTro: r.VaiTro, team: r.Team, kichHoat: r.KichHoat }));
       if (thamSo.vaiTro) list = list.filter(nv => nv.vaiTro === thamSo.vaiTro);
@@ -222,8 +225,8 @@ async function thucThiTool(tenHam, thamSo, ctx) {
     }
 
     case 'tra_cuu_lich_su_gan_day': {
-      // Mở cho mọi vai trò (chính sách phân quyền mới) — xem lịch sử KHÔNG phải hành động quản lý
-      // tài khoản, không thuộc phạm vi giới hạn admin-only.
+      // CHỈ admin — cùng lý do như tra_cuu_nhan_vien ở trên.
+      if (ctx.user.vaiTro !== 'admin') return { loi: 'Không có quyền tra cứu lịch sử hoạt động chung.' };
       return await layHoatDongGanDay(thamSo);
     }
 
@@ -242,9 +245,8 @@ router.post('/hoi', async (req, res) => {
   }
 
   const { rows } = await orderService.getAll();
-  // CHÍNH SÁCH PHÂN QUYỀN (cập nhật): mọi vai trò xem được TOÀN BỘ đơn hàng giống admin — filterForRole()
-  // giờ chỉ trả về nguyên rows, giữ lại lời gọi để nếu sau này cần khôi phục lọc theo vai trò thì chỉ
-  // cần sửa đúng 1 chỗ trong services/orderService.js.
+  // Đơn hàng lấy được ở đây đã tự lọc đúng theo vai trò (san_xuat chỉ thấy đơn từ "ĐÃ SẴN SÀNG
+  // CHẠY MÁY" trở đi — xem services/orderService.js, filterForRole).
   const duLieuTheoQuyen = await orderService.ganTenKhachHang(orderService.filterForRole(rows, user));
 
   // Thống kê nhanh tính sẵn (không tốn vòng gọi công cụ nào) — đủ trả lời các câu hỏi tổng quan ngay,
@@ -252,7 +254,7 @@ router.post('/hoi', async (req, res) => {
   const thongKeNhanh = {};
   duLieuTheoQuyen.forEach(r => { const v = r.TINH_TRANG || '(Trống)'; thongKeNhanh[v] = (thongKeNhanh[v] || 0) + 1; });
 
-  const tools = [...TOOLS, ...TOOLS_QUAN_LY];
+  const tools = user.vaiTro === 'admin' ? [...TOOLS, ...TOOLS_QUAN_LY] : TOOLS;
 
   const systemPrompt =
     'Bạn là trợ lý của xưởng thêu HanhPhuc99, trả lời bằng tiếng Việt, ngắn gọn, chính xác.\n\n' +

@@ -16,6 +16,14 @@ function ghiKhongCho(promise) {
   promise.catch(err => console.error('[QR] Lỗi ghi log nền:', err.message));
 }
 
+// Kịch bản này người đang đăng nhập có được phép dùng không — allowedRoles=null nghĩa là mở cho mọi
+// vai trò (xem services/scenarioService.js, cột Nguoi_Thuc_Hien trong CauHinhKichBan). admin LUÔN
+// được phép dùng mọi kịch bản bất kể Nguoi_Thuc_Hien ghi gì — admin là superuser, không cần liệt kê
+// riêng trong từng dòng Sheet.
+function duocPhepDungKichBan(scenario, user) {
+  return user.vaiTro === 'admin' || !scenario.allowedRoles || scenario.allowedRoles.includes(user.vaiTro);
+}
+
 async function lamGiauDon(row) {
   const [daGanKH] = await orderService.ganTenKhachHang([row]);
   return { ...daGanKH, TieuDeSanPham: orderService.tieuDeSanPham(row), CanhBao: alertService.tinhMucCanhBao(row) };
@@ -41,10 +49,11 @@ router.get('/tra-cuu/:sttKey', async (req, res) => {
 });
 
 // Danh sách kịch bản — đọc trực tiếp từ tab CauHinhKichBan, KHÔNG hardcode trong code.
-// Sửa/thêm kịch bản chỉ cần sửa trực tiếp trên Sheet.
+// Sửa/thêm kịch bản chỉ cần sửa trực tiếp trên Sheet. Chỉ trả về kịch bản mà vai trò đang đăng nhập
+// được phép dùng (cột Nguoi_Thuc_Hien) — không hiện lựa chọn mà người dùng bấm vào sẽ bị từ chối.
 router.get('/kich-ban', async (req, res) => {
   const list = await scenarioService.layDanhSachKichBan();
-  res.json(list);
+  res.json(list.filter(s => duocPhepDungKichBan(s, req.session.user)));
 });
 
 // Quét đơn lẻ, ghi ngay lập tức — dùng cho nút "Chuyển sang..." thủ công ở trang chi tiết đơn,
@@ -55,6 +64,7 @@ router.post('/kich-ban/:scenarioId/quet', async (req, res) => {
   const scenario = await scenarioService.timKichBanTheoId(req.params.scenarioId);
 
   if (!scenario) return res.status(404).json({ error: 'Không tìm thấy kịch bản (có thể đã bị xoá khỏi tab CauHinhKichBan)' });
+  if (!duocPhepDungKichBan(scenario, user)) return res.status(403).json({ error: 'Vai trò của bạn không được dùng kịch bản này' });
   if (!sttKey) return res.status(400).json({ error: 'Thiếu mã đơn hàng' });
 
   // Đọc THẬT (bỏ qua cache) vì đây là bước quyết định có ghi hay không — phải chắc chắn mới nhất
@@ -64,32 +74,35 @@ router.post('/kich-ban/:scenarioId/quet', async (req, res) => {
     return res.status(404).json({ error: 'Không tìm thấy đơn hàng với mã: ' + sttKey });
   }
 
-  if (scenario.requireStatus && row.TINH_TRANG !== scenario.requireStatus) {
+  // Kịch bản thao tác trên ĐÚNG cột đã khai báo (Cot trong CauHinhKichBan) — mặc định TINH_TRANG
+  // nếu không khai báo, giữ tương thích ngược với kịch bản cũ.
+  const giaTriHienTai = row[scenario.column];
+
+  if (scenario.requireStatus && giaTriHienTai !== scenario.requireStatus) {
     ghiKhongCho(ghiLog({
       nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_SAI_TRANG_THAI',
-      sttKey, chiTiet: { scenario: scenario.label, trangThaiHienTai: row.TINH_TRANG, trangThaiCanCo: scenario.requireStatus },
+      sttKey, chiTiet: { scenario: scenario.label, cot: scenario.column, trangThaiHienTai: giaTriHienTai, trangThaiCanCo: scenario.requireStatus },
     }));
     ghiKhongCho(ghiNhatKyQuetHangLoat({
       nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey,
-      trangThaiCu: row.TINH_TRANG, trangThaiMoi: '', ketQua: 'LOI_SAI_TRANG_THAI',
-      ghiChu: `Cần đang ở '${scenario.requireStatus}' nhưng đơn đang ở '${row.TINH_TRANG}'`,
+      trangThaiCu: giaTriHienTai, trangThaiMoi: '', ketQua: 'LOI_SAI_TRANG_THAI',
+      ghiChu: `Cần đang ở '${scenario.requireStatus}' (cột ${scenario.column}) nhưng đơn đang ở '${giaTriHienTai}'`,
     }));
     return res.status(400).json({
-      error: `Đơn đang ở trạng thái '${row.TINH_TRANG}', cần đang ở '${scenario.requireStatus}' để dùng kịch bản này`,
+      error: `Đơn đang ở '${giaTriHienTai}' (cột ${scenario.column}), cần đang ở '${scenario.requireStatus}' để dùng kịch bản này`,
     });
   }
 
-  const trangThaiCu = row.TINH_TRANG;
   const updated = await orderService.update(sttKey, {
-    TINH_TRANG: scenario.setStatus,
+    [scenario.column]: scenario.setStatus,
     NguoiCapNhatCuoi: user.ten,
     ThoiGianCapNhatCuoi: new Date().toISOString(),
   });
 
-  ghiKhongCho(ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_KICH_BAN', sttKey, chiTiet: { scenario: scenario.label, tu: trangThaiCu, sang: scenario.setStatus } }));
+  ghiKhongCho(ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_KICH_BAN', sttKey, chiTiet: { scenario: scenario.label, cot: scenario.column, tu: giaTriHienTai, sang: scenario.setStatus } }));
   ghiKhongCho(ghiNhatKyQuetHangLoat({
     nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey,
-    trangThaiCu, trangThaiMoi: scenario.setStatus, ketQua: 'THANH_CONG',
+    trangThaiCu: giaTriHienTai, trangThaiMoi: scenario.setStatus, ketQua: 'THANH_CONG',
   }));
 
   res.json({ ok: true, don: await lamGiauDon(updated) });
@@ -119,6 +132,7 @@ router.post('/kich-ban/:scenarioId/kiem-tra', async (req, res) => {
   ]);
 
   if (!scenario) return res.status(404).json({ error: 'Không tìm thấy kịch bản' });
+  if (!duocPhepDungKichBan(scenario, user)) return res.status(403).json({ error: 'Vai trò của bạn không được dùng kịch bản này' });
 
   if (!row) {
     ghiKhongCho(ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_KIEM_TRA_KHONG_TIM_THAY', sttKey, chiTiet: { scenario: scenario.label } }));
@@ -131,26 +145,27 @@ router.post('/kich-ban/:scenarioId/kiem-tra', async (req, res) => {
 
   const tieuDe = orderService.tieuDeSanPham(row);
   const tenKhachHang = banDoKhachHang[row.MA_KHACH_HANG] || row.MA_KHACH_HANG || '';
+  const giaTriHienTai = row[scenario.column];
 
-  if (scenario.requireStatus && row.TINH_TRANG !== scenario.requireStatus) {
-    const lyDo = `Đang ở '${row.TINH_TRANG}', kịch bản này yêu cầu đang ở '${scenario.requireStatus}'`;
+  if (scenario.requireStatus && giaTriHienTai !== scenario.requireStatus) {
+    const lyDo = `Đang ở '${giaTriHienTai}' (cột ${scenario.column}), kịch bản này yêu cầu đang ở '${scenario.requireStatus}'`;
     ghiKhongCho(ghiLog({
       nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_KIEM_TRA_SAI_TRANG_THAI',
-      sttKey, chiTiet: { scenario: scenario.label, trangThaiHienTai: row.TINH_TRANG, trangThaiCanCo: scenario.requireStatus },
+      sttKey, chiTiet: { scenario: scenario.label, cot: scenario.column, trangThaiHienTai: giaTriHienTai, trangThaiCanCo: scenario.requireStatus },
     }));
     ghiKhongCho(ghiNhatKyQuetHangLoat({
       nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey,
-      trangThaiCu: row.TINH_TRANG, trangThaiMoi: '', ketQua: 'KIEM_TRA_SAI_TRANG_THAI', ghiChu: lyDo,
+      trangThaiCu: giaTriHienTai, trangThaiMoi: '', ketQua: 'KIEM_TRA_SAI_TRANG_THAI', ghiChu: lyDo,
     }));
-    return res.json({ nhom: 'SAI_TRANG_THAI', sttKey, tieuDe, tenKhachHang, trangThaiHienTai: row.TINH_TRANG, trangThaiYeuCau: scenario.requireStatus, lyDo });
+    return res.json({ nhom: 'SAI_TRANG_THAI', sttKey, tieuDe, tenKhachHang, trangThaiHienTai: giaTriHienTai, trangThaiYeuCau: scenario.requireStatus, lyDo });
   }
 
-  ghiKhongCho(ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_KIEM_TRA_OK', sttKey, chiTiet: { scenario: scenario.label, seChuyenSang: scenario.setStatus } }));
+  ghiKhongCho(ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_KIEM_TRA_OK', sttKey, chiTiet: { scenario: scenario.label, cot: scenario.column, seChuyenSang: scenario.setStatus } }));
   ghiKhongCho(ghiNhatKyQuetHangLoat({
     nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey,
-    trangThaiCu: row.TINH_TRANG, trangThaiMoi: scenario.setStatus, ketQua: 'KIEM_TRA_OK',
+    trangThaiCu: giaTriHienTai, trangThaiMoi: scenario.setStatus, ketQua: 'KIEM_TRA_OK',
   }));
-  res.json({ nhom: 'OK', sttKey, tieuDe, tenKhachHang, trangThaiHienTai: row.TINH_TRANG, trangThaiSau: scenario.setStatus });
+  res.json({ nhom: 'OK', sttKey, tieuDe, tenKhachHang, trangThaiHienTai: giaTriHienTai, trangThaiSau: scenario.setStatus });
 });
 
 // Xác nhận cập nhật hàng loạt — chỉ gọi cho các mã đã kiểm tra OK ở bước quét.
@@ -163,6 +178,7 @@ router.post('/kich-ban/:scenarioId/xac-nhan-hang-loat', async (req, res) => {
   const scenario = await scenarioService.timKichBanTheoId(req.params.scenarioId);
 
   if (!scenario) return res.status(404).json({ error: 'Không tìm thấy kịch bản' });
+  if (!duocPhepDungKichBan(scenario, user)) return res.status(403).json({ error: 'Vai trò của bạn không được dùng kịch bản này' });
   if (!Array.isArray(sttKeys) || sttKeys.length === 0) return res.status(400).json({ error: 'Danh sách mã trống' });
 
   const thanhCong = [];
@@ -171,28 +187,28 @@ router.post('/kich-ban/:scenarioId/xac-nhan-hang-loat', async (req, res) => {
   for (const sttKey of sttKeys) {
     try {
       const { row } = await orderService.getByKey(sttKey, { fresh: true }); // BẮT BUỘC đọc thật ở đây
+      const giaTriHienTai = row ? row[scenario.column] : null;
 
       if (!row) {
         loi.push({ sttKey, lyDo: 'Không còn tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
         ghiKhongCho(ghiNhatKyQuetHangLoat({ nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey, trangThaiCu: '', trangThaiMoi: '', ketQua: 'LOI_XAC_NHAN', ghiChu: 'Không tìm thấy khi xác nhận' }));
         continue;
       }
-      if (scenario.requireStatus && row.TINH_TRANG !== scenario.requireStatus) {
-        loi.push({ sttKey, lyDo: `Trạng thái đã đổi thành '${row.TINH_TRANG}' trước khi kịp xác nhận` });
-        ghiKhongCho(ghiNhatKyQuetHangLoat({ nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey, trangThaiCu: row.TINH_TRANG, trangThaiMoi: '', ketQua: 'LOI_XAC_NHAN', ghiChu: 'Trạng thái đã đổi trước khi xác nhận' }));
+      if (scenario.requireStatus && giaTriHienTai !== scenario.requireStatus) {
+        loi.push({ sttKey, lyDo: `Trạng thái đã đổi thành '${giaTriHienTai}' trước khi kịp xác nhận` });
+        ghiKhongCho(ghiNhatKyQuetHangLoat({ nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey, trangThaiCu: giaTriHienTai, trangThaiMoi: '', ketQua: 'LOI_XAC_NHAN', ghiChu: 'Trạng thái đã đổi trước khi xác nhận' }));
         continue;
       }
 
-      const trangThaiCu = row.TINH_TRANG;
       await orderService.update(sttKey, {
-        TINH_TRANG: scenario.setStatus,
+        [scenario.column]: scenario.setStatus,
         NguoiCapNhatCuoi: user.ten,
         ThoiGianCapNhatCuoi: new Date().toISOString(),
       });
 
       thanhCong.push(sttKey);
-      ghiKhongCho(ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_KICH_BAN_HANG_LOAT', sttKey, chiTiet: { scenario: scenario.label, tu: trangThaiCu, sang: scenario.setStatus } }));
-      ghiKhongCho(ghiNhatKyQuetHangLoat({ nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey, trangThaiCu, trangThaiMoi: scenario.setStatus, ketQua: 'THANH_CONG' }));
+      ghiKhongCho(ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_KICH_BAN_HANG_LOAT', sttKey, chiTiet: { scenario: scenario.label, cot: scenario.column, tu: giaTriHienTai, sang: scenario.setStatus } }));
+      ghiKhongCho(ghiNhatKyQuetHangLoat({ nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey, trangThaiCu: giaTriHienTai, trangThaiMoi: scenario.setStatus, ketQua: 'THANH_CONG' }));
     } catch (err) {
       loi.push({ sttKey, lyDo: err.message });
     }

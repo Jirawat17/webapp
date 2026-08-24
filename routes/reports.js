@@ -18,15 +18,19 @@ router.use(requireLogin); // mọi vai trò đăng nhập đều dùng được 
 const FONT_REGULAR = path.join(__dirname, '..', 'fonts', 'NotoSans-Regular.ttf');
 const FONT_BOLD = path.join(__dirname, '..', 'fonts', 'NotoSans-Bold.ttf');
 
-// 3 trạng thái có mẫu xuất RIÊNG — mọi trạng thái khác (kể cả không chọn gì) dùng mẫu mặc định
-// (danh sách chi tiết từng đơn). Khớp chính xác chuỗi trong data/pipelineTinhTrang.js.
-// Đã cập nhật theo pipeline mới (24/08/2026): B1_Đã in(cũ)->B1.1, B2_Đã lấy phôi(cũ)->B2.1,
-// B5_Đã sản xuất(cũ)->B5.1 (đóng gói, vì pipeline mới có thêm bước đóng gói riêng).
-const TRANG_THAI_TRACKING = 'B5.1_Đơn đã đóng gói';
-const TRANG_THAI_GOP_PHOI_AO = 'B1.1_Đơn đã xác nhận';
-const TRANG_THAI_DON_CAN_IN = 'B2.1_Đã có phôi';
+// 3 mẫu xuất RIÊNG. Cập nhật 24/08/2026 (theo Prompt_Ver_24.docx — hệ trạng thái 3 cột mới):
+//   - TRANG_THAI_TRACKING vẫn dựa trên TINH_TRANG (đóng gói xong = sẵn sàng tạo tracking).
+//   - "Danh sách phôi cần chuẩn bị" và "Đơn cần in sau khi nhặt phôi" giờ dựa trên cột
+//     TRANG_THAI_PHOI (tách riêng khỏi TINH_TRANG) — KHÔNG còn suy được từ TINH_TRANG như bản cũ
+//     nữa (trang Báo cáo trước đây tự nhận diện mẫu khi người dùng chọn đúng 1 trạng thái trong
+//     dropdown TINH_TRANG; giờ 2 mẫu này CHỈ còn ép được qua tham số "mau" — do 3 nút in nhanh ở
+//     trang Đơn hàng gửi lên — không tự suy được nữa vì trang Báo cáo không có dropdown lọc theo
+//     cột phôi).
+const TRANG_THAI_TRACKING = 'Đã đóng gói';
+const TRANG_THAI_PHOI_CAN_CHUAN_BI = 'Chưa lấy phôi'; // mẫu 'phoi_ao_gop' — lọc theo TRANG_THAI_PHOI, không phải TINH_TRANG
+const TRANG_THAI_PHOI_CAN_IN = 'Đã lấy phôi'; // mẫu 'don_can_in' — lọc theo TRANG_THAI_PHOI, không phải TINH_TRANG
 
-function locDon(rows, { tuNgay, denNgay, khachHang, trangThai, tuKhoa }) {
+function locDon(rows, { tuNgay, denNgay, khachHang, trangThai, trangThaiPhoi, trangThaiVeFile, tuKhoa }) {
   return rows.filter(r => {
     const ngay = parseNgay(r.NGAY_LEN_DON);
     if (!ngay) return false;
@@ -34,6 +38,8 @@ function locDon(rows, { tuNgay, denNgay, khachHang, trangThai, tuKhoa }) {
     if (denNgay && ngay > parseNgay(denNgay)) return false;
     if (khachHang && r.MA_KHACH_HANG !== khachHang) return false;
     if (trangThai && r.TINH_TRANG !== trangThai) return false;
+    if (trangThaiPhoi && r.TRANG_THAI_PHOI !== trangThaiPhoi) return false;
+    if (trangThaiVeFile && r.TRANG_THAI_VE_FILE !== trangThaiVeFile) return false;
     if (tuKhoa) {
       const tk = tuKhoa.toLowerCase();
       const khop = (r.MA_KHACH_HANG || '').toLowerCase().includes(tk) || (r.STT_Key || '').toLowerCase().includes(tk);
@@ -43,13 +49,12 @@ function locDon(rows, { tuNgay, denNgay, khachHang, trangThai, tuKhoa }) {
   });
 }
 
-// Chọn mẫu file xuất. Ưu tiên tham số 'mau' nếu có (nút in nhanh ở trang Đơn hàng ép cứng đúng mẫu,
-// không phụ thuộc trạng thái đang lọc). Không có 'mau' thì suy theo trạng thái như cũ (trang Báo cáo).
+// Chọn mẫu file xuất. Ưu tiên tham số 'mau' nếu có (nút in nhanh ở trang Đơn hàng ép cứng đúng mẫu).
+// Không có 'mau' thì chỉ còn suy được mẫu 'tracking' theo TINH_TRANG như cũ — 'phoi_ao_gop' và
+// 'don_can_in' không còn suy tự động được nữa (xem chú thích ở khai báo hằng số phía trên).
 function xacDinhMau(query) {
   const { mau, trangThai } = query;
   if (mau === 'don_can_in' || mau === 'phoi_ao_gop' || mau === 'tracking') return mau;
-  if (trangThai === TRANG_THAI_DON_CAN_IN) return 'don_can_in';
-  if (trangThai === TRANG_THAI_GOP_PHOI_AO) return 'phoi_ao_gop';
   if (trangThai === TRANG_THAI_TRACKING) return 'tracking';
   return 'chi_tiet';
 }
@@ -107,7 +112,9 @@ router.get('/trang-thai-theo-loc', async (req, res) => {
 
 // Tên trạng thái lỗi HIỆN TẠI, cộng thêm tên CŨ trước khi đổi pipeline (xem data/pipelineTinhTrang.js
 // — script migrate không sửa lại lịch sử cũ, nên vẫn cần so khớp cả 2 tên mới không bỏ sót lỗi cũ).
-const TRANG_THAI_LOI = ['B4.3_ĐƠN LỖI CẦN LÀM LẠI', 'ĐƠN LỖI CẦN LÀM LẠI'];
+// Tên trạng thái lỗi qua 3 thế hệ đặt tên (cũ nhất trước, mới nhất sau) — script migrate không sửa
+// lại lịch sử cũ nên vẫn cần so khớp đủ cả 3 mới không bỏ sót lỗi xảy ra ở các bản pipeline trước.
+const TRANG_THAI_LOI = ['ĐƠN LỖI CẦN LÀM LẠI', 'B4.3_ĐƠN LỖI CẦN LÀM LẠI', 'LỖI SẢN XUẤT CẦN LÀM LẠI'];
 
 // Số tuần trong năm theo lịch — dùng thống nhất với cách tính "theo tuần" đã có ở Dashboard
 function soTuanTrongNam(d) {
@@ -115,14 +122,14 @@ function soTuanTrongNam(d) {
   return Math.ceil(((d - dauNam) / 86400000 + dauNam.getDay() + 1) / 7);
 }
 
-// Thống kê tỷ lệ lỗi sản xuất (B4.3_ĐƠN LỖI CẦN LÀM LẠI) theo loại sản phẩm / team sản xuất / tuần.
-// LƯU Ý QUAN TRỌNG: B4.3 là trạng thái THOÁNG QUA — đơn lỗi được xác nhận làm lại sẽ quay về B1.1
-// ngay sau đó, nên KHÔNG thể đếm bằng cách lọc TINH_TRANG hiện tại (hầu hết đơn lỗi trong quá khứ
-// giờ đã không còn ở B4.3 nữa). Phải tính từ LỊCH SỬ (mỗi lần có đơn được CHUYỂN SANG B4.3 tính là
-// 1 lần lỗi, dù sau đó đơn đã được làm lại hay chưa).
+// Thống kê tỷ lệ lỗi sản xuất (LỖI SẢN XUẤT CẦN LÀM LẠI) theo loại sản phẩm / team sản xuất / tuần.
+// LƯU Ý QUAN TRỌNG: đây là trạng thái THOÁNG QUA — đơn lỗi được set tay làm lại từ phôi/file, nên
+// sau 1 thời gian sẽ không còn ở trạng thái này nữa. KHÔNG thể đếm bằng cách lọc TINH_TRANG hiện tại
+// (hầu hết đơn từng lỗi trong quá khứ giờ đã không còn ở trạng thái lỗi nữa). Phải tính từ LỊCH SỬ
+// (mỗi lần có đơn được CHUYỂN SANG trạng thái lỗi tính là 1 lần lỗi, dù sau đó đã được làm lại hay chưa).
 // Đơn hàng không lưu "team sản xuất" trực tiếp — suy ra team bằng cách tra NGƯỜI đã bấm chuyển đơn
-// sang B4.3 (lấy từ lịch sử) rồi tra Team của người đó trong tab NguoiDung. Nếu không tìm được
-// (vd log bị xoá, hoặc trạng thái bị đổi trực tiếp trên Sheet không qua app) thì xếp vào "Không xác định".
+// sang trạng thái lỗi (lấy từ lịch sử) rồi tra Team của người đó trong tab NguoiDung. Nếu không tìm
+// được (vd log bị xoá, hoặc trạng thái bị đổi trực tiếp trên Sheet không qua app) thì xếp vào "Không xác định".
 router.get('/thong-ke-loi', async (req, res) => {
   const { tuNgay, denNgay } = req.query;
 
@@ -171,7 +178,7 @@ router.get('/thong-ke-loi', async (req, res) => {
 });
 
 // ============================================================
-// MẪU "ĐƠN CẦN IN" (B2.1_Đã có phôi) — mỗi đơn 1 thẻ có QR + 2 ảnh thật, khổ giấy 100x150mm
+// MẪU "ĐƠN CẦN IN" (TRANG_THAI_PHOI = 'Đã lấy phôi') — mỗi đơn 1 thẻ có QR + 2 ảnh thật, khổ giấy 100x150mm
 // (bằng khổ tem in phổ biến), 2 đơn/trang để đỡ tốn giấy khi in.
 // ============================================================
 const MM_TO_PT = 2.834645669;

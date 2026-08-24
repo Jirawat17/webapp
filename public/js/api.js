@@ -2,11 +2,9 @@ const API = '/api';
 
 const NHAN_VAI_TRO = {
   admin: 'Admin',
-  quan_ly: 'Quản lý',
+  nguoi_lay_phoi: 'Người lấy phôi',
   ve_file: 'Vẽ file',
-  chuan_bi_phoi: 'Chuẩn bị phôi',
   san_xuat: 'Sản xuất',
-  dong_goi: 'Đóng gói',
 };
 
 // Luôn escape dữ liệu lấy từ Sheet trước khi chèn vào innerHTML — dữ liệu này do khách hàng /
@@ -46,25 +44,34 @@ function dangXuat() {
 
 // Thanh điều hướng dùng chung: header trên cùng (logo + tên NV + đăng xuất) + nav link —
 // nav link tự chuyển thành bottom tab bar trên điện thoại, top nav trên tablet/desktop (xem style.css)
+// CHÍNH SÁCH PHÂN QUYỀN (24/08/2026): nguoi_lay_phoi chỉ nhìn thấy DUY NHẤT menu "Quét mã QR" — ẩn
+// hết mọi menu khác (kể cả Cài đặt và Trợ lý, đã xác nhận rõ với người dùng). Nút Đăng xuất ở góc
+// trên vẫn luôn hiện cho mọi vai trò (không phải 1 "menu" theo nghĩa điều hướng trang).
 function renderNav(user, active) {
-  const links = [
-    { href: '/orders.html', label: 'Đơn hàng', icon: 'orders', key: 'orders' },
-    { href: '/scan.html', label: 'Quét QR', icon: 'scan', key: 'scan' },
-    { href: '/dashboard.html', label: 'Thống kê', icon: 'chart', key: 'dashboard' },
-    { href: '/chatbot.html', label: 'Trợ lý', icon: 'chat', key: 'chatbot' },
-    { href: '/reports.html', label: 'Báo cáo', icon: 'download', key: 'reports' },
-  ];
-  if (user.vaiTro === 'admin') {
-    links.push({ href: '/users.html', label: 'Nhân viên', icon: 'users', key: 'users' });
+  let links;
+  if (user.vaiTro === 'nguoi_lay_phoi') {
+    links = [{ href: '/scan.html', label: 'Quét QR', icon: 'scan', key: 'scan' }];
+  } else {
+    links = [
+      { href: '/orders.html', label: 'Đơn hàng', icon: 'orders', key: 'orders' },
+      { href: '/scan.html', label: 'Quét QR', icon: 'scan', key: 'scan' },
+      { href: '/dashboard.html', label: 'Thống kê', icon: 'chart', key: 'dashboard' },
+      { href: '/chatbot.html', label: 'Trợ lý', icon: 'chat', key: 'chatbot' },
+      { href: '/reports.html', label: 'Báo cáo', icon: 'download', key: 'reports' },
+    ];
+    if (user.vaiTro === 'admin') {
+      links.push({ href: '/users.html', label: 'Nhân viên', icon: 'users', key: 'users' });
+    }
+    links.push({ href: '/settings.html', label: 'Thiết lập', icon: 'settings', key: 'settings' });
   }
-  links.push({ href: '/settings.html', label: 'Thiết lập', icon: 'settings', key: 'settings' });
 
   const nav = document.getElementById('nav');
   if (!nav) return;
 
+  const trangChu = user.vaiTro === 'nguoi_lay_phoi' ? '/scan.html' : '/orders.html';
   nav.innerHTML = `
     <header class="app-header">
-      <a href="/orders.html" class="brand">${icon('logo', { size: 26 })}<span>Xưởng Thêu</span></a>
+      <a href="${trangChu}" class="brand">${icon('logo', { size: 26 })}<span>Xưởng Thêu</span></a>
       <div class="header-right">
         <span class="nav-user">${escapeHtml(user.ten)} · ${escapeHtml(NHAN_VAI_TRO[user.vaiTro] || user.vaiTro)}</span>
         <button class="icon-btn" onclick="dangXuat()" aria-label="Đăng xuất">${icon('logout')}</button>
@@ -87,25 +94,32 @@ function spinnerInline(chuThich = 'Đang xử lý...') {
   return `<span class="inline-loading">${icon('spinner', { className: 'icon-spin', size: 18 })} ${escapeHtml(chuThich)}</span>`;
 }
 
-// TINH_TRANG là chuỗi tự do lấy từ Sheet (không phải enum cố định) — tô màu badge theo từ khoá
-// thay vì theo từng giá trị chính xác, để không vỡ khi Sheet có thêm trạng thái mới.
-// Cập nhật theo pipeline mới (24/08/2026): mỗi giai đoạn B1-B5 giờ có cặp .1_ (đã xong, xanh) và
-// .2_ (chưa xong, vàng); B4.3_ĐƠN LỖI CẦN LÀM LẠI xếp cùng nhóm màu đỏ với hủy/hoàn đơn.
+// Bảng tra cứu CHÍNH XÁC (exact-match) — cập nhật 24/08/2026 theo hệ trạng thái mới (không còn tiền
+// tố B[1-5].[12]_ nên không dùng được cách so khớp mẫu/chuỗi con cũ nữa). Cố tình dùng tra cứu CHÍNH
+// XÁC thay vì includes()/regex — 2 lần trước đã dính lỗi thật vì so khớp chuỗi con (vd 'HUY' khớp
+// nhầm vào giữa chữ 'CHUYỂN', 'TRANSIT' không khớp được 'TRAINSIT' do lệch 1 ký tự) — tra cứu chính
+// xác loại bỏ hẳn nguy cơ đó.
+const MAU_TRANG_THAI = {
+  // TINH_TRANG
+  'Chưa xác nhận': 'trang-thai-warning',
+  'Đã xác nhận': 'trang-thai-info',
+  'ĐÃ SẴN SÀNG CHẠY MÁY': 'trang-thai-info',
+  'Đã sản xuất': 'trang-thai-success',
+  'LỖI SẢN XUẤT CẦN LÀM LẠI': 'trang-thai-danger',
+  'Đã đóng gói': 'trang-thai-success',
+  'IN TRANSIT_Tracking đã hoạt động': 'trang-thai-success',
+  'DELIVERED_Đã giao đến khách': 'trang-thai-success',
+  'CANCELLED_Đã hủy': 'trang-thai-danger',
+  'REFUNDED_Hoàn đơn': 'trang-thai-danger',
+  // TRANG_THAI_PHOI
+  'Chưa lấy phôi': 'trang-thai-warning',
+  'Đã lấy phôi': 'trang-thai-success',
+  // TRANG_THAI_VE_FILE
+  'Chưa vẽ file': 'trang-thai-warning',
+  'Đã vẽ file': 'trang-thai-success',
+};
 function lopTrangThai(tinhTrang) {
-  const s = String(tinhTrang || '').toUpperCase();
-  // LƯU Ý — 2 lỗi thật đã sửa ở đây:
-  // 1) KHÔNG kiểm tra 'HUY' — chuỗi này khớp NHẦM vào giữa chữ "CHUYỂN" (vd "SHIPPED_Đã gửi vận
-  //    CHUYỂN" chứa sẵn "C-H-U-Y-ển"), khiến SHIPPED bị tô nhầm màu đỏ (danger) thay vì xanh
-  //    (success). 'CANCELLED' (tiếng Anh, luôn đứng trước dấu gạch dưới trong mọi chuỗi trạng thái
-  //    hủy đơn của hệ thống) đã đủ để nhận diện, không cần kiểm tra thêm từ tiếng Việt.
-  // 2) Chuỗi trạng thái thật trong hệ thống là "IN TRAINSIT" (có thêm chữ I — xem
-  //    data/pipelineTinhTrang.js), KHÔNG phải "TRANSIT" — kiểm tra cũ dùng "TRANSIT" không bao giờ
-  //    khớp được, khiến IN TRAINSIT rơi vào nhánh mặc định (info, xanh dương) thay vì success (xanh lá).
-  if (s.includes('CANCELLED') || s.includes('REFUND') || s.includes('LỖI')) return 'trang-thai-danger';
-  if (s.includes('SHIPPED') || s.includes('DELIVERED') || s.includes('TRAINSIT')) return 'trang-thai-success';
-  if (/^B[1-5]\.1_/.test(s)) return 'trang-thai-success';
-  if (/^B[1-5]\.2_/.test(s)) return 'trang-thai-warning';
-  return 'trang-thai-info'; // giá trị chưa biết
+  return MAU_TRANG_THAI[tinhTrang] || 'trang-thai-info'; // giá trị lạ/chưa biết
 }
 
 // Google Sheets trả về cột NGAY_LEN_DON dạng chuỗi DD/MM/YYYY (vd "23/08/2026") — new Date(chuoi)

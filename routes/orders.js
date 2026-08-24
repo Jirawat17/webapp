@@ -52,11 +52,13 @@ router.get('/', async (req, res) => {
   res.json(list);
 });
 
-// Chuyển trạng thái HÀNG LOẠT cho nhiều đơn cùng lúc — chọn tự do bất kỳ trong 16 trạng thái,
+// Chuyển trạng thái HÀNG LOẠT cho nhiều đơn cùng lúc — chọn tự do bất kỳ trong 10 giá trị TINH_TRANG,
 // KHÔNG kiểm tra trạng thái hiện tại của từng đơn (khác với kịch bản quét QR — quyết định có chủ ý
 // của người dùng, vì đây là công cụ sửa nhanh/sửa lỗi, không phải luồng vận hành theo pipeline).
-// Mở cho MỌI vai trò, không theo giới hạn cột TRUONG_DUOC_SUA phía dưới (vốn chỉ áp dụng cho sửa
-// từng đơn lẻ) — đây là quyết định có chủ ý, đã thống nhất với người dùng khi thiết kế tính năng này.
+// CHỈ đổi được TINH_TRANG (không đổi TRANG_THAI_PHOI/TRANG_THAI_VE_FILE) — đủ dùng cho việc sửa
+// nhanh/sửa lỗi ở cấp tiến trình chung, còn phôi/file sửa qua trang chi tiết đơn hoặc quét QR.
+// Mở cho MỌI vai trò có quyền vào trang Đơn hàng (admin/ve_file toàn bộ, san_xuat theo phạm vi đã
+// lọc), không theo giới hạn cột TRUONG_DUOC_SUA phía dưới (vốn chỉ áp dụng cho sửa từng đơn lẻ).
 router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
   const { sttKeys, trangThaiMoi } = req.body;
   const user = req.session.user;
@@ -104,9 +106,17 @@ router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
 
 // Những kịch bản (trong CauHinhKichBan) có thể áp dụng cho trạng thái hiện tại của đơn —
 // dùng để hiện nút "Chuyển sang..." trên trang chi tiết mà không cần quét QR
-async function layKichBanKeTiep(tinhTrangHienTai) {
+// So khớp đúng CỘT mà từng kịch bản thao tác (Cot trong CauHinhKichBan — TINH_TRANG hoặc
+// TRANG_THAI_PHOI hoặc TRANG_THAI_VE_FILE), không chỉ so với TINH_TRANG như bản cũ (trước 24/08/2026,
+// lúc đó mọi kịch bản đều chỉ thao tác trên đúng 1 cột TINH_TRANG nên không cần phân biệt). Đồng
+// thời chỉ hiện kịch bản mà VAI TRÒ đang xem được phép dùng (Nguoi_Thuc_Hien) — tránh hiện nút rồi
+// bấm vào bị từ chối (qr.js cũng chặn lại lần nữa ở phía server, đây chỉ là để giao diện đỡ rối).
+async function layKichBanKeTiep(row, user) {
   const list = await scenarioService.layDanhSachKichBan();
-  return list.filter(s => !s.requireStatus || s.requireStatus === tinhTrangHienTai);
+  return list.filter(s =>
+    (!s.requireStatus || s.requireStatus === row[s.column]) &&
+    (user.vaiTro === 'admin' || !s.allowedRoles || s.allowedRoles.includes(user.vaiTro))
+  );
 }
 
 router.get('/:sttKey', async (req, res) => {
@@ -116,24 +126,33 @@ router.get('/:sttKey', async (req, res) => {
   const [lichSu, [donDaLamGiau], kichBanKeTiep] = await Promise.all([
     layLichSuTheoDon(req.params.sttKey),
     lamGiauDon([row]),
-    layKichBanKeTiep(row.TINH_TRANG),
+    layKichBanKeTiep(row, req.session.user),
   ]);
 
   res.json({ ...donDaLamGiau, lichSu, kichBanKeTiep });
 });
 
-// CHÍNH SÁCH PHÂN QUYỀN (cập nhật): mọi vai trò sửa được MỌI trường của đơn, giống hệt admin — không
-// còn giới hạn theo vai trò như trước (ve_file/chuan_bi_phoi từng chỉ sửa được GHI_CHU; san_xuat/
-// dong_goi từng chỉ sửa được vài trường cụ thể). Để trống {} thay vì xóa hẳn TRUONG_DUOC_SUA để nếu
-// sau này cần khôi phục giới hạn theo vai trò thì chỉ cần điền lại đúng chỗ này.
-const TRUONG_DUOC_SUA = {};
+// CHÍNH SÁCH PHÂN QUYỀN (cập nhật 24/08/2026, theo Prompt_Ver_24.docx — HUỶ chính sách "mọi vai trò
+// như Admin" trước đó):
+//   - admin, ve_file: không có trong danh sách dưới đây = sửa được MỌI trường (trừ TRUONG_CAM_SUA).
+//   - san_xuat: chỉ sửa được 3 cột trạng thái + ghi chú — theo đúng mô tả "lỗi thì set tay, làm lại
+//     thì cũng set tay" (san_xuat là người phát hiện lỗi sản xuất, cần tự set TINH_TRANG sang lỗi,
+//     và tự set lại cả 2 cột phôi/file về "chưa" khi cần làm lại — không phải đợi nguoi_lay_phoi/
+//     ve_file làm hộ từng bước).
+//   - nguoi_lay_phoi: chỉ ghi chú — trên thực tế vai trò này không có trang chi tiết đơn để sửa tay
+//     (menu chỉ có "Quét mã QR", xem public/js/api.js renderNav), giữ dòng này để phòng hờ nếu sau
+//     này họ được cấp thêm quyền truy cập trang chi tiết đơn.
+const TRUONG_DUOC_SUA = {
+  san_xuat: ['GHI_CHU', 'TINH_TRANG', 'TRANG_THAI_PHOI', 'TRANG_THAI_VE_FILE'],
+  nguoi_lay_phoi: ['GHI_CHU'],
+};
 
 // Không bao giờ cho phép sửa qua các cột này — khóa chính, field nội bộ, hoặc trường chỉ tính toán để hiển thị
 const TRUONG_CAM_SUA = ['STT_Key', '_row', 'NguoiCapNhatCuoi', 'ThoiGianCapNhatCuoi', 'TenKhachHang', 'TieuDeSanPham', 'ViTriTheu', 'CanhBao'];
 
 router.put('/:sttKey', async (req, res) => {
   const user = req.session.user;
-  const allowed = TRUONG_DUOC_SUA[user.vaiTro]; // luôn undefined (TRUONG_DUOC_SUA để trống) = mọi vai trò sửa hết, trừ TRUONG_CAM_SUA
+  const allowed = TRUONG_DUOC_SUA[user.vaiTro]; // undefined cho admin/ve_file = sửa hết (trừ TRUONG_CAM_SUA)
   let updates = req.body;
 
   if (allowed) {

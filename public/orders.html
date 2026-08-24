@@ -46,22 +46,22 @@
 </div>
 
 <script src="/js/icons.js?v=20260823c"></script>
-<script src="/js/api.js?v=20260824c"></script>
+<script src="/js/api.js?v=20260824d"></script>
 <script>
 const NHAN_CANH_BAO = { VANG: 'Vàng · 3 ngày', CAM: 'Cam · 5 ngày', DO: 'Đỏ · 7 ngày' };
 
-// Danh sách ĐẦY ĐỦ trạng thái — dùng riêng cho ô "Chuyển đến trạng thái" (chọn tự do, không
-// kiểm tra trạng thái hiện tại). PHẢI khớp với DANH_SACH_TRANG_THAI_BAO_CAO trong
+// Danh sách ĐẦY ĐỦ 10 giá trị TINH_TRANG — dùng riêng cho ô "Chuyển đến trạng thái" (chọn tự do,
+// không kiểm tra trạng thái hiện tại). PHẢI khớp với DANH_SACH_TRANG_THAI_BAO_CAO trong
 // data/pipelineTinhTrang.js — sửa 1 chỗ thì nhớ sửa chỗ kia.
-// Cập nhật theo pipeline mới (24/08/2026, So_do_logic.pdf) — thay hoàn toàn 12 trạng thái B0-B5 cũ.
+// Cập nhật 24/08/2026 (theo Prompt_Ver_24.docx) — thay hoàn toàn hệ trạng thái B1.1-B5.2 cũ bằng
+// tên gọi thuần Việt, và tách phôi/vẽ file ra 2 cột riêng (không còn nằm trong danh sách này).
 const DANH_SACH_TRANG_THAI_DAY_DU = [
-  'B1.2_HOLD_Chưa xác nhận', 'B1.1_Đơn đã xác nhận',
-  'B2.2_Không có phôi', 'B2.1_Đã có phôi',
-  'B3.2_Chưa vẽ file', 'B3.1_Đã vẽ file',
-  'B4.2_Đơn chưa sản xuất', 'B4.3_ĐƠN LỖI CẦN LÀM LẠI', 'B4.1_Đơn đã sản xuất',
-  'B5.2_Đơn chưa đóng gói', 'B5.1_Đơn đã đóng gói',
-  'SHIPPED_Đã gửi vận chuyển', 'IN TRAINSIT_Tracking đã hoạt động',
-  'DELIVERED_Đã giao hàng đến khách', 'CANCELLED_Đã hủy đơn', 'REFUNDED_Hoàn đơn',
+  'Chưa xác nhận', 'Đã xác nhận',
+  'ĐÃ SẴN SÀNG CHẠY MÁY',
+  'Đã sản xuất', 'LỖI SẢN XUẤT CẦN LÀM LẠI',
+  'Đã đóng gói',
+  'IN TRANSIT_Tracking đã hoạt động',
+  'DELIVERED_Đã giao đến khách', 'CANCELLED_Đã hủy', 'REFUNDED_Hoàn đơn',
 ];
 
 let danhSachHienTai = [];
@@ -161,6 +161,9 @@ function renderDanhSachDon() {
         <div class="meta">Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgay(o.NGAY_LEN_DON) : '—')}</div>
         <div class="badge-row">
           <span class="badge ${lopTrangThai(o.TINH_TRANG)}">${escapeHtml(o.TINH_TRANG || '')}</span>
+          ${['Chưa xác nhận', 'Đã xác nhận'].includes(o.TINH_TRANG) ? `
+            <span class="badge ${lopTrangThai(o.TRANG_THAI_PHOI)}">${escapeHtml(o.TRANG_THAI_PHOI || '')}</span>
+            <span class="badge ${lopTrangThai(o.TRANG_THAI_VE_FILE)}">${escapeHtml(o.TRANG_THAI_VE_FILE || '')}</span>` : ''}
           ${o.CanhBao ? `
             <span class="badge badge-canh-bao ${o.CanhBao.toLowerCase()}">
               ${icon('alert')} ${NHAN_CANH_BAO[o.CanhBao] || o.CanhBao}
@@ -257,10 +260,16 @@ async function inNhanh(mau, nut) {
   const tuKhoa = document.getElementById('loc-kh').value;
   const tuNgay = document.getElementById('loc-tu-ngay').value;
   const denNgay = document.getElementById('loc-den-ngay').value;
-  if (trangThai) qs.set('trangThai', trangThai);
   if (tuKhoa) qs.set('tuKhoa', tuKhoa);
   if (tuNgay) qs.set('tuNgay', tuNgay);
   if (denNgay) qs.set('denNgay', denNgay);
+
+  // 'phoi_ao_gop' (IN DANH SÁCH PHÔI) và 'don_can_in' (IN ĐƠN) lọc theo cột TRANG_THAI_PHOI (tách
+  // riêng khỏi TINH_TRANG từ 24/08/2026) — ép cứng đúng giá trị cần cho từng mẫu, KHÔNG dùng ô lọc
+  // trạng thái chung ở trên (ô đó chỉ lọc được TINH_TRANG, không lọc được cột phôi).
+  if (mau === 'phoi_ao_gop') qs.set('trangThaiPhoi', 'Chưa lấy phôi');
+  else if (mau === 'don_can_in') qs.set('trangThaiPhoi', 'Đã lấy phôi');
+  else if (trangThai) qs.set('trangThai', trangThai); // 'tracking' và các trường hợp khác vẫn theo đúng ô lọc trạng thái chung như trước
 
   try {
     const res = await fetch('/api/reports/pdf?' + qs.toString(), { credentials: 'include' });
