@@ -472,6 +472,43 @@ nguyên 100%):
   - "IN ĐƠN ÁO"                                      -> "IN ĐƠN"
   - "IN DANH SÁCH ÁO ĐÃ SẢN XUẤT CHO TRACKING"       -> "IN DANH SÁCH ĐÃ SẢN XUẤT"
 
+======================================================================================
+14. SỬA MÀU BADGE SHIPPED VÀ IN TRAINSIT (theo ảnh chụp màn hình bạn gửi)
+======================================================================================
+
+FILE SỬA: public/js/api.js
+
+Bạn gửi ảnh chụp cho thấy SHIPPED_Đã gửi vận chuyển đang bị tô ĐỎ (giống trạng thái hủy/lỗi) và
+IN TRAINSIT_Tracking đã hoạt động đang bị tô XANH DƯƠNG (giống trạng thái chưa rõ), trong khi
+DELIVERED_Đã giao hàng đến khách tô ĐÚNG màu xanh lá — đúng như 3 trạng thái cùng nhóm "đã ship"
+lẽ ra phải cùng 1 màu. Đã tìm ra 2 lỗi thật trong hàm lopTrangThai() (tô màu badge trạng thái),
+không cần hỏi lại thêm vì tự đối chiếu chuỗi ký tự đã xác định chắc chắn nguyên nhân:
+
+14.1. LỖI 1 — SHIPPED bị tô đỏ: hàm cũ kiểm tra `s.includes('HUY')` để nhận diện trạng thái huỷ
+đơn (tiếng Việt "hủy"), nhưng chuỗi "SHIPPED_Đã gửi vận CHUYỂN" (viết hoa hết thành "...VẬN
+CHUYỂN") lại VÔ TÌNH CHỨA SẴN đúng 3 ký tự "H-U-Y" liền nhau ngay giữa chữ "CHUYỂN" (C-H-U-Y-ển) —
+khiến SHIPPED bị nhận nhầm là trạng thái huỷ, tô đỏ. Đã bỏ hẳn kiểm tra 'HUY' này — không cần thiết
+vì chữ "CANCELLED" (tiếng Anh, luôn có sẵn ở đầu mọi chuỗi trạng thái huỷ đơn trong hệ thống) đã đủ
+để nhận diện chính xác trạng thái huỷ.
+
+14.2. LỖI 2 — IN TRAINSIT bị tô xanh dương thay vì xanh lá: hàm cũ kiểm tra
+`s.includes('TRANSIT')`, nhưng chuỗi trạng thái THẬT trong toàn hệ thống là "IN TRAINSIT" (chú ý:
+"TRAINSIT" có thêm chữ I so với "TRANSIT" — chính tả này dùng xuyên suốt từ code gốc ban đầu, xem
+data/pipelineTinhTrang.js, không phải mình gõ nhầm). "TRAINSIT" không hề chứa "TRANSIT" như 1 chuỗi
+con, nên kiểm tra cũ không bao giờ khớp được — badge rơi vào nhánh mặc định (info, xanh dương). Đã
+sửa lại đúng chính tả "TRAINSIT".
+
+Đã tự mô phỏng lại bằng Node với ĐỦ CẢ 16 trạng thái (không chỉ riêng 3 trạng thái trong ảnh) trước
+khi giao, để chắc chắn 2 lần sửa này không vô tình làm sai màu của trạng thái nào khác — kết quả
+khớp đúng 16/16.
+
+QUAN TRỌNG: public/js/api.js dùng chung cho MỌI trang. Đã bump version ?v=20260824c cho 6 trang có
+trong zip (orders, order, reports, dashboard, chatbot, settings) — còn index.html, scan.html,
+users.html KHÔNG có trong zip (mình không có bản để sửa), bạn cần tự bump version api.js thành
+?v=20260824c ở 3 trang đó nữa thì màu badge mới đổi đúng trên toàn hệ thống, không chỉ riêng 6 trang
+đã gửi.
+
+
 
 
 

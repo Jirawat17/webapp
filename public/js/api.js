@@ -93,8 +93,16 @@ function spinnerInline(chuThich = 'Đang xử lý...') {
 // .2_ (chưa xong, vàng); B4.3_ĐƠN LỖI CẦN LÀM LẠI xếp cùng nhóm màu đỏ với hủy/hoàn đơn.
 function lopTrangThai(tinhTrang) {
   const s = String(tinhTrang || '').toUpperCase();
-  if (s.includes('CANCELLED') || s.includes('HUY') || s.includes('REFUND') || s.includes('LỖI')) return 'trang-thai-danger';
-  if (s.includes('SHIPPED') || s.includes('DELIVERED') || s.includes('TRANSIT')) return 'trang-thai-success';
+  // LƯU Ý — 2 lỗi thật đã sửa ở đây:
+  // 1) KHÔNG kiểm tra 'HUY' — chuỗi này khớp NHẦM vào giữa chữ "CHUYỂN" (vd "SHIPPED_Đã gửi vận
+  //    CHUYỂN" chứa sẵn "C-H-U-Y-ển"), khiến SHIPPED bị tô nhầm màu đỏ (danger) thay vì xanh
+  //    (success). 'CANCELLED' (tiếng Anh, luôn đứng trước dấu gạch dưới trong mọi chuỗi trạng thái
+  //    hủy đơn của hệ thống) đã đủ để nhận diện, không cần kiểm tra thêm từ tiếng Việt.
+  // 2) Chuỗi trạng thái thật trong hệ thống là "IN TRAINSIT" (có thêm chữ I — xem
+  //    data/pipelineTinhTrang.js), KHÔNG phải "TRANSIT" — kiểm tra cũ dùng "TRANSIT" không bao giờ
+  //    khớp được, khiến IN TRAINSIT rơi vào nhánh mặc định (info, xanh dương) thay vì success (xanh lá).
+  if (s.includes('CANCELLED') || s.includes('REFUND') || s.includes('LỖI')) return 'trang-thai-danger';
+  if (s.includes('SHIPPED') || s.includes('DELIVERED') || s.includes('TRAINSIT')) return 'trang-thai-success';
   if (/^B[1-5]\.1_/.test(s)) return 'trang-thai-success';
   if (/^B[1-5]\.2_/.test(s)) return 'trang-thai-warning';
   return 'trang-thai-info'; // giá trị chưa biết
