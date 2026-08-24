@@ -26,7 +26,7 @@ router.get('/', async (req, res) => {
   const { rows } = await orderService.getAll();
   let list = orderService.filterForRole(rows, req.session.user);
 
-  const { trangThai, kh } = req.query;
+  const { trangThai, kh, tuNgay, denNgay } = req.query;
   if (trangThai) list = list.filter(r => r.TINH_TRANG === trangThai);
   if (kh) {
     const tuKhoa = kh.toLowerCase();
@@ -34,6 +34,15 @@ router.get('/', async (req, res) => {
       (r.MA_KHACH_HANG || '').toLowerCase().includes(tuKhoa) ||
       (r.STT_Key || '').toLowerCase().includes(tuKhoa)
     );
+  }
+  if (tuNgay || denNgay) {
+    list = list.filter(r => {
+      const ngay = parseNgay(r.NGAY_LEN_DON);
+      if (!ngay) return false;
+      if (tuNgay && ngay < parseNgay(tuNgay)) return false;
+      if (denNgay && ngay > parseNgay(denNgay)) return false;
+      return true;
+    });
   }
 
   // Không có cột deadline riêng — sắp theo ngày lên đơn, đơn cũ nhất (tồn lâu nhất) lên đầu

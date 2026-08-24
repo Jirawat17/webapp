@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=20260824f">
+<link rel="stylesheet" href="/css/style.css?v=20260824h">
 <script src="/js/theme.js?v=20260823b"></script>
 </head>
 <body>
@@ -16,30 +16,16 @@
     <select id="loc-trang-thai"><option value="">Tất cả trạng thái</option></select>
     <label class="sr-only" for="loc-kh">Tìm theo tên đơn hoặc mã khách hàng</label>
     <input id="loc-kh" placeholder="Tìm theo tên đơn (STT_Key) hoặc mã khách hàng">
+    <label class="sr-only" for="loc-tu-ngay">Từ ngày</label>
+    <input type="date" id="loc-tu-ngay" title="Từ ngày">
+    <label class="sr-only" for="loc-den-ngay">Đến ngày</label>
+    <input type="date" id="loc-den-ngay" title="Đến ngày">
   </div>
 
   <div class="in-nhanh-thanh">
-    <div class="in-nhanh">
-      <button type="button" class="btn-hanh-dong phu" id="btn-in-phoi-ao" onclick="toggleMenuInNhanh('menu-phoi-ao')"></button>
-      <div class="in-nhanh-menu" id="menu-phoi-ao" hidden>
-        <button type="button" onclick="inNhanh('phoi_ao_gop', 'excel')">Xuất Excel</button>
-        <button type="button" onclick="inNhanh('phoi_ao_gop', 'pdf')">Xuất PDF</button>
-      </div>
-    </div>
-    <div class="in-nhanh">
-      <button type="button" class="btn-hanh-dong phu" id="btn-in-don-ao" onclick="toggleMenuInNhanh('menu-don-ao')"></button>
-      <div class="in-nhanh-menu" id="menu-don-ao" hidden>
-        <button type="button" onclick="inNhanh('don_can_in', 'excel')">Xuất Excel</button>
-        <button type="button" onclick="inNhanh('don_can_in', 'pdf')">Xuất PDF</button>
-      </div>
-    </div>
-    <div class="in-nhanh">
-      <button type="button" class="btn-hanh-dong phu" id="btn-in-tracking" onclick="toggleMenuInNhanh('menu-tracking')"></button>
-      <div class="in-nhanh-menu" id="menu-tracking" hidden>
-        <button type="button" onclick="inNhanh('tracking', 'excel')">Xuất Excel</button>
-        <button type="button" onclick="inNhanh('tracking', 'pdf')">Xuất PDF</button>
-      </div>
-    </div>
+    <button type="button" class="btn-hanh-dong phu" id="btn-in-phoi-ao" onclick="inNhanh('phoi_ao_gop')"></button>
+    <button type="button" class="btn-hanh-dong phu" id="btn-in-don-ao" onclick="inNhanh('don_can_in')"></button>
+    <button type="button" class="btn-hanh-dong phu" id="btn-in-tracking" onclick="inNhanh('tracking')"></button>
   </div>
 
   <label class="chon-tat-ca-hang">
@@ -84,11 +70,16 @@ let donDaChonSet = new Set();
 
   document.getElementById('loc-trang-thai').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-kh').oninput = debounce(() => { boChonTatCaDon(); taiDon(); }, 400);
+  document.getElementById('loc-tu-ngay').onchange = () => {
+    const denNgay = document.getElementById('loc-den-ngay');
+    if (document.getElementById('loc-tu-ngay').value && !denNgay.value) denNgay.value = ngayHomNayYYYYMMDD();
+    boChonTatCaDon(); taiDon();
+  };
+  document.getElementById('loc-den-ngay').onchange = () => { boChonTatCaDon(); taiDon(); };
 
   document.getElementById('btn-in-phoi-ao').innerHTML = icon('printer') + ' IN DANH SÁCH PHÔI ÁO';
   document.getElementById('btn-in-don-ao').innerHTML = icon('printer') + ' IN ĐƠN ÁO';
   document.getElementById('btn-in-tracking').innerHTML = icon('printer') + ' IN DANH SÁCH ÁO ĐÃ SẢN XUẤT CHO TRACKING';
-  document.addEventListener('click', (e) => { if (!e.target.closest('.in-nhanh')) donghetMenuInNhanh(); });
 
   document.getElementById('trang-thai-dich').innerHTML = '<option value="">Chuyển đến trạng thái...</option>' +
     DANH_SACH_TRANG_THAI_DAY_DU.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
@@ -97,6 +88,13 @@ let donDaChonSet = new Set();
 })();
 
 function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+
+function ngayHomNayYYYYMMDD() {
+  const d = new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
 
 function capNhatBoLocTrangThai(list) {
   const sel = document.getElementById('loc-trang-thai');
@@ -113,9 +111,13 @@ async function taiDon() {
 
   const trangThai = document.getElementById('loc-trang-thai').value;
   const kh = document.getElementById('loc-kh').value;
+  const tuNgay = document.getElementById('loc-tu-ngay').value;
+  const denNgay = document.getElementById('loc-den-ngay').value;
   const qs = new URLSearchParams();
   if (trangThai) qs.set('trangThai', trangThai);
   if (kh) qs.set('kh', kh);
+  if (tuNgay) qs.set('tuNgay', tuNgay);
+  if (denNgay) qs.set('denNgay', denNgay);
 
   let list;
   try {
@@ -127,7 +129,7 @@ async function taiDon() {
 
   danhSachHienTai = list;
 
-  if (!trangThai && !kh) capNhatBoLocTrangThai(list);
+  if (!trangThai && !kh && !tuNgay && !denNgay) capNhatBoLocTrangThai(list);
 
   renderDanhSachDon();
 }
@@ -238,31 +240,22 @@ async function apDungChuyenTrangThai() {
   await taiDon();
 }
 
-function toggleMenuInNhanh(id) {
-  const menu = document.getElementById(id);
-  const dangMo = !menu.hidden;
-  donghetMenuInNhanh();
-  menu.hidden = dangMo;
-}
-
-function donghetMenuInNhanh() {
-  document.querySelectorAll('.in-nhanh-menu').forEach(m => m.hidden = true);
-}
-
 // In nhanh theo ĐÚNG bộ lọc trạng thái + ô tìm kiếm đang áp dụng trên trang này (không ép về
-// đúng trạng thái B1/B2/B5 của mẫu) — 'mau' chỉ ép cứng ĐỊNH DẠNG cột hiển thị trong file xuất.
-async function inNhanh(mau, loai) {
-  donghetMenuInNhanh();
-
+// đúng trạng thái B1/B2/B5 của mẫu) — 'mau' chỉ ép cứng ĐỊNH DẠNG cột hiển thị trong file PDF.
+async function inNhanh(mau) {
   const qs = new URLSearchParams();
   qs.set('mau', mau);
   const trangThai = document.getElementById('loc-trang-thai').value;
   const tuKhoa = document.getElementById('loc-kh').value;
+  const tuNgay = document.getElementById('loc-tu-ngay').value;
+  const denNgay = document.getElementById('loc-den-ngay').value;
   if (trangThai) qs.set('trangThai', trangThai);
   if (tuKhoa) qs.set('tuKhoa', tuKhoa);
+  if (tuNgay) qs.set('tuNgay', tuNgay);
+  if (denNgay) qs.set('denNgay', denNgay);
 
   try {
-    const res = await fetch(`/api/reports/${loai}?` + qs.toString(), { credentials: 'include' });
+    const res = await fetch('/api/reports/pdf?' + qs.toString(), { credentials: 'include' });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
       throw new Error(data.error || 'Không xuất được file');
@@ -273,7 +266,7 @@ async function inNhanh(mau, loai) {
     a.href = url;
     const contentDisposition = res.headers.get('Content-Disposition') || '';
     const khopTen = contentDisposition.match(/filename="([^"]+)"/);
-    a.download = khopTen ? khopTen[1] : (loai === 'excel' ? 'bao-cao.xlsx' : 'bao-cao.pdf');
+    a.download = khopTen ? khopTen[1] : 'bao-cao.pdf';
     document.body.appendChild(a);
     a.click();
     a.remove();
