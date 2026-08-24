@@ -28,13 +28,7 @@ router.get('/', async (req, res) => {
 
   const { trangThai, kh } = req.query;
   if (trangThai) list = list.filter(r => r.TINH_TRANG === trangThai);
-  if (kh) {
-    const tuKhoa = kh.toLowerCase();
-    list = list.filter(r =>
-      (r.MA_KHACH_HANG || '').toLowerCase().includes(tuKhoa) ||
-      (r.STT_Key || '').toLowerCase().includes(tuKhoa)
-    );
-  }
+  if (kh) list = list.filter(r => (r.MA_KHACH_HANG || '').toLowerCase().includes(kh.toLowerCase()));
 
   // Không có cột deadline riêng — sắp theo ngày lên đơn, đơn cũ nhất (tồn lâu nhất) lên đầu
   list.sort((a, b) => (parseNgay(a.NGAY_LEN_DON) || 0) - (parseNgay(b.NGAY_LEN_DON) || 0));
