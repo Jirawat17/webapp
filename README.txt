@@ -374,6 +374,106 @@ BẮT ĐƯỢC 2 LỖI TRƯỚC KHI GIAO (mô phỏng bằng node -e với dữ 
 Không dùng thư viện chart mới — vẽ 3 nhóm thống kê (theo loại/theo team/theo tuần) bằng thanh
 ngang CSS thuần (đã test logic gộp nhóm bằng mô phỏng, ra đúng kết quả).
 
+======================================================================================
+12. PHÂN QUYỀN — CHỈ ADMIN QUẢN LÝ TÀI KHOẢN, MỌI VAI TRÒ KHÁC NHƯ ADMIN
+======================================================================================
+
+FILE THÊM/SỬA MỚI TRONG ĐỢT NÀY:
+- services/orderService.js  -> filterForRole() không còn lọc theo vai trò
+- routes/orders.js          -> TRUONG_DUOC_SUA để trống, mọi vai trò sửa được mọi trường đơn
+- public/order.html         -> bỏ giới hạn "chỉ dong_goi/admin" ở khu tải ảnh đóng gói
+- routes/chatbot.js         -> mở 2 công cụ tra nhân viên/lịch sử chung cho mọi vai trò
+
+CHÍNH SÁCH MỚI (đã xác nhận qua các câu hỏi trước khi code): mọi tài khoản đã đăng nhập có quyền
+xem/sửa dữ liệu GIỐNG HỆT admin. Giới hạn DUY NHẤT còn lại trong toàn hệ thống: chỉ admin mới được
+Thêm/Sửa/Khóa/Hủy khóa TÀI KHOẢN người dùng khác (routes/users.js — không đổi gì, đã đúng sẵn từ
+trước, quan_ly cũng không vào được trang này, chỉ đúng 1 mình admin).
+
+12.1. RÀ SOÁT TOÀN BỘ CODE để tìm đúng những chỗ có phân quyền thật (không đoán) — chỉ có 4 chỗ:
+  1. services/orderService.js (filterForRole) — quyết định mỗi vai trò thấy đơn nào trong danh sách.
+  2. routes/orders.js (TRUONG_DUOC_SUA) — quyết định mỗi vai trò sửa được cột nào của 1 đơn.
+  3. public/order.html — ẩn/hiện khu tải "ảnh đóng gói" theo vai trò (dong_goi/admin).
+  4. routes/chatbot.js (TOOLS_QUAN_LY) — 2 công cụ tra nhân viên + lịch sử hoạt động chung chỉ cho
+     admin/quan_ly.
+  routes/photos.js, routes/qr.js, routes/reports.js, routes/dashboard.js (nếu có) — RÀ SOÁT KỸ,
+  không có giới hạn theo vai trò nào cả (vaiTro chỉ dùng để GHI LOG ai làm, không dùng để chặn) —
+  không cần sửa gì ở các file đó.
+
+12.2. CÁC THAY ĐỔI CỤ THỂ:
+  - filterForRole(rows, user) giờ chỉ return rows, không lọc gì nữa. Giữ lại hàm (không xóa hẳn +
+    sửa mọi nơi gọi) để dễ khôi phục sau này nếu cần — chỉ cần sửa đúng 1 chỗ.
+  - TRUONG_DUOC_SUA đổi thành {} — trước đây ve_file/chuan_bi_phoi chỉ sửa được GHI_CHU,
+    san_xuat/dong_goi chỉ sửa được vài cột cụ thể; giờ mọi vai trò sửa được MỌI cột (trừ
+    TRUONG_CAM_SUA — khóa chính và trường tính toán, không đổi, không ai sửa được kể cả admin).
+  - order.html: khu vực "Chụp ảnh đóng gói" trước đây chỉ dong_goi/admin thấy, giờ mọi vai trò thấy.
+  - chatbot.js: 2 công cụ tra_cuu_nhan_vien và tra_cuu_lich_su_gan_day mở cho mọi vai trò (đây là
+    XEM dữ liệu, không phải Thêm/Sửa/Khóa/Hủy khóa tài khoản — không thuộc phạm vi giới hạn admin
+    theo đúng yêu cầu). Mô tả công cụ gửi cho LLM cũng sửa lại, bỏ dòng "CHỈ dùng được cho
+    admin/quản lý" cũ để LLM không hiểu nhầm giới hạn không còn tồn tại.
+
+12.3. DỌN CODE THỪA (import/hàm không còn ai gọi sau khi bỏ lọc theo vai trò, tự phát hiện và xóa
+theo đúng nguyên tắc không để lại code rác do chính thay đổi của mình gây ra):
+  - services/orderService.js: xóa hàm daRoiKhoiSanXuat() và import chuaXongGiaiDoan/
+    TRANG_THAI_DA_SHIP/TRANG_THAI_KET_THUC từ data/pipelineTinhTrang.js (chỉ dùng trong
+    filterForRole cũ, giờ không còn ai gọi).
+  - routes/chatbot.js: xóa hằng số VAI_TRO_QUAN_LY và biến laQuanLy (không còn dùng để phân biệt
+    quyền dùng công cụ nữa).
+
+12.4. ĐÃ TỰ MÔ PHỎNG BẰNG NODE trước khi giao: filterForRole trả về đủ số đơn cho cả 6 vai trò;
+TRUONG_DUOC_SUA cho phép mọi vai trò sửa GHI_CHU/TINH_TRANG/HANG_VAN_CHUYEN như nhau, và vẫn chặn
+đúng STT_Key (trường cấm sửa) — không có vai trò nào bị sót hay được ưu tiên nhầm.
+
+12.5. KHÔNG ĐỔI: routes/users.js (chỉ admin quản lý tài khoản, đã đúng sẵn), data/pipelineTinhTrang.js,
+cơ chế quét QR theo kịch bản (vốn đã mở cho mọi vai trò từ trước, không có gì phải sửa).
+
+======================================================================================
+13. SỬA LỖI THỐNG KÊ LỖI + XÓA XUẤT BÁO CÁO + ĐỔI TÊN 3 NÚT IN NHANH
+======================================================================================
+
+FILE THÊM/SỬA MỚI TRONG ĐỢT NÀY:
+- services/logService.js  -> layLichSuChuyenSangTrangThai() nhận mảng tên trạng thái
+- routes/reports.js       -> TRANG_THAI_LOI là mảng gồm cả tên cũ lẫn tên mới
+- public/reports.html     -> xóa hẳn phần "Xuất báo cáo", chỉ còn "Thống kê tỷ lệ lỗi sản xuất"
+- public/orders.html      -> đổi tên 3 nút in nhanh
+
+13.1. SỬA LỖI: thống kê tỷ lệ lỗi sản xuất luôn báo 0 lỗi dù thực tế có đơn bị lỗi. Nguyên nhân xác
+định qua hỏi lại triệu chứng cụ thể rồi đối chiếu code: ở đợt đổi pipeline trước, tên trạng thái lỗi
+đổi từ "ĐƠN LỖI CẦN LÀM LẠI" (cũ) sang "B4.3_ĐƠN LỖI CẦN LÀM LẠI" (mới). Script migrate-trang-thai.js
+CHỈ đổi TINH_TRANG hiện tại của đơn trong Sheet Don_Hang_ALL — KHÔNG (và không thể) sửa lại các dòng
+LỊCH SỬ đã ghi sẵn trong tab LichSuHoatDong từ trước khi đổi pipeline. Báo cáo thống kê lỗi lại tính
+hoàn toàn dựa trên lịch sử (bắt buộc, xem lại lý do ở mục 10.2), nên so khớp đúng 1 tên mới sẽ bỏ sót
+mọi lần lỗi xảy ra TRƯỚC thời điểm đổi pipeline — nếu toàn bộ lỗi thực tế của xưởng đều xảy ra trước
+mốc đó (nhiều khả năng đúng vậy, vì pipeline mới chỉ vừa đổi gần đây), báo cáo sẽ báo 0 hoàn toàn.
+
+Đã sửa: layLichSuChuyenSangTrangThai() giờ nhận vào 1 CHUỖI hoặc MẢNG các tên trạng thái cần so khớp
+(thay vì chỉ 1 chuỗi cố định), và routes/reports.js truyền vào cả 2 tên (cũ + mới). Đã tự mô phỏng
+bằng Node với 3 dòng log giả (1 dòng tên cũ, 2 dòng tên mới qua 2 đường ghi log khác nhau) — tìm thấy
+đúng cả 3, không sót dòng nào.
+
+Nếu sau này còn đổi tên bất kỳ trạng thái nào khác, cùng cách này áp dụng được: mọi báo cáo dựa trên
+LỊCH SỬ (không phải trạng thái hiện tại) đều cần liệt kê đủ các tên cũ từng dùng, không chỉ tên mới
+nhất.
+
+13.2. XÓA PHẦN "XUẤT BÁO CÁO": theo đúng yêu cầu, đã xóa hẳn khối chọn khoảng ngày/khách hàng/trạng
+thái + 3 nút Xem trước/Xuất Excel/Xuất PDF khỏi trang Báo cáo, cùng toàn bộ JS chỉ phục vụ khối đó
+(xemTruoc, xuatBaoCao, taiDanhSachTrangThai, layThamSoLoc, layThamSoLocDayDu, an_KhuXemTruoc). Trang
+Báo cáo giờ chỉ còn đúng 1 phần: Thống kê tỷ lệ lỗi sản xuất.
+
+KHÔNG xóa 3 route backend /reports/xem-truoc, /reports/excel, /reports/khach-hang, /reports/trang-thai-theo-loc
+— dù không còn UI nào gọi tới, nhưng route /reports/pdf (dùng chung code) vẫn đang được 3 nút in nhanh
+ở trang Đơn hàng gọi trực tiếp, và yêu cầu chỉ nói xóa PHẦN GIAO DIỆN ("tại menu Báo cáo"), không nói
+xóa hẳn khả năng xuất Excel/xem trước phía server. Nếu muốn xóa luôn các route không còn dùng tới ở
+backend, nói rõ để mình dọn tiếp — hiện tại chúng không gây hại gì (chỉ là code không còn đường gọi
+tới từ giao diện).
+
+13.3. ĐỔI TÊN 3 NÚT (chỉ đổi chữ hiển thị, KHÔNG đổi tham số "mau" gửi lên server nên hành vi giữ
+nguyên 100%):
+  - "IN DANH SÁCH PHÔI ÁO"                          -> "IN DANH SÁCH PHÔI"
+  - "IN ĐƠN ÁO"                                      -> "IN ĐƠN"
+  - "IN DANH SÁCH ÁO ĐÃ SẢN XUẤT CHO TRACKING"       -> "IN DANH SÁCH ĐÃ SẢN XUẤT"
+
+
+
 
 
 

@@ -105,7 +105,9 @@ router.get('/trang-thai-theo-loc', async (req, res) => {
   res.json({ tongSoDon: list.length, trangThai: ketQua });
 });
 
-const TRANG_THAI_LOI = 'B4.3_ĐƠN LỖI CẦN LÀM LẠI';
+// Tên trạng thái lỗi HIỆN TẠI, cộng thêm tên CŨ trước khi đổi pipeline (xem data/pipelineTinhTrang.js
+// — script migrate không sửa lại lịch sử cũ, nên vẫn cần so khớp cả 2 tên mới không bỏ sót lỗi cũ).
+const TRANG_THAI_LOI = ['B4.3_ĐƠN LỖI CẦN LÀM LẠI', 'ĐƠN LỖI CẦN LÀM LẠI'];
 
 // Số tuần trong năm theo lịch — dùng thống nhất với cách tính "theo tuần" đã có ở Dashboard
 function soTuanTrongNam(d) {

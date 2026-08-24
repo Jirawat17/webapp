@@ -81,9 +81,9 @@ let donDaChonSet = new Set();
   };
   document.getElementById('loc-den-ngay').onchange = () => { boChonTatCaDon(); taiDon(); };
 
-  document.getElementById('btn-in-phoi-ao').innerHTML = icon('printer') + ' IN DANH SÁCH PHÔI ÁO';
-  document.getElementById('btn-in-don-ao').innerHTML = icon('printer') + ' IN ĐƠN ÁO';
-  document.getElementById('btn-in-tracking').innerHTML = icon('printer') + ' IN DANH SÁCH ÁO ĐÃ SẢN XUẤT CHO TRACKING';
+  document.getElementById('btn-in-phoi-ao').innerHTML = icon('printer') + ' IN DANH SÁCH PHÔI';
+  document.getElementById('btn-in-don-ao').innerHTML = icon('printer') + ' IN ĐƠN';
+  document.getElementById('btn-in-tracking').innerHTML = icon('printer') + ' IN DANH SÁCH ĐÃ SẢN XUẤT';
 
   document.getElementById('trang-thai-dich').innerHTML = '<option value="">Chuyển đến trạng thái...</option>' +
     DANH_SACH_TRANG_THAI_DAY_DU.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');

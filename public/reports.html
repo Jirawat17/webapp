@@ -4,46 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Báo cáo — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=20260824j">
+<link rel="stylesheet" href="/css/style.css?v=20260824k">
 <script src="/js/theme.js?v=20260824a"></script>
 </head>
 <body>
 <div id="nav"></div>
 <div class="page">
-  <h2>Xuất báo cáo</h2>
-  <p>Mặc định là đơn hàng lên đơn <strong>hôm nay</strong>, tất cả khách hàng. Đổi ngày/khách hàng để mở rộng, hoặc chọn thêm 1 trạng thái để in nhanh đúng nhóm đơn cần thiết.</p>
-  <p>File tự đổi mẫu theo trạng thái đã chọn: <strong>"B1.1_Đơn đã xác nhận"</strong> → danh sách phôi áo <em>đã gộp theo ngày/loại/kích thước/màu</em>; <strong>"B2.1_Đã có phôi"</strong> → <em>phiếu từng đơn kèm mã QR + ảnh mẫu/mockup</em>; <strong>"B5.1_Đơn đã đóng gói"</strong> → mẫu <em>Thông tin cho Tracking</em>; mọi trạng thái khác → danh sách phôi áo chi tiết từng đơn.</p>
-
-  <form id="form-bao-cao" class="bao-cao-form">
-    <div class="truong">
-      <label for="tu-ngay">Từ ngày</label>
-      <input type="date" id="tu-ngay">
-    </div>
-    <div class="truong">
-      <label for="den-ngay">Đến ngày</label>
-      <input type="date" id="den-ngay">
-    </div>
-    <div class="truong">
-      <label for="khach-hang">Khách hàng</label>
-      <select id="khach-hang"><option value="">Tất cả khách hàng</option></select>
-    </div>
-    <div class="truong">
-      <label for="trang-thai">Trạng thái (tuỳ chọn)</label>
-      <select id="trang-thai"><option value="">Tất cả trạng thái</option></select>
-    </div>
-    <div id="thong-tin-loc" class="thong-tin-loc"></div>
-    <div class="nut-xuat">
-      <button type="button" class="btn-hanh-dong phu" id="btn-xem-truoc"></button>
-      <button type="button" class="btn-hanh-dong" id="btn-excel"></button>
-      <button type="button" class="btn-hanh-dong phu" id="btn-pdf"></button>
-    </div>
-  </form>
-
-  <div id="thong-bao" style="margin-top:12px"></div>
-  <div id="khu-xem-truoc" style="margin-top:20px"></div>
-
-  <hr style="margin:32px 0; border:none; border-top:1px solid var(--color-border)">
-
   <h2>Thống kê tỷ lệ lỗi sản xuất</h2>
   <p>Đếm số lần đơn hàng bị chuyển sang <strong>B4.3_ĐƠN LỖI CẦN LÀM LẠI</strong>, theo loại sản phẩm / team sản xuất / tuần — dựa trên lịch sử thao tác, không phải trạng thái hiện tại của đơn (vì đơn lỗi sau khi làm lại sẽ không còn ở trạng thái này nữa).</p>
 
@@ -72,36 +38,6 @@
   if (!user) return;
   renderNav(user, 'reports');
 
-  document.getElementById('btn-xem-truoc').innerHTML = icon('scan') + ' Xem trước';
-  document.getElementById('btn-excel').innerHTML = icon('file') + ' Xuất Excel';
-  document.getElementById('btn-pdf').innerHTML = icon('file') + ' Xuất PDF';
-
-  // Mặc định "hôm nay" cho cả 2 ô ngày — đúng yêu cầu "không chọn thì mặc định hôm nay".
-  const homNay = ngayHomNayYYYYMMDD();
-  document.getElementById('tu-ngay').value = homNay;
-  document.getElementById('den-ngay').value = homNay;
-
-  try {
-    const list = await apiFetch('/reports/khach-hang');
-    const sel = document.getElementById('khach-hang');
-    list.forEach(kh => sel.innerHTML += `<option value="${escapeHtml(kh.ma)}">${escapeHtml(kh.ten)} (${escapeHtml(kh.ma)})</option>`);
-  } catch (e) {
-    document.getElementById('thong-bao').textContent = 'Không tải được danh sách khách hàng: ' + e.message;
-  }
-
-  ['tu-ngay', 'den-ngay', 'khach-hang'].forEach(id => {
-    document.getElementById(id).addEventListener('change', () => {
-      taiDanhSachTrangThai();
-      an_KhuXemTruoc();
-    });
-  });
-  document.getElementById('trang-thai').addEventListener('change', an_KhuXemTruoc);
-  await taiDanhSachTrangThai();
-
-  document.getElementById('btn-xem-truoc').onclick = xemTruoc;
-  document.getElementById('btn-excel').onclick = () => xuatBaoCao('excel');
-  document.getElementById('btn-pdf').onclick = () => xuatBaoCao('pdf');
-
   document.getElementById('btn-xem-thong-ke-loi').innerHTML = icon('chart') + ' Xem thống kê';
   // Mặc định 30 ngày gần nhất — đủ để thấy xu hướng theo tuần mà không phải tải toàn bộ lịch sử
   const homNay30 = new Date(); homNay30.setDate(homNay30.getDate() - 30);
@@ -113,10 +49,6 @@
   await xemThongKeLoi();
 })();
 
-function an_KhuXemTruoc() {
-  document.getElementById('khu-xem-truoc').innerHTML = '';
-}
-
 function ngayHomNayYYYYMMDD() {
   const d = new Date();
   const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -124,140 +56,6 @@ function ngayHomNayYYYYMMDD() {
   return `${d.getFullYear()}-${mm}-${dd}`;
 }
 
-function layThamSoLoc() {
-  const qs = new URLSearchParams();
-  const tuNgay = document.getElementById('tu-ngay').value;
-  const denNgay = document.getElementById('den-ngay').value;
-  const khachHang = document.getElementById('khach-hang').value;
-  if (tuNgay) qs.set('tuNgay', tuNgay);
-  if (denNgay) qs.set('denNgay', denNgay);
-  if (khachHang) qs.set('khachHang', khachHang);
-  return qs;
-}
-
-function layThamSoLocDayDu() {
-  const qs = layThamSoLoc();
-  const trangThai = document.getElementById('trang-thai').value;
-  if (trangThai) qs.set('trangThai', trangThai);
-  return qs;
-}
-
-// Dropdown Trạng thái hiện ĐẦY ĐỦ các trạng thái theo pipeline (kể cả trạng thái chưa có đơn nào
-// khớp bộ lọc hiện tại — hiện "(0 đơn)"), không chỉ những gì đang thực sự có trong dữ liệu.
-async function taiDanhSachTrangThai() {
-  const selTrangThai = document.getElementById('trang-thai');
-  const dangChonTruoc = selTrangThai.value;
-  const thongTin = document.getElementById('thong-tin-loc');
-
-  let ketQua;
-  try {
-    ketQua = await apiFetch('/reports/trang-thai-theo-loc?' + layThamSoLoc().toString());
-  } catch (e) {
-    thongTin.textContent = 'Không tải được danh sách trạng thái: ' + e.message;
-    return;
-  }
-
-  selTrangThai.innerHTML = '<option value="">Tất cả trạng thái</option>' +
-    ketQua.trangThai.map(t => `<option value="${escapeHtml(t.trangThai)}">${escapeHtml(t.trangThai)} (${t.soDon} đơn)</option>`).join('');
-  selTrangThai.value = dangChonTruoc;
-
-  thongTin.textContent = ketQua.tongSoDon === 0
-    ? 'Không có đơn nào khớp ngày/khách hàng đã chọn.'
-    : `Có ${ketQua.tongSoDon} đơn khớp bộ lọc hiện tại.`;
-}
-
-// Xem trước — gọi cùng dữ liệu Excel/PDF sẽ dùng, vẽ thành bảng HTML ngay trên trang, không cần tải file
-async function xemTruoc() {
-  const khu = document.getElementById('khu-xem-truoc');
-  khu.innerHTML = spinnerInline('Đang tải xem trước...');
-
-  let ketQua;
-  try {
-    ketQua = await apiFetch('/reports/xem-truoc?' + layThamSoLocDayDu().toString());
-  } catch (e) {
-    khu.innerHTML = `<p>${icon('alert')} ${escapeHtml(e.message)}</p>`;
-    return;
-  }
-
-  if (ketQua.kieu === 'don_can_in') {
-    khu.innerHTML = `
-      <div class="xem-truoc-bang">
-        <h3>PHIẾU THÔNG TIN ĐƠN CẦN IN</h3>
-        <p class="thong-tin-loc">${escapeHtml(ketQua.dongThongTin)}</p>
-        <p class="thong-tin-loc" style="opacity:0.75">${escapeHtml(ketQua.dongNguoiXuat)}</p>
-        ${ketQua.the.length === 0 ? '<p>Không có đơn nào khớp bộ lọc.</p>' : `
-          <div class="luoi-the-don-can-in">
-            ${ketQua.the.map(t => `
-              <div class="the-don-can-in">
-                <div class="the-hang-tren">
-                  ${t.qr ? `<img src="${t.qr}" alt="Mã QR" class="the-qr">` : `<div class="the-anh-loi">Không có QR</div>`}
-                  <div class="the-anh-nho">
-                    ${t.mau ? `<img src="${t.mau}" alt="Ảnh mẫu">` : `<div class="the-anh-loi">Không tải được ảnh mẫu</div>`}
-                    ${t.mockup ? `<img src="${t.mockup}" alt="Mockup">` : `<div class="the-anh-loi">Không tải được ảnh mockup</div>`}
-                  </div>
-                </div>
-                <strong>${escapeHtml(t.sttKey)}</strong>
-                <div class="thong-tin-loc">${escapeHtml(t.dongTom)}</div>
-                <div class="thong-tin-loc">Vị trí thêu: ${escapeHtml(t.viTri || '—')}</div>
-                <div class="thong-tin-loc">SL: ${escapeHtml(t.soLuong)} · SL áo/đơn: ${escapeHtml(t.soLuongAoTrenDon)} · Ngày: ${escapeHtml(t.ngayLenDon)}</div>
-                ${t.ghiChu ? `<div class="thong-tin-loc"><strong>Ghi chú:</strong> ${escapeHtml(t.ghiChu)}</div>` : ''}
-              </div>
-            `).join('')}
-          </div>
-          <p class="thong-tin-loc">Tổng số đơn: ${ketQua.the.length} (file PDF/Excel sẽ xếp 2 đơn/trang, khổ 100x150mm)</p>
-        `}
-      </div>`;
-    return;
-  }
-
-  khu.innerHTML = ketQua.bang.map(b => `
-    <div class="xem-truoc-bang">
-      <h3>${escapeHtml(b.tieuDe)}</h3>
-      <p class="thong-tin-loc">${escapeHtml(b.dongThongTin)}</p>
-      <p class="thong-tin-loc" style="opacity:0.75">${escapeHtml(b.dongNguoiXuat)}</p>
-      ${b.rows.length === 0 ? '<p>Không có dòng nào khớp bộ lọc.</p>' : `
-        <div class="bang-cuon-ngang">
-          <table class="bang-xem-truoc">
-            <thead><tr>${b.cot.map(c => `<th>${escapeHtml(c)}</th>`).join('')}</tr></thead>
-            <tbody>${b.rows.map(dong => `<tr>${dong.map(o => `<td>${escapeHtml(o)}</td>`).join('')}</tr>`).join('')}</tbody>
-          </table>
-        </div>
-        <p class="thong-tin-loc">Tổng số dòng: ${b.rows.length}</p>
-      `}
-    </div>
-  `).join('');
-}
-
-// Tải file nhị phân (Excel/PDF) qua fetch thay vì mở link trực tiếp — để dùng chung cookie session
-// và bắt được lỗi (vd hết quyền) thay vì trình duyệt hiện trang lỗi JSON thô
-async function xuatBaoCao(loai) {
-  const thongBao = document.getElementById('thong-bao');
-  thongBao.innerHTML = spinnerInline('Đang tạo file...');
-
-  try {
-    const res = await fetch(`/api/reports/${loai}?` + layThamSoLocDayDu().toString(), { credentials: 'include' });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      throw new Error(data.error || 'Không xuất được báo cáo');
-    }
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    // Lấy đúng tên file server đặt (đã kèm ngày, vd DSPhoiAoTongHop_23-08-2026.xlsx) từ header,
-    // không tự đặt cứng tên ở đây — tránh ghi đè tên file đã đổi theo mẫu ở phía server.
-    const contentDisposition = res.headers.get('Content-Disposition') || '';
-    const khopTen = contentDisposition.match(/filename="([^"]+)"/);
-    a.download = khopTen ? khopTen[1] : (loai === 'excel' ? 'bao-cao-don-hang.xlsx' : 'bao-cao-don-hang.pdf');
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    thongBao.innerHTML = `${icon('check')} Đã tải file báo cáo.`;
-  } catch (e) {
-    thongBao.innerHTML = `${icon('alert')} ${escapeHtml(e.message)}`;
-  }
-}
 // Vẽ 1 nhóm thống kê dạng thanh ngang (không cần thư viện chart) — width% theo tỷ lệ so với giá trị lớn nhất
 function veNhomThongKe(tieuDe, doiTuongDem) {
   const muc = Object.entries(doiTuongDem).sort((a, b) => b[1] - a[1]);

@@ -56,14 +56,23 @@ async function layHoatDongGanDay({ nguoiDung, hanhDong, gioiHan = 20 } = {}) {
     .slice(0, Math.min(Number(gioiHan) || 20, 50));
 }
 
-// Tìm mọi lần có đơn được chuyển SANG đúng 1 trạng thái cụ thể — quét cả 4 loại hành động có thể đổi
-// TINH_TRANG (QUET_KICH_BAN, QUET_KICH_BAN_HANG_LOAT, CHUYEN_TRANG_THAI_HANG_LOAT ghi {tu, sang};
-// CAP_NHAT_DON ghi nguyên object các trường đã sửa, có thể có TINH_TRANG). Dùng để dựng báo cáo tỷ lệ
-// lỗi B4.3_ĐƠN LỖI CẦN LÀM LẠI — KHÔNG thể lấy từ TINH_TRANG hiện tại của đơn vì B4.3 là trạng thái
-// thoáng qua (đơn sẽ được xác nhận làm lại và quay về B1.1 sau đó), phải tính từ lịch sử mới đủ.
+// Tìm mọi lần có đơn được chuyển SANG đúng 1 (hoặc nhiều — truyền mảng) trạng thái cụ thể — quét cả
+// 4 loại hành động có thể đổi TINH_TRANG (QUET_KICH_BAN, QUET_KICH_BAN_HANG_LOAT,
+// CHUYEN_TRANG_THAI_HANG_LOAT ghi {tu, sang}; CAP_NHAT_DON ghi nguyên object các trường đã sửa, có
+// thể có TINH_TRANG). Dùng để dựng báo cáo tỷ lệ lỗi B4.3_ĐƠN LỖI CẦN LÀM LẠI — KHÔNG thể lấy từ
+// TINH_TRANG hiện tại của đơn vì B4.3 là trạng thái thoáng qua (đơn sẽ được xác nhận làm lại và quay
+// về B1.1 sau đó), phải tính từ lịch sử mới đủ.
+//
+// LƯU Ý QUAN TRỌNG: cho phép truyền MẢNG tên trạng thái (không chỉ 1 chuỗi) — vì khi đổi tên pipeline
+// (vd "ĐƠN LỖI CẦN LÀM LẠI" cũ -> "B4.3_ĐƠN LỖI CẦN LÀM LẠI" mới), các dòng lịch sử ĐÃ GHI TỪ TRƯỚC
+// vẫn giữ nguyên TÊN CŨ vĩnh viễn (script migrate chỉ đổi TINH_TRANG hiện tại của đơn trong Sheet,
+// không sửa lại lịch sử cũ) — nếu chỉ so khớp đúng 1 tên mới, mọi lần lỗi xảy ra TRƯỚC khi đổi
+// pipeline sẽ bị bỏ sót hoàn toàn, khiến báo cáo báo thiếu/báo 0 dù thực tế có lỗi (lỗi thật đã xảy
+// ra, xem routes/reports.js — TRANG_THAI_LOI giờ truyền cả tên cũ lẫn tên mới).
 const HANH_DONG_CO_THE_DOI_TRANG_THAI = ['QUET_KICH_BAN', 'QUET_KICH_BAN_HANG_LOAT', 'CHUYEN_TRANG_THAI_HANG_LOAT', 'CAP_NHAT_DON'];
 
 async function layLichSuChuyenSangTrangThai(trangThaiDich) {
+  const dsTrangThaiDich = Array.isArray(trangThaiDich) ? trangThaiDich : [trangThaiDich];
   const { rows } = await readTabCached(TAB, 5000);
   const ketQua = [];
   for (const r of rows) {
@@ -71,7 +80,7 @@ async function layLichSuChuyenSangTrangThai(trangThaiDich) {
     let chiTiet;
     try { chiTiet = JSON.parse(r.ChiTiet); } catch (e) { continue; } // ChiTiet không phải JSON hợp lệ — bỏ qua dòng này
     const sang = chiTiet && (chiTiet.sang || chiTiet.TINH_TRANG);
-    if (sang === trangThaiDich) {
+    if (dsTrangThaiDich.includes(sang)) {
       ketQua.push({ sttKey: r.STT_Key, nguoiDung: r.NguoiDung, thoiGian: r.ThoiGian });
     }
   }

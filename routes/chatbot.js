@@ -17,9 +17,6 @@ const LLM_MODEL_MANH = process.env.LLM_MODEL_MANH; // tuỳ chọn — model m�
 // Giữ đúng quy ước quota cũ: câu hỏi có từ khoá "phân tích/tổng hợp..." mới dùng model mạnh hơn (nếu có cấu hình)
 const TU_KHOA_PHUC_TAP = ['phân tích', 'tổng hợp', 'so sánh', 'dự đoán', 'đánh giá'];
 
-// 2 vai trò được coi là quản lý — mở thêm quyền tra cứu nhân viên + lịch sử hoạt động chung (xem TOOLS_QUAN_LY)
-const VAI_TRO_QUAN_LY = ['admin', 'quan_ly'];
-
 // Tối đa số vòng "gọi công cụ rồi hỏi tiếp" — chặn vòng lặp vô hạn nếu model cứ liên tục gọi công cụ
 const TOI_DA_VONG_LAP = 4;
 
@@ -68,10 +65,10 @@ function locTheoNgay(list, tuNgay, denNgay) {
 
 // ============================================================
 // KHAI BÁO CÔNG CỤ (function calling, chuẩn OpenAI-compatible) — model tự quyết định gọi công cụ
-// nào khi cần dữ liệu thật thay vì đoán/bịa. TOOLS mở cho mọi vai trò, TOOLS_QUAN_LY chỉ thêm cho
-// admin/quan_ly (không gửi định nghĩa 2 công cụ đó cho vai trò khác — model sẽ không biết chúng
-// tồn tại; thucThiTool() vẫn kiểm tra quyền 1 lần nữa cho chắc, phòng trường hợp model tự bịa tên
-// công cụ không có trong danh sách được cấp).
+// nào khi cần dữ liệu thật thay vì đoán/bịa. CHÍNH SÁCH PHÂN QUYỀN (cập nhật): TOOLS_QUAN_LY giờ
+// cũng mở cho MỌI vai trò như TOOLS — tên biến giữ nguyên vì lịch sử đặt tên, không còn ý nghĩa
+// giới hạn quyền nữa. Giới hạn DUY NHẤT còn lại là quản lý TÀI KHOẢN (routes/users.js, admin-only),
+// không liên quan tới các công cụ tra cứu (chỉ XEM) ở đây.
 // ============================================================
 const TOOLS = [
   {
@@ -149,7 +146,7 @@ const TOOLS_QUAN_LY = [
     type: 'function',
     function: {
       name: 'tra_cuu_nhan_vien',
-      description: 'Danh sách nhân viên và vai trò trong hệ thống. CHỈ dùng được cho admin/quản lý.',
+      description: 'Danh sách nhân viên và vai trò trong hệ thống.',
       parameters: {
         type: 'object',
         properties: { vaiTro: { type: 'string', description: 'Lọc theo đúng 1 vai trò, bỏ trống để lấy tất cả' } },
@@ -160,7 +157,7 @@ const TOOLS_QUAN_LY = [
     type: 'function',
     function: {
       name: 'tra_cuu_lich_su_gan_day',
-      description: 'Xem hoạt động gần đây trong toàn hệ thống (không giới hạn theo 1 đơn), lọc được theo người dùng hoặc loại hành động. CHỈ dùng được cho admin/quản lý.',
+      description: 'Xem hoạt động gần đây trong toàn hệ thống (không giới hạn theo 1 đơn), lọc được theo người dùng hoặc loại hành động.',
       parameters: {
         type: 'object',
         properties: {
@@ -216,7 +213,8 @@ async function thucThiTool(tenHam, thamSo, ctx) {
     }
 
     case 'tra_cuu_nhan_vien': {
-      if (!VAI_TRO_QUAN_LY.includes(ctx.user.vaiTro)) return { loi: 'Không có quyền tra cứu danh sách nhân viên.' };
+      // Mở cho mọi vai trò (chính sách phân quyền mới) — đây là XEM danh sách, khác với việc
+      // Thêm/Sửa/Khóa/Hủy khóa tài khoản (routes/users.js, vẫn chỉ admin làm được).
       const { rows } = await readTab('NguoiDung');
       let list = rows.map(r => ({ ten: r.Ten, vaiTro: r.VaiTro, team: r.Team, kichHoat: r.KichHoat }));
       if (thamSo.vaiTro) list = list.filter(nv => nv.vaiTro === thamSo.vaiTro);
@@ -224,7 +222,8 @@ async function thucThiTool(tenHam, thamSo, ctx) {
     }
 
     case 'tra_cuu_lich_su_gan_day': {
-      if (!VAI_TRO_QUAN_LY.includes(ctx.user.vaiTro)) return { loi: 'Không có quyền tra cứu lịch sử hoạt động chung.' };
+      // Mở cho mọi vai trò (chính sách phân quyền mới) — xem lịch sử KHÔNG phải hành động quản lý
+      // tài khoản, không thuộc phạm vi giới hạn admin-only.
       return await layHoatDongGanDay(thamSo);
     }
 
@@ -243,8 +242,9 @@ router.post('/hoi', async (req, res) => {
   }
 
   const { rows } = await orderService.getAll();
-  // Chatbot chỉ trả lời trong phạm vi đơn mà vai trò của user được thấy — không lộ dữ liệu ngoài quyền hạn
-  // (áp dụng cho tim_don_hang/thong_ke_don_hang; tra 1 đơn theo đúng mã thì không giới hạn, xem thucThiTool)
+  // CHÍNH SÁCH PHÂN QUYỀN (cập nhật): mọi vai trò xem được TOÀN BỘ đơn hàng giống admin — filterForRole()
+  // giờ chỉ trả về nguyên rows, giữ lại lời gọi để nếu sau này cần khôi phục lọc theo vai trò thì chỉ
+  // cần sửa đúng 1 chỗ trong services/orderService.js.
   const duLieuTheoQuyen = await orderService.ganTenKhachHang(orderService.filterForRole(rows, user));
 
   // Thống kê nhanh tính sẵn (không tốn vòng gọi công cụ nào) — đủ trả lời các câu hỏi tổng quan ngay,
@@ -252,8 +252,7 @@ router.post('/hoi', async (req, res) => {
   const thongKeNhanh = {};
   duLieuTheoQuyen.forEach(r => { const v = r.TINH_TRANG || '(Trống)'; thongKeNhanh[v] = (thongKeNhanh[v] || 0) + 1; });
 
-  const laQuanLy = VAI_TRO_QUAN_LY.includes(user.vaiTro);
-  const tools = laQuanLy ? [...TOOLS, ...TOOLS_QUAN_LY] : TOOLS;
+  const tools = [...TOOLS, ...TOOLS_QUAN_LY];
 
   const systemPrompt =
     'Bạn là trợ lý của xưởng thêu HanhPhuc99, trả lời bằng tiếng Việt, ngắn gọn, chính xác.\n\n' +

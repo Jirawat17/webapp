@@ -122,20 +122,18 @@ router.get('/:sttKey', async (req, res) => {
   res.json({ ...donDaLamGiau, lichSu, kichBanKeTiep });
 });
 
-// Mỗi vai trò chỉ được sửa đúng những cột thuộc phần việc của mình — admin/quản lý sửa được tất cả
-const TRUONG_DUOC_SUA = {
-  ve_file: ['GHI_CHU'],
-  chuan_bi_phoi: ['GHI_CHU'],
-  san_xuat: ['GHI_CHU', 'TINH_TRANG'],
-  dong_goi: ['GHI_CHU', 'HANG_VAN_CHUYEN', 'MA_VAN_DON_ID', 'TINH_TRANG'],
-};
+// CHÍNH SÁCH PHÂN QUYỀN (cập nhật): mọi vai trò sửa được MỌI trường của đơn, giống hệt admin — không
+// còn giới hạn theo vai trò như trước (ve_file/chuan_bi_phoi từng chỉ sửa được GHI_CHU; san_xuat/
+// dong_goi từng chỉ sửa được vài trường cụ thể). Để trống {} thay vì xóa hẳn TRUONG_DUOC_SUA để nếu
+// sau này cần khôi phục giới hạn theo vai trò thì chỉ cần điền lại đúng chỗ này.
+const TRUONG_DUOC_SUA = {};
 
 // Không bao giờ cho phép sửa qua các cột này — khóa chính, field nội bộ, hoặc trường chỉ tính toán để hiển thị
 const TRUONG_CAM_SUA = ['STT_Key', '_row', 'NguoiCapNhatCuoi', 'ThoiGianCapNhatCuoi', 'TenKhachHang', 'TieuDeSanPham', 'ViTriTheu', 'CanhBao'];
 
 router.put('/:sttKey', async (req, res) => {
   const user = req.session.user;
-  const allowed = TRUONG_DUOC_SUA[user.vaiTro]; // undefined cho admin/quan_ly = được sửa hết (trừ TRUONG_CAM_SUA)
+  const allowed = TRUONG_DUOC_SUA[user.vaiTro]; // luôn undefined (TRUONG_DUOC_SUA để trống) = mọi vai trò sửa hết, trừ TRUONG_CAM_SUA
   let updates = req.body;
 
   if (allowed) {

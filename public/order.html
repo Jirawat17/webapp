@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Chi tiết đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=20260824e">
-<script src="/js/theme.js?v=20260823b"></script>
+<link rel="stylesheet" href="/css/style.css?v=20260824j">
+<script src="/js/theme.js?v=20260824a"></script>
 </head>
 <body>
 <div id="nav"></div>
@@ -13,8 +13,8 @@
   <div class="skeleton-list"><div class="skeleton-card" style="height:220px"></div></div>
 </div>
 
-<script src="/js/icons.js?v=20260823b"></script>
-<script src="/js/api.js?v=20260824a"></script>
+<script src="/js/icons.js?v=20260823c"></script>
+<script src="/js/api.js?v=20260824b"></script>
 <script>
 const sttKey = new URLSearchParams(location.search).get('stt');
 const NHAN_CANH_BAO = { VANG: 'Cảnh báo Vàng · 3 ngày ít tiến triển', CAM: 'Cảnh báo Cam · 5 ngày chưa vào sản xuất', DO: 'Cảnh báo Đỏ · 7 ngày chưa ship' };
@@ -114,7 +114,9 @@ function renderKhuVucThaoTac(don) {
       <button class="btn-hanh-dong phu" onclick="luuGhiChu()">${icon('check')} Lưu ghi chú</button>
     </div>`;
 
-  if (user.vaiTro === 'dong_goi' || user.vaiTro === 'admin') {
+  // CHÍNH SÁCH PHÂN QUYỀN (cập nhật): mọi vai trò đều thấy khu vực tải ảnh đóng gói, giống hệt admin
+  // — trước đây chỉ dong_goi/admin thấy được.
+  {
     html += `
       <div class="upload-box">
         <label for="anh-dong-goi">${icon('camera', { size: 18 })} Chụp ảnh đóng gói</label>
