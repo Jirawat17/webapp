@@ -31,10 +31,12 @@ async function ganTenKhachHang(rows) {
   return rows.map(r => ({ ...r, TenKhachHang: banDo[r.MA_KHACH_HANG] || r.MA_KHACH_HANG || '' }));
 }
 
-// Không có cột "tên sản phẩm" riêng — ghép từ LOAI + KICH_THUOC + MAU_SAC cho dễ nhận diện trên danh sách
+// Không có cột "tên sản phẩm" riêng — ghép STT_Key (mã đơn, để dễ nhận diện ngay) + LOAI + KICH_THUOC
+// + MAU_SAC. Dùng dấu "·" để nhất quán với cách hiển thị các cụm ghép khác trong toàn app.
 function tieuDeSanPham(don) {
-  const phan = [don.LOAI, don.KICH_THUOC, don.MAU_SAC].filter(Boolean);
-  return phan.length ? phan.join(' · ') : (don.MA_DON_HANG_ORDERID || don.STT_Key || '');
+  const phanSanPham = [don.LOAI, don.KICH_THUOC, don.MAU_SAC].filter(Boolean);
+  const phan = [don.STT_Key, ...phanSanPham].filter(Boolean);
+  return phan.length ? phan.join(' · ') : (don.MA_DON_HANG_ORDERID || '');
 }
 
 // Vị trí thêu — gộp 3 cột VI_TRI_1/2/3, bỏ ô trống
