@@ -22,6 +22,7 @@ const ICONS = {
   arrowRight: '<line x1="4" y1="12" x2="18.5" y2="12"/><polyline points="13.5 6.5 19 12 13.5 17.5"/>',
   stop: '<rect x="6" y="6" width="12" height="12" rx="2.5"/>',
   settings: '<circle cx="12" cy="12" r="3.2"/><line x1="12" y1="3" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="21"/><line x1="3" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="21" y2="12"/><line x1="5.6" y1="5.6" x2="7.8" y2="7.8"/><line x1="16.2" y1="16.2" x2="18.4" y2="18.4"/><line x1="5.6" y1="18.4" x2="7.8" y2="16.2"/><line x1="16.2" y1="7.8" x2="18.4" y2="5.6"/>',
+  printer: '<polyline points="7 9 7 3 17 3 17 9"/><rect x="4" y="9" width="16" height="8" rx="1.5"/><rect x="7" y="14" width="10" height="6"/>',
 };
 
 function icon(name, opts) {

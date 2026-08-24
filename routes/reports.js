@@ -22,7 +22,7 @@ const TRANG_THAI_TRACKING = 'B5_Đã sản xuất';
 const TRANG_THAI_GOP_PHOI_AO = 'B1_Đã in';
 const TRANG_THAI_DON_CAN_IN = 'B2_Đã lấy phôi';
 
-function locDon(rows, { tuNgay, denNgay, khachHang, trangThai }) {
+function locDon(rows, { tuNgay, denNgay, khachHang, trangThai, tuKhoa }) {
   return rows.filter(r => {
     const ngay = parseNgay(r.NGAY_LEN_DON);
     if (!ngay) return false;
@@ -30,8 +30,24 @@ function locDon(rows, { tuNgay, denNgay, khachHang, trangThai }) {
     if (denNgay && ngay > parseNgay(denNgay)) return false;
     if (khachHang && r.MA_KHACH_HANG !== khachHang) return false;
     if (trangThai && r.TINH_TRANG !== trangThai) return false;
+    if (tuKhoa) {
+      const tk = tuKhoa.toLowerCase();
+      const khop = (r.MA_KHACH_HANG || '').toLowerCase().includes(tk) || (r.STT_Key || '').toLowerCase().includes(tk);
+      if (!khop) return false;
+    }
     return true;
   });
+}
+
+// Chọn mẫu file xuất. Ưu tiên tham số 'mau' nếu có (nút in nhanh ở trang Đơn hàng ép cứng đúng mẫu,
+// không phụ thuộc trạng thái đang lọc). Không có 'mau' thì suy theo trạng thái như cũ (trang Báo cáo).
+function xacDinhMau(query) {
+  const { mau, trangThai } = query;
+  if (mau === 'don_can_in' || mau === 'phoi_ao_gop' || mau === 'tracking') return mau;
+  if (trangThai === TRANG_THAI_DON_CAN_IN) return 'don_can_in';
+  if (trangThai === TRANG_THAI_GOP_PHOI_AO) return 'phoi_ao_gop';
+  if (trangThai === TRANG_THAI_TRACKING) return 'tracking';
+  return 'chi_tiet';
 }
 
 async function layDonDaLoc(query) {
@@ -40,13 +56,14 @@ async function layDonDaLoc(query) {
 }
 
 function dongThongTinLoc(query, kieu) {
-  const { tuNgay, denNgay, khachHang, trangThai } = query;
+  const { tuNgay, denNgay, khachHang, trangThai, tuKhoa } = query;
   const khHienThi = khachHang || 'Tất cả khách hàng';
   const ttHienThi = trangThai || 'Tất cả trạng thái';
+  const dongTuKhoa = tuKhoa ? ` · Từ khoá tìm kiếm: ${tuKhoa}` : '';
   if (kieu === 'tracking') {
-    return `Khoảng thời gian: ${tuNgay || '(không giới hạn)'} ${denNgay || '(không giới hạn)'} · Khách hàng: ${khHienThi} · Trạng thái: ${ttHienThi}`;
+    return `Khoảng thời gian: ${tuNgay || '(không giới hạn)'} ${denNgay || '(không giới hạn)'} · Khách hàng: ${khHienThi} · Trạng thái: ${ttHienThi}${dongTuKhoa}`;
   }
-  return `Khoảng thời gian: Từ ngày ${tuNgay || '(không giới hạn)'} đến ngày ${denNgay || '(không giới hạn)'} · Khách hàng: ${khHienThi} · Trạng thái: ${ttHienThi}`;
+  return `Khoảng thời gian: Từ ngày ${tuNgay || '(không giới hạn)'} đến ngày ${denNgay || '(không giới hạn)'} · Khách hàng: ${khHienThi} · Trạng thái: ${ttHienThi}${dongTuKhoa}`;
 }
 
 function dongNguoiXuatChuoi(tenNguoiXuat) {
@@ -322,9 +339,9 @@ function gomNhomPhoiAo(list) {
 
 function xayDungBaoCaoDangBang(list, query, tenNguoiXuat) {
   const dongNguoiXuat = dongNguoiXuatChuoi(tenNguoiXuat);
-  const { trangThai } = query;
+  const mau = xacDinhMau(query);
 
-  if (trangThai === TRANG_THAI_TRACKING) {
+  if (mau === 'tracking') {
     return {
       tenFileGoc: 'ThongTinChoTracking',
       bang: [{
@@ -338,7 +355,7 @@ function xayDungBaoCaoDangBang(list, query, tenNguoiXuat) {
     };
   }
 
-  if (trangThai === TRANG_THAI_GOP_PHOI_AO) {
+  if (mau === 'phoi_ao_gop') {
     return {
       tenFileGoc: 'DSPhoiAoTongHop',
       bang: [{
@@ -368,7 +385,7 @@ function xayDungBaoCaoDangBang(list, query, tenNguoiXuat) {
 router.get('/xem-truoc', async (req, res) => {
   const list = await layDonDaLoc(req.query);
 
-  if (req.query.trangThai === TRANG_THAI_DON_CAN_IN) {
+  if (xacDinhMau(req.query) === 'don_can_in') {
     const dongNguoiXuat = dongNguoiXuatChuoi(req.session.user.ten);
     const the = [];
     for (const don of list) {
@@ -440,7 +457,7 @@ router.get('/excel', async (req, res) => {
 
   const wb = new ExcelJS.Workbook();
 
-  if (req.query.trangThai === TRANG_THAI_DON_CAN_IN) {
+  if (xacDinhMau(req.query) === 'don_can_in') {
     await veSheetDonCanInExcel(wb, list, dongThongTinLoc(req.query, 'phoi_ao'), dongNguoiXuatChuoi(req.session.user.ten));
     res.setHeader('Content-Disposition', `attachment; filename="DonCanIn_${ngayChoTenFile(req.query)}.xlsx"`);
   } else {
@@ -503,7 +520,7 @@ router.get('/pdf', async (req, res) => {
 
   res.setHeader('Content-Type', 'application/pdf');
 
-  if (req.query.trangThai === TRANG_THAI_DON_CAN_IN) {
+  if (xacDinhMau(req.query) === 'don_can_in') {
     res.setHeader('Content-Disposition', `attachment; filename="DonCanIn_${ngayChoTenFile(req.query)}.pdf"`);
 
     const rong = mmToPt(KHO_GIAY_MM.rong);

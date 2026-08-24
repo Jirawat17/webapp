@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=20260824e">
+<link rel="stylesheet" href="/css/style.css?v=20260824f">
 <script src="/js/theme.js?v=20260823b"></script>
 </head>
 <body>
@@ -16,6 +16,30 @@
     <select id="loc-trang-thai"><option value="">Tất cả trạng thái</option></select>
     <label class="sr-only" for="loc-kh">Tìm theo tên đơn hoặc mã khách hàng</label>
     <input id="loc-kh" placeholder="Tìm theo tên đơn (STT_Key) hoặc mã khách hàng">
+  </div>
+
+  <div class="in-nhanh-thanh">
+    <div class="in-nhanh">
+      <button type="button" class="btn-hanh-dong phu" id="btn-in-phoi-ao" onclick="toggleMenuInNhanh('menu-phoi-ao')"></button>
+      <div class="in-nhanh-menu" id="menu-phoi-ao" hidden>
+        <button type="button" onclick="inNhanh('phoi_ao_gop', 'excel')">Xuất Excel</button>
+        <button type="button" onclick="inNhanh('phoi_ao_gop', 'pdf')">Xuất PDF</button>
+      </div>
+    </div>
+    <div class="in-nhanh">
+      <button type="button" class="btn-hanh-dong phu" id="btn-in-don-ao" onclick="toggleMenuInNhanh('menu-don-ao')"></button>
+      <div class="in-nhanh-menu" id="menu-don-ao" hidden>
+        <button type="button" onclick="inNhanh('don_can_in', 'excel')">Xuất Excel</button>
+        <button type="button" onclick="inNhanh('don_can_in', 'pdf')">Xuất PDF</button>
+      </div>
+    </div>
+    <div class="in-nhanh">
+      <button type="button" class="btn-hanh-dong phu" id="btn-in-tracking" onclick="toggleMenuInNhanh('menu-tracking')"></button>
+      <div class="in-nhanh-menu" id="menu-tracking" hidden>
+        <button type="button" onclick="inNhanh('tracking', 'excel')">Xuất Excel</button>
+        <button type="button" onclick="inNhanh('tracking', 'pdf')">Xuất PDF</button>
+      </div>
+    </div>
   </div>
 
   <label class="chon-tat-ca-hang">
@@ -35,7 +59,7 @@
   <button class="btn-hanh-dong phu" onclick="boChonTatCaDon()">Bỏ chọn</button>
 </div>
 
-<script src="/js/icons.js?v=20260823b"></script>
+<script src="/js/icons.js?v=20260823c"></script>
 <script src="/js/api.js?v=20260824a"></script>
 <script>
 const NHAN_CANH_BAO = { VANG: 'Vàng · 3 ngày', CAM: 'Cam · 5 ngày', DO: 'Đỏ · 7 ngày' };
@@ -60,6 +84,11 @@ let donDaChonSet = new Set();
 
   document.getElementById('loc-trang-thai').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-kh').oninput = debounce(() => { boChonTatCaDon(); taiDon(); }, 400);
+
+  document.getElementById('btn-in-phoi-ao').innerHTML = icon('printer') + ' IN DANH SÁCH PHÔI ÁO';
+  document.getElementById('btn-in-don-ao').innerHTML = icon('printer') + ' IN ĐƠN ÁO';
+  document.getElementById('btn-in-tracking').innerHTML = icon('printer') + ' IN DANH SÁCH ÁO ĐÃ SẢN XUẤT CHO TRACKING';
+  document.addEventListener('click', (e) => { if (!e.target.closest('.in-nhanh')) donghetMenuInNhanh(); });
 
   document.getElementById('trang-thai-dich').innerHTML = '<option value="">Chuyển đến trạng thái...</option>' +
     DANH_SACH_TRANG_THAI_DAY_DU.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
@@ -207,6 +236,51 @@ async function apDungChuyenTrangThai() {
   nutApDung.textContent = 'Áp dụng';
   donDaChonSet.clear();
   await taiDon();
+}
+
+function toggleMenuInNhanh(id) {
+  const menu = document.getElementById(id);
+  const dangMo = !menu.hidden;
+  donghetMenuInNhanh();
+  menu.hidden = dangMo;
+}
+
+function donghetMenuInNhanh() {
+  document.querySelectorAll('.in-nhanh-menu').forEach(m => m.hidden = true);
+}
+
+// In nhanh theo ĐÚNG bộ lọc trạng thái + ô tìm kiếm đang áp dụng trên trang này (không ép về
+// đúng trạng thái B1/B2/B5 của mẫu) — 'mau' chỉ ép cứng ĐỊNH DẠNG cột hiển thị trong file xuất.
+async function inNhanh(mau, loai) {
+  donghetMenuInNhanh();
+
+  const qs = new URLSearchParams();
+  qs.set('mau', mau);
+  const trangThai = document.getElementById('loc-trang-thai').value;
+  const tuKhoa = document.getElementById('loc-kh').value;
+  if (trangThai) qs.set('trangThai', trangThai);
+  if (tuKhoa) qs.set('tuKhoa', tuKhoa);
+
+  try {
+    const res = await fetch(`/api/reports/${loai}?` + qs.toString(), { credentials: 'include' });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Không xuất được file');
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const contentDisposition = res.headers.get('Content-Disposition') || '';
+    const khopTen = contentDisposition.match(/filename="([^"]+)"/);
+    a.download = khopTen ? khopTen[1] : (loai === 'excel' ? 'bao-cao.xlsx' : 'bao-cao.pdf');
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
+  }
 }
 </script>
 </body>

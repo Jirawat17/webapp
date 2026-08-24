@@ -232,6 +232,20 @@ body.trang-dang-nhap {
 }
 .filters input { flex: 1; min-width: 180px; }
 
+.in-nhanh-thanh { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-3); }
+.in-nhanh { position: relative; }
+.in-nhanh > .btn-hanh-dong { font-size: 0.85rem; padding: 10px 14px; }
+.in-nhanh-menu {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; min-width: 160px;
+  background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md); overflow: hidden; display: flex; flex-direction: column;
+}
+.in-nhanh-menu button {
+  padding: 10px 14px; text-align: left; background: none; border: none; font-size: 0.9rem;
+  font-family: inherit; color: var(--color-text); cursor: pointer; min-height: var(--tap-min);
+}
+.in-nhanh-menu button:hover { background: var(--color-primary-light); color: var(--color-primary); }
+
 .order-list { display: grid; grid-template-columns: 1fr; gap: var(--space-3); }
 @media (min-width: 640px)  { .order-list { grid-template-columns: repeat(2, 1fr); } }
 @media (min-width: 1024px) { .order-list { grid-template-columns: repeat(3, 1fr); } }
