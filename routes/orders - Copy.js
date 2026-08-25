@@ -72,17 +72,14 @@ const GIA_TRI_HOP_LE_THEO_COT = {
 // 'cot', hoặc TRANG_THAI_PHOI/TRANG_THAI_VE_FILE — 2 nút bấm nhanh "Đã lấy phôi"/"Chưa lấy phôi"/
 // "Đã vẽ file"/"Chưa vẽ file" ở trang Đơn hàng dùng chung route này, chỉ khác tham số 'cot').
 // Mở cho MỌI vai trò có quyền vào trang Đơn hàng (admin/ve_file toàn bộ, san_xuat theo phạm vi đã
-// lọc — đã xác nhận với người dùng là san_xuat cũng được dùng dù không phụ trách phôi/vẽ file).
-// nguoi_lay_phoi KHÔNG được set tay bất kỳ đơn nào (chỉ được thao tác qua quét QR đúng kịch bản của
-// mình) — chặn cứng ở đây, không chỉ dựa vào việc ẩn menu phía client.
+// lọc — đã xác nhận với người dùng là san_xuat cũng được dùng dù không phụ trách phôi/vẽ file),
+// KHÔNG theo giới hạn TRUONG_DUOC_SUA phía dưới (vốn chỉ áp dụng cho sửa từng đơn lẻ) — nguoi_lay_phoi
+// không dùng được vì không có trang này để vào (menu đã ẩn), không cần chặn thêm ở đây.
 router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
   const { sttKeys, trangThaiMoi } = req.body;
   const cot = req.body.cot || 'TINH_TRANG';
   const user = req.session.user;
 
-  if (user.vaiTro === 'nguoi_lay_phoi') {
-    return res.status(403).json({ error: 'Vai trò này không được phép sửa trạng thái đơn hàng bằng tay' });
-  }
   if (!Array.isArray(sttKeys) || sttKeys.length === 0) {
     return res.status(400).json({ error: 'Danh sách đơn trống' });
   }
@@ -155,18 +152,19 @@ router.get('/:sttKey', async (req, res) => {
   res.json({ ...donDaLamGiau, lichSu, kichBanKeTiep });
 });
 
-// CHÍNH SÁCH PHÂN QUYỀN (cập nhật 26/08/2026 — nguoi_lay_phoi KHÔNG được set tay bất kỳ trường nào
-// của bất kỳ đơn nào nữa, kể cả GHI_CHU; trước đó có cho sửa riêng GHI_CHU nhưng đã bỏ):
+// CHÍNH SÁCH PHÂN QUYỀN (cập nhật 24/08/2026, theo Prompt_Ver_24.docx — HUỶ chính sách "mọi vai trò
+// như Admin" trước đó):
 //   - admin, ve_file: không có trong danh sách dưới đây = sửa được MỌI trường (trừ TRUONG_CAM_SUA).
 //   - san_xuat: chỉ sửa được 3 cột trạng thái + ghi chú — theo đúng mô tả "lỗi thì set tay, làm lại
 //     thì cũng set tay" (san_xuat là người phát hiện lỗi sản xuất, cần tự set TINH_TRANG sang lỗi,
 //     và tự set lại cả 2 cột phôi/file về "chưa" khi cần làm lại — không phải đợi nguoi_lay_phoi/
 //     ve_file làm hộ từng bước).
-//   - nguoi_lay_phoi: mảng rỗng = không sửa được trường nào qua route này (chỉ được thao tác qua
-//     quét QR đúng kịch bản của mình — xem routes/qr.js).
+//   - nguoi_lay_phoi: chỉ ghi chú — trên thực tế vai trò này không có trang chi tiết đơn để sửa tay
+//     (menu chỉ có "Quét mã QR", xem public/js/api.js renderNav), giữ dòng này để phòng hờ nếu sau
+//     này họ được cấp thêm quyền truy cập trang chi tiết đơn.
 const TRUONG_DUOC_SUA = {
   san_xuat: ['GHI_CHU', 'TINH_TRANG', 'TRANG_THAI_PHOI', 'TRANG_THAI_VE_FILE'],
-  nguoi_lay_phoi: [],
+  nguoi_lay_phoi: ['GHI_CHU'],
 };
 
 // Không bao giờ cho phép sửa qua các cột này — khóa chính, field nội bộ, hoặc trường chỉ tính toán để hiển thị
