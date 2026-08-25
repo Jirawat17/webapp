@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=20260824j">
+<link rel="stylesheet" href="/css/style.css?v=20260824l">
 <script src="/js/theme.js?v=20260824a"></script>
 </head>
 <body>
@@ -54,6 +54,11 @@
     <option value="">Chuyển đến trạng thái...</option>
   </select>
   <button id="nut-ap-dung" class="btn-hanh-dong" onclick="apDungChuyenTrangThai()">Áp dụng</button>
+  <span class="thanh-hanh-dong-cach"></span>
+  <button class="btn-hanh-dong phu nhanh-phoi-ve-file" onclick="apDungNhanh('TRANG_THAI_PHOI', 'Đã lấy phôi', this)">Đã lấy phôi</button>
+  <button class="btn-hanh-dong phu nhanh-phoi-ve-file" onclick="apDungNhanh('TRANG_THAI_PHOI', 'Chưa lấy phôi', this)">Chưa lấy phôi</button>
+  <button class="btn-hanh-dong phu nhanh-phoi-ve-file" onclick="apDungNhanh('TRANG_THAI_VE_FILE', 'Đã vẽ file', this)">Đã vẽ file</button>
+  <button class="btn-hanh-dong phu nhanh-phoi-ve-file" onclick="apDungNhanh('TRANG_THAI_VE_FILE', 'Chưa vẽ file', this)">Chưa vẽ file</button>
   <button class="btn-hanh-dong phu" onclick="boChonTatCaDon()">Bỏ chọn</button>
 </div>
 
@@ -230,6 +235,36 @@ function capNhatThanhHanhDong() {
 function boChonTatCaDon() {
   donDaChonSet.clear();
   renderDanhSachDon();
+}
+
+async function apDungNhanh(cot, trangThaiMoi, nut) {
+  const soLuong = donDaChonSet.size;
+  if (!confirm(`Đánh dấu ${soLuong} đơn đã chọn thành "${trangThaiMoi}"?`)) return;
+
+  const nhanGoc = nut.innerHTML;
+  document.querySelectorAll('.nhanh-phoi-ve-file, #nut-ap-dung').forEach(b => b.disabled = true);
+  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Đang xử lý...';
+
+  try {
+    const ketQua = await apiFetch('/orders/chuyen-trang-thai-hang-loat', {
+      method: 'POST',
+      body: JSON.stringify({ sttKeys: Array.from(donDaChonSet), cot, trangThaiMoi }),
+    });
+
+    let thongBao = `Đã đánh dấu ${ketQua.thanhCong.length}/${soLuong} đơn thành "${trangThaiMoi}".`;
+    if (ketQua.loi.length > 0) {
+      thongBao += `\n\nKhông đánh dấu được ${ketQua.loi.length} đơn:\n` +
+        ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
+    }
+    alert(thongBao);
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
+  } finally {
+    document.querySelectorAll('.nhanh-phoi-ve-file, #nut-ap-dung').forEach(b => b.disabled = false);
+    nut.innerHTML = nhanGoc;
+    donDaChonSet.clear();
+    await taiDon();
+  }
 }
 
 async function apDungChuyenTrangThai() {

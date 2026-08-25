@@ -232,3 +232,34 @@ File sửa: routes/orders.js (GET /orders nhận thêm 2 tham số trangThaiPhoi
 public/orders.html (2 dropdown mới + cập nhật taiDon()/inNhanh() để đưa 2 bộ lọc này vào mọi truy
 vấn liên quan, kể cả nút in nhanh "IN DANH SÁCH ĐÃ SẢN XUẤT" khi không bị ép cứng mẫu khác).
 
+=============================================================================================
+6. 4 NÚT BẤM NHANH ĐÁNH DẤU PHÔI/VẼ FILE HÀNG LOẠT (đợt cập nhật này)
+=============================================================================================
+
+Trước đây muốn đổi TRANG_THAI_PHOI/TRANG_THAI_VE_FILE hàng loạt phải quét QR (nguoi_lay_phoi/
+ve_file) hoặc mở từng đơn sửa tay (ve_file/san_xuat/admin) — bất tiện khi ve_file cần xử lý nhiều
+đơn cùng lúc ngồi tại bàn (không phải lúc nào cũng thao tác được qua quét QR). Đã thêm 4 nút bấm
+nhanh ngay cạnh nút "Áp dụng" (công cụ chuyển trạng thái hàng loạt sẵn có): "Đã lấy phôi", "Chưa
+lấy phôi", "Đã vẽ file", "Chưa vẽ file" — dùng chung cơ chế chọn nhiều đơn (tick chọn) đã có, không
+cần mở dropdown chọn giá trị vì mỗi nút đã cố định đúng 1 giá trị.
+
+QUYẾT ĐỊNH ĐÃ XÁC NHẬN VỚI BẠN:
+- Có cả 2 chiều (đánh dấu "đã xong" LẪN chuyển ngược lại "chưa xong") — phòng trường hợp lỡ đánh
+  dấu nhầm hàng loạt.
+- san_xuat cũng dùng được (dù không phụ trách phôi/vẽ file theo mô tả vai trò, để linh hoạt hỗ trợ
+  khi cần) — thực ra không cần thêm code riêng cho việc này: san_xuat đã có sẵn quyền sửa 2 cột này
+  từ đợt trước (phục vụ việc set lại phôi/file khi làm lại sau lỗi), và route bulk-update vốn đã mở
+  cho MỌI vai trò vào được trang Đơn hàng — nên tự động bao gồm san_xuat mà không cần sửa gì thêm.
+- nguoi_lay_phoi KHÔNG dùng được 4 nút này (không có trang Đơn hàng để vào) — vẫn dùng Quét mã QR
+  như trước, đúng thiết kế ban đầu (họ làm việc physically trong xưởng, quét mã tại chỗ hợp lý hơn).
+
+CÁCH LÀM: mở rộng route backend /orders/chuyen-trang-thai-hang-loat SẴN CÓ (không viết route mới)
+— thêm tham số "cot" (mặc định TINH_TRANG nếu không truyền, giữ tương thích ngược với nút "Áp dụng"
+chuyển TINH_TRANG cũ), validate đúng giá trị theo đúng cột. Tận dụng lại toàn bộ logic đọc thật
+trước khi ghi, xử lý lỗi từng đơn, ghi log — không phải viết trùng.
+
+File sửa: routes/orders.js (mở rộng route bulk-update, thêm bảng GIA_TRI_HOP_LE_THEO_COT để
+validate theo đúng cột), public/orders.html (4 nút mới + hàm apDungNhanh()), public/css/style.css
+(style cho vạch phân tách + 4 nút nhỏ hơn).
+
+

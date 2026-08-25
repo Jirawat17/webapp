@@ -4,7 +4,7 @@ const orderService = require('../services/orderService');
 const alertService = require('../services/alertService');
 const scenarioService = require('../services/scenarioService');
 const { parseNgay } = require('../services/dateUtils');
-const { DANH_SACH_TRANG_THAI_BAO_CAO } = require('../data/pipelineTinhTrang');
+const { DANH_SACH_TRANG_THAI_BAO_CAO, TRANG_THAI_PHOI_VALUES, TRANG_THAI_VE_FILE_VALUES } = require('../data/pipelineTinhTrang');
 const { ghiLog, layLichSuTheoDon } = require('../services/logService');
 const { requireLogin } = require('../middleware/auth');
 
@@ -61,8 +61,23 @@ router.get('/', async (req, res) => {
 // nhanh/sửa lỗi ở cấp tiến trình chung, còn phôi/file sửa qua trang chi tiết đơn hoặc quét QR.
 // Mở cho MỌI vai trò có quyền vào trang Đơn hàng (admin/ve_file toàn bộ, san_xuat theo phạm vi đã
 // lọc), không theo giới hạn cột TRUONG_DUOC_SUA phía dưới (vốn chỉ áp dụng cho sửa từng đơn lẻ).
+// Danh sách giá trị hợp lệ theo từng cột — dùng để validate tham số 'cot'/'trangThaiMoi' bên dưới
+const GIA_TRI_HOP_LE_THEO_COT = {
+  TINH_TRANG: DANH_SACH_TRANG_THAI_BAO_CAO,
+  TRANG_THAI_PHOI: TRANG_THAI_PHOI_VALUES,
+  TRANG_THAI_VE_FILE: TRANG_THAI_VE_FILE_VALUES,
+};
+
+// Chuyển hàng loạt — dùng CHUNG cho cả 3 cột trạng thái (TINH_TRANG mặc định nếu không truyền
+// 'cot', hoặc TRANG_THAI_PHOI/TRANG_THAI_VE_FILE — 2 nút bấm nhanh "Đã lấy phôi"/"Chưa lấy phôi"/
+// "Đã vẽ file"/"Chưa vẽ file" ở trang Đơn hàng dùng chung route này, chỉ khác tham số 'cot').
+// Mở cho MỌI vai trò có quyền vào trang Đơn hàng (admin/ve_file toàn bộ, san_xuat theo phạm vi đã
+// lọc — đã xác nhận với người dùng là san_xuat cũng được dùng dù không phụ trách phôi/vẽ file),
+// KHÔNG theo giới hạn TRUONG_DUOC_SUA phía dưới (vốn chỉ áp dụng cho sửa từng đơn lẻ) — nguoi_lay_phoi
+// không dùng được vì không có trang này để vào (menu đã ẩn), không cần chặn thêm ở đây.
 router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
   const { sttKeys, trangThaiMoi } = req.body;
+  const cot = req.body.cot || 'TINH_TRANG';
   const user = req.session.user;
 
   if (!Array.isArray(sttKeys) || sttKeys.length === 0) {
@@ -71,8 +86,11 @@ router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
   if (!trangThaiMoi || typeof trangThaiMoi !== 'string') {
     return res.status(400).json({ error: 'Thiếu trạng thái đích' });
   }
-  if (!DANH_SACH_TRANG_THAI_BAO_CAO.includes(trangThaiMoi)) {
-    return res.status(400).json({ error: 'Trạng thái đích không hợp lệ' });
+  if (!GIA_TRI_HOP_LE_THEO_COT[cot]) {
+    return res.status(400).json({ error: 'Cột không hợp lệ: ' + cot });
+  }
+  if (!GIA_TRI_HOP_LE_THEO_COT[cot].includes(trangThaiMoi)) {
+    return res.status(400).json({ error: 'Trạng thái đích không hợp lệ cho cột ' + cot });
   }
 
   const thanhCong = [];
@@ -86,9 +104,9 @@ router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
         continue;
       }
 
-      const trangThaiCu = row.TINH_TRANG;
+      const trangThaiCu = row[cot];
       await orderService.update(sttKey, {
-        TINH_TRANG: trangThaiMoi,
+        [cot]: trangThaiMoi,
         NguoiCapNhatCuoi: user.ten,
         ThoiGianCapNhatCuoi: new Date().toISOString(),
       });
@@ -96,7 +114,7 @@ router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
       thanhCong.push(sttKey);
       ghiLog({
         nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'CHUYEN_TRANG_THAI_HANG_LOAT',
-        sttKey, chiTiet: { tu: trangThaiCu, sang: trangThaiMoi },
+        sttKey, chiTiet: { cot, tu: trangThaiCu, sang: trangThaiMoi },
       }).catch(err => console.error('[Orders] Lỗi ghi log nền:', err.message));
     } catch (err) {
       loi.push({ sttKey, lyDo: err.message });
