@@ -93,11 +93,25 @@ router.post('/kich-ban/:scenarioId/quet', async (req, res) => {
     });
   }
 
-  const updated = await orderService.update(sttKey, {
-    [scenario.column]: scenario.setStatus,
-    NguoiCapNhatCuoi: user.ten,
-    ThoiGianCapNhatCuoi: new Date().toISOString(),
-  });
+  let updated;
+  try {
+    updated = await orderService.update(sttKey, {
+      [scenario.column]: scenario.setStatus,
+      NguoiCapNhatCuoi: user.ten,
+      ThoiGianCapNhatCuoi: new Date().toISOString(),
+    });
+  } catch (err) {
+    // Đơn ĐÚNG trạng thái cột này yêu cầu, nhưng đổi xong sẽ xung đột với 1 trong 2 cột còn lại
+    // (vd đơn đang "Chưa xác nhận" mà quét "lấy phôi" — TRANG_THAI_PHOI đúng "Chưa lấy phôi" nên
+    // qua được kiểm tra requireStatus ở trên, nhưng orderService.update() chặn lại vì TINH_TRANG
+    // vẫn "Chưa xác nhận", chưa hợp lý để đánh dấu đã có phôi).
+    ghiKhongCho(ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_LOI', sttKey, chiTiet: { scenario: scenario.label, cot: scenario.column, loi: err.message } }));
+    ghiKhongCho(ghiNhatKyQuetHangLoat({
+      nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey,
+      trangThaiCu: giaTriHienTai, trangThaiMoi: '', ketQua: 'LOI_KHONG_HOP_LY', ghiChu: err.message,
+    }));
+    return res.status(400).json({ error: err.message });
+  }
 
   ghiKhongCho(ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_KICH_BAN', sttKey, chiTiet: { scenario: scenario.label, cot: scenario.column, tu: giaTriHienTai, sang: scenario.setStatus } }));
   ghiKhongCho(ghiNhatKyQuetHangLoat({

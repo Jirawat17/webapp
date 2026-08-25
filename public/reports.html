@@ -28,6 +28,27 @@
   </form>
 
   <div id="khu-thong-ke-loi" style="margin-top:20px"></div>
+
+  <hr style="margin:32px 0; border:none; border-top:1px solid var(--color-border)">
+
+  <h2>Thống kê đơn hoàn trả (REFUNDED)</h2>
+  <p>Danh sách các đơn đang ở trạng thái <strong>REFUNDED_Hoàn đơn</strong>, kèm <strong>Ghi chú</strong> để tổng hợp nguyên nhân. Lọc được theo khoảng ngày lên đơn.</p>
+
+  <form id="form-thong-ke-hoan" class="bao-cao-form">
+    <div class="truong">
+      <label for="hoan-tu-ngay">Từ ngày</label>
+      <input type="date" id="hoan-tu-ngay">
+    </div>
+    <div class="truong">
+      <label for="hoan-den-ngay">Đến ngày</label>
+      <input type="date" id="hoan-den-ngay">
+    </div>
+    <div class="nut-xuat">
+      <button type="button" class="btn-hanh-dong phu" id="btn-xem-thong-ke-hoan"></button>
+    </div>
+  </form>
+
+  <div id="khu-thong-ke-hoan" style="margin-top:20px"></div>
 </div>
 
 <script src="/js/icons.js?v=20260823c"></script>
@@ -39,7 +60,6 @@
   renderNav(user, 'reports');
 
   document.getElementById('btn-xem-thong-ke-loi').innerHTML = icon('chart') + ' Xem thống kê';
-  // Mặc định 30 ngày gần nhất — đủ để thấy xu hướng theo tuần mà không phải tải toàn bộ lịch sử
   const homNay30 = new Date(); homNay30.setDate(homNay30.getDate() - 30);
   document.getElementById('loi-tu-ngay').value = homNay30.toISOString().slice(0, 10);
   document.getElementById('loi-den-ngay').value = ngayHomNayYYYYMMDD();
@@ -47,6 +67,13 @@
   document.getElementById('loi-tu-ngay').addEventListener('change', xemThongKeLoi);
   document.getElementById('loi-den-ngay').addEventListener('change', xemThongKeLoi);
   await xemThongKeLoi();
+
+  // Khởi tạo khu hoàn đơn — mặc định xem tất cả (không giới hạn ngày) để thấy toàn bộ đơn đang hoàn
+  document.getElementById('btn-xem-thong-ke-hoan').innerHTML = icon('chart') + ' Xem hoàn đơn';
+  document.getElementById('btn-xem-thong-ke-hoan').onclick = xemThongKeHoanDon;
+  document.getElementById('hoan-tu-ngay').addEventListener('change', xemThongKeHoanDon);
+  document.getElementById('hoan-den-ngay').addEventListener('change', xemThongKeHoanDon);
+  await xemThongKeHoanDon();
 })();
 
 function ngayHomNayYYYYMMDD() {
@@ -114,6 +141,55 @@ async function xemThongKeLoi() {
           <tbody>${ketQua.chiTiet.map(c => `<tr>
             <td>${escapeHtml(c.sttKey)}</td><td>${escapeHtml(c.khachHang)}</td><td>${escapeHtml(c.loai)}</td>
             <td>${escapeHtml(c.team)}</td><td>${escapeHtml(c.nguoiDung)}</td><td>${escapeHtml(c.thoiGian)}</td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+async function xemThongKeHoanDon() {
+  const khu = document.getElementById('khu-thong-ke-hoan');
+  khu.innerHTML = spinnerInline('Đang tải...');
+
+  const qs = new URLSearchParams();
+  const tuNgay = document.getElementById('hoan-tu-ngay').value;
+  const denNgay = document.getElementById('hoan-den-ngay').value;
+  if (tuNgay) qs.set('tuNgay', tuNgay);
+  if (denNgay) qs.set('denNgay', denNgay);
+
+  let ketQua;
+  try {
+    ketQua = await apiFetch('/reports/thong-ke-hoan-don?' + qs.toString());
+  } catch (e) {
+    khu.innerHTML = `<p>${icon('alert')} ${escapeHtml(e.message)}</p>`;
+    return;
+  }
+
+  if (ketQua.tongSoHoan === 0) {
+    khu.innerHTML = `<div class="trang-thai-rong">${icon('check')}<p>Không có đơn hoàn nào trong khoảng thời gian đã chọn.</p></div>`;
+    return;
+  }
+
+  khu.innerHTML = `
+    <p><strong>${ketQua.tongSoHoan}</strong> đơn đang ở trạng thái hoàn trả trong khoảng thời gian đã chọn.</p>
+    <div class="luoi-thong-ke-loi">
+      ${veNhomThongKe('Theo khách hàng', ketQua.theoKhachHang)}
+      ${veNhomThongKe('Theo loại sản phẩm', ketQua.theoLoai)}
+      ${veNhomThongKe('Theo tuần', ketQua.theoTuan)}
+    </div>
+    <div class="xem-truoc-bang" style="margin-top:16px">
+      <h3>Chi tiết (kèm ghi chú nguyên nhân)</h3>
+      <div class="bang-cuon-ngang">
+        <table class="bang-xem-truoc">
+          <thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Loại</th><th>Kích thước</th><th>Màu sắc</th><th>Ngày lên đơn</th><th>Ghi chú / Nguyên nhân</th></tr></thead>
+          <tbody>${ketQua.chiTiet.map(c => `<tr>
+            <td>${escapeHtml(c.sttKey)}</td>
+            <td>${escapeHtml(c.khachHang)}</td>
+            <td>${escapeHtml(c.loai)}</td>
+            <td>${escapeHtml(c.kichThuoc)}</td>
+            <td>${escapeHtml(c.mauSac)}</td>
+            <td>${escapeHtml(c.ngayLenDon)}</td>
+            <td style="color:${c.ghiChu === '(Không có ghi chú)' ? 'var(--color-text-faint)' : 'inherit'}">${escapeHtml(c.ghiChu)}</td>
           </tr>`).join('')}</tbody>
         </table>
       </div>

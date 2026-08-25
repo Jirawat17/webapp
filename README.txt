@@ -262,4 +262,71 @@ File sửa: routes/orders.js (mở rộng route bulk-update, thêm bảng GIA_TR
 validate theo đúng cột), public/orders.html (4 nút mới + hàm apDungNhanh()), public/css/style.css
 (style cho vạch phân tách + 4 nút nhỏ hơn).
 
+=============================================================================================
+7. RÀ SOÁT LOGIC — 2 LỖ HỔNG THẬT TÌM ĐƯỢC + ĐỀ XUẤT THÊM
+=============================================================================================
+
+FILE THÊM/SỬA MỚI:
+- services/orderService.js  -> thêm kiemTraGiaTriHopLe() + kiemTraTinhHopLy(), gọi trong update()
+- routes/orders.js           -> bọc try/catch quanh orderService.update() ở route sửa 1 đơn
+- routes/qr.js                -> bọc try/catch quanh orderService.update() ở route quét đơn lẻ
+- public/order.html           -> cảnh báo trực tiếp trên giao diện TRƯỚC khi lưu (mục 7.3)
+- scripts/kiem-tra-tinh-hop-le.js (MỚI) -> rà soát dữ liệu CŨ, chỉ đọc không sửa gì
+
+7.1. LỖ HỔNG 1 (đúng ví dụ bạn nêu) — KHÔNG có gì ngăn tổ hợp vô lý giữa 3 cột trạng thái. Đã thêm
+kiemTraTinhHopLy() vào orderService.update() — điểm ghi dữ liệu DUY NHẤT mọi đường (sửa tay, quét
+QR, chuyển hàng loạt, 4 nút bấm nhanh) đều đi qua — nên chỉ cần sửa 1 chỗ là chặn được ở MỌI nơi.
+2 quy tắc:
+  1. "Chưa xác nhận" thì KHÔNG THỂ đã "Đã lấy phôi" hoặc "Đã vẽ file".
+  2. Đã tới "ĐÃ SẴN SÀNG CHẠY MÁY" hoặc các bước SAU đó (Đã sản xuất, Đã đóng gói, IN TRANSIT,
+     DELIVERED) thì BẮT BUỘC phải có đủ CẢ phôi lẫn file — không áp dụng cho LỖI SẢN XUẤT CẦN LÀM
+     LẠI/CANCELLED/REFUNDED (cố ý bỏ qua, vì lúc lỗi cần được phép reset phôi/file về "chưa" để làm
+     lại từ đầu, và đơn có thể bị huỷ/hoàn ở bất kỳ giai đoạn nào).
+Chỉ kiểm tra khi có ĐỤNG tới 1 trong 3 cột — sửa GHI_CHU/HANG_VAN_CHUYEN... trên 1 đơn mà dữ liệu cũ
+lỡ đã sai từ trước KHÔNG bị chặn (tránh khoá cứng những đơn cũ chỉ vì muốn sửa 1 trường không liên
+quan). Đã tự mô phỏng 9 tình huống trước khi giao, gồm cả các case dễ báo sai nhất (tương tác với
+logic tự động ĐÃ SẴN SÀNG CHẠY MÁY, luồng làm lại sau lỗi, sửa GHI_CHU trên dữ liệu cũ đã sai sẵn) —
+khớp đúng cả 9/9.
+
+7.2. LỖ HỔNG 2 (tìm thêm trong lúc rà soát, không phải ví dụ bạn nêu) — route PUT /orders/:sttKey
+(sửa 1 đơn) từ trước tới giờ KHÔNG kiểm tra giá trị hợp lệ cho TINH_TRANG/TRANG_THAI_PHOI/
+TRANG_THAI_VE_FILE — có thể ghi bất kỳ chuỗi nào (gõ sai chính tả, dán nhầm) thẳng vào Sheet. Route
+chuyển hàng loạt đã có kiểm tra riêng từ trước, nhưng route sửa 1 đơn thì chưa từng có. Đã thêm
+kiemTraGiaTriHopLe() cùng chỗ (orderService.update()) nên tự động vá cho route này luôn, không cần
+sửa riêng.
+
+HỆ QUẢ CẦN LƯU Ý: cả 2 kiểm tra trên giờ có thể THROW lỗi ở orderService.update() — 2 route trước
+đây KHÔNG bọc try/catch quanh lời gọi này (route sửa 1 đơn, route quét QR đơn lẻ) sẽ khiến lỗi không
+được báo rõ ràng cho người dùng. Đã bọc try/catch bổ sung ở cả 2 chỗ, trả về đúng
+{error: "..."} để giao diện hiện được thông báo rõ ràng thay vì lỗi chung chung hoặc trang trắng.
+2 route còn lại (chuyển hàng loạt, quét QR hàng loạt) đã có try/catch từ trước, không cần sửa.
+
+7.3. CẢI THIỆN GIAO DIỆN ĂN THEO (public/order.html) — thêm cảnh báo NGAY khi người dùng đổi 1
+trong 3 dropdown ở khối "Sửa trạng thái thủ công", trước khi bấm Lưu, thay vì để bấm xong mới biết
+bị từ chối. Nút Lưu tự khoá lại khi đang có tổ hợp không hợp lệ. Đây CHỈ là gợi ý giao diện (dùng
+lại đúng 2 quy tắc viết bằng JS thuần, không gọi API) — không phải chốt bảo mật, server vẫn luôn
+kiểm tra lại đầy đủ dù ai đó có sửa JS trên trình duyệt để bỏ qua cảnh báo này. Đã tự đối chiếu bằng
+cách chạy vét cạn cả 40 tổ hợp có thể (10 giá trị TINH_TRANG × 2 phôi × 2 vẽ file) giữa logic client
+và server — khớp 100%, không có trường hợp nào lệch nhau.
+
+7.4. scripts/kiem-tra-tinh-hop-le.js (MỚI, CHỈ ĐỌC — không có --apply, không bao giờ ghi gì): 2
+kiểm tra mới chỉ chặn được lỗi PHÁT SINH TỪ NAY VỀ SAU, không tự sửa được dữ liệu cũ đã lỡ sai từ
+trước (nếu có). Chạy script này 1 lần để biết chính xác có bao nhiêu đơn cũ đang sai, rồi tự sửa
+tay từng đơn cho đúng (không tự động sửa hộ, vì không biết ý người dùng thật sự muốn đơn đó ở trạng
+thái nào cho đúng). Cách chạy: node scripts/kiem-tra-tinh-hop-le.js — đã tự mô phỏng với 4 đơn giả
+(2 đúng, 2 sai), tìm đúng chính xác 2 đơn sai.
+
+7.5. ĐỀ XUẤT THÊM (CHƯA LÀM, cần bạn xác nhận trước nếu muốn triển khai):
+  - Bắt buộc cột HANG_VAN_CHUYEN/MA_VAN_DON_ID phải có giá trị trước khi cho phép chuyển TINH_TRANG
+    sang IN TRANSIT_Tracking đã hoạt động — hiện chưa có ràng buộc này, 1 đơn có thể "đang vận
+    chuyển" mà không có mã vận đơn nào. Chưa làm vì không chắc chắn 100% đây luôn là bắt buộc về mặt
+    nghiệp vụ (có thể mã vận đơn được điền sau qua tích hợp API vận chuyển).
+  - Cảnh báo tương tự (client-side, không chặn cứng) cho công cụ "Chuyển trạng thái hàng loạt" và 4
+    nút bấm nhanh ở trang Đơn hàng — hiện các công cụ đó CHỈ báo lỗi SAU khi bấm Áp dụng (server trả
+    về danh sách lỗi rõ ràng theo từng đơn, không phải không có phản hồi, nhưng chưa cảnh báo TRƯỚC
+    khi bấm như đã làm ở trang chi tiết đơn).
+  - Thêm 1 báo cáo/thẻ nhỏ ở Dashboard đếm số đơn "dữ liệu cũ chưa hợp lệ" (chạy sẵn logic của
+    kiem-tra-tinh-hop-le.js), để không cần vào console chạy script tay mỗi lần muốn kiểm tra.
+
+
 

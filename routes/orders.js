@@ -187,7 +187,13 @@ router.put('/:sttKey', async (req, res) => {
   updates.NguoiCapNhatCuoi = user.ten;
   updates.ThoiGianCapNhatCuoi = new Date().toISOString();
 
-  const updated = await orderService.update(req.params.sttKey, updates);
+  let updated;
+  try {
+    updated = await orderService.update(req.params.sttKey, updates);
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
+  }
+
   await ghiLog({
     nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'CAP_NHAT_DON',
     sttKey: req.params.sttKey, chiTiet: updates,

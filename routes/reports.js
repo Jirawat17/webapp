@@ -177,6 +177,54 @@ router.get('/thong-ke-loi', async (req, res) => {
   });
 });
 
+// Thống kê đơn HOÀN (REFUNDED_Hoàn đơn) — danh sách từ trạng thái HIỆN TẠI (khác với lỗi sản xuất:
+// REFUNDED là trạng thái CUỐI CÙNG, đơn giữ nguyên ở đó mãi nên không cần tra lịch sử). Tổng hợp
+// theo khách hàng/loại sản phẩm/tuần, kèm GHI_CHU của từng đơn để xem nguyên nhân hoàn.
+router.get('/thong-ke-hoan-don', async (req, res) => {
+  const { tuNgay, denNgay } = req.query;
+  const { rows } = await orderService.getAll();
+  const dsDonHoan = await orderService.ganTenKhachHang(
+    rows.filter(r => r.TINH_TRANG === 'REFUNDED_Hoàn đơn')
+  );
+
+  const locTheoNgay = dsDonHoan.filter(r => {
+    const ngay = parseNgay(r.NGAY_LEN_DON);
+    if (!ngay) return false;
+    if (tuNgay && ngay < parseNgay(tuNgay)) return false;
+    if (denNgay && ngay > parseNgay(denNgay)) return false;
+    return true;
+  });
+
+  const theoKhachHang = {}, theoLoai = {}, theoTuan = {};
+  const chiTiet = [];
+
+  for (const don of [...locTheoNgay].sort((a, b) => {
+    const da = parseNgay(a.NGAY_LEN_DON), db = parseNgay(b.NGAY_LEN_DON);
+    return (db || 0) - (da || 0); // mới nhất trước
+  })) {
+    const kh = don.TenKhachHang || don.MA_KHACH_HANG || '(Không rõ)';
+    const loai = don.LOAI || '(Không rõ loại)';
+    const ngay = parseNgay(don.NGAY_LEN_DON);
+    const nhanTuan = ngay ? `${ngay.getFullYear()}-T${String(soTuanTrongNam(ngay)).padStart(2, '0')}` : '(Không rõ)';
+
+    theoKhachHang[kh] = (theoKhachHang[kh] || 0) + 1;
+    theoLoai[loai] = (theoLoai[loai] || 0) + 1;
+    theoTuan[nhanTuan] = (theoTuan[nhanTuan] || 0) + 1;
+
+    chiTiet.push({
+      sttKey: don.STT_Key,
+      khachHang: kh,
+      loai,
+      kichThuoc: don.KICH_THUOC || '',
+      mauSac: don.MAU_SAC || '',
+      ngayLenDon: dinhDangNgay(don.NGAY_LEN_DON),
+      ghiChu: don.GHI_CHU || '(Không có ghi chú)',
+    });
+  }
+
+  res.json({ tongSoHoan: locTheoNgay.length, theoKhachHang, theoLoai, theoTuan, chiTiet });
+});
+
 // ============================================================
 // MẪU "ĐƠN CẦN IN" (TRANG_THAI_PHOI = 'Đã lấy phôi') — mỗi đơn 1 thẻ có QR + 2 ảnh thật, khổ giấy 100x150mm
 // (bằng khổ tem in phổ biến), 2 đơn/trang để đỡ tốn giấy khi in.
@@ -218,55 +266,58 @@ function veOTrongPdf(doc, x, y, kichThuoc, chuThich) {
 
 function veTheDonPdf(doc, don, anh, offsetY, caoThe) {
   const rong = mmToPt(KHO_GIAY_MM.rong);
-  const leTrong = 6;
+  const leTrong = 5;
   const x0 = leTrong;
   const rongTrong = rong - leTrong * 2;
   let y = offsetY + leTrong;
 
-  doc.font('NotoSans-Bold').fontSize(11).text(don.STT_Key || '', x0, y, { width: rongTrong });
+  // Dòng tiêu đề — cỡ chữ lớn hơn để dễ nhìn khi dán lên áo
+  doc.font('NotoSans-Bold').fontSize(13).text(don.STT_Key || '', x0, y, { width: rongTrong });
+  y += 18;
+  doc.font('NotoSans').fontSize(10).text(`${don.LOAI || ''} · ${don.KICH_THUOC || ''} · ${don.MAU_SAC || ''}`, x0, y, { width: rongTrong });
   y += 14;
-  doc.font('NotoSans').fontSize(8.5).text(`${don.LOAI || ''} · ${don.KICH_THUOC || ''} · ${don.MAU_SAC || ''}`, x0, y, { width: rongTrong });
-  y += 13;
 
-  // QR chiếm phần lớn không gian còn lại — ưu tiên "to rõ" theo yêu cầu, tận dụng hết chiều cao thẻ
-  const qrKichThuoc = mmToPt(42);
-  const qrX = x0;
-  const qrY = y;
-  if (anh.qr) doc.image(anh.qr, qrX, qrY, { width: qrKichThuoc, height: qrKichThuoc });
-  else veOTrongPdf(doc, qrX, qrY, qrKichThuoc, 'Không có QR');
-
-  const anhKichThuoc = mmToPt(20); // 2 ảnh xếp chồng + khoảng cách phải khớp chiều cao QR, tránh chồng lên chữ bên dưới
-  const anhX = qrX + qrKichThuoc + 6;
-  const anhY1 = qrY;
+  // KHỐI ẢNH (ưu tiên): 2 ảnh to xếp cạnh nhau, chiếm hết chiều ngang thẻ — to gấp đôi bố cục cũ
+  const khoangCachAnh = 4;
+  const anhKichThuoc = (rongTrong - khoangCachAnh) / 2; // mỗi ảnh ~65mm — to gần gấp đôi khổ thẻ, hết chiều rộng
+  const anhY = y;
+  // Ảnh mẫu (bên trái)
   if (anh.mau) {
-    try { doc.image(anh.mau, anhX, anhY1, { fit: [anhKichThuoc, anhKichThuoc] }); }
-    catch (e) { veOTrongPdf(doc, anhX, anhY1, anhKichThuoc, 'Không tải được ảnh mẫu'); }
+    try { doc.image(anh.mau, x0, anhY, { fit: [anhKichThuoc, anhKichThuoc] }); }
+    catch (e) { veOTrongPdf(doc, x0, anhY, anhKichThuoc, 'Không tải được ảnh mẫu'); }
   } else {
-    veOTrongPdf(doc, anhX, anhY1, anhKichThuoc, 'Không tải được ảnh mẫu');
+    veOTrongPdf(doc, x0, anhY, anhKichThuoc, 'Không có ảnh mẫu');
   }
-
-  const anhY2 = anhY1 + anhKichThuoc + 6;
+  // Ảnh mockup (bên phải)
+  const anhX2 = x0 + anhKichThuoc + khoangCachAnh;
   if (anh.mockup) {
-    try { doc.image(anh.mockup, anhX, anhY2, { fit: [anhKichThuoc, anhKichThuoc] }); }
-    catch (e) { veOTrongPdf(doc, anhX, anhY2, anhKichThuoc, 'Không tải được ảnh mockup'); }
+    try { doc.image(anh.mockup, anhX2, anhY, { fit: [anhKichThuoc, anhKichThuoc] }); }
+    catch (e) { veOTrongPdf(doc, anhX2, anhY, anhKichThuoc, 'Không tải được ảnh mockup'); }
   } else {
-    veOTrongPdf(doc, anhX, anhY2, anhKichThuoc, 'Không tải được ảnh mockup');
+    veOTrongPdf(doc, anhX2, anhY, anhKichThuoc, 'Không có ảnh mockup');
   }
+  y = anhY + anhKichThuoc + 6;
 
-  // Chiều cao thật của khối ảnh = phần cao hơn giữa QR và 2 ảnh xếp chồng — tránh chữ bên dưới
-  // đè lên ảnh nếu 1 trong 2 khối cao hơn khối còn lại (lỗi đã xảy ra khi kích thước lệch nhau).
-  const chieuCaoKhoiAnh = Math.max(qrKichThuoc, anhKichThuoc * 2 + 6);
-  y = qrY + chieuCaoKhoiAnh + 8;
+  // KHỐI DƯỚI: QR nhỏ (24mm, vẫn đủ quét bằng điện thoại/máy QR) + thông tin bên phải
+  const qrKichThuoc = mmToPt(26); // 26mm — đủ quét bằng điện thoại/máy QR
+  const qrY = y;
+  if (anh.qr) doc.image(anh.qr, x0, qrY, { width: qrKichThuoc, height: qrKichThuoc });
+  else veOTrongPdf(doc, x0, qrY, qrKichThuoc, 'Không có QR');
 
+  const infoX = x0 + qrKichThuoc + 5;
+  const infoRong = rongTrong - qrKichThuoc - 5;
+  let yInfo = qrY;
   const viTri = [don.VI_TRI_1, don.VI_TRI_2, don.VI_TRI_3].filter(Boolean).join(' · ');
-  doc.font('NotoSans-Bold').fontSize(7.5).text('Vị trí thêu: ', x0, y, { continued: true, width: rongTrong });
+  doc.font('NotoSans-Bold').fontSize(9).text('Vị trí thêu: ', infoX, yInfo, { continued: true, width: infoRong });
   doc.font('NotoSans').text(viTri || '—');
-  y += 11;
-  doc.font('NotoSans').fontSize(7.5).text(`SL: ${don.SO_LUONG ?? ''} · SL áo/đơn: ${don.SO_LUONG_AO_TREN_DON ?? ''} · Ngày: ${dinhDangNgay(don.NGAY_LEN_DON)}`, x0, y, { width: rongTrong });
-  y += 11;
+  yInfo += 13;
+  doc.font('NotoSans').fontSize(9).text(`SL: ${don.SO_LUONG ?? ''} · Áo/đơn: ${don.SO_LUONG_AO_TREN_DON ?? ''}`, infoX, yInfo, { width: infoRong });
+  yInfo += 13;
+  doc.font('NotoSans').fontSize(9).text(`Ngày: ${dinhDangNgay(don.NGAY_LEN_DON)}`, infoX, yInfo, { width: infoRong });
   if (don.GHI_CHU) {
-    doc.font('NotoSans-Bold').fontSize(7.5).text('Ghi chú: ', x0, y, { continued: true, width: rongTrong });
-    doc.font('NotoSans').text(String(don.GHI_CHU), { width: rongTrong });
+    yInfo += 13;
+    doc.font('NotoSans-Bold').fontSize(9).text('Ghi chú: ', infoX, yInfo, { continued: true, width: infoRong });
+    doc.font('NotoSans').text(String(don.GHI_CHU), { width: infoRong });
   }
 }
 
@@ -274,21 +325,14 @@ async function veTrangDonCanInPdf(doc, list, dongNguoiXuat) {
   const rong = mmToPt(KHO_GIAY_MM.rong);
   const cao = mmToPt(KHO_GIAY_MM.cao);
   const caoFooter = 9;
-  const caoThe = (cao - caoFooter) / 2;
+  // 1 đơn 1 trang — ảnh to hơn hẳn, dễ đối chiếu khi dán lên áo (trước đây 2 đơn/trang, ảnh nhỏ)
+  const caoThe = cao - caoFooter;
 
-  for (let i = 0; i < list.length; i += 2) {
+  for (let i = 0; i < list.length; i++) {
     if (i > 0) doc.addPage({ size: [rong, cao], margin: 0 });
 
-    const anh1 = await taiAnhChoDon(list[i]);
-    veTheDonPdf(doc, list[i], anh1, 0, caoThe);
-
-    doc.dash(2, { space: 2 }).moveTo(0, caoThe).lineTo(rong, caoThe).stroke('#9ca3af');
-    doc.undash();
-
-    if (list[i + 1]) {
-      const anh2 = await taiAnhChoDon(list[i + 1]);
-      veTheDonPdf(doc, list[i + 1], anh2, caoThe, caoThe);
-    }
+    const anh = await taiAnhChoDon(list[i]);
+    veTheDonPdf(doc, list[i], anh, 0, caoThe);
 
     doc.font('NotoSans').fontSize(5).fillColor('#9ca3af')
       .text(dongNguoiXuat, 4, cao - caoFooter + 1, { width: rong - 8, align: 'center' });

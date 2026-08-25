@@ -1,6 +1,6 @@
 const { readTab, readTabCached, updateCells } = require('./sheetsService');
 const { layBanDoTenKhachHang } = require('./khachHangService');
-const { chiSoTinhTrang } = require('../data/pipelineTinhTrang');
+const { chiSoTinhTrang, TINH_TRANG_VALUES, TRANG_THAI_PHOI_VALUES, TRANG_THAI_VE_FILE_VALUES } = require('../data/pipelineTinhTrang');
 
 const TAB = 'Don_Hang_ALL';
 const KEY_COL = 'STT_Key';
@@ -16,6 +16,64 @@ async function getByKey(sttKey, opts) {
   const { headers, rows } = await getAll(opts);
   const row = rows.find(r => r[KEY_COL] === sttKey);
   return { headers, row };
+}
+
+const idxSanSang = chiSoTinhTrang('ĐÃ SẴN SÀNG CHẠY MÁY');
+
+// Kiểm tra GIÁ TRỊ hợp lệ cho từng cột riêng lẻ (đúng 1 trong các giá trị định nghĩa sẵn) — chặn
+// việc ghi nhầm chuỗi rác/gõ sai chính tả. LƯU Ý: route PUT /orders/:sttKey (sửa 1 đơn) trước đây
+// KHÔNG kiểm tra gì cả — có thể ghi bất kỳ chuỗi nào vào thẳng Sheet; route chuyển hàng loạt đã có
+// kiểm tra riêng (GIA_TRI_HOP_LE_THEO_COT) nhưng đặt kiểm tra ở ĐÂY (update(), điểm ghi chung duy
+// nhất) để CHẮC CHẮN áp dụng cho MỌI đường ghi, kể cả những chỗ lỡ quên tự kiểm tra.
+function kiemTraGiaTriHopLe(updates) {
+  if ('TINH_TRANG' in updates && !TINH_TRANG_VALUES.includes(updates.TINH_TRANG)) {
+    throw new Error(`Giá trị TINH_TRANG không hợp lệ: "${updates.TINH_TRANG}"`);
+  }
+  if ('TRANG_THAI_PHOI' in updates && !TRANG_THAI_PHOI_VALUES.includes(updates.TRANG_THAI_PHOI)) {
+    throw new Error(`Giá trị TRANG_THAI_PHOI không hợp lệ: "${updates.TRANG_THAI_PHOI}"`);
+  }
+  if ('TRANG_THAI_VE_FILE' in updates && !TRANG_THAI_VE_FILE_VALUES.includes(updates.TRANG_THAI_VE_FILE)) {
+    throw new Error(`Giá trị TRANG_THAI_VE_FILE không hợp lệ: "${updates.TRANG_THAI_VE_FILE}"`);
+  }
+}
+
+// Kiểm tra tính HỢP LÝ giữa 3 cột VỚI NHAU — không chỉ đúng giá trị từng cột riêng lẻ mà còn phải
+// khớp logic pipeline. 2 quy tắc:
+//   1. "Chưa xác nhận" thì KHÔNG THỂ đã có phôi/đã vẽ file (đơn còn chưa được khách xác nhận thì
+//      chưa ai chuẩn bị phôi/vẽ file cho đơn đó).
+//   2. Đã tới "ĐÃ SẴN SÀNG CHẠY MÁY" hoặc các bước SAU đó trên đường chính (Đã sản xuất, Đã đóng
+//      gói, IN TRANSIT, DELIVERED) thì BẮT BUỘC phải có đủ CẢ phôi lẫn file — không tính LỖI SẢN
+//      XUẤT CẦN LÀM LẠI/CANCELLED/REFUNDED (nhánh rẽ, không nằm trong THU_TU_TINH_TRANG nên
+//      chiSoTinhTrang trả về null, CỐ Ý bỏ qua quy tắc này — lúc lỗi cần được phép reset phôi/file
+//      về "chưa" để làm lại từ đầu, xem tinhTinhTrangTuDong ở trên và README).
+// Chỉ kiểm tra khi updates THỰC SỰ đụng tới 1 trong 3 cột — sửa các trường khác (GHI_CHU, HANG_VAN_
+// CHUYEN...) không bao giờ bị chặn bởi hàm này, kể cả khi dữ liệu cũ của đơn đó lỡ đã sai từ trước.
+function kiemTraTinhHopLy(rowHienTai, updates) {
+  const dungChamPipeline = 'TINH_TRANG' in updates || 'TRANG_THAI_PHOI' in updates || 'TRANG_THAI_VE_FILE' in updates;
+  if (!dungChamPipeline) return;
+
+  const tinhTrangMoi = updates.TINH_TRANG ?? rowHienTai.TINH_TRANG;
+  const phoiMoi = updates.TRANG_THAI_PHOI ?? rowHienTai.TRANG_THAI_PHOI;
+  const veFileMoi = updates.TRANG_THAI_VE_FILE ?? rowHienTai.TRANG_THAI_VE_FILE;
+
+  if (tinhTrangMoi === 'Chưa xác nhận') {
+    if (phoiMoi === 'Đã lấy phôi') {
+      throw new Error('Không hợp lệ: đơn đang "Chưa xác nhận" thì chưa thể "Đã lấy phôi" — xác nhận đơn trước.');
+    }
+    if (veFileMoi === 'Đã vẽ file') {
+      throw new Error('Không hợp lệ: đơn đang "Chưa xác nhận" thì chưa thể "Đã vẽ file" — xác nhận đơn trước.');
+    }
+  }
+
+  const idx = chiSoTinhTrang(tinhTrangMoi);
+  if (idx !== null && idx >= idxSanSang) {
+    if (phoiMoi !== 'Đã lấy phôi') {
+      throw new Error(`Không hợp lệ: đơn đang/sắp ở "${tinhTrangMoi}" nhưng phôi vẫn "${phoiMoi}" — phải có đủ phôi mới tới được giai đoạn này.`);
+    }
+    if (veFileMoi !== 'Đã vẽ file') {
+      throw new Error(`Không hợp lệ: đơn đang/sắp ở "${tinhTrangMoi}" nhưng file vẽ vẫn "${veFileMoi}" — phải vẽ xong file mới tới được giai đoạn này.`);
+    }
+  }
 }
 
 // TỰ ĐỘNG chuyển TINH_TRANG sang "ĐÃ SẴN SÀNG CHẠY MÁY" khi cả phôi lẫn file vẽ CÙNG xong — nhưng
@@ -41,7 +99,10 @@ async function update(sttKey, updates) {
   const { headers, row } = await getByKey(sttKey, { fresh: true }); // luôn đọc thật trước khi ghi
   if (!row) throw new Error('Không tìm thấy đơn hàng: ' + sttKey);
 
+  kiemTraGiaTriHopLe(updates);
+
   const updatesDaTinh = tinhTinhTrangTuDong(row, updates);
+  kiemTraTinhHopLy(row, updatesDaTinh); // kiểm tra SAU khi đã tính tự động, để không báo nhầm khi chính việc tự động hoá làm cho tổ hợp trở nên hợp lệ
 
   await updateCells(TAB, headers, row._row, updatesDaTinh); // tự xoá cache của tab sau khi ghi (xem sheetsService)
   return { ...row, ...updatesDaTinh };
