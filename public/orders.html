@@ -14,6 +14,18 @@
   <div class="filters">
     <label class="sr-only" for="loc-trang-thai">Lọc theo trạng thái</label>
     <select id="loc-trang-thai"><option value="">Tất cả trạng thái</option></select>
+    <label class="sr-only" for="loc-phoi">Lọc theo phôi</label>
+    <select id="loc-phoi">
+      <option value="">Tất cả (phôi)</option>
+      <option value="Chưa lấy phôi">Chưa lấy phôi</option>
+      <option value="Đã lấy phôi">Đã lấy phôi</option>
+    </select>
+    <label class="sr-only" for="loc-ve-file">Lọc theo vẽ file</label>
+    <select id="loc-ve-file">
+      <option value="">Tất cả (vẽ file)</option>
+      <option value="Chưa vẽ file">Chưa vẽ file</option>
+      <option value="Đã vẽ file">Đã vẽ file</option>
+    </select>
     <label class="sr-only" for="loc-kh">Tìm theo tên đơn hoặc mã khách hàng</label>
     <input id="loc-kh" placeholder="Tìm theo tên đơn (STT_Key) hoặc mã khách hàng">
     <label class="sr-only" for="loc-tu-ngay">Từ ngày</label>
@@ -73,6 +85,8 @@ let donDaChonSet = new Set();
   renderNav(user, 'orders');
 
   document.getElementById('loc-trang-thai').onchange = () => { boChonTatCaDon(); taiDon(); };
+  document.getElementById('loc-phoi').onchange = () => { boChonTatCaDon(); taiDon(); };
+  document.getElementById('loc-ve-file').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-kh').oninput = debounce(() => { boChonTatCaDon(); taiDon(); }, 400);
   document.getElementById('loc-tu-ngay').onchange = () => {
     const denNgay = document.getElementById('loc-den-ngay');
@@ -114,11 +128,15 @@ async function taiDon() {
   el.innerHTML = skeletonList(6);
 
   const trangThai = document.getElementById('loc-trang-thai').value;
+  const trangThaiPhoi = document.getElementById('loc-phoi').value;
+  const trangThaiVeFile = document.getElementById('loc-ve-file').value;
   const kh = document.getElementById('loc-kh').value;
   const tuNgay = document.getElementById('loc-tu-ngay').value;
   const denNgay = document.getElementById('loc-den-ngay').value;
   const qs = new URLSearchParams();
   if (trangThai) qs.set('trangThai', trangThai);
+  if (trangThaiPhoi) qs.set('trangThaiPhoi', trangThaiPhoi);
+  if (trangThaiVeFile) qs.set('trangThaiVeFile', trangThaiVeFile);
   if (kh) qs.set('kh', kh);
   if (tuNgay) qs.set('tuNgay', tuNgay);
   if (denNgay) qs.set('denNgay', denNgay);
@@ -133,7 +151,7 @@ async function taiDon() {
 
   danhSachHienTai = list;
 
-  if (!trangThai && !kh && !tuNgay && !denNgay) capNhatBoLocTrangThai(list);
+  if (!trangThai && !trangThaiPhoi && !trangThaiVeFile && !kh && !tuNgay && !denNgay) capNhatBoLocTrangThai(list);
 
   renderDanhSachDon();
 }
@@ -269,7 +287,15 @@ async function inNhanh(mau, nut) {
   // trạng thái chung ở trên (ô đó chỉ lọc được TINH_TRANG, không lọc được cột phôi).
   if (mau === 'phoi_ao_gop') qs.set('trangThaiPhoi', 'Chưa lấy phôi');
   else if (mau === 'don_can_in') qs.set('trangThaiPhoi', 'Đã lấy phôi');
-  else if (trangThai) qs.set('trangThai', trangThai); // 'tracking' và các trường hợp khác vẫn theo đúng ô lọc trạng thái chung như trước
+  else {
+    // 'tracking' và các trường hợp khác: tôn trọng đúng bộ lọc đang áp dụng trên trang (kể cả 2 ô
+    // lọc phôi/vẽ file mới), không ép cứng gì thêm.
+    if (trangThai) qs.set('trangThai', trangThai);
+    const trangThaiPhoi = document.getElementById('loc-phoi').value;
+    const trangThaiVeFile = document.getElementById('loc-ve-file').value;
+    if (trangThaiPhoi) qs.set('trangThaiPhoi', trangThaiPhoi);
+    if (trangThaiVeFile) qs.set('trangThaiVeFile', trangThaiVeFile);
+  }
 
   try {
     const res = await fetch('/api/reports/pdf?' + qs.toString(), { credentials: 'include' });

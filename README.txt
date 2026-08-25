@@ -212,3 +212,23 @@ CÁCH CHẠY: y hệt script migrate lần 1 — chạy KHÔNG có --apply trư�
 9. Kiểm tra lại: mỗi vai trò đăng nhập đúng thấy đúng menu/đơn theo mô tả ở mục 2; thử quét QR đủ
    3 kịch bản; thử set tay trạng thái lỗi rồi làm lại ở trang chi tiết đơn; kiểm tra badge màu đúng
    trên toàn bộ trạng thái mới.
+
+=============================================================================================
+5. THÊM 2 DROPDOWN LỌC THEO PHÔI/VẼ FILE (đợt cập nhật này) + XÁC NHẬN Prompt_Ver_25.docx
+=============================================================================================
+
+Prompt_Ver_25.docx nội dung GIỐNG HỆT Prompt_Ver_24.docx đã code ở đợt trước (cùng danh sách trạng
+thái, cùng 4 vai trò, cùng logic tự động, cùng 3 dòng kịch bản) — không có gì mới, không cần hỏi
+thêm câu nào.
+
+Đã thêm 2 dropdown lọc mới ở trang Đơn hàng, đặt ngay cạnh ô lọc trạng thái hiện có:
+- "Lọc theo phôi" — Tất cả / Chưa lấy phôi / Đã lấy phôi (lọc theo TRANG_THAI_PHOI)
+- "Lọc theo vẽ file" — Tất cả / Chưa vẽ file / Đã vẽ file (lọc theo TRANG_THAI_VE_FILE)
+
+Kết hợp được với mọi bộ lọc khác (trạng thái chung, tìm kiếm, khoảng ngày) theo kiểu AND — chọn
+càng nhiều bộ lọc thì kết quả càng thu hẹp, giống hệt cách các bộ lọc cũ hoạt động.
+
+File sửa: routes/orders.js (GET /orders nhận thêm 2 tham số trangThaiPhoi/trangThaiVeFile),
+public/orders.html (2 dropdown mới + cập nhật taiDon()/inNhanh() để đưa 2 bộ lọc này vào mọi truy
+vấn liên quan, kể cả nút in nhanh "IN DANH SÁCH ĐÃ SẢN XUẤT" khi không bị ép cứng mẫu khác).
+

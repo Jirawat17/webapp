@@ -26,8 +26,10 @@ router.get('/', async (req, res) => {
   const { rows } = await orderService.getAll();
   let list = orderService.filterForRole(rows, req.session.user);
 
-  const { trangThai, kh, tuNgay, denNgay } = req.query;
+  const { trangThai, trangThaiPhoi, trangThaiVeFile, kh, tuNgay, denNgay } = req.query;
   if (trangThai) list = list.filter(r => r.TINH_TRANG === trangThai);
+  if (trangThaiPhoi) list = list.filter(r => r.TRANG_THAI_PHOI === trangThaiPhoi);
+  if (trangThaiVeFile) list = list.filter(r => r.TRANG_THAI_VE_FILE === trangThaiVeFile);
   if (kh) {
     const tuKhoa = kh.toLowerCase();
     list = list.filter(r =>
