@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=20260824l">
-<script src="/js/theme.js?v=20260824a"></script>
+<link rel="stylesheet" href="/css/style.css?v=20260825a">
+<script src="/js/theme.js?v=20260825a"></script>
 </head>
 <body>
 <div id="nav"></div>
@@ -62,8 +62,8 @@
   <button class="btn-hanh-dong phu" onclick="boChonTatCaDon()">Bỏ chọn</button>
 </div>
 
-<script src="/js/icons.js?v=20260823c"></script>
-<script src="/js/api.js?v=20260824d"></script>
+<script src="/js/icons.js?v=20260825a"></script>
+<script src="/js/api.js?v=20260825a"></script>
 <script>
 const NHAN_CANH_BAO = { VANG: 'Vàng · 3 ngày', CAM: 'Cam · 5 ngày', DO: 'Đỏ · 7 ngày' };
 
@@ -300,8 +300,9 @@ async function apDungChuyenTrangThai() {
   await taiDon();
 }
 
-// In nhanh theo ĐÚNG bộ lọc trạng thái + ô tìm kiếm đang áp dụng trên trang này (không ép về
-// đúng trạng thái B1/B2/B5 của mẫu) — 'mau' chỉ ép cứng ĐỊNH DẠNG cột hiển thị trong file PDF.
+// In nhanh: LUÔN gửi đúng mọi ô lọc đang hiển thị trên trang (trạng thái, phôi, vẽ file, ngày,
+// từ khoá) — không ép cứng gì ở phía client nữa. Mỗi mẫu ('mau') sẽ ép thêm điều kiện trạng thái
+// riêng của mình ở phía server (xem reports.js), kết hợp AND với các ô lọc này.
 async function inNhanh(mau, nut) {
   const nhanGoc = nut.innerHTML;
   nut.disabled = true;
@@ -313,24 +314,14 @@ async function inNhanh(mau, nut) {
   const tuKhoa = document.getElementById('loc-kh').value;
   const tuNgay = document.getElementById('loc-tu-ngay').value;
   const denNgay = document.getElementById('loc-den-ngay').value;
+  const trangThaiPhoi = document.getElementById('loc-phoi').value;
+  const trangThaiVeFile = document.getElementById('loc-ve-file').value;
+  if (trangThai) qs.set('trangThai', trangThai);
   if (tuKhoa) qs.set('tuKhoa', tuKhoa);
   if (tuNgay) qs.set('tuNgay', tuNgay);
   if (denNgay) qs.set('denNgay', denNgay);
-
-  // 'phoi_ao_gop' (IN DANH SÁCH PHÔI) và 'don_can_in' (IN ĐƠN) lọc theo cột TRANG_THAI_PHOI (tách
-  // riêng khỏi TINH_TRANG từ 24/08/2026) — ép cứng đúng giá trị cần cho từng mẫu, KHÔNG dùng ô lọc
-  // trạng thái chung ở trên (ô đó chỉ lọc được TINH_TRANG, không lọc được cột phôi).
-  if (mau === 'phoi_ao_gop') qs.set('trangThaiPhoi', 'Chưa lấy phôi');
-  else if (mau === 'don_can_in') qs.set('trangThaiPhoi', 'Đã lấy phôi');
-  else {
-    // 'tracking' và các trường hợp khác: tôn trọng đúng bộ lọc đang áp dụng trên trang (kể cả 2 ô
-    // lọc phôi/vẽ file mới), không ép cứng gì thêm.
-    if (trangThai) qs.set('trangThai', trangThai);
-    const trangThaiPhoi = document.getElementById('loc-phoi').value;
-    const trangThaiVeFile = document.getElementById('loc-ve-file').value;
-    if (trangThaiPhoi) qs.set('trangThaiPhoi', trangThaiPhoi);
-    if (trangThaiVeFile) qs.set('trangThaiVeFile', trangThaiVeFile);
-  }
+  if (trangThaiPhoi) qs.set('trangThaiPhoi', trangThaiPhoi);
+  if (trangThaiVeFile) qs.set('trangThaiVeFile', trangThaiVeFile);
 
   try {
     const res = await fetch('/api/reports/pdf?' + qs.toString(), { credentials: 'include' });

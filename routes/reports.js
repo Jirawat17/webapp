@@ -18,17 +18,18 @@ router.use(requireLogin); // mọi vai trò đăng nhập đều dùng được 
 const FONT_REGULAR = path.join(__dirname, '..', 'fonts', 'NotoSans-Regular.ttf');
 const FONT_BOLD = path.join(__dirname, '..', 'fonts', 'NotoSans-Bold.ttf');
 
-// 3 mẫu xuất RIÊNG. Cập nhật 24/08/2026 (theo Prompt_Ver_24.docx — hệ trạng thái 3 cột mới):
-//   - TRANG_THAI_TRACKING vẫn dựa trên TINH_TRANG (đóng gói xong = sẵn sàng tạo tracking).
-//   - "Danh sách phôi cần chuẩn bị" và "Đơn cần in sau khi nhặt phôi" giờ dựa trên cột
-//     TRANG_THAI_PHOI (tách riêng khỏi TINH_TRANG) — KHÔNG còn suy được từ TINH_TRANG như bản cũ
-//     nữa (trang Báo cáo trước đây tự nhận diện mẫu khi người dùng chọn đúng 1 trạng thái trong
-//     dropdown TINH_TRANG; giờ 2 mẫu này CHỈ còn ép được qua tham số "mau" — do 3 nút in nhanh ở
-//     trang Đơn hàng gửi lên — không tự suy được nữa vì trang Báo cáo không có dropdown lọc theo
-//     cột phôi).
+// 3 mẫu xuất RIÊNG — cập nhật 26/08/2026: 3 nút in nhanh ở trang Đơn hàng giờ LUÔN gửi kèm đúng các
+// ô lọc đang hiển thị trên trang (trạng thái, phôi, vẽ file, ngày, từ khoá) — không còn ép cứng
+// trangThaiPhoi ở phía client nữa. Mỗi mẫu chỉ còn ép thêm ĐIỀU KIỆN TRẠNG THÁI RIÊNG của mình
+// (AND với các ô lọc đã gửi lên — có thể ra danh sách rỗng nếu người dùng đang lọc trạng thái khác
+// trên trang), áp dụng trong layDonDaLoc():
+//   - 'phoi_ao_gop' (IN DANH SÁCH PHÔI): TRANG_THAI_PHOI = Chưa lấy phôi VÀ TINH_TRANG thuộc
+//     {Đã xác nhận, LỖI SẢN XUẤT CẦN LÀM LẠI} (đơn lỗi làm lại cũng cần lấy lại phôi).
+//   - 'don_can_in' (IN ĐƠN): không ép trạng thái nào thêm — in đúng theo mọi trạng thái đang lọc.
+//   - 'tracking' (IN DANH SÁCH ĐÃ SẢN XUẤT): TINH_TRANG = Đã đóng gói.
 const TRANG_THAI_TRACKING = 'Đã đóng gói';
-const TRANG_THAI_PHOI_CAN_CHUAN_BI = 'Chưa lấy phôi'; // mẫu 'phoi_ao_gop' — lọc theo TRANG_THAI_PHOI, không phải TINH_TRANG
-const TRANG_THAI_PHOI_CAN_IN = 'Đã lấy phôi'; // mẫu 'don_can_in' — lọc theo TRANG_THAI_PHOI, không phải TINH_TRANG
+const TRANG_THAI_PHOI_CAN_CHUAN_BI = 'Chưa lấy phôi';
+const TINH_TRANG_CAN_PHOI = ['Đã xác nhận', 'LỖI SẢN XUẤT CẦN LÀM LẠI'];
 
 function locDon(rows, { tuNgay, denNgay, khachHang, trangThai, trangThaiPhoi, trangThaiVeFile, tuKhoa }) {
   return rows.filter(r => {
@@ -61,7 +62,15 @@ function xacDinhMau(query) {
 
 async function layDonDaLoc(query) {
   const { rows } = await orderService.getAll();
-  return locDon(rows, query);
+  const list = locDon(rows, query);
+  const mau = xacDinhMau(query);
+  if (mau === 'phoi_ao_gop') {
+    return list.filter(r => r.TRANG_THAI_PHOI === TRANG_THAI_PHOI_CAN_CHUAN_BI && TINH_TRANG_CAN_PHOI.includes(r.TINH_TRANG));
+  }
+  if (mau === 'tracking') {
+    return list.filter(r => r.TINH_TRANG === TRANG_THAI_TRACKING);
+  }
+  return list;
 }
 
 function dongThongTinLoc(query, kieu) {

@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=20260824e">
-<script src="/js/theme.js?v=20260823b"></script>
+<link rel="stylesheet" href="/css/style.css?v=20260824l">
+<script src="/js/theme.js?v=20260824a"></script>
 </head>
 <body>
 <div id="nav"></div>
@@ -14,8 +14,30 @@
   <div class="filters">
     <label class="sr-only" for="loc-trang-thai">Lọc theo trạng thái</label>
     <select id="loc-trang-thai"><option value="">Tất cả trạng thái</option></select>
-    <label class="sr-only" for="loc-kh">Tìm theo mã khách hàng</label>
-    <input id="loc-kh" placeholder="Tìm theo mã khách hàng (VD: TeamPQ)">
+    <label class="sr-only" for="loc-phoi">Lọc theo phôi</label>
+    <select id="loc-phoi">
+      <option value="">Tất cả (phôi)</option>
+      <option value="Chưa lấy phôi">Chưa lấy phôi</option>
+      <option value="Đã lấy phôi">Đã lấy phôi</option>
+    </select>
+    <label class="sr-only" for="loc-ve-file">Lọc theo vẽ file</label>
+    <select id="loc-ve-file">
+      <option value="">Tất cả (vẽ file)</option>
+      <option value="Chưa vẽ file">Chưa vẽ file</option>
+      <option value="Đã vẽ file">Đã vẽ file</option>
+    </select>
+    <label class="sr-only" for="loc-kh">Tìm theo tên đơn hoặc mã khách hàng</label>
+    <input id="loc-kh" placeholder="Tìm theo tên đơn (STT_Key) hoặc mã khách hàng">
+    <label class="sr-only" for="loc-tu-ngay">Từ ngày</label>
+    <input type="date" id="loc-tu-ngay" title="Từ ngày">
+    <label class="sr-only" for="loc-den-ngay">Đến ngày</label>
+    <input type="date" id="loc-den-ngay" title="Đến ngày">
+  </div>
+
+  <div class="in-nhanh-thanh">
+    <button type="button" class="btn-hanh-dong phu" id="btn-in-phoi-ao" onclick="inNhanh('phoi_ao_gop', this)"></button>
+    <button type="button" class="btn-hanh-dong phu" id="btn-in-don-ao" onclick="inNhanh('don_can_in', this)"></button>
+    <button type="button" class="btn-hanh-dong phu" id="btn-in-tracking" onclick="inNhanh('tracking', this)"></button>
   </div>
 
   <label class="chon-tat-ca-hang">
@@ -32,22 +54,31 @@
     <option value="">Chuyển đến trạng thái...</option>
   </select>
   <button id="nut-ap-dung" class="btn-hanh-dong" onclick="apDungChuyenTrangThai()">Áp dụng</button>
+  <span class="thanh-hanh-dong-cach"></span>
+  <button class="btn-hanh-dong phu nhanh-phoi-ve-file" onclick="apDungNhanh('TRANG_THAI_PHOI', 'Đã lấy phôi', this)">Đã lấy phôi</button>
+  <button class="btn-hanh-dong phu nhanh-phoi-ve-file" onclick="apDungNhanh('TRANG_THAI_PHOI', 'Chưa lấy phôi', this)">Chưa lấy phôi</button>
+  <button class="btn-hanh-dong phu nhanh-phoi-ve-file" onclick="apDungNhanh('TRANG_THAI_VE_FILE', 'Đã vẽ file', this)">Đã vẽ file</button>
+  <button class="btn-hanh-dong phu nhanh-phoi-ve-file" onclick="apDungNhanh('TRANG_THAI_VE_FILE', 'Chưa vẽ file', this)">Chưa vẽ file</button>
   <button class="btn-hanh-dong phu" onclick="boChonTatCaDon()">Bỏ chọn</button>
 </div>
 
-<script src="/js/icons.js?v=20260823b"></script>
-<script src="/js/api.js?v=20260824a"></script>
+<script src="/js/icons.js?v=20260823c"></script>
+<script src="/js/api.js?v=20260824d"></script>
 <script>
 const NHAN_CANH_BAO = { VANG: 'Vàng · 3 ngày', CAM: 'Cam · 5 ngày', DO: 'Đỏ · 7 ngày' };
 
-// Danh sách ĐẦY ĐỦ 12 trạng thái — dùng riêng cho ô "Chuyển đến trạng thái" (chọn tự do, không
-// kiểm tra trạng thái hiện tại). PHẢI khớp với DANH_SACH_TRANG_THAI_BAO_CAO trong
+// Danh sách ĐẦY ĐỦ 10 giá trị TINH_TRANG — dùng riêng cho ô "Chuyển đến trạng thái" (chọn tự do,
+// không kiểm tra trạng thái hiện tại). PHẢI khớp với DANH_SACH_TRANG_THAI_BAO_CAO trong
 // data/pipelineTinhTrang.js — sửa 1 chỗ thì nhớ sửa chỗ kia.
+// Cập nhật 24/08/2026 (theo Prompt_Ver_24.docx) — thay hoàn toàn hệ trạng thái B1.1-B5.2 cũ bằng
+// tên gọi thuần Việt, và tách phôi/vẽ file ra 2 cột riêng (không còn nằm trong danh sách này).
 const DANH_SACH_TRANG_THAI_DAY_DU = [
-  'B0_Chờ xác nhận', 'B1_Đã in', 'B2_Đã lấy phôi', 'B3_Đã đủ Phôi và File Vẽ',
-  'B4_Đang sản xuất', 'B5_Đã sản xuất', 'SHIPPED_Đã gửi vận chuyển',
-  'IN TRAINSIT_Tracking đã hoạt động', 'DELIVERED_Đã giao hàng đến khách',
-  'CANCELLED_Đã hủy đơn', 'REFUNDED_Hoàn đơn', 'ĐƠN LỖI CẦN LÀM LẠI',
+  'Chưa xác nhận', 'Đã xác nhận',
+  'ĐÃ SẴN SÀNG CHẠY MÁY',
+  'Đã sản xuất', 'LỖI SẢN XUẤT CẦN LÀM LẠI',
+  'Đã đóng gói',
+  'IN TRANSIT_Tracking đã hoạt động',
+  'DELIVERED_Đã giao đến khách', 'CANCELLED_Đã hủy', 'REFUNDED_Hoàn đơn',
 ];
 
 let danhSachHienTai = [];
@@ -59,7 +90,19 @@ let donDaChonSet = new Set();
   renderNav(user, 'orders');
 
   document.getElementById('loc-trang-thai').onchange = () => { boChonTatCaDon(); taiDon(); };
+  document.getElementById('loc-phoi').onchange = () => { boChonTatCaDon(); taiDon(); };
+  document.getElementById('loc-ve-file').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-kh').oninput = debounce(() => { boChonTatCaDon(); taiDon(); }, 400);
+  document.getElementById('loc-tu-ngay').onchange = () => {
+    const denNgay = document.getElementById('loc-den-ngay');
+    if (document.getElementById('loc-tu-ngay').value && !denNgay.value) denNgay.value = ngayHomNayYYYYMMDD();
+    boChonTatCaDon(); taiDon();
+  };
+  document.getElementById('loc-den-ngay').onchange = () => { boChonTatCaDon(); taiDon(); };
+
+  document.getElementById('btn-in-phoi-ao').innerHTML = icon('printer') + ' IN DANH SÁCH PHÔI';
+  document.getElementById('btn-in-don-ao').innerHTML = icon('printer') + ' IN ĐƠN';
+  document.getElementById('btn-in-tracking').innerHTML = icon('printer') + ' IN DANH SÁCH ĐÃ SẢN XUẤT';
 
   document.getElementById('trang-thai-dich').innerHTML = '<option value="">Chuyển đến trạng thái...</option>' +
     DANH_SACH_TRANG_THAI_DAY_DU.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
@@ -68,6 +111,13 @@ let donDaChonSet = new Set();
 })();
 
 function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+
+function ngayHomNayYYYYMMDD() {
+  const d = new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
 
 function capNhatBoLocTrangThai(list) {
   const sel = document.getElementById('loc-trang-thai');
@@ -83,10 +133,18 @@ async function taiDon() {
   el.innerHTML = skeletonList(6);
 
   const trangThai = document.getElementById('loc-trang-thai').value;
+  const trangThaiPhoi = document.getElementById('loc-phoi').value;
+  const trangThaiVeFile = document.getElementById('loc-ve-file').value;
   const kh = document.getElementById('loc-kh').value;
+  const tuNgay = document.getElementById('loc-tu-ngay').value;
+  const denNgay = document.getElementById('loc-den-ngay').value;
   const qs = new URLSearchParams();
   if (trangThai) qs.set('trangThai', trangThai);
+  if (trangThaiPhoi) qs.set('trangThaiPhoi', trangThaiPhoi);
+  if (trangThaiVeFile) qs.set('trangThaiVeFile', trangThaiVeFile);
   if (kh) qs.set('kh', kh);
+  if (tuNgay) qs.set('tuNgay', tuNgay);
+  if (denNgay) qs.set('denNgay', denNgay);
 
   let list;
   try {
@@ -98,7 +156,7 @@ async function taiDon() {
 
   danhSachHienTai = list;
 
-  if (!trangThai && !kh) capNhatBoLocTrangThai(list);
+  if (!trangThai && !trangThaiPhoi && !trangThaiVeFile && !kh && !tuNgay && !denNgay) capNhatBoLocTrangThai(list);
 
   renderDanhSachDon();
 }
@@ -106,7 +164,7 @@ async function taiDon() {
 function renderDanhSachDon() {
   const el = document.getElementById('danh-sach-don');
 
-  if (danhSachHienTai.length === 0) { el.innerHTML = '<p>Không có đơn nào khớp bộ lọc.</p>'; capNhatThanhHanhDong(); return; }
+  if (danhSachHienTai.length === 0) { el.innerHTML = `<div class="trang-thai-rong">${icon('package')}<p>Không có đơn nào khớp bộ lọc.</p></div>`; capNhatThanhHanhDong(); return; }
 
   el.innerHTML = danhSachHienTai.map(o => {
     const daChon = donDaChonSet.has(o.STT_Key);
@@ -126,6 +184,9 @@ function renderDanhSachDon() {
         <div class="meta">Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgay(o.NGAY_LEN_DON) : '—')}</div>
         <div class="badge-row">
           <span class="badge ${lopTrangThai(o.TINH_TRANG)}">${escapeHtml(o.TINH_TRANG || '')}</span>
+          ${['Chưa xác nhận', 'Đã xác nhận'].includes(o.TINH_TRANG) ? `
+            <span class="badge ${lopTrangThai(o.TRANG_THAI_PHOI)}">${escapeHtml(o.TRANG_THAI_PHOI || '')}</span>
+            <span class="badge ${lopTrangThai(o.TRANG_THAI_VE_FILE)}">${escapeHtml(o.TRANG_THAI_VE_FILE || '')}</span>` : ''}
           ${o.CanhBao ? `
             <span class="badge badge-canh-bao ${o.CanhBao.toLowerCase()}">
               ${icon('alert')} ${NHAN_CANH_BAO[o.CanhBao] || o.CanhBao}
@@ -176,6 +237,36 @@ function boChonTatCaDon() {
   renderDanhSachDon();
 }
 
+async function apDungNhanh(cot, trangThaiMoi, nut) {
+  const soLuong = donDaChonSet.size;
+  if (!confirm(`Đánh dấu ${soLuong} đơn đã chọn thành "${trangThaiMoi}"?`)) return;
+
+  const nhanGoc = nut.innerHTML;
+  document.querySelectorAll('.nhanh-phoi-ve-file, #nut-ap-dung').forEach(b => b.disabled = true);
+  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Đang xử lý...';
+
+  try {
+    const ketQua = await apiFetch('/orders/chuyen-trang-thai-hang-loat', {
+      method: 'POST',
+      body: JSON.stringify({ sttKeys: Array.from(donDaChonSet), cot, trangThaiMoi }),
+    });
+
+    let thongBao = `Đã đánh dấu ${ketQua.thanhCong.length}/${soLuong} đơn thành "${trangThaiMoi}".`;
+    if (ketQua.loi.length > 0) {
+      thongBao += `\n\nKhông đánh dấu được ${ketQua.loi.length} đơn:\n` +
+        ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
+    }
+    alert(thongBao);
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
+  } finally {
+    document.querySelectorAll('.nhanh-phoi-ve-file, #nut-ap-dung').forEach(b => b.disabled = false);
+    nut.innerHTML = nhanGoc;
+    donDaChonSet.clear();
+    await taiDon();
+  }
+}
+
 async function apDungChuyenTrangThai() {
   const trangThaiMoi = document.getElementById('trang-thai-dich').value;
   if (!trangThaiMoi) { alert('Hãy chọn trạng thái muốn chuyển tới'); return; }
@@ -207,6 +298,63 @@ async function apDungChuyenTrangThai() {
   nutApDung.textContent = 'Áp dụng';
   donDaChonSet.clear();
   await taiDon();
+}
+
+// In nhanh theo ĐÚNG bộ lọc trạng thái + ô tìm kiếm đang áp dụng trên trang này (không ép về
+// đúng trạng thái B1/B2/B5 của mẫu) — 'mau' chỉ ép cứng ĐỊNH DẠNG cột hiển thị trong file PDF.
+async function inNhanh(mau, nut) {
+  const nhanGoc = nut.innerHTML;
+  nut.disabled = true;
+  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 18 }) + ' Đang tạo file...';
+
+  const qs = new URLSearchParams();
+  qs.set('mau', mau);
+  const trangThai = document.getElementById('loc-trang-thai').value;
+  const tuKhoa = document.getElementById('loc-kh').value;
+  const tuNgay = document.getElementById('loc-tu-ngay').value;
+  const denNgay = document.getElementById('loc-den-ngay').value;
+  if (tuKhoa) qs.set('tuKhoa', tuKhoa);
+  if (tuNgay) qs.set('tuNgay', tuNgay);
+  if (denNgay) qs.set('denNgay', denNgay);
+
+  // 'phoi_ao_gop' (IN DANH SÁCH PHÔI) và 'don_can_in' (IN ĐƠN) lọc theo cột TRANG_THAI_PHOI (tách
+  // riêng khỏi TINH_TRANG từ 24/08/2026) — ép cứng đúng giá trị cần cho từng mẫu, KHÔNG dùng ô lọc
+  // trạng thái chung ở trên (ô đó chỉ lọc được TINH_TRANG, không lọc được cột phôi).
+  if (mau === 'phoi_ao_gop') qs.set('trangThaiPhoi', 'Chưa lấy phôi');
+  else if (mau === 'don_can_in') qs.set('trangThaiPhoi', 'Đã lấy phôi');
+  else {
+    // 'tracking' và các trường hợp khác: tôn trọng đúng bộ lọc đang áp dụng trên trang (kể cả 2 ô
+    // lọc phôi/vẽ file mới), không ép cứng gì thêm.
+    if (trangThai) qs.set('trangThai', trangThai);
+    const trangThaiPhoi = document.getElementById('loc-phoi').value;
+    const trangThaiVeFile = document.getElementById('loc-ve-file').value;
+    if (trangThaiPhoi) qs.set('trangThaiPhoi', trangThaiPhoi);
+    if (trangThaiVeFile) qs.set('trangThaiVeFile', trangThaiVeFile);
+  }
+
+  try {
+    const res = await fetch('/api/reports/pdf?' + qs.toString(), { credentials: 'include' });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Không xuất được file');
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const contentDisposition = res.headers.get('Content-Disposition') || '';
+    const khopTen = contentDisposition.match(/filename="([^"]+)"/);
+    a.download = khopTen ? khopTen[1] : 'bao-cao.pdf';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
+  } finally {
+    nut.disabled = false;
+    nut.innerHTML = nhanGoc;
+  }
 }
 </script>
 </body>
