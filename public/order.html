@@ -153,8 +153,8 @@ function renderKhuVucThaoTac(don) {
         <option value="Chưa lấy phôi" ${don.TRANG_THAI_PHOI === 'Chưa lấy phôi' ? 'selected' : ''}>Chưa lấy phôi</option>
         <option value="Đã lấy phôi" ${don.TRANG_THAI_PHOI === 'Đã lấy phôi' ? 'selected' : ''}>Đã lấy phôi</option>
       </select>
-      <label for="sua-ve-file" style="font-size:0.85rem;font-weight:400">Vẽ file</label>
-      <select id="sua-ve-file" onchange="canhBaoToHopSai()">
+      <label for="sua-ve-file" style="font-size:0.85rem;font-weight:400">Vẽ file ${user.vaiTro === 'nguoi_lay_phoi' ? '<span style="color:var(--color-text-faint)">(chỉ ve_file/admin)</span>' : ''}</label>
+      <select id="sua-ve-file" onchange="canhBaoToHopSai()" ${user.vaiTro === 'nguoi_lay_phoi' ? 'disabled title="Vai trò Người lấy phôi không được thay đổi trạng thái vẽ file"' : ''}>
         <option value="Chưa vẽ file" ${don.TRANG_THAI_VE_FILE === 'Chưa vẽ file' ? 'selected' : ''}>Chưa vẽ file</option>
         <option value="Đã vẽ file" ${don.TRANG_THAI_VE_FILE === 'Đã vẽ file' ? 'selected' : ''}>Đã vẽ file</option>
       </select>

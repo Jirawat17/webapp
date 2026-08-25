@@ -49,6 +49,13 @@
   </form>
 
   <div id="khu-thong-ke-hoan" style="margin-top:20px"></div>
+
+  <hr style="margin:32px 0; border:none; border-top:1px solid var(--color-border)">
+
+  <h2>Soát đơn lệch dữ liệu</h2>
+  <p>Tìm các đơn có tổ hợp <strong>Phôi / Vẽ file / Trạng thái chung</strong> không nhất quán — ví dụ: phôi+file đều xong nhưng trạng thái vẫn "Đã xác nhận", hoặc ngược lại. Nên chạy định kỳ sau khi có thao tác hàng loạt hoặc migrate dữ liệu.</p>
+  <button type="button" class="btn-hanh-dong phu" id="btn-soat-lech" style="margin-bottom:16px"></button>
+  <div id="khu-soat-lech"></div>
 </div>
 
 <script src="/js/icons.js?v=20260823c"></script>
@@ -74,6 +81,9 @@
   document.getElementById('hoan-tu-ngay').addEventListener('change', xemThongKeHoanDon);
   document.getElementById('hoan-den-ngay').addEventListener('change', xemThongKeHoanDon);
   await xemThongKeHoanDon();
+
+  document.getElementById('btn-soat-lech').innerHTML = icon('alert') + ' Kiểm tra ngay';
+  document.getElementById('btn-soat-lech').onclick = soatDonLech;
 })();
 
 function ngayHomNayYYYYMMDD() {
@@ -193,6 +203,45 @@ async function xemThongKeHoanDon() {
           </tr>`).join('')}</tbody>
         </table>
       </div>
+    </div>`;
+}async function soatDonLech() {
+  const khu = document.getElementById('khu-soat-lech');
+  const nut = document.getElementById('btn-soat-lech');
+  const nhanGoc = nut.innerHTML;
+  nut.disabled = true;
+  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Đang kiểm tra...';
+  khu.innerHTML = spinnerInline('Đang quét toàn bộ đơn hàng...');
+
+  let ketQua;
+  try {
+    ketQua = await apiFetch('/reports/don-lech-du-lieu');
+  } catch (e) {
+    khu.innerHTML = `<p>${icon('alert')} ${escapeHtml(e.message)}</p>`;
+    nut.disabled = false; nut.innerHTML = nhanGoc;
+    return;
+  }
+  nut.disabled = false; nut.innerHTML = nhanGoc;
+
+  if (ketQua.soLech === 0) {
+    khu.innerHTML = `<div class="trang-thai-rong">${icon('check')}<p>Tốt — không có đơn nào lệch dữ liệu trong tổng số ${ketQua.tong} đơn.</p></div>`;
+    return;
+  }
+
+  khu.innerHTML = `
+    <p style="color:var(--color-danger-text);font-weight:600">${icon('alert')} Phát hiện <strong>${ketQua.soLech}</strong> đơn lệch dữ liệu trong tổng số ${ketQua.tong} đơn. Hãy sửa thủ công từng đơn qua trang chi tiết đơn.</p>
+    <div class="bang-cuon-ngang">
+      <table class="bang-xem-truoc">
+        <thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Loại</th><th>TINH_TRANG</th><th>Phôi</th><th>Vẽ file</th><th>Mô tả lỗi</th></tr></thead>
+        <tbody>${ketQua.donLech.map(d => `<tr>
+          <td><a href="/order.html?stt=${encodeURIComponent(d.sttKey)}" target="_blank">${escapeHtml(d.sttKey)}</a></td>
+          <td>${escapeHtml(d.khachHang)}</td>
+          <td>${escapeHtml(d.loai)}</td>
+          <td><span class="badge ${lopTrangThai(d.tinhTrang)}">${escapeHtml(d.tinhTrang)}</span></td>
+          <td><span class="badge ${lopTrangThai(d.phoi)}">${escapeHtml(d.phoi || '(trống)')}</span></td>
+          <td><span class="badge ${lopTrangThai(d.veFile)}">${escapeHtml(d.veFile || '(trống)')}</span></td>
+          <td style="color:var(--color-danger-text);font-size:0.85rem">${d.loi.map(l => escapeHtml(l)).join('<br>')}</td>
+        </tr>`).join('')}</tbody>
+      </table>
     </div>`;
 }
 </script>

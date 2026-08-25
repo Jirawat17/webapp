@@ -153,6 +153,15 @@ function dinhDangNgay(giaTri) {
   return d ? d.toLocaleDateString('vi-VN') : '';
 }
 
+// Phiên bản ngắn DD/MM — dùng trên thẻ đơn ở trang Đơn hàng để tiết kiệm không gian
+function dinhDangNgayNgan(giaTri) {
+  const d = parseNgay(giaTri);
+  if (!d) return '';
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  return `${dd}/${mm}`;
+}
+
 // Hiệu ứng gợn sóng khi bấm các nút chính — áp dụng tự động cho MỌI trang (chỉ cần nạp api.js),
 // không cần sửa từng trang riêng. Chỉ dùng transform/opacity, tự dọn dẹp phần tử sau khi chạy xong,
 // tôn trọng cài đặt "giảm chuyển động" của người dùng.
