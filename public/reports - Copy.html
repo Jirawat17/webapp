@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Báo cáo — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=20260825a">
-<script src="/js/theme.js?v=20260825a"></script>
+<link rel="stylesheet" href="/css/style.css?v=20260824l">
+<script src="/js/theme.js?v=20260824a"></script>
 </head>
 <body>
 <div id="nav"></div>
@@ -51,8 +51,8 @@
   <div id="khu-thong-ke-hoan" style="margin-top:20px"></div>
 </div>
 
-<script src="/js/icons.js?v=20260825a"></script>
-<script src="/js/api.js?v=20260825a"></script>
+<script src="/js/icons.js?v=20260823c"></script>
+<script src="/js/api.js?v=20260824d"></script>
 <script>
 (async () => {
   const user = await requireLoginOrRedirect();
@@ -181,15 +181,14 @@ async function xemThongKeHoanDon() {
       <h3>Chi tiết (kèm ghi chú nguyên nhân)</h3>
       <div class="bang-cuon-ngang">
         <table class="bang-xem-truoc">
-          <thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Loại</th><th>Kích thước</th><th>Màu sắc</th><th>Ngày lên đơn</th><th>Người sản xuất</th><th>Ghi chú / Nguyên nhân</th></tr></thead>
+          <thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Loại</th><th>Kích thước</th><th>Màu sắc</th><th>Ngày lên đơn</th><th>Ghi chú / Nguyên nhân</th></tr></thead>
           <tbody>${ketQua.chiTiet.map(c => `<tr>
-            <td><a href="/order.html?stt=${encodeURIComponent(c.sttKey)}">${escapeHtml(c.sttKey)}</a></td>
+            <td>${escapeHtml(c.sttKey)}</td>
             <td>${escapeHtml(c.khachHang)}</td>
             <td>${escapeHtml(c.loai)}</td>
             <td>${escapeHtml(c.kichThuoc)}</td>
             <td>${escapeHtml(c.mauSac)}</td>
             <td>${escapeHtml(c.ngayLenDon)}</td>
-            <td style="color:${c.nguoiSanXuat === 'Không xác định do đã sửa trên GGSheet không qua app' ? 'var(--color-text-faint)' : 'inherit'}">${escapeHtml(c.nguoiSanXuat)}</td>
             <td style="color:${c.ghiChu === '(Không có ghi chú)' ? 'var(--color-text-faint)' : 'inherit'}">${escapeHtml(c.ghiChu)}</td>
           </tr>`).join('')}</tbody>
         </table>

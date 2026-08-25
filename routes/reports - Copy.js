@@ -189,13 +189,6 @@ router.get('/thong-ke-loi', async (req, res) => {
 // Thống kê đơn HOÀN (REFUNDED_Hoàn đơn) — danh sách từ trạng thái HIỆN TẠI (khác với lỗi sản xuất:
 // REFUNDED là trạng thái CUỐI CÙNG, đơn giữ nguyên ở đó mãi nên không cần tra lịch sử). Tổng hợp
 // theo khách hàng/loại sản phẩm/tuần, kèm GHI_CHU của từng đơn để xem nguyên nhân hoàn.
-//
-// "Người sản xuất": đơn hàng không lưu trực tiếp trường này — tra LỊCH SỬ (LichSuHoatDong) tìm lần
-// GẦN NHẤT đơn được chuyển sang "Đã sản xuất" (đơn có thể lỗi rồi sản xuất lại nhiều lần, lấy lần
-// cuối cùng). Gồm cả tên cũ của trạng thái này (xem data/pipelineTinhTrang.js) để không bỏ sót lịch
-// sử ghi từ trước khi đổi pipeline. Không tìm được thì hiển thị "Không xác định".
-const TINH_TRANG_SAN_XUAT = ['Đã sản xuất', 'B4.1_Đơn đã sản xuất', 'B5.2_Đơn chưa đóng gói'];
-
 router.get('/thong-ke-hoan-don', async (req, res) => {
   const { tuNgay, denNgay } = req.query;
   const { rows } = await orderService.getAll();
@@ -210,13 +203,6 @@ router.get('/thong-ke-hoan-don', async (req, res) => {
     if (denNgay && ngay > parseNgay(denNgay)) return false;
     return true;
   });
-
-  const lanSanXuat = await layLichSuChuyenSangTrangThai(TINH_TRANG_SAN_XUAT);
-  const nguoiSanXuatTheoDon = {};
-  for (const l of lanSanXuat) {
-    const hienTai = nguoiSanXuatTheoDon[l.sttKey];
-    if (!hienTai || new Date(l.thoiGian) > new Date(hienTai.thoiGian)) nguoiSanXuatTheoDon[l.sttKey] = l;
-  }
 
   const theoKhachHang = {}, theoLoai = {}, theoTuan = {};
   const chiTiet = [];
@@ -242,7 +228,6 @@ router.get('/thong-ke-hoan-don', async (req, res) => {
       mauSac: don.MAU_SAC || '',
       ngayLenDon: dinhDangNgay(don.NGAY_LEN_DON),
       ghiChu: don.GHI_CHU || '(Không có ghi chú)',
-      nguoiSanXuat: (nguoiSanXuatTheoDon[don.STT_Key] && nguoiSanXuatTheoDon[don.STT_Key].nguoiDung) || 'Không xác định do đã sửa trên GGSheet không qua app',
     });
   }
 
