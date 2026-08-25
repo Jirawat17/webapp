@@ -44,17 +44,33 @@ function dinhDangNgay(giaTri) {
   return `${dd}/${mm}/${d.getFullYear()}`;
 }
 
-// Ngày+giờ hiện tại theo ĐÚNG múi giờ Việt Nam (GMT+7) — dùng Intl.DateTimeFormat với timeZone
-// tường minh thay vì new Date().getHours() (vốn đọc theo múi giờ HỆ THỐNG máy chủ, có thể là UTC
-// hoặc múi giờ khác tuỳ VPS cấu hình, không chắc chắn là giờ Việt Nam).
+// Ngày+giờ ngắn gọn theo đúng yêu cầu: "24-08 23:48:34" (DD-MM HH:mm:ss) — không có năm, đủ ngắn
+// để đặt trong dòng log/lịch sử mà không chiếm quá nhiều chỗ. Dùng cho timeline lịch sử thay đổi,
+// cột "Thời gian" trong bảng báo cáo. Nhận vào ISO string (từ Sheet) hoặc Date object.
+function dinhDangNgayGioNgan(d) {
+  const obj = d instanceof Date ? d : new Date(d);
+  if (isNaN(obj)) return '';
+  const phan = new Intl.DateTimeFormat('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    day: '2-digit', month: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+  }).formatToParts(obj);
+  const lay = (type) => phan.find(p => p.type === type)?.value || '00';
+  return `${lay('day')}-${lay('month')} ${lay('hour')}:${lay('minute')}:${lay('second')}`;
+}
+
+// Ngày+giờ đầy đủ cho footer báo cáo ("Người thực hiện... lúc 23:48 24/08/2026") — vẫn giữ đủ
+// năm để truy vết báo cáo cũ.
 function dinhDangNgayGioVN(d = new Date()) {
+  const obj = d instanceof Date ? d : new Date(d);
+  if (isNaN(obj)) return '';
   const phan = new Intl.DateTimeFormat('vi-VN', {
     timeZone: 'Asia/Ho_Chi_Minh',
     day: '2-digit', month: '2-digit', year: 'numeric',
     hour: '2-digit', minute: '2-digit', hour12: false,
-  }).formatToParts(d);
+  }).formatToParts(obj);
   const lay = (type) => phan.find(p => p.type === type)?.value || '';
   return `${lay('day')}/${lay('month')}/${lay('year')} ${lay('hour')}:${lay('minute')}`;
 }
 
-module.exports = { parseNgay, dinhDangNgay, dinhDangNgayGioVN };
+module.exports = { parseNgay, dinhDangNgay, dinhDangNgayGioVN, dinhDangNgayGioNgan };

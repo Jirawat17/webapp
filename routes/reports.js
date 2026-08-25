@@ -7,7 +7,7 @@ const orderService = require('../services/orderService');
 const { layDanhSachKhachHang } = require('../services/khachHangService');
 const { layLichSuChuyenSangTrangThai } = require('../services/logService');
 const { readTab } = require('../services/sheetsService');
-const { parseNgay, dinhDangNgay, dinhDangNgayGioVN } = require('../services/dateUtils');
+const { parseNgay, dinhDangNgay, dinhDangNgayGioVN, dinhDangNgayGioNgan } = require('../services/dateUtils');
 const { taoQRCodeBuffer } = require('../services/qrService');
 const { taiAnhTuLinkDrive } = require('../services/driveService');
 const { DANH_SACH_TRANG_THAI_BAO_CAO } = require('../data/pipelineTinhTrang');
@@ -166,7 +166,7 @@ router.get('/thong-ke-loi', async (req, res) => {
 
     chiTiet.push({
       sttKey: l.sttKey, loai, team, nguoiDung: l.nguoiDung || '(Không rõ)',
-      thoiGian: dinhDangNgayGioVN(d), khachHang: don ? (don.MA_KHACH_HANG || '') : '',
+      thoiGian: dinhDangNgayGioNgan(d), khachHang: don ? (don.MA_KHACH_HANG || '') : '',
     });
   }
 

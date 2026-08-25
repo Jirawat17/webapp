@@ -246,7 +246,7 @@ body.trang-dang-nhap {
   border: 1px solid var(--color-border); transition: border-color 0.15s, box-shadow 0.2s, transform 0.2s, background 0.15s;
   overflow: hidden;
 }
-.order-card:hover { border-color: var(--color-primary); box-shadow: var(--shadow-lg); transform: translateY(-3px); }
+.order-card:hover { border-color: var(--color-primary); box-shadow: 0 4px 20px rgba(190,18,60,0.10); transform: translateY(-2px); }
 .order-card.da-chon { border-color: var(--color-primary); background: var(--color-primary-light); }
 .order-checkbox { width: 22px; height: 22px; flex-shrink: 0; margin-top: 2px; cursor: pointer; accent-color: var(--color-primary); }
 .order-card img { width: 72px; height: 72px; object-fit: cover; border-radius: var(--radius-sm); background: var(--color-bg); flex-shrink: 0; transition: transform 0.25s ease; }
@@ -280,8 +280,9 @@ body.trang-dang-nhap {
 /* Badge trạng thái + cảnh báo dùng chung token ngữ nghĩa */
 .badge {
   display: inline-flex; align-items: center; gap: 4px;
-  padding: 5px 11px; border-radius: var(--radius-full); font-size: 12.5px; font-weight: 700;
-  background: var(--color-neutral-bg); color: var(--color-neutral-text); white-space: nowrap;
+  padding: 3px 9px; border-radius: 20px; font-size: 0.78rem;
+  font-weight: 600; white-space: nowrap; letter-spacing: 0.01em;
+  background: var(--color-neutral-bg); color: var(--color-neutral-text);
 }
 .trang-thai-info    { background: var(--color-info-bg);    color: var(--color-info-text); }
 .trang-thai-warning { background: var(--color-warning-bg); color: var(--color-warning-text); }
@@ -337,9 +338,13 @@ body.trang-dang-nhap {
 .upload-box label { font-weight: 700; font-size: 0.9rem; }
 .upload-box input[type="file"] { padding: var(--space-2) 0; font-family: inherit; }
 
-.timeline { display: flex; flex-direction: column; gap: var(--space-2); }
-.timeline-item { background: var(--color-surface); padding: 10px 14px; border-radius: var(--radius-sm); border-left: 3px solid var(--color-primary); box-shadow: var(--shadow-sm); }
-.timeline-time { font-size: 0.78rem; color: var(--color-text-faint); }
+.timeline { display: flex; flex-direction: column; gap: 0; position: relative; padding-left: 20px; }
+.timeline::before { content: ''; position: absolute; left: 7px; top: 8px; bottom: 8px; width: 2px; background: var(--color-border); border-radius: 2px; }
+.timeline-item { position: relative; background: var(--color-surface); padding: 10px 14px; border-radius: var(--radius-md); border: 1px solid var(--color-border); box-shadow: var(--shadow-sm); margin-bottom: var(--space-2); display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-2); }
+.timeline-item::before { content: ''; position: absolute; left: -17px; top: 14px; width: 8px; height: 8px; border-radius: 50%; background: var(--color-primary); border: 2px solid var(--color-surface); box-shadow: 0 0 0 2px var(--color-primary); }
+.timeline-item:first-child::before { background: var(--color-primary-dark); box-shadow: 0 0 0 3px var(--color-primary-light), 0 0 0 5px var(--color-primary); }
+.timeline-info { flex: 1; min-width: 0; }
+.timeline-time { font-size: 0.78rem; color: var(--color-text-faint); white-space: nowrap; font-variant-numeric: tabular-nums; flex-shrink: 0; padding-top: 1px; }
 
 /* ============================================================
    QUÉT QR

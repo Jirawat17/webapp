@@ -23,6 +23,19 @@ const DANH_SACH_TINH_TRANG = [
   'Chưa xác nhận', 'Đã xác nhận', 'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đã sản xuất', 'LỖI SẢN XUẤT CẦN LÀM LẠI',
   'Đã đóng gói', 'IN TRANSIT_Tracking đã hoạt động', 'DELIVERED_Đã giao đến khách', 'CANCELLED_Đã hủy', 'REFUNDED_Hoàn đơn',
 ];
+
+// Format timestamp ngắn gọn "DD-MM HH:mm:ss" — nhất quán với backend dinhDangNgayGioNgan()
+// Không dùng toLocaleString('vi-VN') vì output phụ thuộc cài đặt trình duyệt và dài hơn cần thiết
+function tsDep(isoStr) {
+  if (!isoStr) return '';
+  const d = new Date(isoStr);
+  if (isNaN(d)) return isoStr; // fallback: hiện nguyên chuỗi gốc
+  const fmt = (n) => String(n).padStart(2, '0');
+  // Chuyển sang giờ GMT+7 Việt Nam
+  const vn = new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' }));
+  return `${fmt(vn.getDate())}-${fmt(vn.getMonth()+1)} ${fmt(vn.getHours())}:${fmt(vn.getMinutes())}:${fmt(vn.getSeconds())}`;
+}
+
 let user;
 
 (async () => {
@@ -80,7 +93,7 @@ async function taiChiTiet() {
           <tr><td>Người nhận</td><td>${escapeHtml(don.TEN || '')} ${don.SDT ? '· ' + escapeHtml(don.SDT) : ''}</td></tr>
           <tr><td>Địa chỉ giao hàng</td><td>${escapeHtml(dongDiaChi(don))}</td></tr>
           <tr><td>Ghi chú</td><td>${escapeHtml(don.GHI_CHU || '')}</td></tr>
-          <tr><td>Cập nhật lần cuối</td><td>${escapeHtml(don.NguoiCapNhatCuoi || '')}${don.ThoiGianCapNhatCuoi ? ' · ' + new Date(don.ThoiGianCapNhatCuoi).toLocaleString('vi-VN') : ''}</td></tr>
+          <tr><td>Cập nhật lần cuối</td><td>${escapeHtml(don.NguoiCapNhatCuoi || '')}${don.ThoiGianCapNhatCuoi ? ' · ' + tsDep(don.ThoiGianCapNhatCuoi) : ''}</td></tr>
         </table>
         <div id="khu-vuc-thao-tac"></div>
       </div>
@@ -90,8 +103,11 @@ async function taiChiTiet() {
         <div class="timeline">
           ${(don.lichSu || []).map(l => `
             <div class="timeline-item">
-              <div class="timeline-time">${new Date(l.ThoiGian).toLocaleString('vi-VN')}</div>
-              <div><strong>${escapeHtml(l.NguoiDung)}</strong> (${escapeHtml(NHAN_VAI_TRO[l.VaiTro] || l.VaiTro)}) — ${escapeHtml(l.HanhDong)}</div>
+              <div class="timeline-info">
+                <strong>${escapeHtml(l.NguoiDung)}</strong> <span style="font-size:0.85rem;color:var(--color-text-muted)">(${escapeHtml(NHAN_VAI_TRO[l.VaiTro] || l.VaiTro)})</span>
+                <div style="font-size:0.85rem;color:var(--color-text-muted);margin-top:2px">${escapeHtml(l.HanhDong)}</div>
+              </div>
+              <div class="timeline-time">${tsDep(l.ThoiGian)}</div>
             </div>`).join('') || '<p>Chưa có lịch sử.</p>'}
         </div>
       </div>
