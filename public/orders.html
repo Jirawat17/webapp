@@ -164,6 +164,13 @@ async function taiDon() {
 function renderDanhSachDon() {
   const el = document.getElementById('danh-sach-don');
 
+  // Ngày rút gọn D/M (không năm) — chỉ dùng riêng cho thẻ đơn ở Danh sách đơn hàng, không đụng đến
+  // dinhDangNgay() dùng chung (có năm) ở các trang khác.
+  function dinhDangNgayNgan(giaTri) {
+    const d = parseNgay(giaTri);
+    return d ? `${d.getDate()}/${d.getMonth() + 1}` : '';
+  }
+
   if (danhSachHienTai.length === 0) { el.innerHTML = `<div class="trang-thai-rong">${icon('package')}<p>Không có đơn nào khớp bộ lọc.</p></div>`; capNhatThanhHanhDong(); return; }
 
   el.innerHTML = danhSachHienTai.map(o => {
@@ -180,8 +187,8 @@ function renderDanhSachDon() {
         : ''}
       <div class="thong-tin">
         <strong>${escapeHtml(o.TieuDeSanPham || o.STT_Key)}</strong>
-        <div class="meta">${escapeHtml(o.TenKhachHang || '')} · SL: ${escapeHtml(o.SO_LUONG || '')}</div>
-        <div class="meta">Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgay(o.NGAY_LEN_DON) : '—')}</div>
+        <div class="meta">${escapeHtml(o.TenKhachHang || '')} · SL: <strong>${escapeHtml(o.SO_LUONG || '')}</strong></div>
+        <div class="meta">Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgayNgan(o.NGAY_LEN_DON) : '—')}</div>
         <div class="badge-row">
           <span class="badge ${lopTrangThai(o.TINH_TRANG)}">${escapeHtml(o.TINH_TRANG || '')}</span>
           ${['Chưa xác nhận', 'Đã xác nhận'].includes(o.TINH_TRANG) ? `
