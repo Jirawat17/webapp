@@ -81,10 +81,6 @@ const DANH_SACH_TRANG_THAI_DAY_DU = [
   'DELIVERED_Đã giao đến khách', 'CANCELLED_Đã hủy', 'REFUNDED_Hoàn đơn',
 ];
 
-// "ĐÃ SẴN SÀNG CHẠY MÁY" bị loại khỏi dropdown bulk-set — trạng thái này chỉ được hệ thống tự tính
-// (khi cả phôi lẫn file vừa xong), không được phép set tay hàng loạt để tránh phá vỡ logic tự động.
-const DANH_SACH_TRANG_THAI_BULK_SET = DANH_SACH_TRANG_THAI_DAY_DU.filter(t => t !== 'ĐÃ SẴN SÀNG CHẠY MÁY');
-
 let danhSachHienTai = [];
 let donDaChonSet = new Set();
 
@@ -109,7 +105,7 @@ let donDaChonSet = new Set();
   document.getElementById('btn-in-tracking').innerHTML = icon('printer') + ' IN DANH SÁCH ĐÃ SẢN XUẤT';
 
   document.getElementById('trang-thai-dich').innerHTML = '<option value="">Chuyển đến trạng thái...</option>' +
-    DANH_SACH_TRANG_THAI_BULK_SET.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+    DANH_SACH_TRANG_THAI_DAY_DU.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
 
   taiDon();
 })();
@@ -184,8 +180,8 @@ function renderDanhSachDon() {
         : ''}
       <div class="thong-tin">
         <strong>${escapeHtml(o.TieuDeSanPham || o.STT_Key)}</strong>
-        <div class="meta">${escapeHtml(o.TenKhachHang || '')} · SL: <strong>${escapeHtml(o.SO_LUONG || '')}</strong></div>
-        <div class="meta">Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgayNgan(o.NGAY_LEN_DON) : '—')}</div>
+        <div class="meta">${escapeHtml(o.TenKhachHang || '')} · SL: ${escapeHtml(o.SO_LUONG || '')}</div>
+        <div class="meta">Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgay(o.NGAY_LEN_DON) : '—')}</div>
         <div class="badge-row">
           <span class="badge ${lopTrangThai(o.TINH_TRANG)}">${escapeHtml(o.TINH_TRANG || '')}</span>
           ${['Chưa xác nhận', 'Đã xác nhận'].includes(o.TINH_TRANG) ? `

@@ -6,7 +6,6 @@ const scenarioService = require('../services/scenarioService');
 const { layBanDoTenKhachHang } = require('../services/khachHangService');
 const { ghiLog, layLichSuTheoDon, ghiNhatKyQuetHangLoat } = require('../services/logService');
 const { requireLogin } = require('../middleware/auth');
-const { TRANG_THAI_KET_THUC } = require('../data/pipelineTinhTrang');
 
 router.use(requireLogin);
 
@@ -75,14 +74,6 @@ router.post('/kich-ban/:scenarioId/quet', async (req, res) => {
     return res.status(404).json({ error: 'Không tìm thấy đơn hàng với mã: ' + sttKey });
   }
 
-  // Van an toàn chung: chặn MỌI kịch bản nếu đơn đã ở trạng thái kết thúc (CANCELLED/REFUNDED/
-  // DELIVERED). Mỗi kịch bản tự kiểm tra requireStatus theo cột của nó nhưng không quan tâm
-  // TINH_TRANG — van này bổ sung lớp chặn dùng chung để tránh thao tác nhầm trên đơn đã đóng.
-  if (TRANG_THAI_KET_THUC.includes(row.TINH_TRANG)) {
-    ghiKhongCho(ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_LOI', sttKey, chiTiet: { scenario: scenario.label, loi: 'Đơn đã kết thúc: ' + row.TINH_TRANG } }));
-    return res.status(400).json({ error: `Đơn đang ở "${row.TINH_TRANG}" — không thể thao tác trên đơn đã kết thúc.` });
-  }
-
   // Kịch bản thao tác trên ĐÚNG cột đã khai báo (Cot trong CauHinhKichBan) — mặc định TINH_TRANG
   // nếu không khai báo, giữ tương thích ngược với kịch bản cũ.
   const giaTriHienTai = row[scenario.column];
@@ -108,7 +99,7 @@ router.post('/kich-ban/:scenarioId/quet', async (req, res) => {
       [scenario.column]: scenario.setStatus,
       NguoiCapNhatCuoi: user.ten,
       ThoiGianCapNhatCuoi: new Date().toISOString(),
-    }, user);
+    });
   } catch (err) {
     // Đơn ĐÚNG trạng thái cột này yêu cầu, nhưng đổi xong sẽ xung đột với 1 trong 2 cột còn lại
     // (vd đơn đang "Chưa xác nhận" mà quét "lấy phôi" — TRANG_THAI_PHOI đúng "Chưa lấy phôi" nên
@@ -127,12 +118,6 @@ router.post('/kich-ban/:scenarioId/quet', async (req, res) => {
     nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey,
     trangThaiCu: giaTriHienTai, trangThaiMoi: scenario.setStatus, ketQua: 'THANH_CONG',
   }));
-  if (updated._tuDongDoiTinhTrang) {
-    ghiKhongCho(ghiLog({
-      nguoiDung: 'Hệ thống', vaiTro: 'system', hanhDong: 'TU_DONG_DOI_TINH_TRANG',
-      sttKey, chiTiet: { sang: updated.TINH_TRANG, lyDo: `Kích hoạt sau khi quét kịch bản "${scenario.label}" — phôi và vẽ file đều đã hoàn thành` },
-    }));
-  }
 
   res.json({ ok: true, don: await lamGiauDon(updated) });
 });
@@ -223,13 +208,6 @@ router.post('/kich-ban/:scenarioId/xac-nhan-hang-loat', async (req, res) => {
         ghiKhongCho(ghiNhatKyQuetHangLoat({ nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey, trangThaiCu: '', trangThaiMoi: '', ketQua: 'LOI_XAC_NHAN', ghiChu: 'Không tìm thấy khi xác nhận' }));
         continue;
       }
-      // Van an toàn: chặn đơn đã kết thúc — có thể trạng thái đổi thành CANCELLED/REFUNDED/DELIVERED
-      // giữa lúc quét (bước kiem-tra) và lúc xác nhận thật sự
-      if (TRANG_THAI_KET_THUC.includes(row.TINH_TRANG)) {
-        loi.push({ sttKey, lyDo: `Đơn đã kết thúc (${row.TINH_TRANG}) — không thể thao tác` });
-        ghiKhongCho(ghiNhatKyQuetHangLoat({ nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey, trangThaiCu: row.TINH_TRANG, trangThaiMoi: '', ketQua: 'LOI_XAC_NHAN', ghiChu: 'Đơn đã kết thúc khi xác nhận' }));
-        continue;
-      }
       if (scenario.requireStatus && giaTriHienTai !== scenario.requireStatus) {
         loi.push({ sttKey, lyDo: `Trạng thái đã đổi thành '${giaTriHienTai}' trước khi kịp xác nhận` });
         ghiKhongCho(ghiNhatKyQuetHangLoat({ nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey, trangThaiCu: giaTriHienTai, trangThaiMoi: '', ketQua: 'LOI_XAC_NHAN', ghiChu: 'Trạng thái đã đổi trước khi xác nhận' }));
@@ -240,7 +218,7 @@ router.post('/kich-ban/:scenarioId/xac-nhan-hang-loat', async (req, res) => {
         [scenario.column]: scenario.setStatus,
         NguoiCapNhatCuoi: user.ten,
         ThoiGianCapNhatCuoi: new Date().toISOString(),
-      }, user);
+      });
 
       thanhCong.push(sttKey);
       ghiKhongCho(ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_KICH_BAN_HANG_LOAT', sttKey, chiTiet: { scenario: scenario.label, cot: scenario.column, tu: giaTriHienTai, sang: scenario.setStatus } }));

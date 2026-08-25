@@ -672,45 +672,4 @@ router.get('/pdf', async (req, res) => {
   doc.end();
 });
 
-// Soát đơn lệch dữ liệu — tìm những đơn mà tổ hợp 3 cột trạng thái không nhất quán nhau. Gồm 2 nhóm:
-//   1. Phôi + file đều xong nhưng TINH_TRANG chưa qua "ĐÃ SẴN SÀNG CHẠY MÁY" (và không phải nhánh
-//      rẽ LỖI/CANCELLED/REFUNDED) — thường xảy ra khi migrate cũ, bulk-set tay, hoặc bị lỗi network
-//      khi đang ghi.
-//   2. TINH_TRANG đã qua "ĐÃ SẴN SÀNG CHẠY MÁY" nhưng phôi/file chưa được đánh dấu xong — nên không
-//      thể xảy ra theo logic mới nhưng có thể có trong dữ liệu cũ.
-// Chỉ đọc, không ghi gì — dùng định kỳ để phát hiện lệch sớm.
-router.get('/don-lech-du-lieu', async (req, res) => {
-  const { rows } = await orderService.getAll({ fresh: true });
-  const { chiSoTinhTrang } = require('../data/pipelineTinhTrang');
-  const idxSanSang = chiSoTinhTrang('ĐÃ SẴN SÀNG CHẠY MÁY');
-  const NHANH_RE = ['LỖI SẢN XUẤT CẦN LÀM LẠI', 'CANCELLED_Đã hủy', 'REFUNDED_Hoàn đơn'];
-
-  const donLech = [];
-
-  for (const r of rows) {
-    const loi = [];
-    const phoiXong = r.TRANG_THAI_PHOI === 'Đã lấy phôi';
-    const fileXong = r.TRANG_THAI_VE_FILE === 'Đã vẽ file';
-    const idx = chiSoTinhTrang(r.TINH_TRANG);
-    const dauQua = idx !== null && idx >= idxSanSang;
-    const laNhanhRe = NHANH_RE.includes(r.TINH_TRANG);
-
-    // Nhóm 1: phôi+file xong nhưng TINH_TRANG chưa qua ngưỡng (và không phải nhánh rẽ hợp lệ)
-    if (phoiXong && fileXong && !dauQua && !laNhanhRe && r.TINH_TRANG !== 'ĐÃ SẴN SÀNG CHẠY MÁY') {
-      loi.push(`Phôi+file đã xong nhưng TINH_TRANG vẫn là "${r.TINH_TRANG}" (chưa qua ĐÃ SẴN SÀNG CHẠY MÁY)`);
-    }
-    // Nhóm 2: TINH_TRANG đã qua ngưỡng nhưng phôi/file chưa xong
-    if (dauQua) {
-      if (!phoiXong) loi.push(`TINH_TRANG là "${r.TINH_TRANG}" nhưng TRANG_THAI_PHOI vẫn "${r.TRANG_THAI_PHOI || '(trống)'}"`);
-      if (!fileXong) loi.push(`TINH_TRANG là "${r.TINH_TRANG}" nhưng TRANG_THAI_VE_FILE vẫn "${r.TRANG_THAI_VE_FILE || '(trống)'}"`);
-    }
-
-    if (loi.length > 0) {
-      donLech.push({ sttKey: r.STT_Key, khachHang: r.MA_KHACH_HANG, loai: r.LOAI || '', tinhTrang: r.TINH_TRANG, phoi: r.TRANG_THAI_PHOI, veFile: r.TRANG_THAI_VE_FILE, loi });
-    }
-  }
-
-  res.json({ tong: rows.length, soLech: donLech.length, donLech });
-});
-
 module.exports = router;

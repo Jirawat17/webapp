@@ -95,36 +95,17 @@ function tinhTinhTrangTuDong(rowHienTai, updates) {
   return updates;
 }
 
-// Quy tắc phân quyền theo VAI TRÒ — áp dụng trực tiếp tại tầng update() để đảm bảo chặn được
-// mọi đường ghi (form sửa tay, quét QR, API trực tiếp), không chỉ dựa vào TRUONG_DUOC_SUA ở route.
-// Hiện có 1 quy tắc: nguoi_lay_phoi không được đổi TRANG_THAI_VE_FILE (vẽ file là việc của ve_file).
-function kiemTraQuyenVaiTro(user, updates) {
-  if (!user) return; // không truyền user = gọi nội bộ không cần kiểm tra vai trò
-  if (user.vaiTro === 'nguoi_lay_phoi' && 'TRANG_THAI_VE_FILE' in updates) {
-    throw new Error('Vai trò "Người lấy phôi" không được thay đổi trạng thái vẽ file — đây là phần việc của "Vẽ file".');
-  }
-}
-
-async function update(sttKey, updates, user = null) {
-  const { headers, row } = await getByKey(sttKey, { fresh: true });
+async function update(sttKey, updates) {
+  const { headers, row } = await getByKey(sttKey, { fresh: true }); // luôn đọc thật trước khi ghi
   if (!row) throw new Error('Không tìm thấy đơn hàng: ' + sttKey);
 
-  kiemTraQuyenVaiTro(user, updates);
   kiemTraGiaTriHopLe(updates);
 
   const updatesDaTinh = tinhTinhTrangTuDong(row, updates);
-  kiemTraTinhHopLy(row, updatesDaTinh);
+  kiemTraTinhHopLy(row, updatesDaTinh); // kiểm tra SAU khi đã tính tự động, để không báo nhầm khi chính việc tự động hoá làm cho tổ hợp trở nên hợp lệ
 
-  // Phát hiện xem TINH_TRANG có vừa được tự động đổi hay không — để route gọi biết mà ghi thêm
-  // 1 dòng lịch sử riêng, giúp người xem lịch sử hiểu rõ tại sao TINH_TRANG nhảy mà không thấy
-  // ai tự tay đổi (ví dụ: quét "lấy phôi" kích hoạt đồng bộ sang "ĐÃ SẴN SÀNG CHẠY MÁY").
-  const tuDongDoiTinhTrang =
-    !('TINH_TRANG' in updates) &&            // người dùng KHÔNG tự tay đổi TINH_TRANG
-    'TINH_TRANG' in updatesDaTinh &&          // nhưng tinhTinhTrangTuDong đã thêm vào
-    updatesDaTinh.TINH_TRANG !== row.TINH_TRANG; // và giá trị thực sự thay đổi
-
-  await updateCells(TAB, headers, row._row, updatesDaTinh);
-  return { ...row, ...updatesDaTinh, _tuDongDoiTinhTrang: tuDongDoiTinhTrang };
+  await updateCells(TAB, headers, row._row, updatesDaTinh); // tự xoá cache của tab sau khi ghi (xem sheetsService)
+  return { ...row, ...updatesDaTinh };
 }
 
 // Đơn chỉ lưu MA_KHACH_HANG (mã) — gắn thêm tên khách hàng thật để hiển thị, không sửa dữ liệu gốc

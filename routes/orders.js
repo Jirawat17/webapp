@@ -92,12 +92,6 @@ router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
   if (!GIA_TRI_HOP_LE_THEO_COT[cot].includes(trangThaiMoi)) {
     return res.status(400).json({ error: 'Trạng thái đích không hợp lệ cho cột ' + cot });
   }
-  // "ĐÃ SẴN SÀNG CHẠY MÁY" chỉ được hệ thống tự tính khi cả phôi lẫn file cùng xong (tinhTinhTrangTuDong
-  // trong orderService.update) — không được phép set tay hàng loạt vì sẽ phá vỡ logic tự động và có
-  // thể tạo ra trạng thái không hợp lệ (đơn "sẵn sàng chạy máy" mà phôi/file thực ra chưa xong).
-  if (cot === 'TINH_TRANG' && trangThaiMoi === 'ĐÃ SẴN SÀNG CHẠY MÁY') {
-    return res.status(400).json({ error: '"ĐÃ SẴN SÀNG CHẠY MÁY" không thể set tay hàng loạt — trạng thái này chỉ được hệ thống tự tính khi cả phôi và vẽ file cùng hoàn thành.' });
-  }
 
   const thanhCong = [];
   const loi = [];
@@ -115,7 +109,7 @@ router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
         [cot]: trangThaiMoi,
         NguoiCapNhatCuoi: user.ten,
         ThoiGianCapNhatCuoi: new Date().toISOString(),
-      }, user);
+      });
 
       thanhCong.push(sttKey);
       ghiLog({
@@ -195,7 +189,7 @@ router.put('/:sttKey', async (req, res) => {
 
   let updated;
   try {
-    updated = await orderService.update(req.params.sttKey, updates, user);
+    updated = await orderService.update(req.params.sttKey, updates);
   } catch (err) {
     return res.status(400).json({ error: err.message });
   }
@@ -204,15 +198,6 @@ router.put('/:sttKey', async (req, res) => {
     nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'CAP_NHAT_DON',
     sttKey: req.params.sttKey, chiTiet: updates,
   });
-  // Nếu việc sửa vừa rồi kích hoạt đồng bộ tự động TINH_TRANG, ghi thêm 1 dòng lịch sử riêng để
-  // người xem lịch sử đơn sau này hiểu tại sao TINH_TRANG nhảy mà không có ai tự tay đổi.
-  if (updated._tuDongDoiTinhTrang) {
-    await ghiLog({
-      nguoiDung: 'Hệ thống', vaiTro: 'system', hanhDong: 'TU_DONG_DOI_TINH_TRANG',
-      sttKey: req.params.sttKey,
-      chiTiet: { sang: updated.TINH_TRANG, lyDo: 'Phôi và vẽ file đều đã hoàn thành — hệ thống tự chuyển sang "ĐÃ SẴN SÀNG CHẠY MÁY"' },
-    });
-  }
   res.json(updated);
 });
 
