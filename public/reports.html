@@ -83,26 +83,6 @@ function ngayHomNayYYYYMMDD() {
   return `${d.getFullYear()}-${mm}-${dd}`;
 }
 
-// Vẽ 1 nhóm thống kê dạng thanh ngang (không cần thư viện chart) — width% theo tỷ lệ so với giá trị lớn nhất
-function veNhomThongKe(tieuDe, doiTuongDem) {
-  const muc = Object.entries(doiTuongDem).sort((a, b) => b[1] - a[1]);
-  if (muc.length === 0) return `<div class="xem-truoc-bang"><h3>${escapeHtml(tieuDe)}</h3><p>Không có dữ liệu.</p></div>`;
-  const max = muc[0][1];
-  return `
-    <div class="xem-truoc-bang">
-      <h3>${escapeHtml(tieuDe)}</h3>
-      <div class="thanh-thong-ke">
-        ${muc.map(([nhan, soLuong]) => `
-          <div class="thanh-thong-ke-dong">
-            <span class="thanh-thong-ke-nhan">${escapeHtml(nhan)}</span>
-            <span class="thanh-thong-ke-bar"><span style="width:${Math.max(4, Math.round(soLuong / max * 100))}%"></span></span>
-            <span class="thanh-thong-ke-so">${soLuong}</span>
-          </div>
-        `).join('')}
-      </div>
-    </div>`;
-}
-
 async function xemThongKeLoi() {
   const khu = document.getElementById('khu-thong-ke-loi');
   khu.innerHTML = spinnerInline('Đang tải thống kê...');
@@ -128,19 +108,16 @@ async function xemThongKeLoi() {
 
   khu.innerHTML = `
     <p><strong>${ketQua.tongSoLoi}</strong> lần đơn bị chuyển sang lỗi cần làm lại, trong khoảng thời gian đã chọn.</p>
-    <div class="luoi-thong-ke-loi">
-      ${veNhomThongKe('Theo loại sản phẩm', ketQua.theoLoai)}
-      ${veNhomThongKe('Theo team sản xuất', ketQua.theoTeam)}
-      ${veNhomThongKe('Theo tuần', ketQua.theoTuan)}
-    </div>
     <div class="xem-truoc-bang" style="margin-top:16px">
       <h3>Chi tiết ${ketQua.chiTiet.length < ketQua.tongSoLoi ? `(mới nhất ${ketQua.chiTiet.length}/${ketQua.tongSoLoi})` : ''}</h3>
       <div class="bang-cuon-ngang">
         <table class="bang-xem-truoc">
-          <thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Loại</th><th>Team</th><th>Người chuyển</th><th>Thời gian</th></tr></thead>
+          <thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Loại</th><th>Team</th><th>Người chuyển</th><th>Người sản xuất</th><th>Thời gian</th></tr></thead>
           <tbody>${ketQua.chiTiet.map(c => `<tr>
-            <td>${escapeHtml(c.sttKey)}</td><td>${escapeHtml(c.khachHang)}</td><td>${escapeHtml(c.loai)}</td>
-            <td>${escapeHtml(c.team)}</td><td>${escapeHtml(c.nguoiDung)}</td><td>${escapeHtml(c.thoiGian)}</td>
+            <td><a href="/order.html?stt=${encodeURIComponent(c.sttKey)}">${escapeHtml(c.sttKey)}</a></td><td>${escapeHtml(c.khachHang)}</td><td>${escapeHtml(c.loai)}</td>
+            <td>${escapeHtml(c.team)}</td><td>${escapeHtml(c.nguoiDung)}</td>
+            <td style="color:${c.nguoiSanXuat === 'Không xác định do đã sửa trên GGSheet không qua app' ? 'var(--color-text-faint)' : 'inherit'}">${escapeHtml(c.nguoiSanXuat)}</td>
+            <td>${escapeHtml(c.thoiGian)}</td>
           </tr>`).join('')}</tbody>
         </table>
       </div>
@@ -172,11 +149,6 @@ async function xemThongKeHoanDon() {
 
   khu.innerHTML = `
     <p><strong>${ketQua.tongSoHoan}</strong> đơn đang ở trạng thái hoàn trả trong khoảng thời gian đã chọn.</p>
-    <div class="luoi-thong-ke-loi">
-      ${veNhomThongKe('Theo khách hàng', ketQua.theoKhachHang)}
-      ${veNhomThongKe('Theo loại sản phẩm', ketQua.theoLoai)}
-      ${veNhomThongKe('Theo tuần', ketQua.theoTuan)}
-    </div>
     <div class="xem-truoc-bang" style="margin-top:16px">
       <h3>Chi tiết (kèm ghi chú nguyên nhân)</h3>
       <div class="bang-cuon-ngang">

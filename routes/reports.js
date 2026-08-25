@@ -125,6 +125,26 @@ router.get('/trang-thai-theo-loc', async (req, res) => {
 // lại lịch sử cũ nên vẫn cần so khớp đủ cả 3 mới không bỏ sót lỗi xảy ra ở các bản pipeline trước.
 const TRANG_THAI_LOI = ['ĐƠN LỖI CẦN LÀM LẠI', 'B4.3_ĐƠN LỖI CẦN LÀM LẠI', 'LỖI SẢN XUẤT CẦN LÀM LẠI'];
 
+// Tên trạng thái "Đã sản xuất" hiện tại + tên cũ (xem data/pipelineTinhTrang.js), dùng để tra
+// "người sản xuất" từ lịch sử — dùng chung cho cả bảng lỗi sản xuất và bảng hoàn đơn.
+const TINH_TRANG_SAN_XUAT = ['Đã sản xuất', 'B4.1_Đơn đã sản xuất', 'B5.2_Đơn chưa đóng gói'];
+const KHONG_XAC_DINH_NGUOI_SAN_XUAT = 'Không xác định do đã sửa trên GGSheet không qua app';
+
+// "Người sản xuất": đơn hàng không lưu trực tiếp trường này — tra LỊCH SỬ (LichSuHoatDong) tìm lần
+// GẦN NHẤT đơn được chuyển sang "Đã sản xuất" TÍNH ĐẾN HIỆN TẠI (không phân biệt theo từng lần lỗi
+// nếu đơn lỗi rồi sản xuất lại nhiều lần — lấy đơn giản 1 lần gần nhất chung cho mọi mục đích hiển
+// thị). Không tìm được (log bị xoá, hoặc sửa trực tiếp trên Sheet không qua app) thì trả về null —
+// nơi gọi tự thay bằng KHONG_XAC_DINH_NGUOI_SAN_XUAT.
+async function layNguoiSanXuatTheoDon() {
+  const lanSanXuat = await layLichSuChuyenSangTrangThai(TINH_TRANG_SAN_XUAT);
+  const ketQua = {};
+  for (const l of lanSanXuat) {
+    const hienTai = ketQua[l.sttKey];
+    if (!hienTai || new Date(l.thoiGian) > new Date(hienTai.thoiGian)) ketQua[l.sttKey] = l;
+  }
+  return ketQua;
+}
+
 // Số tuần trong năm theo lịch — dùng thống nhất với cách tính "theo tuần" đã có ở Dashboard
 function soTuanTrongNam(d) {
   const dauNam = new Date(d.getFullYear(), 0, 1);
@@ -139,6 +159,8 @@ function soTuanTrongNam(d) {
 // Đơn hàng không lưu "team sản xuất" trực tiếp — suy ra team bằng cách tra NGƯỜI đã bấm chuyển đơn
 // sang trạng thái lỗi (lấy từ lịch sử) rồi tra Team của người đó trong tab NguoiDung. Nếu không tìm
 // được (vd log bị xoá, hoặc trạng thái bị đổi trực tiếp trên Sheet không qua app) thì xếp vào "Không xác định".
+// "Người sản xuất" (khác với "Người chuyển" — người bấm chuyển đơn SANG trạng thái lỗi): người đã
+// thực hiện lần "Đã sản xuất" gần nhất của đơn đó — cho biết vấn đề chất lượng là ở khâu sản xuất nào.
 router.get('/thong-ke-loi', async (req, res) => {
   const { tuNgay, denNgay } = req.query;
 
@@ -159,6 +181,8 @@ router.get('/thong-ke-loi', async (req, res) => {
   const banDoTeam = {};
   nhanVien.forEach(nv => { banDoTeam[nv.Ten] = nv.Team || 'Không rõ team'; });
 
+  const nguoiSanXuatTheoDon = await layNguoiSanXuatTheoDon();
+
   const theoLoai = {}, theoTeam = {}, theoTuan = {};
   const chiTiet = [];
   const locTheoNgaySapXep = [...locTheoNgay].sort((a, b) => (a.thoiGian < b.thoiGian ? 1 : -1)); // sắp theo chuỗi ISO gốc — mới nhất trước
@@ -176,6 +200,7 @@ router.get('/thong-ke-loi', async (req, res) => {
     chiTiet.push({
       sttKey: l.sttKey, loai, team, nguoiDung: l.nguoiDung || '(Không rõ)',
       thoiGian: dinhDangNgayGioNgan(d), khachHang: don ? (don.MA_KHACH_HANG || '') : '',
+      nguoiSanXuat: (nguoiSanXuatTheoDon[l.sttKey] && nguoiSanXuatTheoDon[l.sttKey].nguoiDung) || KHONG_XAC_DINH_NGUOI_SAN_XUAT,
     });
   }
 
@@ -189,13 +214,6 @@ router.get('/thong-ke-loi', async (req, res) => {
 // Thống kê đơn HOÀN (REFUNDED_Hoàn đơn) — danh sách từ trạng thái HIỆN TẠI (khác với lỗi sản xuất:
 // REFUNDED là trạng thái CUỐI CÙNG, đơn giữ nguyên ở đó mãi nên không cần tra lịch sử). Tổng hợp
 // theo khách hàng/loại sản phẩm/tuần, kèm GHI_CHU của từng đơn để xem nguyên nhân hoàn.
-//
-// "Người sản xuất": đơn hàng không lưu trực tiếp trường này — tra LỊCH SỬ (LichSuHoatDong) tìm lần
-// GẦN NHẤT đơn được chuyển sang "Đã sản xuất" (đơn có thể lỗi rồi sản xuất lại nhiều lần, lấy lần
-// cuối cùng). Gồm cả tên cũ của trạng thái này (xem data/pipelineTinhTrang.js) để không bỏ sót lịch
-// sử ghi từ trước khi đổi pipeline. Không tìm được thì hiển thị "Không xác định".
-const TINH_TRANG_SAN_XUAT = ['Đã sản xuất', 'B4.1_Đơn đã sản xuất', 'B5.2_Đơn chưa đóng gói'];
-
 router.get('/thong-ke-hoan-don', async (req, res) => {
   const { tuNgay, denNgay } = req.query;
   const { rows } = await orderService.getAll();
@@ -211,12 +229,7 @@ router.get('/thong-ke-hoan-don', async (req, res) => {
     return true;
   });
 
-  const lanSanXuat = await layLichSuChuyenSangTrangThai(TINH_TRANG_SAN_XUAT);
-  const nguoiSanXuatTheoDon = {};
-  for (const l of lanSanXuat) {
-    const hienTai = nguoiSanXuatTheoDon[l.sttKey];
-    if (!hienTai || new Date(l.thoiGian) > new Date(hienTai.thoiGian)) nguoiSanXuatTheoDon[l.sttKey] = l;
-  }
+  const nguoiSanXuatTheoDon = await layNguoiSanXuatTheoDon();
 
   const theoKhachHang = {}, theoLoai = {}, theoTuan = {};
   const chiTiet = [];
@@ -242,7 +255,7 @@ router.get('/thong-ke-hoan-don', async (req, res) => {
       mauSac: don.MAU_SAC || '',
       ngayLenDon: dinhDangNgay(don.NGAY_LEN_DON),
       ghiChu: don.GHI_CHU || '(Không có ghi chú)',
-      nguoiSanXuat: (nguoiSanXuatTheoDon[don.STT_Key] && nguoiSanXuatTheoDon[don.STT_Key].nguoiDung) || 'Không xác định do đã sửa trên GGSheet không qua app',
+      nguoiSanXuat: (nguoiSanXuatTheoDon[don.STT_Key] && nguoiSanXuatTheoDon[don.STT_Key].nguoiDung) || KHONG_XAC_DINH_NGUOI_SAN_XUAT,
     });
   }
 
