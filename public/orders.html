@@ -75,6 +75,7 @@ const NHAN_CANH_BAO = { VANG: 'Vàng · 3 ngày', CAM: 'Cam · 5 ngày', DO: 'Đ
 const DANH_SACH_TRANG_THAI_DAY_DU = [
   'Chưa xác nhận', 'Đã xác nhận',
   'ĐÃ SẴN SÀNG CHẠY MÁY',
+  'Đang chạy máy',
   'Đã sản xuất', 'LỖI SẢN XUẤT CẦN LÀM LẠI',
   'Đã đóng gói',
   'IN TRANSIT_Tracking đã hoạt động',
@@ -191,6 +192,8 @@ function renderDanhSachDon() {
         <div class="meta">Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgayNgan(o.NGAY_LEN_DON) : '—')}</div>
         <div class="badge-row">
           <span class="badge ${lopTrangThai(o.TINH_TRANG)}">${escapeHtml(o.TINH_TRANG || '')}</span>
+          ${o.TINH_TRANG === 'Đang chạy máy' ? `
+            <span class="badge trang-thai-info">${icon('users', {size:14})} Đang vận hành: ${escapeHtml(o.NguoiVanHanh || 'Không xác định')}</span>` : ''}
           ${['Chưa xác nhận', 'Đã xác nhận'].includes(o.TINH_TRANG) ? `
             <span class="badge ${lopTrangThai(o.TRANG_THAI_PHOI)}">${escapeHtml(o.TRANG_THAI_PHOI || '')}</span>
             <span class="badge ${lopTrangThai(o.TRANG_THAI_VE_FILE)}">${escapeHtml(o.TRANG_THAI_VE_FILE || '')}</span>` : ''}

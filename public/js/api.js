@@ -47,22 +47,25 @@ function dangXuat() {
 // CHÍNH SÁCH PHÂN QUYỀN (24/08/2026): nguoi_lay_phoi chỉ nhìn thấy DUY NHẤT menu "Quét mã QR" — ẩn
 // hết mọi menu khác (kể cả Cài đặt và Trợ lý, đã xác nhận rõ với người dùng). Nút Đăng xuất ở góc
 // trên vẫn luôn hiện cho mọi vai trò (không phải 1 "menu" theo nghĩa điều hướng trang).
+// Icon menu dùng bộ 'nav*' riêng trong icons.js (navOrders, navScan...) — bọc trong
+// <span class="nav-icon-tile"> để Chế độ Tối vẽ thêm khối bo góc phát sáng quanh icon (xem style.css);
+// Chế độ Sáng không style .nav-icon-tile nên nhìn như trước, không đổi gì.
 function renderNav(user, active) {
   let links;
   if (user.vaiTro === 'nguoi_lay_phoi') {
-    links = [{ href: '/scan.html', label: 'Quét QR', icon: 'scan', key: 'scan' }];
+    links = [{ href: '/scan.html', label: 'Quét QR', icon: 'navScan', key: 'scan' }];
   } else {
     links = [
-      { href: '/orders.html', label: 'Đơn hàng', icon: 'orders', key: 'orders' },
-      { href: '/scan.html', label: 'Quét QR', icon: 'scan', key: 'scan' },
-      { href: '/dashboard.html', label: 'Thống kê', icon: 'chart', key: 'dashboard' },
-      { href: '/chatbot.html', label: 'Trợ lý', icon: 'chat', key: 'chatbot' },
-      { href: '/reports.html', label: 'Báo cáo', icon: 'download', key: 'reports' },
+      { href: '/orders.html', label: 'Đơn hàng', icon: 'navOrders', key: 'orders' },
+      { href: '/scan.html', label: 'Quét QR', icon: 'navScan', key: 'scan' },
+      { href: '/dashboard.html', label: 'Thống kê', icon: 'navChart', key: 'dashboard' },
+      { href: '/chatbot.html', label: 'Trợ lý', icon: 'navSupport', key: 'chatbot' },
+      { href: '/reports.html', label: 'Báo cáo', icon: 'navReports', key: 'reports' },
     ];
     if (user.vaiTro === 'admin') {
-      links.push({ href: '/users.html', label: 'Nhân viên', icon: 'users', key: 'users' });
+      links.push({ href: '/users.html', label: 'Nhân viên', icon: 'navUsers', key: 'users' });
     }
-    links.push({ href: '/settings.html', label: 'Thiết lập', icon: 'settings', key: 'settings' });
+    links.push({ href: '/settings.html', label: 'Thiết lập', icon: 'navSettings', key: 'settings' });
   }
 
   const nav = document.getElementById('nav');
@@ -80,7 +83,7 @@ function renderNav(user, active) {
     <nav class="tab-links" aria-label="Điều hướng chính">
       ${links.map(l => `
         <a href="${l.href}" class="${l.key === active ? 'active' : ''}">
-          ${icon(l.icon)}<span>${l.label}</span>
+          <span class="nav-icon-tile">${icon(l.icon, { size: 20 })}</span><span>${l.label}</span>
         </a>`).join('')}
     </nav>`;
 }
@@ -104,6 +107,7 @@ const MAU_TRANG_THAI = {
   'Chưa xác nhận': 'trang-thai-warning',
   'Đã xác nhận': 'trang-thai-info',
   'ĐÃ SẴN SÀNG CHẠY MÁY': 'trang-thai-info',
+  'Đang chạy máy': 'trang-thai-info',
   'Đã sản xuất': 'trang-thai-success',
   'LỖI SẢN XUẤT CẦN LÀM LẠI': 'trang-thai-danger',
   'Đã đóng gói': 'trang-thai-success',

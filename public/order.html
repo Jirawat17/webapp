@@ -20,7 +20,7 @@ const sttKey = new URLSearchParams(location.search).get('stt');
 const NHAN_CANH_BAO = { VANG: 'Cảnh báo Vàng · 3 ngày ít tiến triển', CAM: 'Cảnh báo Cam · 5 ngày chưa vào sản xuất', DO: 'Cảnh báo Đỏ · 7 ngày chưa ship' };
 // PHẢI khớp TINH_TRANG_VALUES trong data/pipelineTinhTrang.js
 const DANH_SACH_TINH_TRANG = [
-  'Chưa xác nhận', 'Đã xác nhận', 'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đã sản xuất', 'LỖI SẢN XUẤT CẦN LÀM LẠI',
+  'Chưa xác nhận', 'Đã xác nhận', 'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đang chạy máy', 'Đã sản xuất', 'LỖI SẢN XUẤT CẦN LÀM LẠI',
   'Đã đóng gói', 'IN TRANSIT_Tracking đã hoạt động', 'DELIVERED_Đã giao đến khách', 'CANCELLED_Đã hủy', 'REFUNDED_Hoàn đơn',
 ];
 
@@ -67,6 +67,8 @@ async function taiChiTiet() {
     <h2>${escapeHtml(don.TieuDeSanPham || don.STT_Key)}</h2>
     <div class="badge-row" style="margin-bottom:16px">
       <span class="badge ${lopTrangThai(don.TINH_TRANG)}">${escapeHtml(don.TINH_TRANG || '')}</span>
+      ${don.TINH_TRANG === 'Đang chạy máy' ? `
+        <span class="badge trang-thai-info">${icon('users', {size:14})} Đang vận hành: ${escapeHtml(don.NguoiVanHanh || 'Không xác định')}</span>` : ''}
       ${['Chưa xác nhận', 'Đã xác nhận'].includes(don.TINH_TRANG) ? `
         <span class="badge ${lopTrangThai(don.TRANG_THAI_PHOI)}">${escapeHtml(don.TRANG_THAI_PHOI || '')}</span>
         <span class="badge ${lopTrangThai(don.TRANG_THAI_VE_FILE)}">${escapeHtml(don.TRANG_THAI_VE_FILE || '')}</span>` : ''}
@@ -187,7 +189,7 @@ function loiToHopTrangThai(tinhTrang, phoi, veFile) {
     if (veFile === 'Đã vẽ file') return 'Đơn đang "Chưa xác nhận" thì chưa thể "Đã vẽ file" — xác nhận đơn trước.';
   }
   const CAC_TRANG_THAI_TU_SAN_SANG_TRO_DI = [
-    'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đã sản xuất', 'Đã đóng gói',
+    'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đang chạy máy', 'Đã sản xuất', 'Đã đóng gói',
     'IN TRANSIT_Tracking đã hoạt động', 'DELIVERED_Đã giao đến khách',
   ];
   if (CAC_TRANG_THAI_TU_SAN_SANG_TRO_DI.includes(tinhTrang)) {

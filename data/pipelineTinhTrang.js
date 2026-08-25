@@ -32,10 +32,16 @@
 //   CANCELLED_Đã hủy đơn             -> TINH_TRANG='CANCELLED_Đã hủy'
 //   REFUNDED_Hoàn đơn                -> TINH_TRANG='REFUNDED_Hoàn đơn' (không đổi)
 
+// "Đang chạy máy" (thêm 26/08/2026): chèn ngay sau "ĐÃ SẴN SÀNG CHẠY MÁY" trong pipeline — do
+// san_xuat SET TAY khi bắt đầu chạy máy, KHÔNG tự động như "ĐÃ SẴN SÀNG CHẠY MÁY". Cùng đứng từ
+// "ĐÃ SẴN SÀNG CHẠY MÁY" trở đi nên vẫn bắt buộc phôi/file phải xong (xem kiemTraTinhHopLy trong
+// services/orderService.js) và vẫn nằm trong phạm vi đơn mà san_xuat được thấy (filterForRole).
+//
 const TINH_TRANG_VALUES = [
   'Chưa xác nhận',
   'Đã xác nhận',
   'ĐÃ SẴN SÀNG CHẠY MÁY',
+  'Đang chạy máy',
   'Đã sản xuất',
   'LỖI SẢN XUẤT CẦN LÀM LẠI',
   'Đã đóng gói',
@@ -55,6 +61,7 @@ const THU_TU_TINH_TRANG = [
   'Chưa xác nhận',
   'Đã xác nhận',
   'ĐÃ SẴN SÀNG CHẠY MÁY',
+  'Đang chạy máy',
   'Đã sản xuất',
   'Đã đóng gói',
   'IN TRANSIT_Tracking đã hoạt động',

@@ -5,19 +5,40 @@ const alertService = require('../services/alertService');
 const scenarioService = require('../services/scenarioService');
 const { parseNgay } = require('../services/dateUtils');
 const { DANH_SACH_TRANG_THAI_BAO_CAO, TRANG_THAI_PHOI_VALUES, TRANG_THAI_VE_FILE_VALUES } = require('../data/pipelineTinhTrang');
-const { ghiLog, layLichSuTheoDon } = require('../services/logService');
+const { ghiLog, layLichSuTheoDon, layLichSuChuyenSangTrangThai } = require('../services/logService');
 const { requireLogin } = require('../middleware/auth');
 
 router.use(requireLogin);
 
+const TRANG_THAI_DANG_CHAY_MAY = 'Đang chạy máy';
+
+// "Người vận hành máy": đơn không lưu trực tiếp trường này — tra LỊCH SỬ (LichSuHoatDong) tìm lần
+// GẦN NHẤT đơn được chuyển sang "Đang chạy máy" (chính xác hơn dùng NguoiCapNhatCuoi, vì trường đó
+// bị ghi đè bởi BẤT KỲ lần sửa nào sau đó, kể cả chỉ sửa Ghi chú). Chỉ cần tính khi có ít nhất 1 đơn
+// đang ở trạng thái này, tránh đọc lịch sử không cần thiết ở các trang không liên quan.
+async function layNguoiVanHanhTheoDon() {
+  const lanChuyen = await layLichSuChuyenSangTrangThai(TRANG_THAI_DANG_CHAY_MAY);
+  const ketQua = {};
+  for (const l of lanChuyen) {
+    const hienTai = ketQua[l.sttKey];
+    if (!hienTai || new Date(l.thoiGian) > new Date(hienTai.thoiGian)) ketQua[l.sttKey] = l;
+  }
+  return ketQua;
+}
+
 // Gắn thêm các trường tính toán (không phải cột thật trong Sheet) để hiển thị — dùng chung cho list/detail
 async function lamGiauDon(rows) {
   const daGanKH = await orderService.ganTenKhachHang(rows);
+  const canNguoiVanHanh = daGanKH.some(r => r.TINH_TRANG === TRANG_THAI_DANG_CHAY_MAY);
+  const nguoiVanHanhTheoDon = canNguoiVanHanh ? await layNguoiVanHanhTheoDon() : {};
   return daGanKH.map(r => ({
     ...r,
     TieuDeSanPham: orderService.tieuDeSanPham(r),
     ViTriTheu: orderService.danhSachViTriTheu(r),
     CanhBao: alertService.tinhMucCanhBao(r),
+    NguoiVanHanh: r.TINH_TRANG === TRANG_THAI_DANG_CHAY_MAY
+      ? ((nguoiVanHanhTheoDon[r.STT_Key] && nguoiVanHanhTheoDon[r.STT_Key].nguoiDung) || null)
+      : null,
   }));
 }
 
