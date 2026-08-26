@@ -9,6 +9,11 @@ const BANG_MAU_CHU_DAO = [
   { id: 'teal',    ten: 'Xanh ngọc',         primary: '#0f766e', dark: '#115e59', light: '#f0fdfa' },
   { id: 'pink',    ten: 'Hồng',              primary: '#be185d', dark: '#9d174d', light: '#fdf2f8' },
   { id: 'slate',   ten: 'Xám đậm',           primary: '#334155', dark: '#1e293b', light: '#f8fafc' },
+  // Theme mới 26/08/2026 — lấy tông từ ảnh AI/mạng lưới người dùng tham khảo (nền xanh navy đậm +
+  // chấm sáng cam). Ở Chế độ Sáng dùng như 1 màu chủ đạo xanh bình thường (không có gì đặc biệt);
+  // riêng ở Chế độ Tối, style.css có thêm 1 khối CSS riêng scope theo [data-mau="navy"] để đổi hẳn
+  // nền sang navy đậm + thêm glow màu cam — xem "Theme Công nghệ (Navy)" trong style.css.
+  { id: 'navy',    ten: 'Công nghệ (Navy)',  primary: '#38bdf8', dark: '#0ea5e9', light: '#e0f2fe' },
 ];
 
 function layMauDaChon() {
@@ -30,6 +35,7 @@ function hexSangRgba(hex, alpha) {
 function apDungMauChuDao(id) {
   const preset = BANG_MAU_CHU_DAO.find(p => p.id === id) || BANG_MAU_CHU_DAO[0];
   const style = document.documentElement.style;
+  document.documentElement.setAttribute('data-mau', preset.id); // để style.css scope riêng theme "navy" ở Chế độ Tối
   style.setProperty('--color-primary', preset.primary);
   style.setProperty('--color-primary-dark', preset.dark);
   style.setProperty('--color-primary-light', dangCheDoToi() ? hexSangRgba(preset.primary, 0.18) : preset.light);
