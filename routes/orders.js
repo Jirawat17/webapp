@@ -42,6 +42,21 @@ async function lamGiauDon(rows) {
   }));
 }
 
+// (bổ sung 26/08/2026, theo yêu cầu người dùng) Đơn "Đang chạy máy" chỉ hiện với ĐÚNG tài khoản
+// san_xuat đang chạy nó — san_xuat KHÁC bị ẩn HOÀN TOÀN (cả danh sách lẫn trang chi tiết, coi như
+// không tồn tại), không chỉ ẩn khỏi danh sách. CHỈ áp dụng cho san_xuat — admin/ve_file luôn thấy
+// đầy đủ. Không xác định được người vận hành (vd sửa thẳng trên Sheet, log bị thiếu) thì vẫn cho
+// TẤT CẢ san_xuat thấy (an toàn hơn, tránh thất lạc đơn) — order.html/orders.html tự hiển thị cảnh
+// báo rõ ràng trong trường hợp này (xem NHAN_NGUOI_VAN_HANH_KHONG_RO ở phía client).
+function locDonDangChayMayTheoNguoiVanHanh(rows, user) {
+  if (user.vaiTro !== 'san_xuat') return rows;
+  return rows.filter(r => {
+    if (r.TINH_TRANG !== TRANG_THAI_DANG_CHAY_MAY) return true;
+    if (!r.NguoiVanHanh) return true; // không xác định được -> vẫn cho thấy
+    return r.NguoiVanHanh === user.ten;
+  });
+}
+
 // Danh sách đơn hàng — tự lọc theo vai trò, có thể lọc thêm qua query string
 router.get('/', async (req, res) => {
   const { rows } = await orderService.getAll();
@@ -72,6 +87,7 @@ router.get('/', async (req, res) => {
   list.sort((a, b) => (parseNgay(a.NGAY_LEN_DON) || 0) - (parseNgay(b.NGAY_LEN_DON) || 0));
 
   list = await lamGiauDon(list);
+  list = locDonDangChayMayTheoNguoiVanHanh(list, req.session.user);
   res.json(list);
 });
 
@@ -170,11 +186,19 @@ router.get('/:sttKey', async (req, res) => {
   const { row } = await orderService.getByKey(req.params.sttKey);
   if (!row) return res.status(404).json({ error: 'Không tìm thấy đơn hàng' });
 
+  const user = req.session.user;
   const [lichSu, [donDaLamGiau], kichBanKeTiep] = await Promise.all([
     layLichSuTheoDon(req.params.sttKey),
     lamGiauDon([row]),
-    layKichBanKeTiep(row, req.session.user),
+    layKichBanKeTiep(row, user),
   ]);
+
+  // Ẩn hoàn toàn (404) nếu là san_xuat KHÁC người đang vận hành đơn "Đang chạy máy" — xem
+  // locDonDangChayMayTheoNguoiVanHanh phía trên.
+  if (user.vaiTro === 'san_xuat' && row.TINH_TRANG === TRANG_THAI_DANG_CHAY_MAY &&
+      donDaLamGiau.NguoiVanHanh && donDaLamGiau.NguoiVanHanh !== user.ten) {
+    return res.status(404).json({ error: 'Không tìm thấy đơn hàng' });
+  }
 
   res.json({ ...donDaLamGiau, lichSu, kichBanKeTiep });
 });
