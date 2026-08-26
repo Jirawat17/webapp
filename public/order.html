@@ -82,6 +82,8 @@ async function taiChiTiet() {
     <div class="chi-tiet-layout">
       <div>
         ${anh ? `<img class="anh-mau" src="${escapeHtml(anh)}" alt="Ảnh mẫu/mockup" loading="lazy" onerror="this.remove()">` : ''}
+        ${don.Anh_File_Theu_URL ? `<div><p style="margin:8px 0 4px;font-weight:600;font-size:0.85rem">Ảnh file thêu</p><img class="anh-mau" src="${escapeHtml(don.Anh_File_Theu_URL)}" alt="Ảnh file thêu" loading="lazy" onerror="this.remove()"></div>` : ''}
+        ${don.Anh_Dong_Goi_URL ? `<div><p style="margin:8px 0 4px;font-weight:600;font-size:0.85rem">Ảnh hoàn thành</p><img class="anh-mau" src="${escapeHtml(don.Anh_Dong_Goi_URL)}" alt="Ảnh hoàn thành" loading="lazy" onerror="this.remove()"></div>` : ''}
         <table class="info-table">
           <tr><td>Mã đơn</td><td>${escapeHtml(don.STT_Key)}</td></tr>
           <tr><td>Mã đơn (sàn TMĐT)</td><td>${escapeHtml(don.MA_DON_HANG_ORDERID || '')}</td></tr>
@@ -165,13 +167,26 @@ function renderKhuVucThaoTac(don) {
       <p style="margin:0;font-size:0.8rem;color:var(--color-text-faint)">Nếu cả Phôi và Vẽ file cùng chuyển sang "Đã..." trong khi Trạng thái chung đang là "Đã xác nhận", hệ thống tự chuyển Trạng thái chung sang "ĐÃ SẴN SÀNG CHẠY MÁY".</p>
     </div>`;
 
+  // Ảnh "File thêu" (bổ sung 26/08/2026) — ve_file upload sau khi vẽ file xong, để san_xuat xem
+  // trước khi chọn chỉ thêu. Thuần lưu ảnh, KHÔNG đụng gì tới trạng thái (khác với "Chụp ảnh hoàn
+  // thành" bên dưới).
+  if (user.vaiTro === 've_file' || user.vaiTro === 'admin') {
+    html += `
+      <div class="upload-box">
+        <label for="anh-ve-file">${icon('camera', { size: 18 })} Ảnh file thêu (sau khi vẽ file)</label>
+        <input type="file" accept="image/*" capture="environment" id="anh-ve-file">
+        <button class="btn-hanh-dong" onclick="taiAnh('ve_file')">${icon('download')} Tải ảnh lên</button>
+        <p style="margin:0;font-size:0.8rem">Cần cột <code>Anh_File_Theu_URL</code> trong Sheet — nếu chưa có, thao tác này sẽ báo lỗi.</p>
+      </div>`;
+  }
+
   if (user.vaiTro === 'admin') {
     html += `
       <div class="upload-box">
-        <label for="anh-dong-goi">${icon('camera', { size: 18 })} Chụp ảnh đóng gói</label>
+        <label for="anh-dong-goi">${icon('camera', { size: 18 })} Chụp ảnh hoàn thành (trước khi đóng gói)</label>
         <input type="file" accept="image/*" capture="environment" id="anh-dong-goi">
         <button class="btn-hanh-dong" onclick="taiAnh('dong_goi')">${icon('download')} Tải ảnh lên</button>
-        <p style="margin:0;font-size:0.8rem">Cần cột <code>Anh_Dong_Goi_URL</code> trong Sheet — nếu chưa có, thao tác này sẽ báo lỗi.</p>
+        <p style="margin:0;font-size:0.8rem">Cần cột <code>Anh_Dong_Goi_URL</code> trong Sheet. Chỉ dùng được khi đơn đang ở "Đã sản xuất" — tải ảnh xong sẽ TỰ ĐỘNG chuyển đơn sang "Đã đóng gói". san_xuat/nguoi_lay_phoi nên dùng màn "Chụp ảnh hoàn thành hàng loạt" ở trang Quét QR thay vì đây (nhanh hơn, không cần mở từng đơn).</p>
       </div>`;
   }
 

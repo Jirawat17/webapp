@@ -14,6 +14,7 @@
   <div class="scan-mode">
     <button id="mode-lookup" class="active"></button>
     <button id="mode-batch"></button>
+    <button id="mode-photo"></button>
   </div>
 
   <div id="chon-kich-ban-wrap" style="display:none"></div>
@@ -37,6 +38,17 @@
     </div>
   </div>
 
+  <div id="photo-wrap" style="display:none">
+    <p>Chụp ảnh sản phẩm đã hoàn thành — đảm bảo tem mã QR nằm rõ trong khung hình. Hệ thống sẽ tự đọc mã, lưu ảnh và chuyển đơn sang "Đã đóng gói". Đơn phải đang ở trạng thái "Đã sản xuất".</p>
+    <input type="file" accept="image/*" capture="environment" id="input-chup-anh" style="display:none">
+    <div id="qr-reader-file-an" style="display:none"></div>
+    <button id="btn-chup-anh" class="btn-dung-quet san-sang"></button>
+    <div id="toast-chup-anh" class="toast-vua-quet"></div>
+    <div id="dem-nhom-anh" class="dem-nhom"></div>
+    <h3 style="margin-top:20px">Danh sách đã chụp</h3>
+    <div id="ds-da-chup" class="ds-dang-quet"></div>
+  </div>
+
   <div id="khu-xem-lai" class="man-xem-lai" style="display:none"></div>
 </div>
 
@@ -58,9 +70,15 @@ let dsQuet = [];
 let dangQuetKichBan = true;
 let audioCtx = null;
 
+let scannerFile = null; // instance Html5Qrcode RIÊNG cho việc đọc QR từ ảnh tĩnh (mode-photo) — tách khỏi `scanner` (camera sống) để không đụng tới trạng thái đang quét kịch bản
+let dsDaChup = [];
+let toastAnhTimer = null;
+
 document.getElementById('mode-lookup').innerHTML = icon('scan') + ' Tra cứu';
 document.getElementById('mode-batch').innerHTML = icon('check') + ' Quét kịch bản';
+document.getElementById('mode-photo').innerHTML = icon('camera', { size: 18 }) + ' Chụp ảnh hoàn thành';
 document.getElementById('btn-dung-quet').innerHTML = icon('stop', { size: 40 }) + ' Dừng quét → Xem lại';
+document.getElementById('btn-chup-anh').innerHTML = icon('camera', { size: 40 }) + ' Chụp ảnh';
 
 (async () => {
   user = await requireLoginOrRedirect();
@@ -72,6 +90,7 @@ document.getElementById('btn-dung-quet').innerHTML = icon('stop', { size: 40 }) 
 
 document.getElementById('mode-lookup').onclick = () => { mode = 'lookup'; capNhatManHinh(); };
 document.getElementById('mode-batch').onclick = () => { mode = 'batch'; capNhatManHinh(); };
+document.getElementById('mode-photo').onclick = () => { mode = 'photo'; capNhatManHinh(); };
 
 async function taiKichBan() {
   try {
@@ -84,10 +103,12 @@ async function taiKichBan() {
 async function capNhatManHinh() {
   document.getElementById('mode-lookup').classList.toggle('active', mode === 'lookup');
   document.getElementById('mode-batch').classList.toggle('active', mode === 'batch');
+  document.getElementById('mode-photo').classList.toggle('active', mode === 'photo');
 
   document.getElementById('chon-kich-ban-wrap').style.display = 'none';
   document.getElementById('camera-wrap').style.display = 'none';
   document.getElementById('khu-xem-lai').style.display = 'none';
+  document.getElementById('photo-wrap').style.display = 'none';
 
   let cameraCanChay = null;
 
@@ -96,6 +117,10 @@ async function capNhatManHinh() {
     document.getElementById('ket-qua-tra-cuu').style.display = 'block';
     setBatchOnlyVisible(false);
     cameraCanChay = 'lookup';
+  } else if (mode === 'photo') {
+    document.getElementById('photo-wrap').style.display = 'block';
+    renderDemNhomAnh();
+    renderDsDaChup();
   } else if (!kichBanDangChon) {
     renderChonKichBan();
     document.getElementById('chon-kich-ban-wrap').style.display = 'block';
@@ -473,6 +498,113 @@ async function xacNhanCapNhatHangLoat() {
 async function tiepTucQuet() {
   dangQuetKichBan = true;
   await capNhatManHinh();
+}
+
+// ============================================================
+// CHỤP ẢNH HOÀN THÀNH HÀNG LOẠT (bổ sung 26/08/2026)
+// Luồng: bấm "Chụp ảnh" → mở camera máy (input file capture) → có ảnh → ĐỌC MÃ QR NGAY TỪ ẢNH bằng
+// html5-qrcode (scanFile — hoàn toàn ở trình duyệt, không cần AI/OCR, không tốn quota) → nếu KHÔNG
+// đọc được mã, báo lỗi và bắt chụp lại NGAY (không upload gì cả) → nếu đọc được, upload thẳng lên
+// server kèm mã đã giải; server tự kiểm tra đơn đang "Đã sản xuất" rồi lưu ảnh + chuyển sang "Đã
+// đóng gói" trong cùng 1 lần ghi (xem routes/photos.js). Mở cho CẢ 4 vai trò.
+// ============================================================
+document.getElementById('btn-chup-anh').onclick = () => {
+  document.getElementById('input-chup-anh').value = ''; // reset để chọn lại đúng ảnh mới chụp, kể cả khi trùng tên file với lần trước
+  document.getElementById('input-chup-anh').click();
+};
+
+document.getElementById('input-chup-anh').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  await xuLyAnhHoanThanh(file);
+});
+
+async function xuLyAnhHoanThanh(file) {
+  const btn = document.getElementById('btn-chup-anh');
+  btn.disabled = true;
+  btn.innerHTML = icon('spinner', { className: 'icon-spin', size: 24 }) + ' Đang đọc mã QR...';
+
+  if (!scannerFile) scannerFile = new Html5Qrcode('qr-reader-file-an', /* verbose= */ false);
+
+  let sttKey;
+  try {
+    const ketQuaDoc = await scannerFile.scanFile(file, false);
+    sttKey = (typeof ketQuaDoc === 'string' ? ketQuaDoc : ketQuaDoc.decodedText || '').trim();
+    if (!sttKey) throw new Error('Rỗng');
+  } catch (err) {
+    // Không đọc được mã QR trong ảnh (mờ, thiếu sáng, tem bị che, góc chụp xấu...) — theo đúng yêu
+    // cầu: báo NGAY và bắt chụp lại ngay lập tức, KHÔNG upload gì lên server.
+    hienThiToastAnh('loi', 'Không đọc được mã QR trong ảnh — chụp lại ngay, đảm bảo tem QR rõ nét và đủ sáng.');
+    phatAmThanhKetQua('KHONG_TIM_THAY');
+    themDongDaChup({ trangThai: 'loi', sttKey: '(không đọc được mã)', ghiChu: 'Ảnh mờ/thiếu sáng/tem bị che — chụp lại' });
+    btn.disabled = false;
+    btn.innerHTML = icon('camera', { size: 40 }) + ' Chụp lại';
+    return;
+  }
+
+  btn.innerHTML = icon('spinner', { className: 'icon-spin', size: 24 }) + ' Đang tải ảnh lên...';
+
+  const form = new FormData();
+  form.append('photo', file);
+  form.append('sttKey', sttKey);
+  form.append('moc', 'dong_goi');
+
+  try {
+    const res = await fetch('/api/photos/upload', { method: 'POST', body: form, credentials: 'include' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    const don = data.don || {};
+    hienThiToastAnh('ok', `${don.STT_Key || sttKey}${don.TenKhachHang ? ' · ' + don.TenKhachHang : ''} — đã chuyển sang "Đã đóng gói"`);
+    phatAmThanhKetQua('OK');
+    themDongDaChup({ trangThai: 'ok', sttKey: don.STT_Key || sttKey, ghiChu: `${don.TenKhachHang || ''} — Đã sản xuất → Đã đóng gói` });
+  } catch (err) {
+    hienThiToastAnh('canh-bao', `${sttKey}: ${err.message}`);
+    phatAmThanhKetQua('SAI_TRANG_THAI');
+    themDongDaChup({ trangThai: 'canh-bao', sttKey, ghiChu: err.message });
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = icon('camera', { size: 40 }) + ' Chụp ảnh tiếp theo';
+}
+
+function hienThiToastAnh(loai, noiDung) {
+  clearTimeout(toastAnhTimer);
+  const el = document.getElementById('toast-chup-anh');
+  const MAP = { ok: '✅', 'canh-bao': '⚠️', loi: '❌' };
+  el.className = 'toast-vua-quet hien ' + loai;
+  el.innerHTML = `<span style="font-size:1.4rem">${MAP[loai] || ''}</span> ${escapeHtml(noiDung)}`;
+  toastAnhTimer = setTimeout(() => { el.classList.remove('hien'); }, 4500);
+}
+
+function themDongDaChup(item) {
+  dsDaChup.unshift(item);
+  renderDemNhomAnh();
+  renderDsDaChup();
+}
+
+function renderDemNhomAnh() {
+  const el = document.getElementById('dem-nhom-anh');
+  const soOK = dsDaChup.filter(x => x.trangThai === 'ok').length;
+  const soCanhBao = dsDaChup.filter(x => x.trangThai === 'canh-bao').length;
+  const soLoi = dsDaChup.filter(x => x.trangThai === 'loi').length;
+  el.innerHTML = `
+    <div class="dem-o ok"><div class="hang-tren"><span class="dem-icon">✅</span><span class="dem-so">${soOK}</span></div><div class="dem-nhan">Thành công</div></div>
+    <div class="dem-o canh-bao"><div class="hang-tren"><span class="dem-icon">⚠️</span><span class="dem-so">${soCanhBao}</span></div><div class="dem-nhan">Lỗi nghiệp vụ</div></div>
+    <div class="dem-o loi"><div class="hang-tren"><span class="dem-icon">❌</span><span class="dem-so">${soLoi}</span></div><div class="dem-nhan">Không đọc được mã</div></div>`;
+}
+
+function renderDsDaChup() {
+  const el = document.getElementById('ds-da-chup');
+  if (dsDaChup.length === 0) { el.innerHTML = '<p style="color:var(--color-text-faint)">Chưa chụp ảnh nào.</p>'; return; }
+  el.innerHTML = dsDaChup.map(item => `
+    <div class="dong-quet ${item.trangThai}">
+      <span style="font-size:1.3rem">${item.trangThai === 'ok' ? '✅' : item.trangThai === 'canh-bao' ? '⚠️' : '❌'}</span>
+      <div class="noi-dung">
+        <strong>${escapeHtml(item.sttKey)}</strong>
+        <div class="ly-do">${escapeHtml(item.ghiChu || '')}</div>
+      </div>
+    </div>`).join('');
 }
 </script>
 </body>
