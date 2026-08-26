@@ -129,16 +129,19 @@ router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
       }
 
       const trangThaiCu = row[cot];
-      await orderService.update(sttKey, {
+      const ketQuaUpdate = await orderService.update(sttKey, {
         [cot]: trangThaiMoi,
         NguoiCapNhatCuoi: user.ten,
         ThoiGianCapNhatCuoi: new Date().toISOString(),
-      });
+      }, user);
 
       thanhCong.push(sttKey);
       ghiLog({
         nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'CHUYEN_TRANG_THAI_HANG_LOAT',
-        sttKey, chiTiet: { cot, tu: trangThaiCu, sang: trangThaiMoi },
+        sttKey, chiTiet: {
+          cot, tu: trangThaiCu, sang: trangThaiMoi,
+          ...(ketQuaUpdate._daTuDongChuyenTinhTrang ? { tuDongChuyenTinhTrangSang: ketQuaUpdate._tinhTrangTuDongMoi } : {}),
+        },
       }).catch(err => console.error('[Orders] Lỗi ghi log nền:', err.message));
     } catch (err) {
       loi.push({ sttKey, lyDo: err.message });
@@ -212,14 +215,18 @@ router.put('/:sttKey', async (req, res) => {
 
   let updated;
   try {
-    updated = await orderService.update(req.params.sttKey, updates);
+    updated = await orderService.update(req.params.sttKey, updates, user);
   } catch (err) {
     return res.status(400).json({ error: err.message });
   }
 
   await ghiLog({
     nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'CAP_NHAT_DON',
-    sttKey: req.params.sttKey, chiTiet: updates,
+    sttKey: req.params.sttKey,
+    chiTiet: {
+      ...updates,
+      ...(updated._daTuDongChuyenTinhTrang ? { tuDongChuyenTinhTrangSang: updated._tinhTrangTuDongMoi } : {}),
+    },
   });
   res.json(updated);
 });
