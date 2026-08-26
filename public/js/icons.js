@@ -25,6 +25,18 @@ const ICONS = {
   printer: '<polyline points="7 9 7 3 17 3 17 9"/><rect x="4" y="9" width="16" height="8" rx="1.5"/><rect x="7" y="14" width="10" height="6"/>',
   moon: '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/>',
   sun: '<circle cx="12" cy="12" r="4.2"/><line x1="12" y1="2.5" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="21.5"/><line x1="2.5" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="21.5" y2="12"/><line x1="4.9" y1="4.9" x2="6.6" y2="6.6"/><line x1="17.4" y1="17.4" x2="19.1" y2="19.1"/><line x1="4.9" y1="19.1" x2="6.6" y2="17.4"/><line x1="17.4" y1="6.6" x2="19.1" y2="4.9"/>',
+
+  // Bộ icon RIÊNG cho menu điều hướng chính (renderNav trong api.js) — vẽ chi tiết hơn 1 chút
+  // (clipboard+dấu tích, khung QR+chấm, biểu đồ+điểm mốc, tai nghe hỗ trợ, tài liệu+kính lúp...)
+  // theo đúng phong cách ảnh tham khảo người dùng gửi. Tách riêng khỏi các icon dùng chung phía trên
+  // để không ảnh hưởng những chỗ khác trong app đang dùng lại 'chart', 'chat', 'download'...
+  navOrders: '<rect x="5" y="4" width="14" height="17" rx="2.2"/><path d="M9 4h6a1 1 0 0 1 1 1v1.4H8V5a1 1 0 0 1 1-1z"/><line x1="8.3" y1="11" x2="14.5" y2="11"/><line x1="8.3" y1="14.3" x2="12.5" y2="14.3"/><path d="M13.6 17.6l1.5 1.5 3-3.4"/>',
+  navScan: '<path d="M4 8V6.3A2.3 2.3 0 0 1 6.3 4H8"/><path d="M16 4h1.7A2.3 2.3 0 0 1 20 6.3V8"/><path d="M20 16v1.7A2.3 2.3 0 0 1 17.7 20H16"/><path d="M8 20H6.3A2.3 2.3 0 0 1 4 17.7V16"/><rect x="7.7" y="7.7" width="3" height="3"/><rect x="13.3" y="7.7" width="3" height="3"/><rect x="7.7" y="13.3" width="3" height="3"/><rect x="13.6" y="13.6" width="2.4" height="2.4" fill="currentColor" stroke="none"/>',
+  navChart: '<path d="M3.5 20V4"/><path d="M3.5 20h17"/><path d="M6.3 15.3l3.3-4 3 2.4 4.7-6.2"/><circle cx="6.3" cy="15.3" r="1.1" fill="currentColor" stroke="none"/><circle cx="9.6" cy="11.3" r="1.1" fill="currentColor" stroke="none"/><circle cx="12.6" cy="13.7" r="1.1" fill="currentColor" stroke="none"/><circle cx="17.3" cy="7.5" r="1.1" fill="currentColor" stroke="none"/>',
+  navSupport: '<path d="M4.5 13.8v-2.3a7.5 7.5 0 0 1 15 0v2.3"/><rect x="3.2" y="13.3" width="4" height="6.2" rx="1.6"/><rect x="16.8" y="13.3" width="4" height="6.2" rx="1.6"/><path d="M19.8 19.5a3.7 3.7 0 0 1-3.7 3.7h-2.3"/>',
+  navReports: '<path d="M6.3 2.5a1 1 0 0 0-1 1V20a1 1 0 0 0 1 1h5"/><path d="M6.3 2.5h6.6l4.1 4.1v3.6"/><polyline points="12.9 2.5 12.9 6.6 17 6.6"/><line x1="8.5" y1="11" x2="12" y2="11"/><line x1="8.5" y1="14" x2="11" y2="14"/><circle cx="16.3" cy="16.3" r="3"/><line x1="18.5" y1="18.5" x2="21" y2="21"/>',
+  navUsers: '<circle cx="9" cy="7.5" r="3"/><path d="M3.5 20c0-3.6 2.9-6.5 5.5-6.5s5.5 2.9 5.5 6.5"/><circle cx="17.5" cy="8.5" r="2.3"/><path d="M15.2 13.7c2.6.3 4.6 2.5 5 5.3"/>',
+  navSettings: '<circle cx="12" cy="12" r="3.2"/><line x1="12" y1="3" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="21"/><line x1="3" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="21" y2="12"/><line x1="5.6" y1="5.6" x2="7.8" y2="7.8"/><line x1="16.2" y1="16.2" x2="18.4" y2="18.4"/><line x1="5.6" y1="18.4" x2="7.8" y2="16.2"/><line x1="16.2" y1="7.8" x2="18.4" y2="5.6"/>',
 };
 
 function icon(name, opts) {
