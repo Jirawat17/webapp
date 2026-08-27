@@ -5,20 +5,56 @@ const alertService = require('../services/alertService');
 const scenarioService = require('../services/scenarioService');
 const { parseNgay } = require('../services/dateUtils');
 const { DANH_SACH_TRANG_THAI_BAO_CAO, TRANG_THAI_PHOI_VALUES, TRANG_THAI_VE_FILE_VALUES } = require('../data/pipelineTinhTrang');
-const { ghiLog, layLichSuTheoDon } = require('../services/logService');
+const { ghiLog, layLichSuTheoDon, layLichSuChuyenSangTrangThai } = require('../services/logService');
 const { requireLogin } = require('../middleware/auth');
 
 router.use(requireLogin);
 
+const TRANG_THAI_DANG_CHAY_MAY = 'Đang chạy máy';
+
+// "Người vận hành máy": đơn không lưu trực tiếp trường này — tra LỊCH SỬ (LichSuHoatDong) tìm lần
+// GẦN NHẤT đơn được chuyển sang "Đang chạy máy" (chính xác hơn dùng NguoiCapNhatCuoi, vì trường đó
+// bị ghi đè bởi BẤT KỲ lần sửa nào sau đó, kể cả chỉ sửa Ghi chú). Chỉ cần tính khi có ít nhất 1 đơn
+// đang ở trạng thái này, tránh đọc lịch sử không cần thiết ở các trang không liên quan.
+async function layNguoiVanHanhTheoDon() {
+  const lanChuyen = await layLichSuChuyenSangTrangThai(TRANG_THAI_DANG_CHAY_MAY);
+  const ketQua = {};
+  for (const l of lanChuyen) {
+    const hienTai = ketQua[l.sttKey];
+    if (!hienTai || new Date(l.thoiGian) > new Date(hienTai.thoiGian)) ketQua[l.sttKey] = l;
+  }
+  return ketQua;
+}
+
 // Gắn thêm các trường tính toán (không phải cột thật trong Sheet) để hiển thị — dùng chung cho list/detail
 async function lamGiauDon(rows) {
   const daGanKH = await orderService.ganTenKhachHang(rows);
+  const canNguoiVanHanh = daGanKH.some(r => r.TINH_TRANG === TRANG_THAI_DANG_CHAY_MAY);
+  const nguoiVanHanhTheoDon = canNguoiVanHanh ? await layNguoiVanHanhTheoDon() : {};
   return daGanKH.map(r => ({
     ...r,
     TieuDeSanPham: orderService.tieuDeSanPham(r),
     ViTriTheu: orderService.danhSachViTriTheu(r),
     CanhBao: alertService.tinhMucCanhBao(r),
+    NguoiVanHanh: r.TINH_TRANG === TRANG_THAI_DANG_CHAY_MAY
+      ? ((nguoiVanHanhTheoDon[r.STT_Key] && nguoiVanHanhTheoDon[r.STT_Key].nguoiDung) || null)
+      : null,
   }));
+}
+
+// (bổ sung 26/08/2026, theo yêu cầu người dùng) Đơn "Đang chạy máy" chỉ hiện với ĐÚNG tài khoản
+// san_xuat đang chạy nó — san_xuat KHÁC bị ẩn HOÀN TOÀN (cả danh sách lẫn trang chi tiết, coi như
+// không tồn tại), không chỉ ẩn khỏi danh sách. CHỈ áp dụng cho san_xuat — admin/ve_file luôn thấy
+// đầy đủ. Không xác định được người vận hành (vd sửa thẳng trên Sheet, log bị thiếu) thì vẫn cho
+// TẤT CẢ san_xuat thấy (an toàn hơn, tránh thất lạc đơn) — order.html/orders.html tự hiển thị cảnh
+// báo rõ ràng trong trường hợp này (xem NHAN_NGUOI_VAN_HANH_KHONG_RO ở phía client).
+function locDonDangChayMayTheoNguoiVanHanh(rows, user) {
+  if (user.vaiTro !== 'san_xuat') return rows;
+  return rows.filter(r => {
+    if (r.TINH_TRANG !== TRANG_THAI_DANG_CHAY_MAY) return true;
+    if (!r.NguoiVanHanh) return true; // không xác định được -> vẫn cho thấy
+    return r.NguoiVanHanh === user.ten;
+  });
 }
 
 // Danh sách đơn hàng — tự lọc theo vai trò, có thể lọc thêm qua query string
@@ -26,26 +62,15 @@ router.get('/', async (req, res) => {
   const { rows } = await orderService.getAll();
   let list = orderService.filterForRole(rows, req.session.user);
 
-  const { trangThai, trangThaiPhoi, trangThaiVeFile, kh, tuNgay, denNgay, chiCuaToi } = req.query;
+  const { trangThai, trangThaiPhoi, trangThaiVeFile, kh, tuNgay, denNgay } = req.query;
   if (trangThai) list = list.filter(r => r.TINH_TRANG === trangThai);
   if (trangThaiPhoi) list = list.filter(r => r.TRANG_THAI_PHOI === trangThaiPhoi);
   if (trangThaiVeFile) list = list.filter(r => r.TRANG_THAI_VE_FILE === trangThaiVeFile);
-  // "Đơn của tôi" (san_xuat) — chỉ những đơn CHÍNH MÌNH đã set sang "Đang chạy máy" và chưa chuyển
-  // tiếp sang "Đã sản xuất" — việc đang dở của người này, không phải mọi đơn từ ĐÃ SẴN SÀNG trở đi.
-  if (chiCuaToi === 'true') {
-    list = list.filter(r => r.TINH_TRANG === 'Đang chạy máy' && r.NGUOI_VAN_HANH === req.session.user.ten);
-  }
-  // Tìm mở rộng: khớp 1 trong các trường mã đơn/khách hàng/loại/kích thước/màu sắc/ghi chú — tiện
-  // tìm nhanh kiểu "đơn hoodie đen tuần trước" hoặc "đơn có ghi chú về màu chỉ" (thêm 27/08/2026).
   if (kh) {
     const tuKhoa = kh.toLowerCase();
     list = list.filter(r =>
       (r.MA_KHACH_HANG || '').toLowerCase().includes(tuKhoa) ||
-      (r.STT_Key || '').toLowerCase().includes(tuKhoa) ||
-      (r.LOAI || '').toLowerCase().includes(tuKhoa) ||
-      (r.KICH_THUOC || '').toLowerCase().includes(tuKhoa) ||
-      (r.MAU_SAC || '').toLowerCase().includes(tuKhoa) ||
-      (r.GHI_CHU || '').toLowerCase().includes(tuKhoa)
+      (r.STT_Key || '').toLowerCase().includes(tuKhoa)
     );
   }
   if (tuNgay || denNgay) {
@@ -62,6 +87,7 @@ router.get('/', async (req, res) => {
   list.sort((a, b) => (parseNgay(a.NGAY_LEN_DON) || 0) - (parseNgay(b.NGAY_LEN_DON) || 0));
 
   list = await lamGiauDon(list);
+  list = locDonDangChayMayTheoNguoiVanHanh(list, req.session.user);
   res.json(list);
 });
 
@@ -83,14 +109,17 @@ const GIA_TRI_HOP_LE_THEO_COT = {
 // 'cot', hoặc TRANG_THAI_PHOI/TRANG_THAI_VE_FILE — 2 nút bấm nhanh "Đã lấy phôi"/"Chưa lấy phôi"/
 // "Đã vẽ file"/"Chưa vẽ file" ở trang Đơn hàng dùng chung route này, chỉ khác tham số 'cot').
 // Mở cho MỌI vai trò có quyền vào trang Đơn hàng (admin/ve_file toàn bộ, san_xuat theo phạm vi đã
-// lọc — đã xác nhận với người dùng là san_xuat cũng được dùng dù không phụ trách phôi/vẽ file),
-// KHÔNG theo giới hạn TRUONG_DUOC_SUA phía dưới (vốn chỉ áp dụng cho sửa từng đơn lẻ) — nguoi_lay_phoi
-// không dùng được vì không có trang này để vào (menu đã ẩn), không cần chặn thêm ở đây.
+// lọc — đã xác nhận với người dùng là san_xuat cũng được dùng dù không phụ trách phôi/vẽ file).
+// nguoi_lay_phoi KHÔNG được set tay bất kỳ đơn nào (chỉ được thao tác qua quét QR đúng kịch bản của
+// mình) — chặn cứng ở đây, không chỉ dựa vào việc ẩn menu phía client.
 router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
   const { sttKeys, trangThaiMoi } = req.body;
   const cot = req.body.cot || 'TINH_TRANG';
   const user = req.session.user;
 
+  if (user.vaiTro === 'nguoi_lay_phoi') {
+    return res.status(403).json({ error: 'Vai trò này không được phép sửa trạng thái đơn hàng bằng tay' });
+  }
   if (!Array.isArray(sttKeys) || sttKeys.length === 0) {
     return res.status(400).json({ error: 'Danh sách đơn trống' });
   }
@@ -116,16 +145,19 @@ router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
       }
 
       const trangThaiCu = row[cot];
-      await orderService.update(sttKey, {
+      const ketQuaUpdate = await orderService.update(sttKey, {
         [cot]: trangThaiMoi,
         NguoiCapNhatCuoi: user.ten,
         ThoiGianCapNhatCuoi: new Date().toISOString(),
-      });
+      }, user);
 
       thanhCong.push(sttKey);
       ghiLog({
         nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'CHUYEN_TRANG_THAI_HANG_LOAT',
-        sttKey, chiTiet: { cot, tu: trangThaiCu, sang: trangThaiMoi },
+        sttKey, chiTiet: {
+          cot, tu: trangThaiCu, sang: trangThaiMoi,
+          ...(ketQuaUpdate._daTuDongChuyenTinhTrang ? { tuDongChuyenTinhTrangSang: ketQuaUpdate._tinhTrangTuDongMoi } : {}),
+        },
       }).catch(err => console.error('[Orders] Lỗi ghi log nền:', err.message));
     } catch (err) {
       loi.push({ sttKey, lyDo: err.message });
@@ -150,50 +182,43 @@ async function layKichBanKeTiep(row, user) {
   );
 }
 
-// Đếm số đơn "Chưa xác nhận" mà VAI TRÒ hiện tại thấy được (đi qua đúng filterForRole như trang
-// danh sách) — dùng cho badge số nhỏ trên nav "Đơn hàng" (thêm 27/08/2026, xem renderNav trong
-// api.js). ĐẶT TRƯỚC router.get('/:sttKey') — nếu đặt sau, Express sẽ hiểu "dem-cho-xac-nhan" là
-// một STT_Key thay vì route riêng.
-router.get('/dem-cho-xac-nhan', async (req, res) => {
-  const { rows } = await orderService.getAll();
-  const list = orderService.filterForRole(rows, req.session.user);
-  const soLuong = list.filter(r => r.TINH_TRANG === 'Chưa xác nhận').length;
-  res.json({ soLuong });
-});
-
 router.get('/:sttKey', async (req, res) => {
   const { row } = await orderService.getByKey(req.params.sttKey);
   if (!row) return res.status(404).json({ error: 'Không tìm thấy đơn hàng' });
 
+  const user = req.session.user;
   const [lichSu, [donDaLamGiau], kichBanKeTiep] = await Promise.all([
     layLichSuTheoDon(req.params.sttKey),
     lamGiauDon([row]),
-    layKichBanKeTiep(row, req.session.user),
+    layKichBanKeTiep(row, user),
   ]);
+
+  // Ẩn hoàn toàn (404) nếu là san_xuat KHÁC người đang vận hành đơn "Đang chạy máy" — xem
+  // locDonDangChayMayTheoNguoiVanHanh phía trên.
+  if (user.vaiTro === 'san_xuat' && row.TINH_TRANG === TRANG_THAI_DANG_CHAY_MAY &&
+      donDaLamGiau.NguoiVanHanh && donDaLamGiau.NguoiVanHanh !== user.ten) {
+    return res.status(404).json({ error: 'Không tìm thấy đơn hàng' });
+  }
 
   res.json({ ...donDaLamGiau, lichSu, kichBanKeTiep });
 });
 
-// CHÍNH SÁCH PHÂN QUYỀN (cập nhật 24/08/2026, theo Prompt_Ver_24.docx — HUỶ chính sách "mọi vai trò
-// như Admin" trước đó):
+// CHÍNH SÁCH PHÂN QUYỀN (cập nhật 26/08/2026 — nguoi_lay_phoi KHÔNG được set tay bất kỳ trường nào
+// của bất kỳ đơn nào nữa, kể cả GHI_CHU; trước đó có cho sửa riêng GHI_CHU nhưng đã bỏ):
 //   - admin, ve_file: không có trong danh sách dưới đây = sửa được MỌI trường (trừ TRUONG_CAM_SUA).
 //   - san_xuat: chỉ sửa được 3 cột trạng thái + ghi chú — theo đúng mô tả "lỗi thì set tay, làm lại
 //     thì cũng set tay" (san_xuat là người phát hiện lỗi sản xuất, cần tự set TINH_TRANG sang lỗi,
 //     và tự set lại cả 2 cột phôi/file về "chưa" khi cần làm lại — không phải đợi nguoi_lay_phoi/
 //     ve_file làm hộ từng bước).
-//   - nguoi_lay_phoi: chỉ ghi chú — trên thực tế vai trò này không có trang chi tiết đơn để sửa tay
-//     (menu chỉ có "Quét mã QR", xem public/js/api.js renderNav), giữ dòng này để phòng hờ nếu sau
-//     này họ được cấp thêm quyền truy cập trang chi tiết đơn.
+//   - nguoi_lay_phoi: mảng rỗng = không sửa được trường nào qua route này (chỉ được thao tác qua
+//     quét QR đúng kịch bản của mình — xem routes/qr.js).
 const TRUONG_DUOC_SUA = {
   san_xuat: ['GHI_CHU', 'TINH_TRANG', 'TRANG_THAI_PHOI', 'TRANG_THAI_VE_FILE'],
-  nguoi_lay_phoi: ['GHI_CHU'],
+  nguoi_lay_phoi: [],
 };
 
-// Không bao giờ cho phép sửa qua các cột này — khóa chính, field nội bộ, hoặc trường chỉ tính toán để hiển thị.
-// NGUOI_VAN_HANH (thêm 27/08/2026) cũng bị khoá ở đây vì đây là field TỰ ĐỘNG (xem
-// services/orderService.js, tuDongGanNguoiVanHanh) — chỉ được phép ghi qua cơ chế tự động đó, không
-// cho client tự gán tuỳ ý qua PUT (tránh gán nhầm/gán khống người vận hành).
-const TRUONG_CAM_SUA = ['STT_Key', '_row', 'NguoiCapNhatCuoi', 'ThoiGianCapNhatCuoi', 'TenKhachHang', 'TieuDeSanPham', 'ViTriTheu', 'CanhBao', 'NGUOI_VAN_HANH'];
+// Không bao giờ cho phép sửa qua các cột này — khóa chính, field nội bộ, hoặc trường chỉ tính toán để hiển thị
+const TRUONG_CAM_SUA = ['STT_Key', '_row', 'NguoiCapNhatCuoi', 'ThoiGianCapNhatCuoi', 'TenKhachHang', 'TieuDeSanPham', 'ViTriTheu', 'CanhBao'];
 
 router.put('/:sttKey', async (req, res) => {
   const user = req.session.user;
@@ -214,14 +239,18 @@ router.put('/:sttKey', async (req, res) => {
 
   let updated;
   try {
-    updated = await orderService.update(req.params.sttKey, updates);
+    updated = await orderService.update(req.params.sttKey, updates, user);
   } catch (err) {
     return res.status(400).json({ error: err.message });
   }
 
   await ghiLog({
     nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'CAP_NHAT_DON',
-    sttKey: req.params.sttKey, chiTiet: updates,
+    sttKey: req.params.sttKey,
+    chiTiet: {
+      ...updates,
+      ...(updated._daTuDongChuyenTinhTrang ? { tuDongChuyenTinhTrangSang: updated._tinhTrangTuDongMoi } : {}),
+    },
   });
   res.json(updated);
 });

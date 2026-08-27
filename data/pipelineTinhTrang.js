@@ -32,12 +32,11 @@
 //   CANCELLED_Đã hủy đơn             -> TINH_TRANG='CANCELLED_Đã hủy'
 //   REFUNDED_Hoàn đơn                -> TINH_TRANG='REFUNDED_Hoàn đơn' (không đổi)
 
-// Thêm 27/08/2026: "Đang chạy máy" — trạng thái trung gian giữa "ĐÃ SẴN SÀNG CHẠY MÁY" và
-// "Đã sản xuất", cho biết đơn đang thực sự nằm trên máy (khác với "sẵn sàng nhưng chưa ai chạy").
-// Đi kèm cột NGUOI_VAN_HANH mới trong Sheet (ghi tự động — xem services/orderService.js) để biết AI
-// đang chạy đơn nào, và để tính được thời gian chạy máy thực tế (routes/reports.js,
-// thong-ke-thoi-gian-chay-may) bằng cách lấy hiệu số thời gian giữa lúc vào "Đang chạy máy" và lúc
-// ra "Đã sản xuất" trong LichSuHoatDong.
+// "Đang chạy máy" (thêm 26/08/2026): chèn ngay sau "ĐÃ SẴN SÀNG CHẠY MÁY" trong pipeline — do
+// san_xuat SET TAY khi bắt đầu chạy máy, KHÔNG tự động như "ĐÃ SẴN SÀNG CHẠY MÁY". Cùng đứng từ
+// "ĐÃ SẴN SÀNG CHẠY MÁY" trở đi nên vẫn bắt buộc phôi/file phải xong (xem kiemTraTinhHopLy trong
+// services/orderService.js) và vẫn nằm trong phạm vi đơn mà san_xuat được thấy (filterForRole).
+//
 const TINH_TRANG_VALUES = [
   'Chưa xác nhận',
   'Đã xác nhận',

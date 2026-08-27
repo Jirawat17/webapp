@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Chi tiết đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=20260828h">
-<script src="/js/theme.js?v=20260828h"></script>
+<link rel="stylesheet" href="/css/style.css?v=20260827a">
+<script src="/js/theme.js?v=20260825a"></script>
 </head>
 <body>
 <div id="nav"></div>
@@ -13,14 +13,14 @@
   <div class="skeleton-list"><div class="skeleton-card" style="height:220px"></div></div>
 </div>
 
-<script src="/js/icons.js?v=20260828h"></script>
-<script src="/js/api.js?v=20260828h"></script>
+<script src="/js/icons.js?v=20260825a"></script>
+<script src="/js/api.js?v=20260825a"></script>
 <script>
 const sttKey = new URLSearchParams(location.search).get('stt');
 const NHAN_CANH_BAO = { VANG: 'Cảnh báo Vàng · 3 ngày ít tiến triển', CAM: 'Cảnh báo Cam · 5 ngày chưa vào sản xuất', DO: 'Cảnh báo Đỏ · 7 ngày chưa ship' };
 // PHẢI khớp TINH_TRANG_VALUES trong data/pipelineTinhTrang.js
 const DANH_SACH_TINH_TRANG = [
-  'Chưa xác nhận', 'Đã xác nhận', 'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đang chạy máy', 'Đã sản xuất', 'LỖI SẢN XUẤT CẦN LÀM LẠI',
+  'Chưa xác nhận', 'Đã xác nhận', 'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đã sản xuất', 'LỖI SẢN XUẤT CẦN LÀM LẠI',
   'Đã đóng gói', 'IN TRANSIT_Tracking đã hoạt động', 'DELIVERED_Đã giao đến khách', 'CANCELLED_Đã hủy', 'REFUNDED_Hoàn đơn',
 ];
 
@@ -51,62 +51,26 @@ function dongDiaChi(don) {
   return phan.length ? phan.join(', ') : '(chưa có địa chỉ)';
 }
 
-// Phân loại hành động để tô màu + chọn icon cho chấm tròn trên timeline (thêm 27/08/2026) — giúp
-// "đọc" nhanh câu chuyện của đơn: xanh lá = quét tiến trình thành công, cam = sửa tay, xanh dương =
-// upload ảnh/tra cứu, đỏ = lỗi/sai trạng thái. Nhãn hiển thị (nhanHanhDong) dùng chung từ api.js.
-function phanLoaiHanhDong(hanhDong) {
-  const NHOM_LOI = ['QUET_LOI', 'QUET_SAI_TRANG_THAI', 'QUET_TRA_CUU_LOI', 'QUET_KIEM_TRA_SAI_TRANG_THAI', 'QUET_KIEM_TRA_KHONG_TIM_THAY'];
-  const NHOM_QUET_THANH_CONG = ['QUET_KICH_BAN', 'QUET_KICH_BAN_HANG_LOAT', 'QUET_KIEM_TRA_OK'];
-  const NHOM_SUA_TAY = ['CAP_NHAT_DON', 'CHUYEN_TRANG_THAI_HANG_LOAT'];
-  const NHOM_ANH = ['UPLOAD_ANH'];
-
-  if (NHOM_LOI.includes(hanhDong)) return { mau: 'danger', iconTen: 'alert' };
-  if (NHOM_QUET_THANH_CONG.includes(hanhDong)) return { mau: 'success', iconTen: 'scan' };
-  if (NHOM_SUA_TAY.includes(hanhDong)) return { mau: 'warning', iconTen: 'settings' };
-  if (NHOM_ANH.includes(hanhDong)) return { mau: 'info', iconTen: 'camera' };
-  return { mau: 'info', iconTen: 'check' };
-}
-
-// Tính số phút đã trôi qua kể từ 1 mốc thời gian ISO — dùng để cảnh báo "vừa được cập nhật gần đây"
-// (thêm 27/08/2026, xem taiChiTiet). Trả về null nếu chuỗi không hợp lệ.
-function tinhPhutTruoc(isoStr) {
-  const d = new Date(isoStr);
-  if (isNaN(d)) return null;
-  return Math.round((Date.now() - d.getTime()) / 60000);
-}
-
 async function taiChiTiet() {
   let don;
   try {
     don = await apiFetch('/orders/' + encodeURIComponent(sttKey));
   } catch (e) {
-    document.getElementById('don-hang').innerHTML = khoiLoiTaiLai(e.message, 'taiChiTiet');
+    document.getElementById('don-hang').innerHTML = `<p>${escapeHtml(e.message)}</p>`;
     return;
   }
 
   const anh = don.MOCKUP || don.DUONG_DAN_URL;
   const viTri = (don.ViTriTheu || []).map(escapeHtml).join(' · ') || '—';
 
-  // Cảnh báo "vừa được cập nhật gần đây" (thêm 27/08/2026) — nhiều người có thể cùng sửa 1 đơn gần
-  // như đồng thời (đặc biệt lúc quét QR hàng loạt), giúp người mở trang sau biết ngay để kiểm tra
-  // lại trước khi sửa tiếp, tránh ghi đè nhau trong lúc không để ý. Chỉ hiện khi người cập nhật gần
-  // nhất KHÔNG PHẢI chính mình, và trong vòng 30 phút gần đây — quá lâu thì không còn liên quan.
-  const phutTruoc = don.ThoiGianCapNhatCuoi ? tinhPhutTruoc(don.ThoiGianCapNhatCuoi) : null;
-  const canhBaoCapNhatGanDay = (phutTruoc !== null && phutTruoc >= 0 && phutTruoc <= 30 &&
-    don.NguoiCapNhatCuoi && don.NguoiCapNhatCuoi !== user.ten)
-    ? `<div class="canh-bao-cap-nhat-gan-day">${icon('alert', { size: 16 })} Đơn này vừa được <strong>${escapeHtml(don.NguoiCapNhatCuoi)}</strong> cập nhật cách đây ${phutTruoc <= 1 ? 'chưa đầy 1 phút' : phutTruoc + ' phút'} — kiểm tra lại trước khi sửa tiếp để tránh ghi đè.</div>`
-    : '';
-
   document.getElementById('don-hang').innerHTML = `
     <h2>${escapeHtml(don.TieuDeSanPham || don.STT_Key)}</h2>
-    ${canhBaoCapNhatGanDay}
     <div class="badge-row" style="margin-bottom:16px">
       <span class="badge ${lopTrangThai(don.TINH_TRANG)}">${escapeHtml(don.TINH_TRANG || '')}</span>
       ${['Chưa xác nhận', 'Đã xác nhận'].includes(don.TINH_TRANG) ? `
         <span class="badge ${lopTrangThai(don.TRANG_THAI_PHOI)}">${escapeHtml(don.TRANG_THAI_PHOI || '')}</span>
         <span class="badge ${lopTrangThai(don.TRANG_THAI_VE_FILE)}">${escapeHtml(don.TRANG_THAI_VE_FILE || '')}</span>` : ''}
       ${don.DANH_DAU_IN ? `<span class="badge trang-thai-info">${icon('check', {size:14})} Đã đánh dấu in</span>` : ''}
-      ${don.NGUOI_VAN_HANH ? `<span class="badge trang-thai-info">Vận hành: ${escapeHtml(don.NGUOI_VAN_HANH)}</span>` : ''}
       ${don.CanhBao ? `
         <span class="badge badge-canh-bao ${don.CanhBao.toLowerCase()}">
           ${icon('alert')} ${escapeHtml(NHAN_CANH_BAO[don.CanhBao] || don.CanhBao)}
@@ -115,7 +79,7 @@ async function taiChiTiet() {
 
     <div class="chi-tiet-layout">
       <div>
-        ${anh ? `<img class="anh-mau" src="${escapeHtml(anh)}" alt="Ảnh mẫu/mockup" loading="lazy" onerror="anhLoi(this)" onclick="moLightbox('${escapeHtml(anh)}')">` : ''}
+        ${anh ? `<img class="anh-mau" src="${escapeHtml(anh)}" alt="Ảnh mẫu/mockup" loading="lazy" onerror="this.remove()">` : ''}
         <table class="info-table">
           <tr><td>Mã đơn</td><td>${escapeHtml(don.STT_Key)}</td></tr>
           <tr><td>Mã đơn (sàn TMĐT)</td><td>${escapeHtml(don.MA_DON_HANG_ORDERID || '')}</td></tr>
@@ -129,7 +93,6 @@ async function taiChiTiet() {
           <tr><td>Người nhận</td><td>${escapeHtml(don.TEN || '')} ${don.SDT ? '· ' + escapeHtml(don.SDT) : ''}</td></tr>
           <tr><td>Địa chỉ giao hàng</td><td>${escapeHtml(dongDiaChi(don))}</td></tr>
           <tr><td>Ghi chú</td><td>${escapeHtml(don.GHI_CHU || '')}</td></tr>
-          ${don.NGUOI_VAN_HANH ? `<tr><td>Người vận hành máy</td><td>${escapeHtml(don.NGUOI_VAN_HANH)}</td></tr>` : ''}
           <tr><td>Cập nhật lần cuối</td><td>${escapeHtml(don.NguoiCapNhatCuoi || '')}${don.ThoiGianCapNhatCuoi ? ' · ' + tsDep(don.ThoiGianCapNhatCuoi) : ''}</td></tr>
         </table>
         <div id="khu-vuc-thao-tac"></div>
@@ -138,18 +101,14 @@ async function taiChiTiet() {
       <div>
         <h3>Lịch sử thay đổi</h3>
         <div class="timeline">
-          ${(don.lichSu || []).map(l => {
-            const pl = phanLoaiHanhDong(l.HanhDong);
-            return `
+          ${(don.lichSu || []).map(l => `
             <div class="timeline-item">
-              <div class="timeline-dot ${pl.mau}">${icon(pl.iconTen, { size: 13 })}</div>
               <div class="timeline-info">
                 <strong>${escapeHtml(l.NguoiDung)}</strong> <span style="font-size:0.85rem;color:var(--color-text-muted)">(${escapeHtml(NHAN_VAI_TRO[l.VaiTro] || l.VaiTro)})</span>
-                <div style="font-size:0.85rem;color:var(--color-text-muted);margin-top:2px">${escapeHtml(nhanHanhDong(l.HanhDong))}</div>
+                <div style="font-size:0.85rem;color:var(--color-text-muted);margin-top:2px">${escapeHtml(l.HanhDong)}</div>
               </div>
               <div class="timeline-time">${tsDep(l.ThoiGian)}</div>
-            </div>`;
-          }).join('') || '<p>Chưa có lịch sử.</p>'}
+            </div>`).join('') || '<p>Chưa có lịch sử.</p>'}
         </div>
       </div>
     </div>
@@ -159,35 +118,40 @@ async function taiChiTiet() {
 
 function renderKhuVucThaoTac(don) {
   const el = document.getElementById('khu-vuc-thao-tac');
-
-  // ===== NHÓM "CHUYỂN TRẠNG THÁI" =====
-  let nhomTrangThai = '';
+  let html = '';
 
   // Nút "Đã xác nhận" — set tay (KHÔNG qua kịch bản quét QR, theo README.txt), chỉ ve_file/admin
   // được dùng. Chỉ hiện khi đơn đang "Chưa xác nhận". Tự động set TRANG_THAI_PHOI="Chưa lấy phôi"
   // và TRANG_THAI_VE_FILE="Chưa vẽ file" để 2 ô lọc trạng thái ở trang Đơn hàng hoạt động đúng.
   const hienNutXacNhan = (user.vaiTro === 'admin' || user.vaiTro === 've_file') && don.TINH_TRANG === 'Chưa xác nhận';
   if (hienNutXacNhan) {
-    nhomTrangThai += `<button class="btn-hanh-dong" onclick="xacNhanDon(this)">${icon('check', { size: 16 })} Đã xác nhận</button>`;
+    html += `<button class="btn-hanh-dong" onclick="xacNhanDon(this)">${icon('check', { size: 16 })} Đã xác nhận</button>`;
   }
 
   // Nút chuyển giai đoạn — đọc từ chính tab CauHinhKichBan (dùng chung logic với quét QR),
   // không hardcode nút theo vai trò vì Sheet không định nghĩa vai trò cho từng kịch bản.
   if (don.kichBanKeTiep && don.kichBanKeTiep.length > 0) {
-    nhomTrangThai += don.kichBanKeTiep.map(kb => `
+    html += don.kichBanKeTiep.map(kb => `
       <button class="btn-hanh-dong" onclick="chuyenGiaiDoan('${kb.id}', this)">
         ${icon('arrowRight')} Chuyển sang: ${escapeHtml(kb.label)}
       </button>`).join('');
   } else if (!hienNutXacNhan) {
-    nhomTrangThai += '<p>Không có kịch bản nào áp dụng được cho trạng thái hiện tại (kiểm tra tab CauHinhKichBan).</p>';
+    html += '<p>Không có kịch bản nào áp dụng được cho trạng thái hiện tại (kiểm tra tab CauHinhKichBan).</p>';
   }
+
+  html += `
+    <div class="upload-box">
+      <label for="ghi-chu-moi">Ghi chú xưởng</label>
+      <textarea id="ghi-chu-moi" rows="3" style="padding:10px;border-radius:8px;border:1px solid var(--color-border);font:inherit">${escapeHtml(don.GHI_CHU || '')}</textarea>
+      <button class="btn-hanh-dong phu" onclick="luuGhiChu()">${icon('check')} Lưu ghi chú</button>
+    </div>`;
 
   // Sửa trạng thái THỦ CÔNG — bắt buộc phải có vì "LỖI SẢN XUẤT CẦN LÀM LẠI" và việc làm lại sau đó
   // KHÔNG đi qua kịch bản quét QR (theo Prompt_Ver_24.docx: "lỗi thì set tay, làm lại cũng set tay").
   // Hiện cho mọi vai trò có mặt ở trang này (nguoi_lay_phoi không tới được trang này — menu đã ẩn
   // hết trừ Quét QR — nên không cần loại riêng ở đây). Server (routes/orders.js, TRUONG_DUOC_SUA)
   // vẫn là nơi chặn thật sự nếu vai trò không đủ quyền sửa cột nào đó.
-  nhomTrangThai += `
+  html += `
     <div class="upload-box">
       <label>Sửa trạng thái thủ công</label>
       <label for="sua-tinh-trang" style="font-size:0.85rem;font-weight:400">Trạng thái chung (TINH_TRANG)</label>
@@ -207,39 +171,17 @@ function renderKhuVucThaoTac(don) {
       <p style="margin:0;font-size:0.8rem;color:var(--color-text-faint)">Nếu cả Phôi và Vẽ file cùng chuyển sang "Đã..." trong khi Trạng thái chung đang là "Đã xác nhận", hệ thống tự chuyển Trạng thái chung sang "ĐÃ SẴN SÀNG CHẠY MÁY".</p>
     </div>`;
 
-  // ===== NHÓM "TIỆN ÍCH" =====
-  let nhomTienIch = `<button class="btn-hanh-dong phu" onclick="inLaiTem(this)">${icon('printer', { size: 16 })} In lại tem</button>`;
-
-  nhomTienIch += `
-    <div class="upload-box">
-      <label for="ghi-chu-moi">Ghi chú xưởng</label>
-      <textarea id="ghi-chu-moi" rows="3" style="padding:10px;border-radius:8px;border:1px solid var(--color-border);font:inherit">${escapeHtml(don.GHI_CHU || '')}</textarea>
-      <button class="btn-hanh-dong phu" onclick="luuGhiChu()">${icon('check')} Lưu ghi chú</button>
-    </div>`;
-
   if (user.vaiTro === 'admin') {
-    nhomTienIch += `
+    html += `
       <div class="upload-box">
         <label for="anh-dong-goi">${icon('camera', { size: 18 })} Chụp ảnh đóng gói</label>
         <input type="file" accept="image/*" capture="environment" id="anh-dong-goi">
         <button class="btn-hanh-dong" onclick="taiAnh('dong_goi')">${icon('download')} Tải ảnh lên</button>
-        <div id="tien-do-anh-dong-goi" class="thanh-tien-do-hang-loat" style="display:none">
-          <div class="thanh-tien-do-nen"><div id="tien-do-anh-dong-goi-fill" class="thanh-tien-do-fill"></div></div>
-          <span id="tien-do-anh-dong-goi-chu" class="thanh-tien-do-chu"></span>
-        </div>
         <p style="margin:0;font-size:0.8rem">Cần cột <code>Anh_Dong_Goi_URL</code> trong Sheet — nếu chưa có, thao tác này sẽ báo lỗi.</p>
       </div>`;
   }
 
-  el.innerHTML = `
-    <div class="nhom-thao-tac">
-      <p class="nhom-thao-tac-tieu-de">Chuyển trạng thái</p>
-      ${nhomTrangThai}
-    </div>
-    <div class="nhom-thao-tac">
-      <p class="nhom-thao-tac-tieu-de">Tiện ích</p>
-      ${nhomTienIch}
-    </div>`;
+  el.innerHTML = html;
   canhBaoToHopSai();
 }
 
@@ -253,7 +195,7 @@ function loiToHopTrangThai(tinhTrang, phoi, veFile) {
     if (veFile === 'Đã vẽ file') return 'Đơn đang "Chưa xác nhận" thì chưa thể "Đã vẽ file" — xác nhận đơn trước.';
   }
   const CAC_TRANG_THAI_TU_SAN_SANG_TRO_DI = [
-    'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đang chạy máy', 'Đã sản xuất', 'Đã đóng gói',
+    'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đã sản xuất', 'Đã đóng gói',
     'IN TRANSIT_Tracking đã hoạt động', 'DELIVERED_Đã giao đến khách',
   ];
   if (CAC_TRANG_THAI_TU_SAN_SANG_TRO_DI.includes(tinhTrang)) {
@@ -289,8 +231,7 @@ async function luuTrangThaiThuCong() {
   try {
     await apiFetch('/orders/' + encodeURIComponent(sttKey), { method: 'PUT', body: JSON.stringify(updates) });
     await taiChiTiet();
-    toast('Đã lưu trạng thái', 'success');
-  } catch (e) { toast(e.message, 'danger'); }
+  } catch (e) { alert(e.message); }
 }
 
 async function xacNhanDon(btn) {
@@ -301,89 +242,9 @@ async function xacNhanDon(btn) {
       body: JSON.stringify({ TINH_TRANG: 'Đã xác nhận', TRANG_THAI_PHOI: 'Chưa lấy phôi', TRANG_THAI_VE_FILE: 'Chưa vẽ file' }),
     });
     await taiChiTiet();
-    toast('Đã xác nhận đơn', 'success');
   } catch (e) {
-    toast(e.message, 'danger');
+    alert(e.message);
     btn.disabled = false;
-  }
-}
-
-async function inLaiTem(btn) {
-  const nhanGoc = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Đang tải xem trước...';
-  try {
-    const xemTruoc = await apiFetch('/reports/tem-xem-truoc/' + encodeURIComponent(sttKey));
-    moModalXemTruocTem(xemTruoc);
-  } catch (e) {
-    toast(e.message, 'danger');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = nhanGoc;
-  }
-}
-
-// Modal xem trước tem (thêm 27/08/2026) — hiện đúng nội dung sẽ có trên tem PDF (QR + 2 ảnh + thông
-// tin) TRƯỚC khi thực sự tải file, để phát hiện ngay nếu ảnh mẫu/mockup không tải được thay vì phải
-// mở file PDF ra mới biết. Dùng lại đúng dữ liệu trả về từ /reports/tem-xem-truoc/:sttKey.
-function moModalXemTruocTem(d) {
-  let overlay = document.getElementById('tem-preview-overlay');
-  if (!overlay) {
-    overlay = document.createElement('div');
-    overlay.id = 'tem-preview-overlay';
-    overlay.className = 'tem-preview-overlay';
-    overlay.onclick = (e) => { if (e.target === overlay) overlay.style.display = 'none'; };
-    document.body.appendChild(overlay);
-  }
-
-  overlay.innerHTML = `
-    <div class="tem-preview-box">
-      <strong>${escapeHtml(d.sttKey)}</strong>
-      <div class="tem-preview-anh-doi">
-        ${d.mau ? `<img src="${d.mau}" alt="Ảnh mẫu">` : `<div class="tem-preview-anh-doi-trong">Không có ảnh mẫu</div>`}
-        ${d.mockup ? `<img src="${d.mockup}" alt="Mockup">` : `<div class="tem-preview-anh-doi-trong">Không có mockup</div>`}
-      </div>
-      <div class="tem-preview-duoi">
-        ${d.qr ? `<img src="${d.qr}" alt="QR">` : ''}
-        <div style="font-size:0.85rem">
-          <div>${escapeHtml(d.dongTom)}</div>
-          <div style="color:var(--color-text-muted)">Vị trí: ${escapeHtml(d.viTri || '—')}</div>
-          <div style="color:var(--color-text-muted)">SL: ${escapeHtml(String(d.soLuong ?? ''))}${d.ghiChu ? ' · Ghi chú: ' + escapeHtml(d.ghiChu) : ''}</div>
-        </div>
-      </div>
-      <div class="tem-preview-nut-hang">
-        <button class="btn-hanh-dong" onclick="taiPdfTem('${escapeHtml(d.sttKey)}', this)">${icon('download', { size: 16 })} Tải PDF</button>
-        <button class="btn-hanh-dong phu" onclick="document.getElementById('tem-preview-overlay').style.display='none'">Đóng</button>
-      </div>
-    </div>`;
-  overlay.style.display = 'flex';
-}
-
-async function taiPdfTem(sttKeyTem, btn) {
-  const nhanGoc = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Đang tạo tem...';
-  try {
-    const res = await fetch('/api/reports/tem/' + encodeURIComponent(sttKeyTem), { credentials: 'include' });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      throw new Error(data.error || 'Không tạo được tem');
-    }
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Tem_${sttKeyTem}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    document.getElementById('tem-preview-overlay').style.display = 'none';
-  } catch (e) {
-    toast(e.message, 'danger');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = nhanGoc;
   }
 }
 
@@ -392,9 +253,8 @@ async function chuyenGiaiDoan(scenarioId, btn) {
   try {
     await apiFetch(`/qr/kich-ban/${scenarioId}/quet`, { method: 'POST', body: JSON.stringify({ sttKey }) });
     await taiChiTiet();
-    toast('Đã chuyển giai đoạn', 'success');
   } catch (e) {
-    toast(e.message, 'danger');
+    alert(e.message);
     btn.disabled = false;
   }
 }
@@ -404,48 +264,25 @@ async function luuGhiChu() {
   try {
     await apiFetch('/orders/' + encodeURIComponent(sttKey), { method: 'PUT', body: JSON.stringify({ GHI_CHU: ghiChu }) });
     await taiChiTiet();
-    toast('Đã lưu ghi chú', 'success');
-  } catch (e) { toast(e.message, 'danger'); }
+  } catch (e) { alert(e.message); }
 }
 
 async function taiAnh(moc) {
-  const idBase = 'anh-' + moc.replace('_', '-');
-  const input = document.getElementById(idBase);
-  if (!input.files[0]) { toast('Chưa chọn ảnh', 'danger'); return; }
-
-  const khuTienDo = document.getElementById('tien-do-' + idBase);
-  const opTienDo = document.getElementById('tien-do-' + idBase + '-fill');
-  const chuTienDo = document.getElementById('tien-do-' + idBase + '-chu');
-  khuTienDo.style.display = 'flex';
-  opTienDo.style.width = '0%';
-  chuTienDo.textContent = 'Đang nén ảnh...';
-
-  // Nén ảnh trước khi gửi lên (giảm dung lượng đáng kể trên mạng yếu) — nếu nén lỗi vì lý do gì đó,
-  // vẫn tải ảnh GỐC lên thay vì chặn hẳn thao tác (thêm 27/08/2026).
-  let anhDeGui;
-  try {
-    anhDeGui = await neniAnh(input.files[0]);
-  } catch (e) {
-    anhDeGui = input.files[0];
-  }
+  const input = document.getElementById('anh-' + moc.replace('_', '-'));
+  if (!input.files[0]) return alert('Chưa chọn ảnh');
 
   const form = new FormData();
-  form.append('photo', anhDeGui, input.files[0].name);
+  form.append('photo', input.files[0]);
   form.append('sttKey', sttKey);
   form.append('moc', moc);
 
   try {
-    await taiLenCoTienDo('/api/photos/upload', form, (phanTram) => {
-      opTienDo.style.width = phanTram + '%';
-      chuTienDo.textContent = `Đang tải lên... ${phanTram}%`;
-    });
-    toast('Đã tải ảnh lên!', 'success');
+    const res = await fetch('/api/photos/upload', { method: 'POST', body: form, credentials: 'include' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    alert('Đã tải ảnh lên!');
     await taiChiTiet();
-  } catch (e) {
-    toast(e.message, 'danger');
-  } finally {
-    khuTienDo.style.display = 'none';
-  }
+  } catch (e) { alert(e.message); }
 }
 </script>
 </body>

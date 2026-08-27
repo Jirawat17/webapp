@@ -38,7 +38,7 @@ function kiemTraGiaTriHopLe(updates) {
 }
 
 // Kiểm tra tính HỢP LÝ giữa 3 cột VỚI NHAU — không chỉ đúng giá trị từng cột riêng lẻ mà còn phải
-// khớp logic pipeline. 2 quy tắc:
+// khớp logic pipeline. 3 quy tắc:
 //   1. "Chưa xác nhận" thì KHÔNG THỂ đã có phôi/đã vẽ file (đơn còn chưa được khách xác nhận thì
 //      chưa ai chuẩn bị phôi/vẽ file cho đơn đó).
 //   2. Đã tới "ĐÃ SẴN SÀNG CHẠY MÁY" hoặc các bước SAU đó trên đường chính (Đã sản xuất, Đã đóng
@@ -46,9 +46,19 @@ function kiemTraGiaTriHopLe(updates) {
 //      XUẤT CẦN LÀM LẠI/CANCELLED/REFUNDED (nhánh rẽ, không nằm trong THU_TU_TINH_TRANG nên
 //      chiSoTinhTrang trả về null, CỐ Ý bỏ qua quy tắc này — lúc lỗi cần được phép reset phôi/file
 //      về "chưa" để làm lại từ đầu, xem tinhTinhTrangTuDong ở trên và README).
+//   3. (bổ sung 26/08/2026) PHẢI đi qua "Đang chạy máy" trước khi tới "Đã sản xuất" — không cho
+//      nhảy cóc thẳng từ "ĐÃ SẴN SÀNG CHẠY MÁY" (hay bất kỳ trạng thái nào khác) sang "Đã sản xuất".
 // Chỉ kiểm tra khi updates THỰC SỰ đụng tới 1 trong 3 cột — sửa các trường khác (GHI_CHU, HANG_VAN_
 // CHUYEN...) không bao giờ bị chặn bởi hàm này, kể cả khi dữ liệu cũ của đơn đó lỡ đã sai từ trước.
-function kiemTraTinhHopLy(rowHienTai, updates) {
+//
+// ADMIN OVERRIDE (bổ sung 26/08/2026, theo Prompt_Ver_25.docx — trước đó CẢ ADMIN cũng bị 2 quy tắc
+// này chặn tuyệt đối, không có lối thoát nào để sửa những trường hợp ngoại lệ/dữ liệu cũ bị lệch,
+// vd cần set tay 1 đơn "Chưa xác nhận" thành "Đã lấy phôi" trước, hoặc cho đơn ĐÃ SẴN SÀNG CHẠY MÁY
+// quay lại "Chưa lấy phôi"/"Chưa vẽ file" để làm lại). admin là superuser, được BỎ QUA hoàn toàn cả
+// 3 quy tắc; các vai trò khác vẫn bị chặn như cũ.
+function kiemTraTinhHopLy(rowHienTai, updates, user) {
+  if (user && user.vaiTro === 'admin') return;
+
   const dungChamPipeline = 'TINH_TRANG' in updates || 'TRANG_THAI_PHOI' in updates || 'TRANG_THAI_VE_FILE' in updates;
   if (!dungChamPipeline) return;
 
@@ -74,6 +84,16 @@ function kiemTraTinhHopLy(rowHienTai, updates) {
       throw new Error(`Không hợp lệ: đơn đang/sắp ở "${tinhTrangMoi}" nhưng file vẽ vẫn "${veFileMoi}" — phải vẽ xong file mới tới được giai đoạn này.`);
     }
   }
+
+  // Quy tắc 3: dùng updates.TINH_TRANG (KHÔNG dùng tinhTrangMoi ở trên) — chỉ kiểm tra khi updates
+  // THỰC SỰ yêu cầu đổi TINH_TRANG thành "Đã sản xuất"; tránh báo nhầm khi đơn ĐÃ SẴN đang ở "Đã
+  // sản xuất" từ trước và người dùng chỉ sửa GHI_CHU/phôi/file mà không đụng gì tới TINH_TRANG.
+  // ÁP DỤNG CHO CẢ quét QR (đã xác nhận với người dùng) — kịch bản "chuyển sang Đã sản xuất" trong
+  // tab CauHinhKichBan trên Google Sheet cần đổi lại requireStatus từ "ĐÃ SẴN SÀNG CHẠY MÁY" thành
+  // "Đang chạy máy", nếu không mọi lượt quét kịch bản đó sẽ báo lỗi từ nay trở đi.
+  if (updates.TINH_TRANG === 'Đã sản xuất' && rowHienTai.TINH_TRANG !== 'Đang chạy máy') {
+    throw new Error(`Không hợp lệ: phải chuyển đơn sang "Đang chạy máy" trước, chưa thể chuyển thẳng từ "${rowHienTai.TINH_TRANG}" sang "Đã sản xuất".`);
+  }
 }
 
 // TỰ ĐỘNG chuyển TINH_TRANG sang "ĐÃ SẴN SÀNG CHẠY MÁY" khi cả phôi lẫn file vẽ CÙNG xong — nhưng
@@ -95,31 +115,30 @@ function tinhTinhTrangTuDong(rowHienTai, updates) {
   return updates;
 }
 
-// TỰ ĐỘNG ghi NGUOI_VAN_HANH = người đang thực hiện thao tác, mỗi khi TINH_TRANG được set sang
-// "Đang chạy máy" — dùng chung cho MỌI đường ghi (PUT sửa đơn, quét QR đơn lẻ, quét QR hàng loạt)
-// vì tất cả đều đã tự set updates.NguoiCapNhatCuoi = tên người thao tác TRƯỚC khi gọi update() (xem
-// routes/orders.js và routes/qr.js) — không cần sửa gì thêm ở các route đó. CỐ Ý không ghi đè nếu
-// người gọi đã tự truyền NGUOI_VAN_HANH (không xảy ra trong luồng bình thường, nhưng phòng hờ).
-// Trường NGUOI_VAN_HANH nằm trong TRUONG_CAM_SUA (routes/orders.js) nên client KHÔNG thể tự đặt giá
-// trị này qua PUT — chỉ hàm này mới ghi được, đảm bảo luôn đúng người đang thao tác thật.
-function tuDongGanNguoiVanHanh(updates) {
-  if (updates.TINH_TRANG === 'Đang chạy máy' && !('NGUOI_VAN_HANH' in updates) && updates.NguoiCapNhatCuoi) {
-    return { ...updates, NGUOI_VAN_HANH: updates.NguoiCapNhatCuoi };
-  }
-  return updates;
-}
-
-async function update(sttKey, updates) {
+async function update(sttKey, updates, user) {
   const { headers, row } = await getByKey(sttKey, { fresh: true }); // luôn đọc thật trước khi ghi
   if (!row) throw new Error('Không tìm thấy đơn hàng: ' + sttKey);
 
   kiemTraGiaTriHopLe(updates);
 
-  const updatesDaTinh = tuDongGanNguoiVanHanh(tinhTinhTrangTuDong(row, updates));
-  kiemTraTinhHopLy(row, updatesDaTinh); // kiểm tra SAU khi đã tính tự động, để không báo nhầm khi chính việc tự động hoá làm cho tổ hợp trở nên hợp lệ
+  const updatesDaTinh = tinhTinhTrangTuDong(row, updates);
+  kiemTraTinhHopLy(row, updatesDaTinh, user); // kiểm tra SAU khi đã tính tự động, để không báo nhầm khi chính việc tự động hoá làm cho tổ hợp trở nên hợp lệ
 
   await updateCells(TAB, headers, row._row, updatesDaTinh); // tự xoá cache của tab sau khi ghi (xem sheetsService)
-  return { ...row, ...updatesDaTinh };
+
+  // true nếu tinhTinhTrangTuDong() VỪA TỰ thêm TINH_TRANG vào updates (người gọi không hề yêu cầu
+  // sửa TINH_TRANG) — bổ sung 26/08/2026 theo Prompt_Ver_25.docx: trước đây log ở orders.js/qr.js
+  // chỉ ghi đúng cột người dùng vừa sửa tay (vd TRANG_THAI_PHOI), không hề nhắc rằng TINH_TRANG cũng
+  // vừa tự nhảy theo, khiến xem lại lịch sử 1 đơn sau này khó hiểu vì sao trạng thái tổng đổi mà
+  // không có dòng nào giải thích. Trả thêm 2 trường "_" để nơi gọi (routes/orders.js, routes/qr.js)
+  // biết mà ghi thêm chi tiết vào dòng log của chính hành động đó.
+  const daTuDongChuyenTinhTrang = !('TINH_TRANG' in updates) && 'TINH_TRANG' in updatesDaTinh;
+
+  return {
+    ...row, ...updatesDaTinh,
+    _daTuDongChuyenTinhTrang: daTuDongChuyenTinhTrang,
+    _tinhTrangTuDongMoi: daTuDongChuyenTinhTrang ? updatesDaTinh.TINH_TRANG : null,
+  };
 }
 
 // Đơn chỉ lưu MA_KHACH_HANG (mã) — gắn thêm tên khách hàng thật để hiển thị, không sửa dữ liệu gốc

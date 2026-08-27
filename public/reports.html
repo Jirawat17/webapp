@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Báo cáo — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=20260828c">
-<script src="/js/theme.js?v=20260828c"></script>
+<link rel="stylesheet" href="/css/style.css?v=20260826a">
+<script src="/js/theme.js?v=20260826a"></script>
 </head>
 <body>
 <div id="nav"></div>
@@ -26,7 +26,6 @@
       <button type="button" class="btn-hanh-dong phu" id="btn-xem-thong-ke-loi"></button>
     </div>
   </form>
-  <div class="khoang-nhanh" id="khoang-nhanh-loi"></div>
 
   <div id="khu-thong-ke-loi" style="margin-top:20px"></div>
 
@@ -48,63 +47,13 @@
       <button type="button" class="btn-hanh-dong phu" id="btn-xem-thong-ke-hoan"></button>
     </div>
   </form>
-  <div class="khoang-nhanh" id="khoang-nhanh-hoan"></div>
 
   <div id="khu-thong-ke-hoan" style="margin-top:20px"></div>
-
-  <hr style="margin:32px 0; border:none; border-top:1px solid var(--color-border)">
-
-  <h2>Thống kê thời gian chạy máy</h2>
-  <p>Thời gian mỗi lần đơn thực sự nằm trên máy — từ lúc chuyển sang <strong>Đang chạy máy</strong> tới lúc chuyển sang <strong>Đã sản xuất</strong> — theo người vận hành và theo loại sản phẩm. Dựa trên lịch sử thao tác (LichSuHoatDong).</p>
-
-  <form id="form-thong-ke-chay-may" class="bao-cao-form">
-    <div class="truong">
-      <label for="chaymay-tu-ngay">Từ ngày</label>
-      <input type="date" id="chaymay-tu-ngay">
-    </div>
-    <div class="truong">
-      <label for="chaymay-den-ngay">Đến ngày</label>
-      <input type="date" id="chaymay-den-ngay">
-    </div>
-    <div class="nut-xuat">
-      <button type="button" class="btn-hanh-dong phu" id="btn-xem-thong-ke-chay-may"></button>
-    </div>
-  </form>
-  <div class="khoang-nhanh" id="khoang-nhanh-chaymay"></div>
-
-  <div id="khu-thong-ke-chay-may" style="margin-top:20px"></div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-<script src="/js/icons.js?v=20260828c"></script>
-<script src="/js/api.js?v=20260828c"></script>
+<script src="/js/icons.js?v=20260826a"></script>
+<script src="/js/api.js?v=20260826a"></script>
 <script>
-// Các nút "7 ngày / 30 ngày / Tháng này" — đặt nhanh khoảng ngày thay vì phải tự chọn 2 ô ngày mỗi
-// lần (thêm 27/08/2026). Dùng chung cho cả 3 khu thống kê, chỉ khác id ô ngày + hàm tải lại.
-const KHOANG_NHANH = [
-  { nhan: '7 ngày', soNgay: 7 },
-  { nhan: '30 ngày', soNgay: 30 },
-  { nhan: 'Tháng này', thangNay: true },
-];
-function veKhoangNhanh(idKhung, idTu, idDen, hamTaiLai) {
-  document.getElementById(idKhung).innerHTML = KHOANG_NHANH.map((k, i) =>
-    `<button type="button" class="khoang-nhanh-btn" onclick="apKhoangNhanh(${i}, '${idTu}', '${idDen}', ${hamTaiLai.name})">${k.nhan}</button>`
-  ).join('');
-}
-function apKhoangNhanh(i, idTu, idDen, hamTaiLai) {
-  const k = KHOANG_NHANH[i];
-  const den = new Date();
-  let tu;
-  if (k.thangNay) {
-    tu = new Date(den.getFullYear(), den.getMonth(), 1);
-  } else {
-    tu = new Date(); tu.setDate(tu.getDate() - k.soNgay + 1);
-  }
-  document.getElementById(idTu).value = tu.toISOString().slice(0, 10);
-  document.getElementById(idDen).value = den.toISOString().slice(0, 10);
-  hamTaiLai();
-}
-
 (async () => {
   const user = await requireLoginOrRedirect();
   if (!user) return;
@@ -117,7 +66,6 @@ function apKhoangNhanh(i, idTu, idDen, hamTaiLai) {
   document.getElementById('btn-xem-thong-ke-loi').onclick = xemThongKeLoi;
   document.getElementById('loi-tu-ngay').addEventListener('change', xemThongKeLoi);
   document.getElementById('loi-den-ngay').addEventListener('change', xemThongKeLoi);
-  veKhoangNhanh('khoang-nhanh-loi', 'loi-tu-ngay', 'loi-den-ngay', xemThongKeLoi);
   await xemThongKeLoi();
 
   // Khởi tạo khu hoàn đơn — mặc định xem tất cả (không giới hạn ngày) để thấy toàn bộ đơn đang hoàn
@@ -125,18 +73,7 @@ function apKhoangNhanh(i, idTu, idDen, hamTaiLai) {
   document.getElementById('btn-xem-thong-ke-hoan').onclick = xemThongKeHoanDon;
   document.getElementById('hoan-tu-ngay').addEventListener('change', xemThongKeHoanDon);
   document.getElementById('hoan-den-ngay').addEventListener('change', xemThongKeHoanDon);
-  veKhoangNhanh('khoang-nhanh-hoan', 'hoan-tu-ngay', 'hoan-den-ngay', xemThongKeHoanDon);
   await xemThongKeHoanDon();
-
-  // Khởi tạo khu thời gian chạy máy — mặc định 30 ngày gần nhất
-  document.getElementById('btn-xem-thong-ke-chay-may').innerHTML = icon('chart') + ' Xem thống kê';
-  document.getElementById('chaymay-tu-ngay').value = homNay30.toISOString().slice(0, 10);
-  document.getElementById('chaymay-den-ngay').value = ngayHomNayYYYYMMDD();
-  document.getElementById('btn-xem-thong-ke-chay-may').onclick = xemThongKeChayMay;
-  document.getElementById('chaymay-tu-ngay').addEventListener('change', xemThongKeChayMay);
-  document.getElementById('chaymay-den-ngay').addEventListener('change', xemThongKeChayMay);
-  veKhoangNhanh('khoang-nhanh-chaymay', 'chaymay-tu-ngay', 'chaymay-den-ngay', xemThongKeChayMay);
-  await xemThongKeChayMay();
 })();
 
 function ngayHomNayYYYYMMDD() {
@@ -144,36 +81,6 @@ function ngayHomNayYYYYMMDD() {
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
   return `${d.getFullYear()}-${mm}-${dd}`;
-}
-
-// Biểu đồ cột thật (Chart.js, thêm 27/08/2026 — thay thanh ngang tự vẽ bằng div trước đây) — trả về
-// khung HTML chứa <canvas>, phải gọi veHoacCapNhatBieuDo() SAU KHI khung này đã được chèn vào DOM
-// thì mới vẽ được biểu đồ lên canvas.
-function veKhungBieuDo(tieuDe, canvasId, doiTuongDem) {
-  if (Object.keys(doiTuongDem).length === 0) return `<div class="xem-truoc-bang"><h3>${escapeHtml(tieuDe)}</h3><p>Không có dữ liệu.</p></div>`;
-  return `<div class="xem-truoc-bang"><h3>${escapeHtml(tieuDe)}</h3><div class="bieu-do-wrap"><canvas id="${canvasId}"></canvas></div></div>`;
-}
-
-const bieuDoDangVe = {};
-function veHoacCapNhatBieuDo(canvasId, doiTuongDem) {
-  const el = document.getElementById(canvasId);
-  if (!el) return; // không có dữ liệu — veKhungBieuDo() không tạo canvas, bỏ qua
-  const muc = Object.entries(doiTuongDem).sort((a, b) => b[1] - a[1]);
-  if (bieuDoDangVe[canvasId]) bieuDoDangVe[canvasId].destroy();
-  bieuDoDangVe[canvasId] = new Chart(el, {
-    type: 'bar',
-    data: {
-      labels: muc.map(m => m[0]),
-      datasets: [{ data: muc.map(m => m[1]), backgroundColor: 'rgba(190,18,60,0.75)', borderRadius: 4 }],
-    },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
-    },
-  });
 }
 
 async function xemThongKeLoi() {
@@ -190,7 +97,7 @@ async function xemThongKeLoi() {
   try {
     ketQua = await apiFetch('/reports/thong-ke-loi?' + qs.toString());
   } catch (e) {
-    khu.innerHTML = khoiLoiTaiLai(e.message, 'xemThongKeLoi');
+    khu.innerHTML = `<p>${icon('alert')} ${escapeHtml(e.message)}</p>`;
     return;
   }
 
@@ -201,26 +108,20 @@ async function xemThongKeLoi() {
 
   khu.innerHTML = `
     <p><strong>${ketQua.tongSoLoi}</strong> lần đơn bị chuyển sang lỗi cần làm lại, trong khoảng thời gian đã chọn.</p>
-    <div class="luoi-thong-ke-loi">
-      ${veKhungBieuDo('Theo loại sản phẩm', 'bieu-do-loi-loai', ketQua.theoLoai)}
-      ${veKhungBieuDo('Theo team sản xuất', 'bieu-do-loi-team', ketQua.theoTeam)}
-      ${veKhungBieuDo('Theo tuần', 'bieu-do-loi-tuan', ketQua.theoTuan)}
-    </div>
     <div class="xem-truoc-bang" style="margin-top:16px">
       <h3>Chi tiết ${ketQua.chiTiet.length < ketQua.tongSoLoi ? `(mới nhất ${ketQua.chiTiet.length}/${ketQua.tongSoLoi})` : ''}</h3>
       <div class="bang-cuon-ngang">
         <table class="bang-xem-truoc">
-          <thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Loại</th><th>Team</th><th>Người chuyển</th><th>Thời gian</th></tr></thead>
+          <thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Loại</th><th>Team</th><th>Người chuyển</th><th>Người sản xuất</th><th>Thời gian</th></tr></thead>
           <tbody>${ketQua.chiTiet.map(c => `<tr>
-            <td>${escapeHtml(c.sttKey)}</td><td>${escapeHtml(c.khachHang)}</td><td>${escapeHtml(c.loai)}</td>
-            <td>${escapeHtml(c.team)}</td><td>${escapeHtml(c.nguoiDung)}</td><td>${escapeHtml(c.thoiGian)}</td>
+            <td><a href="/order.html?stt=${encodeURIComponent(c.sttKey)}">${escapeHtml(c.sttKey)}</a></td><td>${escapeHtml(c.khachHang)}</td><td>${escapeHtml(c.loai)}</td>
+            <td>${escapeHtml(c.team)}</td><td>${escapeHtml(c.nguoiDung)}</td>
+            <td style="color:${c.nguoiSanXuat === 'Không xác định do đã sửa trên GGSheet không qua app' ? 'var(--color-text-faint)' : 'inherit'}">${escapeHtml(c.nguoiSanXuat)}</td>
+            <td>${escapeHtml(c.thoiGian)}</td>
           </tr>`).join('')}</tbody>
         </table>
       </div>
     </div>`;
-  veHoacCapNhatBieuDo('bieu-do-loi-loai', ketQua.theoLoai);
-  veHoacCapNhatBieuDo('bieu-do-loi-team', ketQua.theoTeam);
-  veHoacCapNhatBieuDo('bieu-do-loi-tuan', ketQua.theoTuan);
 }
 
 async function xemThongKeHoanDon() {
@@ -237,7 +138,7 @@ async function xemThongKeHoanDon() {
   try {
     ketQua = await apiFetch('/reports/thong-ke-hoan-don?' + qs.toString());
   } catch (e) {
-    khu.innerHTML = khoiLoiTaiLai(e.message, 'xemThongKeHoanDon');
+    khu.innerHTML = `<p>${icon('alert')} ${escapeHtml(e.message)}</p>`;
     return;
   }
 
@@ -248,82 +149,24 @@ async function xemThongKeHoanDon() {
 
   khu.innerHTML = `
     <p><strong>${ketQua.tongSoHoan}</strong> đơn đang ở trạng thái hoàn trả trong khoảng thời gian đã chọn.</p>
-    <div class="luoi-thong-ke-loi">
-      ${veKhungBieuDo('Theo khách hàng', 'bieu-do-hoan-kh', ketQua.theoKhachHang)}
-      ${veKhungBieuDo('Theo loại sản phẩm', 'bieu-do-hoan-loai', ketQua.theoLoai)}
-      ${veKhungBieuDo('Theo tuần', 'bieu-do-hoan-tuan', ketQua.theoTuan)}
-    </div>
     <div class="xem-truoc-bang" style="margin-top:16px">
       <h3>Chi tiết (kèm ghi chú nguyên nhân)</h3>
       <div class="bang-cuon-ngang">
         <table class="bang-xem-truoc">
-          <thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Loại</th><th>Kích thước</th><th>Màu sắc</th><th>Ngày lên đơn</th><th>Ghi chú / Nguyên nhân</th></tr></thead>
+          <thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Loại</th><th>Kích thước</th><th>Màu sắc</th><th>Ngày lên đơn</th><th>Người sản xuất</th><th>Ghi chú / Nguyên nhân</th></tr></thead>
           <tbody>${ketQua.chiTiet.map(c => `<tr>
-            <td>${escapeHtml(c.sttKey)}</td>
+            <td><a href="/order.html?stt=${encodeURIComponent(c.sttKey)}">${escapeHtml(c.sttKey)}</a></td>
             <td>${escapeHtml(c.khachHang)}</td>
             <td>${escapeHtml(c.loai)}</td>
             <td>${escapeHtml(c.kichThuoc)}</td>
             <td>${escapeHtml(c.mauSac)}</td>
             <td>${escapeHtml(c.ngayLenDon)}</td>
+            <td style="color:${c.nguoiSanXuat === 'Không xác định do đã sửa trên GGSheet không qua app' ? 'var(--color-text-faint)' : 'inherit'}">${escapeHtml(c.nguoiSanXuat)}</td>
             <td style="color:${c.ghiChu === '(Không có ghi chú)' ? 'var(--color-text-faint)' : 'inherit'}">${escapeHtml(c.ghiChu)}</td>
           </tr>`).join('')}</tbody>
         </table>
       </div>
     </div>`;
-  veHoacCapNhatBieuDo('bieu-do-hoan-kh', ketQua.theoKhachHang);
-  veHoacCapNhatBieuDo('bieu-do-hoan-loai', ketQua.theoLoai);
-  veHoacCapNhatBieuDo('bieu-do-hoan-tuan', ketQua.theoTuan);
-}
-
-async function xemThongKeChayMay() {
-  const khu = document.getElementById('khu-thong-ke-chay-may');
-  khu.innerHTML = spinnerInline('Đang tải thống kê...');
-
-  const qs = new URLSearchParams();
-  const tuNgay = document.getElementById('chaymay-tu-ngay').value;
-  const denNgay = document.getElementById('chaymay-den-ngay').value;
-  if (tuNgay) qs.set('tuNgay', tuNgay);
-  if (denNgay) qs.set('denNgay', denNgay);
-
-  let ketQua;
-  try {
-    ketQua = await apiFetch('/reports/thong-ke-thoi-gian-chay-may?' + qs.toString());
-  } catch (e) {
-    khu.innerHTML = khoiLoiTaiLai(e.message, 'xemThongKeChayMay');
-    return;
-  }
-
-  if (ketQua.tongSoLanChay === 0) {
-    khu.innerHTML = `<div class="trang-thai-rong">${icon('package')}<p>Chưa có lần chạy máy nào hoàn tất (từ "Đang chạy máy" tới "Đã sản xuất") trong khoảng thời gian đã chọn.</p></div>`;
-    return;
-  }
-
-  const nhanSoLuong = (doiTuong, dem) => Object.fromEntries(
-    Object.entries(doiTuong).map(([k, v]) => [`${k} (${dem[k]} lần)`, v])
-  );
-  const theoNguoiNhan = nhanSoLuong(ketQua.trungBinhTheoNguoi, ketQua.soLanTheoNguoi);
-  const theoLoaiNhan = nhanSoLuong(ketQua.trungBinhTheoLoai, ketQua.soLanTheoLoai);
-
-  khu.innerHTML = `
-    <p><strong>${ketQua.tongSoLanChay}</strong> lần chạy máy đã hoàn tất trong khoảng thời gian đã chọn (đơn vị các biểu đồ dưới đây: giờ trung bình/lần).</p>
-    <div class="luoi-thong-ke-loi">
-      ${veKhungBieuDo('Trung bình giờ theo người vận hành', 'bieu-do-chaymay-nguoi', theoNguoiNhan)}
-      ${veKhungBieuDo('Trung bình giờ theo loại sản phẩm', 'bieu-do-chaymay-loai', theoLoaiNhan)}
-    </div>
-    <div class="xem-truoc-bang" style="margin-top:16px">
-      <h3>Chi tiết từng lần chạy máy ${ketQua.chiTiet.length < ketQua.tongSoLanChay ? `(mới nhất ${ketQua.chiTiet.length}/${ketQua.tongSoLanChay})` : ''}</h3>
-      <div class="bang-cuon-ngang">
-        <table class="bang-xem-truoc">
-          <thead><tr><th>Mã đơn</th><th>Người vận hành</th><th>Loại</th><th>Bắt đầu</th><th>Kết thúc</th><th>Số giờ</th></tr></thead>
-          <tbody>${ketQua.chiTiet.map(c => `<tr>
-            <td>${escapeHtml(c.sttKey)}</td><td>${escapeHtml(c.nguoiVanHanh)}</td><td>${escapeHtml(c.loai)}</td>
-            <td>${escapeHtml(c.batDau)}</td><td>${escapeHtml(c.ketThuc)}</td><td>${c.soGio}</td>
-          </tr>`).join('')}</tbody>
-        </table>
-      </div>
-    </div>`;
-  veHoacCapNhatBieuDo('bieu-do-chaymay-nguoi', theoNguoiNhan);
-  veHoacCapNhatBieuDo('bieu-do-chaymay-loai', theoLoaiNhan);
 }
 </script>
 </body>

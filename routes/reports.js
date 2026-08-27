@@ -18,17 +18,18 @@ router.use(requireLogin); // mọi vai trò đăng nhập đều dùng được 
 const FONT_REGULAR = path.join(__dirname, '..', 'fonts', 'NotoSans-Regular.ttf');
 const FONT_BOLD = path.join(__dirname, '..', 'fonts', 'NotoSans-Bold.ttf');
 
-// 3 mẫu xuất RIÊNG. Cập nhật 24/08/2026 (theo Prompt_Ver_24.docx — hệ trạng thái 3 cột mới):
-//   - TRANG_THAI_TRACKING vẫn dựa trên TINH_TRANG (đóng gói xong = sẵn sàng tạo tracking).
-//   - "Danh sách phôi cần chuẩn bị" và "Đơn cần in sau khi nhặt phôi" giờ dựa trên cột
-//     TRANG_THAI_PHOI (tách riêng khỏi TINH_TRANG) — KHÔNG còn suy được từ TINH_TRANG như bản cũ
-//     nữa (trang Báo cáo trước đây tự nhận diện mẫu khi người dùng chọn đúng 1 trạng thái trong
-//     dropdown TINH_TRANG; giờ 2 mẫu này CHỈ còn ép được qua tham số "mau" — do 3 nút in nhanh ở
-//     trang Đơn hàng gửi lên — không tự suy được nữa vì trang Báo cáo không có dropdown lọc theo
-//     cột phôi).
+// 3 mẫu xuất RIÊNG — cập nhật 26/08/2026: 3 nút in nhanh ở trang Đơn hàng giờ LUÔN gửi kèm đúng các
+// ô lọc đang hiển thị trên trang (trạng thái, phôi, vẽ file, ngày, từ khoá) — không còn ép cứng
+// trangThaiPhoi ở phía client nữa. Mỗi mẫu chỉ còn ép thêm ĐIỀU KIỆN TRẠNG THÁI RIÊNG của mình
+// (AND với các ô lọc đã gửi lên — có thể ra danh sách rỗng nếu người dùng đang lọc trạng thái khác
+// trên trang), áp dụng trong layDonDaLoc():
+//   - 'phoi_ao_gop' (IN DANH SÁCH PHÔI): TRANG_THAI_PHOI = Chưa lấy phôi VÀ TINH_TRANG thuộc
+//     {Đã xác nhận, LỖI SẢN XUẤT CẦN LÀM LẠI} (đơn lỗi làm lại cũng cần lấy lại phôi).
+//   - 'don_can_in' (IN ĐƠN): không ép trạng thái nào thêm — in đúng theo mọi trạng thái đang lọc.
+//   - 'tracking' (IN DANH SÁCH ĐÃ SẢN XUẤT): TINH_TRANG = Đã đóng gói.
 const TRANG_THAI_TRACKING = 'Đã đóng gói';
-const TRANG_THAI_PHOI_CAN_CHUAN_BI = 'Chưa lấy phôi'; // mẫu 'phoi_ao_gop' — lọc theo TRANG_THAI_PHOI, không phải TINH_TRANG
-const TRANG_THAI_PHOI_CAN_IN = 'Đã lấy phôi'; // mẫu 'don_can_in' — lọc theo TRANG_THAI_PHOI, không phải TINH_TRANG
+const TRANG_THAI_PHOI_CAN_CHUAN_BI = 'Chưa lấy phôi';
+const TINH_TRANG_CAN_PHOI = ['Đã xác nhận', 'LỖI SẢN XUẤT CẦN LÀM LẠI'];
 
 function locDon(rows, { tuNgay, denNgay, khachHang, trangThai, trangThaiPhoi, trangThaiVeFile, tuKhoa }) {
   return rows.filter(r => {
@@ -61,7 +62,15 @@ function xacDinhMau(query) {
 
 async function layDonDaLoc(query) {
   const { rows } = await orderService.getAll();
-  return locDon(rows, query);
+  const list = locDon(rows, query);
+  const mau = xacDinhMau(query);
+  if (mau === 'phoi_ao_gop') {
+    return list.filter(r => r.TRANG_THAI_PHOI === TRANG_THAI_PHOI_CAN_CHUAN_BI && TINH_TRANG_CAN_PHOI.includes(r.TINH_TRANG));
+  }
+  if (mau === 'tracking') {
+    return list.filter(r => r.TINH_TRANG === TRANG_THAI_TRACKING);
+  }
+  return list;
 }
 
 function dongThongTinLoc(query, kieu) {
@@ -116,6 +125,26 @@ router.get('/trang-thai-theo-loc', async (req, res) => {
 // lại lịch sử cũ nên vẫn cần so khớp đủ cả 3 mới không bỏ sót lỗi xảy ra ở các bản pipeline trước.
 const TRANG_THAI_LOI = ['ĐƠN LỖI CẦN LÀM LẠI', 'B4.3_ĐƠN LỖI CẦN LÀM LẠI', 'LỖI SẢN XUẤT CẦN LÀM LẠI'];
 
+// Tên trạng thái "Đã sản xuất" hiện tại + tên cũ (xem data/pipelineTinhTrang.js), dùng để tra
+// "người sản xuất" từ lịch sử — dùng chung cho cả bảng lỗi sản xuất và bảng hoàn đơn.
+const TINH_TRANG_SAN_XUAT = ['Đã sản xuất', 'B4.1_Đơn đã sản xuất', 'B5.2_Đơn chưa đóng gói'];
+const KHONG_XAC_DINH_NGUOI_SAN_XUAT = 'Không xác định do đã sửa trên GGSheet không qua app';
+
+// "Người sản xuất": đơn hàng không lưu trực tiếp trường này — tra LỊCH SỬ (LichSuHoatDong) tìm lần
+// GẦN NHẤT đơn được chuyển sang "Đã sản xuất" TÍNH ĐẾN HIỆN TẠI (không phân biệt theo từng lần lỗi
+// nếu đơn lỗi rồi sản xuất lại nhiều lần — lấy đơn giản 1 lần gần nhất chung cho mọi mục đích hiển
+// thị). Không tìm được (log bị xoá, hoặc sửa trực tiếp trên Sheet không qua app) thì trả về null —
+// nơi gọi tự thay bằng KHONG_XAC_DINH_NGUOI_SAN_XUAT.
+async function layNguoiSanXuatTheoDon() {
+  const lanSanXuat = await layLichSuChuyenSangTrangThai(TINH_TRANG_SAN_XUAT);
+  const ketQua = {};
+  for (const l of lanSanXuat) {
+    const hienTai = ketQua[l.sttKey];
+    if (!hienTai || new Date(l.thoiGian) > new Date(hienTai.thoiGian)) ketQua[l.sttKey] = l;
+  }
+  return ketQua;
+}
+
 // Số tuần trong năm theo lịch — dùng thống nhất với cách tính "theo tuần" đã có ở Dashboard
 function soTuanTrongNam(d) {
   const dauNam = new Date(d.getFullYear(), 0, 1);
@@ -130,6 +159,8 @@ function soTuanTrongNam(d) {
 // Đơn hàng không lưu "team sản xuất" trực tiếp — suy ra team bằng cách tra NGƯỜI đã bấm chuyển đơn
 // sang trạng thái lỗi (lấy từ lịch sử) rồi tra Team của người đó trong tab NguoiDung. Nếu không tìm
 // được (vd log bị xoá, hoặc trạng thái bị đổi trực tiếp trên Sheet không qua app) thì xếp vào "Không xác định".
+// "Người sản xuất" (khác với "Người chuyển" — người bấm chuyển đơn SANG trạng thái lỗi): người đã
+// thực hiện lần "Đã sản xuất" gần nhất của đơn đó — cho biết vấn đề chất lượng là ở khâu sản xuất nào.
 router.get('/thong-ke-loi', async (req, res) => {
   const { tuNgay, denNgay } = req.query;
 
@@ -150,6 +181,8 @@ router.get('/thong-ke-loi', async (req, res) => {
   const banDoTeam = {};
   nhanVien.forEach(nv => { banDoTeam[nv.Ten] = nv.Team || 'Không rõ team'; });
 
+  const nguoiSanXuatTheoDon = await layNguoiSanXuatTheoDon();
+
   const theoLoai = {}, theoTeam = {}, theoTuan = {};
   const chiTiet = [];
   const locTheoNgaySapXep = [...locTheoNgay].sort((a, b) => (a.thoiGian < b.thoiGian ? 1 : -1)); // sắp theo chuỗi ISO gốc — mới nhất trước
@@ -167,6 +200,7 @@ router.get('/thong-ke-loi', async (req, res) => {
     chiTiet.push({
       sttKey: l.sttKey, loai, team, nguoiDung: l.nguoiDung || '(Không rõ)',
       thoiGian: dinhDangNgayGioNgan(d), khachHang: don ? (don.MA_KHACH_HANG || '') : '',
+      nguoiSanXuat: (nguoiSanXuatTheoDon[l.sttKey] && nguoiSanXuatTheoDon[l.sttKey].nguoiDung) || KHONG_XAC_DINH_NGUOI_SAN_XUAT,
     });
   }
 
@@ -195,6 +229,8 @@ router.get('/thong-ke-hoan-don', async (req, res) => {
     return true;
   });
 
+  const nguoiSanXuatTheoDon = await layNguoiSanXuatTheoDon();
+
   const theoKhachHang = {}, theoLoai = {}, theoTuan = {};
   const chiTiet = [];
 
@@ -219,102 +255,11 @@ router.get('/thong-ke-hoan-don', async (req, res) => {
       mauSac: don.MAU_SAC || '',
       ngayLenDon: dinhDangNgay(don.NGAY_LEN_DON),
       ghiChu: don.GHI_CHU || '(Không có ghi chú)',
+      nguoiSanXuat: (nguoiSanXuatTheoDon[don.STT_Key] && nguoiSanXuatTheoDon[don.STT_Key].nguoiDung) || KHONG_XAC_DINH_NGUOI_SAN_XUAT,
     });
   }
 
   res.json({ tongSoHoan: locTheoNgay.length, theoKhachHang, theoLoai, theoTuan, chiTiet });
-});
-
-// ============================================================
-// THỐNG KÊ THỜI GIAN CHẠY MÁY (thêm 27/08/2026) — mỗi đơn mất bao lâu từ lúc vào "Đang chạy máy"
-// tới lúc ra "Đã sản xuất". Lấy 2 danh sách mốc thời gian từ LichSuHoatDong (mỗi lần đơn CHUYỂN
-// SANG đúng trạng thái đó), rồi GHÉP CẶP tuần tự theo đơn: 1 đơn có thể chạy máy NHIỀU LẦN nếu bị
-// lỗi sản xuất và làm lại (LỖI SẢN XUẤT CẦN LÀM LẠI reset về "Chưa lấy phôi"/"Chưa vẽ file", sau đó
-// có thể quay lại "Đang chạy máy" lần nữa) — mỗi lần ghép được 1 cặp bắt đầu/kết thúc riêng, tính
-// thời gian riêng, không cộng gộp các lần lại với nhau.
-// ============================================================
-async function tinhCacLanChayMay() {
-  const [dsBatDau, dsKetThuc] = await Promise.all([
-    layLichSuChuyenSangTrangThai('Đang chạy máy'),
-    layLichSuChuyenSangTrangThai('Đã sản xuất'),
-  ]);
-
-  const theoDonBatDau = {}, theoDonKetThuc = {};
-  dsBatDau.forEach(l => { (theoDonBatDau[l.sttKey] ||= []).push(l); });
-  dsKetThuc.forEach(l => { (theoDonKetThuc[l.sttKey] ||= []).push(l); });
-
-  const capChayMay = [];
-  for (const sttKey of Object.keys(theoDonBatDau)) {
-    const batDauSapXep = [...theoDonBatDau[sttKey]].sort((a, b) => new Date(a.thoiGian) - new Date(b.thoiGian));
-    let ketThucConLai = [...(theoDonKetThuc[sttKey] || [])].sort((a, b) => new Date(a.thoiGian) - new Date(b.thoiGian));
-
-    for (const batDau of batDauSapXep) {
-      const idxKhop = ketThucConLai.findIndex(kt => new Date(kt.thoiGian) > new Date(batDau.thoiGian));
-      if (idxKhop === -1) continue; // lần chạy máy này chưa xong (đang chạy dở) — chưa tính được, bỏ qua
-      const ketThuc = ketThucConLai[idxKhop];
-      ketThucConLai = ketThucConLai.slice(idxKhop + 1);
-      capChayMay.push({
-        sttKey,
-        nguoiVanHanh: batDau.nguoiDung || '(Không rõ)',
-        batDau: batDau.thoiGian,
-        ketThuc: ketThuc.thoiGian,
-        soGio: (new Date(ketThuc.thoiGian) - new Date(batDau.thoiGian)) / 3600000,
-      });
-    }
-  }
-  return capChayMay;
-}
-
-router.get('/thong-ke-thoi-gian-chay-may', async (req, res) => {
-  const { tuNgay, denNgay } = req.query;
-
-  const capChayMay = await tinhCacLanChayMay();
-  const locTheoNgay = capChayMay.filter(c => {
-    const d = new Date(c.batDau);
-    if (isNaN(d)) return false;
-    if (tuNgay && d < new Date(tuNgay + 'T00:00:00')) return false;
-    if (denNgay && d > new Date(denNgay + 'T23:59:59')) return false;
-    return true;
-  });
-
-  const { rows: donHang } = await orderService.getAll();
-  const banDoDon = {};
-  donHang.forEach(r => { banDoDon[r.STT_Key] = r; });
-
-  const tongGioTheoNguoi = {}, soLanTheoNguoi = {};
-  const tongGioTheoLoai = {}, soLanTheoLoai = {};
-  const chiTiet = [];
-
-  for (const c of locTheoNgay) {
-    const loai = (banDoDon[c.sttKey] && banDoDon[c.sttKey].LOAI) || '(Không rõ loại)';
-
-    tongGioTheoNguoi[c.nguoiVanHanh] = (tongGioTheoNguoi[c.nguoiVanHanh] || 0) + c.soGio;
-    soLanTheoNguoi[c.nguoiVanHanh] = (soLanTheoNguoi[c.nguoiVanHanh] || 0) + 1;
-    tongGioTheoLoai[loai] = (tongGioTheoLoai[loai] || 0) + c.soGio;
-    soLanTheoLoai[loai] = (soLanTheoLoai[loai] || 0) + 1;
-
-    chiTiet.push({
-      sttKey: c.sttKey,
-      nguoiVanHanh: c.nguoiVanHanh,
-      loai,
-      batDau: dinhDangNgayGioNgan(new Date(c.batDau)),
-      ketThuc: dinhDangNgayGioNgan(new Date(c.ketThuc)),
-      soGio: Math.round(c.soGio * 10) / 10,
-    });
-  }
-
-  const trungBinhTheoNguoi = {};
-  Object.keys(tongGioTheoNguoi).forEach(k => { trungBinhTheoNguoi[k] = Math.round((tongGioTheoNguoi[k] / soLanTheoNguoi[k]) * 10) / 10; });
-  const trungBinhTheoLoai = {};
-  Object.keys(tongGioTheoLoai).forEach(k => { trungBinhTheoLoai[k] = Math.round((tongGioTheoLoai[k] / soLanTheoLoai[k]) * 10) / 10; });
-
-  chiTiet.sort((a, b) => (a.batDau < b.batDau ? 1 : -1)); // mới nhất trước
-
-  res.json({
-    tongSoLanChay: locTheoNgay.length,
-    trungBinhTheoNguoi, trungBinhTheoLoai, soLanTheoNguoi, soLanTheoLoai,
-    chiTiet: chiTiet.slice(0, 200),
-  });
 });
 
 // ============================================================
@@ -726,51 +671,6 @@ function veBangPdf(doc, bang, canTrangMoi) {
   if (y > doc.page.height - doc.page.margins.bottom - 20) { doc.addPage(); y = doc.page.margins.top; }
   doc.font('NotoSans-Bold').fontSize(10).text(`Tổng số dòng: ${rows.length}`, startX, y);
 }
-
-// Xem trước tem QR trước khi in (thêm 27/08/2026) — trả JSON kèm ảnh base64 (giống /xem-truoc mẫu
-// 'don_can_in') để order.html hiện modal preview trước khi thực sự tải file PDF, tránh trường hợp
-// bấm "In lại tem" xong mới phát hiện ảnh mẫu/mockup không tải được. Lấy thẳng theo STT_Key, KHÔNG
-// qua layDonDaLoc/locDon (lý do xem chú thích ở route /tem/:sttKey bên dưới).
-router.get('/tem-xem-truoc/:sttKey', async (req, res) => {
-  const { row } = await orderService.getByKey(req.params.sttKey, { fresh: true });
-  if (!row) return res.status(404).json({ error: 'Không tìm thấy đơn hàng: ' + req.params.sttKey });
-
-  const anh = await taiAnhChoDon(row);
-  res.json({
-    sttKey: row.STT_Key,
-    dongTom: `${row.LOAI || ''} · ${row.KICH_THUOC || ''} · ${row.MAU_SAC || ''}`,
-    viTri: [row.VI_TRI_1, row.VI_TRI_2, row.VI_TRI_3].filter(Boolean).join(' · '),
-    soLuong: row.SO_LUONG,
-    soLuongAoTrenDon: row.SO_LUONG_AO_TREN_DON,
-    ngayLenDon: dinhDangNgay(row.NGAY_LEN_DON),
-    ghiChu: row.GHI_CHU || '',
-    qr: anh.qr ? `data:image/png;base64,${anh.qr.toString('base64')}` : null,
-    mau: anh.mau ? `data:image/${anh.mauDinhDang};base64,${anh.mau.toString('base64')}` : null,
-    mockup: anh.mockup ? `data:image/${anh.mockupDinhDang};base64,${anh.mockup.toString('base64')}` : null,
-  });
-});
-
-// In lại tem QR cho ĐÚNG 1 đơn (thêm 27/08/2026) — dùng khi tem bị bong/mất, không cần lọc theo
-// TRANG_THAI_PHOI hay ngày lên đơn như mẫu "Đơn cần in" gốc (layDonDaLoc/locDon yêu cầu NGAY_LEN_DON
-// hợp lệ và TRANG_THAI_PHOI='Đã lấy phôi' — không phù hợp cho việc in lại 1 tem bất kỳ lúc nào).
-// Lấy thẳng đơn theo STT_Key, dùng lại đúng khổ thẻ + hàm vẽ của mẫu 'don_can_in'.
-router.get('/tem/:sttKey', async (req, res) => {
-  const { row } = await orderService.getByKey(req.params.sttKey, { fresh: true });
-  if (!row) return res.status(404).json({ error: 'Không tìm thấy đơn hàng: ' + req.params.sttKey });
-
-  res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', `attachment; filename="Tem_${row.STT_Key}.pdf"`);
-
-  const rong = mmToPt(KHO_GIAY_MM.rong);
-  const cao = mmToPt(KHO_GIAY_MM.cao);
-  const doc = new PDFDocument({ size: [rong, cao], margin: 0 });
-  doc.registerFont('NotoSans', FONT_REGULAR);
-  doc.registerFont('NotoSans-Bold', FONT_BOLD);
-  doc.pipe(res);
-
-  await veTrangDonCanInPdf(doc, [row], dongNguoiXuatChuoi(req.session.user.ten));
-  doc.end();
-});
 
 router.get('/pdf', async (req, res) => {
   const list = await layDonDaLoc(req.query);
