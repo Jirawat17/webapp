@@ -55,12 +55,12 @@
   </select>
   <button id="nut-ap-dung" class="btn-hanh-dong" onclick="apDungChuyenTrangThai()">Áp dụng</button>
   <span class="thanh-hanh-dong-cach"></span>
-  <button id="nut-da-xac-nhan" class="btn-hanh-dong phu" style="display:none" onclick="apDungXacNhanHangLoat()">Đã xác nhận</button>
+  <button id="nut-da-xac-nhan" class="btn-hanh-dong phu" style="display:none" onclick="apDungXacNhanHangLoat()"></button>
   <span class="thanh-hanh-dong-cach"></span>
-  <button class="btn-hanh-dong phu nhanh-phoi-ve-file" onclick="apDungNhanh('TRANG_THAI_PHOI', 'Đã lấy phôi')">Đã lấy phôi</button>
-  <button class="btn-hanh-dong phu nhanh-phoi-ve-file" onclick="apDungNhanh('TRANG_THAI_PHOI', 'Chưa lấy phôi')">Chưa lấy phôi</button>
-  <button class="btn-hanh-dong phu nhanh-phoi-ve-file" onclick="apDungNhanh('TRANG_THAI_VE_FILE', 'Đã vẽ file')">Đã vẽ file</button>
-  <button class="btn-hanh-dong phu nhanh-phoi-ve-file" onclick="apDungNhanh('TRANG_THAI_VE_FILE', 'Chưa vẽ file')">Chưa vẽ file</button>
+  <button id="nut-nhanh-da-lay-phoi" class="btn-hanh-dong phu nhanh-phoi-ve-file" onclick="apDungNhanh('TRANG_THAI_PHOI', 'Đã lấy phôi')"></button>
+  <button id="nut-nhanh-chua-lay-phoi" class="btn-hanh-dong phu nhanh-phoi-ve-file" onclick="apDungNhanh('TRANG_THAI_PHOI', 'Chưa lấy phôi')"></button>
+  <button id="nut-nhanh-da-ve-file" class="btn-hanh-dong phu nhanh-phoi-ve-file" onclick="apDungNhanh('TRANG_THAI_VE_FILE', 'Đã vẽ file')"></button>
+  <button id="nut-nhanh-chua-ve-file" class="btn-hanh-dong phu nhanh-phoi-ve-file" onclick="apDungNhanh('TRANG_THAI_VE_FILE', 'Chưa vẽ file')"></button>
   <button class="btn-hanh-dong phu" onclick="boChonTatCaDon()">Bỏ chọn</button>
   <div id="thanh-tien-do-hang-loat" class="thanh-tien-do-hang-loat" style="display:none">
     <div class="thanh-tien-do-nen"><div id="thanh-tien-do-fill" class="thanh-tien-do-fill"></div></div>
@@ -96,6 +96,14 @@ let nguoiDungHienTai = null;
   if (!user) return;
   nguoiDungHienTai = user;
   renderNav(user, 'orders');
+
+  // Icon 'check' cho các nút chuyển sang "Đã..." (tích cực), icon 'undo' cho các nút đưa về lại
+  // "Chưa..." (reset) — phân biệt rõ 2 nhóm nút để tránh bấm nhầm, giữ nguyên màu trung tính.
+  document.getElementById('nut-da-xac-nhan').innerHTML = icon('check', { size: 16 }) + ' Đã xác nhận';
+  document.getElementById('nut-nhanh-da-lay-phoi').innerHTML = icon('check', { size: 16 }) + ' Đã lấy phôi';
+  document.getElementById('nut-nhanh-chua-lay-phoi').innerHTML = icon('undo', { size: 16 }) + ' Chưa lấy phôi';
+  document.getElementById('nut-nhanh-da-ve-file').innerHTML = icon('check', { size: 16 }) + ' Đã vẽ file';
+  document.getElementById('nut-nhanh-chua-ve-file').innerHTML = icon('undo', { size: 16 }) + ' Chưa vẽ file';
 
   if (user.vaiTro === 'admin' || user.vaiTro === 've_file') {
     document.getElementById('nut-da-xac-nhan').style.display = '';

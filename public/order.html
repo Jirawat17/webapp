@@ -125,7 +125,7 @@ function renderKhuVucThaoTac(don) {
   // và TRANG_THAI_VE_FILE="Chưa vẽ file" để 2 ô lọc trạng thái ở trang Đơn hàng hoạt động đúng.
   const hienNutXacNhan = (user.vaiTro === 'admin' || user.vaiTro === 've_file') && don.TINH_TRANG === 'Chưa xác nhận';
   if (hienNutXacNhan) {
-    html += `<button class="btn-hanh-dong" onclick="xacNhanDon(this)">${icon('check')} Đã xác nhận</button>`;
+    html += `<button class="btn-hanh-dong" onclick="xacNhanDon(this)">${icon('check', { size: 16 })} Đã xác nhận</button>`;
   }
 
   // Nút chuyển giai đoạn — đọc từ chính tab CauHinhKichBan (dùng chung logic với quét QR),
