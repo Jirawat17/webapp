@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hoạt động của tôi — Xưởng Thêu</title>
+<link rel="stylesheet" href="/css/style.css?v=20260828c">
+<script src="/js/theme.js?v=20260828c"></script>
+</head>
+<body>
+<div id="nav"></div>
+<div class="page">
+  <h2>Hoạt động của tôi</h2>
+  <p>Nhật ký các thao tác bạn đã thực hiện — quét đơn, chuyển trạng thái, upload ảnh... Dùng để tự đối soát cuối ngày/cuối tuần.</p>
+
+  <div class="tab-doi-tuong-don" id="tab-khoang-thoi-gian">
+    <button type="button" class="tab-doi-tuong-btn active" data-khoang="hom-nay" onclick="doiKhoang('hom-nay')">Hôm nay</button>
+    <button type="button" class="tab-doi-tuong-btn" data-khoang="tuan-nay" onclick="doiKhoang('tuan-nay')">Tuần này</button>
+  </div>
+
+  <div id="khu-tong-hop" style="margin-top:20px"></div>
+
+  <hr style="margin:32px 0; border:none; border-top:1px solid var(--color-border)">
+
+  <h3>Danh sách chi tiết</h3>
+  <div id="khu-chi-tiet" style="margin-top:12px"></div>
+</div>
+
+<script src="/js/icons.js?v=20260828c"></script>
+<script src="/js/api.js?v=20260828c"></script>
+<script>
+let duLieuHoatDong = null;
+let khoangDangChon = 'hom-nay';
+
+(async () => {
+  const user = await requireLoginOrRedirect();
+  if (!user) return;
+  renderNav(user, 'hoatdong');
+  await taiHoatDong();
+})();
+
+function doiKhoang(khoang) {
+  khoangDangChon = khoang;
+  document.querySelectorAll('#tab-khoang-thoi-gian .tab-doi-tuong-btn').forEach(b => b.classList.toggle('active', b.dataset.khoang === khoang));
+  render();
+}
+
+async function taiHoatDong() {
+  document.getElementById('khu-tong-hop').innerHTML = spinnerInline('Đang tải...');
+  try {
+    duLieuHoatDong = await apiFetch('/hoat-dong/cua-toi');
+  } catch (e) {
+    document.getElementById('khu-tong-hop').innerHTML = khoiLoiTaiLai(e.message, 'taiHoatDong');
+    return;
+  }
+  render();
+}
+
+function veNhomThongKe(tieuDe, doiTuongDem) {
+  const muc = Object.entries(doiTuongDem).sort((a, b) => b[1] - a[1]);
+  if (muc.length === 0) return `<div class="xem-truoc-bang"><h3>${escapeHtml(tieuDe)}</h3><p>Không có dữ liệu.</p></div>`;
+  const max = muc[0][1];
+  return `
+    <div class="xem-truoc-bang">
+      <h3>${escapeHtml(tieuDe)}</h3>
+      <div class="thanh-thong-ke">
+        ${muc.map(([nhan, soLuong]) => `
+          <div class="thanh-thong-ke-dong">
+            <span class="thanh-thong-ke-nhan">${escapeHtml(nhanHanhDong(nhan))}</span>
+            <span class="thanh-thong-ke-bar"><span style="width:${Math.max(4, Math.round(soLuong / max * 100))}%"></span></span>
+            <span class="thanh-thong-ke-so">${soLuong}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+}
+
+function render() {
+  if (!duLieuHoatDong) return;
+
+  const laHomNay = khoangDangChon === 'hom-nay';
+  const tong = laHomNay ? duLieuHoatDong.tongHomNay : duLieuHoatDong.tongTuanNay;
+  const theoHanhDong = laHomNay ? duLieuHoatDong.theoHanhDongHomNay : duLieuHoatDong.theoHanhDongTuanNay;
+  const nhanKhoang = laHomNay ? 'hôm nay' : 'tuần này';
+
+  const khuTongHop = document.getElementById('khu-tong-hop');
+  if (tong === 0) {
+    khuTongHop.innerHTML = `<div class="trang-thai-rong">${icon('check')}<p>Chưa có hoạt động nào ${nhanKhoang}.</p></div>`;
+  } else {
+    khuTongHop.innerHTML = `
+      <p>Tổng cộng <strong>${tong}</strong> hoạt động ${nhanKhoang}.</p>
+      ${veNhomThongKe(`Theo loại hành động (${nhanKhoang})`, theoHanhDong)}`;
+  }
+
+  // Danh sách chi tiết — lọc theo đúng khoảng thời gian đang chọn (dùng thoiGianISO gốc để so sánh)
+  const moc = laHomNay ? dauNgay(new Date()) : dauTuan(new Date());
+  const chiTietLoc = duLieuHoatDong.chiTiet.filter(c => new Date(c.thoiGianISO) >= moc);
+
+  const khuChiTiet = document.getElementById('khu-chi-tiet');
+  if (chiTietLoc.length === 0) {
+    khuChiTiet.innerHTML = `<p style="color:var(--color-text-faint)">Không có hoạt động chi tiết nào ${nhanKhoang}.</p>`;
+    return;
+  }
+  khuChiTiet.innerHTML = `
+    <div class="bang-cuon-ngang">
+      <table class="bang-xem-truoc">
+        <thead><tr><th>Thời gian</th><th>Hành động</th><th>Mã đơn</th></tr></thead>
+        <tbody>${chiTietLoc.map(c => `<tr>
+          <td>${escapeHtml(c.thoiGian)}</td>
+          <td>${escapeHtml(nhanHanhDong(c.hanhDong))}</td>
+          <td>${c.sttKey ? `<a href="/order.html?stt=${encodeURIComponent(c.sttKey)}">${escapeHtml(c.sttKey)}</a>` : '—'}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>
+    ${duLieuHoatDong.chiTiet.length >= 200 ? '<p style="color:var(--color-text-faint);margin-top:8px">Chỉ hiện tối đa 200 hoạt động gần nhất.</p>' : ''}`;
+}
+
+function dauNgay(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
+function dauTuan(d) {
+  const x = dauNgay(d);
+  const thu = x.getDay();
+  const lech = thu === 0 ? 6 : thu - 1;
+  x.setDate(x.getDate() - lech);
+  return x;
+}
+</script>
+</body>
+</html>

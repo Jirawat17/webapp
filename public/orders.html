@@ -4,14 +4,22 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=20260827a">
-<script src="/js/theme.js?v=20260825a"></script>
+<link rel="stylesheet" href="/css/style.css?v=20260828h">
+<script src="/js/theme.js?v=20260828h"></script>
 </head>
 <body>
 <div id="nav"></div>
 <div class="page">
   <h2>Danh sách đơn hàng</h2>
-  <div class="filters">
+  <div class="thanh-loc-chinh">
+    <label class="sr-only" for="loc-kh">Tìm theo mã đơn, khách hàng, loại, kích thước, màu sắc hoặc ghi chú</label>
+    <input id="loc-kh" data-shortcut-search placeholder="Tìm theo mã đơn, khách hàng, loại, kích thước, màu sắc, ghi chú... (nhấn / để focus)" list="goi-y-tim-kiem">
+    <datalist id="goi-y-tim-kiem"></datalist>
+    <button type="button" class="btn-hanh-dong phu" id="nut-mo-bo-loc" onclick="toggleBoLoc()">
+      <span id="nut-mo-bo-loc-nhan"></span><span id="dem-bo-loc" class="dem-bo-loc" style="display:none">0</span>
+    </button>
+  </div>
+  <div class="filters" id="khu-bo-loc">
     <label class="sr-only" for="loc-trang-thai">Lọc theo trạng thái</label>
     <select id="loc-trang-thai"><option value="">Tất cả trạng thái</option></select>
     <label class="sr-only" for="loc-phoi">Lọc theo phôi</label>
@@ -26,12 +34,15 @@
       <option value="Chưa vẽ file">Chưa vẽ file</option>
       <option value="Đã vẽ file">Đã vẽ file</option>
     </select>
-    <label class="sr-only" for="loc-kh">Tìm theo tên đơn hoặc mã khách hàng</label>
-    <input id="loc-kh" placeholder="Tìm theo tên đơn (STT_Key) hoặc mã khách hàng">
     <label class="sr-only" for="loc-tu-ngay">Từ ngày</label>
     <input type="date" id="loc-tu-ngay" title="Từ ngày">
     <label class="sr-only" for="loc-den-ngay">Đến ngày</label>
     <input type="date" id="loc-den-ngay" title="Đến ngày">
+  </div>
+
+  <div class="tab-doi-tuong-don" id="tab-doi-tuong-don" style="display:none">
+    <button type="button" class="tab-doi-tuong-btn active" data-che-do="tat-ca" onclick="doiCheDoDon('tat-ca')">Tất cả đơn</button>
+    <button type="button" class="tab-doi-tuong-btn" data-che-do="cua-toi" onclick="doiCheDoDon('cua-toi')">Đơn của tôi (đang chạy máy)</button>
   </div>
 
   <div class="in-nhanh-thanh">
@@ -42,7 +53,7 @@
 
   <label class="chon-tat-ca-hang">
     <input type="checkbox" id="chon-tat-ca" onchange="chonTatCa(this.checked)">
-    Chọn tất cả đơn đang hiển thị
+    <span id="nhan-chon-tat-ca">Chọn tất cả đơn đang hiển thị</span>
   </label>
 
   <div id="danh-sach-don" class="order-list"></div>
@@ -68,10 +79,27 @@
   </div>
 </div>
 
-<script src="/js/icons.js?v=20260825a"></script>
-<script src="/js/api.js?v=20260825a"></script>
+<script src="/js/icons.js?v=20260828h"></script>
+<script src="/js/api.js?v=20260828h"></script>
 <script>
 const NHAN_CANH_BAO = { VANG: 'Vàng · 3 ngày', CAM: 'Cam · 5 ngày', DO: 'Đỏ · 7 ngày' };
+
+// Thứ tự 8 bước "đường chính" của pipeline — PHẢI khớp THU_TU_TINH_TRANG trong
+// data/pipelineTinhTrang.js. Dùng để vẽ dải tiến trình dạng chấm trên mỗi thẻ đơn (thêm 27/08/2026,
+// xem veDaiTienDo). Nhánh rẽ (LỖI SẢN XUẤT CẦN LÀM LẠI/CANCELLED/REFUNDED) không có vị trí tuyến
+// tính nên không vẽ được dải này — không phải thiếu sót, cố ý bỏ qua.
+const THU_TU_TINH_TRANG_CHINH = [
+  'Chưa xác nhận', 'Đã xác nhận', 'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đang chạy máy',
+  'Đã sản xuất', 'Đã đóng gói', 'IN TRANSIT_Tracking đã hoạt động', 'DELIVERED_Đã giao đến khách',
+];
+
+function veDaiTienDo(tinhTrang) {
+  const idx = THU_TU_TINH_TRANG_CHINH.indexOf(tinhTrang);
+  if (idx === -1) return '';
+  return `<div class="dai-tien-do" title="Bước ${idx + 1}/${THU_TU_TINH_TRANG_CHINH.length}: ${escapeHtml(tinhTrang)}">
+    ${THU_TU_TINH_TRANG_CHINH.map((_, i) => `<span class="dai-tien-do-cham ${i <= idx ? 'da-qua' : ''}"></span>`).join('')}
+  </div>`;
+}
 
 // Danh sách ĐẦY ĐỦ 10 giá trị TINH_TRANG — dùng riêng cho ô "Chuyển đến trạng thái" (chọn tự do,
 // không kiểm tra trạng thái hiện tại). PHẢI khớp với DANH_SACH_TRANG_THAI_BAO_CAO trong
@@ -80,7 +108,7 @@ const NHAN_CANH_BAO = { VANG: 'Vàng · 3 ngày', CAM: 'Cam · 5 ngày', DO: 'Đ
 // tên gọi thuần Việt, và tách phôi/vẽ file ra 2 cột riêng (không còn nằm trong danh sách này).
 const DANH_SACH_TRANG_THAI_DAY_DU = [
   'Chưa xác nhận', 'Đã xác nhận',
-  'ĐÃ SẴN SÀNG CHẠY MÁY',
+  'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đang chạy máy',
   'Đã sản xuất', 'LỖI SẢN XUẤT CẦN LÀM LẠI',
   'Đã đóng gói',
   'IN TRANSIT_Tracking đã hoạt động',
@@ -90,6 +118,7 @@ const DANH_SACH_TRANG_THAI_DAY_DU = [
 let danhSachHienTai = [];
 let donDaChonSet = new Set();
 let nguoiDungHienTai = null;
+let cheDoDon = 'tat-ca'; // 'tat-ca' | 'cua-toi' — xem doiCheDoDon(), chỉ san_xuat dùng được 'cua-toi'
 
 (async () => {
   const user = await requireLoginOrRedirect();
@@ -97,8 +126,7 @@ let nguoiDungHienTai = null;
   nguoiDungHienTai = user;
   renderNav(user, 'orders');
 
-  // Icon 'check' cho các nút chuyển sang "Đã..." (tích cực), icon 'undo' cho các nút đưa về lại
-  // "Chưa..." (reset) — phân biệt rõ 2 nhóm nút để tránh bấm nhầm, giữ nguyên màu trung tính.
+  // Icon 'check' cho nút chuyển sang "Đã..." (tích cực), icon 'undo' cho nút đưa về "Chưa..." (reset)
   document.getElementById('nut-da-xac-nhan').innerHTML = icon('check', { size: 16 }) + ' Đã xác nhận';
   document.getElementById('nut-nhanh-da-lay-phoi').innerHTML = icon('check', { size: 16 }) + ' Đã lấy phôi';
   document.getElementById('nut-nhanh-chua-lay-phoi').innerHTML = icon('undo', { size: 16 }) + ' Chưa lấy phôi';
@@ -108,17 +136,31 @@ let nguoiDungHienTai = null;
   if (user.vaiTro === 'admin' || user.vaiTro === 've_file') {
     document.getElementById('nut-da-xac-nhan').style.display = '';
   }
+  // Tab "Đơn của tôi" — chỉ san_xuat cần, để tập trung vào việc đang dở (đơn mình đã set "Đang chạy
+  // máy" nhưng chưa xong) thay vì thấy lẫn mọi đơn từ ĐÃ SẴN SÀNG trở đi. Mặc định VÀO THẲNG tab này
+  // khi san_xuat mở trang (thêm 27/08/2026) — không bắt họ phải tự bấm mới thấy việc của mình.
+  if (user.vaiTro === 'san_xuat') {
+    document.getElementById('tab-doi-tuong-don').style.display = 'flex';
+    cheDoDon = 'cua-toi';
+    document.querySelector('.tab-doi-tuong-btn[data-che-do="cua-toi"]').classList.add('active');
+    document.querySelector('.tab-doi-tuong-btn[data-che-do="tat-ca"]').classList.remove('active');
+    goiYMotLan('tab-doi-tuong-don', 'tab-doi-tuong-don-v1', 'Mới: bấm để xem tất cả đơn thay vì chỉ đơn của bạn');
+  }
 
-  document.getElementById('loc-trang-thai').onchange = () => { boChonTatCaDon(); taiDon(); };
-  document.getElementById('loc-phoi').onchange = () => { boChonTatCaDon(); taiDon(); };
-  document.getElementById('loc-ve-file').onchange = () => { boChonTatCaDon(); taiDon(); };
+  const khiDoiBoLoc = () => { boChonTatCaDon(); capNhatDemBoLoc(); taiDon(); };
+  document.getElementById('loc-trang-thai').onchange = khiDoiBoLoc;
+  document.getElementById('loc-phoi').onchange = khiDoiBoLoc;
+  document.getElementById('loc-ve-file').onchange = khiDoiBoLoc;
   document.getElementById('loc-kh').oninput = debounce(() => { boChonTatCaDon(); taiDon(); }, 400);
   document.getElementById('loc-tu-ngay').onchange = () => {
     const denNgay = document.getElementById('loc-den-ngay');
     if (document.getElementById('loc-tu-ngay').value && !denNgay.value) denNgay.value = ngayHomNayYYYYMMDD();
-    boChonTatCaDon(); taiDon();
+    khiDoiBoLoc();
   };
-  document.getElementById('loc-den-ngay').onchange = () => { boChonTatCaDon(); taiDon(); };
+  document.getElementById('loc-den-ngay').onchange = khiDoiBoLoc;
+
+  document.getElementById('nut-mo-bo-loc-nhan').innerHTML = icon('filter', { size: 16 }) + ' Bộ lọc';
+  goiYMotLan('nut-mo-bo-loc', 'nut-mo-bo-loc-v1', 'Mới: gom bộ lọc vào đây cho gọn màn hình');
 
   document.getElementById('btn-in-phoi-ao').innerHTML = icon('printer') + ' IN DANH SÁCH PHÔI';
   document.getElementById('btn-in-don-ao').innerHTML = icon('printer') + ' IN ĐƠN';
@@ -127,6 +169,7 @@ let nguoiDungHienTai = null;
   document.getElementById('trang-thai-dich').innerHTML = '<option value="">Chuyển đến trạng thái...</option>' +
     DANH_SACH_TRANG_THAI_DAY_DU.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
 
+  capNhatDemBoLoc();
   taiDon();
 })();
 
@@ -139,13 +182,51 @@ function ngayHomNayYYYYMMDD() {
   return `${d.getFullYear()}-${mm}-${dd}`;
 }
 
+// Ẩn/hiện khu bộ lọc mở rộng (trạng thái/phôi/vẽ file/ngày) — trên màn hình hẹp mặc định ẩn để đỡ
+// chiếm chỗ, ô tìm kiếm luôn hiện riêng ở trên. Trên màn hình rộng, CSS luôn hiện .filters bất kể
+// class 'mo' (xem style.css) nên nút này tự ẩn đi trên desktop.
+function toggleBoLoc() {
+  document.getElementById('khu-bo-loc').classList.toggle('mo');
+}
+
+// Đếm số bộ lọc mở rộng đang thực sự áp dụng (không tính ô tìm kiếm, đã hiện riêng) — hiện thành số
+// nhỏ trên nút "Bộ lọc" để biết ngay có đang lọc hay không mà không cần mở ra xem.
+function capNhatDemBoLoc() {
+  const soLuong = ['loc-trang-thai', 'loc-phoi', 'loc-ve-file', 'loc-tu-ngay', 'loc-den-ngay']
+    .filter(id => document.getElementById(id).value).length;
+  const dem = document.getElementById('dem-bo-loc');
+  dem.textContent = soLuong;
+  dem.style.display = soLuong > 0 ? '' : 'none';
+}
+
 function capNhatBoLocTrangThai(list) {
   const sel = document.getElementById('loc-trang-thai');
   const giaTriDangChon = sel.value;
-  const cacTrangThai = [...new Set(list.map(o => o.TINH_TRANG).filter(Boolean))].sort();
+  // Đếm số đơn theo từng trạng thái ngay trên dropdown (vd "Chưa xác nhận (12)") — biết ngay việc
+  // tồn đọng ở đâu mà không cần lọc thử từng trạng thái một (thêm 27/08/2026).
+  const dem = {};
+  list.forEach(o => { if (o.TINH_TRANG) dem[o.TINH_TRANG] = (dem[o.TINH_TRANG] || 0) + 1; });
+  const cacTrangThai = Object.keys(dem).sort();
   sel.innerHTML = '<option value="">Tất cả trạng thái</option>' +
-    cacTrangThai.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+    cacTrangThai.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)} (${dem[t]})</option>`).join('');
   sel.value = giaTriDangChon;
+}
+
+// Gợi ý autocomplete cho ô tìm kiếm — lấy các giá trị LOAI/KICH_THUOC/MAU_SAC đã có trong dữ liệu
+// vừa tải, để gõ vài ký tự là gợi ý ra đúng chính tả (vd gõ "hoo" gợi ý "Hoodie") — thêm 27/08/2026.
+function capNhatGoiYTimKiem(list) {
+  const giaTri = new Set();
+  list.forEach(o => { [o.LOAI, o.KICH_THUOC, o.MAU_SAC].forEach(v => { if (v) giaTri.add(v); }); });
+  document.getElementById('goi-y-tim-kiem').innerHTML =
+    [...giaTri].sort().map(v => `<option value="${escapeHtml(v)}">`).join('');
+}
+
+// Chuyển giữa "Tất cả đơn" và "Đơn của tôi" (chỉ san_xuat) — xem tab-doi-tuong-don ở trên
+function doiCheDoDon(cheDo) {
+  cheDoDon = cheDo;
+  document.querySelectorAll('.tab-doi-tuong-btn').forEach(b => b.classList.toggle('active', b.dataset.cheDo === cheDo));
+  boChonTatCaDon();
+  taiDon();
 }
 
 async function taiDon() {
@@ -165,18 +246,22 @@ async function taiDon() {
   if (kh) qs.set('kh', kh);
   if (tuNgay) qs.set('tuNgay', tuNgay);
   if (denNgay) qs.set('denNgay', denNgay);
+  if (cheDoDon === 'cua-toi') qs.set('chiCuaToi', 'true');
 
   let list;
   try {
     list = await apiFetch('/orders?' + qs.toString());
   } catch (e) {
-    el.innerHTML = `<p>Không tải được danh sách: ${escapeHtml(e.message)}</p>`;
+    el.innerHTML = khoiLoiTaiLai('Không tải được danh sách: ' + e.message, 'taiDon');
     return;
   }
 
   danhSachHienTai = list;
 
-  if (!trangThai && !trangThaiPhoi && !trangThaiVeFile && !kh && !tuNgay && !denNgay) capNhatBoLocTrangThai(list);
+  if (!trangThai && !trangThaiPhoi && !trangThaiVeFile && !kh && !tuNgay && !denNgay) {
+    capNhatBoLocTrangThai(list);
+    capNhatGoiYTimKiem(list);
+  }
 
   renderDanhSachDon();
 }
@@ -184,29 +269,45 @@ async function taiDon() {
 function renderDanhSachDon() {
   const el = document.getElementById('danh-sach-don');
 
-  if (danhSachHienTai.length === 0) { el.innerHTML = `<div class="trang-thai-rong">${icon('package')}<p>Không có đơn nào khớp bộ lọc.</p></div>`; capNhatThanhHanhDong(); return; }
+  if (danhSachHienTai.length === 0) {
+    const coBoLocNao = document.getElementById('loc-trang-thai').value || document.getElementById('loc-phoi').value ||
+      document.getElementById('loc-ve-file').value || document.getElementById('loc-kh').value ||
+      document.getElementById('loc-tu-ngay').value || document.getElementById('loc-den-ngay').value || cheDoDon === 'cua-toi';
+    // Phân biệt "chưa có đơn nào trong hệ thống" (lần đầu cài đặt) với "có đơn nhưng không khớp bộ
+    // lọc đang chọn" — 2 tình huống cần hướng dẫn khác nhau (thêm 27/08/2026).
+    el.innerHTML = coBoLocNao
+      ? `<div class="trang-thai-rong">${icon('package')}<p>Không có đơn nào khớp bộ lọc đang chọn.</p></div>`
+      : `<div class="trang-thai-rong">${icon('package')}<p>Chưa có đơn hàng nào trong hệ thống.<br>Đơn hàng được nhập vào tab "Don_Hang_ALL" trên Google Sheet — thêm dữ liệu ở đó rồi quay lại trang này.</p></div>`;
+    capNhatThanhHanhDong();
+    return;
+  }
 
   el.innerHTML = danhSachHienTai.map(o => {
     const daChon = donDaChonSet.has(o.STT_Key);
+    const anhUrl = o.MOCKUP || o.DUONG_DAN_URL;
     return `
-    <div class="order-card ${daChon ? 'da-chon' : ''}" data-stt="${escapeHtml(o.STT_Key)}"
+    <div class="order-card ${daChon ? 'da-chon' : ''} ${o.CanhBao ? 'canh-bao-' + o.CanhBao.toLowerCase() : ''}" data-stt="${escapeHtml(o.STT_Key)}"
          onclick="moChiTietDon(event, '${encodeURIComponent(o.STT_Key)}')">
       <input type="checkbox" class="order-checkbox" ${daChon ? 'checked' : ''}
              aria-label="Chọn đơn ${escapeHtml(o.STT_Key)}"
              onclick="event.stopPropagation()"
              onchange="toggleChonDon('${escapeHtml(o.STT_Key)}', this.checked)">
-      ${o.MOCKUP || o.DUONG_DAN_URL
-        ? `<img src="${escapeHtml(o.MOCKUP || o.DUONG_DAN_URL)}" alt="" loading="lazy" onerror="this.remove()">`
+      ${anhUrl
+        ? `<img src="${escapeHtml(anhUrl)}" alt="" loading="lazy" onerror="anhLoi(this)"
+               onclick="event.stopPropagation(); moLightbox('${escapeHtml(anhUrl)}')">`
         : ''}
       <div class="thong-tin">
         <strong>${escapeHtml(o.TieuDeSanPham || o.STT_Key)}</strong>
         <div class="meta">${escapeHtml(o.TenKhachHang || '')} · SL: ${escapeHtml(o.SO_LUONG || '')}</div>
         <div class="meta">Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgay(o.NGAY_LEN_DON) : '—')}</div>
+        ${veDaiTienDo(o.TINH_TRANG)}
         <div class="badge-row">
           <span class="badge ${lopTrangThai(o.TINH_TRANG)}">${escapeHtml(o.TINH_TRANG || '')}</span>
           ${['Chưa xác nhận', 'Đã xác nhận'].includes(o.TINH_TRANG) ? `
             <span class="badge ${lopTrangThai(o.TRANG_THAI_PHOI)}">${escapeHtml(o.TRANG_THAI_PHOI || '')}</span>
             <span class="badge ${lopTrangThai(o.TRANG_THAI_VE_FILE)}">${escapeHtml(o.TRANG_THAI_VE_FILE || '')}</span>` : ''}
+          ${o.TINH_TRANG === 'Đang chạy máy' && o.NGUOI_VAN_HANH ? `
+            <span class="badge trang-thai-info">Vận hành: ${escapeHtml(o.NGUOI_VAN_HANH)}</span>` : ''}
           ${o.CanhBao ? `
             <span class="badge badge-canh-bao ${o.CanhBao.toLowerCase()}">
               ${icon('alert')} ${NHAN_CANH_BAO[o.CanhBao] || o.CanhBao}
@@ -243,6 +344,9 @@ function chonTatCa(daChonHet) {
 function capNhatCheckboxChonTatCa() {
   const cb = document.getElementById('chon-tat-ca');
   cb.checked = danhSachHienTai.length > 0 && danhSachHienTai.every(o => donDaChonSet.has(o.STT_Key));
+  // Ghi rõ SỐ LƯỢNG ngay trên nhãn — tránh hiểu nhầm "đang hiển thị" là bao nhiêu đơn (dù trang này
+  // hiện không phân trang nên "đang hiển thị" luôn bằng đúng số đơn khớp bộ lọc hiện tại).
+  document.getElementById('nhan-chon-tat-ca').textContent = `Chọn tất cả ${danhSachHienTai.length} đơn đang hiển thị`;
 }
 
 function capNhatThanhHanhDong() {
@@ -259,13 +363,12 @@ function boChonTatCaDon() {
 
 // Cập nhật hàng loạt DÙNG CHUNG cho mọi thao tác (chuyển trạng thái, phôi/vẽ file nhanh, đã xác
 // nhận) — gọi API sửa TỪNG đơn một (PUT /orders/:sttKey, giống trang chi tiết đơn) thay vì 1 API
-// hàng loạt duy nhất, để hiện được thanh tiến độ % THẬT theo từng đơn đã xử lý xong (thay cho việc
-// chờ không biết hệ thống có đang chạy hay không). 'updates' là object các cột cần sửa, áp dụng
-// giống hệt nhau cho mọi đơn đã chọn.
+// hàng loạt duy nhất, để hiện được thanh tiến độ % THẬT theo từng đơn đã xử lý xong.
 async function apDungCapNhatHangLoat(updates, moTa) {
   const soLuong = donDaChonSet.size;
   if (soLuong === 0) return;
-  if (!confirm(`${moTa} cho ${soLuong} đơn đã chọn?`)) return;
+  const dongY = await xacNhanHanhDong(`${moTa} cho ${soLuong} đơn đã chọn?`);
+  if (!dongY) return;
 
   const cacNut = document.querySelectorAll('.nhanh-phoi-ve-file, #nut-ap-dung, #nut-da-xac-nhan');
   cacNut.forEach(b => b.disabled = true);
@@ -296,9 +399,10 @@ async function apDungCapNhatHangLoat(updates, moTa) {
 
   let thongBao = `Đã cập nhật ${thanhCong.length}/${sttKeys.length} đơn.`;
   if (loi.length > 0) {
-    thongBao += `\n\nKhông cập nhật được ${loi.length} đơn:\n` + loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
+    hienThongBaoChiTiet(thongBao + ` Có ${loi.length} đơn lỗi:`, loi.map(l => `- ${l.sttKey}: ${l.lyDo}`));
+  } else {
+    toast(thongBao, 'success');
   }
-  alert(thongBao);
 
   khuTienDo.style.display = 'none';
   cacNut.forEach(b => b.disabled = false);
@@ -312,13 +416,12 @@ function apDungNhanh(cot, trangThaiMoi) {
 
 function apDungChuyenTrangThai() {
   const trangThaiMoi = document.getElementById('trang-thai-dich').value;
-  if (!trangThaiMoi) { alert('Hãy chọn trạng thái muốn chuyển tới'); return; }
+  if (!trangThaiMoi) { toast('Hãy chọn trạng thái muốn chuyển tới', 'danger'); return; }
   return apDungCapNhatHangLoat({ TINH_TRANG: trangThaiMoi }, `Chuyển sang trạng thái "${trangThaiMoi}"`);
 }
 
-// Nút "Đã xác nhận" hàng loạt — chỉ hiện cho admin/ve_file (xem đoạn hiện/ẩn nút ở IIFE phía trên).
-// Set TINH_TRANG='Đã xác nhận' + reset TRANG_THAI_PHOI/TRANG_THAI_VE_FILE về "Chưa..." để 2 ô lọc
-// trạng thái phôi/vẽ file ở trang này hoạt động đúng ngay từ khi đơn được xác nhận.
+// Nút "Đã xác nhận" hàng loạt — chỉ hiện cho admin/ve_file. Set TINH_TRANG='Đã xác nhận' + reset
+// TRANG_THAI_PHOI/TRANG_THAI_VE_FILE về "Chưa..." để 2 ô lọc trạng thái phôi/vẽ file hoạt động đúng.
 function apDungXacNhanHangLoat() {
   return apDungCapNhatHangLoat(
     { TINH_TRANG: 'Đã xác nhận', TRANG_THAI_PHOI: 'Chưa lấy phôi', TRANG_THAI_VE_FILE: 'Chưa vẽ file' },
@@ -328,11 +431,9 @@ function apDungXacNhanHangLoat() {
 
 // In nhanh theo ĐÚNG bộ lọc trạng thái + ô tìm kiếm đang áp dụng trên trang này (không ép về
 // đúng trạng thái B1/B2/B5 của mẫu) — 'mau' chỉ ép cứng ĐỊNH DẠNG cột hiển thị trong file PDF.
-async function inNhanh(mau, nut) {
-  const nhanGoc = nut.innerHTML;
-  nut.disabled = true;
-  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 18 }) + ' Đang tạo file...';
-
+// Xây bộ tham số lọc cho 1 mẫu in — tách riêng (thêm 27/08/2026) để dùng chung cho cả bước "xem
+// trước" (xemTruocInAn) lẫn bước tải file thật (taiFileInAn), tránh lặp logic 2 lần dễ lệch nhau.
+function xayThamSoInAn(mau) {
   const qs = new URLSearchParams();
   qs.set('mau', mau);
   const trangThai = document.getElementById('loc-trang-thai').value;
@@ -357,9 +458,136 @@ async function inNhanh(mau, nut) {
     if (trangThaiPhoi) qs.set('trangThaiPhoi', trangThaiPhoi);
     if (trangThaiVeFile) qs.set('trangThaiVeFile', trangThaiVeFile);
   }
+  return qs;
+}
+
+// Xem trước TOÀN BỘ danh sách sẽ in TRƯỚC khi tải file (thêm 27/08/2026) — trước đây phải tải PDF
+// xong mới biết có bao nhiêu trang/đúng đơn hay không. Dùng lại đúng endpoint /reports/xem-truoc đã
+// có sẵn ở backend (trước đây chưa có màn hình nào gọi tới).
+async function inNhanh(mau, nut) {
+  const nhanGoc = nut.innerHTML;
+  nut.disabled = true;
+  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 18 }) + ' Đang tải xem trước...';
+
+  const qs = xayThamSoInAn(mau);
+  try {
+    const duLieu = await apiFetch('/reports/xem-truoc?' + qs.toString());
+    moModalXemTruocInAn(duLieu, qs);
+  } catch (e) {
+    toast('Lỗi: ' + e.message, 'danger');
+  } finally {
+    nut.disabled = false;
+    nut.innerHTML = nhanGoc;
+  }
+}
+
+function moModalXemTruocInAn(duLieu, qs) {
+  let overlay = document.getElementById('in-an-preview-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'in-an-preview-overlay';
+    overlay.className = 'tem-preview-overlay';
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.style.display = 'none'; };
+    document.body.appendChild(overlay);
+  }
+
+  let noiDung, tongSo;
+  if (duLieu.kieu === 'don_can_in') {
+    tongSo = duLieu.the.length;
+    const xemMau = duLieu.the.slice(0, 6);
+    noiDung = `
+      <div class="luoi-xem-truoc-in">
+        ${xemMau.map(t => `
+          <div class="the-xem-truoc-in">
+            ${t.qr ? `<img src="${t.qr}" alt="QR">` : ''}
+            <strong>${escapeHtml(t.sttKey)}</strong>
+            <span>${escapeHtml(t.dongTom)}</span>
+          </div>`).join('')}
+      </div>
+      ${tongSo > xemMau.length ? `<p style="color:var(--color-text-faint);font-size:0.85rem">...và ${tongSo - xemMau.length} đơn khác.</p>` : ''}`;
+  } else {
+    tongSo = duLieu.bang.reduce((sum, b) => sum + b.rows.length, 0);
+    noiDung = duLieu.bang.map(b => `
+      <div class="xem-truoc-bang" style="margin-top:0">
+        <h3>${escapeHtml(b.tieuDe)} (${b.rows.length} dòng)</h3>
+        <div class="bang-cuon-ngang">
+          <table class="bang-xem-truoc">
+            <thead><tr>${b.cot.map(c => `<th>${escapeHtml(c)}</th>`).join('')}</tr></thead>
+            <tbody>${b.rows.slice(0, 5).map(r => `<tr>${r.map(v => `<td>${escapeHtml(String(v))}</td>`).join('')}</tr>`).join('')}</tbody>
+          </table>
+        </div>
+        ${b.rows.length > 5 ? `<p style="color:var(--color-text-faint);font-size:0.85rem;margin:8px 0 0">...và ${b.rows.length - 5} dòng khác.</p>` : ''}
+      </div>`).join('');
+  }
+
+  overlay.innerHTML = `
+    <div class="tem-preview-box" style="max-width:520px">
+      <strong>Xem trước — ${tongSo} ${duLieu.kieu === 'don_can_in' ? 'đơn' : 'dòng'} sẽ có trong file</strong>
+      ${tongSo === 0 ? '<p>Không có dữ liệu nào khớp bộ lọc hiện tại.</p>' : noiDung}
+      <div class="tem-preview-nut-hang">
+        ${tongSo > 0 ? `
+          <button class="btn-hanh-dong" onclick="taiFileInAn('pdf', '${qs.toString()}', this)">${icon('download', { size: 16 })} Tải PDF</button>
+          <button class="btn-hanh-dong phu" onclick="taiFileInAn('excel', '${qs.toString()}', this)">${icon('download', { size: 16 })} Tải Excel</button>
+          ${duLieu.kieu === 'don_can_in' ? `<button class="btn-hanh-dong phu" id="nut-in-trinh-duyet">${icon('printer', { size: 16 })} In qua trình duyệt</button>` : ''}` : ''}
+        <button class="btn-hanh-dong phu" onclick="document.getElementById('in-an-preview-overlay').style.display='none'">Đóng</button>
+      </div>
+    </div>`;
+  overlay.style.display = 'flex';
+  if (duLieu.kieu === 'don_can_in' && tongSo > 0) {
+    document.getElementById('nut-in-trinh-duyet').onclick = () => inQuaTrinhDuyet(duLieu);
+  }
+}
+
+// In trực tiếp qua trình duyệt (thêm 27/08/2026) — song song với tải PDF, không cần tải file về máy
+// trước rồi mới mở lên in. Mở 1 cửa sổ mới, dựng lại đúng khổ thẻ 100x150mm bằng CSS @page, dùng
+// LUÔN ảnh base64 đã có sẵn từ bước xem trước (không cần gọi API lần nữa).
+function inQuaTrinhDuyet(duLieu) {
+  const w = window.open('', '_blank');
+  if (!w) { toast('Trình duyệt đã chặn cửa sổ popup — cho phép popup rồi thử lại.', 'danger'); return; }
+
+  const the = duLieu.the.map(t => `
+    <div class="the-in">
+      <div class="the-in-tieu-de">${escapeHtml(t.sttKey)}</div>
+      <div class="the-in-anh">
+        ${t.mau ? `<img src="${t.mau}">` : '<div class="the-in-anh-trong">Không có ảnh mẫu</div>'}
+        ${t.mockup ? `<img src="${t.mockup}">` : '<div class="the-in-anh-trong">Không có mockup</div>'}
+      </div>
+      <div class="the-in-duoi">
+        ${t.qr ? `<img class="the-in-qr" src="${t.qr}">` : ''}
+        <div class="the-in-info">
+          <div>${escapeHtml(t.dongTom)}</div>
+          <div>Vị trí: ${escapeHtml(t.viTri || '—')}</div>
+          <div>SL: ${escapeHtml(String(t.soLuong ?? ''))}${t.ghiChu ? ' · ' + escapeHtml(t.ghiChu) : ''}</div>
+        </div>
+      </div>
+    </div>`).join('');
+
+  w.document.write(`<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><title>In tem</title>
+    <style>
+      @page { size: 100mm 150mm; margin: 0; }
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: Arial, sans-serif; }
+      .the-in { width: 100mm; height: 150mm; padding: 5mm; page-break-after: always; }
+      .the-in-tieu-de { font-weight: bold; font-size: 14pt; margin-bottom: 3mm; }
+      .the-in-anh { display: flex; gap: 4mm; margin-bottom: 4mm; }
+      .the-in-anh img, .the-in-anh-trong { width: 45mm; height: 45mm; object-fit: cover; background: #eee; }
+      .the-in-anh-trong { display: flex; align-items: center; justify-content: center; font-size: 7pt; color: #999; text-align: center; padding: 2mm; }
+      .the-in-duoi { display: flex; gap: 4mm; align-items: flex-start; }
+      .the-in-qr { width: 26mm; height: 26mm; }
+      .the-in-info { font-size: 9pt; line-height: 1.4; }
+    </style>
+    </head><body>${the}</body></html>`);
+  w.document.close();
+  w.onload = () => w.print();
+}
+
+async function taiFileInAn(dinhDang, qsChuoi, btn) {
+  const nhanGoc = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Đang tạo file...';
 
   try {
-    const res = await fetch('/api/reports/pdf?' + qs.toString(), { credentials: 'include' });
+    const res = await fetch(`/api/reports/${dinhDang}?${qsChuoi}`, { credentials: 'include' });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
       throw new Error(data.error || 'Không xuất được file');
@@ -370,16 +598,17 @@ async function inNhanh(mau, nut) {
     a.href = url;
     const contentDisposition = res.headers.get('Content-Disposition') || '';
     const khopTen = contentDisposition.match(/filename="([^"]+)"/);
-    a.download = khopTen ? khopTen[1] : 'bao-cao.pdf';
+    a.download = khopTen ? khopTen[1] : 'bao-cao.' + (dinhDang === 'excel' ? 'xlsx' : 'pdf');
     document.body.appendChild(a);
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+    document.getElementById('in-an-preview-overlay').style.display = 'none';
   } catch (e) {
-    alert('Lỗi: ' + e.message);
+    toast('Lỗi: ' + e.message, 'danger');
   } finally {
-    nut.disabled = false;
-    nut.innerHTML = nhanGoc;
+    btn.disabled = false;
+    btn.innerHTML = nhanGoc;
   }
 }
 </script>
