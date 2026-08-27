@@ -1,90 +1,205 @@
 // scripts/lay-refresh-token-drive.js
 //
-// CHẠY 1 LẦN DUY NHẤT — trên máy TÍNH CÁ NHÂN có trình duyệt (KHÔNG chạy trên VPS, vì cần mở trình
-// duyệt để đăng nhập Google). Mục đích: lấy "refresh_token" cho phép server sau này tạo file mới
-// trên Drive BẰNG CHÍNH TÀI KHOẢN GMAIL CÁ NHÂN của bạn (không phải service account) — vì service
-// account không có dung lượng lưu trữ Drive riêng, xem giải thích trong config/googleClients.js.
-//
-// CHUẨN BỊ TRƯỚC KHI CHẠY (làm trên Google Cloud Console, cùng project đang chứa service account):
-//   1. Vào "APIs & Services" → "OAuth consent screen":
-//      - Chọn "External", điền tên app bất kỳ (vd "HanhPhuc99 Drive Upload").
-//      - Ở mục "Test users", thêm ĐÚNG địa chỉ Gmail cá nhân bạn muốn dùng để lưu ảnh.
-//   2. Vào "APIs & Services" → "Credentials" → "Create Credentials" → "OAuth client ID":
-//      - Application type: chọn "Web application".
-//      - Ở "Authorized redirect URIs", thêm CHÍNH XÁC: http://localhost:4321/oauth2callback
-//      - Bấm Create — Google cho ra "Client ID" và "Client secret", copy lại 2 giá trị này.
-//   3. Đảm bảo API "Google Drive API" đã được BẬT (Enable) trong project (APIs & Services → Library).
-//
-// CÁCH CHẠY:
-//   GOOGLE_OAUTH_CLIENT_ID="..." GOOGLE_OAUTH_CLIENT_SECRET="..." node scripts/lay-refresh-token-drive.js
-//   (dán đúng Client ID / Client secret vừa lấy ở bước 2 vào 2 chỗ "...")
-//
-// Script sẽ in ra 1 đường link — mở link đó trên trình duyệt, đăng nhập ĐÚNG Gmail cá nhân đã thêm ở
-// bước "Test users", bấm "Cho phép". Trình duyệt sẽ tự quay lại localhost và script tự in ra
-// "refresh_token" — copy dòng đó dán vào file .env trên VPS (biến GOOGLE_OAUTH_REFRESH_TOKEN), cùng
-// với GOOGLE_OAUTH_CLIENT_ID và GOOGLE_OAUTH_CLIENT_SECRET đã dùng ở trên.
-//
-// Sau bước này KHÔNG cần chạy lại script nữa (trừ khi bạn tự thu hồi quyền truy cập trong phần
-// "Ứng dụng của bên thứ ba có quyền truy cập tài khoản" của tài khoản Google đó).
+// Chạy 1 lần trên máy có trình duyệt.
+// Google Cloud OAuth Client phải có redirect URI:
+// http://localhost:3001/oauth2callback
 
 const http = require('http');
 const { google } = require('googleapis');
 
-const PORT = 3000;
-const REDIRECT_URI = `http://localhost:${PORT}/oauth2callback`;
-const SCOPES = ['https://www.googleapis.com/auth/drive'];
+const PORT = 3001;
+const REDIRECT_URI =
+  `http://localhost:${PORT}/oauth2callback`;
 
-const CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT_ID;
-const CLIENT_SECRET = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+const SCOPES = [
+  'https://www.googleapis.com/auth/drive',
+];
+
+const CLIENT_ID =
+  process.env.GOOGLE_OAUTH_CLIENT_ID;
+
+const CLIENT_SECRET =
+  process.env.GOOGLE_OAUTH_CLIENT_SECRET;
 
 if (!CLIENT_ID || !CLIENT_SECRET) {
-  console.error('\nThiếu GOOGLE_OAUTH_CLIENT_ID / GOOGLE_OAUTH_CLIENT_SECRET.');
-  console.error('Chạy lại theo đúng cú pháp ở đầu file này (mục "CÁCH CHẠY").\n');
+  console.error('');
+  console.error(
+    'Thiếu GOOGLE_OAUTH_CLIENT_ID / GOOGLE_OAUTH_CLIENT_SECRET.'
+  );
+  console.error('');
+  console.error('Ví dụ:');
+  console.error(
+    'GOOGLE_OAUTH_CLIENT_ID="..." GOOGLE_OAUTH_CLIENT_SECRET="..." node scripts/lay-refresh-token-drive.js'
+  );
+  console.error('');
   process.exit(1);
 }
 
-const oAuth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
+const oauth2Client =
+  new google.auth.OAuth2(
+    CLIENT_ID,
+    CLIENT_SECRET,
+    REDIRECT_URI
+  );
 
-const authUrl = oAuth2Client.generateAuthUrl({
-  access_type: 'offline', // bắt buộc để Google trả về refresh_token, không chỉ access_token tạm thời
-  prompt: 'consent',      // bắt buộc hỏi lại quyền mỗi lần — đảm bảo LUÔN nhận được refresh_token (nếu bỏ, lần chạy thứ 2 trở đi có thể không có)
-  scope: SCOPES,
-});
+const authUrl =
+  oauth2Client.generateAuthUrl({
+    access_type: 'offline',
+    prompt: 'consent',
+    scope: SCOPES,
+  });
 
-console.log('\n1. Mở đường link sau trên trình duyệt (đăng nhập ĐÚNG Gmail cá nhân bạn muốn dùng để lưu ảnh):\n');
-console.log(authUrl + '\n');
-console.log(`2. Đang chờ Google chuyển hướng về http://localhost:${PORT}/oauth2callback ...\n`);
+console.log('');
+console.log('==================================================');
+console.log('GOOGLE DRIVE OAUTH REFRESH TOKEN TOOL');
+console.log('==================================================');
+console.log('');
+console.log('Redirect URI:');
+console.log(REDIRECT_URI);
+console.log('');
+console.log('Mở URL này trong Chrome:');
+console.log('');
+console.log(authUrl);
+console.log('');
+console.log('==================================================');
 
-const server = http.createServer(async (req, res) => {
-  if (!req.url.startsWith('/oauth2callback')) { res.end(); return; }
+const server =
+  http.createServer(async (req, res) => {
+    const url =
+      new URL(req.url, `http://localhost:${PORT}`);
 
-  const code = new URL(req.url, REDIRECT_URI).searchParams.get('code');
-  if (!code) {
-    res.end('Không nhận được mã xác thực. Đóng tab này và thử lại.');
-    return;
-  }
-
-  try {
-    const { tokens } = await oAuth2Client.getToken(code);
-    res.end('Đã lấy được refresh token! Quay lại cửa sổ dòng lệnh (terminal) để xem kết quả. Có thể đóng tab này.');
-
-    console.log('\n===== THÀNH CÔNG — dán 3 dòng sau vào file .env trên VPS =====\n');
-    console.log(`GOOGLE_OAUTH_CLIENT_ID=${CLIENT_ID}`);
-    console.log(`GOOGLE_OAUTH_CLIENT_SECRET=${CLIENT_SECRET}`);
-    console.log(`GOOGLE_OAUTH_REFRESH_TOKEN=${tokens.refresh_token}`);
-    console.log('\n================================================================\n');
-
-    if (!tokens.refresh_token) {
-      console.log('CẢNH BÁO: không thấy refresh_token trong kết quả trả về — thường do tài khoản này đã');
-      console.log('từng cấp quyền cho app này trước đó. Vào https://myaccount.google.com/permissions,');
-      console.log('gỡ quyền truy cập của app vừa tạo, rồi chạy lại script này từ đầu.\n');
+    if (url.pathname !== '/oauth2callback') {
+      res.writeHead(404, {
+        'Content-Type':
+          'text/plain; charset=utf-8',
+      });
+      res.end('Not found');
+      return;
     }
-  } catch (err) {
-    res.end('Lỗi khi đổi mã lấy token: ' + err.message);
-    console.error('\nLỗi khi đổi mã lấy token:', err.message, '\n');
-  }
 
-  setTimeout(() => { server.close(); process.exit(0); }, 500);
+    const oauthError =
+      url.searchParams.get('error');
+
+    if (oauthError) {
+      res.writeHead(400, {
+        'Content-Type':
+          'text/plain; charset=utf-8',
+      });
+      res.end(
+        'Google OAuth error: ' + oauthError
+      );
+
+      console.error(
+        'Google OAuth error:',
+        oauthError
+      );
+
+      return;
+    }
+
+    const code =
+      url.searchParams.get('code');
+
+    if (!code) {
+      res.writeHead(400, {
+        'Content-Type':
+          'text/plain; charset=utf-8',
+      });
+      res.end(
+        'Không nhận được authorization code.'
+      );
+      return;
+    }
+
+    try {
+      const { tokens } =
+        await oauth2Client.getToken(code);
+
+      oauth2Client.setCredentials(tokens);
+
+      const drive = google.drive({
+        version: 'v3',
+        auth: oauth2Client,
+      });
+
+      const about =
+        await drive.about.get({
+          fields:
+            'user(emailAddress,displayName),storageQuota',
+        });
+
+      console.log('');
+      console.log('==================================================');
+      console.log('GOOGLE OAUTH SUCCESS');
+      console.log('==================================================');
+      console.log('');
+      console.log(
+        'Authenticated user:',
+        about.data.user
+      );
+      console.log('');
+      console.log(
+        'Storage quota:',
+        about.data.storageQuota
+      );
+      console.log('');
+
+      if (!tokens.refresh_token) {
+        throw new Error(
+          'Google không trả refresh_token. Hãy revoke quyền OAuth của app trong Google Account rồi chạy lại.'
+        );
+      }
+
+      console.log('Dán 3 dòng sau vào .env trên VPS:');
+      console.log('');
+      console.log(
+        `GOOGLE_OAUTH_CLIENT_ID=${CLIENT_ID}`
+      );
+      console.log(
+        `GOOGLE_OAUTH_CLIENT_SECRET=${CLIENT_SECRET}`
+      );
+      console.log(
+        `GOOGLE_OAUTH_REFRESH_TOKEN=${tokens.refresh_token}`
+      );
+      console.log('');
+      console.log('==================================================');
+
+      res.writeHead(200, {
+        'Content-Type':
+          'text/html; charset=utf-8',
+      });
+
+      res.end(`
+        <h2>OAuth thành công</h2>
+        <p>Tài khoản: <b>${about.data.user?.emailAddress || ''}</b></p>
+        <p>Refresh token đã được in trong terminal.</p>
+        <p>Có thể đóng tab này.</p>
+      `);
+
+      setTimeout(() => {
+        server.close();
+      }, 500);
+    } catch (err) {
+      console.error(
+        'OAuth callback error:',
+        err
+      );
+
+      res.writeHead(500, {
+        'Content-Type':
+          'text/plain; charset=utf-8',
+      });
+
+      res.end(
+        'OAuth failed: ' +
+        (err.message || String(err))
+      );
+    }
+  });
+
+server.listen(PORT, '127.0.0.1', () => {
+  console.log('');
+  console.log(
+    `Đang chờ callback tại ${REDIRECT_URI}`
+  );
 });
-
-server.listen(PORT);
