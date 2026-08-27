@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=20260826a">
-<script src="/js/theme.js?v=20260826a"></script>
+<link rel="stylesheet" href="/css/style.css?v=20260827a">
+<script src="/js/theme.js?v=20260825a"></script>
 </head>
 <body>
 <div id="nav"></div>
@@ -55,15 +55,21 @@
   </select>
   <button id="nut-ap-dung" class="btn-hanh-dong" onclick="apDungChuyenTrangThai()">Áp dụng</button>
   <span class="thanh-hanh-dong-cach"></span>
-  <button class="btn-hanh-dong phu nhanh-phoi-ve-file" onclick="apDungNhanh('TRANG_THAI_PHOI', 'Đã lấy phôi', this)">Đã lấy phôi</button>
-  <button class="btn-hanh-dong phu nhanh-phoi-ve-file" onclick="apDungNhanh('TRANG_THAI_PHOI', 'Chưa lấy phôi', this)">Chưa lấy phôi</button>
-  <button class="btn-hanh-dong phu nhanh-phoi-ve-file" onclick="apDungNhanh('TRANG_THAI_VE_FILE', 'Đã vẽ file', this)">Đã vẽ file</button>
-  <button class="btn-hanh-dong phu nhanh-phoi-ve-file" onclick="apDungNhanh('TRANG_THAI_VE_FILE', 'Chưa vẽ file', this)">Chưa vẽ file</button>
+  <button id="nut-da-xac-nhan" class="btn-hanh-dong phu" style="display:none" onclick="apDungXacNhanHangLoat()">Đã xác nhận</button>
+  <span class="thanh-hanh-dong-cach"></span>
+  <button class="btn-hanh-dong phu nhanh-phoi-ve-file" onclick="apDungNhanh('TRANG_THAI_PHOI', 'Đã lấy phôi')">Đã lấy phôi</button>
+  <button class="btn-hanh-dong phu nhanh-phoi-ve-file" onclick="apDungNhanh('TRANG_THAI_PHOI', 'Chưa lấy phôi')">Chưa lấy phôi</button>
+  <button class="btn-hanh-dong phu nhanh-phoi-ve-file" onclick="apDungNhanh('TRANG_THAI_VE_FILE', 'Đã vẽ file')">Đã vẽ file</button>
+  <button class="btn-hanh-dong phu nhanh-phoi-ve-file" onclick="apDungNhanh('TRANG_THAI_VE_FILE', 'Chưa vẽ file')">Chưa vẽ file</button>
   <button class="btn-hanh-dong phu" onclick="boChonTatCaDon()">Bỏ chọn</button>
+  <div id="thanh-tien-do-hang-loat" class="thanh-tien-do-hang-loat" style="display:none">
+    <div class="thanh-tien-do-nen"><div id="thanh-tien-do-fill" class="thanh-tien-do-fill"></div></div>
+    <span id="thanh-tien-do-chu" class="thanh-tien-do-chu"></span>
+  </div>
 </div>
 
-<script src="/js/icons.js?v=20260826a"></script>
-<script src="/js/api.js?v=20260826a"></script>
+<script src="/js/icons.js?v=20260825a"></script>
+<script src="/js/api.js?v=20260825a"></script>
 <script>
 const NHAN_CANH_BAO = { VANG: 'Vàng · 3 ngày', CAM: 'Cam · 5 ngày', DO: 'Đỏ · 7 ngày' };
 
@@ -72,12 +78,9 @@ const NHAN_CANH_BAO = { VANG: 'Vàng · 3 ngày', CAM: 'Cam · 5 ngày', DO: 'Đ
 // data/pipelineTinhTrang.js — sửa 1 chỗ thì nhớ sửa chỗ kia.
 // Cập nhật 24/08/2026 (theo Prompt_Ver_24.docx) — thay hoàn toàn hệ trạng thái B1.1-B5.2 cũ bằng
 // tên gọi thuần Việt, và tách phôi/vẽ file ra 2 cột riêng (không còn nằm trong danh sách này).
-const NHAN_NGUOI_VAN_HANH_KHONG_RO = 'ĐƠN SỬA TRONG GGSHEET, KHÔNG RÕ TÀI KHOẢN SẢN XUẤT NÀO ĐANG CHẠY';
-
 const DANH_SACH_TRANG_THAI_DAY_DU = [
   'Chưa xác nhận', 'Đã xác nhận',
   'ĐÃ SẴN SÀNG CHẠY MÁY',
-  'Đang chạy máy',
   'Đã sản xuất', 'LỖI SẢN XUẤT CẦN LÀM LẠI',
   'Đã đóng gói',
   'IN TRANSIT_Tracking đã hoạt động',
@@ -86,11 +89,17 @@ const DANH_SACH_TRANG_THAI_DAY_DU = [
 
 let danhSachHienTai = [];
 let donDaChonSet = new Set();
+let nguoiDungHienTai = null;
 
 (async () => {
   const user = await requireLoginOrRedirect();
   if (!user) return;
+  nguoiDungHienTai = user;
   renderNav(user, 'orders');
+
+  if (user.vaiTro === 'admin' || user.vaiTro === 've_file') {
+    document.getElementById('nut-da-xac-nhan').style.display = '';
+  }
 
   document.getElementById('loc-trang-thai').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-phoi').onchange = () => { boChonTatCaDon(); taiDon(); };
@@ -167,13 +176,6 @@ async function taiDon() {
 function renderDanhSachDon() {
   const el = document.getElementById('danh-sach-don');
 
-  // Ngày rút gọn D/M (không năm) — chỉ dùng riêng cho thẻ đơn ở Danh sách đơn hàng, không đụng đến
-  // dinhDangNgay() dùng chung (có năm) ở các trang khác.
-  function dinhDangNgayNgan(giaTri) {
-    const d = parseNgay(giaTri);
-    return d ? `${d.getDate()}/${d.getMonth() + 1}` : '';
-  }
-
   if (danhSachHienTai.length === 0) { el.innerHTML = `<div class="trang-thai-rong">${icon('package')}<p>Không có đơn nào khớp bộ lọc.</p></div>`; capNhatThanhHanhDong(); return; }
 
   el.innerHTML = danhSachHienTai.map(o => {
@@ -190,12 +192,10 @@ function renderDanhSachDon() {
         : ''}
       <div class="thong-tin">
         <strong>${escapeHtml(o.TieuDeSanPham || o.STT_Key)}</strong>
-        <div class="meta">${escapeHtml(o.TenKhachHang || '')} · SL: <strong>${escapeHtml(o.SO_LUONG || '')}</strong></div>
-        <div class="meta">Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgayNgan(o.NGAY_LEN_DON) : '—')}</div>
+        <div class="meta">${escapeHtml(o.TenKhachHang || '')} · SL: ${escapeHtml(o.SO_LUONG || '')}</div>
+        <div class="meta">Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgay(o.NGAY_LEN_DON) : '—')}</div>
         <div class="badge-row">
           <span class="badge ${lopTrangThai(o.TINH_TRANG)}">${escapeHtml(o.TINH_TRANG || '')}</span>
-          ${o.TINH_TRANG === 'Đang chạy máy' ? `
-            <span class="badge trang-thai-info">${icon('users', {size:14})} Đang vận hành: <strong>${escapeHtml(o.NguoiVanHanh || NHAN_NGUOI_VAN_HANH_KHONG_RO)}</strong></span>` : ''}
           ${['Chưa xác nhận', 'Đã xác nhận'].includes(o.TINH_TRANG) ? `
             <span class="badge ${lopTrangThai(o.TRANG_THAI_PHOI)}">${escapeHtml(o.TRANG_THAI_PHOI || '')}</span>
             <span class="badge ${lopTrangThai(o.TRANG_THAI_VE_FILE)}">${escapeHtml(o.TRANG_THAI_VE_FILE || '')}</span>` : ''}
@@ -249,72 +249,77 @@ function boChonTatCaDon() {
   renderDanhSachDon();
 }
 
-async function apDungNhanh(cot, trangThaiMoi, nut) {
+// Cập nhật hàng loạt DÙNG CHUNG cho mọi thao tác (chuyển trạng thái, phôi/vẽ file nhanh, đã xác
+// nhận) — gọi API sửa TỪNG đơn một (PUT /orders/:sttKey, giống trang chi tiết đơn) thay vì 1 API
+// hàng loạt duy nhất, để hiện được thanh tiến độ % THẬT theo từng đơn đã xử lý xong (thay cho việc
+// chờ không biết hệ thống có đang chạy hay không). 'updates' là object các cột cần sửa, áp dụng
+// giống hệt nhau cho mọi đơn đã chọn.
+async function apDungCapNhatHangLoat(updates, moTa) {
   const soLuong = donDaChonSet.size;
-  if (!confirm(`Đánh dấu ${soLuong} đơn đã chọn thành "${trangThaiMoi}"?`)) return;
+  if (soLuong === 0) return;
+  if (!confirm(`${moTa} cho ${soLuong} đơn đã chọn?`)) return;
 
-  const nhanGoc = nut.innerHTML;
-  document.querySelectorAll('.nhanh-phoi-ve-file, #nut-ap-dung').forEach(b => b.disabled = true);
-  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Đang xử lý...';
+  const cacNut = document.querySelectorAll('.nhanh-phoi-ve-file, #nut-ap-dung, #nut-da-xac-nhan');
+  cacNut.forEach(b => b.disabled = true);
 
-  try {
-    const ketQua = await apiFetch('/orders/chuyen-trang-thai-hang-loat', {
-      method: 'POST',
-      body: JSON.stringify({ sttKeys: Array.from(donDaChonSet), cot, trangThaiMoi }),
-    });
+  const khuTienDo = document.getElementById('thanh-tien-do-hang-loat');
+  const opTienDo = document.getElementById('thanh-tien-do-fill');
+  const chuTienDo = document.getElementById('thanh-tien-do-chu');
+  khuTienDo.style.display = 'flex';
+  opTienDo.style.width = '0%';
+  chuTienDo.textContent = `Đang xử lý 0/${soLuong} (0%)`;
 
-    let thongBao = `Đã đánh dấu ${ketQua.thanhCong.length}/${soLuong} đơn thành "${trangThaiMoi}".`;
-    if (ketQua.loi.length > 0) {
-      thongBao += `\n\nKhông đánh dấu được ${ketQua.loi.length} đơn:\n` +
-        ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
+  const sttKeys = Array.from(donDaChonSet);
+  const thanhCong = [];
+  const loi = [];
+
+  for (let i = 0; i < sttKeys.length; i++) {
+    const sttKey = sttKeys[i];
+    try {
+      await apiFetch('/orders/' + encodeURIComponent(sttKey), { method: 'PUT', body: JSON.stringify(updates) });
+      thanhCong.push(sttKey);
+    } catch (e) {
+      loi.push({ sttKey, lyDo: e.message });
     }
-    alert(thongBao);
-  } catch (e) {
-    alert('Lỗi: ' + e.message);
-  } finally {
-    document.querySelectorAll('.nhanh-phoi-ve-file, #nut-ap-dung').forEach(b => b.disabled = false);
-    nut.innerHTML = nhanGoc;
-    donDaChonSet.clear();
-    await taiDon();
-  }
-}
-
-async function apDungChuyenTrangThai() {
-  const trangThaiMoi = document.getElementById('trang-thai-dich').value;
-  if (!trangThaiMoi) { alert('Hãy chọn trạng thái muốn chuyển tới'); return; }
-
-  const soLuong = donDaChonSet.size;
-  if (!confirm(`Chuyển ${soLuong} đơn đã chọn sang trạng thái "${trangThaiMoi}"?\n\nThao tác này ghi thẳng, không kiểm tra trạng thái hiện tại của từng đơn.`)) return;
-
-  const nutApDung = document.getElementById('nut-ap-dung');
-  nutApDung.disabled = true;
-  nutApDung.textContent = 'Đang xử lý...';
-
-  try {
-    const ketQua = await apiFetch('/orders/chuyen-trang-thai-hang-loat', {
-      method: 'POST',
-      body: JSON.stringify({ sttKeys: Array.from(donDaChonSet), trangThaiMoi }),
-    });
-
-    let thongBao = `Đã chuyển ${ketQua.thanhCong.length}/${soLuong} đơn sang "${trangThaiMoi}".`;
-    if (ketQua.loi.length > 0) {
-      thongBao += `\n\nKhông chuyển được ${ketQua.loi.length} đơn:\n` +
-        ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
-    }
-    alert(thongBao);
-  } catch (e) {
-    alert('Lỗi: ' + e.message);
+    const phanTram = Math.round(((i + 1) / sttKeys.length) * 100);
+    opTienDo.style.width = phanTram + '%';
+    chuTienDo.textContent = `Đang xử lý ${i + 1}/${sttKeys.length} (${phanTram}%)`;
   }
 
-  nutApDung.disabled = false;
-  nutApDung.textContent = 'Áp dụng';
+  let thongBao = `Đã cập nhật ${thanhCong.length}/${sttKeys.length} đơn.`;
+  if (loi.length > 0) {
+    thongBao += `\n\nKhông cập nhật được ${loi.length} đơn:\n` + loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
+  }
+  alert(thongBao);
+
+  khuTienDo.style.display = 'none';
+  cacNut.forEach(b => b.disabled = false);
   donDaChonSet.clear();
   await taiDon();
 }
 
-// In nhanh: LUÔN gửi đúng mọi ô lọc đang hiển thị trên trang (trạng thái, phôi, vẽ file, ngày,
-// từ khoá) — không ép cứng gì ở phía client nữa. Mỗi mẫu ('mau') sẽ ép thêm điều kiện trạng thái
-// riêng của mình ở phía server (xem reports.js), kết hợp AND với các ô lọc này.
+function apDungNhanh(cot, trangThaiMoi) {
+  return apDungCapNhatHangLoat({ [cot]: trangThaiMoi }, `Đánh dấu thành "${trangThaiMoi}"`);
+}
+
+function apDungChuyenTrangThai() {
+  const trangThaiMoi = document.getElementById('trang-thai-dich').value;
+  if (!trangThaiMoi) { alert('Hãy chọn trạng thái muốn chuyển tới'); return; }
+  return apDungCapNhatHangLoat({ TINH_TRANG: trangThaiMoi }, `Chuyển sang trạng thái "${trangThaiMoi}"`);
+}
+
+// Nút "Đã xác nhận" hàng loạt — chỉ hiện cho admin/ve_file (xem đoạn hiện/ẩn nút ở IIFE phía trên).
+// Set TINH_TRANG='Đã xác nhận' + reset TRANG_THAI_PHOI/TRANG_THAI_VE_FILE về "Chưa..." để 2 ô lọc
+// trạng thái phôi/vẽ file ở trang này hoạt động đúng ngay từ khi đơn được xác nhận.
+function apDungXacNhanHangLoat() {
+  return apDungCapNhatHangLoat(
+    { TINH_TRANG: 'Đã xác nhận', TRANG_THAI_PHOI: 'Chưa lấy phôi', TRANG_THAI_VE_FILE: 'Chưa vẽ file' },
+    'Đánh dấu "Đã xác nhận"'
+  );
+}
+
+// In nhanh theo ĐÚNG bộ lọc trạng thái + ô tìm kiếm đang áp dụng trên trang này (không ép về
+// đúng trạng thái B1/B2/B5 của mẫu) — 'mau' chỉ ép cứng ĐỊNH DẠNG cột hiển thị trong file PDF.
 async function inNhanh(mau, nut) {
   const nhanGoc = nut.innerHTML;
   nut.disabled = true;
@@ -326,14 +331,24 @@ async function inNhanh(mau, nut) {
   const tuKhoa = document.getElementById('loc-kh').value;
   const tuNgay = document.getElementById('loc-tu-ngay').value;
   const denNgay = document.getElementById('loc-den-ngay').value;
-  const trangThaiPhoi = document.getElementById('loc-phoi').value;
-  const trangThaiVeFile = document.getElementById('loc-ve-file').value;
-  if (trangThai) qs.set('trangThai', trangThai);
   if (tuKhoa) qs.set('tuKhoa', tuKhoa);
   if (tuNgay) qs.set('tuNgay', tuNgay);
   if (denNgay) qs.set('denNgay', denNgay);
-  if (trangThaiPhoi) qs.set('trangThaiPhoi', trangThaiPhoi);
-  if (trangThaiVeFile) qs.set('trangThaiVeFile', trangThaiVeFile);
+
+  // 'phoi_ao_gop' (IN DANH SÁCH PHÔI) và 'don_can_in' (IN ĐƠN) lọc theo cột TRANG_THAI_PHOI (tách
+  // riêng khỏi TINH_TRANG từ 24/08/2026) — ép cứng đúng giá trị cần cho từng mẫu, KHÔNG dùng ô lọc
+  // trạng thái chung ở trên (ô đó chỉ lọc được TINH_TRANG, không lọc được cột phôi).
+  if (mau === 'phoi_ao_gop') qs.set('trangThaiPhoi', 'Chưa lấy phôi');
+  else if (mau === 'don_can_in') qs.set('trangThaiPhoi', 'Đã lấy phôi');
+  else {
+    // 'tracking' và các trường hợp khác: tôn trọng đúng bộ lọc đang áp dụng trên trang (kể cả 2 ô
+    // lọc phôi/vẽ file mới), không ép cứng gì thêm.
+    if (trangThai) qs.set('trangThai', trangThai);
+    const trangThaiPhoi = document.getElementById('loc-phoi').value;
+    const trangThaiVeFile = document.getElementById('loc-ve-file').value;
+    if (trangThaiPhoi) qs.set('trangThaiPhoi', trangThaiPhoi);
+    if (trangThaiVeFile) qs.set('trangThaiVeFile', trangThaiVeFile);
+  }
 
   try {
     const res = await fetch('/api/reports/pdf?' + qs.toString(), { credentials: 'include' });

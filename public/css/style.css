@@ -278,6 +278,12 @@ body.trang-dang-nhap {
 .thanh-hanh-dong-cach { width: 1px; align-self: stretch; background: var(--color-border); margin: 0 4px; }
 .nhanh-phoi-ve-file { font-size: 0.85rem !important; padding: 8px 14px !important; }
 
+/* Thanh tiến độ % khi cập nhật hàng loạt (xem apDungCapNhatHangLoat trong orders.html) */
+.thanh-tien-do-hang-loat { flex-basis: 100%; display: flex; align-items: center; gap: 10px; }
+.thanh-tien-do-nen { flex: 1; height: 8px; border-radius: 4px; background: rgba(255,255,255,0.25); overflow: hidden; }
+.thanh-tien-do-fill { height: 100%; width: 0%; background: var(--color-primary); transition: width 0.15s ease; }
+.thanh-tien-do-chu { font-size: 0.82rem; white-space: nowrap; }
+
 /* Badge trạng thái + cảnh báo dùng chung token ngữ nghĩa */
 .badge {
   display: inline-flex; align-items: center; gap: 4px;
@@ -669,36 +675,6 @@ body.trang-dang-nhap {
   --glow-md: 0 0 28px color-mix(in srgb, var(--color-primary) 35%, transparent);
   --glow-border: 0 0 0 1px var(--color-primary);
 }
-
-/* ============================================================
-   THEME "CÔNG NGHỆ (NAVY)" — bổ sung 26/08/2026, lấy tông từ ảnh AI/mạng lưới người dùng gửi tham
-   khảo (nền xanh navy đậm + chấm sáng cam). CHỈ áp dụng khi đang ở Chế độ Tối VÀ đã chọn đúng màu
-   'navy' ở Thiết lập (thuộc tính data-mau do theme.js gắn lên thẻ <html>) — 8 màu còn lại và Chế độ
-   Sáng của chính màu 'navy' này KHÔNG bị ảnh hưởng gì, giữ nguyên như trước.
-   ============================================================ */
-[data-theme="dark"][data-mau="navy"] {
-  --color-bg: #0a1120;
-  --color-surface: #101a30;
-  --color-border: #1e2c4a;
-  --color-accent-2: #fb923c; /* cam — mô phỏng các chấm sáng cam trong ảnh tham khảo */
-}
-[data-theme="dark"][data-mau="navy"] body:not(.trang-dang-nhap) {
-  background:
-    radial-gradient(ellipse 90% 40% at 50% -10%, color-mix(in srgb, var(--color-primary) 16%, transparent) 0%, transparent 65%),
-    radial-gradient(ellipse 55% 35% at 90% 96%, color-mix(in srgb, var(--color-accent-2) 14%, transparent) 0%, transparent 60%),
-    var(--color-bg);
-  background-attachment: fixed;
-}
-[data-theme="dark"][data-mau="navy"] body.trang-dang-nhap {
-  background:
-    radial-gradient(circle at 50% 15%, color-mix(in srgb, var(--color-primary) 22%, transparent) 0%, transparent 60%),
-    radial-gradient(circle at 88% 88%, color-mix(in srgb, var(--color-accent-2) 14%, transparent) 0%, transparent 55%),
-    var(--color-bg);
-  background-attachment: fixed;
-}
-/* Điểm nhấn cam rất nhẹ ở đúng chỗ đã có sẵn hiệu ứng glow — không thêm phần tử trang trí mới,
-   không đụng bố cục/nội dung nghiệp vụ. */
-[data-theme="dark"][data-mau="navy"] .badge-canh-bao.cam { box-shadow: 0 0 10px color-mix(in srgb, var(--color-accent-2) 55%, transparent); }
 
 /* Nền trang: quầng sáng nhẹ toả từ mép trên, giống hiệu ứng "ánh đèn xưởng" trong bản preview */
 [data-theme="dark"] body:not(.trang-dang-nhap) {

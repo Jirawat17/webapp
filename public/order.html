@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Chi tiết đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=20260826a">
-<script src="/js/theme.js?v=20260826a"></script>
+<link rel="stylesheet" href="/css/style.css?v=20260827a">
+<script src="/js/theme.js?v=20260825a"></script>
 </head>
 <body>
 <div id="nav"></div>
@@ -13,18 +13,14 @@
   <div class="skeleton-list"><div class="skeleton-card" style="height:220px"></div></div>
 </div>
 
-<script src="/js/icons.js?v=20260826a"></script>
-<script src="/js/api.js?v=20260826a"></script>
+<script src="/js/icons.js?v=20260825a"></script>
+<script src="/js/api.js?v=20260825a"></script>
 <script>
 const sttKey = new URLSearchParams(location.search).get('stt');
 const NHAN_CANH_BAO = { VANG: 'Cảnh báo Vàng · 3 ngày ít tiến triển', CAM: 'Cảnh báo Cam · 5 ngày chưa vào sản xuất', DO: 'Cảnh báo Đỏ · 7 ngày chưa ship' };
 // PHẢI khớp TINH_TRANG_VALUES trong data/pipelineTinhTrang.js
-// (bổ sung 26/08/2026) Đơn "Đang chạy máy" nhưng không tra được người vận hành (vd sửa thẳng trên
-// Sheet, log bị thiếu) — vẫn cho xem (an toàn hơn) nhưng cảnh báo TO, RÕ thay vì chỉ ghi "Không xác định".
-const NHAN_NGUOI_VAN_HANH_KHONG_RO = 'ĐƠN SỬA TRONG GGSHEET, KHÔNG RÕ TÀI KHOẢN SẢN XUẤT NÀO ĐANG CHẠY';
-
 const DANH_SACH_TINH_TRANG = [
-  'Chưa xác nhận', 'Đã xác nhận', 'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đang chạy máy', 'Đã sản xuất', 'LỖI SẢN XUẤT CẦN LÀM LẠI',
+  'Chưa xác nhận', 'Đã xác nhận', 'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đã sản xuất', 'LỖI SẢN XUẤT CẦN LÀM LẠI',
   'Đã đóng gói', 'IN TRANSIT_Tracking đã hoạt động', 'DELIVERED_Đã giao đến khách', 'CANCELLED_Đã hủy', 'REFUNDED_Hoàn đơn',
 ];
 
@@ -71,8 +67,6 @@ async function taiChiTiet() {
     <h2>${escapeHtml(don.TieuDeSanPham || don.STT_Key)}</h2>
     <div class="badge-row" style="margin-bottom:16px">
       <span class="badge ${lopTrangThai(don.TINH_TRANG)}">${escapeHtml(don.TINH_TRANG || '')}</span>
-      ${don.TINH_TRANG === 'Đang chạy máy' ? `
-        <span class="badge trang-thai-info">${icon('users', {size:14})} Đang vận hành: <strong>${escapeHtml(don.NguoiVanHanh || NHAN_NGUOI_VAN_HANH_KHONG_RO)}</strong></span>` : ''}
       ${['Chưa xác nhận', 'Đã xác nhận'].includes(don.TINH_TRANG) ? `
         <span class="badge ${lopTrangThai(don.TRANG_THAI_PHOI)}">${escapeHtml(don.TRANG_THAI_PHOI || '')}</span>
         <span class="badge ${lopTrangThai(don.TRANG_THAI_VE_FILE)}">${escapeHtml(don.TRANG_THAI_VE_FILE || '')}</span>` : ''}
@@ -86,13 +80,6 @@ async function taiChiTiet() {
     <div class="chi-tiet-layout">
       <div>
         ${anh ? `<img class="anh-mau" src="${escapeHtml(anh)}" alt="Ảnh mẫu/mockup" loading="lazy" onerror="this.remove()">` : ''}
-        ${user.vaiTro !== 'nguoi_lay_phoi' && (don.DUONG_DAN_URL || don.MOCKUP) ? `
-        <div style="display:flex;gap:14px;margin:4px 0 8px;font-size:0.85rem">
-          ${don.DUONG_DAN_URL ? `<a href="${escapeHtml(don.DUONG_DAN_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh PNG gốc</a>` : ''}
-          ${don.MOCKUP ? `<a href="${escapeHtml(don.MOCKUP)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh Mockup gốc</a>` : ''}
-        </div>` : ''}
-        ${don.Anh_File_Theu_URL ? `<div><p style="margin:8px 0 4px;font-weight:600;font-size:0.85rem">Ảnh file thêu</p><img class="anh-mau" src="${escapeHtml(don.Anh_File_Theu_URL)}" alt="Ảnh file thêu" loading="lazy" onerror="this.remove()"></div>` : ''}
-        ${don.Anh_Dong_Goi_URL ? `<div><p style="margin:8px 0 4px;font-weight:600;font-size:0.85rem">Ảnh hoàn thành</p><img class="anh-mau" src="${escapeHtml(don.Anh_Dong_Goi_URL)}" alt="Ảnh hoàn thành" loading="lazy" onerror="this.remove()"></div>` : ''}
         <table class="info-table">
           <tr><td>Mã đơn</td><td>${escapeHtml(don.STT_Key)}</td></tr>
           <tr><td>Mã đơn (sàn TMĐT)</td><td>${escapeHtml(don.MA_DON_HANG_ORDERID || '')}</td></tr>
@@ -133,6 +120,14 @@ function renderKhuVucThaoTac(don) {
   const el = document.getElementById('khu-vuc-thao-tac');
   let html = '';
 
+  // Nút "Đã xác nhận" — set tay (KHÔNG qua kịch bản quét QR, theo README.txt), chỉ ve_file/admin
+  // được dùng. Chỉ hiện khi đơn đang "Chưa xác nhận". Tự động set TRANG_THAI_PHOI="Chưa lấy phôi"
+  // và TRANG_THAI_VE_FILE="Chưa vẽ file" để 2 ô lọc trạng thái ở trang Đơn hàng hoạt động đúng.
+  const hienNutXacNhan = (user.vaiTro === 'admin' || user.vaiTro === 've_file') && don.TINH_TRANG === 'Chưa xác nhận';
+  if (hienNutXacNhan) {
+    html += `<button class="btn-hanh-dong" onclick="xacNhanDon(this)">${icon('check')} Đã xác nhận</button>`;
+  }
+
   // Nút chuyển giai đoạn — đọc từ chính tab CauHinhKichBan (dùng chung logic với quét QR),
   // không hardcode nút theo vai trò vì Sheet không định nghĩa vai trò cho từng kịch bản.
   if (don.kichBanKeTiep && don.kichBanKeTiep.length > 0) {
@@ -140,7 +135,7 @@ function renderKhuVucThaoTac(don) {
       <button class="btn-hanh-dong" onclick="chuyenGiaiDoan('${kb.id}', this)">
         ${icon('arrowRight')} Chuyển sang: ${escapeHtml(kb.label)}
       </button>`).join('');
-  } else {
+  } else if (!hienNutXacNhan) {
     html += '<p>Không có kịch bản nào áp dụng được cho trạng thái hiện tại (kiểm tra tab CauHinhKichBan).</p>';
   }
 
@@ -176,26 +171,13 @@ function renderKhuVucThaoTac(don) {
       <p style="margin:0;font-size:0.8rem;color:var(--color-text-faint)">Nếu cả Phôi và Vẽ file cùng chuyển sang "Đã..." trong khi Trạng thái chung đang là "Đã xác nhận", hệ thống tự chuyển Trạng thái chung sang "ĐÃ SẴN SÀNG CHẠY MÁY".</p>
     </div>`;
 
-  // Ảnh "File thêu" (bổ sung 26/08/2026) — ve_file upload sau khi vẽ file xong, để san_xuat xem
-  // trước khi chọn chỉ thêu. Thuần lưu ảnh, KHÔNG đụng gì tới trạng thái (khác với "Chụp ảnh hoàn
-  // thành" bên dưới).
-  if (user.vaiTro === 've_file' || user.vaiTro === 'admin') {
-    html += `
-      <div class="upload-box">
-        <label for="anh-ve-file">${icon('camera', { size: 18 })} Ảnh file thêu (sau khi vẽ file)</label>
-        <input type="file" accept="image/*" capture="environment" id="anh-ve-file">
-        <button class="btn-hanh-dong" onclick="taiAnh('ve_file')">${icon('download')} Tải ảnh lên</button>
-        <p style="margin:0;font-size:0.8rem">Cần cột <code>Anh_File_Theu_URL</code> trong Sheet — nếu chưa có, thao tác này sẽ báo lỗi.</p>
-      </div>`;
-  }
-
   if (user.vaiTro === 'admin') {
     html += `
       <div class="upload-box">
-        <label for="anh-dong-goi">${icon('camera', { size: 18 })} Chụp ảnh hoàn thành (trước khi đóng gói)</label>
+        <label for="anh-dong-goi">${icon('camera', { size: 18 })} Chụp ảnh đóng gói</label>
         <input type="file" accept="image/*" capture="environment" id="anh-dong-goi">
         <button class="btn-hanh-dong" onclick="taiAnh('dong_goi')">${icon('download')} Tải ảnh lên</button>
-        <p style="margin:0;font-size:0.8rem">Cần cột <code>Anh_Dong_Goi_URL</code> trong Sheet. Chỉ dùng được khi đơn đang ở "Đã sản xuất" — tải ảnh xong sẽ TỰ ĐỘNG chuyển đơn sang "Đã đóng gói". san_xuat/nguoi_lay_phoi nên dùng màn "Chụp ảnh hoàn thành hàng loạt" ở trang Quét QR thay vì đây (nhanh hơn, không cần mở từng đơn).</p>
+        <p style="margin:0;font-size:0.8rem">Cần cột <code>Anh_Dong_Goi_URL</code> trong Sheet — nếu chưa có, thao tác này sẽ báo lỗi.</p>
       </div>`;
   }
 
@@ -213,7 +195,7 @@ function loiToHopTrangThai(tinhTrang, phoi, veFile) {
     if (veFile === 'Đã vẽ file') return 'Đơn đang "Chưa xác nhận" thì chưa thể "Đã vẽ file" — xác nhận đơn trước.';
   }
   const CAC_TRANG_THAI_TU_SAN_SANG_TRO_DI = [
-    'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đang chạy máy', 'Đã sản xuất', 'Đã đóng gói',
+    'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đã sản xuất', 'Đã đóng gói',
     'IN TRANSIT_Tracking đã hoạt động', 'DELIVERED_Đã giao đến khách',
   ];
   if (CAC_TRANG_THAI_TU_SAN_SANG_TRO_DI.includes(tinhTrang)) {
@@ -252,6 +234,20 @@ async function luuTrangThaiThuCong() {
   } catch (e) { alert(e.message); }
 }
 
+async function xacNhanDon(btn) {
+  btn.disabled = true;
+  try {
+    await apiFetch('/orders/' + encodeURIComponent(sttKey), {
+      method: 'PUT',
+      body: JSON.stringify({ TINH_TRANG: 'Đã xác nhận', TRANG_THAI_PHOI: 'Chưa lấy phôi', TRANG_THAI_VE_FILE: 'Chưa vẽ file' }),
+    });
+    await taiChiTiet();
+  } catch (e) {
+    alert(e.message);
+    btn.disabled = false;
+  }
+}
+
 async function chuyenGiaiDoan(scenarioId, btn) {
   btn.disabled = true;
   try {
@@ -267,7 +263,6 @@ async function luuGhiChu() {
   const ghiChu = document.getElementById('ghi-chu-moi').value;
   try {
     await apiFetch('/orders/' + encodeURIComponent(sttKey), { method: 'PUT', body: JSON.stringify({ GHI_CHU: ghiChu }) });
-    alert('Đã lưu ghi chú!');
     await taiChiTiet();
   } catch (e) { alert(e.message); }
 }
