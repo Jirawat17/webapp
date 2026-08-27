@@ -41,7 +41,16 @@
   <div id="photo-wrap" style="display:none">
     <p>Chụp ảnh sản phẩm đã hoàn thành — đảm bảo tem mã QR nằm rõ trong khung hình. Hệ thống sẽ tự đọc mã, lưu ảnh và chuyển đơn sang "Đã đóng gói". Đơn phải đang ở trạng thái "Đã sản xuất".</p>
     <input type="file" accept="image/*" capture="environment" id="input-chup-anh" style="display:none">
-    <div id="qr-reader-file-an" style="display:none"></div>
+    <!--
+      SỬA LỖI (xem log trao đổi): trước đây div này dùng "display:none", khiến clientWidth/
+      clientHeight luôn bằng 0. Thư viện html5-qrcode dùng chính 2 giá trị này để tính kích thước
+      canvas nội bộ khi giải mã ảnh tĩnh (scanFile) — container rộng/cao = 0 khiến canvas dựng ra
+      rỗng, nên MỌI lần chụp đều báo "không đọc được mã" dù ảnh có rõ nét hay không, không phân biệt
+      thiết bị. Cách sửa: đẩy hẳn ra ngoài màn hình bằng position:fixed + toạ độ âm lớn (khiến người
+      dùng không thấy gì, giữ nguyên trải nghiệm cũ) nhưng vẫn có kích thước LAYOUT THẬT (1000x1000)
+      để thư viện tính toán canvas đúng.
+    -->
+    <div id="qr-reader-file-an" style="position:fixed; top:-9999px; left:-9999px; width:1000px; height:1000px; overflow:hidden;"></div>
     <button id="btn-chup-anh" class="btn-dung-quet san-sang"></button>
     <div id="toast-chup-anh" class="toast-vua-quet"></div>
     <div id="dem-nhom-anh" class="dem-nhom"></div>
@@ -507,6 +516,11 @@ async function tiepTucQuet() {
 // đọc được mã, báo lỗi và bắt chụp lại NGAY (không upload gì cả) → nếu đọc được, upload thẳng lên
 // server kèm mã đã giải; server tự kiểm tra đơn đang "Đã sản xuất" rồi lưu ảnh + chuyển sang "Đã
 // đóng gói" trong cùng 1 lần ghi (xem routes/photos.js). Mở cho CẢ 4 vai trò.
+//
+// SỬA LỖI 28/08/2026: trước đây "Không đọc được mã" xảy ra 100% các lần chụp, kể cả ảnh rõ nét,
+// trên mọi thiết bị — nguyên nhân là div #qr-reader-file-an dùng display:none (xem chú thích tại
+// nơi khai báo div trong phần HTML phía trên). Đã sửa bằng cách đẩy div ra ngoài màn hình thay vì
+// ẩn hẳn, giữ nguyên layout thật để html5-qrcode tính đúng canvas giải mã.
 // ============================================================
 document.getElementById('btn-chup-anh').onclick = () => {
   document.getElementById('input-chup-anh').value = ''; // reset để chọn lại đúng ảnh mới chụp, kể cả khi trùng tên file với lần trước
@@ -532,6 +546,11 @@ async function xuLyAnhHoanThanh(file) {
     sttKey = (typeof ketQuaDoc === 'string' ? ketQuaDoc : ketQuaDoc.decodedText || '').trim();
     if (!sttKey) throw new Error('Rỗng');
   } catch (err) {
+    // Log lỗi thật ra console để chẩn đoán nếu về sau vẫn còn trường hợp lỗi khác (ảnh thật sự mờ,
+    // định dạng file lạ...) — KHÔNG hiện chi tiết kỹ thuật này cho người dùng, chỉ hiện thông báo
+    // dễ hiểu bên dưới.
+    console.error('[Chụp ảnh hoàn thành] Lỗi đọc QR từ ảnh:', err);
+
     // Không đọc được mã QR trong ảnh (mờ, thiếu sáng, tem bị che, góc chụp xấu...) — theo đúng yêu
     // cầu: báo NGAY và bắt chụp lại ngay lập tức, KHÔNG upload gì lên server.
     hienThiToastAnh('loi', 'Không đọc được mã QR trong ảnh — chụp lại ngay, đảm bảo tem QR rõ nét và đủ sáng.');
