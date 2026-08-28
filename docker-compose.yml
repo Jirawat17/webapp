@@ -1,0 +1,20 @@
+services:
+  webapp:
+    build: .
+    container_name: xuong-theu-webapp
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      # MinIO chạy trên Zima ngoài Docker: container truy cập được qua IP LAN.
+      # Nếu sau này thêm MinIO vào docker-compose cùng network thì đổi thành
+      # MINIO_ENDPOINT=http://minio:9000 (không dùng localhost).
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-http://192.168.123.125:9010}
+      # Bên trong container luôn nghe cổng 3000; .env có thể để PORT=3000 cho chạy local,
+      # host mapping "3000:3000" bên dưới vẫn vào đúng.
+      - PORT=3000
+    volumes:
+      # Key Service Account không nén vào image — mount lúc chạy
+      - ./service-account.json:/app/service-account.json:ro

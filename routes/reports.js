@@ -10,6 +10,7 @@ const { readTab } = require('../services/sheetsService');
 const { parseNgay, dinhDangNgay, dinhDangNgayGioVN, dinhDangNgayGioNgan } = require('../services/dateUtils');
 const { taoQRCodeBuffer } = require('../services/qrService');
 const { taiAnhTuLinkDrive } = require('../services/driveService');
+const storageService = require('../services/storageService');
 const { DANH_SACH_TRANG_THAI_BAO_CAO } = require('../data/pipelineTinhTrang');
 const { requireLogin } = require('../middleware/auth');
 
@@ -411,11 +412,29 @@ function nhanDangDinhDangAnh(buffer) {
   return null;
 }
 
+// Ảnh mới nằm trên MinIO (URL proxy nội bộ); ảnh cũ vẫn là link Google Drive —
+// hỗ trợ cả 2 để báo cáo PDF không mất ảnh lịch sử.
+async function taiAnh(url) {
+  const objectKey = storageService.proxyUrlToObjectKey(url);
+  if (objectKey) {
+    try {
+      const result = await storageService.getObjectStream(objectKey);
+      const chunks = [];
+      for await (const chunk of result.Body) chunks.push(chunk);
+      return Buffer.concat(chunks);
+    } catch (err) {
+      console.error('[MinIO] Không tải được ảnh:', url, '-', err.message);
+      return null;
+    }
+  }
+  return taiAnhTuLinkDrive(url);
+}
+
 async function taiAnhChoDon(don) {
   const [qr, mauRaw, mockupRaw] = await Promise.all([
     taoQRCodeBuffer(don.STT_Key || '', 300),
-    taiAnhTuLinkDrive(don.DUONG_DAN_URL),
-    taiAnhTuLinkDrive(don.MOCKUP),
+    taiAnh(don.DUONG_DAN_URL),
+    taiAnh(don.MOCKUP),
   ]);
   const dinhDangMau = nhanDangDinhDangAnh(mauRaw);
   const dinhDangMockup = nhanDangDinhDangAnh(mockupRaw);

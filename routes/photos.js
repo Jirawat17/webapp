@@ -4,7 +4,7 @@ const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 const orderService = require('../services/orderService');
-const driveService = require('../services/driveService');
+const storageService = require('../services/storageService');
 const { ghiLog } = require('../services/logService');
 const { requireLogin } = require('../middleware/auth');
 
@@ -58,13 +58,25 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
     });
   }
 
-  // Folder theo ngày, format YYYY-MM-DD để sắp xếp đúng thứ tự trên Drive
-  const now = new Date();
-  const tenThuMuc = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  const folderId = await driveService.getOrCreateFolder(tenThuMuc);
+  // Chỉ nhận ảnh (giữ nguyên giới hạn 10MB của multer phía trên)
+  if (!req.file.mimetype || !req.file.mimetype.startsWith('image/')) {
+    return res.status(400).json({ error: 'File gửi lên không phải là ảnh' });
+  }
 
+  // Ảnh lưu trên MinIO theo cấu trúc orders/{sttKey}/{uuid}-{tenFile} — mỗi đơn 1 "folder" ảo.
+  // Sheet chỉ lưu URL proxy ổn định qua API của app; ảnh gốc là object riêng tư + presign khi cần.
+  const now = new Date();
   const tenFile = `${sttKey}_${moc}_${Date.now()}.jpg`;
-  const url = await driveService.uploadImageBuffer(req.file.buffer, tenFile, folderId, req.file.mimetype);
+  const objectKey = storageService.taoObjectKeyDonHang(sttKey, tenFile);
+
+  let url;
+  try {
+    await storageService.uploadImageBuffer(req.file.buffer, objectKey, req.file.mimetype);
+    url = storageService.objectKeyToProxyUrl(objectKey);
+  } catch (err) {
+    console.error('[MinIO] Upload ảnh thất bại:', err.message);
+    return res.status(502).json({ error: 'Lưu ảnh lên kho lưu trữ thất bại — vui lòng thử lại' });
+  }
 
   const updates = { [cotAnh]: url, NguoiCapNhatCuoi: user.ten, ThoiGianCapNhatCuoi: now.toISOString() };
   if (chuyenTuDong) updates.TINH_TRANG = chuyenTuDong.chuyenSang;
@@ -81,6 +93,34 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
     sttKey, chiTiet: { moc, url, ...(chuyenTuDong ? { tu: chuyenTuDong.yeuCau, sang: chuyenTuDong.chuyenSang } : {}) },
   });
   res.json({ ok: true, url, don: updated });
+});
+
+// Proxy đọc ảnh từ MinIO — URL dạng /api/photos/file/orders/{sttKey}/{ten-file}.
+// Ảnh là object riêng tư; chỉ user đã đăng nhập mới xem được (session cookie đi kèm
+// tự động vì cùng origin). URL này ổn định, lưu lâu dài trong Sheet không lo hết hạn
+// như presigned URL.
+router.get('/file/*', async (req, res) => {
+  const objectKey = decodeURIComponent(req.path.replace(/^\/file\//, ''));
+
+  // Chỉ cho đọc object dưới prefix orders/ — tránh dùng endpoint này đọc tùy ý toàn bộ bucket
+  if (!objectKey.startsWith('orders/') || objectKey.includes('..')) {
+    return res.status(400).json({ error: 'Đường dẫn ảnh không hợp lệ' });
+  }
+
+  let result;
+  try {
+    result = await storageService.getObjectStream(objectKey);
+  } catch (err) {
+    if (err.name === 'NoSuchKey' || err.$metadata?.httpStatusCode === 404) {
+      return res.status(404).json({ error: 'Không tìm thấy ảnh' });
+    }
+    console.error('[MinIO] Đọc ảnh thất bại:', err.message);
+    return res.status(502).json({ error: 'Đọc ảnh từ kho lưu trữ thất bại' });
+  }
+
+  res.setHeader('Content-Type', result.ContentType || 'application/octet-stream');
+  if (result.ContentLength) res.setHeader('Content-Length', result.ContentLength);
+  result.Body.pipe(res);
 });
 
 module.exports = router;

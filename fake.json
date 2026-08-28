@@ -1,1 +1,13 @@
-{}
+{
+  "type": "service_account",
+  "project_id": "planar-compass-494115-a9",
+  "private_key_id": "c193613ce1292dda8a35e62fad10bddf5d48f885",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCeDCC6xY8G4ovD\nMUzuNVvCze1uowE4umIQuP8evmzKly2ZOXQ2pTeweD4K9u0BgQVrUftgZCVn0zz8\nw4BhdNtLqZJ7HayNzHusHO6V9EE68A4+BCBL9to8CDVIRW8LKXsLUle/CELhhdW8\nfFwRlNmWoA0NaORN0cLBjpaoVuAMsl0VEFnio9vK9NFyPk4hMs5hYbtDvpj1mO30\n/4m6neuN8y+z4jXNgV9qcW1/xN0yX90eZha4m4CZWJ0wffLtcldoLhvn3zgJkuLA\n0UuDX8pjghSNZYoHO67SGdKMcT0DOWboOFaNBUZVu2cuwfKCVmye8RTQCfhO67K9\nPu5hRUvXAgMBAAECggEATYL6LE+GuWQzElxj8/HEWpJfL2MPTtCOFtB8Aop21Zb2\nPI8CcWhvGwOlvf/jNdkenMc8x0XmWHivkPGazXEfughkuC/R+EtAniUkV/POaAbi\nnUStyEO9PTLzWsn+z1UdLOzJ7v0wu+VE8Wd2SgMcAbTmIdz/FzFYWFBDkDTnNiIg\nbGrFzAPqsQMu1CLXPM/Y9QNbGjgMsbaPdVuXRIDzBu0lwvZ1TjMzEY0iEwEw5eFU\nwAfhPiGvHPaUUaetkSpTrxQX/UDtIBvybJl7cV14vXGqkNYeaJ/ojYk8hi/Fz0H9\nMOgIrKMTsSQgZO9LgIb8D1U9cbDB9LTQ6/IePaaxNQKBgQDR7H7ZXGwvDHrlEK6K\ntRm4qgoM5wiVtwn3nXOr+Gw2fsb04aVYyy70nXwTqa6XN92nQz21Q/OZcOxffkp6\nW4YFwFnC2iGQwKj1UkubY/UywZcr6mrOQvp4SvwotaFlAlvOgwxQqwHEpJpEHYp5\n5cZEqFQcEfRRqZsIpKUth56XwwKBgQDAvLlCsgShfo5QgPowlRSAwILu1BgILSxc\nZDGsDLP1hOw2Gu89i4DYgm4q7TXsFFo+/SJrvPXyqW9PJigGGPJoxCJUm0eWp3F1\nu47uRvA0ZFnBJ7se7BaLVEpRR4HXOPuqruRmJ+H68CLjkk/0k6uoZZmZr/kt/+Fl\nOwMaG/6OXQKBgBhDhJntE9gQUjgdyH7h1dpBVS4OmjBr2qwTN+Z9rUxTNP3jAvCT\nc5b0iP3g0/xIiccmf4BvHT30Dm4vM76Wy5Pomrdp7Q1FJ4JLg8+vKw010RpTWwsC\nNN8ok6LE86WwMxpYjVjZmze2atpKq9HRHCydZDNmY934g6HpHep4TX1vAoGARhKX\nPGNigaB0d1pdG9qnqKPVNqWP0zExRqn60TWRG/tmsckbIAIfJxhMm3jAuQMxSGNZ\n51e9B6uIV3tk48qgH2znmmEWJvTbsFUvgvvxiurNIweh5X0qOR+9IU3hK/GAti59\nxZJMe6Jg3OIuBZrGtyOxM4oiCxJTzS0mVJDG/NUCgYEArljfbuWO68Q2thGsbYTV\n114ZPPHkgs4QupqwdBXKvGTv3NAOIOzBmlJvRc4D25YiN9cJYRKtxT97gHNFIhY2\nWxu8QgAYtMr/Wqc+bRwm5+7IT9crilcsKq/NmOhMSJ1nZhBFeXO/lYTMNS3acFgE\n5iUSPockItd93BuiDeAunoA=\n-----END PRIVATE KEY-----\n",
+  "client_email": "xuong-theu-webapp@planar-compass-494115-a9.iam.gserviceaccount.com",
+  "client_id": "109486725305072134077",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/xuong-theu-webapp%40planar-compass-494115-a9.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

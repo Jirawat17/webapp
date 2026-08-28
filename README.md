@@ -1,17 +1,24 @@
 # Xưởng Thêu — Web App (thay thế AppSheet)
 
-Web app quản lý đơn hàng xưởng thêu. Dữ liệu vẫn nằm trên Google Sheets (`HanhPhuc99`), ảnh vẫn lưu Google Drive.
+Web app quản lý đơn hàng xưởng thêu. Dữ liệu vẫn nằm trên Google Sheets (`HanhPhuc99`), ảnh lưu trên **MinIO** (S3-compatible, chạy trên Zima NAS). Ảnh cũ trên Google Drive vẫn đọc được khi in báo cáo.
 
 > **Bản cập nhật này khớp đúng cấu trúc Sheet thật** (dựa trên file `HanhPhuc99.xlsx` bạn cung cấp) — khác với tài liệu AppSheet mẫu ban đầu. Xem mục 9 để biết những chỗ cần bạn tự sửa trong Sheet.
 
 ## 1. Chuẩn bị Google Cloud (làm 1 lần)
 
 1. Vào [Google Cloud Console](https://console.cloud.google.com) → tạo project mới (hoặc dùng project đã có).
-2. Vào **APIs & Services > Library** → bật **Google Sheets API** và **Google Drive API**.
+2. Vào **APIs & Services > Library** → bật **Google Sheets API** và **Google Drive API** (Drive API chỉ còn cần để **đọc ảnh cũ**; ảnh mới lưu trên MinIO).
 3. Vào **IAM & Admin > Service Accounts** → **Create Service Account**.
 4. Tab **Keys** → **Add Key > Create new key > JSON** → tải về, đặt tên `service-account-key.json`, để ở thư mục gốc dự án (**KHÔNG** đưa lên git/public).
 5. Copy **email của service account** → **Share** file `HanhPhuc99` trên Google Sheets với email đó, quyền **Editor**.
-6. **Share** thư mục Drive gốc chứa ảnh với email đó, quyền **Editor**.
+
+### 1b. Chuẩn bị MinIO (kho ảnh mới)
+
+1. Cài MinIO trên Zima NAS, tạo bucket `orders` (giữ riêng tư, KHÔNG đặt public).
+2. Tạo access key/secret key riêng cho app (không dùng root nếu tránh được).
+3. Điền các biến `MINIO_*` vào `.env` (xem `.env.example`).
+4. Node chạy trong Docker cùng network với MinIO → dùng `MINIO_ENDPOINT=http://minio:9000`; Node chạy ngoài Docker → dùng IP của Zima (ví dụ `http://192.168.123.125:9010`).
+5. Ảnh lưu theo cấu trúc object: `orders/{ma-don}/{uuid}-{ten-file}` — app trả về URL proxy ổn định `/api/photos/file/...` để frontend hiển thị.
 
 ## 2. Các tab Sheet app này dùng (đã có sẵn trong `HanhPhuc99.xlsx` của bạn)
 
@@ -135,7 +142,7 @@ Trang **Báo cáo** (`admin`/`quan_ly`) lọc theo `NGAY_LEN_DON` và/hoặc `MA
 ```bash
 npm install
 cp .env.example .env
-# điền SESSION_SECRET, SHEET_ID, DRIVE_ROOT_FOLDER_ID (+ Telegram/LLM nếu dùng)
+# điền SESSION_SECRET, SHEET_ID, MINIO_* (+ Telegram/LLM nếu dùng)
 npm start
 ```
 
