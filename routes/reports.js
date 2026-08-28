@@ -4,7 +4,7 @@ const path = require('path');
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const orderService = require('../services/orderService');
-const { layDanhSachKhachHang } = require('../services/khachHangService');
+const { layDanhSachKhachHang, layBanDoTenKhachHang } = require('../services/khachHangService');
 const { layLichSuChuyenSangTrangThai } = require('../services/logService');
 const { readTab } = require('../services/sheetsService');
 const { parseNgay, dinhDangNgay, dinhDangNgayGioVN, dinhDangNgayGioNgan } = require('../services/dateUtils');
@@ -260,6 +260,140 @@ router.get('/thong-ke-hoan-don', async (req, res) => {
   }
 
   res.json({ tongSoHoan: locTheoNgay.length, theoKhachHang, theoLoai, theoTuan, chiTiet });
+});
+
+// ============================================================
+// THỐNG KÊ THỜI GIAN CHẠY MÁY (Đang chạy máy -> Đã sản xuất)
+// ============================================================
+const TRANG_THAI_BAT_DAU_CHAY_MAY = 'Đang chạy máy';
+
+// Định dạng số mili-giây thành chuỗi dễ đọc kiểu "1 ngày 3 giờ 20 phút" — bỏ đơn vị bằng 0, luôn
+// hiện ít nhất 1 đơn vị (vd "0 phút" nếu chưa tới 1 phút).
+function dinhDangThoiLuong(ms) {
+  if (ms === null || ms === undefined || isNaN(ms)) return '';
+  const tongPhut = Math.max(0, Math.round(ms / 60000));
+  const ngay = Math.floor(tongPhut / 1440);
+  const gio = Math.floor((tongPhut % 1440) / 60);
+  const phut = tongPhut % 60;
+  const phan = [];
+  if (ngay > 0) phan.push(`${ngay} ngày`);
+  if (gio > 0) phan.push(`${gio} giờ`);
+  if (phut > 0 || phan.length === 0) phan.push(`${phut} phút`);
+  return phan.join(' ');
+}
+
+// Ghép mỗi lần chuyển sang "Đang chạy máy" (điểm bắt đầu) với lần chuyển sang "Đã sản xuất" KẾ TIẾP
+// ngay sau đó của CÙNG 1 đơn (điểm kết thúc) — không phải lần gần nhất, vì 1 đơn có thể chạy máy
+// nhiều lần nếu bị lỗi rồi làm lại (mỗi lần chạy máy hoàn chỉnh là 1 dòng riêng trong kết quả).
+// 2 trường hợp CỐ Ý bỏ qua (đã xác nhận với người dùng — chỉ tính lần chạy đã xong):
+//   - "Đang chạy máy" chưa có "Đã sản xuất" theo sau (đơn còn đang chạy dở, hoặc bị chuyển sang lỗi
+//     sản xuất thay vì hoàn thành bình thường).
+//   - "Đã sản xuất" không tìm được điểm bắt đầu tương ứng — dữ liệu cũ trước 26/08/2026 (lúc chưa
+//     bắt buộc phải qua "Đang chạy máy" mới được "Đã sản xuất", xem orderService.kiemTraTinhHopLy
+//     quy tắc 3) có thể rơi vào trường hợp này. Không suy đoán thời lượng cho các trường hợp này.
+async function layThoiGianChayMayTheoDon() {
+  const [dsBatDau, dsKetThuc] = await Promise.all([
+    layLichSuChuyenSangTrangThai(TRANG_THAI_BAT_DAU_CHAY_MAY),
+    layLichSuChuyenSangTrangThai(TINH_TRANG_SAN_XUAT),
+  ]);
+
+  const theoDon = {};
+  dsBatDau.forEach(e => (theoDon[e.sttKey] = theoDon[e.sttKey] || []).push({ ...e, loai: 'BAT_DAU' }));
+  dsKetThuc.forEach(e => (theoDon[e.sttKey] = theoDon[e.sttKey] || []).push({ ...e, loai: 'KET_THUC' }));
+
+  const lanChay = [];
+  Object.entries(theoDon).forEach(([sttKey, events]) => {
+    events.sort((a, b) => new Date(a.thoiGian) - new Date(b.thoiGian));
+    let dangCho = null; // lần "Đang chạy máy" đang chờ ghép với "Đã sản xuất" kế tiếp
+    for (const ev of events) {
+      if (ev.loai === 'BAT_DAU') {
+        // Nếu đang có 1 BẮT ĐẦU chưa khớp được KẾT THÚC nào (chạy dở/bị chuyển sang lỗi giữa
+        // chừng) thì bỏ nó, thay bằng lần BẮT ĐẦU mới nhất này — chỉ tính lần chạy có đủ cặp.
+        dangCho = ev;
+      } else if (ev.loai === 'KET_THUC' && dangCho) {
+        const soMs = new Date(ev.thoiGian) - new Date(dangCho.thoiGian);
+        if (soMs > 0) {
+          lanChay.push({
+            sttKey, nguoiVanHanh: dangCho.nguoiDung || '(Không rõ)',
+            batDau: dangCho.thoiGian, ketThuc: ev.thoiGian, soMs,
+          });
+        }
+        dangCho = null;
+      }
+    }
+  });
+
+  return lanChay;
+}
+
+router.get('/thoi-gian-chay-may', async (req, res) => {
+  const { tuNgay, denNgay } = req.query;
+
+  // Lọc theo NGÀY BẮT ĐẦU chạy máy (không phải ngày lên đơn) — đúng ý nghĩa "trong khoảng thời gian
+  // này xưởng chạy máy như thế nào".
+  const tatCaLanChay = await layThoiGianChayMayTheoDon();
+  const lanChay = tatCaLanChay.filter(l => {
+    const d = new Date(l.batDau);
+    if (isNaN(d)) return false;
+    if (tuNgay && d < new Date(tuNgay + 'T00:00:00')) return false;
+    if (denNgay && d > new Date(denNgay + 'T23:59:59')) return false;
+    return true;
+  });
+
+  const { rows: donHang } = await orderService.getAll();
+  const banDoDon = {};
+  donHang.forEach(r => { banDoDon[r.STT_Key] = r; });
+  const banDoTenKH = await layBanDoTenKhachHang();
+
+  const theoNguoiVanHanh = {}, theoLoai = {}, theoTuan = {};
+  let tongMs = 0;
+
+  const chiTiet = lanChay.map(l => {
+    const don = banDoDon[l.sttKey];
+    const loai = (don && don.LOAI) || '(Không rõ loại)';
+    const d = new Date(l.batDau);
+    const nhanTuan = `${d.getFullYear()}-T${String(soTuanTrongNam(d)).padStart(2, '0')}`;
+
+    tongMs += l.soMs;
+
+    if (!theoNguoiVanHanh[l.nguoiVanHanh]) theoNguoiVanHanh[l.nguoiVanHanh] = { soLan: 0, tongMs: 0 };
+    theoNguoiVanHanh[l.nguoiVanHanh].soLan++;
+    theoNguoiVanHanh[l.nguoiVanHanh].tongMs += l.soMs;
+
+    if (!theoLoai[loai]) theoLoai[loai] = { soLan: 0, tongMs: 0 };
+    theoLoai[loai].soLan++;
+    theoLoai[loai].tongMs += l.soMs;
+
+    if (!theoTuan[nhanTuan]) theoTuan[nhanTuan] = { soLan: 0, tongMs: 0 };
+    theoTuan[nhanTuan].soLan++;
+    theoTuan[nhanTuan].tongMs += l.soMs;
+
+    return {
+      sttKey: l.sttKey,
+      khachHang: don ? (banDoTenKH[don.MA_KHACH_HANG] || don.MA_KHACH_HANG || '') : '',
+      loai,
+      nguoiVanHanh: l.nguoiVanHanh,
+      batDau: dinhDangNgayGioNgan(l.batDau),
+      ketThuc: dinhDangNgayGioNgan(l.ketThuc),
+      thoiLuong: dinhDangThoiLuong(l.soMs),
+      soMs: l.soMs,
+    };
+  }).sort((a, b) => b.soMs - a.soMs); // lâu nhất lên đầu — dễ thấy đơn bất thường ngay
+
+  const gomNhom = (obj) => Object.fromEntries(
+    Object.entries(obj)
+      .sort((a, b) => b[1].soLan - a[1].soLan)
+      .map(([k, v]) => [k, { soLan: v.soLan, trungBinh: dinhDangThoiLuong(v.tongMs / v.soLan) }])
+  );
+
+  res.json({
+    tongSoLanChay: lanChay.length,
+    trungBinhChung: lanChay.length ? dinhDangThoiLuong(tongMs / lanChay.length) : '',
+    theoNguoiVanHanh: gomNhom(theoNguoiVanHanh),
+    theoLoai: gomNhom(theoLoai),
+    theoTuan: gomNhom(theoTuan),
+    chiTiet: chiTiet.slice(0, 200),
+  });
 });
 
 // ============================================================

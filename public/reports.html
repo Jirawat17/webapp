@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Báo cáo — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=20260826a">
-<script src="/js/theme.js?v=20260826a"></script>
+<link rel="stylesheet" href="/css/style.css?v=20260828a">
+<script src="/js/theme.js?v=20260828a"></script>
 </head>
 <body>
 <div id="nav"></div>
@@ -49,10 +49,31 @@
   </form>
 
   <div id="khu-thong-ke-hoan" style="margin-top:20px"></div>
+
+  <hr style="margin:32px 0; border:none; border-top:1px solid var(--color-border)">
+
+  <h2>Thống kê thời gian chạy máy</h2>
+  <p>Thời lượng từ lúc đơn chuyển sang <strong>Đang chạy máy</strong> đến lúc chuyển sang <strong>Đã sản xuất</strong> — chỉ tính những lần đã hoàn thành (có đủ cặp bắt đầu/kết thúc); đơn đang chạy dở hoặc dữ liệu cũ thiếu điểm bắt đầu sẽ không được tính vào đây. Lọc theo ngày <em>bắt đầu</em> chạy máy.</p>
+
+  <form id="form-thoi-gian-chay-may" class="bao-cao-form">
+    <div class="truong">
+      <label for="chaymay-tu-ngay">Từ ngày</label>
+      <input type="date" id="chaymay-tu-ngay">
+    </div>
+    <div class="truong">
+      <label for="chaymay-den-ngay">Đến ngày</label>
+      <input type="date" id="chaymay-den-ngay">
+    </div>
+    <div class="nut-xuat">
+      <button type="button" class="btn-hanh-dong phu" id="btn-xem-chay-may"></button>
+    </div>
+  </form>
+
+  <div id="khu-chay-may" style="margin-top:20px"></div>
 </div>
 
-<script src="/js/icons.js?v=20260826a"></script>
-<script src="/js/api.js?v=20260826a"></script>
+<script src="/js/icons.js?v=20260828a"></script>
+<script src="/js/api.js?v=20260828a"></script>
 <script>
 (async () => {
   const user = await requireLoginOrRedirect();
@@ -74,6 +95,16 @@
   document.getElementById('hoan-tu-ngay').addEventListener('change', xemThongKeHoanDon);
   document.getElementById('hoan-den-ngay').addEventListener('change', xemThongKeHoanDon);
   await xemThongKeHoanDon();
+
+  // Khởi tạo khu thời gian chạy máy — mặc định 30 ngày gần nhất, giống khu thống kê lỗi
+  document.getElementById('btn-xem-chay-may').innerHTML = icon('chart') + ' Xem thống kê';
+  const homNay30b = new Date(); homNay30b.setDate(homNay30b.getDate() - 30);
+  document.getElementById('chaymay-tu-ngay').value = homNay30b.toISOString().slice(0, 10);
+  document.getElementById('chaymay-den-ngay').value = ngayHomNayYYYYMMDD();
+  document.getElementById('btn-xem-chay-may').onclick = xemThoiGianChayMay;
+  document.getElementById('chaymay-tu-ngay').addEventListener('change', xemThoiGianChayMay);
+  document.getElementById('chaymay-den-ngay').addEventListener('change', xemThoiGianChayMay);
+  await xemThoiGianChayMay();
 })();
 
 function ngayHomNayYYYYMMDD() {
@@ -163,6 +194,74 @@ async function xemThongKeHoanDon() {
             <td>${escapeHtml(c.ngayLenDon)}</td>
             <td style="color:${c.nguoiSanXuat === 'Không xác định do đã sửa trên GGSheet không qua app' ? 'var(--color-text-faint)' : 'inherit'}">${escapeHtml(c.nguoiSanXuat)}</td>
             <td style="color:${c.ghiChu === '(Không có ghi chú)' ? 'var(--color-text-faint)' : 'inherit'}">${escapeHtml(c.ghiChu)}</td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// Bảng nhóm nhỏ dùng chung cho 3 chiều thống kê (người vận hành / loại / tuần) của khu chạy máy —
+// mỗi obj có dạng { [nhãn]: { soLan, trungBinh } } (đã được server sắp theo soLan giảm dần sẵn).
+function bangNhomChayMay(tieuDe, nhanCot, obj) {
+  const hang = Object.entries(obj);
+  if (hang.length === 0) {
+    return `<div class="xem-truoc-bang"><h3>${escapeHtml(tieuDe)}</h3><p style="color:var(--color-text-faint);margin:0">Không có dữ liệu.</p></div>`;
+  }
+  return `
+    <div class="xem-truoc-bang">
+      <h3>${escapeHtml(tieuDe)}</h3>
+      <div class="bang-cuon-ngang">
+        <table class="bang-xem-truoc">
+          <thead><tr><th>${escapeHtml(nhanCot)}</th><th>Số lần</th><th>Trung bình</th></tr></thead>
+          <tbody>${hang.map(([k, v]) => `<tr><td>${escapeHtml(k)}</td><td>${v.soLan}</td><td>${escapeHtml(v.trungBinh)}</td></tr>`).join('')}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+async function xemThoiGianChayMay() {
+  const khu = document.getElementById('khu-chay-may');
+  khu.innerHTML = spinnerInline('Đang tải thống kê...');
+
+  const qs = new URLSearchParams();
+  const tuNgay = document.getElementById('chaymay-tu-ngay').value;
+  const denNgay = document.getElementById('chaymay-den-ngay').value;
+  if (tuNgay) qs.set('tuNgay', tuNgay);
+  if (denNgay) qs.set('denNgay', denNgay);
+
+  let ketQua;
+  try {
+    ketQua = await apiFetch('/reports/thoi-gian-chay-may?' + qs.toString());
+  } catch (e) {
+    khu.innerHTML = `<p>${icon('alert')} ${escapeHtml(e.message)}</p>`;
+    return;
+  }
+
+  if (ketQua.tongSoLanChay === 0) {
+    khu.innerHTML = `<div class="trang-thai-rong">${icon('check')}<p>Không có lần chạy máy nào đã hoàn thành trong khoảng thời gian đã chọn.</p></div>`;
+    return;
+  }
+
+  khu.innerHTML = `
+    <p><strong>${ketQua.tongSoLanChay}</strong> lần chạy máy đã hoàn thành, trung bình <strong>${escapeHtml(ketQua.trungBinhChung)}</strong>/lần, trong khoảng thời gian đã chọn.</p>
+    <div class="luoi-thong-ke-loi">
+      ${bangNhomChayMay('Theo người vận hành', 'Người vận hành', ketQua.theoNguoiVanHanh)}
+      ${bangNhomChayMay('Theo loại sản phẩm', 'Loại', ketQua.theoLoai)}
+      ${bangNhomChayMay('Theo tuần', 'Tuần', ketQua.theoTuan)}
+    </div>
+    <div class="xem-truoc-bang" style="margin-top:16px">
+      <h3>Chi tiết từng lần chạy (lâu nhất lên đầu) ${ketQua.chiTiet.length < ketQua.tongSoLanChay ? `— hiển thị ${ketQua.chiTiet.length}/${ketQua.tongSoLanChay}` : ''}</h3>
+      <div class="bang-cuon-ngang">
+        <table class="bang-xem-truoc">
+          <thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Loại</th><th>Người vận hành</th><th>Bắt đầu</th><th>Kết thúc</th><th>Thời lượng</th></tr></thead>
+          <tbody>${ketQua.chiTiet.map(c => `<tr>
+            <td><a href="/order.html?stt=${encodeURIComponent(c.sttKey)}">${escapeHtml(c.sttKey)}</a></td>
+            <td>${escapeHtml(c.khachHang)}</td>
+            <td>${escapeHtml(c.loai)}</td>
+            <td>${escapeHtml(c.nguoiVanHanh)}</td>
+            <td>${escapeHtml(c.batDau)}</td>
+            <td>${escapeHtml(c.ketThuc)}</td>
+            <td><strong>${escapeHtml(c.thoiLuong)}</strong></td>
           </tr>`).join('')}</tbody>
         </table>
       </div>
