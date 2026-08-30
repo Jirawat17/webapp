@@ -41,6 +41,9 @@ const ICONS = {
   // Mũi tên quay lùi (undo/reset) — dùng cho các nút đưa trạng thái về lại "Chưa..." để phân biệt
   // rõ với nút "Đã..." (dùng icon 'check'), tránh bấm nhầm.
   undo: '<polyline points="3 4 3 9 8 9"/><path d="M4.7 15a8 8 0 1 0 1.9-8.6L3 9"/>',
+  // Mục tiêu/tiêu điểm — dùng riêng cho menu "Đơn của tôi" (san_xuat), gợi ý "tập trung vào việc
+  // đang dở" thay vì xem toàn bộ đơn.
+  navMyOrders: '<circle cx="12" cy="12" r="8.3"/><circle cx="12" cy="12" r="4.4"/><circle cx="12" cy="12" r="0.9" fill="currentColor" stroke="none"/>',
 };
 
 function icon(name, opts) {

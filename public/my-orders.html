@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Đơn của tôi — Xưởng Thêu</title>
+<link rel="stylesheet" href="/css/style.css?v=20260831d">
+<script src="/js/theme.js?v=20260831d"></script>
+</head>
+<body>
+<div id="nav"></div>
+<div class="page">
+  <h2>Đơn của tôi</h2>
+  <p style="color:var(--color-text-muted);margin:-8px 0 20px">Đơn bạn đang chạy máy, chưa chuyển sang "Đã sản xuất" — chỉ đúng việc đang dở, không lẫn với toàn bộ đơn hàng.</p>
+  <div id="danh-sach-don" class="order-list"></div>
+</div>
+
+<script src="/js/icons.js?v=20260831d"></script>
+<script src="/js/api.js?v=20260831d"></script>
+<script>
+const NHAN_CANH_BAO = { VANG: 'Vàng · 3 ngày', CAM: 'Cam · 5 ngày', DO: 'Đỏ · 7 ngày' };
+const NHAN_NGUOI_VAN_HANH_KHONG_RO = 'ĐƠN SỬA TRONG GGSHEET, KHÔNG RÕ TÀI KHOẢN SẢN XUẤT NÀO ĐANG CHẠY';
+
+(async () => {
+  const user = await requireLoginOrRedirect();
+  if (!user) return;
+  renderNav(user, 'my-orders');
+  await taiDon();
+})();
+
+// Ngày rút gọn D/M (không năm) — khớp cách hiển thị đang dùng ở trang Danh sách đơn hàng
+function dinhDangNgayNgan(giaTri) {
+  const d = parseNgay(giaTri);
+  return d ? `${d.getDate()}/${d.getMonth() + 1}` : '';
+}
+
+async function taiDon() {
+  const el = document.getElementById('danh-sach-don');
+  el.innerHTML = skeletonList(4);
+
+  let list;
+  try {
+    list = await apiFetch('/orders?trangThai=' + encodeURIComponent('Đang chạy máy'));
+  } catch (e) {
+    el.innerHTML = `<p>Không tải được danh sách: ${escapeHtml(e.message)}</p>`;
+    return;
+  }
+
+  // Server (routes/orders.js, locDonDangChayMayTheoNguoiVanHanh) đã tự lọc: san_xuat chỉ nhận về
+  // đúng đơn mình đang vận hành, hoặc đơn không xác định được ai đang chạy (an toàn, tránh thất lạc)
+  // — không cần lọc lại lần nữa ở đây.
+  if (list.length === 0) {
+    el.innerHTML = `<div class="trang-thai-rong">${icon('package')}<p>Bạn chưa chạy máy đơn nào — mọi việc đã xong hoặc chưa bắt đầu.</p></div>`;
+    return;
+  }
+
+  el.innerHTML = list.map(o => `
+    <div class="order-card" onclick="location.href='/order.html?stt=${encodeURIComponent(o.STT_Key)}'">
+      ${o.MOCKUP || o.DUONG_DAN_URL
+        ? `<img src="${escapeHtml(o.MOCKUP || o.DUONG_DAN_URL)}" alt="" loading="lazy" onerror="this.remove()">`
+        : ''}
+      <div class="thong-tin">
+        <strong class="tieu-de-the">${escapeHtml(o.TieuDeSanPham || o.STT_Key)}</strong>
+        <div class="meta">${escapeHtml(o.TenKhachHang || '')} · SL: <strong>${escapeHtml(o.SO_LUONG || '')}</strong></div>
+        <div class="meta">Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgayNgan(o.NGAY_LEN_DON) : '—')}</div>
+        <div class="badge-row">
+          <span class="badge ${lopTrangThai(o.TINH_TRANG)}">${escapeHtml(o.TINH_TRANG || '')}</span>
+          ${!o.NguoiVanHanh ? `
+            <span class="badge trang-thai-danger" style="white-space:normal;max-width:100%">${icon('alert', {size:14})} ${escapeHtml(NHAN_NGUOI_VAN_HANH_KHONG_RO)}</span>` : ''}
+          ${o.CanhBao ? `
+            <span class="badge badge-canh-bao ${o.CanhBao.toLowerCase()}">
+              ${icon('alert')} ${escapeHtml(NHAN_CANH_BAO[o.CanhBao] || o.CanhBao)}
+            </span>` : ''}
+        </div>
+      </div>
+    </div>`).join('');
+}
+</script>
+</body>
+</html>
