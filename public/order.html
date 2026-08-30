@@ -1,82 +1,86 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chi tiết đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=20260826a">
-<script src="/js/theme.js?v=20260826a"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chi tiết đơn hàng — Xưởng Thêu</title>
+  <link rel="stylesheet" href="/css/style.css?v=20260826a">
+  <script src="/js/theme.js?v=20260826a"></script>
 </head>
+
 <body>
-<div id="nav"></div>
-<div class="page" id="don-hang">
-  <div class="skeleton-list"><div class="skeleton-card" style="height:220px"></div></div>
-</div>
+  <div id="nav"></div>
+  <div class="page" id="don-hang">
+    <div class="skeleton-list">
+      <div class="skeleton-card" style="height:220px"></div>
+    </div>
+  </div>
 
-<script src="/js/icons.js?v=20260826a"></script>
-<script src="/js/api.js?v=20260826a"></script>
-<script>
-const sttKey = new URLSearchParams(location.search).get('stt');
-const NHAN_CANH_BAO = { VANG: 'Cảnh báo Vàng · 3 ngày ít tiến triển', CAM: 'Cảnh báo Cam · 5 ngày chưa vào sản xuất', DO: 'Cảnh báo Đỏ · 7 ngày chưa ship' };
-// PHẢI khớp TINH_TRANG_VALUES trong data/pipelineTinhTrang.js
-// (bổ sung 26/08/2026) Đơn "Đang chạy máy" nhưng không tra được người vận hành (vd sửa thẳng trên
-// Sheet, log bị thiếu) — vẫn cho xem (an toàn hơn) nhưng cảnh báo TO, RÕ thay vì chỉ ghi "Không xác định".
-const NHAN_NGUOI_VAN_HANH_KHONG_RO = 'ĐƠN SỬA TRONG GGSHEET, KHÔNG RÕ TÀI KHOẢN SẢN XUẤT NÀO ĐANG CHẠY';
+  <script src="/js/icons.js?v=20260826a"></script>
+  <script src="/js/api.js?v=20260826a"></script>
+  <script>
+    const sttKey = new URLSearchParams(location.search).get('stt');
+    const NHAN_CANH_BAO = { VANG: 'Cảnh báo Vàng · 3 ngày ít tiến triển', CAM: 'Cảnh báo Cam · 5 ngày chưa vào sản xuất', DO: 'Cảnh báo Đỏ · 7 ngày chưa ship' };
+    // PHẢI khớp TINH_TRANG_VALUES trong data/pipelineTinhTrang.js
+    // (bổ sung 26/08/2026) Đơn "Đang chạy máy" nhưng không tra được người vận hành (vd sửa thẳng trên
+    // Sheet, log bị thiếu) — vẫn cho xem (an toàn hơn) nhưng cảnh báo TO, RÕ thay vì chỉ ghi "Không xác định".
+    const NHAN_NGUOI_VAN_HANH_KHONG_RO = 'Đơn sửa thủ công tại GGSheet, không biết tài khoản';
 
-const DANH_SACH_TINH_TRANG = [
-  'Chưa xác nhận', 'Đã xác nhận', 'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đang chạy máy', 'Đã sản xuất', 'LỖI SẢN XUẤT CẦN LÀM LẠI',
-  'Đã đóng gói', 'IN TRANSIT_Tracking đã hoạt động', 'DELIVERED_Đã giao đến khách', 'CANCELLED_Đã hủy', 'REFUNDED_Hoàn đơn',
-];
+    const DANH_SACH_TINH_TRANG = [
+      'Chưa xác nhận', 'Đã xác nhận', 'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đang chạy máy', 'Đã sản xuất', 'LỖI SẢN XUẤT CẦN LÀM LẠI',
+      'Đã đóng gói', 'IN TRANSIT_Tracking đã hoạt động', 'DELIVERED_Đã giao đến khách', 'CANCELLED_Đã hủy', 'REFUNDED_Hoàn đơn',
+    ];
 
-// Format timestamp ngắn gọn "DD-MM HH:mm:ss" — nhất quán với backend dinhDangNgayGioNgan()
-// Không dùng toLocaleString('vi-VN') vì output phụ thuộc cài đặt trình duyệt và dài hơn cần thiết
-function tsDep(isoStr) {
-  if (!isoStr) return '';
-  const d = new Date(isoStr);
-  if (isNaN(d)) return isoStr; // fallback: hiện nguyên chuỗi gốc
-  const fmt = (n) => String(n).padStart(2, '0');
-  // Chuyển sang giờ GMT+7 Việt Nam
-  const vn = new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' }));
-  return `${fmt(vn.getDate())}-${fmt(vn.getMonth()+1)} ${fmt(vn.getHours())}:${fmt(vn.getMinutes())}:${fmt(vn.getSeconds())}`;
-}
+    // Format timestamp ngắn gọn "DD-MM HH:mm:ss" — nhất quán với backend dinhDangNgayGioNgan()
+    // Không dùng toLocaleString('vi-VN') vì output phụ thuộc cài đặt trình duyệt và dài hơn cần thiết
+    function tsDep(isoStr) {
+      if (!isoStr) return '';
+      const d = new Date(isoStr);
+      if (isNaN(d)) return isoStr; // fallback: hiện nguyên chuỗi gốc
+      const fmt = (n) => String(n).padStart(2, '0');
+      // Chuyển sang giờ GMT+7 Việt Nam
+      const vn = new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' }));
+      return `${fmt(vn.getDate())}-${fmt(vn.getMonth() + 1)} ${fmt(vn.getHours())}:${fmt(vn.getMinutes())}:${fmt(vn.getSeconds())}`;
+    }
 
-let user;
+    let user;
 
-(async () => {
-  user = await requireLoginOrRedirect();
-  if (!user) return;
-  renderNav(user, 'orders');
-  await taiChiTiet();
-})();
+    (async () => {
+      user = await requireLoginOrRedirect();
+      if (!user) return;
+      renderNav(user, 'orders');
+      await taiChiTiet();
+    })();
 
-function dongDiaChi(don) {
-  const phan = [don.TEN_DIA_CHI, don.DIA_CHI_TEN_DUONG, don.DIA_CHI_TEN_TP, don.DIA_CHI_BANG, don.MA_ZIPCODE, don.DIA_CHI_NUOC]
-    .filter(Boolean);
-  return phan.length ? phan.join(', ') : '(chưa có địa chỉ)';
-}
+    function dongDiaChi(don) {
+      const phan = [don.TEN_DIA_CHI, don.DIA_CHI_TEN_DUONG, don.DIA_CHI_TEN_TP, don.DIA_CHI_BANG, don.MA_ZIPCODE, don.DIA_CHI_NUOC]
+        .filter(Boolean);
+      return phan.length ? phan.join(', ') : '(chưa có địa chỉ)';
+    }
 
-async function taiChiTiet() {
-  let don;
-  try {
-    don = await apiFetch('/orders/' + encodeURIComponent(sttKey));
-  } catch (e) {
-    document.getElementById('don-hang').innerHTML = `<p>${escapeHtml(e.message)}</p>`;
-    return;
-  }
+    async function taiChiTiet() {
+      let don;
+      try {
+        don = await apiFetch('/orders/' + encodeURIComponent(sttKey));
+      } catch (e) {
+        document.getElementById('don-hang').innerHTML = `<p>${escapeHtml(e.message)}</p>`;
+        return;
+      }
 
-  const anh = don.MOCKUP || don.DUONG_DAN_URL;
-  const viTri = (don.ViTriTheu || []).map(escapeHtml).join(' · ') || '—';
+      const anh = don.MOCKUP || don.DUONG_DAN_URL;
+      const viTri = (don.ViTriTheu || []).map(escapeHtml).join(' · ') || '—';
 
-  document.getElementById('don-hang').innerHTML = `
+      document.getElementById('don-hang').innerHTML = `
     <h2>${escapeHtml(don.TieuDeSanPham || don.STT_Key)}</h2>
     <div class="badge-row" style="margin-bottom:16px">
       <span class="badge ${lopTrangThai(don.TINH_TRANG)}">${escapeHtml(don.TINH_TRANG || '')}</span>
       ${don.TINH_TRANG === 'Đang chạy máy' ? `
-        <span class="badge trang-thai-info">${icon('users', {size:14})} Đang vận hành: <strong>${escapeHtml(don.NguoiVanHanh || NHAN_NGUOI_VAN_HANH_KHONG_RO)}</strong></span>` : ''}
+        <span class="badge trang-thai-info">${icon('users', { size: 14 })} Đang vận hành: <strong>${escapeHtml(don.NguoiVanHanh || NHAN_NGUOI_VAN_HANH_KHONG_RO)}</strong></span>` : ''}
       ${['Chưa xác nhận', 'Đã xác nhận'].includes(don.TINH_TRANG) ? `
         <span class="badge ${lopTrangThai(don.TRANG_THAI_PHOI)}">${escapeHtml(don.TRANG_THAI_PHOI || '')}</span>
         <span class="badge ${lopTrangThai(don.TRANG_THAI_VE_FILE)}">${escapeHtml(don.TRANG_THAI_VE_FILE || '')}</span>` : ''}
-      ${don.DANH_DAU_IN ? `<span class="badge trang-thai-info">${icon('check', {size:14})} Đã đánh dấu in</span>` : ''}
+      ${don.DANH_DAU_IN ? `<span class="badge trang-thai-info">${icon('check', { size: 14 })} Đã đánh dấu in</span>` : ''}
       ${don.CanhBao ? `
         <span class="badge badge-canh-bao ${don.CanhBao.toLowerCase()}">
           ${icon('alert')} ${escapeHtml(NHAN_CANH_BAO[don.CanhBao] || don.CanhBao)}
@@ -88,11 +92,11 @@ async function taiChiTiet() {
         ${anh ? `<img class="anh-mau" src="${escapeHtml(anh)}" alt="Ảnh mẫu/mockup" loading="lazy" onerror="this.remove()">` : ''}
         ${user.vaiTro !== 'nguoi_lay_phoi' && (don.DUONG_DAN_URL || don.MOCKUP) ? `
         <div style="display:flex;gap:14px;margin:4px 0 8px;font-size:0.85rem">
-          ${don.DUONG_DAN_URL ? `<a href="${escapeHtml(don.DUONG_DAN_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh PNG gốc</a>` : ''}
-          ${don.MOCKUP ? `<a href="${escapeHtml(don.MOCKUP)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh Mockup gốc</a>` : ''}
+          ${don.DUONG_DAN_URL ? `<a href="${escapeHtml(don.DUONG_DAN_URL)}" target="_blank" rel="noopener">${icon('file', { size: 14 })} Ảnh PNG gốc</a>` : ''}
+          ${don.MOCKUP ? `<a href="${escapeHtml(don.MOCKUP)}" target="_blank" rel="noopener">${icon('file', { size: 14 })} Ảnh Mockup gốc</a>` : ''}
         </div>` : ''}
-        ${don.Anh_File_Theu_URL ? `<div><p style="margin:8px 0 4px;font-weight:600;font-size:0.85rem">Ảnh file thêu</p><a href="${escapeHtml(don.Anh_File_Theu_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Xem ảnh file thêu</a></div>` : ''}
-        ${don.Anh_Dong_Goi_URL ? `<div><p style="margin:8px 0 4px;font-weight:600;font-size:0.85rem">Ảnh hoàn thành</p><a href="${escapeHtml(don.Anh_Dong_Goi_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Xem ảnh hoàn thành</a></div>` : ''}
+        ${don.Anh_File_Theu_URL ? `<div><p style="margin:8px 0 4px;font-weight:600;font-size:0.85rem">Ảnh file thêu</p><a href="${escapeHtml(don.Anh_File_Theu_URL)}" target="_blank" rel="noopener">${icon('file', { size: 14 })} Xem ảnh file thêu</a></div>` : ''}
+        ${don.Anh_Dong_Goi_URL ? `<div><p style="margin:8px 0 4px;font-weight:600;font-size:0.85rem">Ảnh hoàn thành</p><a href="${escapeHtml(don.Anh_Dong_Goi_URL)}" target="_blank" rel="noopener">${icon('file', { size: 14 })} Xem ảnh hoàn thành</a></div>` : ''}
         <table class="info-table">
           <tr><td>Mã đơn</td><td>${escapeHtml(don.STT_Key)}</td></tr>
           <tr><td>Mã đơn (sàn TMĐT)</td><td>${escapeHtml(don.MA_DON_HANG_ORDERID || '')}</td></tr>
@@ -126,37 +130,37 @@ async function taiChiTiet() {
       </div>
     </div>
   `;
-  renderKhuVucThaoTac(don);
-}
+      renderKhuVucThaoTac(don);
+    }
 
-function renderKhuVucThaoTac(don) {
-  const el = document.getElementById('khu-vuc-thao-tac');
-  let html = '';
+    function renderKhuVucThaoTac(don) {
+      const el = document.getElementById('khu-vuc-thao-tac');
+      let html = '';
 
-  // Nút chuyển giai đoạn — đọc từ chính tab CauHinhKichBan (dùng chung logic với quét QR),
-  // không hardcode nút theo vai trò vì Sheet không định nghĩa vai trò cho từng kịch bản.
-  if (don.kichBanKeTiep && don.kichBanKeTiep.length > 0) {
-    html += don.kichBanKeTiep.map(kb => `
+      // Nút chuyển giai đoạn — đọc từ chính tab CauHinhKichBan (dùng chung logic với quét QR),
+      // không hardcode nút theo vai trò vì Sheet không định nghĩa vai trò cho từng kịch bản.
+      if (don.kichBanKeTiep && don.kichBanKeTiep.length > 0) {
+        html += don.kichBanKeTiep.map(kb => `
       <button class="btn-hanh-dong" onclick="chuyenGiaiDoan('${kb.id}', this)">
         ${icon('arrowRight')} Chuyển sang: ${escapeHtml(kb.label)}
       </button>`).join('');
-  } else {
-    html += '<p>Không có kịch bản nào áp dụng được cho trạng thái hiện tại (kiểm tra tab CauHinhKichBan).</p>';
-  }
+      } else {
+        html += '<p>Không có kịch bản nào áp dụng được cho trạng thái hiện tại (kiểm tra tab CauHinhKichBan).</p>';
+      }
 
-  html += `
+      html += `
     <div class="upload-box">
       <label for="ghi-chu-moi">Ghi chú xưởng</label>
       <textarea id="ghi-chu-moi" rows="3" style="padding:10px;border-radius:8px;border:1px solid var(--color-border);font:inherit">${escapeHtml(don.GHI_CHU || '')}</textarea>
       <button class="btn-hanh-dong phu" onclick="luuGhiChu()">${icon('check')} Lưu ghi chú</button>
     </div>`;
 
-  // Sửa trạng thái THỦ CÔNG — bắt buộc phải có vì "LỖI SẢN XUẤT CẦN LÀM LẠI" và việc làm lại sau đó
-  // KHÔNG đi qua kịch bản quét QR (theo Prompt_Ver_24.docx: "lỗi thì set tay, làm lại cũng set tay").
-  // Hiện cho mọi vai trò có mặt ở trang này (nguoi_lay_phoi không tới được trang này — menu đã ẩn
-  // hết trừ Quét QR — nên không cần loại riêng ở đây). Server (routes/orders.js, TRUONG_DUOC_SUA)
-  // vẫn là nơi chặn thật sự nếu vai trò không đủ quyền sửa cột nào đó.
-  html += `
+      // Sửa trạng thái THỦ CÔNG — bắt buộc phải có vì "LỖI SẢN XUẤT CẦN LÀM LẠI" và việc làm lại sau đó
+      // KHÔNG đi qua kịch bản quét QR (theo Prompt_Ver_24.docx: "lỗi thì set tay, làm lại cũng set tay").
+      // Hiện cho mọi vai trò có mặt ở trang này (nguoi_lay_phoi không tới được trang này — menu đã ẩn
+      // hết trừ Quét QR — nên không cần loại riêng ở đây). Server (routes/orders.js, TRUONG_DUOC_SUA)
+      // vẫn là nơi chặn thật sự nếu vai trò không đủ quyền sửa cột nào đó.
+      html += `
     <div class="upload-box">
       <label>Sửa trạng thái thủ công</label>
       <label for="sua-tinh-trang" style="font-size:0.85rem;font-weight:400">Trạng thái chung (TINH_TRANG)</label>
@@ -176,119 +180,120 @@ function renderKhuVucThaoTac(don) {
       <p style="margin:0;font-size:0.8rem;color:var(--color-text-faint)">Nếu cả Phôi và Vẽ file cùng chuyển sang "Đã..." trong khi Trạng thái chung đang là "Đã xác nhận", hệ thống tự chuyển Trạng thái chung sang "ĐÃ SẴN SÀNG CHẠY MÁY".</p>
     </div>`;
 
-  // Ảnh "File thêu" (bổ sung 26/08/2026) — ve_file upload sau khi vẽ file xong, để san_xuat xem
-  // trước khi chọn chỉ thêu. Thuần lưu ảnh, KHÔNG đụng gì tới trạng thái (khác với "Chụp ảnh hoàn
-  // thành" bên dưới).
-  if (user.vaiTro === 've_file' || user.vaiTro === 'admin') {
-    html += `
+      // Ảnh "File thêu" (bổ sung 26/08/2026) — ve_file upload sau khi vẽ file xong, để san_xuat xem
+      // trước khi chọn chỉ thêu. Thuần lưu ảnh, KHÔNG đụng gì tới trạng thái (khác với "Chụp ảnh hoàn
+      // thành" bên dưới).
+      if (user.vaiTro === 've_file' || user.vaiTro === 'admin') {
+        html += `
       <div class="upload-box">
         <label for="anh-ve-file">${icon('camera', { size: 18 })} Ảnh file thêu (sau khi vẽ file)</label>
         <input type="file" accept="image/*" capture="environment" id="anh-ve-file">
         <button class="btn-hanh-dong" onclick="taiAnh('ve_file')">${icon('download')} Tải ảnh lên</button>
         <p style="margin:0;font-size:0.8rem">Cần cột <code>Anh_File_Theu_URL</code> trong Sheet — nếu chưa có, thao tác này sẽ báo lỗi.</p>
       </div>`;
-  }
+      }
 
-  if (user.vaiTro === 'admin') {
-    html += `
+      if (user.vaiTro === 'admin') {
+        html += `
       <div class="upload-box">
         <label for="anh-dong-goi">${icon('camera', { size: 18 })} Chụp ảnh hoàn thành (trước khi đóng gói)</label>
         <input type="file" accept="image/*" capture="environment" id="anh-dong-goi">
         <button class="btn-hanh-dong" onclick="taiAnh('dong_goi')">${icon('download')} Tải ảnh lên</button>
         <p style="margin:0;font-size:0.8rem">Cần cột <code>Anh_Dong_Goi_URL</code> trong Sheet. Chỉ dùng được khi đơn đang ở "Đã sản xuất" — tải ảnh xong sẽ TỰ ĐỘNG chuyển đơn sang "Đã đóng gói". san_xuat/nguoi_lay_phoi nên dùng màn "Chụp ảnh hoàn thành hàng loạt" ở trang Quét QR thay vì đây (nhanh hơn, không cần mở từng đơn).</p>
       </div>`;
-  }
+      }
 
-  el.innerHTML = html;
-  canhBaoToHopSai();
-}
+      el.innerHTML = html;
+      canhBaoToHopSai();
+    }
 
-// Cảnh báo TRƯỚC khi lưu, ngay khi người dùng đổi 1 trong 3 dropdown — soi gương lại đúng 2 quy tắc
-// trong services/orderService.js (kiemTraTinhHopLy) để người dùng thấy lỗi ngay, không phải bấm Lưu
-// mới biết bị từ chối. Đây CHỈ là gợi ý trên giao diện — server vẫn kiểm tra lại đầy đủ (không thể
-// bỏ qua bằng cách sửa JS trên trình duyệt), đây không phải là chốt bảo mật.
-function loiToHopTrangThai(tinhTrang, phoi, veFile) {
-  if (tinhTrang === 'Chưa xác nhận') {
-    if (phoi === 'Đã lấy phôi') return 'Đơn đang "Chưa xác nhận" thì chưa thể "Đã lấy phôi" — xác nhận đơn trước.';
-    if (veFile === 'Đã vẽ file') return 'Đơn đang "Chưa xác nhận" thì chưa thể "Đã vẽ file" — xác nhận đơn trước.';
-  }
-  const CAC_TRANG_THAI_TU_SAN_SANG_TRO_DI = [
-    'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đang chạy máy', 'Đã sản xuất', 'Đã đóng gói',
-    'IN TRANSIT_Tracking đã hoạt động', 'DELIVERED_Đã giao đến khách',
-  ];
-  if (CAC_TRANG_THAI_TU_SAN_SANG_TRO_DI.includes(tinhTrang)) {
-    if (phoi !== 'Đã lấy phôi') return `Đang ở "${tinhTrang}" nhưng phôi vẫn "${phoi}" — phải có đủ phôi mới tới được giai đoạn này.`;
-    if (veFile !== 'Đã vẽ file') return `Đang ở "${tinhTrang}" nhưng file vẽ vẫn "${veFile}" — phải vẽ xong file mới tới được giai đoạn này.`;
-  }
-  return null;
-}
+    // Cảnh báo TRƯỚC khi lưu, ngay khi người dùng đổi 1 trong 3 dropdown — soi gương lại đúng 2 quy tắc
+    // trong services/orderService.js (kiemTraTinhHopLy) để người dùng thấy lỗi ngay, không phải bấm Lưu
+    // mới biết bị từ chối. Đây CHỈ là gợi ý trên giao diện — server vẫn kiểm tra lại đầy đủ (không thể
+    // bỏ qua bằng cách sửa JS trên trình duyệt), đây không phải là chốt bảo mật.
+    function loiToHopTrangThai(tinhTrang, phoi, veFile) {
+      if (tinhTrang === 'Chưa xác nhận') {
+        if (phoi === 'Đã lấy phôi') return 'Đơn đang "Chưa xác nhận" thì chưa thể "Đã lấy phôi" — xác nhận đơn trước.';
+        if (veFile === 'Đã vẽ file') return 'Đơn đang "Chưa xác nhận" thì chưa thể "Đã vẽ file" — xác nhận đơn trước.';
+      }
+      const CAC_TRANG_THAI_TU_SAN_SANG_TRO_DI = [
+        'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đang chạy máy', 'Đã sản xuất', 'Đã đóng gói',
+        'IN TRANSIT_Tracking đã hoạt động', 'DELIVERED_Đã giao đến khách',
+      ];
+      if (CAC_TRANG_THAI_TU_SAN_SANG_TRO_DI.includes(tinhTrang)) {
+        if (phoi !== 'Đã lấy phôi') return `Đang ở "${tinhTrang}" nhưng phôi vẫn "${phoi}" — phải có đủ phôi mới tới được giai đoạn này.`;
+        if (veFile !== 'Đã vẽ file') return `Đang ở "${tinhTrang}" nhưng file vẽ vẫn "${veFile}" — phải vẽ xong file mới tới được giai đoạn này.`;
+      }
+      return null;
+    }
 
-function canhBaoToHopSai() {
-  const tinhTrang = document.getElementById('sua-tinh-trang').value;
-  const phoi = document.getElementById('sua-phoi').value;
-  const veFile = document.getElementById('sua-ve-file').value;
-  const loi = loiToHopTrangThai(tinhTrang, phoi, veFile);
+    function canhBaoToHopSai() {
+      const tinhTrang = document.getElementById('sua-tinh-trang').value;
+      const phoi = document.getElementById('sua-phoi').value;
+      const veFile = document.getElementById('sua-ve-file').value;
+      const loi = loiToHopTrangThai(tinhTrang, phoi, veFile);
 
-  const khu = document.getElementById('canh-bao-to-hop');
-  const nutLuu = document.getElementById('nut-luu-trang-thai');
-  if (loi) {
-    khu.innerHTML = `<p style="margin:0;font-size:0.85rem;color:var(--color-danger-text);background:var(--color-danger-bg);padding:8px 10px;border-radius:6px">${icon('alert', {size:14})} ${escapeHtml(loi)}</p>`;
-    nutLuu.disabled = true;
-  } else {
-    khu.innerHTML = '';
-    nutLuu.disabled = false;
-  }
-}
+      const khu = document.getElementById('canh-bao-to-hop');
+      const nutLuu = document.getElementById('nut-luu-trang-thai');
+      if (loi) {
+        khu.innerHTML = `<p style="margin:0;font-size:0.85rem;color:var(--color-danger-text);background:var(--color-danger-bg);padding:8px 10px;border-radius:6px">${icon('alert', { size: 14 })} ${escapeHtml(loi)}</p>`;
+        nutLuu.disabled = true;
+      } else {
+        khu.innerHTML = '';
+        nutLuu.disabled = false;
+      }
+    }
 
-async function luuTrangThaiThuCong() {
-  const updates = {
-    TINH_TRANG: document.getElementById('sua-tinh-trang').value,
-    TRANG_THAI_PHOI: document.getElementById('sua-phoi').value,
-    TRANG_THAI_VE_FILE: document.getElementById('sua-ve-file').value,
-  };
-  try {
-    await apiFetch('/orders/' + encodeURIComponent(sttKey), { method: 'PUT', body: JSON.stringify(updates) });
-    await taiChiTiet();
-  } catch (e) { alert(e.message); }
-}
+    async function luuTrangThaiThuCong() {
+      const updates = {
+        TINH_TRANG: document.getElementById('sua-tinh-trang').value,
+        TRANG_THAI_PHOI: document.getElementById('sua-phoi').value,
+        TRANG_THAI_VE_FILE: document.getElementById('sua-ve-file').value,
+      };
+      try {
+        await apiFetch('/orders/' + encodeURIComponent(sttKey), { method: 'PUT', body: JSON.stringify(updates) });
+        await taiChiTiet();
+      } catch (e) { alert(e.message); }
+    }
 
-async function chuyenGiaiDoan(scenarioId, btn) {
-  btn.disabled = true;
-  try {
-    await apiFetch(`/qr/kich-ban/${scenarioId}/quet`, { method: 'POST', body: JSON.stringify({ sttKey }) });
-    await taiChiTiet();
-  } catch (e) {
-    alert(e.message);
-    btn.disabled = false;
-  }
-}
+    async function chuyenGiaiDoan(scenarioId, btn) {
+      btn.disabled = true;
+      try {
+        await apiFetch(`/qr/kich-ban/${scenarioId}/quet`, { method: 'POST', body: JSON.stringify({ sttKey }) });
+        await taiChiTiet();
+      } catch (e) {
+        alert(e.message);
+        btn.disabled = false;
+      }
+    }
 
-async function luuGhiChu() {
-  const ghiChu = document.getElementById('ghi-chu-moi').value;
-  try {
-    await apiFetch('/orders/' + encodeURIComponent(sttKey), { method: 'PUT', body: JSON.stringify({ GHI_CHU: ghiChu }) });
-    alert('Đã lưu ghi chú!');
-    await taiChiTiet();
-  } catch (e) { alert(e.message); }
-}
+    async function luuGhiChu() {
+      const ghiChu = document.getElementById('ghi-chu-moi').value;
+      try {
+        await apiFetch('/orders/' + encodeURIComponent(sttKey), { method: 'PUT', body: JSON.stringify({ GHI_CHU: ghiChu }) });
+        alert('Đã lưu ghi chú!');
+        await taiChiTiet();
+      } catch (e) { alert(e.message); }
+    }
 
-async function taiAnh(moc) {
-  const input = document.getElementById('anh-' + moc.replace('_', '-'));
-  if (!input.files[0]) return alert('Chưa chọn ảnh');
+    async function taiAnh(moc) {
+      const input = document.getElementById('anh-' + moc.replace('_', '-'));
+      if (!input.files[0]) return alert('Chưa chọn ảnh');
 
-  const form = new FormData();
-  form.append('photo', input.files[0]);
-  form.append('sttKey', sttKey);
-  form.append('moc', moc);
+      const form = new FormData();
+      form.append('photo', input.files[0]);
+      form.append('sttKey', sttKey);
+      form.append('moc', moc);
 
-  try {
-    const res = await fetch('/api/photos/upload', { method: 'POST', body: form, credentials: 'include' });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
-    alert('Đã tải ảnh lên!');
-    await taiChiTiet();
-  } catch (e) { alert(e.message); }
-}
-</script>
+      try {
+        const res = await fetch('/api/photos/upload', { method: 'POST', body: form, credentials: 'include' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        alert('Đã tải ảnh lên!');
+        await taiChiTiet();
+      } catch (e) { alert(e.message); }
+    }
+  </script>
 </body>
+
 </html>
