@@ -152,9 +152,9 @@ function tieuDeSanPham(don) {
   return phan.length ? phan.join(' · ') : (don.MA_DON_HANG_ORDERID || '');
 }
 
-// Vị trí thêu — gộp 3 cột VI_TRI_1/2/3, bỏ ô trống
+// Vị trí thêu
 function danhSachViTriTheu(don) {
-  return [don.VI_TRI_1, don.VI_TRI_2, don.VI_TRI_3].filter(Boolean);
+  return [don.VI_TRI_1].filter(Boolean);
 }
 
 // CHÍNH SÁCH PHÂN QUYỀN (cập nhật 24/08/2026, theo Prompt_Ver_24.docx — HUỶ chính sách "mọi vai trò

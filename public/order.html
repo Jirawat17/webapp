@@ -104,8 +104,10 @@ async function taiChiTiet() {
           <tr><td>Ngày lên đơn</td><td>${don.NGAY_LEN_DON ? dinhDangNgay(don.NGAY_LEN_DON) : ''}</td></tr>
           <tr><td>Hãng vận chuyển</td><td>${escapeHtml(don.HANG_VAN_CHUYEN || '')}</td></tr>
           <tr><td>Mã vận đơn</td><td>${escapeHtml(don.MA_VAN_DON_ID || '')}</td></tr>
+          <tr><td>Mã tracking</td><td>${escapeHtml(don.TRACKING_ID || '')}</td></tr>
           <tr><td>Người nhận</td><td>${escapeHtml(don.TEN || '')} ${don.SDT ? '· ' + escapeHtml(don.SDT) : ''}</td></tr>
           <tr><td>Địa chỉ giao hàng</td><td>${escapeHtml(dongDiaChi(don))}</td></tr>
+          <tr><td>Mã IOSS</td><td>${escapeHtml(don.MA_IOSS || '')}</td></tr>
           <tr><td>Ghi chú</td><td>${escapeHtml(don.GHI_CHU || '')}</td></tr>
           <tr><td>Cập nhật lần cuối</td><td>${escapeHtml(don.NguoiCapNhatCuoi || '')}${don.ThoiGianCapNhatCuoi ? ' · ' + tsDep(don.ThoiGianCapNhatCuoi) : ''}</td></tr>
         </table>

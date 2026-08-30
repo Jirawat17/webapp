@@ -497,7 +497,7 @@ function veTheDonPdf(doc, don, anh, offsetY, caoThe) {
   const infoX = x0 + qrKichThuoc + 5;
   const infoRong = rongTrong - qrKichThuoc - 5;
   let yInfo = qrY;
-  const viTri = [don.VI_TRI_1, don.VI_TRI_2, don.VI_TRI_3].filter(Boolean).join(' · ');
+  const viTri = don.VI_TRI_1 || '';
   doc.font('NotoSans-Bold').fontSize(9).text('Vị trí thêu: ', infoX, yInfo, { continued: true, width: infoRong });
   doc.font('NotoSans').text(viTri || '—');
   yInfo += 13;
@@ -586,7 +586,7 @@ async function veSheetDonCanInExcel(wb, list, dongThongTin, dongNguoiXuat) {
     }
     hang += 7;
 
-    const viTri = [don.VI_TRI_1, don.VI_TRI_2, don.VI_TRI_3].filter(Boolean).join(' · ');
+    const viTri = don.VI_TRI_1 || '';
     sheet.mergeCells(hang, 1, hang, 6);
     sheet.getCell(hang, 1).value = `Vị trí thêu: ${viTri || '—'}`;
     hang += 1;
@@ -703,7 +703,7 @@ router.get('/xem-truoc', async (req, res) => {
       the.push({
         sttKey: don.STT_Key,
         dongTom: `${don.LOAI || ''} · ${don.KICH_THUOC || ''} · ${don.MAU_SAC || ''}`,
-        viTri: [don.VI_TRI_1, don.VI_TRI_2, don.VI_TRI_3].filter(Boolean).join(' · '),
+        viTri: don.VI_TRI_1 || '',
         soLuong: don.SO_LUONG,
         soLuongAoTrenDon: don.SO_LUONG_AO_TREN_DON,
         ngayLenDon: dinhDangNgay(don.NGAY_LEN_DON),
