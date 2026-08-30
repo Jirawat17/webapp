@@ -91,8 +91,8 @@ async function taiChiTiet() {
           ${don.DUONG_DAN_URL ? `<a href="${escapeHtml(don.DUONG_DAN_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh PNG gốc</a>` : ''}
           ${don.MOCKUP ? `<a href="${escapeHtml(don.MOCKUP)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh Mockup gốc</a>` : ''}
         </div>` : ''}
-        ${don.Anh_File_Theu_URL ? `<div><p style="margin:8px 0 4px;font-weight:600;font-size:0.85rem">Ảnh file thêu</p><a href="${escapeHtml(don.Anh_File_Theu_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Xem ảnh file thêu</a></div>` : ''}
-        ${don.Anh_Dong_Goi_URL ? `<div><p style="margin:8px 0 4px;font-weight:600;font-size:0.85rem">Ảnh hoàn thành</p><a href="${escapeHtml(don.Anh_Dong_Goi_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Xem ảnh hoàn thành</a></div>` : ''}
+        ${don.Anh_File_Theu_URL ? `<div><a href="${escapeHtml(don.Anh_File_Theu_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Xem ảnh file thêu</a></div>` : ''}
+        ${don.Anh_Dong_Goi_URL ? `<div><a href="${escapeHtml(don.Anh_Dong_Goi_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Xem ảnh hoàn thành</a></div>` : ''}
         <table class="info-table">
           <tr><td>Mã đơn</td><td>${escapeHtml(don.STT_Key)}</td></tr>
           <tr><td>Mã đơn (sàn TMĐT)</td><td>${escapeHtml(don.MA_DON_HANG_ORDERID || '')}</td></tr>
