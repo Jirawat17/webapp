@@ -506,8 +506,17 @@ function veTheDonPdf(doc, don, anh, offsetY, caoThe) {
   doc.font('NotoSans').fontSize(9).text(`Ngày: ${dinhDangNgay(don.NGAY_LEN_DON)}`, infoX, yInfo, { width: infoRong });
   if (don.GHI_CHU) {
     yInfo += 13;
-    doc.font('NotoSans-Bold').fontSize(9).text('Ghi chú: ', infoX, yInfo, { continued: true, width: infoRong });
-    doc.font('NotoSans').text(String(don.GHI_CHU), { width: infoRong });
+    // In đậm + cỡ chữ lớn hẳn (15, so với 9 của các dòng khác) để nổi bật, dễ nhìn hơn hẳn — theo
+    // đúng yêu cầu người dùng. Giới hạn CHIỀU CAO còn lại tới trước dòng chú thích cuối trang
+    // (dongNguoiXuat, vẽ bởi veTrangDonCanInPdf) + ellipsis: true để pdfkit tự cắt bớt nếu ghi chú
+    // quá dài, tuyệt đối không vẽ đè/tràn lên dòng chú thích đó dù cỡ chữ đã tăng nhiều.
+    const CO_CHU_GHI_CHU = 15;
+    const yGioiHanDuoi = offsetY + caoThe - leTrong;
+    const chieuCaoConLai = yGioiHanDuoi - yInfo;
+    if (chieuCaoConLai >= CO_CHU_GHI_CHU) {
+      doc.font('NotoSans-Bold').fontSize(CO_CHU_GHI_CHU)
+        .text(`Ghi chú: ${don.GHI_CHU}`, infoX, yInfo, { width: infoRong, height: chieuCaoConLai, ellipsis: true });
+    }
   }
 }
 
