@@ -92,7 +92,8 @@ async function taiChiTiet() {
           ${don.MOCKUP ? `<a href="${escapeHtml(don.MOCKUP)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh Mockup gốc</a>` : ''}
         </div>` : ''}
         ${don.Anh_File_Theu_URL ? `<div><a href="${escapeHtml(don.Anh_File_Theu_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Xem ảnh file thêu</a></div>` : ''}
-        ${don.Anh_Dong_Goi_URL ? `<div><a href="${escapeHtml(don.Anh_Dong_Goi_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Xem ảnh hoàn thành</a></div>` : ''}
+        ${don.Anh_Da_San_Xuat_URL ? `<div><a href="${escapeHtml(don.Anh_Da_San_Xuat_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Xem ảnh đã sản xuất</a></div>` : ''}
+        ${don.Anh_Dong_Goi_URL ? `<div><a href="${escapeHtml(don.Anh_Dong_Goi_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Xem ảnh đóng gói</a></div>` : ''}
         <table class="info-table">
           <tr><td>Mã đơn</td><td>${escapeHtml(don.STT_Key)}</td></tr>
           <tr><td>Mã đơn (sàn TMĐT)</td><td>${escapeHtml(don.MA_DON_HANG_ORDERID || '')}</td></tr>
@@ -200,10 +201,16 @@ function renderKhuVucThaoTac(don) {
   if (user.vaiTro === 'admin') {
     html += `
       <div class="upload-box">
-        <label for="anh-dong-goi">${icon('camera', { size: 18 })} Chụp ảnh hoàn thành (trước khi đóng gói)</label>
+        <label for="anh-da-san-xuat">${icon('camera', { size: 18 })} Ảnh đã sản xuất (ngay khi chạy máy xong)</label>
+        <input type="file" accept="image/*" capture="environment" id="anh-da-san-xuat">
+        <button class="btn-hanh-dong" onclick="taiAnh('da_san_xuat')">${icon('download')} Tải ảnh lên</button>
+        <p style="margin:0;font-size:0.8rem">Cần cột <code>Anh_Da_San_Xuat_URL</code> trong Sheet. Chỉ dùng được khi đơn đang ở "Đang chạy máy" — tải ảnh xong sẽ TỰ ĐỘNG chuyển đơn sang "Đã sản xuất". san_xuat/nguoi_lay_phoi nên dùng màn "Chụp ảnh đã sản xuất" ở trang Quét QR thay vì đây (nhanh hơn, không cần mở từng đơn).</p>
+      </div>
+      <div class="upload-box">
+        <label for="anh-dong-goi">${icon('camera', { size: 18 })} Ảnh đóng gói (sau khi đóng gói xong)</label>
         <input type="file" accept="image/*" capture="environment" id="anh-dong-goi">
         <button class="btn-hanh-dong" onclick="taiAnh('dong_goi')">${icon('download')} Tải ảnh lên</button>
-        <p style="margin:0;font-size:0.8rem">Cần cột <code>Anh_Dong_Goi_URL</code> trong Sheet. Chỉ dùng được khi đơn đang ở "Đã sản xuất" — tải ảnh xong sẽ TỰ ĐỘNG chuyển đơn sang "Đã đóng gói". san_xuat/nguoi_lay_phoi nên dùng màn "Chụp ảnh hoàn thành hàng loạt" ở trang Quét QR thay vì đây (nhanh hơn, không cần mở từng đơn).</p>
+        <p style="margin:0;font-size:0.8rem">Cần cột <code>Anh_Dong_Goi_URL</code> trong Sheet. Chỉ dùng được khi đơn đang ở "Đã sản xuất" — tải ảnh xong sẽ TỰ ĐỘNG chuyển đơn sang "Đã đóng gói". san_xuat/nguoi_lay_phoi nên dùng màn "Chụp ảnh đóng gói" ở trang Quét QR thay vì đây (nhanh hơn, không cần mở từng đơn).</p>
       </div>`;
   }
 
@@ -283,7 +290,7 @@ async function luuGhiChu() {
 }
 
 async function taiAnh(moc) {
-  const input = document.getElementById('anh-' + moc.replace('_', '-'));
+  const input = document.getElementById('anh-' + moc.replace(/_/g, '-'));
   if (!input.files[0]) return alert('Chưa chọn ảnh');
 
   const form = new FormData();

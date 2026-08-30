@@ -11,23 +11,28 @@ const { requireLogin } = require('../middleware/auth');
 router.use(requireLogin);
 
 // Mỗi "mốc nghiệp vụ" ghi URL vào đúng cột tương ứng trong Sheet.
-// LƯU Ý: Sheet thật KHÔNG có cột Anh_Dong_Goi_URL/Anh_File_Theu_URL (khác với bản thiết kế mẫu ban
-// đầu) — muốn dùng 2 mốc "dong_goi"/"ve_file" cần tự thêm 2 cột này vào Don_Hang_ALL trước.
+// LƯU Ý: Sheet thật KHÔNG có cột Anh_Dong_Goi_URL/Anh_File_Theu_URL/Anh_Da_San_Xuat_URL (khác với
+// bản thiết kế mẫu ban đầu) — muốn dùng các mốc "dong_goi"/"ve_file"/"da_san_xuat" cần tự thêm các
+// cột này vào Don_Hang_ALL trước.
 const COT_ANH_THEO_MOC = {
   dong_goi: 'Anh_Dong_Goi_URL',
+  da_san_xuat: 'Anh_Da_San_Xuat_URL', // bổ sung 31/08/2026 — ảnh chụp ngay khi vừa chạy máy xong
   mau: 'DUONG_DAN_URL',
   mockup: 'MOCKUP',
   ve_file: 'Anh_File_Theu_URL', // bổ sung 26/08/2026 — ảnh file thêu do ve_file upload sau khi vẽ file xong, để san_xuat xem trước khi chọn chỉ
 };
 
-// Mốc "dong_goi" (bổ sung 26/08/2026, theo yêu cầu người dùng) giờ KHÔNG chỉ lưu ảnh — nó CHÍNH LÀ
-// hành động "chụp ảnh hoàn thành trước khi đóng gói": tự động chuyển TINH_TRANG trong CÙNG 1 lần ghi
-// với việc lưu URL ảnh. Yêu cầu đơn ĐANG ở đúng "yeuCau" trước khi chụp — kiemTraTinhHopLy() trong
-// orderService.update() KHÔNG tự chặn việc này (không phải 1 trong 3 quy tắc của nó) nên phải tự
-// kiểm tra ở đây. Mở cho CẢ 4 vai trò (không giới hạn gì thêm ngoài requireLogin ở trên) — dùng ở cả
-// màn "Chụp ảnh hoàn thành hàng loạt" (scan.html) lẫn nút tải ảnh đơn lẻ (order.html, admin).
+// 2 mốc dưới đây KHÔNG chỉ lưu ảnh — mỗi mốc CHÍNH LÀ 1 hành động "chụp ảnh bằng chứng kèm chuyển
+// giai đoạn": tự động chuyển TINH_TRANG trong CÙNG 1 lần ghi với việc lưu URL ảnh. Yêu cầu đơn ĐANG
+// ở đúng "yeuCau" trước khi chụp — kiemTraTinhHopLy() trong orderService.update() KHÔNG tự chặn việc
+// này (không phải 1 trong 3 quy tắc của nó) nên phải tự kiểm tra ở đây. Mở cho CẢ 4 vai trò (không
+// giới hạn gì thêm ngoài requireLogin ở trên) — dùng ở cả 2 tab "Chụp ảnh đã sản xuất"/"Chụp ảnh đóng
+// gói" (scan.html) lẫn 2 nút tải ảnh đơn lẻ tương ứng (order.html, admin).
+//   dong_goi     (bổ sung 26/08/2026) — "Ảnh đóng gói": Đã sản xuất -> Đã đóng gói
+//   da_san_xuat  (bổ sung 31/08/2026) — "Ảnh đã sản xuất": Đang chạy máy -> Đã sản xuất
 const MOC_TU_DONG_CHUYEN_TRANG_THAI = {
   dong_goi: { yeuCau: 'Đã sản xuất', chuyenSang: 'Đã đóng gói' },
+  da_san_xuat: { yeuCau: 'Đang chạy máy', chuyenSang: 'Đã sản xuất' },
 };
 
 // Vì mã đơn đã lấy từ bước quét QR ngay trước đó trong cùng luồng thao tác (sttKey gửi kèm trong
@@ -54,7 +59,7 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
   const chuyenTuDong = MOC_TU_DONG_CHUYEN_TRANG_THAI[moc];
   if (chuyenTuDong && row.TINH_TRANG !== chuyenTuDong.yeuCau) {
     return res.status(400).json({
-      error: `Đơn "${sttKey}" đang ở trạng thái "${row.TINH_TRANG}" — chỉ chụp ảnh hoàn thành được khi đơn đang ở "${chuyenTuDong.yeuCau}".`,
+      error: `Đơn "${sttKey}" đang ở trạng thái "${row.TINH_TRANG}" — chỉ chụp ảnh được khi đơn đang ở "${chuyenTuDong.yeuCau}".`,
     });
   }
 
