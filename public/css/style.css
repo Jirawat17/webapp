@@ -157,6 +157,7 @@ body.trang-dang-nhap {
   background-attachment: fixed;
 }
 .login-wrap { max-width: 440px; margin: var(--space-8) auto; padding: var(--space-5); text-align: center; }
+.login-wrap .welcome-banner { max-width: 100%; height: auto; margin-bottom: var(--space-2); }
 .login-wrap .logo-mark { color: var(--color-primary); margin-bottom: var(--space-2); animation: troiNhe 3.5s ease-in-out infinite; }
 @keyframes troiNhe { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 .ten-list { display: flex; flex-wrap: wrap; gap: var(--space-3); justify-content: center; margin-top: var(--space-5); }

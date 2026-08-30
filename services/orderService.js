@@ -76,6 +76,21 @@ function kiemTraTinhHopLy(rowHienTai, updates) {
   }
 }
 
+// TỰ ĐỘNG điền TRANG_THAI_PHOI = 'Chưa lấy phôi' và TRANG_THAI_VE_FILE = 'Chưa vẽ file' khi đơn được
+// xác nhận (TINH_TRANG chuyển từ 'Chưa xác nhận' sang 'Đã xác nhận') — đơn vừa xác nhận thì chưa ai
+// kịp lấy phôi/vẽ file, nên đặt sẵn 2 cột này về "chưa" luôn, không phải set tay riêng. Không ghi đè
+// nếu người gọi đã tự chỉ định 1 trong 2 cột này trong chính updates đó. Chỉ áp dụng đúng lượt
+// chuyển 'Chưa xác nhận' -> 'Đã xác nhận' (không áp dụng khi TINH_TRANG đang set lại 'Đã xác nhận'
+// từ trạng thái khác, vd sau khi lỗi sản xuất).
+function tinhPhoiVeFileTuDongKhiXacNhan(rowHienTai, updates) {
+  if (updates.TINH_TRANG !== 'Đã xác nhận' || rowHienTai.TINH_TRANG !== 'Chưa xác nhận') return updates;
+
+  const ketQua = { ...updates };
+  if (!('TRANG_THAI_PHOI' in ketQua)) ketQua.TRANG_THAI_PHOI = 'Chưa lấy phôi';
+  if (!('TRANG_THAI_VE_FILE' in ketQua)) ketQua.TRANG_THAI_VE_FILE = 'Chưa vẽ file';
+  return ketQua;
+}
+
 // TỰ ĐỘNG chuyển TINH_TRANG sang "ĐÃ SẴN SÀNG CHẠY MÁY" khi cả phôi lẫn file vẽ CÙNG xong — nhưng
 // CHỈ áp dụng lần đầu (khi TINH_TRANG đang là "Đã xác nhận"). Sau khi đơn bị lỗi rồi làm lại từ phôi/
 // file, việc quay lại "ĐÃ SẴN SÀNG CHẠY MÁY" lần 2 KHÔNG tự động — người phụ trách phải tự set tay
@@ -101,7 +116,8 @@ async function update(sttKey, updates) {
 
   kiemTraGiaTriHopLe(updates);
 
-  const updatesDaTinh = tinhTinhTrangTuDong(row, updates);
+  const updatesSauXacNhan = tinhPhoiVeFileTuDongKhiXacNhan(row, updates);
+  const updatesDaTinh = tinhTinhTrangTuDong(row, updatesSauXacNhan);
   kiemTraTinhHopLy(row, updatesDaTinh); // kiểm tra SAU khi đã tính tự động, để không báo nhầm khi chính việc tự động hoá làm cho tổ hợp trở nên hợp lệ
 
   await updateCells(TAB, headers, row._row, updatesDaTinh); // tự xoá cache của tab sau khi ghi (xem sheetsService)
