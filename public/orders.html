@@ -198,7 +198,7 @@ function renderDanhSachDon() {
         ? `<img src="${escapeHtml(o.MOCKUP || o.DUONG_DAN_URL)}" alt="" loading="lazy" onerror="this.remove()">`
         : ''}
       <div class="thong-tin">
-        <strong>${escapeHtml(o.TieuDeSanPham || o.STT_Key)}</strong>
+        <strong class="tieu-de-the">${escapeHtml(o.TieuDeSanPham || o.STT_Key)}</strong>
         <div class="meta">${escapeHtml(o.TenKhachHang || '')} · SL: <strong>${escapeHtml(o.SO_LUONG || '')}</strong></div>
         <div class="meta">Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgayNgan(o.NGAY_LEN_DON) : '—')}</div>
         <div class="badge-row">

@@ -147,7 +147,7 @@ button:active:not(:disabled), .btn-ten:active, .kich-ban-btn:active:not(:disable
 }
 @keyframes lanToa { to { transform: scale(1); opacity: 0; } }
 
-.page { max-width: 1100px; margin: 0 auto; padding: var(--space-4); }
+.page { max-width: 1500px; margin: 0 auto; padding: var(--space-4); }
 
 /* ============================================================
    ĐĂNG NHẬP — nền động nhẹ nhàng, nút có ánh sáng lướt qua thu hút nhẹ
@@ -241,6 +241,7 @@ body.trang-dang-nhap {
 .order-list { display: grid; grid-template-columns: 1fr; gap: var(--space-3); }
 @media (min-width: 640px)  { .order-list { grid-template-columns: repeat(2, 1fr); } }
 @media (min-width: 1024px) { .order-list { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 1400px) { .order-list { grid-template-columns: repeat(4, 1fr); } }
 
 .order-card {
   display: flex; align-items: flex-start; gap: var(--space-3); background: var(--color-surface); border-radius: var(--radius-md);
@@ -254,7 +255,7 @@ body.trang-dang-nhap {
 .order-card img { width: 72px; height: 72px; object-fit: cover; border-radius: var(--radius-sm); background: var(--color-bg); flex-shrink: 0; transition: transform 0.25s ease; }
 .order-card:hover img { transform: scale(1.06); }
 .order-card .thong-tin { min-width: 0; flex: 1; }
-.order-card strong { display: block; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.order-card .tieu-de-the { display: block; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .order-card .meta { font-size: 0.85rem; color: var(--color-text-muted); margin: 2px 0; }
 .order-card .badge-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 
@@ -322,6 +323,7 @@ select.chon-trang-thai-tieu-cuc { border-color: var(--color-warning-text); color
 .skeleton-list { display: grid; grid-template-columns: 1fr; gap: var(--space-3); }
 @media (min-width: 640px)  { .skeleton-list { grid-template-columns: repeat(2, 1fr); } }
 @media (min-width: 1024px) { .skeleton-list { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 1400px) { .skeleton-list { grid-template-columns: repeat(4, 1fr); } }
 .skeleton-card {
   height: 96px; border-radius: var(--radius-md); background: linear-gradient(90deg, #eceef1 25%, #f5f6f8 37%, #eceef1 63%);
   background-size: 400% 100%; animation: skeleton-loading 1.4s ease infinite;
