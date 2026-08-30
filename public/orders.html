@@ -55,11 +55,11 @@
   </select>
   <button id="nut-ap-dung" class="btn-hanh-dong" onclick="apDungChuyenTrangThai()">Áp dụng</button>
   <span class="thanh-hanh-dong-cach"></span>
-  <button class="btn-hanh-dong phu nhanh-phoi-ve-file" onclick="apDungNhanh('TINH_TRANG', 'Đã xác nhận', this)">Đã xác nhận</button>
-  <button class="btn-hanh-dong phu nhanh-phoi-ve-file" onclick="apDungNhanh('TRANG_THAI_PHOI', 'Đã lấy phôi', this)">Đã lấy phôi</button>
-  <button class="btn-hanh-dong phu nhanh-phoi-ve-file" onclick="apDungNhanh('TRANG_THAI_PHOI', 'Chưa lấy phôi', this)">Chưa lấy phôi</button>
-  <button class="btn-hanh-dong phu nhanh-phoi-ve-file" onclick="apDungNhanh('TRANG_THAI_VE_FILE', 'Đã vẽ file', this)">Đã vẽ file</button>
-  <button class="btn-hanh-dong phu nhanh-phoi-ve-file" onclick="apDungNhanh('TRANG_THAI_VE_FILE', 'Chưa vẽ file', this)">Chưa vẽ file</button>
+  <button id="btn-xac-nhan" class="btn-hanh-dong phu nhanh-phoi-ve-file trang-thai-tich-cuc" onclick="apDungNhanh('TINH_TRANG', 'Đã xác nhận', this)"></button>
+  <button id="btn-da-lay-phoi" class="btn-hanh-dong phu nhanh-phoi-ve-file trang-thai-tich-cuc" onclick="apDungNhanh('TRANG_THAI_PHOI', 'Đã lấy phôi', this)"></button>
+  <button id="btn-chua-lay-phoi" class="btn-hanh-dong phu nhanh-phoi-ve-file trang-thai-tieu-cuc" onclick="apDungNhanh('TRANG_THAI_PHOI', 'Chưa lấy phôi', this)"></button>
+  <button id="btn-da-ve-file" class="btn-hanh-dong phu nhanh-phoi-ve-file trang-thai-tich-cuc" onclick="apDungNhanh('TRANG_THAI_VE_FILE', 'Đã vẽ file', this)"></button>
+  <button id="btn-chua-ve-file" class="btn-hanh-dong phu nhanh-phoi-ve-file trang-thai-tieu-cuc" onclick="apDungNhanh('TRANG_THAI_VE_FILE', 'Chưa vẽ file', this)"></button>
   <button class="btn-hanh-dong phu" onclick="boChonTatCaDon()">Bỏ chọn</button>
 </div>
 
@@ -107,6 +107,14 @@ let donDaChonSet = new Set();
   document.getElementById('btn-in-phoi-ao').innerHTML = icon('printer') + ' IN DANH SÁCH PHÔI';
   document.getElementById('btn-in-don-ao').innerHTML = icon('printer') + ' IN ĐƠN';
   document.getElementById('btn-in-tracking').innerHTML = icon('printer') + ' IN DANH SÁCH ĐÃ SẢN XUẤT';
+
+  // Nút "Đã..." (positive) dùng icon check, nút "Chưa..." (negative, đưa trạng thái quay lại) dùng
+  // icon undo — phân biệt trực quan, không chỉ dựa vào màu (xem thêm .trang-thai-tich-cuc/.trang-thai-tieu-cuc trong style.css)
+  document.getElementById('btn-xac-nhan').innerHTML = icon('check', { size: 16 }) + ' Đã xác nhận';
+  document.getElementById('btn-da-lay-phoi').innerHTML = icon('check', { size: 16 }) + ' Đã lấy phôi';
+  document.getElementById('btn-chua-lay-phoi').innerHTML = icon('undo', { size: 16 }) + ' Chưa lấy phôi';
+  document.getElementById('btn-da-ve-file').innerHTML = icon('check', { size: 16 }) + ' Đã vẽ file';
+  document.getElementById('btn-chua-ve-file').innerHTML = icon('undo', { size: 16 }) + ' Chưa vẽ file';
 
   document.getElementById('trang-thai-dich').innerHTML = '<option value="">Chuyển đến trạng thái...</option>' +
     DANH_SACH_TRANG_THAI_DAY_DU.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');

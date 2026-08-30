@@ -129,6 +129,14 @@ async function taiChiTiet() {
   renderKhuVucThaoTac(don);
 }
 
+// Tô màu <select> Phôi/Vẽ file theo giá trị đang chọn — xanh lá cho "Đã..." (positive), cam cho
+// "Chưa..." (negative), khớp đúng ý nghĩa với badge trạng thái đang dùng ở nơi khác trong app.
+function capNhatMauChonTrangThai(select) {
+  const laTichCuc = select.value.startsWith('Đã ');
+  select.classList.toggle('chon-trang-thai-tich-cuc', laTichCuc);
+  select.classList.toggle('chon-trang-thai-tieu-cuc', !laTichCuc);
+}
+
 function renderKhuVucThaoTac(don) {
   const el = document.getElementById('khu-vuc-thao-tac');
   let html = '';
@@ -162,12 +170,12 @@ function renderKhuVucThaoTac(don) {
       <label for="sua-tinh-trang" style="font-size:0.85rem;font-weight:400">Trạng thái chung (TINH_TRANG)</label>
       <select id="sua-tinh-trang" onchange="canhBaoToHopSai()">${DANH_SACH_TINH_TRANG.map(t => `<option value="${escapeHtml(t)}" ${t === don.TINH_TRANG ? 'selected' : ''}>${escapeHtml(t)}</option>`).join('')}</select>
       <label for="sua-phoi" style="font-size:0.85rem;font-weight:400">Phôi</label>
-      <select id="sua-phoi" onchange="canhBaoToHopSai()">
+      <select id="sua-phoi" onchange="canhBaoToHopSai(); capNhatMauChonTrangThai(this)">
         <option value="Chưa lấy phôi" ${don.TRANG_THAI_PHOI === 'Chưa lấy phôi' ? 'selected' : ''}>Chưa lấy phôi</option>
         <option value="Đã lấy phôi" ${don.TRANG_THAI_PHOI === 'Đã lấy phôi' ? 'selected' : ''}>Đã lấy phôi</option>
       </select>
       <label for="sua-ve-file" style="font-size:0.85rem;font-weight:400">Vẽ file</label>
-      <select id="sua-ve-file" onchange="canhBaoToHopSai()">
+      <select id="sua-ve-file" onchange="canhBaoToHopSai(); capNhatMauChonTrangThai(this)">
         <option value="Chưa vẽ file" ${don.TRANG_THAI_VE_FILE === 'Chưa vẽ file' ? 'selected' : ''}>Chưa vẽ file</option>
         <option value="Đã vẽ file" ${don.TRANG_THAI_VE_FILE === 'Đã vẽ file' ? 'selected' : ''}>Đã vẽ file</option>
       </select>
@@ -201,6 +209,8 @@ function renderKhuVucThaoTac(don) {
 
   el.innerHTML = html;
   canhBaoToHopSai();
+  capNhatMauChonTrangThai(document.getElementById('sua-phoi'));
+  capNhatMauChonTrangThai(document.getElementById('sua-ve-file'));
 }
 
 // Cảnh báo TRƯỚC khi lưu, ngay khi người dùng đổi 1 trong 3 dropdown — soi gương lại đúng 2 quy tắc

@@ -279,6 +279,19 @@ body.trang-dang-nhap {
 .thanh-hanh-dong-cach { width: 1px; align-self: stretch; background: var(--color-border); margin: 0 4px; }
 .nhanh-phoi-ve-file { font-size: 0.85rem !important; padding: 8px 14px !important; }
 
+/* Phân biệt nút/ô chọn trạng thái "Đã..." (positive, việc đã xong) với "Chưa..." (negative, còn
+   thiếu việc) — tô màu khớp đúng ý nghĩa với badge trạng thái đang dùng (MAU_TRANG_THAI trong
+   api.js: xanh lá = success, cam = warning), để nhận ra ngay không cần đọc kỹ chữ trên nút. */
+.btn-hanh-dong.phu.trang-thai-tich-cuc { border-color: var(--color-success-text); color: var(--color-success-text); }
+.btn-hanh-dong.phu.trang-thai-tich-cuc:hover { background: var(--color-success-bg); }
+.btn-hanh-dong.phu.trang-thai-tieu-cuc { border-color: var(--color-warning-text); color: var(--color-warning-text); }
+.btn-hanh-dong.phu.trang-thai-tieu-cuc:hover { background: var(--color-warning-bg); }
+
+/* Cùng ý nghĩa nhưng dùng cho <select> (trang chi tiết đơn — sửa trạng thái thủ công) — màu đổi
+   động theo giá trị đang chọn, xem capNhatMauChonTrangThai() trong order.html. */
+select.chon-trang-thai-tich-cuc { border-color: var(--color-success-text); color: var(--color-success-text); font-weight: 700; }
+select.chon-trang-thai-tieu-cuc { border-color: var(--color-warning-text); color: var(--color-warning-text); font-weight: 700; }
+
 /* Thanh tiến độ % khi cập nhật hàng loạt (xem apDungCapNhatHangLoat trong orders.html) */
 .thanh-tien-do-hang-loat { flex-basis: 100%; display: flex; align-items: center; gap: 10px; }
 .thanh-tien-do-nen { flex: 1; height: 8px; border-radius: 4px; background: rgba(255,255,255,0.25); overflow: hidden; }
