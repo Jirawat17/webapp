@@ -44,16 +44,21 @@ function dangXuat() {
 
 // Thanh điều hướng dùng chung: header trên cùng (logo + tên NV + đăng xuất) + nav link —
 // nav link tự chuyển thành bottom tab bar trên điện thoại, top nav trên tablet/desktop (xem style.css)
-// CHÍNH SÁCH PHÂN QUYỀN (24/08/2026): nguoi_lay_phoi chỉ nhìn thấy DUY NHẤT menu "Quét mã QR" — ẩn
-// hết mọi menu khác (kể cả Cài đặt và Trợ lý, đã xác nhận rõ với người dùng). Nút Đăng xuất ở góc
-// trên vẫn luôn hiện cho mọi vai trò (không phải 1 "menu" theo nghĩa điều hướng trang).
+// CHÍNH SÁCH PHÂN QUYỀN (24/08/2026, sửa 31/08/2026): nguoi_lay_phoi chỉ nhìn thấy 2 menu "Quét mã
+// QR" và "SL Phôi" — ẩn hết mọi menu khác (kể cả Cài đặt và Trợ lý, đã xác nhận rõ với người dùng).
+// "SL Phôi" là NGOẠI LỆ được thêm riêng (31/08/2026, theo yêu cầu người dùng) vì đây chính là vai trò
+// trực tiếp lấy phôi ngoài đời — cần xem tồn kho + tự nhập kho, xem routes/taiSan.js. Nút Đăng xuất
+// ở góc trên vẫn luôn hiện cho mọi vai trò (không phải 1 "menu" theo nghĩa điều hướng trang).
 // Icon menu dùng bộ 'nav*' riêng trong icons.js (navOrders, navScan...) — bọc trong
 // <span class="nav-icon-tile"> để Chế độ Tối vẽ thêm khối bo góc phát sáng quanh icon (xem style.css);
 // Chế độ Sáng không style .nav-icon-tile nên nhìn như trước, không đổi gì.
 function renderNav(user, active) {
   let links;
   if (user.vaiTro === 'nguoi_lay_phoi') {
-    links = [{ href: '/scan.html', label: 'Quét QR', icon: 'navScan', key: 'scan' }];
+    links = [
+      { href: '/scan.html', label: 'Quét QR', icon: 'navScan', key: 'scan' },
+      { href: '/tai-san.html', label: 'SL Phôi', icon: 'navAssets', key: 'tai-san' },
+    ];
   } else {
     links = [
       { href: '/orders.html', label: 'Đơn hàng', icon: 'navOrders', key: 'orders' },

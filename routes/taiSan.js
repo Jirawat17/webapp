@@ -3,10 +3,12 @@ const router = express.Router();
 const taiSanService = require('../services/taiSanService');
 const { requireRole } = require('../middleware/auth');
 
-// Mở cho admin (luôn được phép, xem middleware/auth.js) + ve_file + san_xuat — KHÔNG mở cho
-// nguoi_lay_phoi (đã xác nhận rõ với người dùng, dù đây là vai trò trực tiếp lấy phôi ngoài đời,
-// vai trò này vẫn chỉ dùng đúng 1 menu "Quét mã QR" trong toàn app).
-router.use(requireRole('ve_file', 'san_xuat'));
+// Mở cho admin (luôn được phép, xem middleware/auth.js) + ve_file + san_xuat + nguoi_lay_phoi.
+// (Cập nhật 31/08/2026, theo yêu cầu người dùng) — trước đó nguoi_lay_phoi bị chặn khỏi trang này dù
+// đây chính là người trực tiếp lấy phôi ngoài đời; nay được xem tồn kho + tự nhập kho như ve_file/
+// san_xuat. Đây là NGOẠI LỆ DUY NHẤT trong chính sách "nguoi_lay_phoi chỉ dùng menu Quét mã QR" — xem
+// thêm renderNav() trong public/js/api.js.
+router.use(requireRole('ve_file', 'san_xuat', 'nguoi_lay_phoi'));
 
 router.get('/ton-kho', async (req, res) => {
   const list = await taiSanService.layTonKho();

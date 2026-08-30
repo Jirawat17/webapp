@@ -88,7 +88,10 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
 
   let updated;
   try {
-    updated = await orderService.update(sttKey, updates, user);
+    // quaAnh: true — cho phép đặt thẳng TINH_TRANG="Đã sản xuất"/"Đã đóng gói" ở đây, vì đây CHÍNH LÀ
+    // luồng chụp ảnh QR hợp lệ mà orderService.update() bắt buộc phải đi qua cho 2 trạng thái này
+    // (xem kiemTraCongAnhBatBuoc trong orderService.js).
+    updated = await orderService.update(sttKey, updates, user, { quaAnh: true });
   } catch (err) {
     return res.status(400).json({ error: err.message });
   }

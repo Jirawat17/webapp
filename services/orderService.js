@@ -111,11 +111,36 @@ function tinhTinhTrangTuDong(rowHienTai, updates) {
   return updates;
 }
 
-async function update(sttKey, updates, user) {
+// "Đã sản xuất" và "Đã đóng gói" chỉ được đặt qua đúng luồng chụp ảnh QR (routes/photos.js — mốc
+// da_san_xuat/dong_goi, gọi update() với tuyChon.quaAnh = true). Chặn MỌI đường khác (ô "Sửa trạng
+// thái thủ công" ở order.html, kịch bản quét chung trong CauHinhKichBan nếu còn sót cấu hình cũ,
+// chuyển hàng loạt...) — bất kể đơn đang ở trạng thái nào trước đó, không chỉ riêng 2 cặp chuyển tiếp
+// "chuẩn". admin vẫn ghi đè được (cần 1 lối thoát khi máy ảnh hỏng/QR không đọc được) — đã xác nhận
+// rõ với người dùng, chấp nhận rủi ro bị lạm dụng ở mức admin.
+// CHỈ chặn khi đây là 1 CHUYỂN ĐỔI THẬT (giá trị mới khác giá trị đang có) — ô "Sửa trạng thái thủ
+// công" ở order.html luôn gửi cả 3 cột TINH_TRANG/PHOI/VE_FILE cùng lúc kể cả khi người dùng chỉ định
+// sửa 1 trong 2 cột kia, nên KHÔNG được chặn nhầm khi TINH_TRANG gửi lên trùng với giá trị hiện tại.
+const TRANG_THAI_BAT_BUOC_CHUP_ANH = ['Đã sản xuất', 'Đã đóng gói'];
+
+function kiemTraCongAnhBatBuoc(rowHienTai, updates, user, quaAnh) {
+  if (!('TINH_TRANG' in updates)) return;
+  if (updates.TINH_TRANG === rowHienTai.TINH_TRANG) return; // gửi lại đúng giá trị cũ — không phải chuyển đổi
+  if (quaAnh) return;
+  if (user && user.vaiTro === 'admin') return;
+
+  if (TRANG_THAI_BAT_BUOC_CHUP_ANH.includes(updates.TINH_TRANG)) {
+    throw new Error(
+      `Chuyển sang "${updates.TINH_TRANG}" bắt buộc phải chụp ảnh QR ở trang Quét QR — vai trò này không set tay được.`
+    );
+  }
+}
+
+async function update(sttKey, updates, user, tuyChon = {}) {
   const { headers, row } = await getByKey(sttKey, { fresh: true }); // luôn đọc thật trước khi ghi
   if (!row) throw new Error('Không tìm thấy đơn hàng: ' + sttKey);
 
   kiemTraGiaTriHopLe(updates);
+  kiemTraCongAnhBatBuoc(row, updates, user, tuyChon.quaAnh);
 
   const updatesSauXacNhan = tinhPhoiVeFileTuDongKhiXacNhan(row, updates);
   const updatesDaTinh = tinhTinhTrangTuDong(row, updatesSauXacNhan);

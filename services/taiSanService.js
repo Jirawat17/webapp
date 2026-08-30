@@ -10,8 +10,13 @@ const { ghiLog } = require('./logService');
 const TAB_TON_KHO = 'Ton_Kho_Phoi';
 const TAB_LICH_SU_NHAP = 'LichSuNhapPhoi';
 
+// Chuẩn hoá để SO SÁNH (không đụng tới dữ liệu gốc lưu trong Sheet) — cắt khoảng trắng 2 đầu, gộp
+// khoảng trắng lặp ở giữa, và không phân biệt hoa/thường, để "Đen"/"đen"/"ĐEN" hay "Sweat"/"SWEAT"
+// được coi là cùng 1 loại phôi. CHỈ chuẩn hoá hoa/thường trong CÙNG 1 ngôn ngữ — không ánh xạ đồng
+// nghĩa khác ngôn ngữ (vd "Đen"/"Black") vì dễ gộp nhầm 2 loại phôi thực sự khác nhau (đã xác nhận
+// rõ với người dùng, cố ý KHÔNG làm mức này).
 function chuan(str) {
-  return String(str || '').trim();
+  return String(str || '').trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
 // Khớp đúng CẢ 3 thông tin loại/kích thước/màu sắc — đây là "mã định danh" của 1 loại phôi, không
