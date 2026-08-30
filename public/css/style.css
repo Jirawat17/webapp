@@ -337,6 +337,11 @@ select.chon-trang-thai-tieu-cuc { border-color: var(--color-warning-text); color
 
 .anh-mau { width: 100%; max-height: 320px; object-fit: cover; border-radius: var(--radius-md); margin-bottom: var(--space-3); background: var(--color-border); }
 
+/* Gộp tối đa 5 link ảnh (PNG/Mockup/file thêu/đã sản xuất/đóng gói) vào 1 hàng gọn, tự xuống dòng
+   khi hết chỗ — thay cho cách cũ mỗi link 1 dòng riêng, chiếm nhiều chiều cao hơn cần thiết. */
+.danh-sach-link-anh { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 4px 0 10px; font-size: 0.85rem; }
+.danh-sach-link-anh a { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+
 .info-table { width: 100%; border-collapse: collapse; background: var(--color-surface); border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-sm); border: 1px solid var(--color-border); }
 .info-table td, .info-table th { padding: 12px 14px; border-bottom: 1px solid var(--color-border); text-align: left; font-size: 0.95rem; }
 .info-table td:first-child, .info-table th:first-child { color: var(--color-text-muted); width: 42%; }

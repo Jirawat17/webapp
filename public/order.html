@@ -86,14 +86,14 @@ async function taiChiTiet() {
     <div class="chi-tiet-layout">
       <div>
         ${anh ? `<img class="anh-mau" src="${escapeHtml(anh)}" alt="Ảnh mẫu/mockup" loading="lazy" onerror="this.remove()">` : ''}
-        ${user.vaiTro !== 'nguoi_lay_phoi' && (don.DUONG_DAN_URL || don.MOCKUP) ? `
-        <div style="display:flex;gap:14px;margin:4px 0 8px;font-size:0.85rem">
-          ${don.DUONG_DAN_URL ? `<a href="${escapeHtml(don.DUONG_DAN_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh PNG gốc</a>` : ''}
-          ${don.MOCKUP ? `<a href="${escapeHtml(don.MOCKUP)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh Mockup gốc</a>` : ''}
+        ${(user.vaiTro !== 'nguoi_lay_phoi' && (don.DUONG_DAN_URL || don.MOCKUP)) || don.Anh_File_Theu_URL || don.Anh_Da_San_Xuat_URL || don.Anh_Dong_Goi_URL ? `
+        <div class="danh-sach-link-anh">
+          ${user.vaiTro !== 'nguoi_lay_phoi' && don.DUONG_DAN_URL ? `<a href="${escapeHtml(don.DUONG_DAN_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh PNG</a>` : ''}
+          ${user.vaiTro !== 'nguoi_lay_phoi' && don.MOCKUP ? `<a href="${escapeHtml(don.MOCKUP)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh Mockup</a>` : ''}
+          ${don.Anh_File_Theu_URL ? `<a href="${escapeHtml(don.Anh_File_Theu_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh file thêu</a>` : ''}
+          ${don.Anh_Da_San_Xuat_URL ? `<a href="${escapeHtml(don.Anh_Da_San_Xuat_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh đã sản xuất</a>` : ''}
+          ${don.Anh_Dong_Goi_URL ? `<a href="${escapeHtml(don.Anh_Dong_Goi_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh đóng gói</a>` : ''}
         </div>` : ''}
-        ${don.Anh_File_Theu_URL ? `<div><a href="${escapeHtml(don.Anh_File_Theu_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Xem ảnh file thêu</a></div>` : ''}
-        ${don.Anh_Da_San_Xuat_URL ? `<div><a href="${escapeHtml(don.Anh_Da_San_Xuat_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Xem ảnh đã sản xuất</a></div>` : ''}
-        ${don.Anh_Dong_Goi_URL ? `<div><a href="${escapeHtml(don.Anh_Dong_Goi_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Xem ảnh đóng gói</a></div>` : ''}
         <table class="info-table">
           <tr><td>Mã đơn</td><td>${escapeHtml(don.STT_Key)}</td></tr>
           <tr><td>Mã đơn (sàn TMĐT)</td><td>${escapeHtml(don.MA_DON_HANG_ORDERID || '')}</td></tr>
