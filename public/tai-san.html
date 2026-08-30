@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quản lý tài sản — Xưởng Thêu</title>
+<link rel="stylesheet" href="/css/style.css?v=20260826a">
+<script src="/js/theme.js?v=20260826a"></script>
+</head>
+<body>
+<div id="nav"></div>
+<div class="page">
+  <h2>Quản lý tài sản — Kho phôi</h2>
+
+  <form id="form-nhap-kho" class="inline-form">
+    <div class="truong">
+      <label for="phoi-loai">Loại</label>
+      <input id="phoi-loai" required>
+    </div>
+    <div class="truong">
+      <label for="phoi-kich-thuoc">Kích thước</label>
+      <input id="phoi-kich-thuoc" required>
+    </div>
+    <div class="truong">
+      <label for="phoi-mau-sac">Màu sắc</label>
+      <input id="phoi-mau-sac" required>
+    </div>
+    <div class="truong">
+      <label for="phoi-so-luong">Số lượng nhập</label>
+      <input id="phoi-so-luong" type="number" min="1" step="1" required>
+    </div>
+    <div class="truong">
+      <label for="phoi-ghi-chu">Ghi chú (không bắt buộc)</label>
+      <input id="phoi-ghi-chu">
+    </div>
+    <button type="submit" class="btn-hanh-dong">Nhập kho</button>
+  </form>
+
+  <h3>Tồn kho hiện tại</h3>
+  <table id="bang-ton-kho" class="info-table"></table>
+
+  <h3>Lịch sử nhập kho gần đây</h3>
+  <table id="bang-lich-su-nhap" class="info-table"></table>
+</div>
+
+<script src="/js/icons.js?v=20260826a"></script>
+<script src="/js/api.js?v=20260826a"></script>
+<script>
+(async () => {
+  const user = await requireLoginOrRedirect();
+  if (!user) return;
+  renderNav(user, 'tai-san');
+  await Promise.all([taiTonKho(), taiLichSuNhap()]);
+})();
+
+document.getElementById('form-nhap-kho').onsubmit = async (e) => {
+  e.preventDefault();
+  const loai = document.getElementById('phoi-loai').value.trim();
+  const kichThuoc = document.getElementById('phoi-kich-thuoc').value.trim();
+  const mauSac = document.getElementById('phoi-mau-sac').value.trim();
+  const soLuong = document.getElementById('phoi-so-luong').value;
+  const ghiChu = document.getElementById('phoi-ghi-chu').value.trim();
+
+  const nutSubmit = e.target.querySelector('button[type="submit"]');
+  nutSubmit.disabled = true;
+  try {
+    await apiFetch('/tai-san/nhap-kho', {
+      method: 'POST',
+      body: JSON.stringify({ loai, kichThuoc, mauSac, soLuong, ghiChu }),
+    });
+    e.target.reset();
+    await Promise.all([taiTonKho(), taiLichSuNhap()]);
+  } catch (err) {
+    alert(err.message);
+  } finally {
+    nutSubmit.disabled = false;
+  }
+};
+
+async function taiTonKho() {
+  const bang = document.getElementById('bang-ton-kho');
+  bang.innerHTML = '<tr><td>Đang tải...</td></tr>';
+
+  let list;
+  try {
+    list = await apiFetch('/tai-san/ton-kho');
+  } catch (e) {
+    bang.innerHTML = `<tr><td>Không tải được tồn kho: ${escapeHtml(e.message)}</td></tr>`;
+    return;
+  }
+
+  if (list.length === 0) {
+    bang.innerHTML = '<tr><td>Chưa có dữ liệu tồn kho — hãy nhập kho ít nhất 1 lần.</td></tr>';
+    return;
+  }
+
+  // Đơn thiếu phôi (tồn âm/hết) hiện lên đầu để dễ thấy cần nhập thêm ngay
+  const daSap = [...list].sort((a, b) => a.TON_HIEN_TAI - b.TON_HIEN_TAI);
+
+  bang.innerHTML = `
+    <tr><th>Loại</th><th>Kích thước</th><th>Màu sắc</th><th>Tồn hiện tại</th><th>Tình trạng</th></tr>
+    ${daSap.map(t => `
+      <tr>
+        <td>${escapeHtml(t.LOAI)}</td>
+        <td>${escapeHtml(t.KICH_THUOC)}</td>
+        <td>${escapeHtml(t.MAU_SAC)}</td>
+        <td>${t.TON_HIEN_TAI}</td>
+        <td><span class="badge ${t.TON_HIEN_TAI <= 0 ? 'trang-thai-danger' : 'trang-thai-success'}">
+          ${t.TON_HIEN_TAI <= 0 ? 'Hết phôi' : 'Còn phôi'}
+        </span></td>
+      </tr>`).join('')}`;
+}
+
+async function taiLichSuNhap() {
+  const bang = document.getElementById('bang-lich-su-nhap');
+  bang.innerHTML = '<tr><td>Đang tải...</td></tr>';
+
+  let list;
+  try {
+    list = await apiFetch('/tai-san/lich-su-nhap');
+  } catch (e) {
+    bang.innerHTML = `<tr><td>Không tải được lịch sử: ${escapeHtml(e.message)}</td></tr>`;
+    return;
+  }
+
+  if (list.length === 0) {
+    bang.innerHTML = '<tr><td>Chưa có lần nhập kho nào.</td></tr>';
+    return;
+  }
+
+  bang.innerHTML = `
+    <tr><th>Thời gian</th><th>Loại</th><th>Kích thước</th><th>Màu sắc</th><th>Số lượng nhập</th><th>Người nhập</th><th>Ghi chú</th></tr>
+    ${list.map(l => `
+      <tr>
+        <td>${escapeHtml(new Date(l.ThoiGian).toLocaleString('vi-VN'))}</td>
+        <td>${escapeHtml(l.LOAI)}</td>
+        <td>${escapeHtml(l.KICH_THUOC)}</td>
+        <td>${escapeHtml(l.MAU_SAC)}</td>
+        <td>${escapeHtml(l.SoLuongNhap)}</td>
+        <td>${escapeHtml(l.NguoiNhap)}</td>
+        <td>${escapeHtml(l.GhiChu)}</td>
+      </tr>`).join('')}`;
+}
+</script>
+</body>
+</html>

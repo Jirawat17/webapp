@@ -37,6 +37,7 @@ const ICONS = {
   navReports: '<path d="M6.3 2.5a1 1 0 0 0-1 1V20a1 1 0 0 0 1 1h5"/><path d="M6.3 2.5h6.6l4.1 4.1v3.6"/><polyline points="12.9 2.5 12.9 6.6 17 6.6"/><line x1="8.5" y1="11" x2="12" y2="11"/><line x1="8.5" y1="14" x2="11" y2="14"/><circle cx="16.3" cy="16.3" r="3"/><line x1="18.5" y1="18.5" x2="21" y2="21"/>',
   navUsers: '<circle cx="9" cy="7.5" r="3"/><path d="M3.5 20c0-3.6 2.9-6.5 5.5-6.5s5.5 2.9 5.5 6.5"/><circle cx="17.5" cy="8.5" r="2.3"/><path d="M15.2 13.7c2.6.3 4.6 2.5 5 5.3"/>',
   navSettings: '<circle cx="12" cy="12" r="3.2"/><line x1="12" y1="3" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="21"/><line x1="3" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="21" y2="12"/><line x1="5.6" y1="5.6" x2="7.8" y2="7.8"/><line x1="16.2" y1="16.2" x2="18.4" y2="18.4"/><line x1="5.6" y1="18.4" x2="7.8" y2="16.2"/><line x1="16.2" y1="7.8" x2="18.4" y2="5.6"/>',
+  navAssets: '<path d="M12 3 4 7v10l8 4 8-4V7l-8-4z"/><path d="M4 7l8 4 8-4"/><line x1="12" y1="11" x2="12" y2="21"/>',
   // Mũi tên quay lùi (undo/reset) — dùng cho các nút đưa trạng thái về lại "Chưa..." để phân biệt
   // rõ với nút "Đã..." (dùng icon 'check'), tránh bấm nhầm.
   undo: '<polyline points="3 4 3 9 8 9"/><path d="M4.7 15a8 8 0 1 0 1.9-8.6L3 9"/>',

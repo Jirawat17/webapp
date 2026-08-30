@@ -1,5 +1,6 @@
 const { readTab, readTabCached, updateCells } = require('./sheetsService');
 const { layBanDoTenKhachHang } = require('./khachHangService');
+const taiSanService = require('./taiSanService');
 const { chiSoTinhTrang, TINH_TRANG_VALUES, TRANG_THAI_PHOI_VALUES, TRANG_THAI_VE_FILE_VALUES } = require('../data/pipelineTinhTrang');
 
 const TAB = 'Don_Hang_ALL';
@@ -110,7 +111,7 @@ function tinhTinhTrangTuDong(rowHienTai, updates) {
   return updates;
 }
 
-async function update(sttKey, updates) {
+async function update(sttKey, updates, user) {
   const { headers, row } = await getByKey(sttKey, { fresh: true }); // luôn đọc thật trước khi ghi
   if (!row) throw new Error('Không tìm thấy đơn hàng: ' + sttKey);
 
@@ -121,6 +122,19 @@ async function update(sttKey, updates) {
   kiemTraTinhHopLy(row, updatesDaTinh); // kiểm tra SAU khi đã tính tự động, để không báo nhầm khi chính việc tự động hoá làm cho tổ hợp trở nên hợp lệ
 
   await updateCells(TAB, headers, row._row, updatesDaTinh); // tự xoá cache của tab sau khi ghi (xem sheetsService)
+
+  // Trừ kho phôi (tab Ton_Kho_Phoi) khi đơn VỪA chuyển sang "Đã lấy phôi" — không hoàn kho khi chuyển
+  // ngược lại (xem taiSanService.truKhoTheoDon). Chạy SAU khi ghi Sheet đơn hàng đã thành công; lỗi ở
+  // đây (vd chưa tạo tab Ton_Kho_Phoi) chỉ log ra console, KHÔNG được làm hỏng việc cập nhật đơn hàng
+  // — kho phôi chỉ mang tính theo dõi, không phải điều kiện chặn thao tác lấy phôi thực tế.
+  if (updatesDaTinh.TRANG_THAI_PHOI === 'Đã lấy phôi' && row.TRANG_THAI_PHOI !== 'Đã lấy phôi') {
+    try {
+      await taiSanService.truKhoTheoDon(row, user);
+    } catch (err) {
+      console.error('[Orders] Lỗi trừ kho phôi:', err.message);
+    }
+  }
+
   return { ...row, ...updatesDaTinh };
 }
 

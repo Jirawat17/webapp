@@ -59,6 +59,7 @@ function renderNav(user, active) {
       { href: '/orders.html', label: 'Đơn hàng', icon: 'navOrders', key: 'orders' },
       { href: '/scan.html', label: 'Quét QR', icon: 'navScan', key: 'scan' },
       { href: '/dashboard.html', label: 'Thống kê', icon: 'navChart', key: 'dashboard' },
+      { href: '/tai-san.html', label: 'Tài sản', icon: 'navAssets', key: 'tai-san' },
       { href: '/chatbot.html', label: 'Trợ lý', icon: 'navSupport', key: 'chatbot' },
       { href: '/reports.html', label: 'Báo cáo', icon: 'navReports', key: 'reports' },
     ];

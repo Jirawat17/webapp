@@ -24,6 +24,7 @@ app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/canh-bao', require('./routes/canhBao'));
 app.use('/api/chatbot', require('./routes/chatbot'));
 app.use('/api/reports', require('./routes/reports'));
+app.use('/api/tai-san', require('./routes/taiSan'));
 
 app.use(express.static(path.join(__dirname, 'public')));
 
