@@ -72,8 +72,8 @@ const MUC_CANH_BAO_THU_TU = { DO: 3, CAM: 2, VANG: 1 };
 function sapXepDon(list, kieu) {
   const daSap = [...list];
   switch (kieu) {
-    case 'ngay_moi_nhat':
-      return daSap.sort((a, b) => -soSanhNgayTang(a, b));
+    case 'ngay_cu_nhat':
+      return daSap.sort(soSanhNgayTang);
     case 'canh_bao':
       return daSap.sort((a, b) => {
         const chenhLech = (MUC_CANH_BAO_THU_TU[b.CanhBao] || 0) - (MUC_CANH_BAO_THU_TU[a.CanhBao] || 0);
@@ -90,7 +90,7 @@ function sapXepDon(list, kieu) {
         return chenhLech !== 0 ? chenhLech : soSanhNgayTang(a, b);
       });
     default:
-      return daSap.sort(soSanhNgayTang);
+      return daSap.sort((a, b) => -soSanhNgayTang(a, b));
   }
 }
 
