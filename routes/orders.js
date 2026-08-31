@@ -57,15 +57,65 @@ function locDonDangChayMayTheoNguoiVanHanh(rows, user) {
   });
 }
 
+// So sánh tăng dần theo NGAY_LEN_DON — dùng làm tiêu chí phụ (tie-break) cho mọi kiểu sắp xếp, để
+// thứ tự trong 1 nhóm bằng nhau (vd cùng mức cảnh báo) vẫn ổn định và có ý nghĩa (đơn chờ lâu hơn lên trước).
+function soSanhNgayTang(a, b) {
+  return (parseNgay(a.NGAY_LEN_DON) || 0) - (parseNgay(b.NGAY_LEN_DON) || 0);
+}
+
+// Thứ tự mức cảnh báo khi sắp theo "canh_bao" — càng khẩn cấp càng lên đầu. Không nằm trong map coi
+// như "không cảnh báo", xếp cuối cùng.
+const MUC_CANH_BAO_THU_TU = { DO: 3, CAM: 2, VANG: 1 };
+
+// Sắp xếp danh sách đơn theo lựa chọn của người dùng (nút "Sắp xếp" ở trang Đơn hàng) — mặc định
+// (không truyền hoặc giá trị lạ) giữ đúng hành vi cũ: cũ nhất lên đầu theo NGAY_LEN_DON.
+function sapXepDon(list, kieu) {
+  const daSap = [...list];
+  switch (kieu) {
+    case 'ngay_moi_nhat':
+      return daSap.sort((a, b) => -soSanhNgayTang(a, b));
+    case 'canh_bao':
+      return daSap.sort((a, b) => {
+        const chenhLech = (MUC_CANH_BAO_THU_TU[b.CanhBao] || 0) - (MUC_CANH_BAO_THU_TU[a.CanhBao] || 0);
+        return chenhLech !== 0 ? chenhLech : soSanhNgayTang(a, b);
+      });
+    case 'so_luong':
+      return daSap.sort((a, b) => {
+        const chenhLech = (Number(b.SO_LUONG) || 0) - (Number(a.SO_LUONG) || 0);
+        return chenhLech !== 0 ? chenhLech : soSanhNgayTang(a, b);
+      });
+    case 'khach_hang':
+      return daSap.sort((a, b) => {
+        const chenhLech = String(a.TenKhachHang || '').localeCompare(String(b.TenKhachHang || ''), 'vi');
+        return chenhLech !== 0 ? chenhLech : soSanhNgayTang(a, b);
+      });
+    default:
+      return daSap.sort(soSanhNgayTang);
+  }
+}
+
 // Danh sách đơn hàng — tự lọc theo vai trò, có thể lọc thêm qua query string
 router.get('/', async (req, res) => {
   const { rows } = await orderService.getAll();
   let list = orderService.filterForRole(rows, req.session.user);
 
-  const { trangThai, trangThaiPhoi, trangThaiVeFile, kh, tuNgay, denNgay } = req.query;
+  // Gắn CanhBao/TenKhachHang SỚM (trước khi lọc/sắp xếp) — cần có CanhBao để lọc theo "canhBao" và
+  // sắp theo "canh_bao" bên dưới; đọc dữ liệu để gắn không phụ thuộc số dòng còn lại sau lọc nên
+  // gắn sớm hay muộn cũng cùng 1 chi phí, không tốn thêm gì.
+  list = await lamGiauDon(list);
+
+  const {
+    trangThai, trangThaiPhoi, trangThaiVeFile, kh, tuNgay, denNgay,
+    loai, kichThuoc, mauSac, hangVanChuyen, canhBao, sapXep,
+  } = req.query;
   if (trangThai) list = list.filter(r => r.TINH_TRANG === trangThai);
   if (trangThaiPhoi) list = list.filter(r => r.TRANG_THAI_PHOI === trangThaiPhoi);
   if (trangThaiVeFile) list = list.filter(r => r.TRANG_THAI_VE_FILE === trangThaiVeFile);
+  if (loai) list = list.filter(r => r.LOAI === loai);
+  if (kichThuoc) list = list.filter(r => r.KICH_THUOC === kichThuoc);
+  if (mauSac) list = list.filter(r => r.MAU_SAC === mauSac);
+  if (hangVanChuyen) list = list.filter(r => r.HANG_VAN_CHUYEN === hangVanChuyen);
+  if (canhBao) list = list.filter(r => r.CanhBao === canhBao);
   if (kh) {
     const tuKhoa = kh.toLowerCase();
     list = list.filter(r =>
@@ -83,10 +133,7 @@ router.get('/', async (req, res) => {
     });
   }
 
-  // Không có cột deadline riêng — sắp theo ngày lên đơn, đơn cũ nhất (tồn lâu nhất) lên đầu
-  list.sort((a, b) => (parseNgay(a.NGAY_LEN_DON) || 0) - (parseNgay(b.NGAY_LEN_DON) || 0));
-
-  list = await lamGiauDon(list);
+  list = sapXepDon(list, sapXep);
   list = locDonDangChayMayTheoNguoiVanHanh(list, req.session.user);
   res.json(list);
 });

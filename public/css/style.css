@@ -226,14 +226,20 @@ body.trang-dang-nhap {
 /* ============================================================
    DANH SÁCH ĐƠN HÀNG — lưới tự co giãn theo bề rộng màn hình
    ============================================================ */
-.filters { display: flex; gap: var(--space-2); margin-bottom: var(--space-4); flex-wrap: wrap; }
-.filters select, .filters input {
-  padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--color-border);
-  font-size: 15px; min-height: var(--tap-min); background: var(--color-surface); color: var(--color-text);
-  font-family: inherit;
+/* Nút "Lọc"/"Sắp xếp" (bổ sung 31/08/2026) — thay cho hàng bộ lọc luôn hiện sẵn trước đây, đỡ chật
+   giao diện nhất là trên điện thoại. Bấm mở đúng 1 trong 2 panel xổ xuống bên dưới (xem batTatPanel
+   trong orders.html), nút đang mở tô màu đậm để biết panel nào đang hiện. */
+.thanh-cong-cu-danh-sach { display: flex; gap: var(--space-2); margin-bottom: var(--space-2); flex-wrap: wrap; }
+.thanh-cong-cu-danh-sach .btn-hanh-dong.dang-mo,
+.thanh-cong-cu-danh-sach .btn-hanh-dong.dang-mo:hover {
+  background: var(--color-primary); color: white; border-color: var(--color-primary);
 }
-.filters input { flex: 1; min-width: 180px; }
-.filters input[type="date"] { flex: 0 1 160px; min-width: 150px; }
+.panel-dieu-khien {
+  background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  padding: var(--space-3); margin-bottom: var(--space-3); box-shadow: var(--shadow-sm);
+}
+.panel-dieu-khien .inline-form { margin-bottom: var(--space-2); }
+.panel-dieu-khien .inline-form:last-child { margin-bottom: 0; }
 
 .in-nhanh-thanh { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-3); }
 .in-nhanh-thanh .btn-hanh-dong { font-size: 0.85rem; padding: 10px 14px; }

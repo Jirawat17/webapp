@@ -15,6 +15,7 @@ const ICONS = {
   alert: '<path d="M12 3.2 2.5 20h19L12 3.2z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><circle cx="12" cy="16.6" r="0.9" fill="currentColor" stroke="none"/>',
   package: '<path d="M12 3 4 7v10l8 4 8-4V7l-8-4z"/><path d="M4 7l8 4 8-4"/><line x1="12" y1="11" x2="12" y2="21"/>',
   filter: '<path d="M4 5h16l-6.5 7.5V19l-3 1.5v-8L4 5z"/>',
+  sort: '<path d="M7 4v14"/><polyline points="4 15 7 18 10 15"/><path d="M17 20V6"/><polyline points="20 9 17 6 14 9"/>',
   download: '<path d="M12 3v11"/><polyline points="7.5 10.5 12 15 16.5 10.5"/><path d="M4.5 19.5h15"/>',
   file: '<path d="M6.5 2.5h8l5 5v13.5a1 1 0 0 1-1 1h-12a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1z"/><polyline points="14.5 2.5 14.5 7.5 19.5 7.5"/>',
   logo: '<circle cx="12" cy="12" r="9.5" fill="currentColor" stroke="none"/><path d="M7.2 12c1.6-2.4 3.2-2.4 4.8 0s3.2 2.4 4.8 0" stroke="white" stroke-width="1.8"/>',
