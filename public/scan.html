@@ -24,7 +24,7 @@
     <button id="mode-photo-san-xuat"></button>
     <button id="mode-photo-dong-goi"></button>
   </div>
-  <select id="mode-select" class="mode-select-mobile"></select>
+  <select id="mode-select" class="mode-select"></select>
 
   <div id="chon-kich-ban-wrap" style="display:none"></div>
 
@@ -100,13 +100,13 @@ const CAU_HINH_ANH = {
   photo_san_xuat: {
     moc: 'da_san_xuat',
     nhanTab: 'Chụp ảnh đã sản xuất',
-    moTa: 'Chụp sản phẩm vừa chạy máy xong, tem QR rõ nét. (Yêu cầu: Đang chạy máy → Đã sản xuất)',
+    moTa: 'Đơn phải đang ở "Đang chạy máy".',
     yeuCau: 'Đang chạy máy', chuyenSang: 'Đã sản xuất',
   },
   photo_dong_goi: {
     moc: 'dong_goi',
     nhanTab: 'Chụp ảnh đóng gói',
-    moTa: 'Chụp sản phẩm sau khi đóng gói xong, tem QR rõ nét. (Yêu cầu: Đã sản xuất → Đã đóng gói)',
+    moTa: 'Đơn phải đang ở "Đã sản xuất".',
     yeuCau: 'Đã sản xuất', chuyenSang: 'Đã đóng gói',
   },
 };
@@ -120,8 +120,9 @@ document.getElementById('btn-dung-quet').innerHTML = icon('stop', { size: 40 }) 
 document.getElementById('btn-chup-anh').innerHTML = icon('camera', { size: 40 }) + ' Chụp ảnh';
 capNhatNutFlash();
 
-// Dropdown thay cho 4 nút trên điện thoại (xem .mode-select-mobile / .scan-mode trong style.css)
-// — cùng nội dung, chỉ khác cách chọn để đỡ chiếm 2 hàng màn hình hẹp.
+// Dropdown là cách DUY NHẤT để chọn chế độ (đã bỏ hẳn menu 4 nút — xem .mode-select / .scan-mode
+// trong style.css). 4 nút cũ vẫn còn trong DOM (ẩn) vì JS phía dưới vẫn toggle class active lên
+// chúng — vô hại, không cần dọn vì không hiển thị.
 const MODE_OPTIONS = [
   { value: 'lookup', label: 'Tra cứu' },
   { value: 'batch', label: 'Quét kịch bản' },

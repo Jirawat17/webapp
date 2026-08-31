@@ -393,18 +393,17 @@ select.chon-trang-thai-tieu-cuc { border-color: var(--color-warning-text); color
 /* ============================================================
    QUÉT QR
    ============================================================ */
-/* Trên điện thoại, 4 nút (dù xếp lưới 2x2) vẫn chiếm nguyên 2 hàng — thay bằng 1 dropdown gọn
-   (.mode-select-mobile). Từ 640px trở lên đủ chỗ cho 1 hàng 4 nút như cũ nên giữ nguyên .scan-mode. */
+/* Đã bỏ hẳn menu 4 nút cố định (mọi kích thước màn hình) — chỉ còn .mode-select bên dưới. */
 .scan-mode { display: none; }
-@media (min-width: 640px) { .scan-mode { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-2); margin-bottom: var(--space-3); } }
 
-.mode-select-mobile {
+/* To hơn ~30% so với dropdown gốc (min-height 46px/font 1rem/padding 12px 14px) để dễ bấm hơn
+   khi đây là cách chọn chế độ DUY NHẤT (không còn 4 nút song song để dự phòng). */
+.mode-select {
   display: block; width: 100%; margin-bottom: var(--space-3);
-  padding: 12px 14px; border-radius: var(--radius-md); border: 1.5px solid var(--color-border);
+  padding: 16px 18px; border-radius: var(--radius-md); border: 1.5px solid var(--color-border);
   background: var(--color-surface); color: var(--color-text); font-family: inherit;
-  font-size: 1rem; font-weight: 700; min-height: var(--tap-min);
+  font-size: 1.3rem; font-weight: 700; min-height: 60px;
 }
-@media (min-width: 640px) { .mode-select-mobile { display: none; } }
 .scan-mode button {
   display: flex; align-items: center; justify-content: center; gap: 8px;
   padding: 12px; border-radius: var(--radius-md); border: 1.5px solid var(--color-border);
