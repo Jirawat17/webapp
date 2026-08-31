@@ -71,7 +71,7 @@ function renderNav(user, active) {
     // "Đơn của tôi" (bổ sung 31/08/2026, theo yêu cầu người dùng) — chỉ san_xuat mới có khái niệm
     // "đơn tôi đang chạy máy", nên chèn ngay sau "Đơn hàng" thay vì thêm cho mọi vai trò.
     if (user.vaiTro === 'san_xuat') {
-      links.splice(1, 0, { href: '/my-orders.html', label: 'Đơn của tôi', icon: 'navMyOrders', key: 'my-orders' });
+      links.splice(1, 0, { href: '/my-orders.html', label: 'Đơn của tôi · ' + escapeHtml(user.ten), icon: 'navMyOrders', key: 'my-orders' });
     }
     if (user.vaiTro === 'admin') {
       links.push({ href: '/users.html', label: 'Nhân viên', icon: 'navUsers', key: 'users' });

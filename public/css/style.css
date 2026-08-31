@@ -254,9 +254,6 @@ body.trang-dang-nhap {
   #panel-loc .inline-form #btn-xoa-loc { flex: 0 0 auto; white-space: nowrap; }
 }
 
-.in-nhanh-thanh { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-3); }
-.in-nhanh-thanh .btn-hanh-dong { font-size: 0.85rem; padding: 10px 14px; }
-
 .order-list { display: grid; grid-template-columns: 1fr; gap: var(--space-3); }
 @media (min-width: 640px)  { .order-list { grid-template-columns: repeat(2, 1fr); } }
 @media (min-width: 1024px) { .order-list { grid-template-columns: repeat(3, 1fr); } }

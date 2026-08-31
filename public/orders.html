@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=20260831g">
-<script src="/js/theme.js?v=20260831g"></script>
+<link rel="stylesheet" href="/css/style.css?v=20260831h">
+<script src="/js/theme.js?v=20260831h"></script>
 </head>
 <body>
 <div id="nav"></div>
@@ -15,6 +15,9 @@
   <div class="thanh-cong-cu-danh-sach">
     <button type="button" class="btn-hanh-dong phu" id="btn-mo-loc" onclick="batTatPanel('panel-loc')"></button>
     <button type="button" class="btn-hanh-dong phu" id="btn-mo-sap-xep" onclick="batTatPanel('panel-sap-xep')"></button>
+    <button type="button" class="btn-hanh-dong phu" id="btn-in-phoi-ao" onclick="inNhanh('phoi_ao_gop', this)"></button>
+    <button type="button" class="btn-hanh-dong phu" id="btn-in-don-ao" onclick="inNhanh('don_can_in', this)"></button>
+    <button type="button" class="btn-hanh-dong phu" id="btn-in-tracking" onclick="inNhanh('tracking', this)"></button>
   </div>
 
   <div id="panel-loc" class="panel-dieu-khien" style="display:none">
@@ -95,12 +98,6 @@
     </div>
   </div>
 
-  <div class="in-nhanh-thanh">
-    <button type="button" class="btn-hanh-dong phu" id="btn-in-phoi-ao" onclick="inNhanh('phoi_ao_gop', this)"></button>
-    <button type="button" class="btn-hanh-dong phu" id="btn-in-don-ao" onclick="inNhanh('don_can_in', this)"></button>
-    <button type="button" class="btn-hanh-dong phu" id="btn-in-tracking" onclick="inNhanh('tracking', this)"></button>
-  </div>
-
   <label class="chon-tat-ca-hang">
     <input type="checkbox" id="chon-tat-ca" onchange="chonTatCa(this.checked)">
     Chọn tất cả đơn đang hiển thị
@@ -124,8 +121,8 @@
   <button class="btn-hanh-dong phu" onclick="boChonTatCaDon()">Bỏ chọn</button>
 </div>
 
-<script src="/js/icons.js?v=20260831g"></script>
-<script src="/js/api.js?v=20260831g"></script>
+<script src="/js/icons.js?v=20260831h"></script>
+<script src="/js/api.js?v=20260831h"></script>
 <script>
 const NHAN_CANH_BAO = { VANG: 'Vàng · 3 ngày', CAM: 'Cam · 5 ngày', DO: 'Đỏ · 7 ngày' };
 
