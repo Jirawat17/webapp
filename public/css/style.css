@@ -571,6 +571,14 @@ select.chon-trang-thai-tieu-cuc { border-color: var(--color-warning-text); color
 .chart-card canvas { max-height: 280px; }
 
 /* ============================================================
+   HOẠT ĐỘNG CỦA TÔI
+   ============================================================ */
+.thong-ke-nhanh { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-3); margin-bottom: var(--space-4); }
+.the-nhanh { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-4); box-shadow: var(--shadow-sm); text-align: center; }
+.the-nhanh .so { font-size: 2rem; font-weight: 800; color: var(--color-primary); font-variant-numeric: tabular-nums; }
+.the-nhanh .nhan { display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 0.85rem; color: var(--color-text-muted); margin-top: 4px; }
+
+/* ============================================================
    BÁO CÁO (xuất Excel/PDF)
    ============================================================ */
 .bao-cao-form { background: var(--color-surface); padding: var(--space-4); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); border: 1px solid var(--color-border); display: grid; gap: var(--space-3); max-width: 520px; }

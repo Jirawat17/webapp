@@ -58,6 +58,9 @@ function renderNav(user, active) {
     links = [
       { href: '/scan.html', label: 'Quét QR', icon: 'navScan', key: 'scan' },
       { href: '/tai-san.html', label: 'SL Phôi', icon: 'navAssets', key: 'tai-san' },
+      // Ngoại lệ thứ 3 cho nguoi_lay_phoi (sau Quét QR, SL Phôi) — xem lại hoạt động CHÍNH MÌNH
+      // không phải xem đơn hàng nói chung nên không phá chính sách "chỉ thấy Quét QR" ban đầu.
+      { href: '/hoat-dong.html', label: 'Hoạt động của tôi', icon: 'navActivity', key: 'hoat-dong' },
     ];
   } else {
     links = [
@@ -78,6 +81,7 @@ function renderNav(user, active) {
     if (user.vaiTro === 'admin') {
       links.push({ href: '/users.html', label: 'Nhân viên', icon: 'navUsers', key: 'users' });
     }
+    links.push({ href: '/hoat-dong.html', label: 'Hoạt động của tôi', icon: 'navActivity', key: 'hoat-dong' });
     links.push({ href: '/settings.html', label: 'Thiết lập', icon: 'navSettings', key: 'settings' });
   }
 

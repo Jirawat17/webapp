@@ -45,6 +45,8 @@ const ICONS = {
   // Mục tiêu/tiêu điểm — dùng riêng cho menu "Đơn của tôi" (san_xuat), gợi ý "tập trung vào việc
   // đang dở" thay vì xem toàn bộ đơn.
   navMyOrders: '<circle cx="12" cy="12" r="8.3"/><circle cx="12" cy="12" r="4.4"/><circle cx="12" cy="12" r="0.9" fill="currentColor" stroke="none"/>',
+  // Đồng hồ + kim chỉ giờ — dùng riêng cho menu "Hoạt động của tôi" (nhật ký hoạt động cá nhân).
+  navActivity: '<circle cx="12" cy="12" r="8.5"/><polyline points="12 7.5 12 12 15.5 14"/>',
 };
 
 function icon(name, opts) {

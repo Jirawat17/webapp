@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hoạt động của tôi — Xưởng Thêu</title>
+<link rel="stylesheet" href="/css/style.css?v=20260831j">
+<script src="/js/theme.js?v=20260831j"></script>
+</head>
+<body>
+<div id="nav"></div>
+<div class="page">
+  <h2>Hoạt động của tôi</h2>
+  <p style="color:var(--color-text-muted);margin:-8px 0 20px">Nhật ký thao tác của chính bạn — quét QR, đổi trạng thái, upload ảnh — để tự đối soát cuối ngày/tuần.</p>
+
+  <div class="thanh-cong-cu-danh-sach" id="thanh-chon-ky">
+    <button type="button" class="btn-hanh-dong phu dang-mo" data-ky="hom_nay">Hôm nay</button>
+    <button type="button" class="btn-hanh-dong phu" data-ky="tuan_nay">Tuần này</button>
+    <button type="button" class="btn-hanh-dong phu" data-ky="thang_nay">Tháng này</button>
+    <button type="button" class="btn-hanh-dong phu" data-ky="toan_bo">Toàn bộ</button>
+    <button type="button" class="btn-hanh-dong phu" data-ky="tuy_chon">Tuỳ chọn...</button>
+  </div>
+
+  <div id="panel-khoang-ngay" class="panel-dieu-khien" style="display:none">
+    <div class="inline-form">
+      <div class="truong">
+        <label for="hd-tu-ngay">Từ ngày</label>
+        <input type="date" id="hd-tu-ngay">
+      </div>
+      <div class="truong">
+        <label for="hd-den-ngay">Đến ngày</label>
+        <input type="date" id="hd-den-ngay">
+      </div>
+      <button type="button" class="btn-hanh-dong" id="btn-ap-dung-khoang">Áp dụng</button>
+    </div>
+  </div>
+
+  <div id="thong-ke-nhanh" class="thong-ke-nhanh">Đang tải...</div>
+
+  <div>
+    <h3>Lượt quét QR thành công</h3>
+    <div id="ds-quet" class="timeline"></div>
+  </div>
+
+  <div>
+    <h3>Đổi trạng thái đơn</h3>
+    <div id="ds-doi-trang-thai" class="timeline"></div>
+  </div>
+
+  <div>
+    <h3>Ảnh đã upload</h3>
+    <div id="ds-upload-anh" class="timeline"></div>
+  </div>
+</div>
+
+<script src="/js/icons.js?v=20260831j"></script>
+<script src="/js/api.js?v=20260831j"></script>
+<script>
+let kyHienTai = 'hom_nay';
+
+const NHAN_COT_TRANG_THAI = { TINH_TRANG: 'Trạng thái chung', TRANG_THAI_PHOI: 'Phôi', TRANG_THAI_VE_FILE: 'Vẽ file' };
+const NHAN_MOC_ANH = { mau: 'Ảnh mẫu (PNG)', mockup: 'Ảnh Mockup', ve_file: 'Ảnh file thêu', da_san_xuat: 'Ảnh đã sản xuất', dong_goi: 'Ảnh đóng gói' };
+
+(async () => {
+  const user = await requireLoginOrRedirect();
+  if (!user) return;
+  renderNav(user, 'hoat-dong');
+
+  document.querySelectorAll('#thanh-chon-ky button').forEach(btn => {
+    btn.onclick = () => {
+      kyHienTai = btn.dataset.ky;
+      document.querySelectorAll('#thanh-chon-ky button').forEach(b => b.classList.toggle('dang-mo', b === btn));
+      document.getElementById('panel-khoang-ngay').style.display = kyHienTai === 'tuy_chon' ? 'block' : 'none';
+      if (kyHienTai !== 'tuy_chon') taiHoatDong();
+    };
+  });
+  document.getElementById('btn-ap-dung-khoang').onclick = () => taiHoatDong();
+
+  await taiHoatDong();
+})();
+
+// Giống hệt logic ở dashboard.html (tinhKhoangTheoKy/dinhDangYMD) — mỗi trang tự chứa, không dùng
+// chung module vì dự án này không có bước build để chia sẻ code giữa các trang tĩnh.
+function tinhKhoangTheoKy(ky) {
+  const homNay = new Date();
+  homNay.setHours(0, 0, 0, 0);
+  if (ky === 'hom_nay') return { tu: homNay, den: homNay };
+  if (ky === 'tuan_nay') {
+    const thu = homNay.getDay();
+    const lechDauTuan = thu === 0 ? 6 : thu - 1;
+    const dau = new Date(homNay); dau.setDate(homNay.getDate() - lechDauTuan);
+    const cuoi = new Date(dau); cuoi.setDate(dau.getDate() + 6);
+    return { tu: dau, den: cuoi };
+  }
+  if (ky === 'thang_nay') {
+    const dau = new Date(homNay.getFullYear(), homNay.getMonth(), 1);
+    const cuoi = new Date(homNay.getFullYear(), homNay.getMonth() + 1, 0);
+    return { tu: dau, den: cuoi };
+  }
+  return null; // toan_bo — không giới hạn
+}
+
+function dinhDangYMD(d) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+// Format timestamp ngắn gọn "DD-MM HH:mm:ss" — copy từ order.html (tsDep), giữ nhất quán cách hiển
+// thị thời gian trên toàn app.
+function tsDep(isoStr) {
+  if (!isoStr) return '';
+  const d = new Date(isoStr);
+  if (isNaN(d)) return isoStr;
+  const fmt = (n) => String(n).padStart(2, '0');
+  const vn = new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' }));
+  return `${fmt(vn.getDate())}-${fmt(vn.getMonth()+1)} ${fmt(vn.getHours())}:${fmt(vn.getMinutes())}:${fmt(vn.getSeconds())}`;
+}
+
+async function taiHoatDong() {
+  document.getElementById('thong-ke-nhanh').textContent = 'Đang tải...';
+
+  const qs = new URLSearchParams();
+  if (kyHienTai === 'tuy_chon') {
+    const tu = document.getElementById('hd-tu-ngay').value;
+    const den = document.getElementById('hd-den-ngay').value;
+    if (tu) qs.set('tuNgay', tu);
+    if (den) qs.set('denNgay', den);
+  } else {
+    const khoang = tinhKhoangTheoKy(kyHienTai);
+    if (khoang) {
+      qs.set('tuNgay', dinhDangYMD(khoang.tu));
+      qs.set('denNgay', dinhDangYMD(khoang.den));
+    }
+  }
+
+  let data;
+  try {
+    data = await apiFetch('/hoat-dong/cua-toi?' + qs.toString());
+  } catch (e) {
+    document.getElementById('thong-ke-nhanh').textContent = 'Không tải được: ' + e.message;
+    return;
+  }
+
+  document.getElementById('thong-ke-nhanh').innerHTML = `
+    <div class="the-nhanh"><div class="so">${data.tongSoQuet}</div><div class="nhan">${icon('scan', {size:14})} Lượt quét thành công</div></div>
+    <div class="the-nhanh"><div class="so">${data.tongSoDoiTrangThai}</div><div class="nhan">${icon('arrowRight', {size:14})} Lượt đổi trạng thái</div></div>
+    <div class="the-nhanh"><div class="so">${data.tongSoUpload}</div><div class="nhan">${icon('camera', {size:14})} Ảnh đã upload</div></div>
+  `;
+
+  renderDsQuet(data.quet);
+  renderDsDoiTrangThai(data.doiTrangThai);
+  renderDsUploadAnh(data.uploadAnh);
+}
+
+function dongRong(chuThich) {
+  return `<div class="trang-thai-rong">${icon('package')}<p>${escapeHtml(chuThich)}</p></div>`;
+}
+
+function renderDsQuet(list) {
+  const el = document.getElementById('ds-quet');
+  if (list.length === 0) { el.innerHTML = dongRong('Chưa có lượt quét thành công nào trong khoảng này.'); return; }
+  el.innerHTML = list.map(x => `
+    <div class="timeline-item">
+      <div class="timeline-info">
+        <strong>${escapeHtml(x.sttKey)}</strong>
+        <div style="font-size:0.85rem;color:var(--color-text-muted);margin-top:2px">
+          ${escapeHtml(x.kichBan || NHAN_COT_TRANG_THAI[x.cot] || x.cot)}${x.tu ? `: ${escapeHtml(x.tu)} → ${escapeHtml(x.sang)}` : (x.sang ? ` → ${escapeHtml(x.sang)}` : '')}
+        </div>
+      </div>
+      <div class="timeline-time">${tsDep(x.thoiGian)}</div>
+    </div>`).join('');
+}
+
+function renderDsDoiTrangThai(list) {
+  const el = document.getElementById('ds-doi-trang-thai');
+  if (list.length === 0) { el.innerHTML = dongRong('Chưa có thay đổi trạng thái nào trong khoảng này.'); return; }
+  el.innerHTML = list.map(x => `
+    <div class="timeline-item">
+      <div class="timeline-info">
+        <strong>${escapeHtml(x.sttKey)}</strong>
+        <div style="font-size:0.85rem;color:var(--color-text-muted);margin-top:2px">
+          ${escapeHtml(NHAN_COT_TRANG_THAI[x.cot] || x.cot)} (${escapeHtml(x.nguon)}): ${x.tu ? `${escapeHtml(x.tu)} → ` : ''}${escapeHtml(x.sang)}
+        </div>
+      </div>
+      <div class="timeline-time">${tsDep(x.thoiGian)}</div>
+    </div>`).join('');
+}
+
+function renderDsUploadAnh(list) {
+  const el = document.getElementById('ds-upload-anh');
+  if (list.length === 0) { el.innerHTML = dongRong('Chưa có ảnh nào được tải lên trong khoảng này.'); return; }
+  el.innerHTML = list.map(x => `
+    <div class="timeline-item">
+      <div class="timeline-info">
+        <strong>${escapeHtml(x.sttKey)}</strong>
+        <div style="font-size:0.85rem;color:var(--color-text-muted);margin-top:2px">
+          ${escapeHtml(NHAN_MOC_ANH[x.moc] || x.moc)}${x.tuDongChuyenSang ? ` — tự động chuyển đơn sang "${escapeHtml(x.tuDongChuyenSang)}"` : ''}
+        </div>
+      </div>
+      <div class="timeline-time">${tsDep(x.thoiGian)}</div>
+    </div>`).join('');
+}
+</script>
+</body>
+</html>
