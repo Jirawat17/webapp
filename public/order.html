@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Chi tiết đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=20260831h">
-<script src="/js/theme.js?v=20260831h"></script>
+<link rel="stylesheet" href="/css/style.css?v=20260831i">
+<script src="/js/theme.js?v=20260831i"></script>
 </head>
 <body>
 <div id="nav"></div>
@@ -13,8 +13,8 @@
   <div class="skeleton-list"><div class="skeleton-card" style="height:220px"></div></div>
 </div>
 
-<script src="/js/icons.js?v=20260831h"></script>
-<script src="/js/api.js?v=20260831h"></script>
+<script src="/js/icons.js?v=20260831i"></script>
+<script src="/js/api.js?v=20260831i"></script>
 <script>
 const sttKey = new URLSearchParams(location.search).get('stt');
 const NHAN_CANH_BAO = { VANG: 'Cảnh báo Vàng · 3 ngày ít tiến triển', CAM: 'Cảnh báo Cam · 5 ngày chưa vào sản xuất', DO: 'Cảnh báo Đỏ · 7 ngày chưa ship' };
@@ -68,7 +68,10 @@ async function taiChiTiet() {
   const viTri = (don.ViTriTheu || []).map(escapeHtml).join(' · ') || '—';
 
   document.getElementById('don-hang').innerHTML = `
-    <h2>${escapeHtml(don.TieuDeSanPham || don.STT_Key)}</h2>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <h2 style="margin:0">${escapeHtml(don.TieuDeSanPham || don.STT_Key)}</h2>
+      <button type="button" class="btn-hanh-dong phu" onclick="inDonHang(this)">${icon('printer')} IN ĐƠN</button>
+    </div>
     <div class="badge-row" style="margin-bottom:16px">
       <span class="badge ${lopTrangThai(don.TINH_TRANG)}">${escapeHtml(don.TINH_TRANG || '')}</span>
       ${don.TINH_TRANG === 'Đang chạy máy' ? `
@@ -289,6 +292,39 @@ async function luuGhiChu() {
     alert('Đã lưu ghi chú!');
     await taiChiTiet();
   } catch (e) { alert(e.message); }
+}
+
+// Giống hệt inNhanh('don_can_in', ...) ở orders.html nhưng chỉ in đúng 1 đơn — dùng 'stt' (khớp
+// chính xác STT_Key ở routes/reports.js locDon()) thay vì 'tuKhoa' (khớp chuỗi con, dễ dính nhầm
+// đơn khác nếu STT_Key này là chuỗi con của 1 STT_Key khác).
+async function inDonHang(btn) {
+  const nhanGoc = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = icon('spinner', { className: 'icon-spin', size: 18 }) + ' Đang tạo file...';
+
+  try {
+    const res = await fetch('/api/reports/pdf?mau=don_can_in&stt=' + encodeURIComponent(sttKey), { credentials: 'include' });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Không xuất được file');
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const contentDisposition = res.headers.get('Content-Disposition') || '';
+    const khopTen = contentDisposition.match(/filename="([^"]+)"/);
+    a.download = khopTen ? khopTen[1] : 'don-hang.pdf';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = nhanGoc;
+  }
 }
 
 async function taiAnh(moc) {

@@ -69,8 +69,10 @@ function renderNav(user, active) {
       { href: '/reports.html', label: 'Báo cáo', icon: 'navReports', key: 'reports' },
     ];
     // "Đơn của tôi" (bổ sung 31/08/2026, theo yêu cầu người dùng) — chỉ san_xuat mới có khái niệm
-    // "đơn tôi đang chạy máy", nên chèn ngay sau "Đơn hàng" thay vì thêm cho mọi vai trò.
-    if (user.vaiTro === 'san_xuat') {
+    // "đơn tôi đang chạy máy", nên chèn ngay sau "Đơn hàng" thay vì thêm cho mọi vai trò. Admin cũng
+    // thấy menu này (bổ sung sau) để xem nhanh mọi đơn đang "Đang chạy máy" — routes/orders.js
+    // (locDonDangChayMayTheoNguoiVanHanh) chỉ lọc theo NguoiVanHanh cho san_xuat, admin xem được hết.
+    if (user.vaiTro === 'san_xuat' || user.vaiTro === 'admin') {
       links.splice(1, 0, { href: '/my-orders.html', label: 'Đơn của tôi · ' + escapeHtml(user.ten), icon: 'navMyOrders', key: 'my-orders' });
     }
     if (user.vaiTro === 'admin') {

@@ -32,7 +32,13 @@ const TRANG_THAI_TRACKING = 'Đã đóng gói';
 const TRANG_THAI_PHOI_CAN_CHUAN_BI = 'Chưa lấy phôi';
 const TINH_TRANG_CAN_PHOI = ['Đã xác nhận', 'LỖI SẢN XUẤT CẦN LÀM LẠI'];
 
-function locDon(rows, { tuNgay, denNgay, khachHang, trangThai, trangThaiPhoi, trangThaiVeFile, tuKhoa }) {
+function locDon(rows, { stt, tuNgay, denNgay, khachHang, trangThai, trangThaiPhoi, trangThaiVeFile, tuKhoa }) {
+  // 'stt' — dùng riêng cho nút "IN ĐƠN" ở trang chi tiết 1 đơn (order.html): khớp CHÍNH XÁC theo
+  // STT_Key, bỏ qua mọi điều kiện lọc khác kể cả yêu cầu phải có ngày lên đơn hợp lệ ở nhánh dưới.
+  // Không dùng lại 'tuKhoa' (so khớp CHUỖI CON) vì có thể khớp nhầm sang đơn khác có STT_Key
+  // chứa STT_Key này làm chuỗi con (vd "DH100" nằm trong "DH1000").
+  if (stt) return rows.filter(r => r.STT_Key === stt);
+
   return rows.filter(r => {
     const ngay = parseNgay(r.NGAY_LEN_DON);
     if (!ngay) return false;
