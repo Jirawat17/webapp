@@ -393,10 +393,18 @@ select.chon-trang-thai-tieu-cuc { border-color: var(--color-warning-text); color
 /* ============================================================
    QUÉT QR
    ============================================================ */
-/* Lưới 2 cột trên màn hẹp (điện thoại) — 4 nút tab trên 1 hàng sẽ quá chật, chữ bị bóp nhỏ khó đọc;
-   chuyển sang 1 hàng duy nhất khi màn đủ rộng (cùng ngưỡng 640px đang dùng cho các lưới khác). */
-.scan-mode { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-2); margin-bottom: var(--space-3); }
-@media (min-width: 640px) { .scan-mode { grid-template-columns: repeat(4, 1fr); } }
+/* Trên điện thoại, 4 nút (dù xếp lưới 2x2) vẫn chiếm nguyên 2 hàng — thay bằng 1 dropdown gọn
+   (.mode-select-mobile). Từ 640px trở lên đủ chỗ cho 1 hàng 4 nút như cũ nên giữ nguyên .scan-mode. */
+.scan-mode { display: none; }
+@media (min-width: 640px) { .scan-mode { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-2); margin-bottom: var(--space-3); } }
+
+.mode-select-mobile {
+  display: block; width: 100%; margin-bottom: var(--space-3);
+  padding: 12px 14px; border-radius: var(--radius-md); border: 1.5px solid var(--color-border);
+  background: var(--color-surface); color: var(--color-text); font-family: inherit;
+  font-size: 1rem; font-weight: 700; min-height: var(--tap-min);
+}
+@media (min-width: 640px) { .mode-select-mobile { display: none; } }
 .scan-mode button {
   display: flex; align-items: center; justify-content: center; gap: 8px;
   padding: 12px; border-radius: var(--radius-md); border: 1.5px solid var(--color-border);
@@ -440,14 +448,17 @@ select.chon-trang-thai-tieu-cuc { border-color: var(--color-warning-text); color
 .dem-o.canh-bao { background: var(--color-warning-bg); color: var(--color-warning-text); }
 .dem-o.loi  { background: var(--color-danger-bg); color: var(--color-danger-text); }
 
-/* --- Nút bật/tắt đèn flash --- */
-.btn-flash {
-  display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
-  padding: 13px; border-radius: var(--radius-md); border: 2px solid var(--color-border);
-  background: var(--color-surface); font-size: 0.95rem; font-weight: 700; cursor: pointer;
-  min-height: var(--tap-min); margin-bottom: var(--space-3); font-family: inherit;
+/* --- Nút bật/tắt đèn flash — icon tròn nổi trên góc khung camera thay vì chiếm nguyên 1 hàng
+   riêng; chỉ hiện khi thiết bị thực sự có torch (xem capNhatHoTroFlash trong scan.html). --- */
+.camera-vien { position: relative; max-width: 480px; margin: 0 auto; }
+.btn-flash-overlay {
+  position: absolute; top: 10px; right: 10px; z-index: 5;
+  width: 44px; height: 44px; padding: 0; border: none; border-radius: var(--radius-full);
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(24,24,27,0.55); color: #fff; font-size: 1.3rem; cursor: pointer;
 }
-.btn-flash.dang-bat { background: var(--color-warning-bg); border-color: var(--color-warning-text); color: var(--color-warning-text); }
+.btn-flash-overlay.dang-bat { background: var(--color-warning-text); }
+.btn-flash-overlay[hidden] { display: none; }
 
 /* --- Khu vực camera + toast "vừa quét" nổi ngay dưới --- */
 .khu-vuc-camera { position: relative; margin-bottom: var(--space-3); }

@@ -6,6 +6,13 @@
 <title>Quét QR — Xưởng Thêu</title>
 <link rel="stylesheet" href="/css/style.css?v=20260831j">
 <script src="/js/theme.js?v=20260831j"></script>
+<style>
+/* Tự ẩn header khi cuộn xuống, hiện lại khi cuộn lên — chỉ áp dụng riêng cho trang Quét QR
+   (chỉ định nghĩa trong <style> của trang này, không đụng style.css dùng chung) để tăng vùng
+   thao tác trên điện thoại khi đang quét/chụp liên tục. */
+.app-header { transition: transform 0.25s ease; }
+.app-header.an-khi-cuon { transform: translateY(-100%); }
+</style>
 </head>
 <body>
 <div id="nav"></div>
@@ -17,15 +24,18 @@
     <button id="mode-photo-san-xuat"></button>
     <button id="mode-photo-dong-goi"></button>
   </div>
+  <select id="mode-select" class="mode-select-mobile"></select>
 
   <div id="chon-kich-ban-wrap" style="display:none"></div>
 
   <div id="camera-wrap" style="display:none">
-    <button id="btn-flash" class="btn-flash"></button>
     <div id="dem-nhom" class="dem-nhom chi-che-do-kich-ban" style="display:none"></div>
 
     <div class="khu-vuc-camera">
-      <div id="qr-reader" style="max-width:480px;margin:0 auto;border-radius:12px;overflow:hidden;"></div>
+      <div class="camera-vien">
+        <div id="qr-reader" style="border-radius:12px;overflow:hidden;"></div>
+        <button id="btn-flash" class="btn-flash-overlay" hidden></button>
+      </div>
       <div id="toast-vua-quet" class="toast-vua-quet"></div>
     </div>
 
@@ -90,13 +100,13 @@ const CAU_HINH_ANH = {
   photo_san_xuat: {
     moc: 'da_san_xuat',
     nhanTab: 'Chụp ảnh đã sản xuất',
-    moTa: 'Chụp ảnh sản phẩm ngay khi vừa chạy máy xong — đảm bảo tem mã QR nằm rõ trong khung hình. Hệ thống sẽ tự đọc mã, lưu ảnh và chuyển đơn sang "Đã sản xuất". Đơn phải đang ở trạng thái "Đang chạy máy".',
+    moTa: 'Chụp sản phẩm vừa chạy máy xong, tem QR rõ nét. (Yêu cầu: Đang chạy máy → Đã sản xuất)',
     yeuCau: 'Đang chạy máy', chuyenSang: 'Đã sản xuất',
   },
   photo_dong_goi: {
     moc: 'dong_goi',
     nhanTab: 'Chụp ảnh đóng gói',
-    moTa: 'Chụp ảnh sản phẩm sau khi đóng gói xong — đảm bảo tem mã QR nằm rõ trong khung hình. Hệ thống sẽ tự đọc mã, lưu ảnh và chuyển đơn sang "Đã đóng gói". Đơn phải đang ở trạng thái "Đã sản xuất".',
+    moTa: 'Chụp sản phẩm sau khi đóng gói xong, tem QR rõ nét. (Yêu cầu: Đã sản xuất → Đã đóng gói)',
     yeuCau: 'Đã sản xuất', chuyenSang: 'Đã đóng gói',
   },
 };
@@ -108,6 +118,37 @@ document.getElementById('mode-photo-san-xuat').innerHTML = icon('camera', { size
 document.getElementById('mode-photo-dong-goi').innerHTML = icon('camera', { size: 18 }) + ' ' + CAU_HINH_ANH.photo_dong_goi.nhanTab;
 document.getElementById('btn-dung-quet').innerHTML = icon('stop', { size: 40 }) + ' Dừng quét → Xem lại';
 document.getElementById('btn-chup-anh').innerHTML = icon('camera', { size: 40 }) + ' Chụp ảnh';
+capNhatNutFlash();
+
+// Dropdown thay cho 4 nút trên điện thoại (xem .mode-select-mobile / .scan-mode trong style.css)
+// — cùng nội dung, chỉ khác cách chọn để đỡ chiếm 2 hàng màn hình hẹp.
+const MODE_OPTIONS = [
+  { value: 'lookup', label: 'Tra cứu' },
+  { value: 'batch', label: 'Quét kịch bản' },
+  { value: 'photo_san_xuat', label: CAU_HINH_ANH.photo_san_xuat.nhanTab },
+  { value: 'photo_dong_goi', label: CAU_HINH_ANH.photo_dong_goi.nhanTab },
+];
+const elModeSelect = document.getElementById('mode-select');
+elModeSelect.innerHTML = MODE_OPTIONS.map(o => `<option value="${o.value}">${escapeHtml(o.label)}</option>`).join('');
+elModeSelect.onchange = () => { mode = elModeSelect.value; capNhatManHinh(); };
+
+// Tự ẩn header khi cuộn xuống, hiện lại khi cuộn lên (chỉ trang này — xem <style> ở đầu file).
+// Không đụng tới thanh tab điều hướng dưới cùng, vẫn cố định như trước.
+(function () {
+  let yLanTruoc = window.scrollY;
+  let dangCho = false;
+  window.addEventListener('scroll', () => {
+    if (dangCho) return;
+    dangCho = true;
+    requestAnimationFrame(() => {
+      const y = window.scrollY;
+      const header = document.querySelector('.app-header');
+      if (header) header.classList.toggle('an-khi-cuon', y > yLanTruoc && y > 80);
+      yLanTruoc = y;
+      dangCho = false;
+    });
+  }, { passive: true });
+})();
 
 (async () => {
   user = await requireLoginOrRedirect();
@@ -135,6 +176,7 @@ async function capNhatManHinh() {
   document.getElementById('mode-batch').classList.toggle('active', mode === 'batch');
   document.getElementById('mode-photo-san-xuat').classList.toggle('active', mode === 'photo_san_xuat');
   document.getElementById('mode-photo-dong-goi').classList.toggle('active', mode === 'photo_dong_goi');
+  document.getElementById('mode-select').value = mode;
 
   document.getElementById('chon-kich-ban-wrap').style.display = 'none';
   document.getElementById('camera-wrap').style.display = 'none';
@@ -261,6 +303,7 @@ async function batDauCamera(onScan) {
   if (!scanner) scanner = new Html5Qrcode('qr-reader');
   try {
     await scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: 260 }, onScan);
+    capNhatHoTroFlash();
   } catch (err) {
     document.getElementById('ket-qua-tra-cuu').innerHTML =
       `<div class="ket-qua-box loi">${icon('alert')} Không mở được camera: ${escapeHtml(String(err))}. Hãy cho phép quyền camera.</div>`;
@@ -273,7 +316,19 @@ async function dungCamera() {
   }
   cameraDangChayCho = null;
   denFlashBat = false;
+  document.getElementById('btn-flash').hidden = true;
   capNhatNutFlash();
+}
+
+// Đèn flash chỉ hoạt động qua web trên số ít thiết bị/trình duyệt hỗ trợ "torch" — kiểm tra ngay
+// sau khi mở camera, ẩn hẳn icon nếu không hỗ trợ (thay vì hiện ra rồi báo lỗi khi bấm như trước).
+function capNhatHoTroFlash() {
+  let hoTro = false;
+  try {
+    const kn = scanner.getRunningTrackCapabilities();
+    hoTro = !!(kn && kn.torch);
+  } catch (e) {}
+  document.getElementById('btn-flash').hidden = !hoTro;
 }
 
 document.getElementById('btn-flash').onclick = async () => {
@@ -291,7 +346,9 @@ document.getElementById('btn-flash').onclick = async () => {
 function capNhatNutFlash() {
   const btn = document.getElementById('btn-flash');
   btn.classList.toggle('dang-bat', denFlashBat);
-  btn.innerHTML = `🔦 ${denFlashBat ? 'TẮT ĐÈN FLASH' : 'BẬT ĐÈN FLASH'}`;
+  btn.innerHTML = '🔦';
+  btn.setAttribute('aria-label', denFlashBat ? 'Tắt đèn flash' : 'Bật đèn flash');
+  btn.title = btn.getAttribute('aria-label');
 }
 
 async function xuLyQuetTraCuu(sttKey) {
