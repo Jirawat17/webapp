@@ -10,7 +10,7 @@ const NHAN_VAI_TRO = {
 // Luôn escape dữ liệu lấy từ Sheet trước khi chèn vào innerHTML — dữ liệu này do khách hàng /
 // nhân viên nhập từ nhiều nguồn khác nhau, không được tin tưởng tuyệt đối.
 function escapeHtml(str) {
-  return String(str ?? '').replace(/[&<>"']/g, ch => ({
+  return String(str == null ? '' : str).replace(/[&<>"']/g, ch => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
   }[ch]));
 }
