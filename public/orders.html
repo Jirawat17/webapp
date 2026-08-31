@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=20260831f">
-<script src="/js/theme.js?v=20260831f"></script>
+<link rel="stylesheet" href="/css/style.css?v=20260831g">
+<script src="/js/theme.js?v=20260831g"></script>
 </head>
 <body>
 <div id="nav"></div>
@@ -64,20 +64,20 @@
         <label for="loc-hang-van-chuyen">Hãng vận chuyển</label>
         <select id="loc-hang-van-chuyen"><option value="">Tất cả hãng vận chuyển</option></select>
       </div>
-      <div class="truong">
+      <div class="truong truong-rong">
         <label for="loc-kh">Tìm theo tên đơn / mã KH</label>
         <input id="loc-kh" placeholder="STT_Key hoặc mã khách hàng">
       </div>
-      <div class="truong">
+      <div class="truong truong-ngay">
         <label for="loc-tu-ngay">Từ ngày</label>
         <input type="date" id="loc-tu-ngay">
       </div>
-      <div class="truong">
+      <div class="truong truong-ngay">
         <label for="loc-den-ngay">Đến ngày</label>
         <input type="date" id="loc-den-ngay">
       </div>
+      <button type="button" class="btn-hanh-dong phu" id="btn-xoa-loc" onclick="xoaTatCaLoc()">Xoá bộ lọc</button>
     </div>
-    <button type="button" class="btn-hanh-dong phu" id="btn-xoa-loc" onclick="xoaTatCaLoc()">Xoá bộ lọc</button>
   </div>
 
   <div id="panel-sap-xep" class="panel-dieu-khien" style="display:none">
@@ -124,8 +124,8 @@
   <button class="btn-hanh-dong phu" onclick="boChonTatCaDon()">Bỏ chọn</button>
 </div>
 
-<script src="/js/icons.js?v=20260831f"></script>
-<script src="/js/api.js?v=20260831f"></script>
+<script src="/js/icons.js?v=20260831g"></script>
+<script src="/js/api.js?v=20260831g"></script>
 <script>
 const NHAN_CANH_BAO = { VANG: 'Vàng · 3 ngày', CAM: 'Cam · 5 ngày', DO: 'Đỏ · 7 ngày' };
 
