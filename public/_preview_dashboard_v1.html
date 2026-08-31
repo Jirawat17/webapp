@@ -47,6 +47,45 @@
 <script src="/js/icons.js?v=20260831h"></script>
 <script src="/js/api.js?v=20260831h"></script>
 <script>
+const MOCK_USER = { ten: 'Tester', vaiTro: 'admin' };
+window.requireLoginOrRedirect = async () => MOCK_USER;
+
+function ymd(d) { const p = n => String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; }
+const homNay = new Date(); homNay.setHours(0,0,0,0);
+function ngayLech(soNgay) { const d = new Date(homNay); d.setDate(d.getDate() + soNgay); return d; }
+// STT_Key gắn nhãn theo độ lệch ngày so với hôm nay để dễ đối chiếu kết quả lọc
+const MOCK_ROWS = [-40, -10, -3, -1, 0].map(lech => ({
+  STT_Key: `lech${lech}`, NGAY_LEN_DON: `${String(ngayLech(lech).getDate()).padStart(2,'0')}/${String(ngayLech(lech).getMonth()+1).padStart(2,'0')}/${ngayLech(lech).getFullYear()}`,
+  TINH_TRANG: 'Đã xác nhận', LOAI: 'Sweat',
+}));
+window.__lastQuery = '';
+window.apiFetch = async (path) => {
+  window.__lastQuery = path;
+  const qs = new URLSearchParams(path.split('?')[1] || '');
+  const tuNgay = qs.get('tuNgay'), denNgay = qs.get('denNgay');
+  let rows = MOCK_ROWS;
+  if (tuNgay || denNgay) {
+    const tu = tuNgay ? new Date(`${tuNgay}T00:00:00`) : null;
+    const den = denNgay ? new Date(`${denNgay}T23:59:59`) : null;
+    rows = rows.filter(r => {
+      const [dd,mm,yyyy] = r.NGAY_LEN_DON.split('/').map(Number);
+      const d = new Date(yyyy, mm-1, dd);
+      if (tu && d < tu) return false;
+      if (den && d > den) return false;
+      return true;
+    });
+  }
+  const demTheo = (list, key) => list.reduce((acc, r) => { const v = r[key]||'(Trống)'; acc[v]=(acc[v]||0)+1; return acc; }, {});
+  return {
+    tongSoDon: rows.length,
+    theoTrangThai: demTheo(rows, 'TINH_TRANG'),
+    theoKhachHang: demTheo(rows.map(r => ({...r, TenKhachHang: r.STT_Key})), 'TenKhachHang'),
+    theoLoaiSanPham: demTheo(rows, 'LOAI'),
+    theoTuan: demTheo(rows, 'NGAY_LEN_DON'),
+  };
+};
+</script>
+<script>
 let kyHienTai = 'toan_bo';
 const cacBieuDo = {};
 

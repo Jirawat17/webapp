@@ -7,7 +7,24 @@ const { requireLogin } = require('../middleware/auth');
 router.use(requireLogin);
 
 router.get('/thong-ke', async (req, res) => {
-  const { rows } = await orderService.getAll();
+  const { rows: tatCaDon } = await orderService.getAll();
+
+  // Lọc theo khoảng NGAY_LEN_DON nếu FE gửi kèm tuNgay/denNgay (nút Hôm nay/Tuần này/Tháng
+  // này/Tuỳ chọn ở dashboard.html) — không truyền gì thì giữ nguyên hành vi cũ: thống kê toàn bộ.
+  const { tuNgay, denNgay } = req.query;
+  let rows = tatCaDon;
+  if (tuNgay || denNgay) {
+    const tu = tuNgay ? new Date(`${tuNgay}T00:00:00`) : null;
+    const den = denNgay ? new Date(`${denNgay}T23:59:59`) : null;
+    rows = tatCaDon.filter(r => {
+      const d = parseNgay(r.NGAY_LEN_DON);
+      if (!d) return false;
+      if (tu && d < tu) return false;
+      if (den && d > den) return false;
+      return true;
+    });
+  }
+
   const daGanKH = await orderService.ganTenKhachHang(rows);
 
   const demTheo = (list, key) => list.reduce((acc, r) => {
