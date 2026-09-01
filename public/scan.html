@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Quét QR — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=77">
-<script src="/js/theme.js?v=77"></script>
+<link rel="stylesheet" href="/css/style.css?v=78">
+<script src="/js/theme.js?v=78"></script>
 <style>
 /* Tự ẩn header khi cuộn xuống, hiện lại khi cuộn lên — chỉ áp dụng riêng cho trang Quét QR
    (chỉ định nghĩa trong <style> của trang này, không đụng style.css dùng chung) để tăng vùng
@@ -73,8 +73,8 @@
 </div>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="/js/icons.js?v=77"></script>
-<script src="/js/api.js?v=77"></script>
+<script src="/js/icons.js?v=78"></script>
+<script src="/js/api.js?v=78"></script>
 <script>
 let user;
 let mode = 'lookup';
@@ -184,6 +184,10 @@ async function capNhatManHinh() {
   document.getElementById('camera-wrap').style.display = 'none';
   document.getElementById('khu-xem-lai').style.display = 'none';
   document.getElementById('photo-wrap').style.display = 'none';
+  // Khung camera tab "Quét mã QR Tracking" hiển thị to gấp đôi mặc định (xem .che-do-to trong
+  // style.css) — dễ ngắm hơn khi thao tác 1 mình trên máy tính có gắn máy in, không ảnh hưởng các
+  // tab quét khác.
+  document.getElementById('camera-wrap').classList.toggle('che-do-to', mode === 'gke_tracking');
 
   let cameraCanChay = null;
 
@@ -304,13 +308,15 @@ async function dieuChinhCamera(muonChay) {
   cameraDangChayCho = muonChay;
   if (muonChay === 'lookup') await batDauCamera(xuLyQuetTraCuu);
   else if (muonChay === 'batch') await batDauCamera(xuLyQuetKichBan);
-  else if (muonChay === 'gke_tracking') await batDauCamera(xuLyQuetTracking);
+  // qrbox to gấp đôi (520 so với 260 mặc định) khớp với khung camera to gấp đôi của tab này (xem
+  // .che-do-to) — giữ tỉ lệ khung ngắm QR so với khung hình camera như các tab khác.
+  else if (muonChay === 'gke_tracking') await batDauCamera(xuLyQuetTracking, 520);
 }
 
-async function batDauCamera(onScan) {
+async function batDauCamera(onScan, qrboxSize) {
   if (!scanner) scanner = new Html5Qrcode('qr-reader');
   try {
-    await scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: 260 }, onScan);
+    await scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: qrboxSize || 260 }, onScan);
     capNhatHoTroFlash();
   } catch (err) {
     document.getElementById('ket-qua-tra-cuu').innerHTML =
@@ -391,6 +397,7 @@ async function xuLyQuetTracking(sttKey) {
   const el = document.getElementById('ket-qua-tra-cuu');
   el.innerHTML = `<div class="ket-qua-box">${spinnerInline('Đang tạo vận đơn và chờ GKE generate tem... (có thể mất tới 1 phút)')}</div>`;
 
+  let daGoiIn = false;
   try {
     const ketQua = await apiFetch('/gke/tracking/quet', {
       method: 'POST', body: JSON.stringify({ sttKey }),
@@ -404,6 +411,7 @@ async function xuLyQuetTracking(sttKey) {
     </div>`;
     phatAmThanhKetQua('OK');
     inTemTuDong(ketQua.labelBase64);
+    daGoiIn = true;
   } catch (e) {
     // In cả lỗi gốc ra console trình duyệt (F12 > Console) — ô đỏ trên màn hình chỉ hiện được
     // đúng 1 dòng ngắn, console mới thấy đủ chi tiết khi cần đối chiếu với log server (xem
@@ -414,6 +422,26 @@ async function xuLyQuetTracking(sttKey) {
   }
 
   setTimeout(() => { dangXuLyQuet = false; }, 1500);
+
+  // Hộp thoại in PDF của trình duyệt là 1 cửa sổ tách biệt đè lên trang — trên nhiều máy, sau khi
+  // đóng hộp thoại này lại khung hình camera bị đứng hình/đen dù luồng vẫn còn sống bên dưới, khiến
+  // không quét tiếp được đơn kế tiếp. Chủ động khởi động lại camera vài giây sau khi gọi in để chắc
+  // chắn luôn sẵn sàng quét tiếp, không cần người dùng tự tải lại trang.
+  if (daGoiIn) setTimeout(khoiDongLaiCameraTracking, 3000);
+}
+
+async function khoiDongLaiCameraTracking() {
+  if (mode !== 'gke_tracking') return; // đã chuyển sang tab khác trong lúc chờ — không đụng vào camera tab đó
+  await dungCamera();
+  cameraDangChayCho = 'gke_tracking';
+  await batDauCamera(xuLyQuetTracking, 520);
+}
+
+function base64ThanhBlob(base64, kieuMime) {
+  const nhiPhan = atob(base64);
+  const mang = new Uint8Array(nhiPhan.length);
+  for (let i = 0; i < nhiPhan.length; i++) mang[i] = nhiPhan.charCodeAt(i);
+  return new Blob([mang], { type: kieuMime });
 }
 
 // Mở tem PDF trong 1 iframe ẩn rồi gọi in ngay lập tức — trình duyệt VẪN sẽ hiện hộp thoại in của
@@ -421,27 +449,46 @@ async function xuLyQuetTracking(sttKey) {
 // KHÔNG có bước xác nhận riêng nào của app trước đó — đúng yêu cầu "in luôn không cần hỏi". Máy
 // tính chạy tab này cần đã cài driver Xprinter XP-480B qua USB và đặt sẵn làm máy in mặc định/khổ
 // giấy 100x150mm để hộp thoại in hiện đúng máy ngay (xem hướng dẫn cài đặt).
+//
+// 2 lỗi thực tế khiến máy in không nhận được gì dù không báo lỗi (đã gặp đúng kiểu iframe ẩn này ở
+// #qr-reader-file-an phía trên, xem ghi chú ở đó): (1) iframe rộng/cao = 0 khiến trình xem PDF nội
+// bộ của Chrome không có chỗ để dựng hình, .print() gọi ra nhưng không có nội dung nào để in — phải
+// để kích thước LAYOUT THẬT, chỉ đẩy ra ngoài màn hình bằng toạ độ âm; (2) gọi print() ngay lúc
+// iframe "onload" đôi khi sớm hơn lúc trình xem PDF bên trong dựng xong nội dung — phải chờ thêm 1
+// nhịp ngắn. Dùng blob: URL thay vì data: URI vì trình xem PDF của Chrome nhận diện ổn định hơn.
 function inTemTuDong(labelBase64) {
   if (!labelBase64) return;
+  let urlBlob;
+  try {
+    urlBlob = URL.createObjectURL(base64ThanhBlob(labelBase64, 'application/pdf'));
+  } catch (e) {
+    console.error('[GKE] Lỗi tạo file tem để in:', e);
+    return;
+  }
+
   const iframe = document.createElement('iframe');
   iframe.style.position = 'fixed';
-  iframe.style.right = '0';
-  iframe.style.bottom = '0';
-  iframe.style.width = '0';
-  iframe.style.height = '0';
+  iframe.style.top = '-9999px';
+  iframe.style.left = '-9999px';
+  iframe.style.width = '800px';
+  iframe.style.height = '1200px';
   iframe.style.border = '0';
-  iframe.src = 'data:application/pdf;base64,' + labelBase64;
+  iframe.src = urlBlob;
   document.body.appendChild(iframe);
+
   iframe.onload = () => {
-    try {
-      iframe.contentWindow.focus();
-      iframe.contentWindow.print();
-    } catch (e) {
-      console.error('[GKE] Lỗi tự mở hộp thoại in:', e);
-    }
-    // Dọn iframe sau 1 phút — đủ thời gian người dùng thao tác xong hộp thoại in, không giữ mãi trong DOM.
-    setTimeout(() => iframe.remove(), 60000);
+    setTimeout(() => {
+      try {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      } catch (e) {
+        console.error('[GKE] Lỗi tự mở hộp thoại in:', e);
+      }
+    }, 400);
   };
+
+  // Dọn iframe + giải phóng blob sau 1 phút — đủ thời gian người dùng thao tác xong hộp thoại in, không giữ mãi trong DOM.
+  setTimeout(() => { iframe.remove(); URL.revokeObjectURL(urlBlob); }, 60000);
 }
 
 async function xuLyQuetKichBan(sttKey) {
