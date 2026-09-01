@@ -5,7 +5,7 @@
 //     KHÔNG cần lưu riêng order_num/waybill number của GKE, chỉ cần num_type=1 + STT_Key.
 //   - Đơn đã tạo vận đơn GKE rồi (kể cả đang chờ tem, xem MA_DANG_CHO_TEM trong routes/gke.js) thì
 //     KHÔNG được gọi order/create/ lại — mỗi lần gọi tạo 1 vận đơn thật, gọi lặp sẽ ra 2 vận đơn
-//     trùng nhau. routes/gke.js ghi 1 giá trị placeholder vào MA_VAN_DON_ID NGAY sau khi tạo đơn
+//     trùng nhau. routes/gke.js ghi 1 giá trị placeholder vào TRACKING_ID NGAY sau khi tạo đơn
 //     thành công, TRƯỚC KHI thử lấy tem — vì tem có thể chưa generate xong ngay (xem layTemIn),
 //     nếu không ghi gì ở bước này mà lấy tem thất bại thì quét lại sẽ tưởng nhầm là chưa tạo đơn.
 //   - Cân nặng: ước lượng SO_LUONG * 0.05kg/áo (chưa có cột cân nặng thật trong Sheet).
@@ -107,6 +107,15 @@ async function goiApi(buoc, path, body, { daThuLai = false } = {}) {
   });
 
   if (!data.success) {
+    // code=301 "Repeated" — KHÔNG phải lỗi thật, GKE đang báo "đơn này (theo customer_order_num) đã
+    // tồn tại rồi", kèm sẵn data của vận đơn đã tạo trước đó (order_num, tracking_num...). Gặp thật
+    // 01/09/2026: do 1 bug cũ (đã vá — xem MA_DANG_CHO_TEM trong routes/gke.js) khiến Sheet không
+    // ghi lại vận đơn đã tạo, quét lại tưởng nhầm chưa tạo và gọi order/create/ lần nữa — GKE tự
+    // chặn trùng ở phía họ và trả thẳng data cũ, coi như thành công để đi tiếp lấy tem, không báo lỗi.
+    if (data.code === 301 && data.data) {
+      console.log(`[GKE] [${buoc}] GKE báo "đã tồn tại từ trước" (code 301) — dùng lại dữ liệu cũ:`, JSON.stringify(data.data));
+      return data.data;
+    }
     const loiTokenHong = res.status === 401 || /token/i.test(data.detail || '');
     if (loiTokenHong && !daThuLai) {
       console.log(`[GKE] [${buoc}] Token có vẻ đã hỏng — làm mới token và thử lại 1 lần`);

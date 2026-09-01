@@ -317,7 +317,7 @@ thái nào cho đúng). Cách chạy: node scripts/kiem-tra-tinh-hop-le.js — �
 (2 đúng, 2 sai), tìm đúng chính xác 2 đơn sai.
 
 7.5. ĐỀ XUẤT THÊM (CHƯA LÀM, cần bạn xác nhận trước nếu muốn triển khai):
-  - Bắt buộc cột HANG_VAN_CHUYEN/MA_VAN_DON_ID phải có giá trị trước khi cho phép chuyển TINH_TRANG
+  - Bắt buộc cột HANG_VAN_CHUYEN/TRACKING_ID phải có giá trị trước khi cho phép chuyển TINH_TRANG
     sang IN TRANSIT_Tracking đã hoạt động — hiện chưa có ràng buộc này, 1 đơn có thể "đang vận
     chuyển" mà không có mã vận đơn nào. Chưa làm vì không chắc chắn 100% đây luôn là bắt buộc về mặt
     nghiệp vụ (có thể mã vận đơn được điền sau qua tích hợp API vận chuyển).

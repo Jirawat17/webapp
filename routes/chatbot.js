@@ -48,7 +48,7 @@ function lamGonDon(r) {
     ngayLenDon: r.NGAY_LEN_DON,
     trangThai: r.TINH_TRANG,
     hangVanChuyen: r.HANG_VAN_CHUYEN,
-    maVanDon: r.MA_VAN_DON_ID,
+    maVanDon: r.TRACKING_ID,
     ghiChu: r.GHI_CHU,
   };
 }

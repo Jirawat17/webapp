@@ -40,7 +40,7 @@ Các tab `Nhan_Vien`, `QuetMa`, `Chatbot`, `B0_Chuan_Bi_Phoi_Ao`, `DATANEW_VIP3`
 | `STT_Key` | Mã đơn — khóa chính, dùng để quét QR |
 | `MA_KHACH_HANG` | Mã khách hàng (tra tên thật qua tab `Khach_Hang`) |
 | `HANG_VAN_CHUYEN` | Hãng vận chuyển |
-| `MA_VAN_DON_ID` | Mã vận đơn |
+| `TRACKING_ID` | Mã vận đơn/tracking |
 | `DANH_DAU_IN` | Đã đánh dấu in (TRUE/FALSE) |
 | `TINH_TRANG` | Trạng thái hiện tại — xem pipeline ở mục 4 |
 | `NGAY_LEN_DON` | Ngày lên đơn — dùng để sắp xếp danh sách và tính cảnh báo |
@@ -160,7 +160,7 @@ npm start
 | `chuan_bi_phoi` | Chưa tới `B2_Đã lấy phôi` | `GHI_CHU` |
 | `ve_file` | Chưa tới `B3_Đã đủ Phôi và File Vẽ` | `GHI_CHU` |
 | `san_xuat` | Từ `B3` đến trước `SHIPPED` | `GHI_CHU`, `TINH_TRANG` |
-| `dong_goi` | Từ `B5_Đã sản xuất` trở đi | `GHI_CHU`, `HANG_VAN_CHUYEN`, `MA_VAN_DON_ID`, `TINH_TRANG` |
+| `dong_goi` | Từ `B5_Đã sản xuất` trở đi | `GHI_CHU`, `HANG_VAN_CHUYEN`, `TRACKING_ID`, `TINH_TRANG` |
 
 Mọi vai trò đều có thể bấm nút "Chuyển sang..." trên trang chi tiết đơn (đọc từ `CauHinhKichBan`) — Sheet hiện không có cột phân quyền theo kịch bản nên app chưa giới hạn vai trò nào được dùng kịch bản nào. Nếu cần giới hạn, có thể thêm cột (vd `VaiTro_ChoPhep`) vào `CauHinhKichBan` và báo tôi để cập nhật `scenarioService.js`.
 

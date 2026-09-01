@@ -12,7 +12,7 @@ function ghiKhongCho(promise) {
   promise.catch(err => console.error('[GKE] Lỗi ghi log nền:', err.message));
 }
 
-// Giá trị tạm ghi vào MA_VAN_DON_ID NGAY SAU KHI order/create/ thành công, TRƯỚC KHI thử lấy tem —
+// Giá trị tạm ghi vào TRACKING_ID NGAY SAU KHI order/create/ thành công, TRƯỚC KHI thử lấy tem —
 // đóng lại "khoảng hở" nguy hiểm: nếu không ghi gì cho tới lúc có tem thật, mà lấy tem lại thất bại
 // (GKE cần thời gian generate tem, có thể chưa xong ngay — xem gkeService.layTemIn), quét lại đơn
 // sẽ hiểu nhầm "chưa tạo đơn" và gọi order/create/ THÊM 1 LẦN, tạo ra 2 vận đơn thật trùng nhau bên
@@ -48,8 +48,8 @@ router.post('/tracking/quet', async (req, res) => {
     });
   }
 
-  const chuaTungTaoDon = !row.MA_VAN_DON_ID; // trống hẳn = chưa từng gọi order/create/ lần nào
-  const dangChoTuLanTruoc = row.MA_VAN_DON_ID === MA_DANG_CHO_TEM; // đã tạo đơn ở lượt trước, lần đó lấy tem chưa xong
+  const chuaTungTaoDon = !row.TRACKING_ID; // trống hẳn = chưa từng gọi order/create/ lần nào
+  const dangChoTuLanTruoc = row.TRACKING_ID === MA_DANG_CHO_TEM; // đã tạo đơn ở lượt trước, lần đó lấy tem chưa xong
 
   // Bước 1: tạo vận đơn GKE — CHỈ khi thực sự chưa từng tạo (trống hẳn). Nếu đang ở trạng thái
   // "chờ tem" từ lần quét trước, KHÔNG được gọi lại order/create/ — đơn thật đã tồn tại bên GKE rồi.
@@ -64,7 +64,7 @@ router.post('/tracking/quet', async (req, res) => {
 
     // Tạo THÀNH CÔNG — ghi placeholder NGAY để khoá không tạo trùng, trước khi thử lấy tem.
     try {
-      await orderService.update(sttKey, { MA_VAN_DON_ID: MA_DANG_CHO_TEM }, user);
+      await orderService.update(sttKey, { TRACKING_ID: MA_DANG_CHO_TEM }, user);
     } catch (err) {
       console.error(`[GKE] Tạo vận đơn THÀNH CÔNG cho ${sttKey} nhưng LỖI khi ghi placeholder vào Sheet:`, err.stack || err.message);
       ghiKhongCho(ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'GKE_GHI_SHEET_LOI', sttKey, chiTiet: { loi: err.message } }));
@@ -91,7 +91,7 @@ router.post('/tracking/quet', async (req, res) => {
 
   // Lấy tem THÀNH CÔNG — ghi đúng mã vận đơn thật + hãng vận chuyển, thay cho placeholder (nếu có).
   await orderService.update(sttKey, {
-    MA_VAN_DON_ID: ketQuaTem.tracking_num,
+    TRACKING_ID: ketQuaTem.tracking_num,
     HANG_VAN_CHUYEN: ketQuaTem.delivery_carrier,
   }, user);
 

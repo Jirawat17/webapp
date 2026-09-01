@@ -642,7 +642,7 @@ const COT_TRACKING = [
   { header: 'STT_Key', key: 'STT_Key', width: 14 },
   { header: 'MA_CODE_STT', key: 'MA_CODE_STT', width: 14 },
   { header: 'MA_KHACH_HANG', key: 'MA_KHACH_HANG', width: 16 },
-  { header: 'MA_VAN_DON_ID', key: 'MA_VAN_DON_ID', width: 18 },
+  { header: 'TRACKING_ID', key: 'TRACKING_ID', width: 18 },
   { header: 'QUOC_GIA', key: 'QUOC_GIA', width: 12 },
   { header: 'LOAI', key: 'LOAI', width: 12 },
   { header: 'SO_LUONG', key: 'SO_LUONG', width: 10 },

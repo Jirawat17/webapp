@@ -106,7 +106,6 @@ async function taiChiTiet() {
           <tr><td>Số lượng</td><td>${escapeHtml(don.SO_LUONG || '')} ${don.SO_LUONG_AO_TREN_DON ? `(áo trên đơn: ${escapeHtml(don.SO_LUONG_AO_TREN_DON)})` : ''}</td></tr>
           <tr><td>Ngày lên đơn</td><td>${don.NGAY_LEN_DON ? dinhDangNgay(don.NGAY_LEN_DON) : ''}</td></tr>
           <tr><td>Hãng vận chuyển</td><td>${escapeHtml(don.HANG_VAN_CHUYEN || '')}</td></tr>
-          <tr><td>Mã vận đơn</td><td>${escapeHtml(don.MA_VAN_DON_ID || '')}</td></tr>
           <tr><td>Mã tracking</td><td>${escapeHtml(don.TRACKING_ID || '')}</td></tr>
           <tr><td>Người nhận</td><td>${escapeHtml(don.TEN || '')} ${don.SDT ? '· ' + escapeHtml(don.SDT) : ''}</td></tr>
           <tr><td>Địa chỉ giao hàng</td><td>${escapeHtml(dongDiaChi(don))}</td></tr>
