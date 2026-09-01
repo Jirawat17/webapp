@@ -389,7 +389,7 @@ async function xuLyQuetTracking(sttKey) {
   if (dangXuLyQuet) return;
   dangXuLyQuet = true;
   const el = document.getElementById('ket-qua-tra-cuu');
-  el.innerHTML = `<div class="ket-qua-box">${spinnerInline('Đang tạo/lấy vận đơn GKE...')}</div>`;
+  el.innerHTML = `<div class="ket-qua-box">${spinnerInline('Đang tạo/lấy vận đơn GKE... (có thể mất tới 45 giây)')}</div>`;
 
   try {
     const ketQua = await apiFetch('/gke/tracking/quet', {

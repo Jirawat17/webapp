@@ -17,11 +17,14 @@
 const BASE_URL = 'https://order.gkelogistics.com/openapi/customer';
 
 // fetch() của Node không có timeout mặc định — nếu mạng tới GKE bị treo (chặn tường lửa, DNS lỗi...)
-// request có thể treo VÔ THỜI HẠN, khiến người dùng chỉ thấy vòng xoay chờ mãi rồi cuối cùng nhận
-// 1 lỗi mơ hồ do proxy (nếu có) tự ngắt kết nối trả về trang lỗi KHÔNG PHẢI JSON — đây chính là
-// nguyên nhân hay gặp nhất của thông báo "Có lỗi xảy ra" chung chung (client không parse được JSON
+// request có thể treo VÔ THỜI HẠN, khiến người dùng chỉ thấy vòng xoay chờ mãi. Từng đặt 20s (thấy
+// hụt thật khi test 01/09/2026 — order/create/ với dữ liệu đơn xuyên biên giới đầy đủ mất hơn 20s
+// mới xong, không phải lỗi mạng), nâng lên 45s cho có dư — GKE bắt buộc phối hợp với hãng vận
+// chuyển cuối (UniUni...) để tạo vận đơn thật, nặng hơn hẳn 1 lượt đăng nhập lấy token đơn thuần.
+// Trước đó cũng từng nghi ngờ 1 proxy/tunnel phía trước tự ngắt kết nối trả về trang lỗi KHÔNG PHẢI
+// JSON — đây chính là nguyên nhân hay gặp nhất của thông báo "Có lỗi xảy ra" chung chung (client không parse được JSON
 // nên rơi vào thông báo mặc định). Đặt timeout rõ ràng để báo đúng nguyên nhân "quá thời gian chờ".
-const TIMEOUT_MS = 20000;
+const TIMEOUT_MS = 45000;
 
 // Gọi 1 URL, LUÔN đọc response dạng text trước rồi mới thử parse JSON — nếu parse lỗi thì in ra
 // console 500 ký tự đầu của response thật (thường là trang lỗi HTML từ proxy/GKE) thay vì nuốt lỗi
