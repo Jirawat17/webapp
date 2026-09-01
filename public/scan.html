@@ -128,6 +128,7 @@ const MODE_OPTIONS = [
   { value: 'batch', label: 'Quét kịch bản' },
   { value: 'photo_san_xuat', label: CAU_HINH_ANH.photo_san_xuat.nhanTab },
   { value: 'photo_dong_goi', label: CAU_HINH_ANH.photo_dong_goi.nhanTab },
+  { value: 'gke_tracking', label: 'Quét mã QR Tracking' },
 ];
 const elModeSelect = document.getElementById('mode-select');
 elModeSelect.innerHTML = MODE_OPTIONS.map(o => `<option value="${o.value}">${escapeHtml(o.label)}</option>`).join('');
@@ -191,6 +192,11 @@ async function capNhatManHinh() {
     document.getElementById('ket-qua-tra-cuu').style.display = 'block';
     setBatchOnlyVisible(false);
     cameraCanChay = 'lookup';
+  } else if (mode === 'gke_tracking') {
+    document.getElementById('camera-wrap').style.display = 'block';
+    document.getElementById('ket-qua-tra-cuu').style.display = 'block';
+    setBatchOnlyVisible(false);
+    cameraCanChay = 'gke_tracking';
   } else if (mode === 'photo_san_xuat' || mode === 'photo_dong_goi') {
     document.getElementById('photo-wrap').style.display = 'block';
     document.getElementById('photo-mo-ta').textContent = CAU_HINH_ANH[mode].moTa;
@@ -298,6 +304,7 @@ async function dieuChinhCamera(muonChay) {
   cameraDangChayCho = muonChay;
   if (muonChay === 'lookup') await batDauCamera(xuLyQuetTraCuu);
   else if (muonChay === 'batch') await batDauCamera(xuLyQuetKichBan);
+  else if (muonChay === 'gke_tracking') await batDauCamera(xuLyQuetTracking);
 }
 
 async function batDauCamera(onScan) {
@@ -372,6 +379,65 @@ async function xuLyQuetTraCuu(sttKey) {
   }
 
   setTimeout(() => { dangXuLyQuet = false; }, 1500);
+}
+
+// Tab "Quét mã QR Tracking" (bổ sung 31/08/2026) — quét tem đã dán trên đơn "Đã đóng gói", gọi GKE
+// Logistics tạo vận đơn thật (hoặc in lại nếu đơn đã có mã vận đơn từ trước) rồi TỰ ĐỘNG mở hộp
+// thoại in ngay, không cần bấm thêm nút xác nhận nào (xem inTemTuDong bên dưới). Dùng CHUNG cơ chế
+// debounce/hiển thị với xuLyQuetTraCuu ở trên — chỉ khác action gọi API và có thêm bước in.
+async function xuLyQuetTracking(sttKey) {
+  if (dangXuLyQuet) return;
+  dangXuLyQuet = true;
+  const el = document.getElementById('ket-qua-tra-cuu');
+  el.innerHTML = `<div class="ket-qua-box">${spinnerInline('Đang tạo/lấy vận đơn GKE...')}</div>`;
+
+  try {
+    const ketQua = await apiFetch('/gke/tracking/quet', {
+      method: 'POST', body: JSON.stringify({ sttKey }),
+    });
+    el.innerHTML = `<div class="ket-qua-box">
+      ${icon('printer')}
+      <div>
+        <strong>${escapeHtml(sttKey)}</strong> — ${ketQua.daTaoMoi ? 'Đã tạo vận đơn mới, đang in tem' : 'In lại tem cũ'}<br>
+        Hãng: <strong>${escapeHtml(ketQua.hangVanChuyen || '')}</strong> · Mã vận đơn: <strong>${escapeHtml(ketQua.trackingNum || '')}</strong>
+      </div>
+    </div>`;
+    phatAmThanhKetQua('OK');
+    inTemTuDong(ketQua.labelBase64);
+  } catch (e) {
+    el.innerHTML = `<div class="ket-qua-box loi">${icon('alert')} ${escapeHtml(e.message)}</div>`;
+    phatAmThanhKetQua('KHONG_TIM_THAY');
+  }
+
+  setTimeout(() => { dangXuLyQuet = false; }, 1500);
+}
+
+// Mở tem PDF trong 1 iframe ẩn rồi gọi in ngay lập tức — trình duyệt VẪN sẽ hiện hộp thoại in của
+// chính nó (không có cách nào tắt bằng JS vì lý do bảo mật trình duyệt, ở mọi trình duyệt), nhưng
+// KHÔNG có bước xác nhận riêng nào của app trước đó — đúng yêu cầu "in luôn không cần hỏi". Máy
+// tính chạy tab này cần đã cài driver Xprinter XP-480B qua USB và đặt sẵn làm máy in mặc định/khổ
+// giấy 100x150mm để hộp thoại in hiện đúng máy ngay (xem hướng dẫn cài đặt).
+function inTemTuDong(labelBase64) {
+  if (!labelBase64) return;
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = '0';
+  iframe.src = 'data:application/pdf;base64,' + labelBase64;
+  document.body.appendChild(iframe);
+  iframe.onload = () => {
+    try {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+    } catch (e) {
+      console.error('[GKE] Lỗi tự mở hộp thoại in:', e);
+    }
+    // Dọn iframe sau 1 phút — đủ thời gian người dùng thao tác xong hộp thoại in, không giữ mãi trong DOM.
+    setTimeout(() => iframe.remove(), 60000);
+  };
 }
 
 async function xuLyQuetKichBan(sttKey) {

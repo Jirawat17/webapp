@@ -26,6 +26,7 @@ app.use('/api/chatbot', require('./routes/chatbot'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/tai-san', require('./routes/taiSan'));
 app.use('/api/hoat-dong', require('./routes/hoatDong'));
+app.use('/api/gke', require('./routes/gke'));
 
 app.use(express.static(path.join(__dirname, 'public')));
 
