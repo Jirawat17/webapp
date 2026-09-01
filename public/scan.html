@@ -324,18 +324,57 @@ async function dieuChinhCamera(muonChay) {
   if (muonChay === 'lookup') await batDauCamera(xuLyQuetTraCuu);
   else if (muonChay === 'batch') await batDauCamera(xuLyQuetKichBan);
   // qrbox to gấp đôi (520 so với 260 mặc định) khớp với khung camera to gấp đôi của tab này (xem
-  // .che-do-to) — giữ tỉ lệ khung ngắm QR so với khung hình camera như các tab khác.
-  else if (muonChay === 'gke_tracking') await batDauCamera(xuLyQuetTracking, 520);
+  // .che-do-to) — giữ tỉ lệ khung ngắm QR so với khung hình camera như các tab khác. facingMode
+  // 'user' thay vì 'environment' mặc định — tab này CHỈ chạy trên PC/laptop có gắn máy in (quyết
+  // định "Approach 3" 31/08/2026, không chạy trên điện thoại như 2 tab kia), mà webcam PC/laptop
+  // luôn quay MẶT VỀ NGƯỜI DÙNG chứ không có camera "environment" thật — xin đúng facingMode giúp
+  // trình duyệt/driver khớp thiết bị nhanh hơn, đỡ mất thời gian thương lượng constraint không khớp.
+  else if (muonChay === 'gke_tracking') await batDauCamera(xuLyQuetTracking, 520, { facingMode: 'user' });
 }
 
-async function batDauCamera(onScan, qrboxSize) {
+// "NotReadableError: Could not start video source" KHÔNG PHẢI lỗi quyền — trình duyệt/OS chưa kịp
+// nhả hẳn camera từ lượt dừng ngay trước đó (hay gặp khi dừng rồi mở lại camera liên tiếp, xem
+// khoiDongLaiCameraTracking) HOẶC 1 app/tab khác đang giữ camera. Tự thử lại vài lần có chờ trước
+// khi báo lỗi thật — phần lớn trường hợp tự hết sau 1-2 lần thử vì camera vừa được nhả ra.
+function laLoiCameraDangBanRoi(err) {
+  return /NotReadableError/i.test(String(err));
+}
+
+async function batDauCamera(onScan, qrboxSize, tuyChon = {}) {
+  const { soLanThuLai = 2, facingMode = 'environment' } = tuyChon;
   if (!scanner) scanner = new Html5Qrcode('qr-reader');
+
+  // Ghi ra Console (F12) trạng thái quyền camera THẬT SỰ theo trình duyệt (nếu hỗ trợ Permissions
+  // API) — để phân biệt rõ "chưa cấp quyền/đã bị chặn" (permission) với "có quyền nhưng phần cứng
+  // không mở được" (NotReadableError, xem hàm trên) thay vì đoán mò qua thông báo lỗi chung chung.
   try {
-    await scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: qrboxSize || 260 }, onScan);
-    capNhatHoTroFlash();
-  } catch (err) {
-    document.getElementById('ket-qua-tra-cuu').innerHTML =
-      `<div class="ket-qua-box loi">${icon('alert')} Không mở được camera: ${escapeHtml(String(err))}. Hãy cho phép quyền camera.</div>`;
+    const trangThai = await navigator.permissions.query({ name: 'camera' });
+    console.log('[Camera] Trạng thái quyền camera (Permissions API):', trangThai.state);
+  } catch (e) {
+    console.log('[Camera] Trình duyệt không hỗ trợ Permissions API cho camera — bỏ qua bước kiểm tra này (không phải lỗi).');
+  }
+
+  for (let lan = 0; lan <= soLanThuLai; lan++) {
+    const gioBatDau = Date.now();
+    try {
+      await scanner.start({ facingMode }, { fps: 10, qrbox: qrboxSize || 260 }, onScan);
+      capNhatHoTroFlash();
+      console.log(`[Camera] Mở camera thành công sau ${Date.now() - gioBatDau}ms (facingMode=${facingMode})`);
+      return;
+    } catch (err) {
+      console.error(`[Camera] Lỗi mở camera (lần ${lan + 1}/${soLanThuLai + 1}, sau ${Date.now() - gioBatDau}ms) — tên lỗi: "${err && err.name}":`, err);
+      if (laLoiCameraDangBanRoi(err) && lan < soLanThuLai) {
+        console.warn(`[Camera] Camera đang bận, đợi rồi thử lại...`);
+        await new Promise(r => setTimeout(r, 700));
+        continue;
+      }
+      const goiY = laLoiCameraDangBanRoi(err)
+        ? 'Camera đang được app/tab khác dùng — đóng hết ứng dụng/tab khác đang mở camera (Zoom, Teams, Windows Camera, tab trình duyệt khác...) rồi thử lại.'
+        : 'Hãy cho phép quyền camera cho trang web này trong trình duyệt.';
+      document.getElementById('ket-qua-tra-cuu').innerHTML =
+        `<div class="ket-qua-box loi">${icon('alert')} Không mở được camera: ${escapeHtml(String(err))}. ${goiY}</div>`;
+      return;
+    }
   }
 }
 
@@ -454,8 +493,12 @@ async function khoiDongLaiCameraTracking() {
   // Đã chuyển sang tab khác, hoặc đã bấm "Dừng quét" trong lúc chờ — không đụng vào camera nữa.
   if (mode !== 'gke_tracking' || !dangQuetTracking) return;
   await dungCamera();
+  // Đợi 1 nhịp ngắn cho trình duyệt/OS nhả hẳn camera trước khi mở lại — dừng rồi mở lại NGAY LẬP
+  // TỨC dễ dính NotReadableError (xem batDauCamera) hơn nếu không có khoảng nghỉ này.
+  await new Promise(r => setTimeout(r, 400));
+  if (mode !== 'gke_tracking' || !dangQuetTracking) return; // kiểm tra lại — có thể đã đổi ý trong lúc chờ
   cameraDangChayCho = 'gke_tracking';
-  await batDauCamera(xuLyQuetTracking, 520);
+  await batDauCamera(xuLyQuetTracking, 520, { facingMode: 'user' });
 }
 
 function base64ThanhBlob(base64, kieuMime) {
