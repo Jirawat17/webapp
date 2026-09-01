@@ -405,7 +405,11 @@ async function xuLyQuetTracking(sttKey) {
     phatAmThanhKetQua('OK');
     inTemTuDong(ketQua.labelBase64);
   } catch (e) {
-    el.innerHTML = `<div class="ket-qua-box loi">${icon('alert')} ${escapeHtml(e.message)}</div>`;
+    // In cả lỗi gốc ra console trình duyệt (F12 > Console) — ô đỏ trên màn hình chỉ hiện được
+    // đúng 1 dòng ngắn, console mới thấy đủ chi tiết khi cần đối chiếu với log server (xem
+    // "CÁCH TÌM LỖI" ở cuối services/gkeService.js).
+    console.error('[GKE Tracking] Lỗi khi quét', sttKey, ':', e);
+    el.innerHTML = `<div class="ket-qua-box loi">${icon('alert')} ${escapeHtml(e.message || 'Lỗi không rõ nguyên nhân — mở Console (F12) và log server để xem chi tiết')}</div>`;
     phatAmThanhKetQua('KHONG_TIM_THAY');
   }
 
