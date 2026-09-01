@@ -37,6 +37,12 @@
 // "ĐÃ SẴN SÀNG CHẠY MÁY" trở đi nên vẫn bắt buộc phôi/file phải xong (xem kiemTraTinhHopLy trong
 // services/orderService.js) và vẫn nằm trong phạm vi đơn mà san_xuat được thấy (filterForRole).
 //
+// "ĐÃ DÁN TEM" (thêm 01/09/2026): chèn giữa "Đã đóng gói" và "IN TRANSIT" — routes/gke.js tự đặt
+// TINH_TRANG sang giá trị này ngay sau khi quét mã ở tab "Quét mã QR Tracking" lấy được tem GKE
+// thành công (xem routes/gke.js). Không có automation nào tự chuyển tiếp "ĐÃ DÁN TEM" ->
+// "IN TRANSIT" — vẫn set tay như trước (đã kiểm tra: "IN TRANSIT" trước giờ luôn set tay qua
+// order.html/orders.html, không có job nào tự làm việc này).
+//
 const TINH_TRANG_VALUES = [
   'Chưa xác nhận',
   'Đã xác nhận',
@@ -45,6 +51,7 @@ const TINH_TRANG_VALUES = [
   'Đã sản xuất',
   'LỖI SẢN XUẤT CẦN LÀM LẠI',
   'Đã đóng gói',
+  'ĐÃ DÁN TEM',
   'IN TRANSIT_Tracking đã hoạt động',
   'DELIVERED_Đã giao đến khách',
   'CANCELLED_Đã hủy',
@@ -64,6 +71,7 @@ const THU_TU_TINH_TRANG = [
   'Đang chạy máy',
   'Đã sản xuất',
   'Đã đóng gói',
+  'ĐÃ DÁN TEM',
   'IN TRANSIT_Tracking đã hoạt động',
   'DELIVERED_Đã giao đến khách',
 ];

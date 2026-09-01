@@ -8,7 +8,8 @@
 //     trùng nhau. routes/gke.js ghi 1 giá trị placeholder vào TRACKING_ID NGAY sau khi tạo đơn
 //     thành công, TRƯỚC KHI thử lấy tem — vì tem có thể chưa generate xong ngay (xem layTemIn),
 //     nếu không ghi gì ở bước này mà lấy tem thất bại thì quét lại sẽ tưởng nhầm là chưa tạo đơn.
-//   - Cân nặng: ước lượng SO_LUONG * 0.05kg/áo (chưa có cột cân nặng thật trong Sheet).
+//   - Cân nặng: TRONG_LUONG (kg/áo, cột thật trong Sheet) x SO_LUONG; đơn chưa có TRONG_LUONG (trống/
+//     không hợp lệ) thì tạm dùng ước lượng 0.05kg/áo như cũ (bổ sung 01/09/2026, xem tinhCanNangKg).
 //   - Khai báo hải quan: dùng 1 mức giá/mã HS cố định cho MỌI đơn (đọc từ .env), không phân biệt
 //     loại sản phẩm — đơn giản hoá theo yêu cầu, có thể tách theo LOAI sau này nếu cần chính xác hơn.
 //   - Lỗi gọi GKE KHÔNG chặn màn quét (xem routes/gke.js) — chỉ báo lỗi rõ, nhân viên quét lại sau.
@@ -198,7 +199,18 @@ function thongTinNguoiNhan(donHang) {
   };
 }
 
-const CAN_NANG_MOI_AO_KG = 0.05; // ước lượng theo yêu cầu người dùng (31/08/2026) — chưa có cột cân nặng thật
+// Mặc định mỗi áo khi đơn KHÔNG có TRONG_LUONG hợp lệ (trống, 0, hoặc không phải số) — giữ nguyên
+// ước lượng cũ (31/08/2026) làm lưới an toàn, không chặn quét/in chỉ vì thiếu 1 cột.
+const CAN_NANG_MOI_AO_KG = 0.05;
+
+// Cân nặng cả kiện = TRONG_LUONG (kg/áo, cột thật trong Sheet, người dùng xác nhận đơn vị kg
+// 01/09/2026) x SO_LUONG. TRONG_LUONG trống/0/không hợp lệ thì dùng CAN_NANG_MOI_AO_KG/áo thay thế.
+function tinhCanNangKg(donHang) {
+  const soLuong = Number(donHang.SO_LUONG) || 1;
+  const trongLuongMoiCai = Number(donHang.TRONG_LUONG);
+  const canNangMoiCai = trongLuongMoiCai > 0 ? trongLuongMoiCai : CAN_NANG_MOI_AO_KG;
+  return Math.max(soLuong * canNangMoiCai, 0.01);
+}
 
 // Tạo 1 vận đơn THẬT bên GKE — routes/gke.js chỉ gọi hàm này khi đơn CHƯA từng tạo vận đơn lần nào.
 async function taoDonGke(donHang) {
@@ -208,7 +220,6 @@ async function taoDonGke(donHang) {
     throw new Error(`[chuẩn bị dữ liệu] Thiếu ${thieuCauHinh.join(', ')} trong .env`);
   }
 
-  const soLuong = Number(donHang.SO_LUONG) || 1;
   const tenHang = process.env.GKE_CUSTOMS_ITEM_NAME || 'Embroidered garment';
 
   const body = {
@@ -219,7 +230,7 @@ async function taoDonGke(donHang) {
     shipper_info: thongTinNguoiGui(),
     consignee_info: thongTinNguoiNhan(donHang),
     parcel_list: [{
-      weight: Math.max(soLuong * CAN_NANG_MOI_AO_KG, 0.01),
+      weight: tinhCanNangKg(donHang),
       item_list: [{
         export_declared: tenHang,
         import_declared: tenHang,

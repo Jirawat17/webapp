@@ -42,6 +42,7 @@
     <div id="ket-qua-tra-cuu"></div>
 
     <button id="btn-dung-quet" class="btn-dung-quet chi-che-do-kich-ban" style="display:none"></button>
+    <button id="btn-dung-quet-tracking" class="btn-dung-quet" style="display:none"></button>
 
     <div class="chi-che-do-kich-ban" style="display:none">
       <h3 style="margin-top:20px">Danh sách đang quét</h3>
@@ -93,6 +94,13 @@ let audioCtx = null;
 let scannerFile = null; // instance Html5Qrcode RIÊNG cho việc đọc QR từ ảnh tĩnh (2 mode chụp ảnh) — tách khỏi `scanner` (camera sống) để không đụng tới trạng thái đang quét kịch bản
 let toastAnhTimer = null;
 
+// Tab "Quét mã QR Tracking" — riêng, KHÔNG dùng chung dsQuet/dangQuetKichBan của "Quét kịch bản" vì
+// khác hẳn mô hình: mỗi lượt quét ở đây đã áp dụng NGAY (gọi GKE + ghi Sheet + in tem thật), không
+// có bước "xác nhận hàng loạt" nào — dsQuetTracking chỉ là NHẬT KÝ để xem lại sau khi dừng, không
+// dùng để chặn/gộp thao tác như dsQuet.
+let dsQuetTracking = [];
+let dangQuetTracking = true; // true = đang quét (camera sống); false = đã bấm Dừng quét, đang xem tổng hợp
+
 // 2 mốc "chụp ảnh kèm chuyển giai đoạn" dùng CHUNG 1 bộ UI/logic (chỉ khác mốc ảnh + trạng thái yêu
 // cầu/đích) — xem CAU_HINH_ANH bên dưới. Mỗi mốc giữ DANH SÁCH ĐÃ CHỤP riêng (dsDaChupTheoMoc) để
 // chuyển qua lại 2 tab không làm mất lịch sử của tab kia trong cùng phiên làm việc.
@@ -117,6 +125,7 @@ document.getElementById('mode-batch').innerHTML = icon('check') + ' Quét kịch
 document.getElementById('mode-photo-san-xuat').innerHTML = icon('camera', { size: 18 }) + ' ' + CAU_HINH_ANH.photo_san_xuat.nhanTab;
 document.getElementById('mode-photo-dong-goi').innerHTML = icon('camera', { size: 18 }) + ' ' + CAU_HINH_ANH.photo_dong_goi.nhanTab;
 document.getElementById('btn-dung-quet').innerHTML = icon('stop', { size: 40 }) + ' Dừng quét → Xem lại';
+document.getElementById('btn-dung-quet-tracking').innerHTML = icon('stop', { size: 40 }) + ' Dừng quét → Xem tổng hợp';
 document.getElementById('btn-chup-anh').innerHTML = icon('camera', { size: 40 }) + ' Chụp ảnh';
 capNhatNutFlash();
 
@@ -184,6 +193,7 @@ async function capNhatManHinh() {
   document.getElementById('camera-wrap').style.display = 'none';
   document.getElementById('khu-xem-lai').style.display = 'none';
   document.getElementById('photo-wrap').style.display = 'none';
+  document.getElementById('btn-dung-quet-tracking').style.display = 'none';
   // Khung camera tab "Quét mã QR Tracking" hiển thị to gấp đôi mặc định (xem .che-do-to trong
   // style.css) — dễ ngắm hơn khi thao tác 1 mình trên máy tính có gắn máy in, không ảnh hưởng các
   // tab quét khác.
@@ -196,11 +206,16 @@ async function capNhatManHinh() {
     document.getElementById('ket-qua-tra-cuu').style.display = 'block';
     setBatchOnlyVisible(false);
     cameraCanChay = 'lookup';
-  } else if (mode === 'gke_tracking') {
+  } else if (mode === 'gke_tracking' && dangQuetTracking) {
     document.getElementById('camera-wrap').style.display = 'block';
     document.getElementById('ket-qua-tra-cuu').style.display = 'block';
+    document.getElementById('btn-dung-quet-tracking').style.display = '';
     setBatchOnlyVisible(false);
     cameraCanChay = 'gke_tracking';
+  } else if (mode === 'gke_tracking' && !dangQuetTracking) {
+    // Đã bấm "Dừng quét" — camera tắt hẳn (cameraCanChay giữ null), hiện tổng hợp phiên vừa quét.
+    document.getElementById('khu-xem-lai').style.display = 'block';
+    renderTongHopTracking();
   } else if (mode === 'photo_san_xuat' || mode === 'photo_dong_goi') {
     document.getElementById('photo-wrap').style.display = 'block';
     document.getElementById('photo-mo-ta').textContent = CAU_HINH_ANH[mode].moTa;
@@ -412,6 +427,10 @@ async function xuLyQuetTracking(sttKey) {
     phatAmThanhKetQua('OK');
     inTemTuDong(ketQua.labelBase64);
     daGoiIn = true;
+    dsQuetTracking.unshift({
+      sttKey, thanhCong: true, gio: new Date().toLocaleTimeString('vi-VN'),
+      daTaoMoi: ketQua.daTaoMoi, hangVanChuyen: ketQua.hangVanChuyen, trackingNum: ketQua.trackingNum,
+    });
   } catch (e) {
     // In cả lỗi gốc ra console trình duyệt (F12 > Console) — ô đỏ trên màn hình chỉ hiện được
     // đúng 1 dòng ngắn, console mới thấy đủ chi tiết khi cần đối chiếu với log server (xem
@@ -419,6 +438,7 @@ async function xuLyQuetTracking(sttKey) {
     console.error('[GKE Tracking] Lỗi khi quét', sttKey, ':', e);
     el.innerHTML = `<div class="ket-qua-box loi">${icon('alert')} ${escapeHtml(e.message || 'Lỗi không rõ nguyên nhân — mở Console (F12) và log server để xem chi tiết')}</div>`;
     phatAmThanhKetQua('KHONG_TIM_THAY');
+    dsQuetTracking.unshift({ sttKey, thanhCong: false, gio: new Date().toLocaleTimeString('vi-VN'), loi: e.message });
   }
 
   setTimeout(() => { dangXuLyQuet = false; }, 1500);
@@ -431,7 +451,8 @@ async function xuLyQuetTracking(sttKey) {
 }
 
 async function khoiDongLaiCameraTracking() {
-  if (mode !== 'gke_tracking') return; // đã chuyển sang tab khác trong lúc chờ — không đụng vào camera tab đó
+  // Đã chuyển sang tab khác, hoặc đã bấm "Dừng quét" trong lúc chờ — không đụng vào camera nữa.
+  if (mode !== 'gke_tracking' || !dangQuetTracking) return;
   await dungCamera();
   cameraDangChayCho = 'gke_tracking';
   await batDauCamera(xuLyQuetTracking, 520);
@@ -597,6 +618,60 @@ document.getElementById('btn-dung-quet').onclick = async () => {
   dangQuetKichBan = false;
   await capNhatManHinh();
 };
+
+document.getElementById('btn-dung-quet-tracking').onclick = async () => {
+  dangQuetTracking = false;
+  await capNhatManHinh();
+};
+
+// Tổng hợp phiên quét Tracking — hiện sau khi bấm "Dừng quét" ở tab "Quét mã QR Tracking". Chỉ là
+// NHẬT KÝ để xem lại (khác hẳn renderXemLai của "Quét kịch bản" — không có bước xác nhận hàng loạt
+// vì mỗi lượt quét ở tab này đã áp dụng thật ngay lúc quét, không có gì để "xác nhận" thêm nữa).
+function renderTongHopTracking() {
+  const el = document.getElementById('khu-xem-lai');
+  const thanhCong = dsQuetTracking.filter(x => x.thanhCong);
+  const loi = dsQuetTracking.filter(x => !x.thanhCong);
+
+  el.innerHTML = `
+    <h2>Tổng hợp phiên quét Tracking</h2>
+    <p>Tổng ${dsQuetTracking.length} lượt quét — ${thanhCong.length} thành công, ${loi.length} lỗi.</p>
+
+    <div class="luoi-3-nhom luoi-2-nhom">
+      <div class="nhom-xem-lai ok">
+        <div class="tieu-de-nhom">✅ Thành công (${thanhCong.length})</div>
+        <div class="danh-sach-nhom">${thanhCong.length ? thanhCong.map(dongTongHopTrackingOK).join('') : dongTrong()}</div>
+      </div>
+      <div class="nhom-xem-lai loi">
+        <div class="tieu-de-nhom">❌ Lỗi (${loi.length})</div>
+        <div class="danh-sach-nhom">${loi.length ? loi.map(dongTongHopTrackingLoi).join('') : dongTrong()}</div>
+      </div>
+    </div>
+
+    <button class="btn-tiep-tuc-quet san-sang" id="btn-tiep-tuc-tracking">Quét tiếp</button>
+  `;
+  document.getElementById('btn-tiep-tuc-tracking').onclick = async () => {
+    dangQuetTracking = true;
+    await capNhatManHinh();
+  };
+}
+
+function dongTongHopTrackingOK(item) {
+  return `<div class="dong-xem-lai">
+    <div class="noi-dung">
+      <strong>${escapeHtml(item.sttKey)}</strong>
+      <div class="ly-do">${item.daTaoMoi ? 'Tạo vận đơn mới' : 'In lại tem cũ'} · ${escapeHtml(item.hangVanChuyen || '')} · ${escapeHtml(item.trackingNum || '')} · ${item.gio}</div>
+    </div>
+  </div>`;
+}
+
+function dongTongHopTrackingLoi(item) {
+  return `<div class="dong-xem-lai">
+    <div class="noi-dung">
+      <strong>${escapeHtml(item.sttKey)}</strong>
+      <div class="ly-do">${escapeHtml(item.loi || '')} · ${item.gio}</div>
+    </div>
+  </div>`;
+}
 
 function renderXemLai() {
   const el = document.getElementById('khu-xem-lai');

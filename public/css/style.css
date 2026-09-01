@@ -512,6 +512,9 @@ select.chon-trang-thai-tieu-cuc { border-color: var(--color-warning-text); color
 .man-xem-lai h3 { display: flex; align-items: center; gap: 8px; }
 .luoi-3-nhom { display: grid; grid-template-columns: 1fr; gap: var(--space-3); align-items: start; margin-bottom: var(--space-3); }
 @media (min-width: 640px) { .luoi-3-nhom { grid-template-columns: repeat(3, 1fr); gap: var(--space-2); } }
+/* Tổng hợp phiên quét Tracking chỉ có 2 nhóm (Thành công/Lỗi, không có "Sai trạng thái" như Quét
+   kịch bản) — đè lại số cột của .luoi-3-nhom thay vì để trống 1 cột. */
+@media (min-width: 640px) { .luoi-2-nhom { grid-template-columns: repeat(2, 1fr); } }
 
 .nhom-xem-lai { min-width: 0; }
 .nhom-xem-lai .tieu-de-nhom {
