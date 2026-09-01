@@ -3,8 +3,11 @@
 // 31/08/2026:
 //   - customer_order_num khi tạo đơn LUÔN đặt = STT_Key của mình — nhờ vậy in lại tem sau này
 //     KHÔNG cần lưu riêng order_num/waybill number của GKE, chỉ cần num_type=1 + STT_Key.
-//   - Đơn đã có MA_VAN_DON_ID rồi thì KHÔNG tạo đơn GKE mới nữa (mỗi lần order/create/ tạo 1 vận
-//     đơn thật, gọi lặp sẽ ra nhiều vận đơn trùng) — chỉ gọi lại label/print/ để in lại tem cũ.
+//   - Đơn đã tạo vận đơn GKE rồi (kể cả đang chờ tem, xem MA_DANG_CHO_TEM trong routes/gke.js) thì
+//     KHÔNG được gọi order/create/ lại — mỗi lần gọi tạo 1 vận đơn thật, gọi lặp sẽ ra 2 vận đơn
+//     trùng nhau. routes/gke.js ghi 1 giá trị placeholder vào MA_VAN_DON_ID NGAY sau khi tạo đơn
+//     thành công, TRƯỚC KHI thử lấy tem — vì tem có thể chưa generate xong ngay (xem layTemIn),
+//     nếu không ghi gì ở bước này mà lấy tem thất bại thì quét lại sẽ tưởng nhầm là chưa tạo đơn.
 //   - Cân nặng: ước lượng SO_LUONG * 0.05kg/áo (chưa có cột cân nặng thật trong Sheet).
 //   - Khai báo hải quan: dùng 1 mức giá/mã HS cố định cho MỌI đơn (đọc từ .env), không phân biệt
 //     loại sản phẩm — đơn giản hoá theo yêu cầu, có thể tách theo LOAI sau này nếu cần chính xác hơn.
@@ -188,7 +191,7 @@ function thongTinNguoiNhan(donHang) {
 
 const CAN_NANG_MOI_AO_KG = 0.05; // ước lượng theo yêu cầu người dùng (31/08/2026) — chưa có cột cân nặng thật
 
-// Tạo 1 vận đơn THẬT bên GKE — chỉ gọi khi đơn CHƯA có MA_VAN_DON_ID (xem taoDonVaLayTem).
+// Tạo 1 vận đơn THẬT bên GKE — routes/gke.js chỉ gọi hàm này khi đơn CHƯA từng tạo vận đơn lần nào.
 async function taoDonGke(donHang) {
   const thieuCauHinh = ['GKE_SERVICE_CODE', 'GKE_CUSTOMS_HS_CODE', 'GKE_CUSTOMS_DECLARED_PRICE']
     .filter(k => !process.env[k]);
@@ -228,31 +231,43 @@ async function taoDonGke(donHang) {
   return goiApi('tạo đơn', '/order/create/', body);
 }
 
-// Lấy tem in (PDF base64) — dùng num_type=1 (Customer Order Number) + STT_Key, KHÔNG cần biết
-// order_num/waybill number nội bộ của GKE vì lúc tạo đơn đã đặt customer_order_num = STT_Key.
-async function layTemIn(donHang) {
-  return goiApi('in tem', '/label/print/', { num_type: 1, num: donHang.STT_Key });
+// Ngay sau khi order/create/ thành công, tem thường CHƯA generate xong ngay — gọi label/print/
+// quá sớm bị GKE từ chối với thông báo kiểu "等待抓取面单" (đang chờ lấy được tem). Phát hiện qua
+// test thật 01/09/2026. Tự đợi + thử lại vài lần thay vì báo lỗi ngay, để vẫn giữ đúng luồng
+// "quét là in luôn, không cần bấm gì thêm" — nếu sau hết số lần thử vẫn chưa xong thì mới báo lỗi
+// thật cho người dùng (đơn đã tạo thành công, chỉ chưa lấy được tem, có thể vào lại sau để in lại).
+const SO_LAN_THU_LAI_TEM = 6;
+const KHOANG_CACH_THU_LAI_MS = 3000;
+function dangChoTemSanSang(thongBaoLoi) {
+  return /等待抓取面单|waiting|pending|chưa.*sẵn sàng|đang.*xử lý/i.test(thongBaoLoi || '');
 }
 
-// Hàm chính routes/gke.js gọi — tự quyết định tạo đơn mới hay chỉ in lại tuỳ đơn đã có
-// MA_VAN_DON_ID hay chưa.
-async function taoDonVaLayTem(donHang) {
-  if (!donHang.MA_VAN_DON_ID) {
-    console.log(`[GKE] Đơn ${donHang.STT_Key} chưa có MA_VAN_DON_ID — tạo vận đơn mới`);
-    await taoDonGke(donHang);
-  } else {
-    console.log(`[GKE] Đơn ${donHang.STT_Key} đã có MA_VAN_DON_ID=${donHang.MA_VAN_DON_ID} — chỉ in lại tem`);
+// Lấy tem in (PDF base64) — dùng num_type=1 (Customer Order Number) + STT_Key, KHÔNG cần biết
+// order_num/waybill number nội bộ của GKE vì lúc tạo đơn đã đặt customer_order_num = STT_Key.
+async function layTemIn(donHang, { laLanDauSauKhiTao = false } = {}) {
+  const soLanThu = laLanDauSauKhiTao ? SO_LAN_THU_LAI_TEM : 1;
+  for (let lan = 1; lan <= soLanThu; lan++) {
+    try {
+      return await goiApi('in tem', '/label/print/', { num_type: 1, num: donHang.STT_Key });
+    } catch (err) {
+      const conThuTiep = laLanDauSauKhiTao && lan < soLanThu && dangChoTemSanSang(err.message);
+      if (!conThuTiep) throw err;
+      console.log(`[GKE] [in tem] Tem chưa sẵn sàng (lần ${lan}/${soLanThu}), đợi ${KHOANG_CACH_THU_LAI_MS / 1000}s rồi thử lại...`);
+      await new Promise(r => setTimeout(r, KHOANG_CACH_THU_LAI_MS));
+    }
   }
-  return layTemIn(donHang);
 }
 
 // CÁCH TÌM LỖI khi tab "Quét mã QR Tracking" báo lỗi:
-//   1. Mở terminal đang chạy `npm start`/`node server.js` — mọi bước đều in dòng bắt đầu "[GKE]",
-//      kèm đúng tên bước (đăng nhập / tạo đơn / in tem / chuẩn bị dữ liệu) đang thất bại.
+//   1. Mở terminal đang chạy `npm start`/`node server.js` (hoặc `docker logs -f xuong-theu-webapp`
+//      nếu chạy Docker) — mọi bước đều in dòng bắt đầu "[GKE]", kèm đúng tên bước (đăng nhập / tạo
+//      đơn / in tem / chuẩn bị dữ liệu) đang thất bại.
 //   2. Nếu dòng lỗi có "Phản hồi KHÔNG phải JSON" — GKE hoặc 1 proxy ở giữa trả về HTML/lỗi mạng,
 //      500 ký tự in kèm theo là nội dung thật nhận được, đọc trực tiếp để biết chuyện gì xảy ra.
 //   3. Nếu dòng lỗi có "Quá thời gian chờ" — server không kết nối được tới order.gkelogistics.com
-//      trong 20 giây, kiểm tra tường lửa/mạng ra ngoài của máy đang chạy server.
-//   4. Thông báo hiện trên điện thoại/trình duyệt (mục ket-qua-tra-cuu) LUÔN kèm tên bước trong
+//      trong 45 giây, kiểm tra tường lửa/mạng ra ngoài của máy đang chạy server.
+//   4. Nếu dòng lỗi có "chưa sẵn sàng" / "等待抓取面单" ở bước in tem — bình thường, hệ thống tự thử
+//      lại vài lần (xem layTemIn); chỉ thực sự lỗi nếu hết số lần thử vẫn chưa xong.
+//   5. Thông báo hiện trên điện thoại/trình duyệt (mục ket-qua-tra-cuu) LUÔN kèm tên bước trong
 //      ngoặc vuông ở đầu câu, vd "[tạo đơn] ..." — khớp đúng với log server để đối chiếu nhanh.
-module.exports = { taoDonVaLayTem, taoDonGke, layTemIn, maQuocGia };
+module.exports = { taoDonGke, layTemIn, maQuocGia };
