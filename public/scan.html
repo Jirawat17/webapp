@@ -35,6 +35,7 @@
       <div class="camera-vien">
         <div id="qr-reader" style="border-radius:12px;overflow:hidden;"></div>
         <button id="btn-flash" class="btn-flash-overlay" hidden></button>
+        <div id="trang-thai-camera-tracking" class="trang-thai-camera-tracking" style="display:none"></div>
       </div>
       <div id="toast-vua-quet" class="toast-vua-quet"></div>
     </div>
@@ -194,6 +195,7 @@ async function capNhatManHinh() {
   document.getElementById('khu-xem-lai').style.display = 'none';
   document.getElementById('photo-wrap').style.display = 'none';
   document.getElementById('btn-dung-quet-tracking').style.display = 'none';
+  hienThiTrangThaiCamera(''); // dọn sạch, phòng khi đổi mode ngay giữa lúc đang khởi động lại camera tab Tracking
   // Khung camera tab "Quét mã QR Tracking" hiển thị to gấp đôi mặc định (xem .che-do-to trong
   // style.css) — dễ ngắm hơn khi thao tác 1 mình trên máy tính có gắn máy in, không ảnh hưởng các
   // tab quét khác.
@@ -299,7 +301,16 @@ function phatBeep(tanSo, thoiLuongMs, doTreMs, loaiSong) {
 // không nhầm khi quét nhanh liên tục: OK dùng sóng sine êm (như chuông); 2 trường hợp lỗi dùng
 // sóng square (âm sắc "còi báo động", khác hẳn về chất âm chứ không chỉ khác cao độ) + có rung.
 function phatAmThanhKetQua(nhom) {
-  if (nhom === 'OK') {
+  if (nhom === 'DA_NHAN') {
+    // Tab Tracking (bổ sung 02/09/2026): quét xong 1 mã phải chờ GKE tới ~1 phút mới có kết quả
+    // cuối — nếu chỉ phát âm OK/lỗi ở cuối thì người quét không biết máy đã "nhận" được mã ngay lúc
+    // quét hay chưa, dễ tưởng máy treo mà quét lại. 2 tiếng "tít tít" NGẮN, CÙNG 1 cao độ, sát nhau
+    // (mô phỏng tiếng bíp máy quét mã vạch quen thuộc, dễ nhận ra ngay) — cao độ cao hơn hẳn và
+    // không tăng dần như OK (OK: 2 nốt tăng dần 880→1175, dài hơn, cách xa hơn) nên không lẫn dù
+    // cùng là 2 tiếng; không mang nghĩa thành công/thất bại nên không rung.
+    phatBeep(1500, 50, 0, 'sine');
+    phatBeep(1500, 50, 70, 'sine');
+  } else if (nhom === 'OK') {
     // 2 nốt sine tăng dần, êm nhẹ — không rung, để phân biệt tuyệt đối với 2 trường hợp lỗi bên dưới
     phatBeep(880, 120, 0, 'sine');
     phatBeep(1175, 150, 100, 'sine');
@@ -445,9 +456,26 @@ async function xuLyQuetTraCuu(sttKey) {
 // Logistics tạo vận đơn thật (hoặc in lại nếu đơn đã có mã vận đơn từ trước) rồi TỰ ĐỘNG mở hộp
 // thoại in ngay, không cần bấm thêm nút xác nhận nào (xem inTemTuDong bên dưới). Dùng CHUNG cơ chế
 // debounce/hiển thị với xuLyQuetTraCuu ở trên — chỉ khác action gọi API và có thêm bước in.
+// Mỗi lượt quét chỉ xử lý ĐÚNG 1 đơn tại 1 thời điểm (đợi GKE tạo vận đơn + tem xong mới nhận đơn
+// tiếp theo) — khớp đúng quy trình thật: phải cầm tem VỪA IN xong mới dán lên ĐÚNG kiện đó rồi mới
+// chuyển sang kiện tiếp theo, nên không cần xếp hàng đợi nhiều đơn cùng lúc. daBaoDangBanTracking chỉ
+// để KHÔNG spam toast nếu người dùng lỡ quét thêm nhiều lần trong lúc đang đợi đơn trước xử lý xong.
+let daBaoDangBanTracking = false;
+
 async function xuLyQuetTracking(sttKey) {
-  if (dangXuLyQuet) return;
+  if (dangXuLyQuet) {
+    // Đang xử lý đơn trước — mã này bị BỎ QUA, không phải lỗi. Trước đây im lặng hoàn toàn khiến
+    // người quét tưởng máy treo/không nhận được mã; giờ báo rõ 1 lần (không lặp lại liên tục) để họ
+    // biết chỉ cần đợi rồi quét lại, không phải quét lại ngay do lỗi đọc mã.
+    if (!daBaoDangBanTracking) {
+      daBaoDangBanTracking = true;
+      hienThiToast('trung', `Đang xử lý đơn trước — đợi xong rồi quét lại ${sttKey}`);
+    }
+    return;
+  }
   dangXuLyQuet = true;
+  daBaoDangBanTracking = false;
+  phatAmThanhKetQua('DA_NHAN'); // báo NGAY lúc đọc được mã — không đợi tới khi GKE trả kết quả (có thể mất tới 1 phút)
   const el = document.getElementById('ket-qua-tra-cuu');
   el.innerHTML = `<div class="ket-qua-box">${spinnerInline('Đang tạo vận đơn và chờ GKE generate tem... (có thể mất tới 1 phút)')}</div>`;
 
@@ -464,12 +492,14 @@ async function xuLyQuetTracking(sttKey) {
       </div>
     </div>`;
     phatAmThanhKetQua('OK');
-    inTemTuDong(ketQua.labelBase64);
     daGoiIn = true;
     dsQuetTracking.unshift({
       sttKey, thanhCong: true, gio: new Date().toLocaleTimeString('vi-VN'),
       daTaoMoi: ketQua.daTaoMoi, hangVanChuyen: ketQua.hangVanChuyen, trackingNum: ketQua.trackingNum,
     });
+    // Gọi in NGAY (không đợi kết quả) — nhưng đăng ký callback để khởi động lại camera SỚM HƠN nếu
+    // trình duyệt báo được lúc hộp thoại in đóng lại (afterprint), thay vì luôn đợi cứng 3 giây.
+    inTemTuDong(ketQua.labelBase64, () => { khoiDongLaiCameraTracking(); });
   } catch (e) {
     // In cả lỗi gốc ra console trình duyệt (F12 > Console) — ô đỏ trên màn hình chỉ hiện được
     // đúng 1 dòng ngắn, console mới thấy đủ chi tiết khi cần đối chiếu với log server (xem
@@ -484,21 +514,46 @@ async function xuLyQuetTracking(sttKey) {
 
   // Hộp thoại in PDF của trình duyệt là 1 cửa sổ tách biệt đè lên trang — trên nhiều máy, sau khi
   // đóng hộp thoại này lại khung hình camera bị đứng hình/đen dù luồng vẫn còn sống bên dưới, khiến
-  // không quét tiếp được đơn kế tiếp. Chủ động khởi động lại camera vài giây sau khi gọi in để chắc
-  // chắn luôn sẵn sàng quét tiếp, không cần người dùng tự tải lại trang.
+  // không quét tiếp được đơn kế tiếp. Chủ động khởi động lại camera sau khi in để chắc chắn luôn sẵn
+  // sàng quét tiếp — hẹn giờ DỰ PHÒNG ở đây (3s) phòng khi callback afterprint ở inTemTuDong không
+  // bắn ra (không phải trình duyệt nào cũng hỗ trợ với trình xem PDF nội bộ của Chrome).
+  // khoiDongLaiCameraTracking tự chặn chạy trùng (cờ dangKhoiDongLaiCameraTracking) nên dù afterprint
+  // VÀ hẹn giờ này cùng gọi tới cũng chỉ thực thi đúng 1 lần — không cần hiện trạng thái camera ở
+  // đây (camera vẫn đang sống bình thường lúc này), chỉ hiện NGAY LÚC thực sự dừng/mở lại (xem hàm dưới).
   if (daGoiIn) setTimeout(khoiDongLaiCameraTracking, 3000);
 }
+
+// Hiện dòng trạng thái nhỏ ngay trên khung camera trong lúc camera tạm tắt để khởi động lại — tránh
+// người dùng tưởng camera bị treo/lỗi khi thấy khung hình đứng yên vài giây không rõ lý do.
+function hienThiTrangThaiCamera(noiDung) {
+  const el = document.getElementById('trang-thai-camera-tracking');
+  if (!el) return;
+  el.textContent = noiDung || '';
+  el.style.display = noiDung ? 'flex' : 'none';
+}
+
+let dangKhoiDongLaiCameraTracking = false;
 
 async function khoiDongLaiCameraTracking() {
   // Đã chuyển sang tab khác, hoặc đã bấm "Dừng quét" trong lúc chờ — không đụng vào camera nữa.
   if (mode !== 'gke_tracking' || !dangQuetTracking) return;
-  await dungCamera();
-  // Đợi 1 nhịp ngắn cho trình duyệt/OS nhả hẳn camera trước khi mở lại — dừng rồi mở lại NGAY LẬP
-  // TỨC dễ dính NotReadableError (xem batDauCamera) hơn nếu không có khoảng nghỉ này.
-  await new Promise(r => setTimeout(r, 400));
-  if (mode !== 'gke_tracking' || !dangQuetTracking) return; // kiểm tra lại — có thể đã đổi ý trong lúc chờ
-  cameraDangChayCho = 'gke_tracking';
-  await batDauCamera(xuLyQuetTracking, 520, { facingMode: 'user' });
+  // afterprint (đường nhanh) và hẹn giờ 3s dự phòng có thể cùng gọi hàm này — chỉ chạy 1 lần
+  // (dangKhoiDongLaiCameraTracking bật suốt quá trình, tắt lại ở finally bên dưới).
+  if (dangKhoiDongLaiCameraTracking) return;
+  dangKhoiDongLaiCameraTracking = true;
+  hienThiTrangThaiCamera('Đang khởi động lại camera...');
+  try {
+    await dungCamera();
+    // Đợi 1 nhịp ngắn cho trình duyệt/OS nhả hẳn camera trước khi mở lại — dừng rồi mở lại NGAY LẬP
+    // TỨC dễ dính NotReadableError (xem batDauCamera) hơn nếu không có khoảng nghỉ này.
+    await new Promise(r => setTimeout(r, 400));
+    if (mode !== 'gke_tracking' || !dangQuetTracking) return; // kiểm tra lại — có thể đã đổi ý trong lúc chờ
+    cameraDangChayCho = 'gke_tracking';
+    await batDauCamera(xuLyQuetTracking, 520, { facingMode: 'user' });
+  } finally {
+    hienThiTrangThaiCamera('');
+    dangKhoiDongLaiCameraTracking = false;
+  }
 }
 
 function base64ThanhBlob(base64, kieuMime) {
@@ -520,13 +575,20 @@ function base64ThanhBlob(base64, kieuMime) {
 // để kích thước LAYOUT THẬT, chỉ đẩy ra ngoài màn hình bằng toạ độ âm; (2) gọi print() ngay lúc
 // iframe "onload" đôi khi sớm hơn lúc trình xem PDF bên trong dựng xong nội dung — phải chờ thêm 1
 // nhịp ngắn. Dùng blob: URL thay vì data: URI vì trình xem PDF của Chrome nhận diện ổn định hơn.
-function inTemTuDong(labelBase64) {
-  if (!labelBase64) return;
+//
+// onXongIn (bổ sung 02/09/2026): gọi lại khi hộp thoại in ĐÃ ĐÓNG (sự kiện afterprint trên chính
+// cửa sổ iframe) — cho phép khoiDongLaiCameraTracking chạy SỚM HƠN 3 giây cố định, để camera sẵn
+// sàng quét đơn tiếp theo nhanh nhất có thể. Không phải trình duyệt/context nào cũng bắn đúng sự
+// kiện này với trình xem PDF nội bộ của Chrome — nếu không bắn thì gọi ý sẽ KHÔNG chạy, đây là lý do
+// xuLyQuetTracking VẪN giữ hẹn giờ 3 giây dự phòng song song, không phụ thuộc hoàn toàn vào đây.
+function inTemTuDong(labelBase64, onXongIn) {
+  if (!labelBase64) { if (onXongIn) onXongIn(); return; }
   let urlBlob;
   try {
     urlBlob = URL.createObjectURL(base64ThanhBlob(labelBase64, 'application/pdf'));
   } catch (e) {
     console.error('[GKE] Lỗi tạo file tem để in:', e);
+    if (onXongIn) onXongIn();
     return;
   }
 
@@ -544,6 +606,9 @@ function inTemTuDong(labelBase64) {
     setTimeout(() => {
       try {
         iframe.contentWindow.focus();
+        if (onXongIn) {
+          try { iframe.contentWindow.addEventListener('afterprint', onXongIn, { once: true }); } catch (e2) {}
+        }
         iframe.contentWindow.print();
       } catch (e) {
         console.error('[GKE] Lỗi tự mở hộp thoại in:', e);

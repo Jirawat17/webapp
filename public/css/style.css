@@ -461,6 +461,14 @@ select.chon-trang-thai-tieu-cuc { border-color: var(--color-warning-text); color
   background: rgba(24,24,27,0.55); color: #fff; font-size: 1.3rem; cursor: pointer;
 }
 .btn-flash-overlay.dang-bat { background: var(--color-warning-text); }
+/* Đè lên khung camera trong lúc tab Tracking đang khởi động lại camera (xem hienThiTrangThaiCamera
+   trong scan.html) — tránh người dùng tưởng camera treo khi thấy khung hình đứng yên vài giây. */
+.trang-thai-camera-tracking {
+  position: absolute; inset: 0; z-index: 4;
+  align-items: center; justify-content: center; text-align: center; padding: 16px;
+  background: rgba(24,24,27,0.72); color: #fff; font-weight: 700; font-size: 0.95rem;
+  border-radius: var(--radius-md);
+}
 .btn-flash-overlay[hidden] { display: none; }
 
 /* --- Khu vực camera + toast "vừa quét" nổi ngay dưới --- */
