@@ -210,8 +210,13 @@ async function taoDonGke(donHang) {
         import_declared: tenHang,
         export_hscode: process.env.GKE_CUSTOMS_HS_CODE,
         import_hscode: process.env.GKE_CUSTOMS_HS_CODE,
+        // GKE bắt buộc khai giá CẢ 2 chiều xuất/nhập cho đơn xuyên biên giới (phát hiện qua log lỗi
+        // thật 01/09/2026: "import_price: Field required") — dùng CÙNG 1 mức cố định cho cả 2, đúng
+        // quyết định "1 mức cố định" ban đầu, không tách riêng giá xuất/nhập.
         export_price: Number(process.env.GKE_CUSTOMS_DECLARED_PRICE),
         export_price_currency: process.env.GKE_CUSTOMS_CURRENCY || 'USD',
+        import_price: Number(process.env.GKE_CUSTOMS_DECLARED_PRICE),
+        import_price_currency: process.env.GKE_CUSTOMS_CURRENCY || 'USD',
       }],
     }],
   };
