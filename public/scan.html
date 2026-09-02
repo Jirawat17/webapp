@@ -336,11 +336,14 @@ async function dieuChinhCamera(muonChay) {
   else if (muonChay === 'batch') await batDauCamera(xuLyQuetKichBan);
   // qrbox to gấp đôi (520 so với 260 mặc định) khớp với khung camera to gấp đôi của tab này (xem
   // .che-do-to) — giữ tỉ lệ khung ngắm QR so với khung hình camera như các tab khác. facingMode
-  // 'user' thay vì 'environment' mặc định — tab này CHỈ chạy trên PC/laptop có gắn máy in (quyết
-  // định "Approach 3" 31/08/2026, không chạy trên điện thoại như 2 tab kia), mà webcam PC/laptop
-  // luôn quay MẶT VỀ NGƯỜI DÙNG chứ không có camera "environment" thật — xin đúng facingMode giúp
-  // trình duyệt/driver khớp thiết bị nhanh hơn, đỡ mất thời gian thương lượng constraint không khớp.
-  else if (muonChay === 'gke_tracking') await batDauCamera(xuLyQuetTracking, 520, { facingMode: 'user' });
+  // 'environment' (camera SAU) — bổ sung 02/09/2026: tab này giờ cũng dùng được trên điện thoại
+  // (trước đó từng đổi tạm sang 'user' khi tưởng tab chỉ chạy trên PC, nay không còn đúng nữa), mà
+  // camera sau mới đúng hướng để quét tem dán trên kiện hàng (camera trước là selfie, không dùng
+  // được). Giống hệt facingMode của 2 tab Tra cứu/Quét kịch bản — chạy PC vẫn ổn (giá trị bare kiểu
+  // này chỉ là "ưu tiên", không "bắt buộc", nên PC không có camera sau thật vẫn tự dùng camera có sẵn
+  // như trước giờ vẫn vậy), không phải nguyên nhân đã gây lỗi NotReadableError hôm trước (đã có
+  // retry + log riêng trong batDauCamera lo phần đó).
+  else if (muonChay === 'gke_tracking') await batDauCamera(xuLyQuetTracking, 520, { facingMode: 'environment' });
 }
 
 // "NotReadableError: Could not start video source" KHÔNG PHẢI lỗi quyền — trình duyệt/OS chưa kịp
@@ -549,7 +552,7 @@ async function khoiDongLaiCameraTracking() {
     await new Promise(r => setTimeout(r, 400));
     if (mode !== 'gke_tracking' || !dangQuetTracking) return; // kiểm tra lại — có thể đã đổi ý trong lúc chờ
     cameraDangChayCho = 'gke_tracking';
-    await batDauCamera(xuLyQuetTracking, 520, { facingMode: 'user' });
+    await batDauCamera(xuLyQuetTracking, 520, { facingMode: 'environment' });
   } finally {
     hienThiTrangThaiCamera('');
     dangKhoiDongLaiCameraTracking = false;
