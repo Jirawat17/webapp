@@ -493,6 +493,7 @@ async function xuLyQuetTracking(sttKey) {
         <strong>${escapeHtml(sttKey)}</strong> — ${ketQua.daTaoMoi ? 'Đã tạo vận đơn mới, đang in tem' : 'In lại tem cũ'}<br>
         Hãng: <strong>${escapeHtml(ketQua.hangVanChuyen || '')}</strong> · Mã vận đơn: <strong>${escapeHtml(ketQua.trackingNum || '')}</strong>
       </div>
+      <button id="btn-in-tem-tracking" class="btn-in-tem-tracking">${icon('printer', { size: 18 })} In tem</button>
     </div>`;
     phatAmThanhKetQua('OK');
     daGoiIn = true;
@@ -502,7 +503,16 @@ async function xuLyQuetTracking(sttKey) {
     });
     // Gọi in NGAY (không đợi kết quả) — nhưng đăng ký callback để khởi động lại camera SỚM HƠN nếu
     // trình duyệt báo được lúc hộp thoại in đóng lại (afterprint), thay vì luôn đợi cứng 3 giây.
-    inTemTuDong(ketQua.labelBase64, () => { khoiDongLaiCameraTracking(); });
+    //
+    // Nút "In tem" (bổ sung 02/09/2026): trên điện thoại (đặc biệt iOS Safari, và nhiều bản Android
+    // Chrome), trình duyệt CHẶN gọi print() bằng JS nếu không xuất phát trực tiếp từ 1 thao tác chạm/
+    // bấm thật của người dùng — mà lượt quét QR ở đây là do camera tự đọc được mã, không phải 1 cú
+    // bấm, nên trên điện thoại hộp thoại in có thể KHÔNG tự bật lên được (khác PC, nơi trình duyệt dễ
+    // dãi hơn nên vẫn tự bật được). trinhIn() trả về từ inTemTuDong dùng LẠI ĐÚNG iframe/tem đã tạo —
+    // bấm nút này là 1 cú bấm thật nên chắc chắn mở được hộp thoại in trên mọi trình duyệt/thiết bị.
+    const trinhIn = inTemTuDong(ketQua.labelBase64, () => { khoiDongLaiCameraTracking(); });
+    const btnInTem = document.getElementById('btn-in-tem-tracking');
+    if (btnInTem && trinhIn) btnInTem.onclick = trinhIn;
   } catch (e) {
     // In cả lỗi gốc ra console trình duyệt (F12 > Console) — ô đỏ trên màn hình chỉ hiện được
     // đúng 1 dòng ngắn, console mới thấy đủ chi tiết khi cần đối chiếu với log server (xem
@@ -584,15 +594,21 @@ function base64ThanhBlob(base64, kieuMime) {
 // sàng quét đơn tiếp theo nhanh nhất có thể. Không phải trình duyệt/context nào cũng bắn đúng sự
 // kiện này với trình xem PDF nội bộ của Chrome — nếu không bắn thì gọi ý sẽ KHÔNG chạy, đây là lý do
 // xuLyQuetTracking VẪN giữ hẹn giờ 3 giây dự phòng song song, không phụ thuộc hoàn toàn vào đây.
+//
+// Trả về hàm goiIn — cho phép gọi LẠI thủ công qua nút "In tem" (xem xuLyQuetTracking). Trên điện
+// thoại (đặc biệt iOS Safari), trình duyệt thường CHẶN print() gọi từ JS nếu không xuất phát trực
+// tiếp từ 1 cú bấm/chạm thật (bổ sung 02/09/2026, phát hiện qua thực tế: PC tự bật hộp thoại in bình
+// thường nhưng điện thoại thì không) — lượt gọi TỰ ĐỘNG dưới đây vẫn thử trước (vô hại nếu bị chặn
+// im lặng), còn nút bấm thật đảm bảo LUÔN mở được hộp thoại in trên mọi thiết bị.
 function inTemTuDong(labelBase64, onXongIn) {
-  if (!labelBase64) { if (onXongIn) onXongIn(); return; }
+  if (!labelBase64) { if (onXongIn) onXongIn(); return null; }
   let urlBlob;
   try {
     urlBlob = URL.createObjectURL(base64ThanhBlob(labelBase64, 'application/pdf'));
   } catch (e) {
     console.error('[GKE] Lỗi tạo file tem để in:', e);
     if (onXongIn) onXongIn();
-    return;
+    return null;
   }
 
   const iframe = document.createElement('iframe');
@@ -605,22 +621,27 @@ function inTemTuDong(labelBase64, onXongIn) {
   iframe.src = urlBlob;
   document.body.appendChild(iframe);
 
-  iframe.onload = () => {
-    setTimeout(() => {
-      try {
-        iframe.contentWindow.focus();
-        if (onXongIn) {
-          try { iframe.contentWindow.addEventListener('afterprint', onXongIn, { once: true }); } catch (e2) {}
-        }
-        iframe.contentWindow.print();
-      } catch (e) {
-        console.error('[GKE] Lỗi tự mở hộp thoại in:', e);
+  let daDangKyAfterprint = false;
+  function goiIn() {
+    try {
+      iframe.contentWindow.focus();
+      if (onXongIn && !daDangKyAfterprint) {
+        daDangKyAfterprint = true;
+        try { iframe.contentWindow.addEventListener('afterprint', onXongIn, { once: true }); } catch (e2) {}
       }
-    }, 400);
-  };
+      iframe.contentWindow.print();
+    } catch (e) {
+      console.error('[GKE] Lỗi mở hộp thoại in:', e);
+    }
+  }
 
-  // Dọn iframe + giải phóng blob sau 1 phút — đủ thời gian người dùng thao tác xong hộp thoại in, không giữ mãi trong DOM.
-  setTimeout(() => { iframe.remove(); URL.revokeObjectURL(urlBlob); }, 60000);
+  iframe.onload = () => { setTimeout(goiIn, 400); };
+
+  // Dọn iframe + giải phóng blob sau 5 phút — đủ thời gian bấm nút "In tem" thủ công (vd cầm điện
+  // thoại đi tới chỗ máy in) chứ không chỉ riêng lượt tự động lúc vừa quét xong, không giữ mãi trong DOM.
+  setTimeout(() => { iframe.remove(); URL.revokeObjectURL(urlBlob); }, 300000);
+
+  return goiIn;
 }
 
 async function xuLyQuetKichBan(sttKey) {
