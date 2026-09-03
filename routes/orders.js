@@ -4,7 +4,7 @@ const orderService = require('../services/orderService');
 const alertService = require('../services/alertService');
 const scenarioService = require('../services/scenarioService');
 const { parseNgay } = require('../services/dateUtils');
-const { DANH_SACH_TRANG_THAI_BAO_CAO, TRANG_THAI_PHOI_VALUES, TRANG_THAI_VE_FILE_VALUES } = require('../data/pipelineTinhTrang');
+const { DANH_SACH_TRANG_THAI_BAO_CAO, TRANG_THAI_PHOI_VALUES, TRANG_THAI_VE_FILE_VALUES, khopGiaTriLoc } = require('../data/pipelineTinhTrang');
 const { ghiLog, layLichSuTheoDon, layLichSuChuyenSangTrangThai } = require('../services/logService');
 const { requireLogin } = require('../middleware/auth');
 
@@ -108,9 +108,9 @@ router.get('/', async (req, res) => {
     trangThai, trangThaiPhoi, trangThaiVeFile, kh, tuNgay, denNgay,
     loai, kichThuoc, mauSac, hangVanChuyen, canhBao, sapXep,
   } = req.query;
-  if (trangThai) list = list.filter(r => r.TRANG_THAI_XUONG === trangThai);
-  if (trangThaiPhoi) list = list.filter(r => r.TRANG_THAI_PHOI === trangThaiPhoi);
-  if (trangThaiVeFile) list = list.filter(r => r.TRANG_THAI_VE_FILE === trangThaiVeFile);
+  if (trangThai) list = list.filter(r => khopGiaTriLoc(r.TRANG_THAI_XUONG, trangThai));
+  if (trangThaiPhoi) list = list.filter(r => khopGiaTriLoc(r.TRANG_THAI_PHOI, trangThaiPhoi));
+  if (trangThaiVeFile) list = list.filter(r => khopGiaTriLoc(r.TRANG_THAI_VE_FILE, trangThaiVeFile));
   if (loai) list = list.filter(r => r.LOAI === loai);
   if (kichThuoc) list = list.filter(r => r.KICH_THUOC === kichThuoc);
   if (mauSac) list = list.filter(r => r.MAU_SAC === mauSac);
@@ -185,7 +185,7 @@ router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
 
   for (const sttKey of sttKeys) {
     try {
-      const { row } = await orderService.getByKey(sttKey, { fresh: true });
+      const { headers, row } = await orderService.getByKey(sttKey, { fresh: true });
       if (!row) {
         loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
         continue;
@@ -196,7 +196,7 @@ router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
         [cot]: trangThaiMoi,
         NguoiCapNhatCuoi: user.ten,
         ThoiGianCapNhatCuoi: new Date().toISOString(),
-      }, user);
+      }, user, { donDaDoc: { headers, row } }); // đã đọc thật ở trên, khỏi đọc lại lần nữa (xem orderService.update)
 
       thanhCong.push(sttKey);
       ghiLog({

@@ -32,6 +32,7 @@
           <option value="">Tất cả (phôi)</option>
           <option value="Chưa lấy phôi">Chưa lấy phôi</option>
           <option value="Đã lấy phôi">Đã lấy phôi</option>
+          <option value="__TRONG__">(Trống)</option>
         </select>
       </div>
       <div class="truong">
@@ -40,6 +41,7 @@
           <option value="">Tất cả (vẽ file)</option>
           <option value="Chưa vẽ file">Chưa vẽ file</option>
           <option value="Đã vẽ file">Đã vẽ file</option>
+          <option value="__TRONG__">(Trống)</option>
         </select>
       </div>
       <div class="truong">
@@ -125,6 +127,10 @@
 <script src="/js/api.js?v=78"></script>
 <script>
 const NHAN_CANH_BAO = { VANG: 'Vàng · 3 ngày', CAM: 'Cam · 5 ngày', DO: 'Đỏ · 7 ngày' };
+
+// Giá trị lọc đặc biệt "(Trống)" — lọc đúng các đơn có ô Trạng thái/Phôi/Vẽ file đang TRỐNG trong
+// Sheet. PHẢI khớp với GIA_TRI_LOC_TRONG trong data/pipelineTinhTrang.js — sửa 1 chỗ thì nhớ sửa chỗ kia.
+const GIA_TRI_LOC_TRONG = '__TRONG__';
 
 // Danh sách ĐẦY ĐỦ 10 giá trị TRANG_THAI_XUONG — dùng riêng cho ô "Chuyển đến trạng thái" (chọn tự do,
 // không kiểm tra trạng thái hiện tại). PHẢI khớp với DANH_SACH_TRANG_THAI_BAO_CAO trong
@@ -244,6 +250,10 @@ function domLaiOChon(id, nhanTatCa, giaTriList) {
 // đúng danh sách đã bị thu hẹp thì các lựa chọn khác sẽ biến mất khỏi ô, không bấm lại được nữa.
 function capNhatCacBoLocDong(list) {
   domLaiOChon('loc-trang-thai', 'Tất cả trạng thái', list.map(o => o.TRANG_THAI_XUONG));
+  // domLaiOChon() tự loại giá trị rỗng khỏi danh sách (Boolean(...)) nên phải thêm tay lựa chọn
+  // "(Trống)" ở đây — LUÔN hiện, kể cả khi hiện tại không đơn nào đang trống, để người dùng lọc ra
+  // ngay khi có đơn nào đó lỡ để trống trực tiếp trên Google Sheet.
+  document.getElementById('loc-trang-thai').insertAdjacentHTML('beforeend', `<option value="${GIA_TRI_LOC_TRONG}">(Trống)</option>`);
   domLaiOChon('loc-loai', 'Tất cả loại', list.map(o => o.LOAI));
   domLaiOChon('loc-kich-thuoc', 'Tất cả kích thước', list.map(o => o.KICH_THUOC));
   domLaiOChon('loc-mau-sac', 'Tất cả màu sắc', list.map(o => o.MAU_SAC));

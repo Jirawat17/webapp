@@ -91,7 +91,8 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
     // quaAnh: true — cho phép đặt thẳng TRANG_THAI_XUONG="Đã sản xuất"/"Đã đóng gói" ở đây, vì đây CHÍNH LÀ
     // luồng chụp ảnh QR hợp lệ mà orderService.update() bắt buộc phải đi qua cho 2 trạng thái này
     // (xem kiemTraCongAnhBatBuoc trong orderService.js).
-    updated = await orderService.update(sttKey, updates, user, { quaAnh: true });
+    // headers/row đã đọc thật ở trên (dòng 53), khỏi đọc lại lần nữa (xem orderService.update)
+    updated = await orderService.update(sttKey, updates, user, { quaAnh: true, donDaDoc: { headers, row } });
   } catch (err) {
     return res.status(400).json({ error: err.message });
   }

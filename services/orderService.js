@@ -6,11 +6,13 @@ const { chiSoTinhTrang, TINH_TRANG_VALUES, TRANG_THAI_PHOI_VALUES, TRANG_THAI_VE
 const TAB = 'Don_Hang_ALL';
 const KEY_COL = 'STT_Key';
 
-// Mặc định đọc qua cache (nhanh, dữ liệu có thể cũ tối đa vài giây) — dùng cho hiển thị/kiểm tra.
+// Mặc định đọc qua cache (nhanh, dữ liệu có thể cũ tối đa 10s) — dùng cho hiển thị/kiểm tra. Chỉ
+// giúp các màn hình XEM (danh sách, dashboard, báo cáo) đỡ tốn quota khi nhiều người cùng xem —
+// KHÔNG ảnh hưởng các thao tác GHI (update() luôn tự đọc fresh riêng, xem bên dưới).
 // Truyền { fresh: true } để BẮT BUỘC đọc thật từ Google Sheets — LUÔN dùng trước khi ghi (update())
 // để không bao giờ ghi nhầm dòng nếu vừa có ai thêm/xoá dòng khác ở nơi khác.
 async function getAll({ fresh = false } = {}) {
-  return fresh ? readTab(TAB) : readTabCached(TAB, 5000);
+  return fresh ? readTab(TAB) : readTabCached(TAB, 10000);
 }
 
 async function getByKey(sttKey, opts) {

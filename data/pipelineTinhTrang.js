@@ -61,6 +61,21 @@ const TINH_TRANG_VALUES = [
 const TRANG_THAI_PHOI_VALUES = ['Chưa lấy phôi', 'Đã lấy phôi'];
 const TRANG_THAI_VE_FILE_VALUES = ['Chưa vẽ file', 'Đã vẽ file'];
 
+// Giá trị đặc biệt cho bộ lọc "(Trống)" ở trang Đơn hàng (TRANG_THAI_XUONG/TRANG_THAI_PHOI/
+// TRANG_THAI_VE_FILE) — CHỈ dùng cho lọc/hiển thị, KHÔNG BAO GIỜ được ghi vào Sheet. Không dùng chuỗi
+// rỗng '' vì cả client (public/orders.html) lẫn server (routes/orders.js, routes/reports.js) đều coi
+// '' là "không lọc gì" — cần 1 giá trị khác hẳn để phân biệt "lọc đơn có đúng ô này đang trống" với
+// "không lọc theo cột này". PHẢI khớp với hằng số cùng tên bên public/orders.html — sửa 1 chỗ thì
+// nhớ sửa chỗ kia.
+const GIA_TRI_LOC_TRONG = '__TRONG__';
+
+// So khớp 1 giá trị lọc với giá trị thật trên đơn — hỗ trợ GIA_TRI_LOC_TRONG (lọc đúng các đơn có ô
+// này đang TRỐNG trong Sheet), khớp CHÍNH XÁC cho mọi giá trị khác như trước giờ. Dùng chung cho
+// routes/orders.js (danh sách) và routes/reports.js (in/xuất file) để 2 nơi luôn hiểu đúng như nhau.
+function khopGiaTriLoc(giaTriThat, giaTriLoc) {
+  return giaTriLoc === GIA_TRI_LOC_TRONG ? !giaTriThat : giaTriThat === giaTriLoc;
+}
+
 // Thứ tự tiến trình CHÍNH (không gồm LỖI SẢN XUẤT CẦN LÀM LẠI / CANCELLED / REFUNDED — 3 trạng thái
 // này là nhánh rẽ, không nằm trên đường chính). Dùng để biết "đơn đã qua mốc X hay chưa" — vd lọc
 // đơn cho san_xuat (xem services/orderService.js).
@@ -107,5 +122,7 @@ module.exports = {
   TRANG_THAI_KET_THUC,
   TRANG_THAI_DA_SHIP,
   DANH_SACH_TRANG_THAI_BAO_CAO,
+  GIA_TRI_LOC_TRONG,
+  khopGiaTriLoc,
   chiSoTinhTrang,
 };

@@ -11,7 +11,7 @@ const { parseNgay, dinhDangNgay, dinhDangNgayGioVN, dinhDangNgayGioNgan } = requ
 const { taoQRCodeBuffer } = require('../services/qrService');
 const { taiAnhTuLinkDrive } = require('../services/driveService');
 const storageService = require('../services/storageService');
-const { DANH_SACH_TRANG_THAI_BAO_CAO } = require('../data/pipelineTinhTrang');
+const { DANH_SACH_TRANG_THAI_BAO_CAO, GIA_TRI_LOC_TRONG, khopGiaTriLoc } = require('../data/pipelineTinhTrang');
 const { requireLogin } = require('../middleware/auth');
 
 router.use(requireLogin); // mọi vai trò đăng nhập đều dùng được trang Báo cáo
@@ -45,9 +45,9 @@ function locDon(rows, { stt, tuNgay, denNgay, khachHang, trangThai, trangThaiPho
     if (tuNgay && ngay < parseNgay(tuNgay)) return false;
     if (denNgay && ngay > parseNgay(denNgay)) return false;
     if (khachHang && r.MA_KHACH_HANG !== khachHang) return false;
-    if (trangThai && r.TRANG_THAI_XUONG !== trangThai) return false;
-    if (trangThaiPhoi && r.TRANG_THAI_PHOI !== trangThaiPhoi) return false;
-    if (trangThaiVeFile && r.TRANG_THAI_VE_FILE !== trangThaiVeFile) return false;
+    if (trangThai && !khopGiaTriLoc(r.TRANG_THAI_XUONG, trangThai)) return false;
+    if (trangThaiPhoi && !khopGiaTriLoc(r.TRANG_THAI_PHOI, trangThaiPhoi)) return false;
+    if (trangThaiVeFile && !khopGiaTriLoc(r.TRANG_THAI_VE_FILE, trangThaiVeFile)) return false;
     if (tuKhoa) {
       const tk = tuKhoa.toLowerCase();
       const khop = (r.MA_KHACH_HANG || '').toLowerCase().includes(tk) || (r.STT_Key || '').toLowerCase().includes(tk);
@@ -83,7 +83,7 @@ async function layDonDaLoc(query) {
 function dongThongTinLoc(query, kieu) {
   const { tuNgay, denNgay, khachHang, trangThai, tuKhoa } = query;
   const khHienThi = khachHang || 'Tất cả khách hàng';
-  const ttHienThi = trangThai || 'Tất cả trạng thái';
+  const ttHienThi = trangThai === GIA_TRI_LOC_TRONG ? '(Trống)' : (trangThai || 'Tất cả trạng thái');
   const dongTuKhoa = tuKhoa ? ` · Từ khoá tìm kiếm: ${tuKhoa}` : '';
   if (kieu === 'tracking') {
     return `Khoảng thời gian: ${tuNgay || '(không giới hạn)'} ${denNgay || '(không giới hạn)'} · Khách hàng: ${khHienThi} · Trạng thái: ${ttHienThi}${dongTuKhoa}`;

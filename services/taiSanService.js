@@ -71,7 +71,11 @@ async function truKhoTheoDon(donHang, user) {
   const soLuong = Number(donHang.SO_LUONG);
   if (!soLuong || soLuong <= 0) return; // thiếu/sai dữ liệu số lượng trên đơn — bỏ qua, không chặn đơn
 
-  const { headers, rows } = await readTab(TAB_TON_KHO);
+  // Đọc qua cache (không cần fresh) — tồn kho phôi CHỈ mang tính theo dõi (xem chú thích ở trên và
+  // orderService.update()), không phải điều kiện chặn thao tác lấy phôi thực tế, nên lệch vài giây
+  // không gây hại. Đổi từ readTab (luôn fresh) sang cache ngắn để giảm tải: hàm này chạy kèm MỌI lượt
+  // quét "Đã lấy phôi", kể cả trong vòng lặp xác nhận hàng loạt.
+  const { headers, rows } = await readTabCached(TAB_TON_KHO, 5000);
   const dong = rows.find(r => khopLoaiPhoi(r, donHang.LOAI, donHang.KICH_THUOC, donHang.MAU_SAC));
 
   if (dong) {
