@@ -620,7 +620,9 @@ const COT_PHOI_AO_CHI_TIET = [
 ];
 
 const COT_PHOI_AO_GOP = [
-  { header: 'NGAY_LEN_DON', key: 'NGAY_LEN_DON', width: 14, laNgay: true },
+  // KHÔNG đánh dấu laNgay — cột này có thể chứa NHIỀU ngày gộp lại (xem gomNhomPhoiAo), đã được
+  // định dạng sẵn thành chuỗi hiển thị, không phải 1 giá trị ngày đơn để tự format nữa.
+  { header: 'NGAY_LEN_DON', key: 'NGAY_LEN_DON', width: 26 },
   { header: 'LOAI', key: 'LOAI', width: 12 },
   { header: 'KICH_THUOC', key: 'KICH_THUOC', width: 12 },
   { header: 'MAU_SAC', key: 'MAU_SAC', width: 18 },
@@ -645,27 +647,59 @@ function chuanHoaPhoiAo(str) {
   return String(str || '').trim().toUpperCase();
 }
 
+// Thứ tự cỡ áo CHUẨN, nhỏ -> lớn (xác nhận với người dùng 04/09/2026) — dùng để sắp cột KICH_THUOC ở
+// danh sách phôi áo theo đúng cỡ, không phải theo bảng chữ cái (bảng chữ cái sẽ ra sai thứ tự, vd
+// "L" đứng trước "M" trước "S" trước "XL"). Giá trị KHÔNG khớp danh sách này (gõ sai/lạ, hiếm gặp)
+// bị ĐẨY XUỐNG CUỐI — sau mọi cỡ hợp lệ — rồi tự sắp với nhau theo bảng chữ cái (xem soSanhKichThuoc).
+const THU_TU_KICH_THUOC = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL'];
+
+function soSanhKichThuoc(a, b) {
+  const idxA = THU_TU_KICH_THUOC.indexOf(a);
+  const idxB = THU_TU_KICH_THUOC.indexOf(b);
+  if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+  if (idxA !== -1) return -1;
+  if (idxB !== -1) return 1;
+  return a.localeCompare(b, 'vi');
+}
+
+// Gộp TẤT CẢ đơn khớp LOAI+KICH_THUOC+MAU_SAC vào 1 dòng DUY NHẤT, KHÔNG phân biệt ngày lên đơn khác
+// nhau (cập nhật 04/09/2026, theo yêu cầu người dùng — trước đó còn gộp riêng theo từng ngày, cùng
+// loại/kích/màu nhưng khác ngày bị tách thành nhiều dòng). Cột NGAY_LEN_DON của dòng gộp liệt kê ĐẦY
+// ĐỦ mọi ngày khác nhau có góp mặt trong nhóm đó, mỗi ngày chỉ hiện 1 lần (nhiều đơn cùng ngày không
+// lặp lại), sắp theo thời gian tăng dần, cách nhau bằng dấu phẩy.
 function gomNhomPhoiAo(list) {
   const nhom = new Map();
   list.forEach(r => {
-    const ngay = parseNgay(r.NGAY_LEN_DON);
-    const khoaNgay = ngay ? `${ngay.getFullYear()}-${ngay.getMonth()}-${ngay.getDate()}` : '';
     const loai = chuanHoaPhoiAo(r.LOAI);
     const kichThuoc = chuanHoaPhoiAo(r.KICH_THUOC);
     const mauSac = chuanHoaPhoiAo(r.MAU_SAC);
-    const khoa = [khoaNgay, loai, kichThuoc, mauSac].join('|');
+    const khoa = [loai, kichThuoc, mauSac].join('|');
     if (!nhom.has(khoa)) {
-      nhom.set(khoa, { NGAY_LEN_DON: r.NGAY_LEN_DON, LOAI: loai, KICH_THUOC: kichThuoc, MAU_SAC: mauSac, SO_LUONG: 0 });
+      nhom.set(khoa, { cacNgay: new Map(), LOAI: loai, KICH_THUOC: kichThuoc, MAU_SAC: mauSac, SO_LUONG: 0 });
     }
-    nhom.get(khoa).SO_LUONG += Number(r.SO_LUONG) || 0;
+    const n = nhom.get(khoa);
+    n.SO_LUONG += Number(r.SO_LUONG) || 0;
+
+    const ngay = parseNgay(r.NGAY_LEN_DON);
+    if (ngay) {
+      const khoaNgay = `${ngay.getFullYear()}-${ngay.getMonth()}-${ngay.getDate()}`; // để loại trùng ngày, không dùng làm khoá gộp nhóm nữa
+      if (!n.cacNgay.has(khoaNgay)) n.cacNgay.set(khoaNgay, ngay);
+    }
   });
-  // Sắp theo thứ tự ưu tiên giảm dần: LOAI -> KICH_THUOC -> MAU_SAC -> SO_LUONG (theo yêu cầu người
-  // dùng 04/09/2026) — cùng LOAI đứng gần nhau, trong cùng LOAI thì cùng KICH_THUOC đứng gần nhau...,
-  // SO_LUONG chỉ để phân định khi 3 cột trên đã giống hệt nhau (hiếm, vd cùng loại/kích/màu nhưng
-  // khác ngày lên đơn nên không gộp chung được 1 dòng — xem khoaNgay ở trên).
-  return Array.from(nhom.values()).sort((a, b) =>
+
+  const ketQua = Array.from(nhom.values()).map(n => ({
+    LOAI: n.LOAI, KICH_THUOC: n.KICH_THUOC, MAU_SAC: n.MAU_SAC, SO_LUONG: n.SO_LUONG,
+    NGAY_LEN_DON: Array.from(n.cacNgay.values()).sort((a, b) => a - b).map(d => dinhDangNgay(d)).join(', '),
+  }));
+
+  // Sắp theo thứ tự ưu tiên giảm dần: LOAI -> KICH_THUOC (theo cỡ nhỏ -> lớn, xem THU_TU_KICH_THUOC,
+  // KHÔNG phải theo bảng chữ cái) -> MAU_SAC -> SO_LUONG (theo yêu cầu người dùng 04/09/2026) — cùng
+  // LOAI đứng gần nhau, trong cùng LOAI thì cỡ nhỏ đứng trước cỡ lớn..., SO_LUONG chỉ để phân định
+  // khi 3 cột trên đã giống hệt nhau (không còn xảy ra nữa vì giờ chỉ có đúng 1 dòng cho mỗi tổ hợp
+  // LOAI+KICH_THUOC+MAU_SAC, nhưng vẫn giữ lại cho chắc).
+  return ketQua.sort((a, b) =>
     a.LOAI.localeCompare(b.LOAI, 'vi') ||
-    a.KICH_THUOC.localeCompare(b.KICH_THUOC, 'vi') ||
+    soSanhKichThuoc(a.KICH_THUOC, b.KICH_THUOC) ||
     a.MAU_SAC.localeCompare(b.MAU_SAC, 'vi') ||
     b.SO_LUONG - a.SO_LUONG
   );
