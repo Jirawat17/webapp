@@ -9,7 +9,7 @@ const { layLichSuChuyenSangTrangThai } = require('../services/logService');
 const { readTabCached } = require('../services/sheetsService');
 const { parseNgay, dinhDangNgay, dinhDangNgayGioVN, dinhDangNgayGioNgan } = require('../services/dateUtils');
 const { taoQRCodeBuffer } = require('../services/qrService');
-const { taiAnhTuLinkDrive } = require('../services/driveService');
+const { taiAnhTuLinkDrive, layFileIdTuLinkDrive, layDsAnhTrongThuMucDrive } = require('../services/driveService');
 const storageService = require('../services/storageService');
 const { DANH_SACH_TRANG_THAI_BAO_CAO, GIA_TRI_LOC_TRONG, khopGiaTriLoc } = require('../data/pipelineTinhTrang');
 const { requireLogin } = require('../middleware/auth');
@@ -407,8 +407,26 @@ function nhanDangDinhDangAnh(buffer) {
   return null;
 }
 
-// Ảnh mới nằm trên MinIO (URL proxy nội bộ); ảnh cũ vẫn là link Google Drive —
-// hỗ trợ cả 2 để báo cáo PDF không mất ảnh lịch sử.
+// Tải ảnh trực tiếp qua HTTP(S) thường — dùng khi URL KHÔNG phải MinIO proxy VÀ KHÔNG nhận diện
+// được là link Google Drive (cập nhật 04/09/2026, theo yêu cầu người dùng, xác nhận qua dữ liệu thật
+// — rất nhiều đơn dán thẳng link ảnh tham khảo từ nơi khác, vd Etsy, thay vì Drive/MinIO — trước đây
+// những link này KHÔNG có đường lấy nào cả nên luôn hiện "Không tải được ảnh" dù link vẫn truy cập
+// công khai bình thường). Giới hạn 15s tránh treo cả file in nếu 1 ảnh chậm/chết; chỉ nhận http(s)
+// (chặn file://, ftp://... phòng URL lạ/gõ nhầm trong Sheet).
+async function taiAnhTuUrlThuong(url) {
+  if (!url || !/^https?:\/\//i.test(String(url))) return null;
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) return null;
+    return Buffer.from(await res.arrayBuffer());
+  } catch (err) {
+    console.error('[Ảnh ngoài] Không tải được:', url, '-', err.message);
+    return null;
+  }
+}
+
+// Ảnh mới nằm trên MinIO (URL proxy nội bộ); ảnh cũ có thể là link Google Drive HOẶC link ảnh công
+// khai từ nơi khác — thử lần lượt cả 3 nguồn để báo cáo PDF mất ít ảnh nhất có thể.
 async function taiAnh(url) {
   const objectKey = storageService.proxyUrlToObjectKey(url);
   if (objectKey) {
@@ -422,23 +440,48 @@ async function taiAnh(url) {
       return null;
     }
   }
-  return taiAnhTuLinkDrive(url);
+
+  if (layFileIdTuLinkDrive(url)) return taiAnhTuLinkDrive(url);
+
+  return taiAnhTuUrlThuong(url);
+}
+
+// Lấy TẤT CẢ ảnh của 1 URL — thường chỉ có 1 ảnh (link file/MinIO/HTTP thường), NHƯNG nếu url là link
+// THƯ MỤC Drive thì lấy hết mọi ảnh bên trong (bổ sung 04/09/2026, theo yêu cầu người dùng). Luôn trả
+// về MẢNG (có thể rỗng), để nơi gọi xử lý đồng nhất dù 1 hay nhiều ảnh.
+async function taiDsAnh(url) {
+  const dsThuMuc = await layDsAnhTrongThuMucDrive(url);
+  if (dsThuMuc !== null) return dsThuMuc; // đúng là link thư mục (kể cả khi rỗng) — không thử nguồn khác nữa
+
+  const mot = await taiAnh(url);
+  return mot ? [mot] : [];
 }
 
 async function taiAnhChoDon(don) {
-  const [qr, mauRaw, mockupRaw] = await Promise.all([
+  const [qr, dsMau, dsMockup] = await Promise.all([
     taoQRCodeBuffer(don.STT_Key || '', 300),
-    taiAnh(don.DUONG_DAN_URL),
-    taiAnh(don.MOCKUP),
+    taiDsAnh(don.DUONG_DAN_URL),
+    taiDsAnh(don.MOCKUP),
   ]);
-  const dinhDangMau = nhanDangDinhDangAnh(mauRaw);
-  const dinhDangMockup = nhanDangDinhDangAnh(mockupRaw);
+
+  // Ảnh ĐẦU TIÊN (theo tên file nếu là thư mục) dùng cho đúng 2 ô ảnh cố định của thẻ chính — giữ
+  // nguyên bố cục thẻ như trước, không đổi gì khi url chỉ trỏ tới đúng 1 ảnh (trường hợp thường gặp).
+  const mauChinh = dsMau[0] || null;
+  const mockupChinh = dsMockup[0] || null;
+  const dinhDangMau = nhanDangDinhDangAnh(mauChinh);
+  const dinhDangMockup = nhanDangDinhDangAnh(mockupChinh);
+
+  // Ảnh DƯ (thư mục có nhiều hơn 1 ảnh) — KHÔNG vẽ vào thẻ chính (không đủ chỗ), gộp lại in bổ sung ở
+  // trang riêng cuối file (xem veTrangAnhDuPdf) — chỉ giữ ảnh đúng định dạng PNG/JPEG nhận diện được.
+  const anhDu = [...dsMau.slice(1), ...dsMockup.slice(1)].filter(buf => nhanDangDinhDangAnh(buf));
+
   return {
     qr,
-    mau: dinhDangMau ? mauRaw : null,
-    mockup: dinhDangMockup ? mockupRaw : null,
+    mau: dinhDangMau ? mauChinh : null,
+    mockup: dinhDangMockup ? mockupChinh : null,
     mauDinhDang: dinhDangMau,
     mockupDinhDang: dinhDangMockup,
+    anhDu,
   };
 }
 
@@ -515,12 +558,61 @@ function veTheDonPdf(doc, don, anh, offsetY, caoThe) {
   }
 }
 
+// Trang phụ gộp ẢNH DƯ (đơn có link THƯ MỤC Drive chứa nhiều hơn 1 ảnh — ảnh đầu đã dùng cho thẻ
+// chính, các ảnh còn lại không có chỗ trên thẻ 100x150mm nên in bổ sung ở đây) — bổ sung 04/09/2026,
+// theo yêu cầu người dùng. Khổ A4 dọc bình thường (khác khổ thẻ chính) để đủ chỗ xếp lưới nhiều ảnh,
+// mỗi ảnh ghi rõ mã đơn (STT_Key) bên dưới để dễ đối chiếu lại đúng đơn nào. KHÔNG thêm trang nào nếu
+// không có ảnh dư nào cả (trường hợp thường gặp — mỗi url chỉ trỏ đúng 1 ảnh).
+function veTrangAnhDuPdf(doc, danhSachAnhDu) {
+  if (danhSachAnhDu.length === 0) return;
+
+  const soCot = 3;
+  const le = 24;
+  const khoangCach = 10;
+  const caoNhan = 14;
+
+  function trangGomMoi() {
+    doc.addPage({ size: 'A4', margin: le });
+    return { rongTrang: doc.page.width, caoTrang: doc.page.height };
+  }
+
+  let { rongTrang, caoTrang } = trangGomMoi();
+  const rongO = (rongTrang - le * 2 - khoangCach * (soCot - 1)) / soCot;
+  const caoO = rongO + caoNhan + khoangCach;
+
+  doc.font('NotoSans-Bold').fontSize(12)
+    .text('ẢNH BỔ SUNG TỪ THƯ MỤC (ngoài ảnh chính đã in trên thẻ)', le, le);
+
+  let x = le;
+  let y = le + 26;
+
+  danhSachAnhDu.forEach((item, i) => {
+    if (y + caoO > caoTrang - le) {
+      ({ rongTrang, caoTrang } = trangGomMoi());
+      x = le; y = le;
+    }
+    try {
+      doc.image(item.buffer, x, y, { fit: [rongO, rongO] });
+    } catch (e) {
+      veOTrongPdf(doc, x, y, rongO, 'Lỗi ảnh');
+    }
+    doc.font('NotoSans').fontSize(8).fillColor('#374151')
+      .text(item.sttKey, x, y + rongO + 2, { width: rongO, align: 'center' });
+    doc.fillColor('#000000');
+
+    x += rongO + khoangCach;
+    if ((i + 1) % soCot === 0) { x = le; y += caoO; }
+  });
+}
+
 async function veTrangDonCanInPdf(doc, list, dongNguoiXuat) {
   const rong = mmToPt(KHO_GIAY_MM.rong);
   const cao = mmToPt(KHO_GIAY_MM.cao);
   const caoFooter = 9;
   // 1 đơn 1 trang — ảnh to hơn hẳn, dễ đối chiếu khi dán lên áo (trước đây 2 đơn/trang, ảnh nhỏ)
   const caoThe = cao - caoFooter;
+
+  const anhDuTatCa = []; // gộp ảnh dư từ MỌI đơn trong lượt in này, in bổ sung 1 lần ở cuối
 
   for (let i = 0; i < list.length; i++) {
     if (i > 0) doc.addPage({ size: [rong, cao], margin: 0 });
@@ -531,7 +623,11 @@ async function veTrangDonCanInPdf(doc, list, dongNguoiXuat) {
     doc.font('NotoSans').fontSize(5).fillColor('#9ca3af')
       .text(dongNguoiXuat, 4, cao - caoFooter + 1, { width: rong - 8, align: 'center' });
     doc.fillColor('#000000');
+
+    anh.anhDu.forEach(buffer => anhDuTatCa.push({ sttKey: list[i].STT_Key || '', buffer }));
   }
+
+  veTrangAnhDuPdf(doc, anhDuTatCa);
 }
 
 async function veSheetDonCanInExcel(wb, list, dongThongTin, dongNguoiXuat) {
