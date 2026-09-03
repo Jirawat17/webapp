@@ -637,14 +637,25 @@ const COT_TRACKING = [
   { header: 'SO_LUONG', key: 'SO_LUONG', width: 10 },
 ];
 
+// Chuẩn hoá LOAI/KICH_THUOC/MAU_SAC để gộp nhóm ở gomNhomPhoiAo() KHÔNG phân biệt hoa/thường (vd
+// "SWEAT"/"Sweat"/"sweat" tính là CÙNG 1 dòng, không tách lẻ vì lỗi gõ hoa/thường) — cắt khoảng
+// trắng thừa 2 đầu, luôn IN HOA để hiển thị đồng nhất trong file PDF/Excel xuất ra, bất kể dữ liệu
+// gốc trên Sheet viết kiểu gì. Không sửa dữ liệu gốc trên Sheet, chỉ chuẩn hoá lúc gộp/hiển thị.
+function chuanHoaPhoiAo(str) {
+  return String(str || '').trim().toUpperCase();
+}
+
 function gomNhomPhoiAo(list) {
   const nhom = new Map();
   list.forEach(r => {
     const ngay = parseNgay(r.NGAY_LEN_DON);
     const khoaNgay = ngay ? `${ngay.getFullYear()}-${ngay.getMonth()}-${ngay.getDate()}` : '';
-    const khoa = [khoaNgay, r.LOAI || '', r.KICH_THUOC || '', r.MAU_SAC || ''].join('|');
+    const loai = chuanHoaPhoiAo(r.LOAI);
+    const kichThuoc = chuanHoaPhoiAo(r.KICH_THUOC);
+    const mauSac = chuanHoaPhoiAo(r.MAU_SAC);
+    const khoa = [khoaNgay, loai, kichThuoc, mauSac].join('|');
     if (!nhom.has(khoa)) {
-      nhom.set(khoa, { NGAY_LEN_DON: r.NGAY_LEN_DON, LOAI: r.LOAI, KICH_THUOC: r.KICH_THUOC, MAU_SAC: r.MAU_SAC, SO_LUONG: 0 });
+      nhom.set(khoa, { NGAY_LEN_DON: r.NGAY_LEN_DON, LOAI: loai, KICH_THUOC: kichThuoc, MAU_SAC: mauSac, SO_LUONG: 0 });
     }
     nhom.get(khoa).SO_LUONG += Number(r.SO_LUONG) || 0;
   });
