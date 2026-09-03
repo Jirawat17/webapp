@@ -391,26 +391,37 @@ async function apDungNhanh(cot, trangThaiMoi, nut) {
   document.querySelectorAll('.nhanh-phoi-ve-file, #nut-ap-dung').forEach(b => b.disabled = true);
   nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Đang xử lý...';
 
-  try {
-    const ketQua = await apiFetch('/orders/chuyen-trang-thai-hang-loat', {
-      method: 'POST',
-      body: JSON.stringify({ sttKeys: Array.from(donDaChonSet), cot, trangThaiMoi }),
-    });
+  // Gọi tuần tự từng mã 1 (thay vì gửi cả danh sách trong 1 request) để hiện được tiến độ thật —
+  // xem chayHangLoatCoTienDo()/taoThanhTienDo() trong api.js. API vẫn y hệt, chỉ đổi cách gọi.
+  let daHuy = false;
+  const danhSach = Array.from(donDaChonSet);
+  const thanhTienDo = taoThanhTienDo(nut, { onHuy: () => { daHuy = true; } });
+  thanhTienDo.capNhat(0, danhSach.length);
 
-    let thongBao = `Đã đánh dấu ${ketQua.thanhCong.length}/${soLuong} đơn thành "${trangThaiMoi}".`;
-    if (ketQua.loi.length > 0) {
-      thongBao += `\n\nKhông đánh dấu được ${ketQua.loi.length} đơn:\n` +
-        ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
-    }
-    alert(thongBao);
-  } catch (e) {
-    alert('Lỗi: ' + e.message);
-  } finally {
-    document.querySelectorAll('.nhanh-phoi-ve-file, #nut-ap-dung').forEach(b => b.disabled = false);
-    nut.innerHTML = nhanGoc;
-    donDaChonSet.clear();
-    await taiDon();
+  const ketQua = await chayHangLoatCoTienDo(
+    danhSach,
+    sttKey => apiFetch('/orders/chuyen-trang-thai-hang-loat', {
+      method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], cot, trangThaiMoi }),
+    }),
+    { onTienDo: (hienTai, tong) => thanhTienDo.capNhat(hienTai, tong), kiemTraHuy: () => daHuy }
+  );
+  thanhTienDo.xoa();
+
+  let thongBao = `Đã đánh dấu ${ketQua.thanhCong.length}/${soLuong} đơn thành "${trangThaiMoi}".`;
+  if (ketQua.daHuy) thongBao += `\n\nĐã HỦY giữa chừng — các đơn còn lại vẫn đang được chọn, bấm lại nếu muốn tiếp tục.`;
+  if (ketQua.loi.length > 0) {
+    thongBao += `\n\nKhông đánh dấu được ${ketQua.loi.length} đơn:\n` +
+      ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
   }
+  alert(thongBao);
+
+  document.querySelectorAll('.nhanh-phoi-ve-file, #nut-ap-dung').forEach(b => b.disabled = false);
+  nut.innerHTML = nhanGoc;
+  // Hủy giữa chừng: chỉ bỏ chọn đúng các đơn ĐÃ xử lý xong, GIỮ LẠI các đơn còn lại (chưa kịp xử lý)
+  // đang được chọn để bấm lại là tiếp tục ngay. Không hủy (chạy hết danh sách): bỏ chọn toàn bộ như cũ.
+  if (ketQua.daHuy) ketQua.thanhCong.forEach(sttKey => donDaChonSet.delete(sttKey));
+  else donDaChonSet.clear();
+  await taiDon();
 }
 
 async function apDungChuyenTrangThai() {
@@ -424,25 +435,32 @@ async function apDungChuyenTrangThai() {
   nutApDung.disabled = true;
   nutApDung.textContent = 'Đang xử lý...';
 
-  try {
-    const ketQua = await apiFetch('/orders/chuyen-trang-thai-hang-loat', {
-      method: 'POST',
-      body: JSON.stringify({ sttKeys: Array.from(donDaChonSet), trangThaiMoi }),
-    });
+  let daHuy = false;
+  const danhSach = Array.from(donDaChonSet);
+  const thanhTienDo = taoThanhTienDo(nutApDung, { onHuy: () => { daHuy = true; } });
+  thanhTienDo.capNhat(0, danhSach.length);
 
-    let thongBao = `Đã chuyển ${ketQua.thanhCong.length}/${soLuong} đơn sang "${trangThaiMoi}".`;
-    if (ketQua.loi.length > 0) {
-      thongBao += `\n\nKhông chuyển được ${ketQua.loi.length} đơn:\n` +
-        ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
-    }
-    alert(thongBao);
-  } catch (e) {
-    alert('Lỗi: ' + e.message);
+  const ketQua = await chayHangLoatCoTienDo(
+    danhSach,
+    sttKey => apiFetch('/orders/chuyen-trang-thai-hang-loat', {
+      method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], trangThaiMoi }),
+    }),
+    { onTienDo: (hienTai, tong) => thanhTienDo.capNhat(hienTai, tong), kiemTraHuy: () => daHuy }
+  );
+  thanhTienDo.xoa();
+
+  let thongBao = `Đã chuyển ${ketQua.thanhCong.length}/${soLuong} đơn sang "${trangThaiMoi}".`;
+  if (ketQua.daHuy) thongBao += `\n\nĐã HỦY giữa chừng — các đơn còn lại vẫn đang được chọn, bấm lại nếu muốn tiếp tục.`;
+  if (ketQua.loi.length > 0) {
+    thongBao += `\n\nKhông chuyển được ${ketQua.loi.length} đơn:\n` +
+      ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
   }
+  alert(thongBao);
 
   nutApDung.disabled = false;
   nutApDung.textContent = 'Áp dụng';
-  donDaChonSet.clear();
+  if (ketQua.daHuy) ketQua.thanhCong.forEach(sttKey => donDaChonSet.delete(sttKey));
+  else donDaChonSet.clear();
   await taiDon();
 }
 

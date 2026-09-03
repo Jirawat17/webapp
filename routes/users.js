@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { readTab, appendRow, updateCells } = require('../services/sheetsService');
+const { readTab, readTabCached, appendRow, updateCells } = require('../services/sheetsService');
 const { requireRole } = require('../middleware/auth');
 
 const TAB = 'NguoiDung';
@@ -8,7 +8,7 @@ const TAB = 'NguoiDung';
 router.use(requireRole('admin'));
 
 router.get('/', async (req, res) => {
-  const { rows } = await readTab(TAB);
+  const { rows } = await readTabCached(TAB, 30000); // chỉ liệt kê để xem — POST/PUT bên dưới vẫn đọc thật vì ghi ngay sau đó
   res.json(rows);
 });
 

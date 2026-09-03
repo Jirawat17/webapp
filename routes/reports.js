@@ -6,7 +6,7 @@ const PDFDocument = require('pdfkit');
 const orderService = require('../services/orderService');
 const { layDanhSachKhachHang, layBanDoTenKhachHang } = require('../services/khachHangService');
 const { layLichSuChuyenSangTrangThai } = require('../services/logService');
-const { readTab } = require('../services/sheetsService');
+const { readTabCached } = require('../services/sheetsService');
 const { parseNgay, dinhDangNgay, dinhDangNgayGioVN, dinhDangNgayGioNgan } = require('../services/dateUtils');
 const { taoQRCodeBuffer } = require('../services/qrService');
 const { taiAnhTuLinkDrive } = require('../services/driveService');
@@ -184,7 +184,7 @@ router.get('/thong-ke-loi', async (req, res) => {
   const banDoDon = {};
   donHang.forEach(r => { banDoDon[r.STT_Key] = r; });
 
-  const { rows: nhanVien } = await readTab('NguoiDung');
+  const { rows: nhanVien } = await readTabCached('NguoiDung', 30000);
   const banDoTeam = {};
   nhanVien.forEach(nv => { banDoTeam[nv.Ten] = nv.Team || 'Không rõ team'; });
 

@@ -114,6 +114,67 @@ function spinnerInline(chuThich = 'Đang xử lý...') {
   return `<span class="inline-loading">${icon('spinner', { className: 'icon-spin', size: 18 })} ${escapeHtml(chuThich)}</span>`;
 }
 
+// ============================================================
+// XỬ LÝ HÀNG LOẠT CÓ TIẾN ĐỘ — dùng chung cho quét QR hàng loạt (scan.html) và đổi trạng thái hàng
+// loạt (orders.html). 2 API backend liên quan (/qr/kich-ban/:id/xac-nhan-hang-loat và
+// /orders/chuyen-trang-thai-hang-loat) đều nhận mảng sttKeys và đã xử lý đúng với mảng CHỈ 1 phần tử,
+// nên KHÔNG cần sửa gì ở server — chỉ đổi cách GỌI: thay vì gửi cả danh sách 1 lần rồi đợi xong mới
+// biết kết quả (người vận hành không biết đang tới đâu, có bị treo hay không), giờ gọi TUẦN TỰ từng
+// phần tử một để cập nhật số đếm ngay sau mỗi phần tử, đồng thời cho phép Hủy giữa chừng.
+// ============================================================
+
+// Vẽ 1 thanh tiến độ nhỏ ngay SAU phần tử `sauPhanTu` (thường là nút bấm vừa được disable), trả về
+// {capNhat(hienTai,tong), xoa()} để bên gọi tự cập nhật/dọn dẹp. onHuy (tuỳ chọn) hiện thêm nút "Hủy".
+function taoThanhTienDo(sauPhanTu, { onHuy } = {}) {
+  const el = document.createElement('div');
+  el.className = 'thanh-tien-do';
+  el.innerHTML = `
+    <div class="thanh-tien-do-track"><div class="thanh-tien-do-fill"></div></div>
+    <span class="thanh-tien-do-nhan">0/0</span>
+    ${onHuy ? '<button type="button" class="btn-huy-tien-do">Hủy</button>' : ''}
+  `;
+  sauPhanTu.insertAdjacentElement('afterend', el);
+  if (onHuy) el.querySelector('.btn-huy-tien-do').addEventListener('click', onHuy);
+
+  const fill = el.querySelector('.thanh-tien-do-fill');
+  const nhan = el.querySelector('.thanh-tien-do-nhan');
+  return {
+    capNhat(hienTai, tong) {
+      fill.style.width = (tong ? Math.round(hienTai / tong * 100) : 0) + '%';
+      nhan.textContent = `${hienTai}/${tong}`;
+    },
+    xoa() { el.remove(); },
+  };
+}
+
+// Chạy tuần tự xuLyMotPhanTu(phanTu) cho từng phần tử trong danhSach — DỪNG NGAY TRƯỚC phần tử kế
+// tiếp nếu kiemTraHuy() trả true (không huỷ phần tử đang xử lý dở, nó vẫn hoàn tất bình thường).
+// Gộp kết quả {thanhCong, loi} từ mỗi lần gọi — khớp đúng hình dạng mà 2 API trên đang trả về, nên
+// code render kết quả cuối cùng ở scan.html/orders.html không cần đổi.
+// Lỗi ở 1 phần tử (network hỏng, server lỗi...) KHÔNG làm dừng cả lô — chỉ phần tử đó rơi vào `loi`,
+// các phần tử sau vẫn chạy tiếp (khác hành vi cũ: trước đây 1 request hỏng là mất trắng cả lô).
+async function chayHangLoatCoTienDo(danhSach, xuLyMotPhanTu, { onTienDo, kiemTraHuy } = {}) {
+  const thanhCong = [];
+  const loi = [];
+  let daHuy = false;
+
+  for (let i = 0; i < danhSach.length; i++) {
+    if (kiemTraHuy && kiemTraHuy()) { daHuy = true; break; }
+
+    try {
+      const kq = await xuLyMotPhanTu(danhSach[i]);
+      if (kq && Array.isArray(kq.thanhCong)) thanhCong.push(...kq.thanhCong);
+      if (kq && Array.isArray(kq.loi)) loi.push(...kq.loi);
+    } catch (err) {
+      loi.push({ sttKey: danhSach[i], lyDo: err.message });
+    }
+
+    if (onTienDo) onTienDo(i + 1, danhSach.length);
+  }
+
+  return { thanhCong, loi, daHuy };
+}
+
 // Bảng tra cứu CHÍNH XÁC (exact-match) — cập nhật 24/08/2026 theo hệ trạng thái mới (không còn tiền
 // tố B[1-5].[12]_ nên không dùng được cách so khớp mẫu/chuỗi con cũ nữa). Cố tình dùng tra cứu CHÍNH
 // XÁC thay vì includes()/regex — 2 lần trước đã dính lỗi thật vì so khớp chuỗi con (vd 'HUY' khớp

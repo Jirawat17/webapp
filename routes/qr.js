@@ -81,7 +81,7 @@ router.post('/kich-ban/:scenarioId/quet', async (req, res) => {
   if (!sttKey) return res.status(400).json({ error: 'Thiếu mã đơn hàng' });
 
   // Đọc THẬT (bỏ qua cache) vì đây là bước quyết định có ghi hay không — phải chắc chắn mới nhất
-  const { row } = await orderService.getByKey(sttKey, { fresh: true });
+  const { headers, row } = await orderService.getByKey(sttKey, { fresh: true });
   if (!row) {
     ghiKhongCho(ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_LOI', sttKey, chiTiet: { scenario: scenario.label, loi: 'Không tìm thấy đơn' } }));
     return res.status(404).json({ error: 'Không tìm thấy đơn hàng với mã: ' + sttKey });
@@ -122,7 +122,7 @@ router.post('/kich-ban/:scenarioId/quet', async (req, res) => {
       [scenario.column]: scenario.setStatus,
       NguoiCapNhatCuoi: user.ten,
       ThoiGianCapNhatCuoi: new Date().toISOString(),
-    }, user);
+    }, user, { donDaDoc: { headers, row } }); // đã đọc thật ở trên, khỏi đọc lại lần nữa (xem orderService.update)
   } catch (err) {
     // Đơn ĐÚNG trạng thái cột này yêu cầu, nhưng đổi xong sẽ xung đột với 1 trong 2 cột còn lại
     // (vd đơn đang "Chưa xác nhận" mà quét "lấy phôi" — TRANG_THAI_PHOI đúng "Chưa lấy phôi" nên
@@ -243,7 +243,7 @@ router.post('/kich-ban/:scenarioId/xac-nhan-hang-loat', async (req, res) => {
 
   for (const sttKey of sttKeys) {
     try {
-      const { row } = await orderService.getByKey(sttKey, { fresh: true }); // BẮT BUỘC đọc thật ở đây
+      const { headers, row } = await orderService.getByKey(sttKey, { fresh: true }); // BẮT BUỘC đọc thật ở đây
       const giaTriHienTai = row ? row[scenario.column] : null;
 
       if (!row) {
@@ -266,7 +266,8 @@ router.post('/kich-ban/:scenarioId/xac-nhan-hang-loat', async (req, res) => {
         [scenario.column]: scenario.setStatus,
         NguoiCapNhatCuoi: user.ten,
         ThoiGianCapNhatCuoi: new Date().toISOString(),
-      }, user);
+      }, user, { donDaDoc: { headers, row } }); // đã đọc thật ở trên, khỏi đọc lại lần nữa — mỗi mã quét trong lượt
+      // xác nhận hàng loạt trước đây tốn 2 lượt đọc toàn bộ tab Don_Hang_ALL, nay chỉ còn 1
 
       thanhCong.push(sttKey);
       ghiKhongCho(ghiLog({

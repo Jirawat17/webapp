@@ -136,7 +136,13 @@ function kiemTraCongAnhBatBuoc(rowHienTai, updates, user, quaAnh) {
 }
 
 async function update(sttKey, updates, user, tuyChon = {}) {
-  const { headers, row } = await getByKey(sttKey, { fresh: true }); // luôn đọc thật trước khi ghi
+  // tuyChon.donDaDoc cho phép truyền sẵn {headers, row} đã đọc fresh ngay trước đó (vd routes/qr.js
+  // vừa getByKey({fresh:true}) để kiểm tra trạng thái trước khi quyết định có gọi update() hay
+  // không) — bỏ qua việc đọc lại y hệt lần nữa. Không có gì ghi xen giữa 2 bước đó trong cùng 1 lượt
+  // gọi nên vẫn giữ đúng nguyên tắc "đọc thật ngay trước khi ghi", chỉ gộp 2 lượt đọc thật liền nhau
+  // thành 1 — quan trọng cho luồng quét QR hàng loạt (routes/qr.js xac-nhan-hang-loat), trước đây mỗi
+  // mã quét tốn TỚI 2 lượt đọc toàn bộ tab Don_Hang_ALL (1 ở route, 1 ở đây) thay vì 1.
+  const { headers, row } = tuyChon.donDaDoc || await getByKey(sttKey, { fresh: true }); // luôn đọc thật trước khi ghi
   if (!row) throw new Error('Không tìm thấy đơn hàng: ' + sttKey);
 
   kiemTraGiaTriHopLe(updates);

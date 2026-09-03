@@ -3,7 +3,7 @@ const router = express.Router();
 const orderService = require('../services/orderService');
 const khachHangService = require('../services/khachHangService');
 const { ghiLog, layLichSuTheoDon, layHoatDongGanDay } = require('../services/logService');
-const { readTab } = require('../services/sheetsService');
+const { readTabCached } = require('../services/sheetsService');
 const { parseNgay } = require('../services/dateUtils');
 const { requireLogin } = require('../middleware/auth');
 
@@ -218,7 +218,7 @@ async function thucThiTool(tenHam, thamSo, ctx) {
       // quay lại phân quyền theo vai trò. Không gửi định nghĩa công cụ này cho vai trò khác admin
       // (xem TOOLS_QUAN_LY phía dưới) — kiểm tra lại 1 lần nữa ở đây phòng model tự bịa tên công cụ.
       if (ctx.user.vaiTro !== 'admin') return { loi: 'Không có quyền tra cứu danh sách nhân viên.' };
-      const { rows } = await readTab('NguoiDung');
+      const { rows } = await readTabCached('NguoiDung', 30000);
       let list = rows.map(r => ({ ten: r.Ten, vaiTro: r.VaiTro, team: r.Team, kichHoat: r.KichHoat }));
       if (thamSo.vaiTro) list = list.filter(nv => nv.vaiTro === thamSo.vaiTro);
       return list;

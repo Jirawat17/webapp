@@ -886,23 +886,32 @@ async function xacNhanCapNhatHangLoat() {
   btn.disabled = true;
   btn.textContent = 'Đang cập nhật...';
 
-  try {
-    const res = await apiFetch(`/qr/kich-ban/${kichBanDangChon.id}/xac-nhan-hang-loat`, {
-      method: 'POST', body: JSON.stringify({ sttKeys: nhomOK.map(x => x.sttKey) }),
-    });
+  // Gọi tuần tự từng mã 1 (thay vì gửi cả danh sách trong 1 request) để hiện được tiến độ thật —
+  // xem chayHangLoatCoTienDo()/taoThanhTienDo() trong api.js. API vẫn y hệt, chỉ đổi cách gọi.
+  let daHuy = false;
+  const thanhTienDo = taoThanhTienDo(btn, { onHuy: () => { daHuy = true; } });
+  thanhTienDo.capNhat(0, nhomOK.length);
 
-    dsQuet = dsQuet.filter(x => !res.thanhCong.includes(x.sttKey));
+  const res = await chayHangLoatCoTienDo(
+    nhomOK.map(x => x.sttKey),
+    sttKey => apiFetch(`/qr/kich-ban/${kichBanDangChon.id}/xac-nhan-hang-loat`, {
+      method: 'POST', body: JSON.stringify({ sttKeys: [sttKey] }),
+    }),
+    { onTienDo: (hienTai, tong) => thanhTienDo.capNhat(hienTai, tong), kiemTraHuy: () => daHuy }
+  );
+  thanhTienDo.xoa();
 
-    res.loi.forEach(l => {
-      const item = dsQuet.find(x => x.sttKey === l.sttKey);
-      if (item) { item.nhom = 'SAI_TRANG_THAI'; item.lyDo = l.lyDo; item.daXuLy = false; }
-    });
+  dsQuet = dsQuet.filter(x => !res.thanhCong.includes(x.sttKey));
 
-    if (res.loi.length > 0) {
-      alert(`Đã cập nhật ${res.thanhCong.length} đơn. Có ${res.loi.length} đơn KHÔNG cập nhật được — xem lại nhóm "Sai trạng thái" bên dưới.`);
-    }
-  } catch (e) {
-    alert('Lỗi khi xác nhận: ' + e.message);
+  res.loi.forEach(l => {
+    const item = dsQuet.find(x => x.sttKey === l.sttKey);
+    if (item) { item.nhom = 'SAI_TRANG_THAI'; item.lyDo = l.lyDo; item.daXuLy = false; }
+  });
+
+  if (res.daHuy) {
+    alert(`Đã HỦY giữa chừng — đã cập nhật ${res.thanhCong.length}/${nhomOK.length} đơn. Các đơn còn lại vẫn ở nhóm "OK", bấm "Xác nhận cập nhật" lại để tiếp tục.`);
+  } else if (res.loi.length > 0) {
+    alert(`Đã cập nhật ${res.thanhCong.length} đơn. Có ${res.loi.length} đơn KHÔNG cập nhật được — xem lại nhóm "Sai trạng thái" bên dưới.`);
   }
 
   renderDemNhom();

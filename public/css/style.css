@@ -296,6 +296,14 @@ body.trang-dang-nhap {
 .thanh-hanh-dong-cach { width: 1px; align-self: stretch; background: var(--color-border); margin: 0 4px; }
 .nhanh-phoi-ve-file { font-size: 0.85rem !important; padding: 8px 14px !important; }
 
+/* .thanh-tien-do chèn vào thanh hành động hàng loạt (nền tối, chữ trắng — xem .thanh-hanh-dong-hang-loat
+   ở trên) cần đổi màu riêng vì màu mặc định (--color-text-muted) dành cho nền sáng, không đủ tương phản
+   trên nền gần đen này. Luôn chiếm trọn 1 dòng riêng (flex-basis 100%) cho dễ đọc thay vì chen giữa các nút. */
+.thanh-hanh-dong-hang-loat .thanh-tien-do { flex: 1 1 100%; color: rgba(255,255,255,0.85); }
+.thanh-hanh-dong-hang-loat .thanh-tien-do-track { background: rgba(255,255,255,0.25); }
+.thanh-hanh-dong-hang-loat .btn-huy-tien-do { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3); color: white; }
+.thanh-hanh-dong-hang-loat .btn-huy-tien-do:hover { border-color: #fca5a5; color: #fca5a5; }
+
 /* Phân biệt nút/ô chọn trạng thái "Đã..." (positive, việc đã xong) với "Chưa..." (negative, còn
    thiếu việc) — tô màu khớp đúng ý nghĩa với badge trạng thái đang dùng (MAU_TRANG_THAI trong
    api.js: xanh lá = success, cam = warning), để nhận ra ngay không cần đọc kỹ chữ trên nút. */
@@ -346,6 +354,18 @@ select.chon-trang-thai-tieu-cuc { border-color: var(--color-warning-text); color
 }
 @keyframes skeleton-loading { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
 .inline-loading { display: inline-flex; align-items: center; gap: 6px; color: var(--color-text-muted); }
+
+/* Thanh tiến độ nhỏ cho xử lý hàng loạt (quét QR / đổi trạng thái hàng loạt) — chèn động ngay sau
+   nút bấm gốc bằng taoThanhTienDo() trong api.js, xem chayHangLoatCoTienDo() cùng file. */
+.thanh-tien-do { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); font-size: 0.85rem; color: var(--color-text-muted); }
+.thanh-tien-do-track { flex: 1; min-width: 60px; height: 8px; border-radius: var(--radius-full); background: var(--color-border); overflow: hidden; }
+.thanh-tien-do-fill { height: 100%; width: 0; background: var(--color-primary); border-radius: var(--radius-full); transition: width .2s ease; }
+.thanh-tien-do-nhan { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.btn-huy-tien-do {
+  border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-muted);
+  border-radius: var(--radius-sm); padding: 2px 10px; font-size: 0.8rem; cursor: pointer; white-space: nowrap;
+}
+.btn-huy-tien-do:hover { border-color: var(--color-danger-text); color: var(--color-danger-text); }
 
 /* ============================================================
    CHI TIẾT ĐƠN HÀNG

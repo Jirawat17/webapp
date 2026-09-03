@@ -16,6 +16,13 @@ const _cacheBang = new Map(); // tabName -> { data: {headers, rows}, hetHan }
 const _cacheHeader = new Map(); // tabName -> { headers, hetHan } — KHÔNG xoá khi appendRow, vì thêm 1
                                  // dòng dữ liệu không làm đổi header; chỉ xoá khi updateCells sửa hẳn dòng 1
 
+// Yêu cầu ĐANG ĐỌC DỞ theo từng tab — gộp các lượt gọi readTabCached/getHeadersCached xảy ra CÙNG
+// LÚC (vd nhiều nhân viên cùng mở trang Đơn hàng đúng lúc cache vừa hết hạn) thành 1 request thật
+// duy nhất tới Google, thay vì mỗi lượt gọi tự bắn 1 request riêng ("cache stampede") — đây từng là
+// 1 trong các nguyên nhân góp phần vượt quota 'Read requests per minute per user'.
+const _dangDocBang = new Map(); // tabName -> Promise
+const _dangDocHeader = new Map(); // tabName -> Promise
+
 function xoaCacheBang(tabName) {
   _cacheBang.delete(tabName);
 }
@@ -37,15 +44,64 @@ async function getSheetsClient() {
   return google.sheets({ version: 'v4', auth });
 }
 
+// ============================================================
+// THỬ LẠI KHI GOOGLE TRẢ LỖI TẠM THỜI — 429 (vượt quota/rate-limit) hoặc 500/503 (lỗi tạm thời phía
+// Google) đều là lỗi CÓ THỂ TỰ KHỎI nếu chờ 1 chút rồi gọi lại (đúng khuyến nghị chính thức của Google
+// cho các API này: exponential backoff + jitter). KHÔNG thử lại lỗi khác (400 sai tham số, 404 không
+// tìm thấy sheet...) vì gọi lại không giúp ích, chỉ làm chậm phản hồi vô ích.
+// Trước đây KHÔNG có lớp này — bất kỳ lượt vượt quota nào (dù chỉ thoáng qua vài giây do nhiều người
+// dùng cùng lúc) đều rơi thẳng ra người dùng dưới dạng lỗi thô của Google (vd "Không tải được danh
+// sách: Quota exceeded for quota metric..."), thay vì tự phục hồi.
+// ============================================================
+const SO_LAN_THU_LAI_TOI_DA = 4;
+const DO_TRE_GOC_MS = 500;
+
+function maLoiHttp(err) {
+  return (err && (err.code || (err.response && err.response.status))) || null;
+}
+
+function loiTamThoiCoTheThuLai(err) {
+  const ma = maLoiHttp(err);
+  return ma === 429 || ma === 500 || ma === 503;
+}
+
+async function goiApiCoThuLai(goiApi) {
+  for (let lan = 0; ; lan++) {
+    try {
+      return await goiApi();
+    } catch (err) {
+      if (!loiTamThoiCoTheThuLai(err) || lan >= SO_LAN_THU_LAI_TOI_DA) {
+        if (maLoiHttp(err) === 429) {
+          throw new Error('Google Sheets đang tạm quá tải do có nhiều người thao tác cùng lúc — vui lòng thử lại sau ít phút.');
+        }
+        throw err;
+      }
+      const doTreMs = DO_TRE_GOC_MS * 2 ** lan + Math.random() * 300; // jitter tránh nhiều request cùng retry đồng loạt
+      await new Promise(r => setTimeout(r, doTreMs));
+    }
+  }
+}
+
+// Gộp các lượt gọi hàm đọc (fn) trùng key xảy ra cùng lúc thành 1 lượt gọi thật duy nhất — dùng cho
+// readTabCached/getHeadersCached khi cache vừa hết hạn và có nhiều request đang chờ cùng lúc.
+function gopYeuCauTrung(mapDangDoc, key, fn) {
+  const dangChay = mapDangDoc.get(key);
+  if (dangChay) return dangChay;
+
+  const promise = fn().finally(() => mapDangDoc.delete(key));
+  mapDangDoc.set(key, promise);
+  return promise;
+}
+
 // Đọc toàn bộ 1 tab. Trả về { headers, rows } — mỗi row là object {TenCot: giaTri, _row: soDongThat}
 // _row dùng để ghi lại đúng dòng đó sau này (dòng 1 là header nên dữ liệu bắt đầu từ dòng 2)
 // LUÔN đọc thật (không qua cache) — dùng hàm này khi cần dữ liệu chắc chắn mới nhất (trước khi ghi).
 async function readTab(tabName) {
   const sheets = await getSheetsClient();
-  const res = await sheets.spreadsheets.values.get({
+  const res = await goiApiCoThuLai(() => sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
     range: tabName,
-  });
+  }));
 
   const values = res.data.values || [];
   if (values.length === 0) return { headers: [], rows: [] };
@@ -68,9 +124,11 @@ async function readTabCached(tabName, ttlMs = 5000) {
   const now = Date.now();
   if (cached && cached.hetHan > now) return cached.data;
 
-  const data = await readTab(tabName);
-  _cacheBang.set(tabName, { data, hetHan: now + ttlMs });
-  return data;
+  return gopYeuCauTrung(_dangDocBang, tabName, async () => {
+    const data = await readTab(tabName);
+    _cacheBang.set(tabName, { data, hetHan: Date.now() + ttlMs });
+    return data;
+  });
 }
 
 // Chỉ đọc DÒNG HEADER (dòng 1) — dùng khi appendRow chỉ cần biết thứ tự cột, không cần load toàn
@@ -81,12 +139,14 @@ async function getHeadersCached(tabName, ttlMs = 10 * 60 * 1000) {
   const now = Date.now();
   if (cached && cached.hetHan > now) return cached.headers;
 
-  const sheets = await getSheetsClient();
-  const res = await sheets.spreadsheets.values.get({ spreadsheetId: SHEET_ID, range: `${tabName}!1:1` });
-  const headers = (res.data.values && res.data.values[0] || []).map(h => String(h).trim());
+  return gopYeuCauTrung(_dangDocHeader, tabName, async () => {
+    const sheets = await getSheetsClient();
+    const res = await goiApiCoThuLai(() => sheets.spreadsheets.values.get({ spreadsheetId: SHEET_ID, range: `${tabName}!1:1` }));
+    const headers = (res.data.values && res.data.values[0] || []).map(h => String(h).trim());
 
-  _cacheHeader.set(tabName, { headers, hetHan: now + ttlMs });
-  return headers;
+    _cacheHeader.set(tabName, { headers, hetHan: Date.now() + ttlMs });
+    return headers;
+  });
 }
 
 // Thêm 1 dòng mới vào cuối tab, ghi theo đúng thứ tự cột thật của sheet (truyền vào qua headers)
@@ -94,12 +154,12 @@ async function appendRow(tabName, headers, rowObject) {
   const sheets = await getSheetsClient();
   const values = [headers.map(h => (rowObject[h] !== undefined ? rowObject[h] : ''))];
 
-  await sheets.spreadsheets.values.append({
+  await goiApiCoThuLai(() => sheets.spreadsheets.values.append({
     spreadsheetId: SHEET_ID,
     range: tabName,
     valueInputOption: 'USER_ENTERED',
     requestBody: { values },
-  });
+  }));
 
   xoaCacheBang(tabName); // dòng vừa thêm phải xuất hiện ngay ở lần đọc kế tiếp, kể cả đọc qua cache
 }
@@ -121,10 +181,10 @@ async function updateCells(tabName, headers, rowNumber, updates) {
 
   if (data.length === 0) return;
 
-  await sheets.spreadsheets.values.batchUpdate({
+  await goiApiCoThuLai(() => sheets.spreadsheets.values.batchUpdate({
     spreadsheetId: SHEET_ID,
     requestBody: { valueInputOption: 'USER_ENTERED', data },
-  });
+  }));
 
   xoaCacheBang(tabName); // đảm bảo lần đọc kế tiếp (kể cả qua cache) thấy đúng giá trị vừa ghi
 }
