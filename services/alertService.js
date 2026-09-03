@@ -23,13 +23,13 @@ const idxSanXuat = chiSoTinhTrang('Đã sản xuất');
 // THU_TU_TINH_TRANG (vd LỖI SẢN XUẤT CẦN LÀM LẠI) coi như "chưa đạt mốc nào" — an toàn, không bỏ sót
 // cảnh báo cho đơn đang bị lỗi.
 function tinhMucCanhBao(don) {
-  if (TRANG_THAI_KET_THUC.includes(don.TINH_TRANG)) return null;
+  if (TRANG_THAI_KET_THUC.includes(don.TRANG_THAI_XUONG)) return null;
 
   const soNgay = soNgayTu(don.NGAY_LEN_DON);
   if (soNgay === null) return null;
 
-  const chuaShip = !TRANG_THAI_DA_SHIP.includes(don.TINH_TRANG);
-  const idx = chiSoTinhTrang(don.TINH_TRANG);
+  const chuaShip = !TRANG_THAI_DA_SHIP.includes(don.TRANG_THAI_XUONG);
+  const idx = chiSoTinhTrang(don.TRANG_THAI_XUONG);
   const chuaToiSanSang = idx === null || idx < idxSanSang;
   const chuaToiSanXuat = idx === null || idx < idxSanXuat;
 

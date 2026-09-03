@@ -1,5 +1,5 @@
 // Script RÀ SOÁT (CHỈ ĐỌC, KHÔNG GHI GÌ) — quét toàn bộ đơn hàng hiện có trong Sheet, tìm những
-// đơn đang mang tổ hợp TINH_TRANG/TRANG_THAI_PHOI/TRANG_THAI_VE_FILE không hợp lý theo đúng 2 quy
+// đơn đang mang tổ hợp TRANG_THAI_XUONG/TRANG_THAI_PHOI/TRANG_THAI_VE_FILE không hợp lý theo đúng 2 quy
 // tắc mới thêm vào services/orderService.js (kiemTraTinhHopLy):
 //   1. "Chưa xác nhận" mà đã "Đã lấy phôi" hoặc "Đã vẽ file"
 //   2. Đã tới "ĐÃ SẴN SÀNG CHẠY MÁY" hoặc các bước sau đó mà phôi/file vẫn chưa xong
@@ -20,15 +20,15 @@ const idxSanSang = chiSoTinhTrang('ĐÃ SẴN SÀNG CHẠY MÁY');
 function timLoi(don) {
   const loi = [];
 
-  if (don.TINH_TRANG === 'Chưa xác nhận') {
+  if (don.TRANG_THAI_XUONG === 'Chưa xác nhận') {
     if (don.TRANG_THAI_PHOI === 'Đã lấy phôi') loi.push('Chưa xác nhận nhưng Đã lấy phôi');
     if (don.TRANG_THAI_VE_FILE === 'Đã vẽ file') loi.push('Chưa xác nhận nhưng Đã vẽ file');
   }
 
-  const idx = chiSoTinhTrang(don.TINH_TRANG);
+  const idx = chiSoTinhTrang(don.TRANG_THAI_XUONG);
   if (idx !== null && idx >= idxSanSang) {
-    if (don.TRANG_THAI_PHOI !== 'Đã lấy phôi') loi.push(`Đang ở "${don.TINH_TRANG}" nhưng phôi vẫn "${don.TRANG_THAI_PHOI || '(trống)'}"`);
-    if (don.TRANG_THAI_VE_FILE !== 'Đã vẽ file') loi.push(`Đang ở "${don.TINH_TRANG}" nhưng vẽ file vẫn "${don.TRANG_THAI_VE_FILE || '(trống)'}"`);
+    if (don.TRANG_THAI_PHOI !== 'Đã lấy phôi') loi.push(`Đang ở "${don.TRANG_THAI_XUONG}" nhưng phôi vẫn "${don.TRANG_THAI_PHOI || '(trống)'}"`);
+    if (don.TRANG_THAI_VE_FILE !== 'Đã vẽ file') loi.push(`Đang ở "${don.TRANG_THAI_XUONG}" nhưng vẽ file vẫn "${don.TRANG_THAI_VE_FILE || '(trống)'}"`);
   }
 
   return loi;
@@ -49,7 +49,7 @@ async function chay() {
   }
 
   donLoi.forEach(({ don, loi }) => {
-    console.log(`- ${don.STT_Key} (TINH_TRANG="${don.TINH_TRANG}", PHOI="${don.TRANG_THAI_PHOI}", VE_FILE="${don.TRANG_THAI_VE_FILE}")`);
+    console.log(`- ${don.STT_Key} (TRANG_THAI_XUONG="${don.TRANG_THAI_XUONG}", PHOI="${don.TRANG_THAI_PHOI}", VE_FILE="${don.TRANG_THAI_VE_FILE}")`);
     loi.forEach(l => console.log(`    · ${l}`));
   });
 

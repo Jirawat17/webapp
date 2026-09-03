@@ -41,14 +41,14 @@ router.post('/tracking/quet', async (req, res) => {
   // dưới) HOẶC đã "ĐÃ DÁN TEM" từ trước (quét lại để in lại tem cũ, KHÔNG lùi trạng thái). Không cho
   // quét khi đã qua "IN TRANSIT"/"DELIVERED" trở đi — tem đã dán xong từ lâu, quét nhầm không nên
   // đụng vào đơn nữa.
-  if (row.TINH_TRANG !== 'Đã đóng gói' && row.TINH_TRANG !== 'ĐÃ DÁN TEM') {
-    console.log(`[GKE] Sai trạng thái: ${sttKey} đang ở "${row.TINH_TRANG}"`);
+  if (row.TRANG_THAI_XUONG !== 'Đã đóng gói' && row.TRANG_THAI_XUONG !== 'ĐÃ DÁN TEM') {
+    console.log(`[GKE] Sai trạng thái: ${sttKey} đang ở "${row.TRANG_THAI_XUONG}"`);
     ghiKhongCho(ghiLog({
       nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'GKE_QUET_SAI_TRANG_THAI', sttKey,
-      chiTiet: { trangThaiHienTai: row.TINH_TRANG },
+      chiTiet: { trangThaiHienTai: row.TRANG_THAI_XUONG },
     }));
     return res.status(400).json({
-      error: `Đơn đang ở "${row.TINH_TRANG}" — phải "Đã đóng gói" hoặc "ĐÃ DÁN TEM" mới tạo/in được vận đơn GKE.`,
+      error: `Đơn đang ở "${row.TRANG_THAI_XUONG}" — phải "Đã đóng gói" hoặc "ĐÃ DÁN TEM" mới tạo/in được vận đơn GKE.`,
     });
   }
 
@@ -94,12 +94,12 @@ router.post('/tracking/quet', async (req, res) => {
   }
 
   // Lấy tem THÀNH CÔNG — ghi đúng mã vận đơn thật + hãng vận chuyển, thay cho placeholder (nếu có).
-  // Luôn kèm TINH_TRANG='ĐÃ DÁN TEM' — vô hại khi ghi lại đúng giá trị cũ (trường hợp quét lại để in
+  // Luôn kèm TRANG_THAI_XUONG='ĐÃ DÁN TEM' — vô hại khi ghi lại đúng giá trị cũ (trường hợp quét lại để in
   // lại tem, xem gate check ở trên và kiemTraCongAnhBatBuoc trong services/orderService.js).
   await orderService.update(sttKey, {
     TRACKING_ID: ketQuaTem.tracking_num,
     HANG_VAN_CHUYEN: ketQuaTem.delivery_carrier,
-    TINH_TRANG: 'ĐÃ DÁN TEM',
+    TRANG_THAI_XUONG: 'ĐÃ DÁN TEM',
   }, user);
 
   ghiKhongCho(ghiLog({

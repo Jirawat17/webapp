@@ -1,4 +1,4 @@
-// Script MIGRATE 1 LẦN — đổi TINH_TRANG của các đơn hiện có trong Don_Hang_ALL sang tên trạng
+// Script MIGRATE 1 LẦN — đổi TRANG_THAI_XUONG của các đơn hiện có trong Don_Hang_ALL sang tên trạng
 // thái mới theo pipeline mới (So_do_logic.pdf, áp dụng 24/08/2026). Chạy đúng 1 lần rồi thôi,
 // không phải job chạy định kỳ.
 //
@@ -26,7 +26,7 @@ async function chay() {
   const apply = process.argv.includes('--apply');
   const { headers, rows } = await orderService.getAll({ fresh: true });
 
-  const canDoi = rows.filter(r => ANH_XA_CU_MOI[r.TINH_TRANG]);
+  const canDoi = rows.filter(r => ANH_XA_CU_MOI[r.TRANG_THAI_XUONG]);
 
   console.log(`Tổng số đơn: ${rows.length}. Số đơn cần đổi trạng thái: ${canDoi.length}.`);
   if (canDoi.length === 0) {
@@ -35,7 +35,7 @@ async function chay() {
   }
 
   const demTheoTrangThaiCu = {};
-  canDoi.forEach(r => { demTheoTrangThaiCu[r.TINH_TRANG] = (demTheoTrangThaiCu[r.TINH_TRANG] || 0) + 1; });
+  canDoi.forEach(r => { demTheoTrangThaiCu[r.TRANG_THAI_XUONG] = (demTheoTrangThaiCu[r.TRANG_THAI_XUONG] || 0) + 1; });
   console.log('Chi tiết theo trạng thái cũ:');
   Object.entries(demTheoTrangThaiCu).forEach(([cu, soLuong]) => {
     console.log(`  - "${cu}" -> "${ANH_XA_CU_MOI[cu]}"  (${soLuong} đơn)`);
@@ -49,7 +49,7 @@ async function chay() {
   console.log('\nĐang ghi vào Sheet...');
   let daGhi = 0;
   for (const r of canDoi) {
-    await updateCells('Don_Hang_ALL', headers, r._row, { TINH_TRANG: ANH_XA_CU_MOI[r.TINH_TRANG] });
+    await updateCells('Don_Hang_ALL', headers, r._row, { TRANG_THAI_XUONG: ANH_XA_CU_MOI[r.TRANG_THAI_XUONG] });
     daGhi++;
     if (daGhi % 20 === 0) console.log(`  ...đã ghi ${daGhi}/${canDoi.length}`);
   }

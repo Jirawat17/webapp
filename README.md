@@ -42,7 +42,7 @@ Các tab `Nhan_Vien`, `QuetMa`, `Chatbot`, `B0_Chuan_Bi_Phoi_Ao`, `DATANEW_VIP3`
 | `HANG_VAN_CHUYEN` | Hãng vận chuyển |
 | `TRACKING_ID` | Mã vận đơn/tracking |
 | `DANH_DAU_IN` | Đã đánh dấu in (TRUE/FALSE) |
-| `TINH_TRANG` | Trạng thái hiện tại — xem pipeline ở mục 4 |
+| `TRANG_THAI_XUONG` | Trạng thái hiện tại — xem pipeline ở mục 4 |
 | `NGAY_LEN_DON` | Ngày lên đơn — dùng để sắp xếp danh sách và tính cảnh báo |
 | `TEN_DIA_CHI`, `DIA_CHI_TEN_DUONG`, `DIA_CHI_TEN_TP`, `DIA_CHI_BANG`, `MA_ZIPCODE`, `DIA_CHI_NUOC` | Các phần địa chỉ giao hàng |
 | `MA_DON_HANG_ORDERID` | Mã đơn hàng trên sàn TMĐT (Etsy...) |
@@ -55,9 +55,9 @@ Các tab `Nhan_Vien`, `QuetMa`, `Chatbot`, `B0_Chuan_Bi_Phoi_Ao`, `DATANEW_VIP3`
 | `TEN`, `SDT` | Tên & SĐT người nhận |
 | `NguoiCapNhatCuoi`, `ThoiGianCapNhatCuoi` | App tự ghi — ai/khi nào sửa đơn gần nhất |
 
-**Cột KHÔNG tồn tại** (khác với bản thiết kế mẫu trước đây, đã bỏ khỏi code): `Ten_KH`, `Ten_San_Pham`, `Co_Phoi`, `Co_File_Ve`, `Team_San_Xuat`, `Ngay_Giao_Du_Kien`, `Nguoi_Ve_File`, `Trang_Thai_Ship`, `Ngay_Ship`. Khái niệm "có phôi/có file" giờ được thể hiện qua **vị trí của đơn trong pipeline `TINH_TRANG`**, không phải checkbox riêng.
+**Cột KHÔNG tồn tại** (khác với bản thiết kế mẫu trước đây, đã bỏ khỏi code): `Ten_KH`, `Ten_San_Pham`, `Co_Phoi`, `Co_File_Ve`, `Team_San_Xuat`, `Ngay_Giao_Du_Kien`, `Nguoi_Ve_File`, `Trang_Thai_Ship`, `Ngay_Ship`. Khái niệm "có phôi/có file" giờ được thể hiện qua **vị trí của đơn trong pipeline `TRANG_THAI_XUONG`**, không phải checkbox riêng.
 
-## 4. Pipeline `TINH_TRANG` thật
+## 4. Pipeline `TRANG_THAI_XUONG` thật
 
 ```
 B0_Chờ xác nhận → B1_Đã in → B2_Đã lấy phôi → B3_Đã đủ Phôi và File Vẽ
@@ -81,7 +81,7 @@ Quét **không** ghi Sheet ngay. Mỗi mã quét được gọi qua `POST /api/q
 | Nhóm | Điều kiện | Xử lý |
 |---|---|---|
 | ✅ OK | Mã tồn tại + đúng `Trang_Thai_Yeu_Cau` | Vào danh sách "Sẵn sàng cập nhật" |
-| ⚠️ Sai trạng thái | Mã tồn tại nhưng `TINH_TRANG` khác yêu cầu | Vào danh sách "cần xem lại", chặn không cho thoát màn Xem lại tới khi bấm "Đã xem" hoặc "Xóa" |
+| ⚠️ Sai trạng thái | Mã tồn tại nhưng `TRANG_THAI_XUONG` khác yêu cầu | Vào danh sách "cần xem lại", chặn không cho thoát màn Xem lại tới khi bấm "Đã xem" hoặc "Xóa" |
 | ❌ Không tìm thấy | Mã không khớp `STT_Key` nào | Tương tự nhóm trên |
 
 Khi nhân viên bấm "Xác nhận cập nhật", client gọi `POST /api/qr/kich-ban/:id/xac-nhan-hang-loat` với mảng `sttKeys` (chỉ nhóm OK). **Server kiểm tra lại từng mã một lần nữa** trước khi ghi (phòng trường hợp trạng thái đã đổi giữa lúc quét và lúc xác nhận — ví dụ 2 người cùng quét 1 đơn) — mã nào không còn hợp lệ sẽ trả về trong `loi[]` kèm lý do cụ thể, **không âm thầm bỏ qua**, và tự động chuyển sang nhóm "Sai trạng thái" để bắt buộc xử lý tiếp.
@@ -159,8 +159,8 @@ npm start
 | `admin` / `quan_ly` | Tất cả | Tất cả |
 | `chuan_bi_phoi` | Chưa tới `B2_Đã lấy phôi` | `GHI_CHU` |
 | `ve_file` | Chưa tới `B3_Đã đủ Phôi và File Vẽ` | `GHI_CHU` |
-| `san_xuat` | Từ `B3` đến trước `SHIPPED` | `GHI_CHU`, `TINH_TRANG` |
-| `dong_goi` | Từ `B5_Đã sản xuất` trở đi | `GHI_CHU`, `HANG_VAN_CHUYEN`, `TRACKING_ID`, `TINH_TRANG` |
+| `san_xuat` | Từ `B3` đến trước `SHIPPED` | `GHI_CHU`, `TRANG_THAI_XUONG` |
+| `dong_goi` | Từ `B5_Đã sản xuất` trở đi | `GHI_CHU`, `HANG_VAN_CHUYEN`, `TRACKING_ID`, `TRANG_THAI_XUONG` |
 
 Mọi vai trò đều có thể bấm nút "Chuyển sang..." trên trang chi tiết đơn (đọc từ `CauHinhKichBan`) — Sheet hiện không có cột phân quyền theo kịch bản nên app chưa giới hạn vai trò nào được dùng kịch bản nào. Nếu cần giới hạn, có thể thêm cột (vd `VaiTro_ChoPhep`) vào `CauHinhKichBan` và báo tôi để cập nhật `scenarioService.js`.
 

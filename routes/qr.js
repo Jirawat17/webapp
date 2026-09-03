@@ -25,8 +25,8 @@ function duocPhepDungKichBan(scenario, user) {
 }
 
 // "Van an toàn" chung (bổ sung 26/08/2026, theo Prompt_Ver_25.docx): trước đây mỗi kịch bản chỉ tự
-// kiểm tra ĐÚNG cột nó nhắm tới (scenario.requireStatus), không quan tâm TINH_TRANG tổng của đơn là
-// gì. Về mặt dữ liệu không nguy hiểm (tinhTinhTrangTuDong() chỉ tự đồng bộ khi TINH_TRANG đang
+// kiểm tra ĐÚNG cột nó nhắm tới (scenario.requireStatus), không quan tâm TRANG_THAI_XUONG tổng của đơn là
+// gì. Về mặt dữ liệu không nguy hiểm (tinhTinhTrangTuDong() chỉ tự đồng bộ khi TRANG_THAI_XUONG đang
 // "Đã xác nhận" nên đơn đã kết thúc sẽ không bị kéo lung tung), nhưng vẫn có thể tạo tình huống lạ —
 // vd đánh dấu "đã lấy phôi" cho 1 đơn đã bị huỷ. Chặn CHUNG mọi kịch bản khi đơn đang ở 1 trong 3
 // trạng thái kết thúc — áp dụng cho MỌI vai trò kể cả admin (đây là lớp chống quét nhầm bằng máy
@@ -34,7 +34,7 @@ function duocPhepDungKichBan(scenario, user) {
 // trang chi tiết đơn, nơi đã có quyền ghi đè riêng — xem kiemTraTinhHopLy trong services/orderService.js).
 const TRANG_THAI_KET_THUC = ['CANCELLED_Đã hủy', 'REFUNDED_Hoàn đơn', 'DELIVERED_Đã giao đến khách'];
 function donDaKetThuc(row) {
-  return TRANG_THAI_KET_THUC.includes(row.TINH_TRANG);
+  return TRANG_THAI_KET_THUC.includes(row.TRANG_THAI_XUONG);
 }
 
 async function lamGiauDon(row) {
@@ -87,18 +87,18 @@ router.post('/kich-ban/:scenarioId/quet', async (req, res) => {
     return res.status(404).json({ error: 'Không tìm thấy đơn hàng với mã: ' + sttKey });
   }
 
-  // Kịch bản thao tác trên ĐÚNG cột đã khai báo (Cot trong CauHinhKichBan) — mặc định TINH_TRANG
+  // Kịch bản thao tác trên ĐÚNG cột đã khai báo (Cot trong CauHinhKichBan) — mặc định TRANG_THAI_XUONG
   // nếu không khai báo, giữ tương thích ngược với kịch bản cũ.
   const giaTriHienTai = row[scenario.column];
 
   if (donDaKetThuc(row)) {
-    ghiKhongCho(ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_CHAN_DON_KET_THUC', sttKey, chiTiet: { scenario: scenario.label, tinhTrang: row.TINH_TRANG } }));
+    ghiKhongCho(ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_CHAN_DON_KET_THUC', sttKey, chiTiet: { scenario: scenario.label, tinhTrang: row.TRANG_THAI_XUONG } }));
     ghiKhongCho(ghiNhatKyQuetHangLoat({
       nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey,
-      trangThaiCu: row.TINH_TRANG, trangThaiMoi: '', ketQua: 'LOI_DON_DA_KET_THUC',
-      ghiChu: `Đơn đã ở trạng thái kết thúc "${row.TINH_TRANG}"`,
+      trangThaiCu: row.TRANG_THAI_XUONG, trangThaiMoi: '', ketQua: 'LOI_DON_DA_KET_THUC',
+      ghiChu: `Đơn đã ở trạng thái kết thúc "${row.TRANG_THAI_XUONG}"`,
     }));
-    return res.status(400).json({ error: `Đơn đã ở trạng thái kết thúc "${row.TINH_TRANG}" — không thể dùng kịch bản quét nào nữa cho đơn này.` });
+    return res.status(400).json({ error: `Đơn đã ở trạng thái kết thúc "${row.TRANG_THAI_XUONG}" — không thể dùng kịch bản quét nào nữa cho đơn này.` });
   }
 
   if (scenario.requireStatus && giaTriHienTai !== scenario.requireStatus) {
@@ -126,7 +126,7 @@ router.post('/kich-ban/:scenarioId/quet', async (req, res) => {
   } catch (err) {
     // Đơn ĐÚNG trạng thái cột này yêu cầu, nhưng đổi xong sẽ xung đột với 1 trong 2 cột còn lại
     // (vd đơn đang "Chưa xác nhận" mà quét "lấy phôi" — TRANG_THAI_PHOI đúng "Chưa lấy phôi" nên
-    // qua được kiểm tra requireStatus ở trên, nhưng orderService.update() chặn lại vì TINH_TRANG
+    // qua được kiểm tra requireStatus ở trên, nhưng orderService.update() chặn lại vì TRANG_THAI_XUONG
     // vẫn "Chưa xác nhận", chưa hợp lý để đánh dấu đã có phôi). admin vẫn có thể gặp lỗi này nếu
     // dữ liệu THỰC SỰ mâu thuẫn ở cột khác — override chỉ áp dụng cho 2 quy tắc trong
     // kiemTraTinhHopLy(), không tắt hẳn kiểm tra.
@@ -193,15 +193,15 @@ router.post('/kich-ban/:scenarioId/kiem-tra', async (req, res) => {
   const giaTriHienTai = row[scenario.column];
 
   if (donDaKetThuc(row)) {
-    const lyDo = `Đơn đã ở trạng thái kết thúc "${row.TINH_TRANG}" — không thể dùng kịch bản quét nào nữa`;
-    ghiKhongCho(ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_KIEM_TRA_CHAN_DON_KET_THUC', sttKey, chiTiet: { scenario: scenario.label, tinhTrang: row.TINH_TRANG } }));
+    const lyDo = `Đơn đã ở trạng thái kết thúc "${row.TRANG_THAI_XUONG}" — không thể dùng kịch bản quét nào nữa`;
+    ghiKhongCho(ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_KIEM_TRA_CHAN_DON_KET_THUC', sttKey, chiTiet: { scenario: scenario.label, tinhTrang: row.TRANG_THAI_XUONG } }));
     ghiKhongCho(ghiNhatKyQuetHangLoat({
       nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey,
-      trangThaiCu: row.TINH_TRANG, trangThaiMoi: '', ketQua: 'LOI_DON_DA_KET_THUC', ghiChu: lyDo,
+      trangThaiCu: row.TRANG_THAI_XUONG, trangThaiMoi: '', ketQua: 'LOI_DON_DA_KET_THUC', ghiChu: lyDo,
     }));
     // Dùng lại nhóm SAI_TRANG_THAI có sẵn (đã có đủ styling/đếm/xem-lại ở scan.html) thay vì tạo
     // nhóm mới — về bản chất đây cũng là "đơn không ở đúng trạng thái mà kịch bản này cần".
-    return res.json({ nhom: 'SAI_TRANG_THAI', sttKey, tieuDe, tenKhachHang, trangThaiHienTai: row.TINH_TRANG, trangThaiYeuCau: scenario.requireStatus, lyDo });
+    return res.json({ nhom: 'SAI_TRANG_THAI', sttKey, tieuDe, tenKhachHang, trangThaiHienTai: row.TRANG_THAI_XUONG, trangThaiYeuCau: scenario.requireStatus, lyDo });
   }
 
   if (scenario.requireStatus && giaTriHienTai !== scenario.requireStatus) {
@@ -252,8 +252,8 @@ router.post('/kich-ban/:scenarioId/xac-nhan-hang-loat', async (req, res) => {
         continue;
       }
       if (donDaKetThuc(row)) {
-        loi.push({ sttKey, lyDo: `Đơn đã ở trạng thái kết thúc "${row.TINH_TRANG}" — không thể xác nhận` });
-        ghiKhongCho(ghiNhatKyQuetHangLoat({ nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey, trangThaiCu: row.TINH_TRANG, trangThaiMoi: '', ketQua: 'LOI_DON_DA_KET_THUC', ghiChu: 'Đơn đã ở trạng thái kết thúc, chuyển sang trạng thái này ở giữa lúc quét và lúc xác nhận' }));
+        loi.push({ sttKey, lyDo: `Đơn đã ở trạng thái kết thúc "${row.TRANG_THAI_XUONG}" — không thể xác nhận` });
+        ghiKhongCho(ghiNhatKyQuetHangLoat({ nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey, trangThaiCu: row.TRANG_THAI_XUONG, trangThaiMoi: '', ketQua: 'LOI_DON_DA_KET_THUC', ghiChu: 'Đơn đã ở trạng thái kết thúc, chuyển sang trạng thái này ở giữa lúc quét và lúc xác nhận' }));
         continue;
       }
       if (scenario.requireStatus && giaTriHienTai !== scenario.requireStatus) {

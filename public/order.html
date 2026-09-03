@@ -73,10 +73,10 @@ async function taiChiTiet() {
       <button type="button" class="btn-hanh-dong phu" onclick="inDonHang(this)">${icon('printer')} IN ĐƠN</button>
     </div>
     <div class="badge-row" style="margin-bottom:16px">
-      <span class="badge ${lopTrangThai(don.TINH_TRANG)}">${escapeHtml(don.TINH_TRANG || '')}</span>
-      ${don.TINH_TRANG === 'Đang chạy máy' ? `
+      <span class="badge ${lopTrangThai(don.TRANG_THAI_XUONG)}">${escapeHtml(don.TRANG_THAI_XUONG || '')}</span>
+      ${don.TRANG_THAI_XUONG === 'Đang chạy máy' ? `
         <span class="badge trang-thai-info">${icon('users', {size:14})} Đang vận hành: <strong>${escapeHtml(don.NguoiVanHanh || NHAN_NGUOI_VAN_HANH_KHONG_RO)}</strong></span>` : ''}
-      ${['Chưa xác nhận', 'Đã xác nhận'].includes(don.TINH_TRANG) ? `
+      ${['Chưa xác nhận', 'Đã xác nhận'].includes(don.TRANG_THAI_XUONG) ? `
         <span class="badge ${lopTrangThai(don.TRANG_THAI_PHOI)}">${escapeHtml(don.TRANG_THAI_PHOI || '')}</span>
         <span class="badge ${lopTrangThai(don.TRANG_THAI_VE_FILE)}">${escapeHtml(don.TRANG_THAI_VE_FILE || '')}</span>` : ''}
       ${don.DANH_DAU_IN ? `<span class="badge trang-thai-info">${icon('check', {size:14})} Đã đánh dấu in</span>` : ''}
@@ -172,8 +172,8 @@ function renderKhuVucThaoTac(don) {
   html += `
     <div class="upload-box">
       <label>Sửa trạng thái thủ công</label>
-      <label for="sua-tinh-trang" style="font-size:0.85rem;font-weight:400">Trạng thái chung (TINH_TRANG)</label>
-      <select id="sua-tinh-trang" onchange="canhBaoToHopSai()">${DANH_SACH_TINH_TRANG.map(t => `<option value="${escapeHtml(t)}" ${t === don.TINH_TRANG ? 'selected' : ''}>${escapeHtml(t)}</option>`).join('')}</select>
+      <label for="sua-tinh-trang" style="font-size:0.85rem;font-weight:400">Trạng thái chung (TRANG_THAI_XUONG)</label>
+      <select id="sua-tinh-trang" onchange="canhBaoToHopSai()">${DANH_SACH_TINH_TRANG.map(t => `<option value="${escapeHtml(t)}" ${t === don.TRANG_THAI_XUONG ? 'selected' : ''}>${escapeHtml(t)}</option>`).join('')}</select>
       <label for="sua-phoi" style="font-size:0.85rem;font-weight:400">Phôi</label>
       <select id="sua-phoi" onchange="canhBaoToHopSai(); capNhatMauChonTrangThai(this)">
         <option value="Chưa lấy phôi" ${don.TRANG_THAI_PHOI === 'Chưa lấy phôi' ? 'selected' : ''}>Chưa lấy phôi</option>
@@ -263,7 +263,7 @@ function canhBaoToHopSai() {
 
 async function luuTrangThaiThuCong() {
   const updates = {
-    TINH_TRANG: document.getElementById('sua-tinh-trang').value,
+    TRANG_THAI_XUONG: document.getElementById('sua-tinh-trang').value,
     TRANG_THAI_PHOI: document.getElementById('sua-phoi').value,
     TRANG_THAI_VE_FILE: document.getElementById('sua-ve-file').value,
   };

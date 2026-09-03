@@ -444,7 +444,7 @@ async function xuLyQuetTraCuu(sttKey) {
       ${icon('package')}
       <div>
         <strong>${escapeHtml(don.TieuDeSanPham || don.STT_Key)}</strong> — ${escapeHtml(don.TenKhachHang || '')}<br>
-        Trạng thái: <span class="badge ${lopTrangThai(don.TINH_TRANG)}">${escapeHtml(don.TINH_TRANG || '')}</span><br>
+        Trạng thái: <span class="badge ${lopTrangThai(don.TRANG_THAI_XUONG)}">${escapeHtml(don.TRANG_THAI_XUONG || '')}</span><br>
         <a href="/order.html?stt=${encodeURIComponent(sttKey)}">Xem chi tiết ${icon('arrowRight', {size:14})}</a>
       </div>
     </div>`;

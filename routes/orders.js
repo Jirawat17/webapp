@@ -29,14 +29,14 @@ async function layNguoiVanHanhTheoDon() {
 // Gắn thêm các trường tính toán (không phải cột thật trong Sheet) để hiển thị — dùng chung cho list/detail
 async function lamGiauDon(rows) {
   const daGanKH = await orderService.ganTenKhachHang(rows);
-  const canNguoiVanHanh = daGanKH.some(r => r.TINH_TRANG === TRANG_THAI_DANG_CHAY_MAY);
+  const canNguoiVanHanh = daGanKH.some(r => r.TRANG_THAI_XUONG === TRANG_THAI_DANG_CHAY_MAY);
   const nguoiVanHanhTheoDon = canNguoiVanHanh ? await layNguoiVanHanhTheoDon() : {};
   return daGanKH.map(r => ({
     ...r,
     TieuDeSanPham: orderService.tieuDeSanPham(r),
     ViTriTheu: orderService.danhSachViTriTheu(r),
     CanhBao: alertService.tinhMucCanhBao(r),
-    NguoiVanHanh: r.TINH_TRANG === TRANG_THAI_DANG_CHAY_MAY
+    NguoiVanHanh: r.TRANG_THAI_XUONG === TRANG_THAI_DANG_CHAY_MAY
       ? ((nguoiVanHanhTheoDon[r.STT_Key] && nguoiVanHanhTheoDon[r.STT_Key].nguoiDung) || null)
       : null,
   }));
@@ -51,7 +51,7 @@ async function lamGiauDon(rows) {
 function locDonDangChayMayTheoNguoiVanHanh(rows, user) {
   if (user.vaiTro !== 'san_xuat') return rows;
   return rows.filter(r => {
-    if (r.TINH_TRANG !== TRANG_THAI_DANG_CHAY_MAY) return true;
+    if (r.TRANG_THAI_XUONG !== TRANG_THAI_DANG_CHAY_MAY) return true;
     if (!r.NguoiVanHanh) return true; // không xác định được -> vẫn cho thấy
     return r.NguoiVanHanh === user.ten;
   });
@@ -108,7 +108,7 @@ router.get('/', async (req, res) => {
     trangThai, trangThaiPhoi, trangThaiVeFile, kh, tuNgay, denNgay,
     loai, kichThuoc, mauSac, hangVanChuyen, canhBao, sapXep,
   } = req.query;
-  if (trangThai) list = list.filter(r => r.TINH_TRANG === trangThai);
+  if (trangThai) list = list.filter(r => r.TRANG_THAI_XUONG === trangThai);
   if (trangThaiPhoi) list = list.filter(r => r.TRANG_THAI_PHOI === trangThaiPhoi);
   if (trangThaiVeFile) list = list.filter(r => r.TRANG_THAI_VE_FILE === trangThaiVeFile);
   if (loai) list = list.filter(r => r.LOAI === loai);
@@ -138,21 +138,21 @@ router.get('/', async (req, res) => {
   res.json(list);
 });
 
-// Chuyển trạng thái HÀNG LOẠT cho nhiều đơn cùng lúc — chọn tự do bất kỳ trong 10 giá trị TINH_TRANG,
+// Chuyển trạng thái HÀNG LOẠT cho nhiều đơn cùng lúc — chọn tự do bất kỳ trong 10 giá trị TRANG_THAI_XUONG,
 // KHÔNG kiểm tra trạng thái hiện tại của từng đơn (khác với kịch bản quét QR — quyết định có chủ ý
 // của người dùng, vì đây là công cụ sửa nhanh/sửa lỗi, không phải luồng vận hành theo pipeline).
-// CHỈ đổi được TINH_TRANG (không đổi TRANG_THAI_PHOI/TRANG_THAI_VE_FILE) — đủ dùng cho việc sửa
+// CHỈ đổi được TRANG_THAI_XUONG (không đổi TRANG_THAI_PHOI/TRANG_THAI_VE_FILE) — đủ dùng cho việc sửa
 // nhanh/sửa lỗi ở cấp tiến trình chung, còn phôi/file sửa qua trang chi tiết đơn hoặc quét QR.
 // Mở cho MỌI vai trò có quyền vào trang Đơn hàng (admin/ve_file toàn bộ, san_xuat theo phạm vi đã
 // lọc), không theo giới hạn cột TRUONG_DUOC_SUA phía dưới (vốn chỉ áp dụng cho sửa từng đơn lẻ).
 // Danh sách giá trị hợp lệ theo từng cột — dùng để validate tham số 'cot'/'trangThaiMoi' bên dưới
 const GIA_TRI_HOP_LE_THEO_COT = {
-  TINH_TRANG: DANH_SACH_TRANG_THAI_BAO_CAO,
+  TRANG_THAI_XUONG: DANH_SACH_TRANG_THAI_BAO_CAO,
   TRANG_THAI_PHOI: TRANG_THAI_PHOI_VALUES,
   TRANG_THAI_VE_FILE: TRANG_THAI_VE_FILE_VALUES,
 };
 
-// Chuyển hàng loạt — dùng CHUNG cho cả 3 cột trạng thái (TINH_TRANG mặc định nếu không truyền
+// Chuyển hàng loạt — dùng CHUNG cho cả 3 cột trạng thái (TRANG_THAI_XUONG mặc định nếu không truyền
 // 'cot', hoặc TRANG_THAI_PHOI/TRANG_THAI_VE_FILE — 2 nút bấm nhanh "Đã lấy phôi"/"Chưa lấy phôi"/
 // "Đã vẽ file"/"Chưa vẽ file" ở trang Đơn hàng dùng chung route này, chỉ khác tham số 'cot').
 // Mở cho MỌI vai trò có quyền vào trang Đơn hàng (admin/ve_file toàn bộ, san_xuat theo phạm vi đã
@@ -161,7 +161,7 @@ const GIA_TRI_HOP_LE_THEO_COT = {
 // mình) — chặn cứng ở đây, không chỉ dựa vào việc ẩn menu phía client.
 router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
   const { sttKeys, trangThaiMoi } = req.body;
-  const cot = req.body.cot || 'TINH_TRANG';
+  const cot = req.body.cot || 'TRANG_THAI_XUONG';
   const user = req.session.user;
 
   if (user.vaiTro === 'nguoi_lay_phoi') {
@@ -216,9 +216,9 @@ router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
 
 // Những kịch bản (trong CauHinhKichBan) có thể áp dụng cho trạng thái hiện tại của đơn —
 // dùng để hiện nút "Chuyển sang..." trên trang chi tiết mà không cần quét QR
-// So khớp đúng CỘT mà từng kịch bản thao tác (Cot trong CauHinhKichBan — TINH_TRANG hoặc
-// TRANG_THAI_PHOI hoặc TRANG_THAI_VE_FILE), không chỉ so với TINH_TRANG như bản cũ (trước 24/08/2026,
-// lúc đó mọi kịch bản đều chỉ thao tác trên đúng 1 cột TINH_TRANG nên không cần phân biệt). Đồng
+// So khớp đúng CỘT mà từng kịch bản thao tác (Cot trong CauHinhKichBan — TRANG_THAI_XUONG hoặc
+// TRANG_THAI_PHOI hoặc TRANG_THAI_VE_FILE), không chỉ so với TRANG_THAI_XUONG như bản cũ (trước 24/08/2026,
+// lúc đó mọi kịch bản đều chỉ thao tác trên đúng 1 cột TRANG_THAI_XUONG nên không cần phân biệt). Đồng
 // thời chỉ hiện kịch bản mà VAI TRÒ đang xem được phép dùng (Nguoi_Thuc_Hien) — tránh hiện nút rồi
 // bấm vào bị từ chối (qr.js cũng chặn lại lần nữa ở phía server, đây chỉ là để giao diện đỡ rối).
 async function layKichBanKeTiep(row, user) {
@@ -242,7 +242,7 @@ router.get('/:sttKey', async (req, res) => {
 
   // Ẩn hoàn toàn (404) nếu là san_xuat KHÁC người đang vận hành đơn "Đang chạy máy" — xem
   // locDonDangChayMayTheoNguoiVanHanh phía trên.
-  if (user.vaiTro === 'san_xuat' && row.TINH_TRANG === TRANG_THAI_DANG_CHAY_MAY &&
+  if (user.vaiTro === 'san_xuat' && row.TRANG_THAI_XUONG === TRANG_THAI_DANG_CHAY_MAY &&
       donDaLamGiau.NguoiVanHanh && donDaLamGiau.NguoiVanHanh !== user.ten) {
     return res.status(404).json({ error: 'Không tìm thấy đơn hàng' });
   }
@@ -254,13 +254,13 @@ router.get('/:sttKey', async (req, res) => {
 // của bất kỳ đơn nào nữa, kể cả GHI_CHU; trước đó có cho sửa riêng GHI_CHU nhưng đã bỏ):
 //   - admin, ve_file: không có trong danh sách dưới đây = sửa được MỌI trường (trừ TRUONG_CAM_SUA).
 //   - san_xuat: chỉ sửa được 3 cột trạng thái + ghi chú — theo đúng mô tả "lỗi thì set tay, làm lại
-//     thì cũng set tay" (san_xuat là người phát hiện lỗi sản xuất, cần tự set TINH_TRANG sang lỗi,
+//     thì cũng set tay" (san_xuat là người phát hiện lỗi sản xuất, cần tự set TRANG_THAI_XUONG sang lỗi,
 //     và tự set lại cả 2 cột phôi/file về "chưa" khi cần làm lại — không phải đợi nguoi_lay_phoi/
 //     ve_file làm hộ từng bước).
 //   - nguoi_lay_phoi: mảng rỗng = không sửa được trường nào qua route này (chỉ được thao tác qua
 //     quét QR đúng kịch bản của mình — xem routes/qr.js).
 const TRUONG_DUOC_SUA = {
-  san_xuat: ['GHI_CHU', 'TINH_TRANG', 'TRANG_THAI_PHOI', 'TRANG_THAI_VE_FILE'],
+  san_xuat: ['GHI_CHU', 'TRANG_THAI_XUONG', 'TRANG_THAI_PHOI', 'TRANG_THAI_VE_FILE'],
   nguoi_lay_phoi: [],
 };
 

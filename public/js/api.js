@@ -120,7 +120,7 @@ function spinnerInline(chuThich = 'Đang xử lý...') {
 // nhầm vào giữa chữ 'CHUYỂN', 'TRANSIT' không khớp được 'TRAINSIT' do lệch 1 ký tự) — tra cứu chính
 // xác loại bỏ hẳn nguy cơ đó.
 const MAU_TRANG_THAI = {
-  // TINH_TRANG
+  // TRANG_THAI_XUONG
   'Chưa xác nhận': 'trang-thai-warning',
   'Đã xác nhận': 'trang-thai-info',
   'ĐÃ SẴN SÀNG CHẠY MÁY': 'trang-thai-info',

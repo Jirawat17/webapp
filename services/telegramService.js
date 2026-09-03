@@ -49,7 +49,7 @@ async function guiCanhBao(muc, don) {
     `${NHAN_MUC[muc] || muc} — Đơn <b>${don.STT_Key}</b>\n` +
     `Sản phẩm: ${sanPham}\n` +
     `Khách hàng: ${don.TenKhachHang || don.MA_KHACH_HANG || ''}\n` +
-    `Trạng thái: ${don.TINH_TRANG || ''}\n` +
+    `Trạng thái: ${don.TRANG_THAI_XUONG || ''}\n` +
     `Ngày đặt: ${don.NGAY_LEN_DON || ''}`;
 
   await guiTinNhan(CHAT_ID_THEO_MUC[muc], text);

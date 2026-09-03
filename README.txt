@@ -26,8 +26,8 @@ copy đè (xem giải thích ở các zip trước — vẫn áp dụng y hệt)
      được vì không biết dịch "quan_ly cũ" thành "admin" hay giữ nguyên là quyết định của bạn.)
 
 0.3. Tab CauHinhKichBan — THÊM 2 CỘT MỚI + SỬA LẠI TOÀN BỘ CÁC DÒNG:
-     - Cot             — TÊN CỘT mà dòng kịch bản đó thao tác: TINH_TRANG / TRANG_THAI_PHOI /
-                          TRANG_THAI_VE_FILE. Để trống thì mặc định TINH_TRANG.
+     - Cot             — TÊN CỘT mà dòng kịch bản đó thao tác: TRANG_THAI_XUONG / TRANG_THAI_PHOI /
+                          TRANG_THAI_VE_FILE. Để trống thì mặc định TRANG_THAI_XUONG.
      - Nguoi_Thuc_Hien  — danh sách vai trò được dùng, phân cách dấu phẩy (vd "nguoi_lay_phoi, ve_file").
                           Để trống = mở cho mọi vai trò. admin LUÔN được dùng mọi kịch bản bất kể cột
                           này ghi gì (admin là superuser).
@@ -38,8 +38,8 @@ copy đè (xem giải thích ở các zip trước — vẫn áp dụng y hệt)
      Ten_Kich_Ban                                          | Cot                | Trang_Thai_Yeu_Cau | Trang_Thai_Sau      | Nguoi_Thuc_Hien
      -------------------------------------------------------|--------------------|--------------------|--------------------|-----------------------
      Quét mã để chuyển từ CHƯA LẤY PHÔI sang ĐÃ LẤY PHÔI    | TRANG_THAI_PHOI    | Chưa lấy phôi      | Đã lấy phôi         | nguoi_lay_phoi, ve_file
-     Quét mã để chuyển từ ĐÃ SẴN SÀNG CHẠY MÁY sang ĐÃ SẢN XUẤT | TINH_TRANG     | ĐÃ SẴN SÀNG CHẠY MÁY | Đã sản xuất       | san_xuat
-     Quét mã để chuyển từ ĐÃ SẢN XUẤT sang ĐÃ ĐÓNG GÓI      | TINH_TRANG         | Đã sản xuất        | Đã đóng gói         | nguoi_lay_phoi
+     Quét mã để chuyển từ ĐÃ SẴN SÀNG CHẠY MÁY sang ĐÃ SẢN XUẤT | TRANG_THAI_XUONG     | ĐÃ SẴN SÀNG CHẠY MÁY | Đã sản xuất       | san_xuat
+     Quét mã để chuyển từ ĐÃ SẢN XUẤT sang ĐÃ ĐÓNG GÓI      | TRANG_THAI_XUONG         | Đã sản xuất        | Đã đóng gói         | nguoi_lay_phoi
 
      LƯU Ý QUAN TRỌNG — các việc KHÔNG có kịch bản quét QR (set tay, đã xác nhận với bạn):
      - "Chưa xác nhận" -> "Đã xác nhận": set tay (ve_file hoặc admin).
@@ -50,7 +50,7 @@ copy đè (xem giải thích ở các zip trước — vẫn áp dụng y hệt)
      đơn (order.html) — xem mục 3.4.
 
 0.4. NGUỒN TẠO ĐƠN MỚI (Apps Script/kênh bán hàng) — sửa giá trị mặc định khi tạo 1 đơn mới:
-     - TINH_TRANG = "Chưa xác nhận"
+     - TRANG_THAI_XUONG = "Chưa xác nhận"
      - TRANG_THAI_PHOI = "Chưa lấy phôi"
      - TRANG_THAI_VE_FILE = "Chưa vẽ file"
      (Nằm ngoài phạm vi code Node trong zip này — không sửa được từ đây, bạn cần tự cập nhật Apps
@@ -63,7 +63,7 @@ copy đè (xem giải thích ở các zip trước — vẫn áp dụng y hệt)
 Lấy phôi và vẽ file giờ là 2 việc ĐỘC LẬP, làm SONG SONG (không bắt buộc phải có phôi trước mới vẽ
 file như bản cũ). Mỗi việc có 1 cột trạng thái riêng:
 
-  TINH_TRANG (tiến trình chung — 10 giá trị theo đúng thứ tự):
+  TRANG_THAI_XUONG (tiến trình chung — 10 giá trị theo đúng thứ tự):
     Chưa xác nhận -> Đã xác nhận -> ĐÃ SẴN SÀNG CHẠY MÁY -> Đã sản xuất -> Đã đóng gói ->
     IN TRANSIT_Tracking đã hoạt động -> DELIVERED_Đã giao đến khách
     (nhánh rẽ, không nằm trên đường chính: LỖI SẢN XUẤT CẦN LÀM LẠI, CANCELLED_Đã hủy, REFUNDED_Hoàn đơn)
@@ -71,9 +71,9 @@ file như bản cũ). Mỗi việc có 1 cột trạng thái riêng:
   TRANG_THAI_PHOI: "Chưa lấy phôi" | "Đã lấy phôi"
   TRANG_THAI_VE_FILE: "Chưa vẽ file" | "Đã vẽ file"
 
-"ĐÃ SẴN SÀNG CHẠY MÁY" LÀ TRẠNG THÁI TỰ ĐỘNG: hệ thống tự đặt TINH_TRANG sang giá trị này ngay khi
+"ĐÃ SẴN SÀNG CHẠY MÁY" LÀ TRẠNG THÁI TỰ ĐỘNG: hệ thống tự đặt TRANG_THAI_XUONG sang giá trị này ngay khi
 TRANG_THAI_PHOI="Đã lấy phôi" VÀ TRANG_THAI_VE_FILE="Đã vẽ file" CÙNG LÚC — NHƯNG CHỈ áp dụng khi
-TINH_TRANG đang là "Đã xác nhận" (lần đầu). Sau khi lỗi rồi làm lại từ phôi/file, việc quay lại
+TRANG_THAI_XUONG đang là "Đã xác nhận" (lần đầu). Sau khi lỗi rồi làm lại từ phôi/file, việc quay lại
 "ĐÃ SẴN SÀNG CHẠY MÁY" lần 2 KHÔNG tự động — phải set tay (đã xác nhận rõ với bạn). Logic này nằm
 trong services/orderService.js, hàm update() — áp dụng cho MỌI đường ghi dữ liệu (quét QR, sửa tay,
 chuyển hàng loạt) vì tất cả đều đi qua hàm này.
@@ -90,7 +90,7 @@ chuyển hàng loạt) vì tất cả đều đi qua hàm này.
 - san_xuat: CHỈ thấy đơn từ "ĐÃ SẴN SÀNG CHẠY MÁY" trở đi (gồm cả "LỖI SẢN XUẤT CẦN LÀM LẠI"),
   không thấy đơn còn ở "Chưa xác nhận"/"Đã xác nhận". Không thấy đơn CANCELLED/REFUNDED (giữ đúng
   thói quen cũ — chỉ admin/ve_file thấy đơn huỷ/hoàn, vì quan_ly đã bị xoá). Chỉ sửa được
-  GHI_CHU/TINH_TRANG/TRANG_THAI_PHOI/TRANG_THAI_VE_FILE (đủ để tự set lỗi và tự set lại khi làm lại).
+  GHI_CHU/TRANG_THAI_XUONG/TRANG_THAI_PHOI/TRANG_THAI_VE_FILE (đủ để tự set lỗi và tự set lại khi làm lại).
 - nguoi_lay_phoi: gộp từ chuan_bi_phoi + dong_goi cũ — lo cả lấy phôi lẫn đóng gói. CHỈ NHÌN THẤY
   DUY NHẤT MENU "Quét mã QR" — mọi menu khác (Đơn hàng, Dashboard, Báo cáo, Cài đặt, Trợ lý, Nhân
   viên) đều bị ẨN (đã xác nhận rõ với bạn: ẩn TẤT CẢ). Không có trang danh sách/chi tiết đơn để vào,
@@ -113,24 +113,24 @@ LỖI/CANCELLED/REFUNDED vì đó là nhánh rẽ), chiSoTinhTrang() thay cho ch
    - filterForRole(): san_xuat lọc theo THU_TU_TINH_TRANG (xem mục 2); admin/ve_file xem hết.
    - update(): THÊM MỚI logic tự động "ĐÃ SẴN SÀNG CHẠY MÁY" (xem mục 1) — đã tự mô phỏng 6 tình
      huống bằng Node trước khi giao, bao gồm 2 case dễ sai nhất (không tự động sau khi làm lại từ
-     lỗi; không ghi đè khi người dùng tự chỉ định TINH_TRANG).
+     lỗi; không ghi đè khi người dùng tự chỉ định TRANG_THAI_XUONG).
 
-3.3. services/scenarioService.js: đọc thêm cột Cot (mặc định TINH_TRANG nếu để trống) và
+3.3. services/scenarioService.js: đọc thêm cột Cot (mặc định TRANG_THAI_XUONG nếu để trống) và
 Nguoi_Thuc_Hien (mảng vai trò, null = mở cho mọi vai trò) từ tab CauHinhKichBan.
 
-3.4. routes/qr.js: TOÀN BỘ logic trước đây hardcode so khớp/ghi vào đúng cột TINH_TRANG — giờ dùng
+3.4. routes/qr.js: TOÀN BỘ logic trước đây hardcode so khớp/ghi vào đúng cột TRANG_THAI_XUONG — giờ dùng
 scenario.column (đọc từ Cot) để so khớp VÀ ghi đúng cột kịch bản đó thao tác. Thêm hàm
 duocPhepDungKichBan() chặn theo Nguoi_Thuc_Hien (admin luôn được phép). Áp dụng cho cả 2 luồng quét
 (đơn lẻ và hàng loạt).
 
 3.5. routes/orders.js:
    - TRUONG_DUOC_SUA: ve_file/admin không giới hạn (sửa hết); san_xuat chỉ sửa được
-     GHI_CHU/TINH_TRANG/TRANG_THAI_PHOI/TRANG_THAI_VE_FILE; nguoi_lay_phoi chỉ GHI_CHU (thực tế
+     GHI_CHU/TRANG_THAI_XUONG/TRANG_THAI_PHOI/TRANG_THAI_VE_FILE; nguoi_lay_phoi chỉ GHI_CHU (thực tế
      không dùng vì không có trang để sửa tay).
-   - layKichBanKeTiep(): SỬA LỖI — trước đây chỉ so khớp với TINH_TRANG bất kể kịch bản thao tác
+   - layKichBanKeTiep(): SỬA LỖI — trước đây chỉ so khớp với TRANG_THAI_XUONG bất kể kịch bản thao tác
      cột nào (sẽ không bao giờ hiện đúng nút cho kịch bản thao tác TRANG_THAI_PHOI). Giờ so khớp
      đúng row[scenario.column], và lọc luôn theo Nguoi_Thuc_Hien (admin luôn thấy hết).
-   - Danh sách 10 giá trị TINH_TRANG cho nút "Chuyển đến trạng thái" hàng loạt (không đổi được
+   - Danh sách 10 giá trị TRANG_THAI_XUONG cho nút "Chuyển đến trạng thái" hàng loạt (không đổi được
      TRANG_THAI_PHOI/VE_FILE hàng loạt — sửa qua trang chi tiết đơn hoặc quét QR).
 
 3.6. services/alertService.js: viết lại tinhMucCanhBao() dùng chiSoTinhTrang() thay chuaXongGiaiDoan()
@@ -140,10 +140,10 @@ ngày khác nhau).
 
 3.7. routes/reports.js:
    - TRANG_THAI_TRACKING = 'Đã đóng gói' (theo tên mới).
-   - VẤN ĐỀ PHÁT SINH: 2 mẫu "IN DANH SÁCH PHÔI" và "IN ĐƠN" trước đây suy trạng thái qua TINH_TRANG
-     — giờ phôi đã tách thành cột riêng, KHÔNG còn suy được qua TINH_TRANG nữa. Đã sửa: locDon()
+   - VẤN ĐỀ PHÁT SINH: 2 mẫu "IN DANH SÁCH PHÔI" và "IN ĐƠN" trước đây suy trạng thái qua TRANG_THAI_XUONG
+     — giờ phôi đã tách thành cột riêng, KHÔNG còn suy được qua TRANG_THAI_XUONG nữa. Đã sửa: locDon()
      nhận thêm tham số trangThaiPhoi/trangThaiVeFile lọc riêng theo 2 cột mới; xacDinhMau() bỏ hẳn
-     khả năng tự suy 2 mẫu này qua TINH_TRANG (chỉ còn ép được qua tham số "mau" — do nút in nhanh
+     khả năng tự suy 2 mẫu này qua TRANG_THAI_XUONG (chỉ còn ép được qua tham số "mau" — do nút in nhanh
      gửi lên).
    - TRANG_THAI_LOI: thêm bí danh thứ 3 "LỖI SẢN XUẤT CẦN LÀM LẠI" (giờ có ĐỦ 3 tên gọi qua 3 đời
      pipeline: "ĐƠN LỖI CẦN LÀM LẠI" gốc -> "B4.3_ĐƠN LỖI CẦN LÀM LẠI" -> "LỖI SẢN XUẤT CẦN LÀM LẠI"
@@ -160,11 +160,11 @@ ngày khác nhau).
 3.9. public/orders.html: danh sách 10 trạng thái mới cho dropdown; thêm badge phôi/vẽ file trên thẻ
 đơn (chỉ hiện khi đơn còn ở "Chưa xác nhận"/"Đã xác nhận" — hết ý nghĩa theo dõi sau khi đã "sẵn
 sàng chạy máy"); 2 nút in nhanh "IN DANH SÁCH PHÔI"/"IN ĐƠN" giờ ép lọc theo TRANG_THAI_PHOI thay vì
-dùng ô lọc trạng thái chung (ô đó chỉ lọc được TINH_TRANG).
+dùng ô lọc trạng thái chung (ô đó chỉ lọc được TRANG_THAI_XUONG).
 
 3.10. public/order.html:
    - Thêm badge phôi/vẽ file.
-   - THÊM MỚI khối "Sửa trạng thái thủ công" — 3 dropdown riêng cho TINH_TRANG/PHOI/VE_FILE. Đây là
+   - THÊM MỚI khối "Sửa trạng thái thủ công" — 3 dropdown riêng cho TRANG_THAI_XUONG/PHOI/VE_FILE. Đây là
      phần BẮT BUỘC PHẢI CÓ vì việc set "LỖI SẢN XUẤT CẦN LÀM LẠI" và làm lại sau đó đều là set tay,
      không qua kịch bản quét QR nào cả (theo đúng mô tả trong Prompt_Ver_24.docx).
    - Khu vực "Chụp ảnh đóng gói": trước đây hiện cho dong_goi/admin, giờ dong_goi không còn tồn tại
@@ -182,8 +182,8 @@ dùng ô lọc trạng thái chung (ô đó chỉ lọc được TINH_TRANG).
      đó, nhưng chính sách đó ĐÃ BỊ HUỶ theo yêu cầu lần này, nên khôi phục lại giới hạn ban đầu
      (quan_ly đã bị xoá nên giờ chỉ còn đúng "admin", không phải danh sách 2 vai trò như trước).
 
-3.13. scripts/migrate-trang-thai-v2.js (MỚI): script chạy 1 lần, đổi TOÀN BỘ 16 giá trị TINH_TRANG
-hệ CŨ sang bộ 3 giá trị (TINH_TRANG, TRANG_THAI_PHOI, TRANG_THAI_VE_FILE) hệ MỚI. Bảng ánh xạ đầy đủ
+3.13. scripts/migrate-trang-thai-v2.js (MỚI): script chạy 1 lần, đổi TOÀN BỘ 16 giá trị TRANG_THAI_XUONG
+hệ CŨ sang bộ 3 giá trị (TRANG_THAI_XUONG, TRANG_THAI_PHOI, TRANG_THAI_VE_FILE) hệ MỚI. Bảng ánh xạ đầy đủ
 nằm trong chính file này VÀ trong comment đầu data/pipelineTinhTrang.js. Đã tự mô phỏng, xác nhận cả
 16 giá trị mới đều hợp lệ theo đúng danh sách trong pipelineTinhTrang.js.
 
@@ -254,8 +254,8 @@ QUYẾT ĐỊNH ĐÃ XÁC NHẬN VỚI BẠN:
   như trước, đúng thiết kế ban đầu (họ làm việc physically trong xưởng, quét mã tại chỗ hợp lý hơn).
 
 CÁCH LÀM: mở rộng route backend /orders/chuyen-trang-thai-hang-loat SẴN CÓ (không viết route mới)
-— thêm tham số "cot" (mặc định TINH_TRANG nếu không truyền, giữ tương thích ngược với nút "Áp dụng"
-chuyển TINH_TRANG cũ), validate đúng giá trị theo đúng cột. Tận dụng lại toàn bộ logic đọc thật
+— thêm tham số "cot" (mặc định TRANG_THAI_XUONG nếu không truyền, giữ tương thích ngược với nút "Áp dụng"
+chuyển TRANG_THAI_XUONG cũ), validate đúng giá trị theo đúng cột. Tận dụng lại toàn bộ logic đọc thật
 trước khi ghi, xử lý lỗi từng đơn, ghi log — không phải viết trùng.
 
 File sửa: routes/orders.js (mở rộng route bulk-update, thêm bảng GIA_TRI_HOP_LE_THEO_COT để
@@ -289,7 +289,7 @@ logic tự động ĐÃ SẴN SÀNG CHẠY MÁY, luồng làm lại sau lỗi, s
 khớp đúng cả 9/9.
 
 7.2. LỖ HỔNG 2 (tìm thêm trong lúc rà soát, không phải ví dụ bạn nêu) — route PUT /orders/:sttKey
-(sửa 1 đơn) từ trước tới giờ KHÔNG kiểm tra giá trị hợp lệ cho TINH_TRANG/TRANG_THAI_PHOI/
+(sửa 1 đơn) từ trước tới giờ KHÔNG kiểm tra giá trị hợp lệ cho TRANG_THAI_XUONG/TRANG_THAI_PHOI/
 TRANG_THAI_VE_FILE — có thể ghi bất kỳ chuỗi nào (gõ sai chính tả, dán nhầm) thẳng vào Sheet. Route
 chuyển hàng loạt đã có kiểm tra riêng từ trước, nhưng route sửa 1 đơn thì chưa từng có. Đã thêm
 kiemTraGiaTriHopLe() cùng chỗ (orderService.update()) nên tự động vá cho route này luôn, không cần
@@ -306,7 +306,7 @@ trong 3 dropdown ở khối "Sửa trạng thái thủ công", trước khi bấ
 bị từ chối. Nút Lưu tự khoá lại khi đang có tổ hợp không hợp lệ. Đây CHỈ là gợi ý giao diện (dùng
 lại đúng 2 quy tắc viết bằng JS thuần, không gọi API) — không phải chốt bảo mật, server vẫn luôn
 kiểm tra lại đầy đủ dù ai đó có sửa JS trên trình duyệt để bỏ qua cảnh báo này. Đã tự đối chiếu bằng
-cách chạy vét cạn cả 40 tổ hợp có thể (10 giá trị TINH_TRANG × 2 phôi × 2 vẽ file) giữa logic client
+cách chạy vét cạn cả 40 tổ hợp có thể (10 giá trị TRANG_THAI_XUONG × 2 phôi × 2 vẽ file) giữa logic client
 và server — khớp 100%, không có trường hợp nào lệch nhau.
 
 7.4. scripts/kiem-tra-tinh-hop-le.js (MỚI, CHỈ ĐỌC — không có --apply, không bao giờ ghi gì): 2
@@ -317,7 +317,7 @@ thái nào cho đúng). Cách chạy: node scripts/kiem-tra-tinh-hop-le.js — �
 (2 đúng, 2 sai), tìm đúng chính xác 2 đơn sai.
 
 7.5. ĐỀ XUẤT THÊM (CHƯA LÀM, cần bạn xác nhận trước nếu muốn triển khai):
-  - Bắt buộc cột HANG_VAN_CHUYEN/TRACKING_ID phải có giá trị trước khi cho phép chuyển TINH_TRANG
+  - Bắt buộc cột HANG_VAN_CHUYEN/TRACKING_ID phải có giá trị trước khi cho phép chuyển TRANG_THAI_XUONG
     sang IN TRANSIT_Tracking đã hoạt động — hiện chưa có ràng buộc này, 1 đơn có thể "đang vận
     chuyển" mà không có mã vận đơn nào. Chưa làm vì không chắc chắn 100% đây luôn là bắt buộc về mặt
     nghiệp vụ (có thể mã vận đơn được điền sau qua tích hợp API vận chuyển).

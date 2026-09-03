@@ -113,7 +113,7 @@
   </select>
   <button id="nut-ap-dung" class="btn-hanh-dong" onclick="apDungChuyenTrangThai()">Áp dụng</button>
   <span class="thanh-hanh-dong-cach"></span>
-  <button id="btn-xac-nhan" class="btn-hanh-dong phu nhanh-phoi-ve-file trang-thai-tich-cuc" onclick="apDungNhanh('TINH_TRANG', 'Đã xác nhận', this)"></button>
+  <button id="btn-xac-nhan" class="btn-hanh-dong phu nhanh-phoi-ve-file trang-thai-tich-cuc" onclick="apDungNhanh('TRANG_THAI_XUONG', 'Đã xác nhận', this)"></button>
   <button id="btn-da-lay-phoi" class="btn-hanh-dong phu nhanh-phoi-ve-file trang-thai-tich-cuc" onclick="apDungNhanh('TRANG_THAI_PHOI', 'Đã lấy phôi', this)"></button>
   <button id="btn-chua-lay-phoi" class="btn-hanh-dong phu nhanh-phoi-ve-file trang-thai-tieu-cuc" onclick="apDungNhanh('TRANG_THAI_PHOI', 'Chưa lấy phôi', this)"></button>
   <button id="btn-da-ve-file" class="btn-hanh-dong phu nhanh-phoi-ve-file trang-thai-tich-cuc" onclick="apDungNhanh('TRANG_THAI_VE_FILE', 'Đã vẽ file', this)"></button>
@@ -126,7 +126,7 @@
 <script>
 const NHAN_CANH_BAO = { VANG: 'Vàng · 3 ngày', CAM: 'Cam · 5 ngày', DO: 'Đỏ · 7 ngày' };
 
-// Danh sách ĐẦY ĐỦ 10 giá trị TINH_TRANG — dùng riêng cho ô "Chuyển đến trạng thái" (chọn tự do,
+// Danh sách ĐẦY ĐỦ 10 giá trị TRANG_THAI_XUONG — dùng riêng cho ô "Chuyển đến trạng thái" (chọn tự do,
 // không kiểm tra trạng thái hiện tại). PHẢI khớp với DANH_SACH_TRANG_THAI_BAO_CAO trong
 // data/pipelineTinhTrang.js — sửa 1 chỗ thì nhớ sửa chỗ kia.
 // Cập nhật 24/08/2026 (theo Prompt_Ver_24.docx) — thay hoàn toàn hệ trạng thái B1.1-B5.2 cũ bằng
@@ -243,7 +243,7 @@ function domLaiOChon(id, nhanTatCa, giaTriList) {
 // CHỈ đổ lại các ô lọc động khi KHÔNG có bộ lọc nào đang áp dụng — nếu đã lọc rồi mà vẫn đổ lại theo
 // đúng danh sách đã bị thu hẹp thì các lựa chọn khác sẽ biến mất khỏi ô, không bấm lại được nữa.
 function capNhatCacBoLocDong(list) {
-  domLaiOChon('loc-trang-thai', 'Tất cả trạng thái', list.map(o => o.TINH_TRANG));
+  domLaiOChon('loc-trang-thai', 'Tất cả trạng thái', list.map(o => o.TRANG_THAI_XUONG));
   domLaiOChon('loc-loai', 'Tất cả loại', list.map(o => o.LOAI));
   domLaiOChon('loc-kich-thuoc', 'Tất cả kích thước', list.map(o => o.KICH_THUOC));
   domLaiOChon('loc-mau-sac', 'Tất cả màu sắc', list.map(o => o.MAU_SAC));
@@ -327,10 +327,10 @@ function renderDanhSachDon() {
         <div class="meta">${escapeHtml(o.TenKhachHang || '')} · SL: <strong>${escapeHtml(o.SO_LUONG || '')}</strong></div>
         <div class="meta">Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgayNgan(o.NGAY_LEN_DON) : '—')}</div>
         <div class="badge-row">
-          <span class="badge ${lopTrangThai(o.TINH_TRANG)}">${escapeHtml(o.TINH_TRANG || '')}</span>
-          ${o.TINH_TRANG === 'Đang chạy máy' ? `
+          <span class="badge ${lopTrangThai(o.TRANG_THAI_XUONG)}">${escapeHtml(o.TRANG_THAI_XUONG || '')}</span>
+          ${o.TRANG_THAI_XUONG === 'Đang chạy máy' ? `
             <span class="badge trang-thai-info">${icon('users', {size:14})} Đang vận hành: <strong>${escapeHtml(o.NguoiVanHanh || NHAN_NGUOI_VAN_HANH_KHONG_RO)}</strong></span>` : ''}
-          ${['Chưa xác nhận', 'Đã xác nhận'].includes(o.TINH_TRANG) ? `
+          ${['Chưa xác nhận', 'Đã xác nhận'].includes(o.TRANG_THAI_XUONG) ? `
             <span class="badge ${lopTrangThai(o.TRANG_THAI_PHOI)}">${escapeHtml(o.TRANG_THAI_PHOI || '')}</span>
             <span class="badge ${lopTrangThai(o.TRANG_THAI_VE_FILE)}">${escapeHtml(o.TRANG_THAI_VE_FILE || '')}</span>` : ''}
           ${o.CanhBao ? `

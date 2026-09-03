@@ -16,8 +16,8 @@ function slugHoa(str) {
 // Dùng cache 60s vì bảng này gần như không đổi trong lúc đang thao tác — tránh đọc lại qua mạng mỗi lần quét.
 //
 // CẬP NHẬT 24/08/2026 (theo Prompt_Ver_24.docx): thêm 2 cột mới trong CauHinhKichBan —
-//   Cot            — TÊN CỘT mà kịch bản này thao tác (TINH_TRANG / TRANG_THAI_PHOI / TRANG_THAI_VE_FILE).
-//                    Để trống thì mặc định là TINH_TRANG (giữ tương thích ngược với kịch bản cũ).
+//   Cot            — TÊN CỘT mà kịch bản này thao tác (TRANG_THAI_XUONG / TRANG_THAI_PHOI / TRANG_THAI_VE_FILE).
+//                    Để trống thì mặc định là TRANG_THAI_XUONG (giữ tương thích ngược với kịch bản cũ).
 //   Nguoi_Thuc_Hien — danh sách vai trò được PHÉP dùng kịch bản này, phân cách bởi dấu phẩy (vd
 //                    "nguoi_lay_phoi, ve_file"). Để trống = mở cho MỌI vai trò (không giới hạn).
 async function layDanhSachKichBan() {
@@ -27,7 +27,7 @@ async function layDanhSachKichBan() {
     .map(r => ({
       id: slugHoa(r.Ten_Kich_Ban),
       label: r.Ten_Kich_Ban,
-      column: (r.Cot || 'TINH_TRANG').trim(),
+      column: (r.Cot || 'TRANG_THAI_XUONG').trim(),
       requireStatus: r.Trang_Thai_Yeu_Cau || null,
       setStatus: r.Trang_Thai_Sau,
       allowedRoles: r.Nguoi_Thuc_Hien

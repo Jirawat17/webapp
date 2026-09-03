@@ -64,7 +64,7 @@ async function taiDon() {
         <div class="meta">${escapeHtml(o.TenKhachHang || '')} · SL: <strong>${escapeHtml(o.SO_LUONG || '')}</strong></div>
         <div class="meta">Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgayNgan(o.NGAY_LEN_DON) : '—')}</div>
         <div class="badge-row">
-          <span class="badge ${lopTrangThai(o.TINH_TRANG)}">${escapeHtml(o.TINH_TRANG || '')}</span>
+          <span class="badge ${lopTrangThai(o.TRANG_THAI_XUONG)}">${escapeHtml(o.TRANG_THAI_XUONG || '')}</span>
           ${!o.NguoiVanHanh ? `
             <span class="badge trang-thai-danger" style="white-space:normal;max-width:100%">${icon('alert', {size:14})} ${escapeHtml(NHAN_NGUOI_VAN_HANH_KHONG_RO)}</span>` : ''}
           ${o.CanhBao ? `

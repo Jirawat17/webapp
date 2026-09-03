@@ -23,7 +23,7 @@ const COT_ANH_THEO_MOC = {
 };
 
 // 2 mốc dưới đây KHÔNG chỉ lưu ảnh — mỗi mốc CHÍNH LÀ 1 hành động "chụp ảnh bằng chứng kèm chuyển
-// giai đoạn": tự động chuyển TINH_TRANG trong CÙNG 1 lần ghi với việc lưu URL ảnh. Yêu cầu đơn ĐANG
+// giai đoạn": tự động chuyển TRANG_THAI_XUONG trong CÙNG 1 lần ghi với việc lưu URL ảnh. Yêu cầu đơn ĐANG
 // ở đúng "yeuCau" trước khi chụp — kiemTraTinhHopLy() trong orderService.update() KHÔNG tự chặn việc
 // này (không phải 1 trong 3 quy tắc của nó) nên phải tự kiểm tra ở đây. Mở cho CẢ 4 vai trò (không
 // giới hạn gì thêm ngoài requireLogin ở trên) — dùng ở cả 2 tab "Chụp ảnh đã sản xuất"/"Chụp ảnh đóng
@@ -50,16 +50,16 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
   const cotAnh = COT_ANH_THEO_MOC[moc];
   if (!cotAnh) return res.status(400).json({ error: 'Mốc ảnh không hợp lệ: ' + moc });
 
-  const { headers, row } = await orderService.getByKey(sttKey, { fresh: true }); // fresh: mốc dong_goi kiểm tra TINH_TRANG ngay dưới đây, không được dùng bản cache cũ
+  const { headers, row } = await orderService.getByKey(sttKey, { fresh: true }); // fresh: mốc dong_goi kiểm tra TRANG_THAI_XUONG ngay dưới đây, không được dùng bản cache cũ
   if (!row) return res.status(404).json({ error: 'Không tìm thấy đơn hàng: ' + sttKey });
   if (!headers.includes(cotAnh)) {
     return res.status(400).json({ error: `Sheet chưa có cột '${cotAnh}' — cần thêm cột này vào Don_Hang_ALL trước khi dùng mốc ảnh "${moc}"` });
   }
 
   const chuyenTuDong = MOC_TU_DONG_CHUYEN_TRANG_THAI[moc];
-  if (chuyenTuDong && row.TINH_TRANG !== chuyenTuDong.yeuCau) {
+  if (chuyenTuDong && row.TRANG_THAI_XUONG !== chuyenTuDong.yeuCau) {
     return res.status(400).json({
-      error: `Đơn "${sttKey}" đang ở trạng thái "${row.TINH_TRANG}" — chỉ chụp ảnh được khi đơn đang ở "${chuyenTuDong.yeuCau}".`,
+      error: `Đơn "${sttKey}" đang ở trạng thái "${row.TRANG_THAI_XUONG}" — chỉ chụp ảnh được khi đơn đang ở "${chuyenTuDong.yeuCau}".`,
     });
   }
 
@@ -84,11 +84,11 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
   }
 
   const updates = { [cotAnh]: url, NguoiCapNhatCuoi: user.ten, ThoiGianCapNhatCuoi: now.toISOString() };
-  if (chuyenTuDong) updates.TINH_TRANG = chuyenTuDong.chuyenSang;
+  if (chuyenTuDong) updates.TRANG_THAI_XUONG = chuyenTuDong.chuyenSang;
 
   let updated;
   try {
-    // quaAnh: true — cho phép đặt thẳng TINH_TRANG="Đã sản xuất"/"Đã đóng gói" ở đây, vì đây CHÍNH LÀ
+    // quaAnh: true — cho phép đặt thẳng TRANG_THAI_XUONG="Đã sản xuất"/"Đã đóng gói" ở đây, vì đây CHÍNH LÀ
     // luồng chụp ảnh QR hợp lệ mà orderService.update() bắt buộc phải đi qua cho 2 trạng thái này
     // (xem kiemTraCongAnhBatBuoc trong orderService.js).
     updated = await orderService.update(sttKey, updates, user, { quaAnh: true });

@@ -27,8 +27,8 @@ const idxSanSang = chiSoTinhTrang('ĐÃ SẴN SÀNG CHẠY MÁY');
 // kiểm tra riêng (GIA_TRI_HOP_LE_THEO_COT) nhưng đặt kiểm tra ở ĐÂY (update(), điểm ghi chung duy
 // nhất) để CHẮC CHẮN áp dụng cho MỌI đường ghi, kể cả những chỗ lỡ quên tự kiểm tra.
 function kiemTraGiaTriHopLe(updates) {
-  if ('TINH_TRANG' in updates && !TINH_TRANG_VALUES.includes(updates.TINH_TRANG)) {
-    throw new Error(`Giá trị TINH_TRANG không hợp lệ: "${updates.TINH_TRANG}"`);
+  if ('TRANG_THAI_XUONG' in updates && !TINH_TRANG_VALUES.includes(updates.TRANG_THAI_XUONG)) {
+    throw new Error(`Giá trị TRANG_THAI_XUONG không hợp lệ: "${updates.TRANG_THAI_XUONG}"`);
   }
   if ('TRANG_THAI_PHOI' in updates && !TRANG_THAI_PHOI_VALUES.includes(updates.TRANG_THAI_PHOI)) {
     throw new Error(`Giá trị TRANG_THAI_PHOI không hợp lệ: "${updates.TRANG_THAI_PHOI}"`);
@@ -50,10 +50,10 @@ function kiemTraGiaTriHopLe(updates) {
 // Chỉ kiểm tra khi updates THỰC SỰ đụng tới 1 trong 3 cột — sửa các trường khác (GHI_CHU, HANG_VAN_
 // CHUYEN...) không bao giờ bị chặn bởi hàm này, kể cả khi dữ liệu cũ của đơn đó lỡ đã sai từ trước.
 function kiemTraTinhHopLy(rowHienTai, updates) {
-  const dungChamPipeline = 'TINH_TRANG' in updates || 'TRANG_THAI_PHOI' in updates || 'TRANG_THAI_VE_FILE' in updates;
+  const dungChamPipeline = 'TRANG_THAI_XUONG' in updates || 'TRANG_THAI_PHOI' in updates || 'TRANG_THAI_VE_FILE' in updates;
   if (!dungChamPipeline) return;
 
-  const tinhTrangMoi = updates.TINH_TRANG ?? rowHienTai.TINH_TRANG;
+  const tinhTrangMoi = updates.TRANG_THAI_XUONG ?? rowHienTai.TRANG_THAI_XUONG;
   const phoiMoi = updates.TRANG_THAI_PHOI ?? rowHienTai.TRANG_THAI_PHOI;
   const veFileMoi = updates.TRANG_THAI_VE_FILE ?? rowHienTai.TRANG_THAI_VE_FILE;
 
@@ -78,13 +78,13 @@ function kiemTraTinhHopLy(rowHienTai, updates) {
 }
 
 // TỰ ĐỘNG điền TRANG_THAI_PHOI = 'Chưa lấy phôi' và TRANG_THAI_VE_FILE = 'Chưa vẽ file' khi đơn được
-// xác nhận (TINH_TRANG chuyển từ 'Chưa xác nhận' sang 'Đã xác nhận') — đơn vừa xác nhận thì chưa ai
+// xác nhận (TRANG_THAI_XUONG chuyển từ 'Chưa xác nhận' sang 'Đã xác nhận') — đơn vừa xác nhận thì chưa ai
 // kịp lấy phôi/vẽ file, nên đặt sẵn 2 cột này về "chưa" luôn, không phải set tay riêng. Không ghi đè
 // nếu người gọi đã tự chỉ định 1 trong 2 cột này trong chính updates đó. Chỉ áp dụng đúng lượt
-// chuyển 'Chưa xác nhận' -> 'Đã xác nhận' (không áp dụng khi TINH_TRANG đang set lại 'Đã xác nhận'
+// chuyển 'Chưa xác nhận' -> 'Đã xác nhận' (không áp dụng khi TRANG_THAI_XUONG đang set lại 'Đã xác nhận'
 // từ trạng thái khác, vd sau khi lỗi sản xuất).
 function tinhPhoiVeFileTuDongKhiXacNhan(rowHienTai, updates) {
-  if (updates.TINH_TRANG !== 'Đã xác nhận' || rowHienTai.TINH_TRANG !== 'Chưa xác nhận') return updates;
+  if (updates.TRANG_THAI_XUONG !== 'Đã xác nhận' || rowHienTai.TRANG_THAI_XUONG !== 'Chưa xác nhận') return updates;
 
   const ketQua = { ...updates };
   if (!('TRANG_THAI_PHOI' in ketQua)) ketQua.TRANG_THAI_PHOI = 'Chưa lấy phôi';
@@ -92,21 +92,21 @@ function tinhPhoiVeFileTuDongKhiXacNhan(rowHienTai, updates) {
   return ketQua;
 }
 
-// TỰ ĐỘNG chuyển TINH_TRANG sang "ĐÃ SẴN SÀNG CHẠY MÁY" khi cả phôi lẫn file vẽ CÙNG xong — nhưng
-// CHỈ áp dụng lần đầu (khi TINH_TRANG đang là "Đã xác nhận"). Sau khi đơn bị lỗi rồi làm lại từ phôi/
+// TỰ ĐỘNG chuyển TRANG_THAI_XUONG sang "ĐÃ SẴN SÀNG CHẠY MÁY" khi cả phôi lẫn file vẽ CÙNG xong — nhưng
+// CHỈ áp dụng lần đầu (khi TRANG_THAI_XUONG đang là "Đã xác nhận"). Sau khi đơn bị lỗi rồi làm lại từ phôi/
 // file, việc quay lại "ĐÃ SẴN SÀNG CHẠY MÁY" lần 2 KHÔNG tự động — người phụ trách phải tự set tay
-// (đã xác nhận rõ với người dùng, xem data/pipelineTinhTrang.js). Hàm này không tự đổi TINH_TRANG
-// nếu người gọi đã tự chỉ định TINH_TRANG trong chính updates đó — tôn trọng giá trị người dùng
+// (đã xác nhận rõ với người dùng, xem data/pipelineTinhTrang.js). Hàm này không tự đổi TRANG_THAI_XUONG
+// nếu người gọi đã tự chỉ định TRANG_THAI_XUONG trong chính updates đó — tôn trọng giá trị người dùng
 // muốn set tay, không ghi đè.
 function tinhTinhTrangTuDong(rowHienTai, updates) {
-  if ('TINH_TRANG' in updates) return updates; // người gọi đã tự set — không can thiệp
+  if ('TRANG_THAI_XUONG' in updates) return updates; // người gọi đã tự set — không can thiệp
 
   const phoiMoi = updates.TRANG_THAI_PHOI ?? rowHienTai.TRANG_THAI_PHOI;
   const veFileMoi = updates.TRANG_THAI_VE_FILE ?? rowHienTai.TRANG_THAI_VE_FILE;
   const caPhoiVaFileXong = phoiMoi === 'Đã lấy phôi' && veFileMoi === 'Đã vẽ file';
 
-  if (caPhoiVaFileXong && rowHienTai.TINH_TRANG === 'Đã xác nhận') {
-    return { ...updates, TINH_TRANG: 'ĐÃ SẴN SÀNG CHẠY MÁY' };
+  if (caPhoiVaFileXong && rowHienTai.TRANG_THAI_XUONG === 'Đã xác nhận') {
+    return { ...updates, TRANG_THAI_XUONG: 'ĐÃ SẴN SÀNG CHẠY MÁY' };
   }
   return updates;
 }
@@ -118,19 +118,19 @@ function tinhTinhTrangTuDong(rowHienTai, updates) {
 // "chuẩn". admin vẫn ghi đè được (cần 1 lối thoát khi máy ảnh hỏng/QR không đọc được) — đã xác nhận
 // rõ với người dùng, chấp nhận rủi ro bị lạm dụng ở mức admin.
 // CHỈ chặn khi đây là 1 CHUYỂN ĐỔI THẬT (giá trị mới khác giá trị đang có) — ô "Sửa trạng thái thủ
-// công" ở order.html luôn gửi cả 3 cột TINH_TRANG/PHOI/VE_FILE cùng lúc kể cả khi người dùng chỉ định
-// sửa 1 trong 2 cột kia, nên KHÔNG được chặn nhầm khi TINH_TRANG gửi lên trùng với giá trị hiện tại.
+// công" ở order.html luôn gửi cả 3 cột TRANG_THAI_XUONG/PHOI/VE_FILE cùng lúc kể cả khi người dùng chỉ định
+// sửa 1 trong 2 cột kia, nên KHÔNG được chặn nhầm khi TRANG_THAI_XUONG gửi lên trùng với giá trị hiện tại.
 const TRANG_THAI_BAT_BUOC_CHUP_ANH = ['Đã sản xuất', 'Đã đóng gói'];
 
 function kiemTraCongAnhBatBuoc(rowHienTai, updates, user, quaAnh) {
-  if (!('TINH_TRANG' in updates)) return;
-  if (updates.TINH_TRANG === rowHienTai.TINH_TRANG) return; // gửi lại đúng giá trị cũ — không phải chuyển đổi
+  if (!('TRANG_THAI_XUONG' in updates)) return;
+  if (updates.TRANG_THAI_XUONG === rowHienTai.TRANG_THAI_XUONG) return; // gửi lại đúng giá trị cũ — không phải chuyển đổi
   if (quaAnh) return;
   if (user && user.vaiTro === 'admin') return;
 
-  if (TRANG_THAI_BAT_BUOC_CHUP_ANH.includes(updates.TINH_TRANG)) {
+  if (TRANG_THAI_BAT_BUOC_CHUP_ANH.includes(updates.TRANG_THAI_XUONG)) {
     throw new Error(
-      `Chuyển sang "${updates.TINH_TRANG}" bắt buộc phải chụp ảnh QR ở trang Quét QR — vai trò này không set tay được.`
+      `Chuyển sang "${updates.TRANG_THAI_XUONG}" bắt buộc phải chụp ảnh QR ở trang Quét QR — vai trò này không set tay được.`
     );
   }
 }
@@ -197,8 +197,8 @@ function filterForRole(rows, user) {
   if (user.vaiTro === 'san_xuat') {
     const idxSanSang = chiSoTinhTrang('ĐÃ SẴN SÀNG CHẠY MÁY');
     return rows.filter(r => {
-      if (r.TINH_TRANG === 'LỖI SẢN XUẤT CẦN LÀM LẠI') return true;
-      const idx = chiSoTinhTrang(r.TINH_TRANG);
+      if (r.TRANG_THAI_XUONG === 'LỖI SẢN XUẤT CẦN LÀM LẠI') return true;
+      const idx = chiSoTinhTrang(r.TRANG_THAI_XUONG);
       return idx !== null && idx >= idxSanSang;
     });
   }

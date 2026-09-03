@@ -26,9 +26,9 @@ const TOI_DA_VONG_LAP = 4;
 // ============================================================
 const MO_TA_PIPELINE =
   'Từ 24/08/2026, hệ thống theo dõi tiến trình đơn hàng bằng 3 CỘT RIÊNG (không còn 1 cột duy nhất ' +
-  'như trước): TINH_TRANG (tiến trình chung), TRANG_THAI_PHOI (lấy phôi), TRANG_THAI_VE_FILE (vẽ file) ' +
+  'như trước): TRANG_THAI_XUONG (tiến trình chung), TRANG_THAI_PHOI (lấy phôi), TRANG_THAI_VE_FILE (vẽ file) ' +
   '— lấy phôi và vẽ file là 2 việc ĐỘC LẬP, làm song song, không phải làm tuần tự.\n\n' +
-  'Giá trị TINH_TRANG theo đúng thứ tự: Chưa xác nhận → Đã xác nhận → ĐÃ SẴN SÀNG CHẠY MÁY (hệ ' +
+  'Giá trị TRANG_THAI_XUONG theo đúng thứ tự: Chưa xác nhận → Đã xác nhận → ĐÃ SẴN SÀNG CHẠY MÁY (hệ ' +
   'thống tự động chuyển sang trạng thái này khi TRANG_THAI_PHOI="Đã lấy phôi" VÀ TRANG_THAI_VE_FILE=' +
   '"Đã vẽ file" cùng lúc) → Đã sản xuất → Đã đóng gói → IN TRANSIT_Tracking đã hoạt động → ' +
   'DELIVERED_Đã giao đến khách. Nhánh rẽ: LỖI SẢN XUẤT CẦN LÀM LẠI (lỗi khi sản xuất, người phụ ' +
@@ -46,7 +46,7 @@ function lamGonDon(r) {
     viTriTheu: (r.ViTriTheu || orderService.danhSachViTriTheu(r) || []).join(', '),
     sl: r.SO_LUONG,
     ngayLenDon: r.NGAY_LEN_DON,
-    trangThai: r.TINH_TRANG,
+    trangThai: r.TRANG_THAI_XUONG,
     hangVanChuyen: r.HANG_VAN_CHUYEN,
     maVanDon: r.TRACKING_ID,
     ghiChu: r.GHI_CHU,
@@ -189,14 +189,14 @@ async function thucThiTool(tenHam, thamSo, ctx) {
         const tk = String(thamSo.maKhachHang).toLowerCase();
         list = list.filter(r => (r.MA_KHACH_HANG || '').toLowerCase().includes(tk) || (r.TenKhachHang || '').toLowerCase().includes(tk));
       }
-      if (thamSo.trangThai) list = list.filter(r => r.TINH_TRANG === thamSo.trangThai);
+      if (thamSo.trangThai) list = list.filter(r => r.TRANG_THAI_XUONG === thamSo.trangThai);
       list = locTheoNgay(list, thamSo.tuNgay, thamSo.denNgay);
       return { tongSoKhop: list.length, ketQua: list.slice(0, 20).map(lamGonDon) };
     }
 
     case 'thong_ke_don_hang': {
       let list = locTheoNgay(ctx.duLieuTheoQuyen, thamSo.tuNgay, thamSo.denNgay);
-      const cotNhom = thamSo.nhomTheo === 'khachHang' ? 'TenKhachHang' : thamSo.nhomTheo === 'loai' ? 'LOAI' : 'TINH_TRANG';
+      const cotNhom = thamSo.nhomTheo === 'khachHang' ? 'TenKhachHang' : thamSo.nhomTheo === 'loai' ? 'LOAI' : 'TRANG_THAI_XUONG';
       const dem = {};
       list.forEach(r => { const v = r[cotNhom] || '(Trống)'; dem[v] = (dem[v] || 0) + 1; });
       return dem;
@@ -252,7 +252,7 @@ router.post('/hoi', async (req, res) => {
   // Thống kê nhanh tính sẵn (không tốn vòng gọi công cụ nào) — đủ trả lời các câu hỏi tổng quan ngay,
   // chỉ cần tra cứu thêm khi hỏi cụ thể (1 đơn, 1 khách hàng, lịch sử...).
   const thongKeNhanh = {};
-  duLieuTheoQuyen.forEach(r => { const v = r.TINH_TRANG || '(Trống)'; thongKeNhanh[v] = (thongKeNhanh[v] || 0) + 1; });
+  duLieuTheoQuyen.forEach(r => { const v = r.TRANG_THAI_XUONG || '(Trống)'; thongKeNhanh[v] = (thongKeNhanh[v] || 0) + 1; });
 
   const tools = user.vaiTro === 'admin' ? [...TOOLS, ...TOOLS_QUAN_LY] : TOOLS;
 

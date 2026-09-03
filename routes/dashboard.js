@@ -45,7 +45,7 @@ router.get('/thong-ke', async (req, res) => {
 
   res.json({
     tongSoDon: rows.length,
-    theoTrangThai: demTheo(rows, 'TINH_TRANG'),
+    theoTrangThai: demTheo(rows, 'TRANG_THAI_XUONG'),
     theoKhachHang: demTheo(daGanKH, 'TenKhachHang'),
     theoLoaiSanPham: demTheo(rows, 'LOAI'),
     theoTuan,

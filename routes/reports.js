@@ -24,10 +24,10 @@ const FONT_BOLD = path.join(__dirname, '..', 'fonts', 'NotoSans-Bold.ttf');
 // trangThaiPhoi ở phía client nữa. Mỗi mẫu chỉ còn ép thêm ĐIỀU KIỆN TRẠNG THÁI RIÊNG của mình
 // (AND với các ô lọc đã gửi lên — có thể ra danh sách rỗng nếu người dùng đang lọc trạng thái khác
 // trên trang), áp dụng trong layDonDaLoc():
-//   - 'phoi_ao_gop' (IN DANH SÁCH PHÔI): TRANG_THAI_PHOI = Chưa lấy phôi VÀ TINH_TRANG thuộc
+//   - 'phoi_ao_gop' (IN DANH SÁCH PHÔI): TRANG_THAI_PHOI = Chưa lấy phôi VÀ TRANG_THAI_XUONG thuộc
 //     {Đã xác nhận, LỖI SẢN XUẤT CẦN LÀM LẠI} (đơn lỗi làm lại cũng cần lấy lại phôi).
 //   - 'don_can_in' (IN ĐƠN): không ép trạng thái nào thêm — in đúng theo mọi trạng thái đang lọc.
-//   - 'tracking' (IN DANH SÁCH ĐÃ SẢN XUẤT): TINH_TRANG = Đã đóng gói.
+//   - 'tracking' (IN DANH SÁCH ĐÃ SẢN XUẤT): TRANG_THAI_XUONG = Đã đóng gói.
 const TRANG_THAI_TRACKING = 'Đã đóng gói';
 const TRANG_THAI_PHOI_CAN_CHUAN_BI = 'Chưa lấy phôi';
 const TINH_TRANG_CAN_PHOI = ['Đã xác nhận', 'LỖI SẢN XUẤT CẦN LÀM LẠI'];
@@ -45,7 +45,7 @@ function locDon(rows, { stt, tuNgay, denNgay, khachHang, trangThai, trangThaiPho
     if (tuNgay && ngay < parseNgay(tuNgay)) return false;
     if (denNgay && ngay > parseNgay(denNgay)) return false;
     if (khachHang && r.MA_KHACH_HANG !== khachHang) return false;
-    if (trangThai && r.TINH_TRANG !== trangThai) return false;
+    if (trangThai && r.TRANG_THAI_XUONG !== trangThai) return false;
     if (trangThaiPhoi && r.TRANG_THAI_PHOI !== trangThaiPhoi) return false;
     if (trangThaiVeFile && r.TRANG_THAI_VE_FILE !== trangThaiVeFile) return false;
     if (tuKhoa) {
@@ -58,7 +58,7 @@ function locDon(rows, { stt, tuNgay, denNgay, khachHang, trangThai, trangThaiPho
 }
 
 // Chọn mẫu file xuất. Ưu tiên tham số 'mau' nếu có (nút in nhanh ở trang Đơn hàng ép cứng đúng mẫu).
-// Không có 'mau' thì chỉ còn suy được mẫu 'tracking' theo TINH_TRANG như cũ — 'phoi_ao_gop' và
+// Không có 'mau' thì chỉ còn suy được mẫu 'tracking' theo TRANG_THAI_XUONG như cũ — 'phoi_ao_gop' và
 // 'don_can_in' không còn suy tự động được nữa (xem chú thích ở khai báo hằng số phía trên).
 function xacDinhMau(query) {
   const { mau, trangThai } = query;
@@ -72,10 +72,10 @@ async function layDonDaLoc(query) {
   const list = locDon(rows, query);
   const mau = xacDinhMau(query);
   if (mau === 'phoi_ao_gop') {
-    return list.filter(r => r.TRANG_THAI_PHOI === TRANG_THAI_PHOI_CAN_CHUAN_BI && TINH_TRANG_CAN_PHOI.includes(r.TINH_TRANG));
+    return list.filter(r => r.TRANG_THAI_PHOI === TRANG_THAI_PHOI_CAN_CHUAN_BI && TINH_TRANG_CAN_PHOI.includes(r.TRANG_THAI_XUONG));
   }
   if (mau === 'tracking') {
-    return list.filter(r => r.TINH_TRANG === TRANG_THAI_TRACKING);
+    return list.filter(r => r.TRANG_THAI_XUONG === TRANG_THAI_TRACKING);
   }
   return list;
 }
@@ -117,7 +117,7 @@ router.get('/trang-thai-theo-loc', async (req, res) => {
 
   const dem = {};
   list.forEach(r => {
-    const t = r.TINH_TRANG || '(Trống)';
+    const t = r.TRANG_THAI_XUONG || '(Trống)';
     dem[t] = (dem[t] || 0) + 1;
   });
 
@@ -160,7 +160,7 @@ function soTuanTrongNam(d) {
 
 // Thống kê tỷ lệ lỗi sản xuất (LỖI SẢN XUẤT CẦN LÀM LẠI) theo loại sản phẩm / team sản xuất / tuần.
 // LƯU Ý QUAN TRỌNG: đây là trạng thái THOÁNG QUA — đơn lỗi được set tay làm lại từ phôi/file, nên
-// sau 1 thời gian sẽ không còn ở trạng thái này nữa. KHÔNG thể đếm bằng cách lọc TINH_TRANG hiện tại
+// sau 1 thời gian sẽ không còn ở trạng thái này nữa. KHÔNG thể đếm bằng cách lọc TRANG_THAI_XUONG hiện tại
 // (hầu hết đơn từng lỗi trong quá khứ giờ đã không còn ở trạng thái lỗi nữa). Phải tính từ LỊCH SỬ
 // (mỗi lần có đơn được CHUYỂN SANG trạng thái lỗi tính là 1 lần lỗi, dù sau đó đã được làm lại hay chưa).
 // Đơn hàng không lưu "team sản xuất" trực tiếp — suy ra team bằng cách tra NGƯỜI đã bấm chuyển đơn
@@ -225,7 +225,7 @@ router.get('/thong-ke-hoan-don', async (req, res) => {
   const { tuNgay, denNgay } = req.query;
   const { rows } = await orderService.getAll();
   const dsDonHoan = await orderService.ganTenKhachHang(
-    rows.filter(r => r.TINH_TRANG === 'REFUNDED_Hoàn đơn')
+    rows.filter(r => r.TRANG_THAI_XUONG === 'REFUNDED_Hoàn đơn')
   );
 
   const locTheoNgay = dsDonHoan.filter(r => {
@@ -623,7 +623,7 @@ async function veSheetDonCanInExcel(wb, list, dongThongTin, dongNguoiXuat) {
 const COT_PHOI_AO_CHI_TIET = [
   { header: 'STT_Key', key: 'STT_Key', width: 14 },
   { header: 'MA_CODE_STT', key: 'MA_CODE_STT', width: 14 },
-  { header: 'TINH_TRANG', key: 'TINH_TRANG', width: 24 },
+  { header: 'TRANG_THAI_XUONG', key: 'TRANG_THAI_XUONG', width: 24 },
   { header: 'NGAY_LEN_DON', key: 'NGAY_LEN_DON', width: 14, laNgay: true },
   { header: 'LOAI', key: 'LOAI', width: 12 },
   { header: 'KICH_THUOC', key: 'KICH_THUOC', width: 12 },
