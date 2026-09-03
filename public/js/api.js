@@ -190,7 +190,6 @@ const MAU_TRANG_THAI = {
   'LỖI SẢN XUẤT CẦN LÀM LẠI': 'trang-thai-danger',
   'Đã đóng gói': 'trang-thai-success',
   'ĐÃ DÁN TEM': 'trang-thai-success',
-  'IN TRANSIT_Tracking đã hoạt động': 'trang-thai-success',
   'DELIVERED_Đã giao đến khách': 'trang-thai-success',
   'CANCELLED_Đã hủy': 'trang-thai-danger',
   'REFUNDED_Hoàn đơn': 'trang-thai-danger',

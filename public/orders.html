@@ -44,6 +44,18 @@
           <option value="__TRONG__">(Trống)</option>
         </select>
       </div>
+      <div class="truong truong-rong">
+        <label for="loc-kh">Tìm theo tên đơn / mã KH</label>
+        <input id="loc-kh" placeholder="STT_Key hoặc mã khách hàng">
+      </div>
+      <div class="truong truong-ngay">
+        <label for="loc-tu-ngay">Từ ngày</label>
+        <input type="date" id="loc-tu-ngay">
+      </div>
+      <div class="truong truong-ngay">
+        <label for="loc-den-ngay">Đến ngày</label>
+        <input type="date" id="loc-den-ngay">
+      </div>
       <div class="truong">
         <label for="loc-canh-bao">Mức cảnh báo</label>
         <select id="loc-canh-bao">
@@ -68,18 +80,6 @@
       <div class="truong">
         <label for="loc-hang-van-chuyen">Hãng vận chuyển</label>
         <select id="loc-hang-van-chuyen"><option value="">Tất cả hãng vận chuyển</option></select>
-      </div>
-      <div class="truong truong-rong">
-        <label for="loc-kh">Tìm theo tên đơn / mã KH</label>
-        <input id="loc-kh" placeholder="STT_Key hoặc mã khách hàng">
-      </div>
-      <div class="truong truong-ngay">
-        <label for="loc-tu-ngay">Từ ngày</label>
-        <input type="date" id="loc-tu-ngay">
-      </div>
-      <div class="truong truong-ngay">
-        <label for="loc-den-ngay">Đến ngày</label>
-        <input type="date" id="loc-den-ngay">
       </div>
       <button type="button" class="btn-hanh-dong phu" id="btn-xoa-loc" onclick="xoaTatCaLoc()">Xoá bộ lọc</button>
     </div>
@@ -146,7 +146,6 @@ const DANH_SACH_TRANG_THAI_DAY_DU = [
   'Đã sản xuất', 'LỖI SẢN XUẤT CẦN LÀM LẠI',
   'Đã đóng gói',
   'ĐÃ DÁN TEM',
-  'IN TRANSIT_Tracking đã hoạt động',
   'DELIVERED_Đã giao đến khách', 'CANCELLED_Đã hủy', 'REFUNDED_Hoàn đơn',
 ];
 

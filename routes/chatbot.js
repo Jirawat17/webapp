@@ -30,7 +30,7 @@ const MO_TA_PIPELINE =
   '— lấy phôi và vẽ file là 2 việc ĐỘC LẬP, làm song song, không phải làm tuần tự.\n\n' +
   'Giá trị TRANG_THAI_XUONG theo đúng thứ tự: Chưa xác nhận → Đã xác nhận → ĐÃ SẴN SÀNG CHẠY MÁY (hệ ' +
   'thống tự động chuyển sang trạng thái này khi TRANG_THAI_PHOI="Đã lấy phôi" VÀ TRANG_THAI_VE_FILE=' +
-  '"Đã vẽ file" cùng lúc) → Đã sản xuất → Đã đóng gói → IN TRANSIT_Tracking đã hoạt động → ' +
+  '"Đã vẽ file" cùng lúc) → Đã sản xuất → Đã đóng gói → ĐÃ DÁN TEM → ' +
   'DELIVERED_Đã giao đến khách. Nhánh rẽ: LỖI SẢN XUẤT CẦN LÀM LẠI (lỗi khi sản xuất, người phụ ' +
   'trách set tay, sau đó làm lại từ phôi/file), CANCELLED_Đã hủy, REFUNDED_Hoàn đơn (đơn dừng hẳn).\n\n' +
   'Giá trị TRANG_THAI_PHOI: "Chưa lấy phôi" hoặc "Đã lấy phôi". Giá trị TRANG_THAI_VE_FILE: ' +

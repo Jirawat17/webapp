@@ -45,7 +45,7 @@ function kiemTraGiaTriHopLe(updates) {
 //   1. "Chưa xác nhận" thì KHÔNG THỂ đã có phôi/đã vẽ file (đơn còn chưa được khách xác nhận thì
 //      chưa ai chuẩn bị phôi/vẽ file cho đơn đó).
 //   2. Đã tới "ĐÃ SẴN SÀNG CHẠY MÁY" hoặc các bước SAU đó trên đường chính (Đã sản xuất, Đã đóng
-//      gói, IN TRANSIT, DELIVERED) thì BẮT BUỘC phải có đủ CẢ phôi lẫn file — không tính LỖI SẢN
+//      gói, ĐÃ DÁN TEM, DELIVERED) thì BẮT BUỘC phải có đủ CẢ phôi lẫn file — không tính LỖI SẢN
 //      XUẤT CẦN LÀM LẠI/CANCELLED/REFUNDED (nhánh rẽ, không nằm trong THU_TU_TINH_TRANG nên
 //      chiSoTinhTrang trả về null, CỐ Ý bỏ qua quy tắc này — lúc lỗi cần được phép reset phôi/file
 //      về "chưa" để làm lại từ đầu, xem tinhTinhTrangTuDong ở trên và README).

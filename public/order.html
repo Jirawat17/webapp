@@ -25,7 +25,7 @@ const NHAN_NGUOI_VAN_HANH_KHONG_RO = 'ĐƠN SỬA TRONG GGSHEET, KHÔNG RÕ TÀI
 
 const DANH_SACH_TINH_TRANG = [
   'Chưa xác nhận', 'Đã xác nhận', 'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đang chạy máy', 'Đã sản xuất', 'LỖI SẢN XUẤT CẦN LÀM LẠI',
-  'Đã đóng gói', 'ĐÃ DÁN TEM', 'IN TRANSIT_Tracking đã hoạt động', 'DELIVERED_Đã giao đến khách', 'CANCELLED_Đã hủy', 'REFUNDED_Hoàn đơn',
+  'Đã đóng gói', 'ĐÃ DÁN TEM', 'DELIVERED_Đã giao đến khách', 'CANCELLED_Đã hủy', 'REFUNDED_Hoàn đơn',
 ];
 
 // Format timestamp ngắn gọn "DD-MM HH:mm:ss" — nhất quán với backend dinhDangNgayGioNgan()
@@ -235,7 +235,7 @@ function loiToHopTrangThai(tinhTrang, phoi, veFile) {
   }
   const CAC_TRANG_THAI_TU_SAN_SANG_TRO_DI = [
     'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đang chạy máy', 'Đã sản xuất', 'Đã đóng gói',
-    'IN TRANSIT_Tracking đã hoạt động', 'DELIVERED_Đã giao đến khách',
+    'DELIVERED_Đã giao đến khách',
   ];
   if (CAC_TRANG_THAI_TU_SAN_SANG_TRO_DI.includes(tinhTrang)) {
     if (phoi !== 'Đã lấy phôi') return `Đang ở "${tinhTrang}" nhưng phôi vẫn "${phoi}" — phải có đủ phôi mới tới được giai đoạn này.`;

@@ -37,11 +37,17 @@
 // "ĐÃ SẴN SÀNG CHẠY MÁY" trở đi nên vẫn bắt buộc phôi/file phải xong (xem kiemTraTinhHopLy trong
 // services/orderService.js) và vẫn nằm trong phạm vi đơn mà san_xuat được thấy (filterForRole).
 //
-// "ĐÃ DÁN TEM" (thêm 01/09/2026): chèn giữa "Đã đóng gói" và "IN TRANSIT" — routes/gke.js tự đặt
+// "ĐÃ DÁN TEM" (thêm 01/09/2026): chèn giữa "Đã đóng gói" và "DELIVERED" — routes/gke.js tự đặt
 // TRANG_THAI_XUONG sang giá trị này ngay sau khi quét mã ở tab "Quét mã QR Tracking" lấy được tem GKE
-// thành công (xem routes/gke.js). Không có automation nào tự chuyển tiếp "ĐÃ DÁN TEM" ->
-// "IN TRANSIT" — vẫn set tay như trước (đã kiểm tra: "IN TRANSIT" trước giờ luôn set tay qua
-// order.html/orders.html, không có job nào tự làm việc này).
+// thành công (xem routes/gke.js). Không có automation nào tự chuyển tiếp "ĐÃ DÁN TEM" -> "DELIVERED"
+// — vẫn set tay như trước.
+//
+// "IN TRANSIT_Tracking đã hoạt động" (XOÁ 04/09/2026, theo yêu cầu người dùng): từng nằm giữa "ĐÃ
+// DÁN TEM" và "DELIVERED", nhưng thực tế không đơn nào dùng tới (đã xác nhận không có đơn nào đang ở
+// trạng thái này trước khi xoá) — pipeline giờ đi thẳng ĐÃ DÁN TEM -> DELIVERED. Xoá đồng bộ khỏi
+// TINH_TRANG_VALUES/THU_TU_TINH_TRANG/TRANG_THAI_DA_SHIP ở file này, MAU_TRANG_THAI (public/js/api.js),
+// DANH_SACH_TINH_TRANG + CAC_TRANG_THAI_TU_SAN_SANG_TRO_DI (public/order.html),
+// DANH_SACH_TRANG_THAI_DAY_DU (public/orders.html), và mô tả pipeline cho chatbot (routes/chatbot.js).
 //
 const TINH_TRANG_VALUES = [
   'Chưa xác nhận',
@@ -52,7 +58,6 @@ const TINH_TRANG_VALUES = [
   'LỖI SẢN XUẤT CẦN LÀM LẠI',
   'Đã đóng gói',
   'ĐÃ DÁN TEM',
-  'IN TRANSIT_Tracking đã hoạt động',
   'DELIVERED_Đã giao đến khách',
   'CANCELLED_Đã hủy',
   'REFUNDED_Hoàn đơn',
@@ -87,7 +92,6 @@ const THU_TU_TINH_TRANG = [
   'Đã sản xuất',
   'Đã đóng gói',
   'ĐÃ DÁN TEM',
-  'IN TRANSIT_Tracking đã hoạt động',
   'DELIVERED_Đã giao đến khách',
 ];
 
@@ -98,9 +102,8 @@ const TRANG_THAI_KET_THUC = [
   'REFUNDED_Hoàn đơn',
 ];
 
-// Đơn đã rời xưởng (đang/đã vận chuyển/đã giao) — dùng để tính cảnh báo mức Đỏ
+// Đơn đã rời xưởng (đã giao) — dùng để tính cảnh báo mức Đỏ
 const TRANG_THAI_DA_SHIP = [
-  'IN TRANSIT_Tracking đã hoạt động',
   'DELIVERED_Đã giao đến khách',
 ];
 

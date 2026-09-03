@@ -39,8 +39,7 @@ router.post('/tracking/quet', async (req, res) => {
   }
   // Cho phép quét khi đang "Đã đóng gói" (lần đầu — sẽ tạo vận đơn + chuyển sang "ĐÃ DÁN TEM" ngay
   // dưới) HOẶC đã "ĐÃ DÁN TEM" từ trước (quét lại để in lại tem cũ, KHÔNG lùi trạng thái). Không cho
-  // quét khi đã qua "IN TRANSIT"/"DELIVERED" trở đi — tem đã dán xong từ lâu, quét nhầm không nên
-  // đụng vào đơn nữa.
+  // quét khi đã qua "DELIVERED" — tem đã dán xong từ lâu, quét nhầm không nên đụng vào đơn nữa.
   if (row.TRANG_THAI_XUONG !== 'Đã đóng gói' && row.TRANG_THAI_XUONG !== 'ĐÃ DÁN TEM') {
     console.log(`[GKE] Sai trạng thái: ${sttKey} đang ở "${row.TRANG_THAI_XUONG}"`);
     ghiKhongCho(ghiLog({
