@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const path = require('path');
+const crypto = require('crypto');
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const orderService = require('../services/orderService');
@@ -605,7 +606,9 @@ function veTrangAnhDuPdf(doc, danhSachAnhDu) {
   });
 }
 
-async function veTrangDonCanInPdf(doc, list, dongNguoiXuat) {
+// onTienDo (tuỳ chọn) — gọi lại SAU MỖI đơn đã xử lý xong (đã tải ảnh xong), dùng để báo tiến độ ra
+// ngoài cho luồng tạo file chạy nền + polling (xem router.post('/don-can-in/bat-dau') bên dưới).
+async function veTrangDonCanInPdf(doc, list, dongNguoiXuat, onTienDo) {
   const rong = mmToPt(KHO_GIAY_MM.rong);
   const cao = mmToPt(KHO_GIAY_MM.cao);
   const caoFooter = 9;
@@ -625,12 +628,14 @@ async function veTrangDonCanInPdf(doc, list, dongNguoiXuat) {
     doc.fillColor('#000000');
 
     anh.anhDu.forEach(buffer => anhDuTatCa.push({ sttKey: list[i].STT_Key || '', buffer }));
+    if (onTienDo) onTienDo();
   }
 
   veTrangAnhDuPdf(doc, anhDuTatCa);
 }
 
-async function veSheetDonCanInExcel(wb, list, dongThongTin, dongNguoiXuat) {
+// onTienDo (tuỳ chọn) — xem chú thích ở veTrangDonCanInPdf(), cùng mục đích.
+async function veSheetDonCanInExcel(wb, list, dongThongTin, dongNguoiXuat, onTienDo) {
   const sheet = wb.addWorksheet('DonCanIn');
   [16, 16, 16, 16, 16, 16].forEach((w, i) => { sheet.getColumn(i + 1).width = w; });
 
@@ -702,6 +707,7 @@ async function veSheetDonCanInExcel(wb, list, dongThongTin, dongNguoiXuat) {
     }
 
     hang += 2;
+    if (onTienDo) onTienDo();
   }
 }
 
@@ -1014,6 +1020,105 @@ router.get('/pdf', async (req, res) => {
   baoCao.bang.forEach((b, i) => veBangPdf(doc, b, i > 0));
 
   doc.end();
+});
+
+// ============================================================
+// TẠO FILE "IN ĐƠN" CÓ TIẾN ĐỘ — chạy nền + client hỏi tiến độ định kỳ (polling), bổ sung 04/09/2026
+// theo yêu cầu người dùng. Khác với luồng quét QR/đổi trạng thái hàng loạt (chayHangLoatCoTienDo
+// trong public/js/api.js — tách được thành nhiều lệnh gọi API độc lập từ trình duyệt), tạo file
+// PDF/Excel là 1 tiến trình LIÊN TỤC ngay trên server (build 1 file duy nhất, không tách nhỏ được từ
+// phía trình duyệt) nên phải dùng mô hình: server tạo "công việc" (job) chạy nền, trả về jobId ngay;
+// client hỏi lại tiến độ mỗi vài trăm ms tới khi xong rồi mới tải file về qua 1 URL riêng.
+// CHỈ áp dụng cho mẫu 'don_can_in' (IN ĐƠN) — đây là mẫu DUY NHẤT phải tải ảnh từng đơn một
+// (taiAnhChoDon) nên mới chậm; 'phoi_ao_gop'/'tracking' không đụng ảnh, đã đủ nhanh, vẫn dùng
+// nguyên route /pdf và /excel ở trên như cũ.
+// ============================================================
+const _congViecInDon = new Map(); // jobId -> { tongSo, daXong, trangThai: 'dang_chay'|'xong'|'loi', buffer, contentType, tenFile, loi, capNhatLucNao }
+const THOI_GIAN_GIU_JOB_MS = 15 * 60 * 1000; // dọn job cũ hơn 15 phút — phòng người dùng bỏ dở không tải về, tránh rò rỉ bộ nhớ
+
+function donDepJobCu() {
+  const gioiHan = Date.now() - THOI_GIAN_GIU_JOB_MS;
+  for (const [id, job] of _congViecInDon) {
+    if (job.capNhatLucNao < gioiHan) _congViecInDon.delete(id);
+  }
+}
+
+router.post('/don-can-in/bat-dau', async (req, res) => {
+  donDepJobCu();
+
+  const dinhDang = req.body.dinhDang === 'excel' ? 'excel' : 'pdf';
+  const list = await layDonDaLoc(req.body);
+
+  const jobId = crypto.randomUUID();
+  const job = {
+    tongSo: list.length, daXong: 0, trangThai: 'dang_chay',
+    buffer: null, contentType: null, tenFile: null, loi: null,
+    capNhatLucNao: Date.now(),
+  };
+  _congViecInDon.set(jobId, job);
+
+  res.json({ jobId, tongSo: list.length });
+
+  // Xử lý THẬT chạy nền sau khi đã trả response — KHÔNG await ở trên.
+  (async () => {
+    try {
+      const onTienDo = () => { job.daXong += 1; job.capNhatLucNao = Date.now(); };
+      const tenNguoiDung = req.session.user.ten;
+
+      if (dinhDang === 'excel') {
+        const wb = new ExcelJS.Workbook();
+        await veSheetDonCanInExcel(wb, list, dongThongTinLoc(req.body, 'phoi_ao'), dongNguoiXuatChuoi(tenNguoiDung), onTienDo);
+        job.buffer = Buffer.from(await wb.xlsx.writeBuffer());
+        job.contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+        job.tenFile = `DonCanIn_${ngayChoTenFile(req.body)}.xlsx`;
+      } else {
+        const rong = mmToPt(KHO_GIAY_MM.rong);
+        const cao = mmToPt(KHO_GIAY_MM.cao);
+        const doc = new PDFDocument({ size: [rong, cao], margin: 0 });
+        doc.registerFont('NotoSans', FONT_REGULAR);
+        doc.registerFont('NotoSans-Bold', FONT_BOLD);
+
+        const chunks = [];
+        doc.on('data', chunk => chunks.push(chunk));
+        const daGhiXong = new Promise(resolve => doc.on('end', resolve));
+
+        if (list.length === 0) {
+          doc.font('NotoSans').fontSize(9).text('Không có đơn nào khớp bộ lọc.', 10, 10);
+        } else {
+          await veTrangDonCanInPdf(doc, list, dongNguoiXuatChuoi(tenNguoiDung), onTienDo);
+        }
+        doc.end();
+        await daGhiXong;
+
+        job.buffer = Buffer.concat(chunks);
+        job.contentType = 'application/pdf';
+        job.tenFile = `DonCanIn_${ngayChoTenFile(req.body)}.pdf`;
+      }
+      job.trangThai = 'xong';
+    } catch (err) {
+      console.error('[Reports] Lỗi tạo file IN ĐƠN (chạy nền):', err.message);
+      job.trangThai = 'loi';
+      job.loi = err.message;
+    }
+    job.capNhatLucNao = Date.now();
+  })();
+});
+
+router.get('/don-can-in/tien-do/:jobId', (req, res) => {
+  const job = _congViecInDon.get(req.params.jobId);
+  if (!job) return res.status(404).json({ error: 'Không tìm thấy tiến trình (có thể đã hết hạn)' });
+  res.json({ tongSo: job.tongSo, daXong: job.daXong, trangThai: job.trangThai, loi: job.loi });
+});
+
+router.get('/don-can-in/tai-ve/:jobId', (req, res) => {
+  const job = _congViecInDon.get(req.params.jobId);
+  if (!job || job.trangThai !== 'xong') {
+    return res.status(404).json({ error: 'File chưa sẵn sàng hoặc đã hết hạn' });
+  }
+  res.setHeader('Content-Type', job.contentType);
+  res.setHeader('Content-Disposition', `attachment; filename="${job.tenFile}"`);
+  res.send(job.buffer);
+  _congViecInDon.delete(req.params.jobId); // đã tải về xong, dọn ngay không cần đợi hết hạn
 });
 
 module.exports = router;

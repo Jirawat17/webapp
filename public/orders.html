@@ -476,25 +476,49 @@ async function apDungChuyenTrangThai() {
 // In nhanh: LUÔN gửi đúng mọi ô lọc đang hiển thị trên trang (trạng thái, phôi, vẽ file, ngày,
 // từ khoá) — không ép cứng gì ở phía client nữa. Mỗi mẫu ('mau') sẽ ép thêm điều kiện trạng thái
 // riêng của mình ở phía server (xem reports.js), kết hợp AND với các ô lọc này.
-async function inNhanh(mau, nut) {
-  const nhanGoc = nut.innerHTML;
-  nut.disabled = true;
-  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 18 }) + ' Đang tạo file...';
-
-  const qs = new URLSearchParams();
-  qs.set('mau', mau);
+function locBoLocDangChon() {
   const trangThai = document.getElementById('loc-trang-thai').value;
   const tuKhoa = document.getElementById('loc-kh').value;
   const tuNgay = document.getElementById('loc-tu-ngay').value;
   const denNgay = document.getElementById('loc-den-ngay').value;
   const trangThaiPhoi = document.getElementById('loc-phoi').value;
   const trangThaiVeFile = document.getElementById('loc-ve-file').value;
-  if (trangThai) qs.set('trangThai', trangThai);
-  if (tuKhoa) qs.set('tuKhoa', tuKhoa);
-  if (tuNgay) qs.set('tuNgay', tuNgay);
-  if (denNgay) qs.set('denNgay', denNgay);
-  if (trangThaiPhoi) qs.set('trangThaiPhoi', trangThaiPhoi);
-  if (trangThaiVeFile) qs.set('trangThaiVeFile', trangThaiVeFile);
+  const bo = {};
+  if (trangThai) bo.trangThai = trangThai;
+  if (tuKhoa) bo.tuKhoa = tuKhoa;
+  if (tuNgay) bo.tuNgay = tuNgay;
+  if (denNgay) bo.denNgay = denNgay;
+  if (trangThaiPhoi) bo.trangThaiPhoi = trangThaiPhoi;
+  if (trangThaiVeFile) bo.trangThaiVeFile = trangThaiVeFile;
+  return bo;
+}
+
+function taiFileTuBlob(blob, contentDisposition, tenMacDinh) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const khopTen = (contentDisposition || '').match(/filename="([^"]+)"/);
+  a.download = khopTen ? khopTen[1] : tenMacDinh;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function inNhanh(mau, nut) {
+  const nhanGoc = nut.innerHTML;
+  nut.disabled = true;
+  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 18 }) + ' Đang tạo file...';
+
+  if (mau === 'don_can_in') {
+    await inDonHangLoatCoTienDo(nut, nhanGoc);
+    return;
+  }
+
+  const qs = new URLSearchParams();
+  qs.set('mau', mau);
+  const bo = locBoLocDangChon();
+  Object.entries(bo).forEach(([k, v]) => qs.set(k, v));
 
   try {
     const res = await fetch('/api/reports/pdf?' + qs.toString(), { credentials: 'include' });
@@ -503,19 +527,62 @@ async function inNhanh(mau, nut) {
       throw new Error(data.error || 'Không xuất được file');
     }
     const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const contentDisposition = res.headers.get('Content-Disposition') || '';
-    const khopTen = contentDisposition.match(/filename="([^"]+)"/);
-    a.download = khopTen ? khopTen[1] : 'bao-cao.pdf';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+    taiFileTuBlob(blob, res.headers.get('Content-Disposition'), 'bao-cao.pdf');
   } catch (e) {
     alert('Lỗi: ' + e.message);
   } finally {
+    nut.disabled = false;
+    nut.innerHTML = nhanGoc;
+  }
+}
+
+// IN ĐƠN có thể in NHIỀU đơn cùng lúc, phải tải ảnh từng đơn một nên chậm — khác với luồng quét
+// QR/đổi trạng thái hàng loạt (chayHangLoatCoTienDo trong api.js, tách được thành nhiều lệnh gọi độc
+// lập), tạo file PDF là 1 tiến trình liên tục trên server nên dùng CHẠY NỀN + HỎI TIẾN ĐỘ ĐỊNH KỲ:
+// server tạo 1 "công việc" (job), trả về jobId ngay, xử lý thật ở nền; client hỏi lại tiến độ mỗi
+// 700ms tới khi xong rồi mới tải file về (xem routes/reports.js router.post('/don-can-in/bat-dau')).
+async function inDonHangLoatCoTienDo(nut, nhanGoc) {
+  let ketQuaBatDau;
+  try {
+    ketQuaBatDau = await apiFetch('/reports/don-can-in/bat-dau', {
+      method: 'POST', body: JSON.stringify({ ...locBoLocDangChon(), dinhDang: 'pdf' }),
+    });
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
+    nut.disabled = false; nut.innerHTML = nhanGoc;
+    return;
+  }
+
+  const { jobId, tongSo } = ketQuaBatDau;
+  if (tongSo === 0) {
+    alert('Không có đơn nào khớp bộ lọc.');
+    nut.disabled = false; nut.innerHTML = nhanGoc;
+    return;
+  }
+
+  const thanhTienDo = taoThanhTienDo(nut);
+  thanhTienDo.capNhat(0, tongSo);
+
+  try {
+    let tienDo;
+    do {
+      await new Promise(r => setTimeout(r, 700));
+      tienDo = await apiFetch(`/reports/don-can-in/tien-do/${jobId}`);
+      thanhTienDo.capNhat(tienDo.daXong, tienDo.tongSo);
+      if (tienDo.trangThai === 'loi') throw new Error(tienDo.loi || 'Tạo file thất bại');
+    } while (tienDo.trangThai !== 'xong');
+
+    const res = await fetch(`/api/reports/don-can-in/tai-ve/${jobId}`, { credentials: 'include' });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Không tải được file');
+    }
+    const blob = await res.blob();
+    taiFileTuBlob(blob, res.headers.get('Content-Disposition'), 'don-can-in.pdf');
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
+  } finally {
+    thanhTienDo.xoa();
     nut.disabled = false;
     nut.innerHTML = nhanGoc;
   }
