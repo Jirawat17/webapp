@@ -20,20 +20,14 @@ const FONT_REGULAR = path.join(__dirname, '..', 'fonts', 'NotoSans-Regular.ttf')
 const FONT_BOLD = path.join(__dirname, '..', 'fonts', 'NotoSans-Bold.ttf');
 
 // 3 mẫu xuất RIÊNG — 3 nút in nhanh ở trang Đơn hàng LUÔN gửi kèm đúng các ô lọc đang hiển thị trên
-// trang (trạng thái, phôi, vẽ file, ngày, từ khoá...), áp dụng trong layDonDaLoc():
-//   - 'phoi_ao_gop' (IN DANH SÁCH PHÔI): MẶC ĐỊNH (khi người dùng CHƯA tự chọn Trạng thái LẪN Phôi
-//     trên trang) ép TRANG_THAI_PHOI = Chưa lấy phôi VÀ TRANG_THAI_XUONG thuộc {Đã xác nhận, LỖI SẢN
-//     XUẤT CẦN LÀM LẠI} (đơn lỗi làm lại cũng cần lấy lại phôi) — giữ đúng ý nghĩa "danh sách phôi
-//     cần chuẩn bị". (Cập nhật 04/09/2026, theo yêu cầu người dùng) NẾU người dùng đã tự chọn Trạng
-//     thái VÀ/HOẶC Phôi cụ thể trên trang, tôn trọng NGUYÊN VẸN lựa chọn đó — bỏ HẲN cả 2 điều kiện
-//     ép cứng (không ép chồng thêm điều kiện còn lại), tránh trước đây chọn khác 2 điều kiện ép cứng
-//     rồi bấm in sẽ luôn ra file RỖNG.
-//   - 'don_can_in' (IN ĐƠN): không ép trạng thái nào thêm — in đúng theo mọi trạng thái đang lọc.
-//   - 'tracking' (IN DANH SÁCH ĐÃ SẢN XUẤT): tương tự 'phoi_ao_gop' — MẶC ĐỊNH ép TRANG_THAI_XUONG =
-//     Đã đóng gói, NHƯNG tôn trọng lựa chọn Trạng thái của người dùng nếu họ đã tự chọn trên trang.
-const TRANG_THAI_TRACKING = 'Đã đóng gói';
-const TRANG_THAI_PHOI_CAN_CHUAN_BI = 'Chưa lấy phôi';
-const TINH_TRANG_CAN_PHOI = ['Đã xác nhận', 'LỖI SẢN XUẤT CẦN LÀM LẠI'];
+// trang (trạng thái, phôi, vẽ file, ngày, từ khoá...). Cả 3 mẫu ('phoi_ao_gop', 'don_can_in',
+// 'tracking') giờ dùng CHUNG ĐÚNG 1 cách lọc — layDonDaLoc() chỉ còn gọi locDon(rows, query), không
+// còn ép thêm điều kiện riêng nào cho từng mẫu nữa (CẬP NHẬT 04/09/2026, theo yêu cầu người dùng —
+// trước đó 'phoi_ao_gop'/'tracking' có mặc định riêng khi không lọc gì, nhưng người dùng muốn LUÔN
+// in đúng 100% theo bộ lọc đang hiển thị, kể cả khi không lọc gì thì in TOÀN BỘ đơn). 'mau' giờ CHỈ
+// còn quyết định ĐỊNH DẠNG file xuất (cột, tiêu đề, nhóm — xem xayDungBaoCaoDangBang()/veTheDonPdf()),
+// không còn ảnh hưởng gì tới việc đơn nào được đưa vào danh sách in nữa.
+const TRANG_THAI_TRACKING = 'Đã đóng gói'; // chỉ còn dùng để TỰ SUY mẫu 'tracking' khi không truyền 'mau' (xem xacDinhMau)
 
 function locDon(rows, { stt, tuNgay, denNgay, khachHang, trangThai, trangThaiPhoi, trangThaiVeFile, tuKhoa }) {
   // 'stt' — dùng riêng cho nút "IN ĐƠN" ở trang chi tiết 1 đơn (order.html): khớp CHÍNH XÁC theo
@@ -72,20 +66,7 @@ function xacDinhMau(query) {
 
 async function layDonDaLoc(query) {
   const { rows } = await orderService.getAll();
-  const list = locDon(rows, query);
-  const mau = xacDinhMau(query);
-  if (mau === 'phoi_ao_gop') {
-    // Người dùng đã tự chọn Trạng thái VÀ/HOẶC Phôi trên trang -> locDon() ở trên đã lọc đúng ý họ
-    // rồi, tôn trọng nguyên vẹn (bỏ HẲN 2 điều kiện ép cứng bên dưới, không ép chồng thêm gì nữa).
-    // Chỉ khi KHÔNG chọn gì mới ép mặc định cũ (xem chú thích ở khai báo mẫu).
-    if (query.trangThai || query.trangThaiPhoi) return list;
-    return list.filter(r => r.TRANG_THAI_PHOI === TRANG_THAI_PHOI_CAN_CHUAN_BI && TINH_TRANG_CAN_PHOI.includes(r.TRANG_THAI_XUONG));
-  }
-  if (mau === 'tracking') {
-    if (query.trangThai) return list; // người dùng đã tự chọn Trạng thái — tôn trọng đúng lựa chọn đó
-    return list.filter(r => r.TRANG_THAI_XUONG === TRANG_THAI_TRACKING);
-  }
-  return list;
+  return locDon(rows, query);
 }
 
 function dongThongTinLoc(query, kieu) {
