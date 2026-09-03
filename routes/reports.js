@@ -659,7 +659,16 @@ function gomNhomPhoiAo(list) {
     }
     nhom.get(khoa).SO_LUONG += Number(r.SO_LUONG) || 0;
   });
-  return Array.from(nhom.values()).sort((a, b) => b.SO_LUONG - a.SO_LUONG);
+  // Sắp theo thứ tự ưu tiên giảm dần: LOAI -> KICH_THUOC -> MAU_SAC -> SO_LUONG (theo yêu cầu người
+  // dùng 04/09/2026) — cùng LOAI đứng gần nhau, trong cùng LOAI thì cùng KICH_THUOC đứng gần nhau...,
+  // SO_LUONG chỉ để phân định khi 3 cột trên đã giống hệt nhau (hiếm, vd cùng loại/kích/màu nhưng
+  // khác ngày lên đơn nên không gộp chung được 1 dòng — xem khoaNgay ở trên).
+  return Array.from(nhom.values()).sort((a, b) =>
+    a.LOAI.localeCompare(b.LOAI, 'vi') ||
+    a.KICH_THUOC.localeCompare(b.KICH_THUOC, 'vi') ||
+    a.MAU_SAC.localeCompare(b.MAU_SAC, 'vi') ||
+    b.SO_LUONG - a.SO_LUONG
+  );
 }
 
 function xayDungBaoCaoDangBang(list, query, tenNguoiXuat) {
