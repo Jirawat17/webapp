@@ -15,9 +15,8 @@
   <div class="thanh-cong-cu-danh-sach">
     <button type="button" class="btn-hanh-dong phu" id="btn-mo-loc" onclick="batTatPanel('panel-loc')"></button>
     <button type="button" class="btn-hanh-dong phu" id="btn-mo-sap-xep" onclick="batTatPanel('panel-sap-xep')"></button>
-    <button type="button" class="btn-hanh-dong phu" id="btn-in-phoi-ao" onclick="inNhanh('phoi_ao_gop', this)"></button>
+    <button type="button" class="btn-hanh-dong phu" id="btn-in-phoi-ao" onclick="inPhoiDangChon(this)"></button>
     <button type="button" class="btn-hanh-dong phu" id="btn-in-don-dang-chon" onclick="inDonDangChon(this)"></button>
-    <button type="button" class="btn-hanh-dong phu" id="btn-in-tracking" onclick="inNhanh('tracking', this)"></button>
   </div>
 
   <div id="panel-loc" class="panel-dieu-khien" style="display:none">
@@ -179,9 +178,8 @@ let donDaChonSet = new Set();
   document.getElementById('btn-mo-loc').innerHTML = icon('filter', { size: 16 }) + ' Lọc';
   document.getElementById('btn-mo-sap-xep').innerHTML = icon('sort', { size: 16 }) + ' Sắp xếp';
 
-  document.getElementById('btn-in-phoi-ao').innerHTML = icon('printer') + ' IN DANH SÁCH PHÔI';
+  document.getElementById('btn-in-phoi-ao').innerHTML = icon('printer') + ' IN DANH SÁCH PHÔI CỦA ĐƠN ĐANG CHỌN';
   document.getElementById('btn-in-don-dang-chon').innerHTML = icon('printer') + ' IN ĐƠN ĐANG CHỌN';
-  document.getElementById('btn-in-tracking').innerHTML = icon('printer') + ' IN DANH SÁCH ĐÃ SẢN XUẤT';
 
   // Nút "Đã..." (positive) dùng icon check, nút "Chưa..." (negative, đưa trạng thái quay lại) dùng
   // icon undo — phân biệt trực quan, không chỉ dựa vào màu (xem thêm .trang-thai-tich-cuc/.trang-thai-tieu-cuc trong style.css)
@@ -473,26 +471,6 @@ async function apDungChuyenTrangThai() {
   await taiDon();
 }
 
-// In nhanh: LUÔN gửi đúng mọi ô lọc đang hiển thị trên trang (trạng thái, phôi, vẽ file, ngày,
-// từ khoá) — không ép cứng gì ở phía client nữa. Mỗi mẫu ('mau') sẽ ép thêm điều kiện trạng thái
-// riêng của mình ở phía server (xem reports.js), kết hợp AND với các ô lọc này.
-function locBoLocDangChon() {
-  const trangThai = document.getElementById('loc-trang-thai').value;
-  const tuKhoa = document.getElementById('loc-kh').value;
-  const tuNgay = document.getElementById('loc-tu-ngay').value;
-  const denNgay = document.getElementById('loc-den-ngay').value;
-  const trangThaiPhoi = document.getElementById('loc-phoi').value;
-  const trangThaiVeFile = document.getElementById('loc-ve-file').value;
-  const bo = {};
-  if (trangThai) bo.trangThai = trangThai;
-  if (tuKhoa) bo.tuKhoa = tuKhoa;
-  if (tuNgay) bo.tuNgay = tuNgay;
-  if (denNgay) bo.denNgay = denNgay;
-  if (trangThaiPhoi) bo.trangThaiPhoi = trangThaiPhoi;
-  if (trangThaiVeFile) bo.trangThaiVeFile = trangThaiVeFile;
-  return bo;
-}
-
 function taiFileTuBlob(blob, contentDisposition, tenMacDinh) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -505,15 +483,19 @@ function taiFileTuBlob(blob, contentDisposition, tenMacDinh) {
   URL.revokeObjectURL(url);
 }
 
-async function inNhanh(mau, nut) {
+// Nút "IN DANH SÁCH PHÔI CỦA ĐƠN ĐANG CHỌN" — in ĐÚNG các đơn đang tick chọn (donDaChonSet), bỏ qua
+// mọi ô lọc đang hiển thị trên trang. Không cần chạy nền + tiến độ như "IN ĐƠN ĐANG CHỌN" (mẫu
+// 'phoi_ao_gop' là bảng dữ liệu thuần, không tải ảnh từng đơn nên luôn đủ nhanh) — gọi thẳng /pdf.
+async function inPhoiDangChon(nut) {
+  if (donDaChonSet.size === 0) { alert('Hãy chọn ít nhất 1 đơn muốn in.'); return; }
+
   const nhanGoc = nut.innerHTML;
   nut.disabled = true;
   nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 18 }) + ' Đang tạo file...';
 
   const qs = new URLSearchParams();
-  qs.set('mau', mau);
-  const bo = locBoLocDangChon();
-  Object.entries(bo).forEach(([k, v]) => qs.set(k, v));
+  qs.set('mau', 'phoi_ao_gop');
+  Array.from(donDaChonSet).forEach(sttKey => qs.append('sttKeys', sttKey));
 
   try {
     const res = await fetch('/api/reports/pdf?' + qs.toString(), { credentials: 'include' });

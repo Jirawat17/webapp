@@ -40,12 +40,17 @@ function locDon(rows, { stt, sttKeys, tuNgay, denNgay, khachHang, trangThai, tra
   // chứa STT_Key này làm chuỗi con (vd "DH100" nằm trong "DH1000").
   if (stt) return rows.filter(r => r.STT_Key === stt);
 
-  // 'sttKeys' — dùng cho nút "IN ĐƠN ĐANG CHỌN" ở trang Đơn hàng: khớp CHÍNH XÁC theo danh sách
+  // 'sttKeys' — dùng cho các nút "IN ... ĐANG CHỌN" ở trang Đơn hàng: khớp CHÍNH XÁC theo danh sách
   // STT_Key đã tick chọn, bỏ qua MỌI bộ lọc khác đang hiển thị trên trang (giống tinh thần của 'stt'
-  // ở trên, chỉ khác là nhiều đơn thay vì 1).
-  if (sttKeys && sttKeys.length > 0) {
-    const set = new Set(sttKeys);
-    return rows.filter(r => set.has(r.STT_Key));
+  // ở trên, chỉ khác là nhiều đơn thay vì 1). Chuẩn hoá về mảng vì 2 nơi gọi truyền khác kiểu: body
+  // JSON (POST /don-can-in/bat-dau) luôn là mảng, còn query string (GET /pdf, ?sttKeys=...&sttKeys=...)
+  // qua Express chỉ ra mảng khi có TỪ 2 GIÁ TRỊ TRỞ LÊN — chỉ tick 1 đơn thì ra chuỗi đơn lẻ.
+  if (sttKeys) {
+    const ds = Array.isArray(sttKeys) ? sttKeys : [sttKeys];
+    if (ds.length > 0) {
+      const set = new Set(ds);
+      return rows.filter(r => set.has(r.STT_Key));
+    }
   }
 
   return rows.filter(r => {
