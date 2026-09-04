@@ -16,7 +16,6 @@
     <button type="button" class="btn-hanh-dong phu" id="btn-mo-loc" onclick="batTatPanel('panel-loc')"></button>
     <button type="button" class="btn-hanh-dong phu" id="btn-mo-sap-xep" onclick="batTatPanel('panel-sap-xep')"></button>
     <button type="button" class="btn-hanh-dong phu" id="btn-in-phoi-ao" onclick="inNhanh('phoi_ao_gop', this)"></button>
-    <button type="button" class="btn-hanh-dong phu" id="btn-in-don-ao" onclick="inNhanh('don_can_in', this)"></button>
     <button type="button" class="btn-hanh-dong phu" id="btn-in-don-dang-chon" onclick="inDonDangChon(this)"></button>
     <button type="button" class="btn-hanh-dong phu" id="btn-in-tracking" onclick="inNhanh('tracking', this)"></button>
   </div>
@@ -181,7 +180,6 @@ let donDaChonSet = new Set();
   document.getElementById('btn-mo-sap-xep').innerHTML = icon('sort', { size: 16 }) + ' Sắp xếp';
 
   document.getElementById('btn-in-phoi-ao').innerHTML = icon('printer') + ' IN DANH SÁCH PHÔI';
-  document.getElementById('btn-in-don-ao').innerHTML = icon('printer') + ' IN ĐƠN ĐANG HIỂN THỊ';
   document.getElementById('btn-in-don-dang-chon').innerHTML = icon('printer') + ' IN ĐƠN ĐANG CHỌN';
   document.getElementById('btn-in-tracking').innerHTML = icon('printer') + ' IN DANH SÁCH ĐÃ SẢN XUẤT';
 
@@ -512,11 +510,6 @@ async function inNhanh(mau, nut) {
   nut.disabled = true;
   nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 18 }) + ' Đang tạo file...';
 
-  if (mau === 'don_can_in') {
-    await inDonHangLoatCoTienDo(nut, nhanGoc, locBoLocDangChon());
-    return;
-  }
-
   const qs = new URLSearchParams();
   qs.set('mau', mau);
   const bo = locBoLocDangChon();
@@ -538,13 +531,12 @@ async function inNhanh(mau, nut) {
   }
 }
 
-// IN ĐƠN có thể in NHIỀU đơn cùng lúc, phải tải ảnh từng đơn một nên chậm — khác với luồng quét
-// QR/đổi trạng thái hàng loạt (chayHangLoatCoTienDo trong api.js, tách được thành nhiều lệnh gọi độc
-// lập), tạo file PDF là 1 tiến trình liên tục trên server nên dùng CHẠY NỀN + HỎI TIẾN ĐỘ ĐỊNH KỲ:
+// IN ĐƠN ĐANG CHỌN có thể in NHIỀU đơn cùng lúc, phải tải ảnh từng đơn một nên chậm — khác với luồng
+// quét QR/đổi trạng thái hàng loạt (chayHangLoatCoTienDo trong api.js, tách được thành nhiều lệnh gọi
+// độc lập), tạo file PDF là 1 tiến trình liên tục trên server nên dùng CHẠY NỀN + HỎI TIẾN ĐỘ ĐỊNH KỲ:
 // server tạo 1 "công việc" (job), trả về jobId ngay, xử lý thật ở nền; client hỏi lại tiến độ mỗi
 // 700ms tới khi xong rồi mới tải file về (xem routes/reports.js router.post('/don-can-in/bat-dau')).
-// `than` — nội dung body gửi lên: hoặc bộ lọc đang hiển thị (nút "IN ĐƠN ĐANG HIỂN THỊ"), hoặc
-// { sttKeys } của các đơn đang tick chọn (nút "IN ĐƠN ĐANG CHỌN", xem inDonDangChon()).
+// `than` — nội dung body gửi lên: { sttKeys } của các đơn đang tick chọn (xem inDonDangChon()).
 // Có nút "DỪNG" (onHuy) — bấm vào sẽ báo server đặt cờ hủy thật (route '/don-can-in/huy/:jobId'),
 // server dừng xử lý các đơn CÒN LẠI ngay (đơn đang xử lý dở vẫn hoàn tất bình thường), không chỉ đơn
 // thuần ẩn thanh tiến độ ở trình duyệt — xem routes/reports.js router.post('/don-can-in/bat-dau').
@@ -603,7 +595,7 @@ async function inDonHangLoatCoTienDo(nut, nhanGoc, than) {
 }
 
 // Nút "IN ĐƠN ĐANG CHỌN" — in ĐÚNG các đơn đang tick chọn (donDaChonSet), bỏ qua mọi ô lọc đang hiển
-// thị trên trang (khác nút "IN ĐƠN ĐANG HIỂN THỊ" bên cạnh — luôn in theo bộ lọc, không cần chọn đơn nào).
+// thị trên trang.
 async function inDonDangChon(nut) {
   if (donDaChonSet.size === 0) { alert('Hãy chọn ít nhất 1 đơn muốn in.'); return; }
 

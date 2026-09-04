@@ -334,6 +334,7 @@ body.trang-dang-nhap {
   min-height: 40px; font-family: inherit; flex: 1; min-width: 180px;
 }
 .thanh-hanh-dong-hang-loat .btn-hanh-dong { padding: 10px 18px; min-height: 40px; font-size: 0.9rem; }
+#so-luong-da-chon { font-size: 3em; line-height: 1; } /* tăng thêm 200% (gấp 3) so với cỡ chữ gốc để dễ nhìn */
 .thanh-hanh-dong-cach { width: 1px; align-self: stretch; background: var(--color-border); margin: 0 4px; }
 .nhanh-phoi-ve-file { font-size: 0.85rem !important; padding: 8px 14px !important; }
 
