@@ -17,6 +17,7 @@
     <button type="button" class="btn-hanh-dong phu" id="btn-mo-sap-xep" onclick="batTatPanel('panel-sap-xep')"></button>
     <button type="button" class="btn-hanh-dong phu" id="btn-in-phoi-ao" onclick="inNhanh('phoi_ao_gop', this)"></button>
     <button type="button" class="btn-hanh-dong phu" id="btn-in-don-ao" onclick="inNhanh('don_can_in', this)"></button>
+    <button type="button" class="btn-hanh-dong phu" id="btn-in-don-dang-chon" onclick="inDonDangChon(this)"></button>
     <button type="button" class="btn-hanh-dong phu" id="btn-in-tracking" onclick="inNhanh('tracking', this)"></button>
   </div>
 
@@ -180,7 +181,8 @@ let donDaChonSet = new Set();
   document.getElementById('btn-mo-sap-xep').innerHTML = icon('sort', { size: 16 }) + ' Sắp xếp';
 
   document.getElementById('btn-in-phoi-ao').innerHTML = icon('printer') + ' IN DANH SÁCH PHÔI';
-  document.getElementById('btn-in-don-ao').innerHTML = icon('printer') + ' IN ĐƠN';
+  document.getElementById('btn-in-don-ao').innerHTML = icon('printer') + ' IN ĐƠN ĐANG HIỂN THỊ';
+  document.getElementById('btn-in-don-dang-chon').innerHTML = icon('printer') + ' IN ĐƠN ĐANG CHỌN';
   document.getElementById('btn-in-tracking').innerHTML = icon('printer') + ' IN DANH SÁCH ĐÃ SẢN XUẤT';
 
   // Nút "Đã..." (positive) dùng icon check, nút "Chưa..." (negative, đưa trạng thái quay lại) dùng
@@ -511,7 +513,7 @@ async function inNhanh(mau, nut) {
   nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 18 }) + ' Đang tạo file...';
 
   if (mau === 'don_can_in') {
-    await inDonHangLoatCoTienDo(nut, nhanGoc);
+    await inDonHangLoatCoTienDo(nut, nhanGoc, locBoLocDangChon());
     return;
   }
 
@@ -541,11 +543,16 @@ async function inNhanh(mau, nut) {
 // lập), tạo file PDF là 1 tiến trình liên tục trên server nên dùng CHẠY NỀN + HỎI TIẾN ĐỘ ĐỊNH KỲ:
 // server tạo 1 "công việc" (job), trả về jobId ngay, xử lý thật ở nền; client hỏi lại tiến độ mỗi
 // 700ms tới khi xong rồi mới tải file về (xem routes/reports.js router.post('/don-can-in/bat-dau')).
-async function inDonHangLoatCoTienDo(nut, nhanGoc) {
+// `than` — nội dung body gửi lên: hoặc bộ lọc đang hiển thị (nút "IN ĐƠN ĐANG HIỂN THỊ"), hoặc
+// { sttKeys } của các đơn đang tick chọn (nút "IN ĐƠN ĐANG CHỌN", xem inDonDangChon()).
+// Có nút "DỪNG" (onHuy) — bấm vào sẽ báo server đặt cờ hủy thật (route '/don-can-in/huy/:jobId'),
+// server dừng xử lý các đơn CÒN LẠI ngay (đơn đang xử lý dở vẫn hoàn tất bình thường), không chỉ đơn
+// thuần ẩn thanh tiến độ ở trình duyệt — xem routes/reports.js router.post('/don-can-in/bat-dau').
+async function inDonHangLoatCoTienDo(nut, nhanGoc, than) {
   let ketQuaBatDau;
   try {
     ketQuaBatDau = await apiFetch('/reports/don-can-in/bat-dau', {
-      method: 'POST', body: JSON.stringify({ ...locBoLocDangChon(), dinhDang: 'pdf' }),
+      method: 'POST', body: JSON.stringify({ ...than, dinhDang: 'pdf' }),
     });
   } catch (e) {
     alert('Lỗi: ' + e.message);
@@ -555,12 +562,14 @@ async function inDonHangLoatCoTienDo(nut, nhanGoc) {
 
   const { jobId, tongSo } = ketQuaBatDau;
   if (tongSo === 0) {
-    alert('Không có đơn nào khớp bộ lọc.');
+    alert('Không có đơn nào để in.');
     nut.disabled = false; nut.innerHTML = nhanGoc;
     return;
   }
 
-  const thanhTienDo = taoThanhTienDo(nut);
+  const thanhTienDo = taoThanhTienDo(nut, {
+    onHuy: () => { apiFetch(`/reports/don-can-in/huy/${jobId}`, { method: 'POST' }).catch(() => {}); },
+  });
   thanhTienDo.capNhat(0, tongSo);
 
   try {
@@ -570,7 +579,12 @@ async function inDonHangLoatCoTienDo(nut, nhanGoc) {
       tienDo = await apiFetch(`/reports/don-can-in/tien-do/${jobId}`);
       thanhTienDo.capNhat(tienDo.daXong, tienDo.tongSo);
       if (tienDo.trangThai === 'loi') throw new Error(tienDo.loi || 'Tạo file thất bại');
-    } while (tienDo.trangThai !== 'xong');
+    } while (tienDo.trangThai !== 'xong' && tienDo.trangThai !== 'huy');
+
+    if (tienDo.trangThai === 'huy') {
+      alert(`Đã dừng. Đã tạo xong ${tienDo.daXong}/${tienDo.tongSo} đơn trước khi dừng (không tải về được nữa, hãy in lại nếu cần).`);
+      return;
+    }
 
     const res = await fetch(`/api/reports/don-can-in/tai-ve/${jobId}`, { credentials: 'include' });
     if (!res.ok) {
@@ -586,6 +600,18 @@ async function inDonHangLoatCoTienDo(nut, nhanGoc) {
     nut.disabled = false;
     nut.innerHTML = nhanGoc;
   }
+}
+
+// Nút "IN ĐƠN ĐANG CHỌN" — in ĐÚNG các đơn đang tick chọn (donDaChonSet), bỏ qua mọi ô lọc đang hiển
+// thị trên trang (khác nút "IN ĐƠN ĐANG HIỂN THỊ" bên cạnh — luôn in theo bộ lọc, không cần chọn đơn nào).
+async function inDonDangChon(nut) {
+  if (donDaChonSet.size === 0) { alert('Hãy chọn ít nhất 1 đơn muốn in.'); return; }
+
+  const nhanGoc = nut.innerHTML;
+  nut.disabled = true;
+  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 18 }) + ' Đang tạo file...';
+
+  await inDonHangLoatCoTienDo(nut, nhanGoc, { sttKeys: Array.from(donDaChonSet) });
 }
 </script>
 </body>

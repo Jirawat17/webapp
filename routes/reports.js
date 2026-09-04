@@ -33,12 +33,20 @@ const FONT_BOLD = path.join(__dirname, '..', 'fonts', 'NotoSans-Bold.ttf');
 // không còn ảnh hưởng gì tới việc đơn nào được đưa vào danh sách in nữa.
 const TRANG_THAI_TRACKING = 'Đã đóng gói'; // chỉ còn dùng để TỰ SUY mẫu 'tracking' khi không truyền 'mau' (xem xacDinhMau)
 
-function locDon(rows, { stt, tuNgay, denNgay, khachHang, trangThai, trangThaiPhoi, trangThaiVeFile, tuKhoa }) {
+function locDon(rows, { stt, sttKeys, tuNgay, denNgay, khachHang, trangThai, trangThaiPhoi, trangThaiVeFile, tuKhoa }) {
   // 'stt' — dùng riêng cho nút "IN ĐƠN" ở trang chi tiết 1 đơn (order.html): khớp CHÍNH XÁC theo
   // STT_Key, bỏ qua mọi điều kiện lọc khác kể cả yêu cầu phải có ngày lên đơn hợp lệ ở nhánh dưới.
   // Không dùng lại 'tuKhoa' (so khớp CHUỖI CON) vì có thể khớp nhầm sang đơn khác có STT_Key
   // chứa STT_Key này làm chuỗi con (vd "DH100" nằm trong "DH1000").
   if (stt) return rows.filter(r => r.STT_Key === stt);
+
+  // 'sttKeys' — dùng cho nút "IN ĐƠN ĐANG CHỌN" ở trang Đơn hàng: khớp CHÍNH XÁC theo danh sách
+  // STT_Key đã tick chọn, bỏ qua MỌI bộ lọc khác đang hiển thị trên trang (giống tinh thần của 'stt'
+  // ở trên, chỉ khác là nhiều đơn thay vì 1).
+  if (sttKeys && sttKeys.length > 0) {
+    const set = new Set(sttKeys);
+    return rows.filter(r => set.has(r.STT_Key));
+  }
 
   return rows.filter(r => {
     const ngay = parseNgay(r.NGAY_LEN_DON);
@@ -638,7 +646,10 @@ function veTrangAnhDuPdf(doc, danhSachAnhDu) {
 
 // onTienDo (tuỳ chọn) — gọi lại SAU MỖI đơn đã xử lý xong (đã tải ảnh xong), dùng để báo tiến độ ra
 // ngoài cho luồng tạo file chạy nền + polling (xem router.post('/don-can-in/bat-dau') bên dưới).
-async function veTrangDonCanInPdf(doc, list, dongNguoiXuat, onTienDo) {
+// kiemTraHuy (tuỳ chọn) — gọi TRƯỚC MỖI đơn, trả true thì dừng ngay (không xử lý tiếp các đơn còn
+// lại) — cùng cơ chế 'kiemTraHuy' đã dùng ở chayHangLoatCoTienDo() bên public/js/api.js: đơn đang xử
+// lý dở vẫn hoàn tất bình thường, chỉ không bắt đầu đơn kế tiếp.
+async function veTrangDonCanInPdf(doc, list, dongNguoiXuat, onTienDo, kiemTraHuy) {
   const rong = mmToPt(KHO_GIAY_MM.rong);
   const cao = mmToPt(KHO_GIAY_MM.cao);
   const caoFooter = 9;
@@ -648,6 +659,7 @@ async function veTrangDonCanInPdf(doc, list, dongNguoiXuat, onTienDo) {
   const anhDuTatCa = []; // gộp ảnh dư từ MỌI đơn trong lượt in này, in bổ sung 1 lần ở cuối
 
   for (let i = 0; i < list.length; i++) {
+    if (kiemTraHuy && kiemTraHuy()) break;
     if (i > 0) doc.addPage({ size: [rong, cao], margin: 0 });
 
     const anh = await taiAnhChoDon(list[i]);
@@ -664,8 +676,8 @@ async function veTrangDonCanInPdf(doc, list, dongNguoiXuat, onTienDo) {
   veTrangAnhDuPdf(doc, anhDuTatCa);
 }
 
-// onTienDo (tuỳ chọn) — xem chú thích ở veTrangDonCanInPdf(), cùng mục đích.
-async function veSheetDonCanInExcel(wb, list, dongThongTin, dongNguoiXuat, onTienDo) {
+// onTienDo/kiemTraHuy (tuỳ chọn) — xem chú thích ở veTrangDonCanInPdf(), cùng mục đích.
+async function veSheetDonCanInExcel(wb, list, dongThongTin, dongNguoiXuat, onTienDo, kiemTraHuy) {
   const sheet = wb.addWorksheet('DonCanIn');
   [16, 16, 16, 16, 16, 16].forEach((w, i) => { sheet.getColumn(i + 1).width = w; });
 
@@ -689,6 +701,7 @@ async function veSheetDonCanInExcel(wb, list, dongThongTin, dongNguoiXuat, onTie
   }
 
   for (const don of list) {
+    if (kiemTraHuy && kiemTraHuy()) break;
     const anh = await taiAnhChoDon(don);
 
     sheet.mergeCells(hang, 1, hang, 6);
@@ -1063,7 +1076,7 @@ router.get('/pdf', async (req, res) => {
 // (taiAnhChoDon) nên mới chậm; 'phoi_ao_gop'/'tracking' không đụng ảnh, đã đủ nhanh, vẫn dùng
 // nguyên route /pdf và /excel ở trên như cũ.
 // ============================================================
-const _congViecInDon = new Map(); // jobId -> { tongSo, daXong, trangThai: 'dang_chay'|'xong'|'loi', buffer, contentType, tenFile, loi, capNhatLucNao }
+const _congViecInDon = new Map(); // jobId -> { tongSo, daXong, trangThai: 'dang_chay'|'xong'|'huy'|'loi', daHuy, buffer, contentType, tenFile, loi, capNhatLucNao }
 const THOI_GIAN_GIU_JOB_MS = 15 * 60 * 1000; // dọn job cũ hơn 15 phút — phòng người dùng bỏ dở không tải về, tránh rò rỉ bộ nhớ
 
 function donDepJobCu() {
@@ -1081,7 +1094,7 @@ router.post('/don-can-in/bat-dau', async (req, res) => {
 
   const jobId = crypto.randomUUID();
   const job = {
-    tongSo: list.length, daXong: 0, trangThai: 'dang_chay',
+    tongSo: list.length, daXong: 0, trangThai: 'dang_chay', daHuy: false,
     buffer: null, contentType: null, tenFile: null, loi: null,
     capNhatLucNao: Date.now(),
   };
@@ -1093,14 +1106,17 @@ router.post('/don-can-in/bat-dau', async (req, res) => {
   (async () => {
     try {
       const onTienDo = () => { job.daXong += 1; job.capNhatLucNao = Date.now(); };
+      const kiemTraHuy = () => job.daHuy;
       const tenNguoiDung = req.session.user.ten;
 
       if (dinhDang === 'excel') {
         const wb = new ExcelJS.Workbook();
-        await veSheetDonCanInExcel(wb, list, dongThongTinLoc(req.body, 'phoi_ao'), dongNguoiXuatChuoi(tenNguoiDung), onTienDo);
-        job.buffer = Buffer.from(await wb.xlsx.writeBuffer());
-        job.contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-        job.tenFile = `DonCanIn_${ngayChoTenFile(req.body)}.xlsx`;
+        await veSheetDonCanInExcel(wb, list, dongThongTinLoc(req.body, 'phoi_ao'), dongNguoiXuatChuoi(tenNguoiDung), onTienDo, kiemTraHuy);
+        if (!job.daHuy) {
+          job.buffer = Buffer.from(await wb.xlsx.writeBuffer());
+          job.contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+          job.tenFile = `DonCanIn_${ngayChoTenFile(req.body)}.xlsx`;
+        }
       } else {
         const rong = mmToPt(KHO_GIAY_MM.rong);
         const cao = mmToPt(KHO_GIAY_MM.cao);
@@ -1115,16 +1131,20 @@ router.post('/don-can-in/bat-dau', async (req, res) => {
         if (list.length === 0) {
           doc.font('NotoSans').fontSize(9).text('Không có đơn nào khớp bộ lọc.', 10, 10);
         } else {
-          await veTrangDonCanInPdf(doc, list, dongNguoiXuatChuoi(tenNguoiDung), onTienDo);
+          await veTrangDonCanInPdf(doc, list, dongNguoiXuatChuoi(tenNguoiDung), onTienDo, kiemTraHuy);
         }
+        // Vẫn phải đóng doc dù đã bị hủy giữa chừng — nếu không, sự kiện 'end' không bao giờ bắn,
+        // 'daGhiXong' treo mãi, job không bao giờ cập nhật xong trạng thái.
         doc.end();
         await daGhiXong;
 
-        job.buffer = Buffer.concat(chunks);
-        job.contentType = 'application/pdf';
-        job.tenFile = `DonCanIn_${ngayChoTenFile(req.body)}.pdf`;
+        if (!job.daHuy) {
+          job.buffer = Buffer.concat(chunks);
+          job.contentType = 'application/pdf';
+          job.tenFile = `DonCanIn_${ngayChoTenFile(req.body)}.pdf`;
+        }
       }
-      job.trangThai = 'xong';
+      job.trangThai = job.daHuy ? 'huy' : 'xong';
     } catch (err) {
       console.error('[Reports] Lỗi tạo file IN ĐƠN (chạy nền):', err.message);
       job.trangThai = 'loi';
@@ -1138,6 +1158,14 @@ router.get('/don-can-in/tien-do/:jobId', (req, res) => {
   const job = _congViecInDon.get(req.params.jobId);
   if (!job) return res.status(404).json({ error: 'Không tìm thấy tiến trình (có thể đã hết hạn)' });
   res.json({ tongSo: job.tongSo, daXong: job.daXong, trangThai: job.trangThai, loi: job.loi });
+});
+
+// Nút "DỪNG" ở public/orders.html gọi route này — chỉ đặt cờ 'daHuy', KHÔNG xoá job ngay (job vẫn
+// đang chạy nền, cần tự đọc cờ này ở kiemTraHuy() rồi mới dừng đúng chỗ — xem router.post('/bat-dau')).
+router.post('/don-can-in/huy/:jobId', (req, res) => {
+  const job = _congViecInDon.get(req.params.jobId);
+  if (job && job.trangThai === 'dang_chay') job.daHuy = true;
+  res.json({ ok: true });
 });
 
 router.get('/don-can-in/tai-ve/:jobId', (req, res) => {
