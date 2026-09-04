@@ -399,13 +399,14 @@ select.chon-trang-thai-tieu-cuc { border-color: var(--color-warning-text); color
 
 /* Thanh tiến độ nhỏ cho xử lý hàng loạt (quét QR / đổi trạng thái hàng loạt) — chèn động ngay sau
    nút bấm gốc bằng taoThanhTienDo() trong api.js, xem chayHangLoatCoTienDo() cùng file. */
-.thanh-tien-do { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); font-size: 0.85rem; color: var(--color-text-muted); }
-.thanh-tien-do-track { flex: 1; min-width: 60px; height: 8px; border-radius: var(--radius-full); background: var(--color-border); overflow: hidden; }
+/* Cỡ chữ/thanh/nút bên dưới đã tăng thêm 200% (gấp 3) so với bản gốc (0.85rem/8px/0.8rem) để dễ nhìn. */
+.thanh-tien-do { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); font-size: 2.55rem; color: var(--color-text-muted); }
+.thanh-tien-do-track { flex: 1; min-width: 60px; height: 24px; border-radius: var(--radius-full); background: var(--color-border); overflow: hidden; }
 .thanh-tien-do-fill { height: 100%; width: 0; background: var(--color-primary); border-radius: var(--radius-full); transition: width .2s ease; }
 .thanh-tien-do-nhan { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .btn-huy-tien-do {
   border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-muted);
-  border-radius: var(--radius-sm); padding: 2px 10px; font-size: 0.8rem; cursor: pointer; white-space: nowrap;
+  border-radius: var(--radius-sm); padding: 6px 30px; font-size: 2.4rem; cursor: pointer; white-space: nowrap;
 }
 .btn-huy-tien-do:hover { border-color: var(--color-danger-text); color: var(--color-danger-text); }
 
