@@ -177,6 +177,47 @@ body.trang-dang-nhap {
 @keyframes quetSang { 0%, 45% { transform: translateX(-320%) skewX(-20deg); } 100% { transform: translateX(420%) skewX(-20deg); } }
 
 /* ============================================================
+   QUY TRÌNH ĐƠN HÀNG (đăng nhập) — tóm tắt các mốc TRANG_THAI_XUONG chính cho nhân viên mới, gấp lại
+   theo mặc định để không choán chỗ nút chọn tên (ai đã quen việc không cần xem lại mỗi lần đăng
+   nhập). Dùng lại đúng class .badge/.trang-thai-* của trang Đơn hàng nên màu khớp với thứ nhân viên
+   sẽ thấy ngay sau khi đăng nhập — xem data/pipelineTinhTrang.js + MAU_TRANG_THAI trong public/js/api.js.
+   CHỈ SO một số mốc chính (không có nhánh LỖI SẢN XUẤT/CANCELLED/REFUNDED) — mục tiêu là dễ nắm chứ
+   không phải liệt kê đầy đủ.
+   ============================================================ */
+.quy-trinh {
+  text-align: left; margin-top: var(--space-5);
+  border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+  background: var(--color-surface); box-shadow: var(--shadow-sm);
+}
+.quy-trinh summary {
+  display: flex; align-items: center; gap: var(--space-2);
+  padding: var(--space-3) var(--space-4); min-height: var(--tap-min);
+  font-weight: 700; color: var(--color-text); cursor: pointer; list-style: none;
+}
+.quy-trinh summary::-webkit-details-marker { display: none; }
+.quy-trinh summary .qt-chevron { margin-left: auto; color: var(--color-text-muted); transition: transform 0.2s ease; }
+.quy-trinh[open] summary .qt-chevron { transform: rotate(180deg); }
+
+.qt-list { list-style: none; margin: 0; padding: 0 var(--space-4) var(--space-4); }
+.qt-buoc { position: relative; display: flex; gap: var(--space-3); padding-bottom: var(--space-4); }
+.qt-buoc:last-child { padding-bottom: 0; }
+.qt-so {
+  flex: none; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--color-primary); color: #fff; font-size: 0.75rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; position: relative; z-index: 1;
+}
+.qt-buoc:not(:last-child) .qt-so::after {
+  content: ''; position: absolute; top: 26px; left: 50%; width: 2px;
+  height: calc(100% - 26px + var(--space-4)); background: var(--color-border); transform: translateX(-50%);
+}
+.qt-noi-dung { flex: 1; min-width: 0; padding-top: 2px; }
+.qt-song-song { display: flex; flex-direction: column; gap: var(--space-2); }
+.qt-mo-ta {
+  display: flex; align-items: center; gap: 5px; margin-top: 5px;
+  font-size: 0.82rem; color: var(--color-text-muted); line-height: 1.4;
+}
+
+/* ============================================================
    HEADER + ĐIỀU HƯỚNG
    Điện thoại (<768px): header trên cùng + tab bar CỐ ĐỊNH Ở ĐÁY (thumb-friendly)
    Tablet/Desktop (>=768px): header + nav ngang ngay dưới header

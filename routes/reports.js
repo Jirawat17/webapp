@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const crypto = require('crypto');
+const https = require('https');
+const http = require('http');
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const orderService = require('../services/orderService');
@@ -11,6 +13,7 @@ const { readTabCached } = require('../services/sheetsService');
 const { parseNgay, dinhDangNgay, dinhDangNgayGioVN, dinhDangNgayGioNgan } = require('../services/dateUtils');
 const { taoQRCodeBuffer } = require('../services/qrService');
 const { taiAnhTuLinkDrive, layFileIdTuLinkDrive, layDsAnhTrongThuMucDrive } = require('../services/driveService');
+const { laLinkChiaSeGemini, taiAnhTuTrangGemini } = require('../services/trangWebService');
 const storageService = require('../services/storageService');
 const { DANH_SACH_TRANG_THAI_BAO_CAO, GIA_TRI_LOC_TRONG, khopGiaTriLoc } = require('../data/pipelineTinhTrang');
 const { requireLogin } = require('../middleware/auth');
@@ -414,20 +417,45 @@ function nhanDangDinhDangAnh(buffer) {
 // những link này KHÔNG có đường lấy nào cả nên luôn hiện "Không tải được ảnh" dù link vẫn truy cập
 // công khai bình thường). Giới hạn 15s tránh treo cả file in nếu 1 ảnh chậm/chết; chỉ nhận http(s)
 // (chặn file://, ftp://... phòng URL lạ/gõ nhầm trong Sheet).
-async function taiAnhTuUrlThuong(url) {
-  if (!url || !/^https?:\/\//i.test(String(url))) return null;
-  try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
-    if (!res.ok) return null;
-    return Buffer.from(await res.arrayBuffer());
-  } catch (err) {
-    console.error('[Ảnh ngoài] Không tải được:', url, '-', err.message);
-    return null;
-  }
+// Đọc thẳng 1 URL bằng module http(s) GỐC của Node — CỐ Ý không dùng fetch() ở đây: fetch() (undici)
+// từ chối đọc luôn nếu tổng độ dài HTTP header vượt quá giới hạn mặc định (gặp thật với
+// gemini.google.com — header ~25KB, fetch() ném lỗi HeadersOverflowError ngay cả trước khi đọc được
+// nội dung). maxHeaderSize nâng lên ở đây tránh đúng lỗi này. Tự theo redirect (301/302/303/307/308)
+// vì http(s).get() KHÔNG tự làm như fetch() — tối đa 5 lần, đủ dùng thực tế, tránh lặp vô hạn.
+function taiUrlTho(url, soLanChuyenHuongConLai = 5) {
+  return new Promise((resolve) => {
+    const mod = String(url).startsWith('http://') ? http : https;
+    const yeuCau = mod.get(url, {
+      maxHeaderSize: 65536 * 4, // 256KB — dư sức so với ~25KB thực tế gặp phải, vẫn có giới hạn để tránh phản hồi bất thường
+      timeout: 15000,
+      headers: { 'User-Agent': 'Mozilla/5.0' }, // 1 số site chặn request không có User-Agint hợp lệ
+    }, (res) => {
+      if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location && soLanChuyenHuongConLai > 0) {
+        res.resume();
+        return resolve(taiUrlTho(new URL(res.headers.location, url).toString(), soLanChuyenHuongConLai - 1));
+      }
+      if (res.statusCode !== 200) { res.resume(); return resolve(null); }
+
+      const chunks = [];
+      res.on('data', c => chunks.push(c));
+      res.on('end', () => resolve(Buffer.concat(chunks)));
+    });
+    yeuCau.on('timeout', () => yeuCau.destroy());
+    yeuCau.on('error', (err) => {
+      console.error('[Ảnh ngoài] Không tải được:', url, '-', err.message);
+      resolve(null);
+    });
+  });
 }
 
-// Ảnh mới nằm trên MinIO (URL proxy nội bộ); ảnh cũ có thể là link Google Drive HOẶC link ảnh công
-// khai từ nơi khác — thử lần lượt cả 3 nguồn để báo cáo PDF mất ít ảnh nhất có thể.
+async function taiAnhTuUrlThuong(url) {
+  if (!url || !/^https?:\/\//i.test(String(url))) return null;
+  return taiUrlTho(url);
+}
+
+// Ảnh mới nằm trên MinIO (URL proxy nội bộ); ảnh cũ có thể là link Google Drive, link chia sẻ Gemini
+// (trang dựng bằng JS, cần trình duyệt ảo — xem services/trangWebService.js), hoặc link ảnh công
+// khai từ nơi khác — thử lần lượt các nguồn để báo cáo PDF mất ít ảnh nhất có thể.
 async function taiAnh(url) {
   const objectKey = storageService.proxyUrlToObjectKey(url);
   if (objectKey) {
@@ -443,6 +471,8 @@ async function taiAnh(url) {
   }
 
   if (layFileIdTuLinkDrive(url)) return taiAnhTuLinkDrive(url);
+
+  if (laLinkChiaSeGemini(url)) return taiAnhTuTrangGemini(url);
 
   return taiAnhTuUrlThuong(url);
 }

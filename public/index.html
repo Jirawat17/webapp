@@ -14,11 +14,72 @@
   <h1>Xưởng Thêu <span style="font-size:0.4em;font-weight:400;color:var(--color-text-muted);vertical-align:middle">Phiên bản 68</span></h1>
   <p>Chào mừng đến với Giao diện quản lý xưởng thêu</p>
   <div id="danh-sach-ten" class="ten-list">Đang tải danh sách nhân viên...</div>
+
+  <details class="quy-trinh">
+    <summary>
+      <span data-icon="navChart" data-icon-size="18"></span>
+      Xem quy trình xử lý đơn hàng
+      <span class="qt-chevron" data-icon="chevronDown" data-icon-size="16"></span>
+    </summary>
+    <ol class="qt-list">
+      <li class="qt-buoc">
+        <div class="qt-so">1</div>
+        <div class="qt-noi-dung">
+          <span class="badge trang-thai-warning">Chưa xác nhận</span>
+          <div class="qt-mo-ta"><span data-icon="chat" data-icon-size="14"></span> Vẽ file trao đổi, chốt đơn với khách</div>
+        </div>
+      </li>
+      <li class="qt-buoc">
+        <div class="qt-so">2</div>
+        <div class="qt-noi-dung">
+          <span class="badge trang-thai-info">Đã xác nhận</span>
+        </div>
+      </li>
+      <li class="qt-buoc">
+        <div class="qt-so">3</div>
+        <div class="qt-noi-dung qt-song-song">
+          <div class="qt-mo-ta"><span data-icon="file" data-icon-size="14"></span> Vẽ file cập nhật &rarr; <span class="badge trang-thai-success">Đã vẽ file</span></div>
+          <div class="qt-mo-ta"><span data-icon="navScan" data-icon-size="14"></span> Lấy phôi quét QR Code &rarr; <span class="badge trang-thai-success">Đã lấy phôi</span></div>
+        </div>
+      </li>
+      <li class="qt-buoc">
+        <div class="qt-so">4</div>
+        <div class="qt-noi-dung">
+          <span class="badge trang-thai-info">ĐÃ SẴN SÀNG CHẠY MÁY</span>
+          <div class="qt-mo-ta">Hệ thống tự chuyển khi đủ cả 2 điều kiện ở bước 3</div>
+        </div>
+      </li>
+      <li class="qt-buoc">
+        <div class="qt-so">5</div>
+        <div class="qt-noi-dung">
+          <span class="badge trang-thai-info">Đang chạy máy</span>
+          <div class="qt-mo-ta"><span data-icon="navScan" data-icon-size="14"></span> Sản xuất quét QR Code</div>
+        </div>
+      </li>
+      <li class="qt-buoc">
+        <div class="qt-so">6</div>
+        <div class="qt-noi-dung">
+          <span class="badge trang-thai-success">Đã sản xuất</span>
+          <div class="qt-mo-ta"><span data-icon="camera" data-icon-size="14"></span> Lấy phôi chụp ảnh xác nhận</div>
+        </div>
+      </li>
+      <li class="qt-buoc">
+        <div class="qt-so">7</div>
+        <div class="qt-noi-dung">
+          <span class="badge trang-thai-success">Đã đóng gói</span>
+          <div class="qt-mo-ta"><span data-icon="camera" data-icon-size="14"></span> Lấy phôi chụp ảnh xác nhận</div>
+        </div>
+      </li>
+    </ol>
+  </details>
 </div>
 <script src="/js/icons.js?v=78"></script>
 <script src="/js/api.js?v=78"></script>
 <script>
 document.getElementById('logo-mark').innerHTML = icon('logo', { size: 56 });
+document.querySelectorAll('[data-icon]').forEach(el => {
+  el.innerHTML = icon(el.dataset.icon, { size: Number(el.dataset.iconSize) || 16 });
+});
 
 async function taiDanhSach() {
   const el = document.getElementById('danh-sach-ten');
