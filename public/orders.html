@@ -182,6 +182,16 @@ let donDaChonSet = new Set();
   document.getElementById('btn-in-phoi-ao').innerHTML = icon('printer') + ' IN DANH SÁCH PHÔI CỦA ĐƠN ĐANG CHỌN';
   document.getElementById('btn-in-don-dang-chon').innerHTML = icon('printer') + ' IN ĐƠN ĐANG CHỌN';
 
+  // Nút gộp 3 việc (đổi trạng thái "Đã in mã" + in 2 file PDF) — chỉ dành cho admin/ve_file theo
+  // đúng phạm vi người dùng đã xác nhận, ẩn hẳn với các vai trò khác (san_xuat, nguoi_lay_phoi) thay
+  // vì chỉ dựa vào việc backend chặn đổi trạng thái (xem spec 2026-09-05).
+  const btnInMaPhoiDon = document.getElementById('btn-in-ma-phoi-don');
+  if (user.vaiTro === 'admin' || user.vaiTro === 've_file') {
+    btnInMaPhoiDon.innerHTML = icon('printer') + ' IN MÃ + IN DANH SÁCH PHÔI ĐƠN ĐANG CHỌN + IN ĐƠN ĐANG CHỌN';
+  } else {
+    btnInMaPhoiDon.style.display = 'none';
+  }
+
   // Nút "Đã..." (positive) dùng icon check, nút "Chưa..." (negative, đưa trạng thái quay lại) dùng
   // icon undo — phân biệt trực quan, không chỉ dựa vào màu (xem thêm .trang-thai-tich-cuc/.trang-thai-tieu-cuc trong style.css)
   document.getElementById('btn-xac-nhan').innerHTML = icon('check', { size: 16 }) + ' Đã in mã';
