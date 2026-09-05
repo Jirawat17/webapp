@@ -344,8 +344,12 @@ function taoDSU(n) {
 // đơn cũ đã có hash từ trước vẫn cần được xét lại vì 1 đơn MỚI vừa hash xong có thể khớp với nó. Chỉ
 // ghi lại Sheet những đơn có mã nhóm THAY ĐỔI so với hiện tại (kể cả ghi '' để xoá mã nhóm cũ không
 // còn đúng) — tránh ghi thừa hàng trăm ô không đổi mỗi lần quét.
-async function tinhLaiNhomHangLoat(headers) {
-  const { rows: tatCaDon } = await orderService.getAll();
+async function tinhLaiNhomHangLoat() {
+  // Đọc lại CẢ headers lẫn rows ở đây (không nhận headers truyền vào từ lúc job bắt đầu) — bước gộp
+  // nhóm này có thể chạy sau khi vòng lặp tính hash phía trên đã kéo dài, cấu trúc cột trong Sheet có
+  // thể đã đổi trong lúc đó; ghi bằng headers cũ có thể ghi nhầm cột (xem quy ước tương tự ở
+  // services/orderService.js update() — luôn đọc thật ngay trước khi ghi).
+  const { headers, rows: tatCaDon } = await orderService.getAll();
   const coHash = tatCaDon.filter(d => d.HASH_ANH_MAU);
 
   const dsu = taoDSU(coHash.length);
@@ -388,6 +392,16 @@ async function tinhLaiNhomHangLoat(headers) {
 router.post('/quet-hang-loat/bat-dau', async (req, res) => {
   donDepJobHangLoatCu();
 
+  // Chặn chạy 2 lượt quét cùng lúc (double-click, 2 tab, 2 người cùng bấm) — job này GHI vào Sheet
+  // (khác job in PDF ở routes/reports.js chỉ tạo buffer tạm), nên 2 lượt chồng nhau vừa lãng phí tải
+  // lại ảnh trùng, vừa có thể ghi đè NHOM_HANG_LOAT lộn xộn nếu lượt cũ (snapshot cũ hơn) ghi SAU lượt
+  // mới.
+  for (const job of _congViecHangLoat.values()) {
+    if (job.trangThai === 'dang_chay') {
+      return res.status(409).json({ error: 'Đang có 1 lượt quét đơn hàng loạt khác đang chạy — vui lòng đợi lượt đó xong trước khi quét lại.' });
+    }
+  }
+
   const { headers, rows } = await orderService.getAll({ fresh: true });
   if (!headers.includes('HASH_ANH_MAU') || !headers.includes('NHOM_HANG_LOAT')) {
     return res.status(400).json({ error: 'Sheet chưa có đủ 2 cột HASH_ANH_MAU/NHOM_HANG_LOAT — cần thêm vào Don_Hang_ALL trước khi dùng tính năng "Đơn hàng loạt"' });
@@ -425,7 +439,7 @@ router.post('/quet-hang-loat/bat-dau', async (req, res) => {
       // Luôn tính lại nhóm SAU vòng lặp trên, kể cả khi bị hủy giữa chừng — tận dụng các hash đã tính
       // được thay vì bỏ phí, và cũng để bắt các thay đổi khác (đơn bị xoá ảnh mẫu chẳng hạn — xem
       // services/orderService.js) kể cả khi không có đơn nào mới cần tính hash ở vòng lặp trên.
-      const { soNhomTimThay, soDonTrongNhom } = await tinhLaiNhomHangLoat(headers);
+      const { soNhomTimThay, soDonTrongNhom } = await tinhLaiNhomHangLoat();
 
       job.ketQua = { soDaQuet: job.daXong, soTinhDuocHash, soNhomTimThay, soDonTrongNhom };
       job.trangThai = job.daHuy ? 'huy' : 'xong';
