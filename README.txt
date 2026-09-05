@@ -328,5 +328,40 @@ thái nào cho đúng). Cách chạy: node scripts/kiem-tra-tinh-hop-le.js — �
   - Thêm 1 báo cáo/thẻ nhỏ ở Dashboard đếm số đơn "dữ liệu cũ chưa hợp lệ" (chạy sẵn logic của
     kiem-tra-tinh-hop-le.js), để không cần vào console chạy script tay mỗi lần muốn kiểm tra.
 
+=============================================================================================
+8. ĐỔI TÊN "Chưa xác nhận"/"Đã xác nhận" THÀNH "Chưa in mã"/"Đã in mã" (đợt cập nhật này, 05/09/2026)
+=============================================================================================
+
+CHỈ đổi TÊN GỌI 2 giá trị đầu tiên của TRANG_THAI_XUONG — giữ NGUYÊN vị trí trong pipeline và MỌI
+logic/quyền/tự động hoá liên quan (validate 2 quy tắc trong kiemTraTinhHopLy, tự động điền phôi/vẽ
+file về "chưa" khi vừa in mã, tự động nhảy "ĐÃ SẴN SÀNG CHẠY MÁY", hiện/ẩn badge phôi-vẽ file...) —
+không đổi CÁCH chuyển trạng thái (vẫn set tay qua khối "Sửa trạng thái thủ công" ở trang chi tiết đơn
+hoặc nút "Đã xác nhận" cũ (giờ đổi tên "Đã in mã") ở trang Đơn hàng, không qua quét QR).
+
+File sửa: data/pipelineTinhTrang.js (TINH_TRANG_VALUES, THU_TU_TINH_TRANG), services/orderService.js
+(kiemTraTinhHopLy, tinhPhoiVeFileTuDongKhiXacNhan đổi tên hàm thành tinhPhoiVeFileTuDongKhiInMa,
+tinhTinhTrangTuDong), public/js/api.js (MAU_TRANG_THAI), public/orders.html (DANH_SACH_TRANG_THAI_DAY_
+DU, nút nhanh "btn-xac-nhan", điều kiện hiện badge phôi/vẽ file), public/order.html (DANH_SACH_TINH_
+TRANG, điều kiện hiện badge, cảnh báo hợp lệ client-side), public/index.html (chú thích quy trình ở
+trang đăng nhập), routes/chatbot.js (mô tả pipeline cho AI), routes/qr.js (chỉ sửa comment, không có
+logic nào so khớp trực tiếp 2 giá trị này), scripts/kiem-tra-tinh-hop-le.js.
+
+BẮT BUỘC LÀM SAU KHI COPY FILE ĐÈ:
+  1. Chạy node scripts/migrate-trang-thai-v3.js (KHÔNG --apply) để xem trước danh sách đơn cũ đang
+     mang "Chưa xác nhận"/"Đã xác nhận" sẽ được đổi tên.
+  2. Chạy lại node scripts/migrate-trang-thai-v3.js --apply để ghi thật vào Sheet.
+  3. TỰ sửa Apps Script (kênh tạo đơn mới) — đang set mặc định TRANG_THAI_XUONG="Chưa xác nhận" cho
+     đơn vừa tạo, phải đổi thành "Chưa in mã". KHÔNG sửa bước này thì mọi đơn tạo mới sau đó vẫn mang
+     tên cũ, gây lệch dữ liệu ngay lập tức.
+  4. Tab CauHinhKichBan KHÔNG cần sửa — đã rà lại, không có kịch bản quét QR nào dùng "Chưa xác nhận"/
+     "Đã xác nhận" làm Trang_Thai_Yeu_Cau/Trang_Thai_Sau (3 kịch bản hiện có chỉ thao tác các mốc khác
+     trong pipeline).
+
+GHI CHÚ RIÊNG: rà code lúc làm đợt này phát hiện 2 file routes/orderService.js và routes/kiem-tra-
+tinh-hop-le.js — bản SAO KHÁC (dùng tên cột "TINH_TRANG" thay vì "TRANG_THAI_XUONG", có thêm quy tắc
+thứ 3 và cơ chế admin override chưa từng thấy ở bản services/orderService.js đang chạy thật) nhưng
+KHÔNG được server.js require tới, tức là code CHẾT, không ảnh hưởng gì tới ứng dụng đang chạy. Không
+đụng tới 2 file này trong đợt cập nhật này vì không rõ ý định ban đầu (thử nghiệm dở dang? bản dự
+phòng?) — bạn kiểm tra lại xem có còn cần giữ không, nếu không cần thì tự xoá.
 
 

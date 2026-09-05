@@ -10,7 +10,7 @@
 //
 // "ĐÃ SẴN SÀNG CHẠY MÁY" là trạng thái TỰ ĐỘNG: hệ thống tự đặt TRANG_THAI_XUONG sang giá trị này ngay khi
 // TRANG_THAI_PHOI = 'Đã lấy phôi' VÀ TRANG_THAI_VE_FILE = 'Đã vẽ file' CÙNG LÚC — NHƯNG CHỈ áp dụng
-// khi TRANG_THAI_XUONG đang là 'Đã xác nhận' (lần đầu tiên). Sau khi đơn bị lỗi rồi làm lại từ phôi/file,
+// khi TRANG_THAI_XUONG đang là 'Đã in mã' (lần đầu tiên). Sau khi đơn bị lỗi rồi làm lại từ phôi/file,
 // việc quay lại "ĐÃ SẴN SÀNG CHẠY MÁY" lần 2 KHÔNG tự động nữa — phải set tay (đã xác nhận rõ với
 // người dùng). Xem services/orderService.js (hàm update) để biết chỗ tính tự động này.
 //
@@ -49,9 +49,18 @@
 // DANH_SACH_TINH_TRANG + CAC_TRANG_THAI_TU_SAN_SANG_TRO_DI (public/order.html),
 // DANH_SACH_TRANG_THAI_DAY_DU (public/orders.html), và mô tả pipeline cho chatbot (routes/chatbot.js).
 //
+// ĐỔI TÊN (05/09/2026, theo yêu cầu người dùng) — 'Chưa xác nhận'/'Đã xác nhận' đổi tên thành 'Chưa in
+// mã'/'Đã in mã' (giữ NGUYÊN vị trí trong pipeline và MỌI logic/quyền/tự động hoá liên quan — chỉ đổi
+// tên gọi). Đơn cũ trong Sheet đang mang 2 giá trị cũ này cần chạy scripts/migrate-trang-thai-v3.js để
+// đổi sang tên mới (xem hướng dẫn --apply trong chính file script đó). LƯU Ý 2 việc NẰM NGOÀI phạm vi
+// code Node, phải tự làm: (1) Apps Script tạo đơn mới hiện đang set mặc định TRANG_THAI_XUONG='Chưa
+// xác nhận' cho đơn vừa tạo — phải tự sửa lại thành 'Chưa in mã', không thì đơn mới tạo ra vẫn mang
+// tên cũ; (2) tab CauHinhKichBan không cần sửa vì không có kịch bản quét QR nào dùng 2 giá trị này làm
+// Trang_Thai_Yeu_Cau/Trang_Thai_Sau (đã rà lại, chỉ có 3 kịch bản thao tác TRANG_THAI_PHOI/TRANG_THAI_
+// XUONG ở các mốc khác, không đụng 'Chưa xác nhận'/'Đã xác nhận' cũ).
 const TINH_TRANG_VALUES = [
-  'Chưa xác nhận',
-  'Đã xác nhận',
+  'Chưa in mã',
+  'Đã in mã',
   'ĐÃ SẴN SÀNG CHẠY MÁY',
   'Đang chạy máy',
   'Đã sản xuất',
@@ -85,8 +94,8 @@ function khopGiaTriLoc(giaTriThat, giaTriLoc) {
 // này là nhánh rẽ, không nằm trên đường chính). Dùng để biết "đơn đã qua mốc X hay chưa" — vd lọc
 // đơn cho san_xuat (xem services/orderService.js).
 const THU_TU_TINH_TRANG = [
-  'Chưa xác nhận',
-  'Đã xác nhận',
+  'Chưa in mã',
+  'Đã in mã',
   'ĐÃ SẴN SÀNG CHẠY MÁY',
   'Đang chạy máy',
   'Đã sản xuất',

@@ -182,8 +182,8 @@ async function chayHangLoatCoTienDo(danhSach, xuLyMotPhanTu, { onTienDo, kiemTra
 // xác loại bỏ hẳn nguy cơ đó.
 const MAU_TRANG_THAI = {
   // TRANG_THAI_XUONG
-  'Chưa xác nhận': 'trang-thai-warning',
-  'Đã xác nhận': 'trang-thai-info',
+  'Chưa in mã': 'trang-thai-warning',
+  'Đã in mã': 'trang-thai-info',
   'ĐÃ SẴN SÀNG CHẠY MÁY': 'trang-thai-info',
   'Đang chạy máy': 'trang-thai-info',
   'Đã sản xuất': 'trang-thai-success',

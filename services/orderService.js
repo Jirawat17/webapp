@@ -42,8 +42,8 @@ function kiemTraGiaTriHopLe(updates) {
 
 // Kiểm tra tính HỢP LÝ giữa 3 cột VỚI NHAU — không chỉ đúng giá trị từng cột riêng lẻ mà còn phải
 // khớp logic pipeline. 2 quy tắc:
-//   1. "Chưa xác nhận" thì KHÔNG THỂ đã có phôi/đã vẽ file (đơn còn chưa được khách xác nhận thì
-//      chưa ai chuẩn bị phôi/vẽ file cho đơn đó).
+//   1. "Chưa in mã" thì KHÔNG THỂ đã có phôi/đã vẽ file (đơn còn chưa in mã thì chưa ai chuẩn bị
+//      phôi/vẽ file cho đơn đó).
 //   2. Đã tới "ĐÃ SẴN SÀNG CHẠY MÁY" hoặc các bước SAU đó trên đường chính (Đã sản xuất, Đã đóng
 //      gói, ĐÃ DÁN TEM, DELIVERED) thì BẮT BUỘC phải có đủ CẢ phôi lẫn file — không tính LỖI SẢN
 //      XUẤT CẦN LÀM LẠI/CANCELLED/REFUNDED (nhánh rẽ, không nằm trong THU_TU_TINH_TRANG nên
@@ -59,12 +59,12 @@ function kiemTraTinhHopLy(rowHienTai, updates) {
   const phoiMoi = updates.TRANG_THAI_PHOI ?? rowHienTai.TRANG_THAI_PHOI;
   const veFileMoi = updates.TRANG_THAI_VE_FILE ?? rowHienTai.TRANG_THAI_VE_FILE;
 
-  if (tinhTrangMoi === 'Chưa xác nhận') {
+  if (tinhTrangMoi === 'Chưa in mã') {
     if (phoiMoi === 'Đã lấy phôi') {
-      throw new Error('Không hợp lệ: đơn đang "Chưa xác nhận" thì chưa thể "Đã lấy phôi" — xác nhận đơn trước.');
+      throw new Error('Không hợp lệ: đơn đang "Chưa in mã" thì chưa thể "Đã lấy phôi" — in mã đơn trước.');
     }
     if (veFileMoi === 'Đã vẽ file') {
-      throw new Error('Không hợp lệ: đơn đang "Chưa xác nhận" thì chưa thể "Đã vẽ file" — xác nhận đơn trước.');
+      throw new Error('Không hợp lệ: đơn đang "Chưa in mã" thì chưa thể "Đã vẽ file" — in mã đơn trước.');
     }
   }
 
@@ -80,13 +80,13 @@ function kiemTraTinhHopLy(rowHienTai, updates) {
 }
 
 // TỰ ĐỘNG điền TRANG_THAI_PHOI = 'Chưa lấy phôi' và TRANG_THAI_VE_FILE = 'Chưa vẽ file' khi đơn được
-// xác nhận (TRANG_THAI_XUONG chuyển từ 'Chưa xác nhận' sang 'Đã xác nhận') — đơn vừa xác nhận thì chưa ai
+// in mã (TRANG_THAI_XUONG chuyển từ 'Chưa in mã' sang 'Đã in mã') — đơn vừa in mã thì chưa ai
 // kịp lấy phôi/vẽ file, nên đặt sẵn 2 cột này về "chưa" luôn, không phải set tay riêng. Không ghi đè
 // nếu người gọi đã tự chỉ định 1 trong 2 cột này trong chính updates đó. Chỉ áp dụng đúng lượt
-// chuyển 'Chưa xác nhận' -> 'Đã xác nhận' (không áp dụng khi TRANG_THAI_XUONG đang set lại 'Đã xác nhận'
+// chuyển 'Chưa in mã' -> 'Đã in mã' (không áp dụng khi TRANG_THAI_XUONG đang set lại 'Đã in mã'
 // từ trạng thái khác, vd sau khi lỗi sản xuất).
-function tinhPhoiVeFileTuDongKhiXacNhan(rowHienTai, updates) {
-  if (updates.TRANG_THAI_XUONG !== 'Đã xác nhận' || rowHienTai.TRANG_THAI_XUONG !== 'Chưa xác nhận') return updates;
+function tinhPhoiVeFileTuDongKhiInMa(rowHienTai, updates) {
+  if (updates.TRANG_THAI_XUONG !== 'Đã in mã' || rowHienTai.TRANG_THAI_XUONG !== 'Chưa in mã') return updates;
 
   const ketQua = { ...updates };
   if (!('TRANG_THAI_PHOI' in ketQua)) ketQua.TRANG_THAI_PHOI = 'Chưa lấy phôi';
@@ -95,7 +95,7 @@ function tinhPhoiVeFileTuDongKhiXacNhan(rowHienTai, updates) {
 }
 
 // TỰ ĐỘNG chuyển TRANG_THAI_XUONG sang "ĐÃ SẴN SÀNG CHẠY MÁY" khi cả phôi lẫn file vẽ CÙNG xong — nhưng
-// CHỈ áp dụng lần đầu (khi TRANG_THAI_XUONG đang là "Đã xác nhận"). Sau khi đơn bị lỗi rồi làm lại từ phôi/
+// CHỈ áp dụng lần đầu (khi TRANG_THAI_XUONG đang là "Đã in mã"). Sau khi đơn bị lỗi rồi làm lại từ phôi/
 // file, việc quay lại "ĐÃ SẴN SÀNG CHẠY MÁY" lần 2 KHÔNG tự động — người phụ trách phải tự set tay
 // (đã xác nhận rõ với người dùng, xem data/pipelineTinhTrang.js). Hàm này không tự đổi TRANG_THAI_XUONG
 // nếu người gọi đã tự chỉ định TRANG_THAI_XUONG trong chính updates đó — tôn trọng giá trị người dùng
@@ -107,7 +107,7 @@ function tinhTinhTrangTuDong(rowHienTai, updates) {
   const veFileMoi = updates.TRANG_THAI_VE_FILE ?? rowHienTai.TRANG_THAI_VE_FILE;
   const caPhoiVaFileXong = phoiMoi === 'Đã lấy phôi' && veFileMoi === 'Đã vẽ file';
 
-  if (caPhoiVaFileXong && rowHienTai.TRANG_THAI_XUONG === 'Đã xác nhận') {
+  if (caPhoiVaFileXong && rowHienTai.TRANG_THAI_XUONG === 'Đã in mã') {
     return { ...updates, TRANG_THAI_XUONG: 'ĐÃ SẴN SÀNG CHẠY MÁY' };
   }
   return updates;
@@ -150,8 +150,8 @@ async function update(sttKey, updates, user, tuyChon = {}) {
   kiemTraGiaTriHopLe(updates);
   kiemTraCongAnhBatBuoc(row, updates, user, tuyChon.quaAnh);
 
-  const updatesSauXacNhan = tinhPhoiVeFileTuDongKhiXacNhan(row, updates);
-  const updatesDaTinh = tinhTinhTrangTuDong(row, updatesSauXacNhan);
+  const updatesSauInMa = tinhPhoiVeFileTuDongKhiInMa(row, updates);
+  const updatesDaTinh = tinhTinhTrangTuDong(row, updatesSauInMa);
   kiemTraTinhHopLy(row, updatesDaTinh); // kiểm tra SAU khi đã tính tự động, để không báo nhầm khi chính việc tự động hoá làm cho tổ hợp trở nên hợp lệ
 
   await updateCells(TAB, headers, row._row, updatesDaTinh); // tự xoá cache của tab sau khi ghi (xem sheetsService)
@@ -195,7 +195,7 @@ function danhSachViTriTheu(don) {
 // quan_ly bị xoá hẳn, dong_goi gộp vào nguoi_lay_phoi).
 //   - admin, ve_file: xem TOÀN BỘ đơn, không lọc gì.
 //   - san_xuat: CHỈ thấy đơn đã tới "ĐÃ SẴN SÀNG CHẠY MÁY" trở đi (kể cả trạng thái lỗi
-//     "LỖI SẢN XUẤT CẦN LÀM LẠI"), không thấy đơn còn ở "Chưa xác nhận"/"Đã xác nhận". Đơn đã
+//     "LỖI SẢN XUẤT CẦN LÀM LẠI"), không thấy đơn còn ở "Chưa in mã"/"Đã in mã". Đơn đã
 //     CANCELLED/REFUNDED không nằm trong THU_TU_TINH_TRANG (nhánh rẽ) nên tự động bị loại — chỉ
 //     admin/ve_file mới thấy đơn huỷ/hoàn, giữ đúng thói quen cũ (trước đây chỉ admin/quan_ly thấy).
 //   - nguoi_lay_phoi: KHÔNG dùng route GET /orders (danh sách) — vai trò này chỉ có đúng 1 menu

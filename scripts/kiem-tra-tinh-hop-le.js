@@ -1,7 +1,7 @@
 // Script RÀ SOÁT (CHỈ ĐỌC, KHÔNG GHI GÌ) — quét toàn bộ đơn hàng hiện có trong Sheet, tìm những
 // đơn đang mang tổ hợp TRANG_THAI_XUONG/TRANG_THAI_PHOI/TRANG_THAI_VE_FILE không hợp lý theo đúng 2 quy
 // tắc mới thêm vào services/orderService.js (kiemTraTinhHopLy):
-//   1. "Chưa xác nhận" mà đã "Đã lấy phôi" hoặc "Đã vẽ file"
+//   1. "Chưa in mã" mà đã "Đã lấy phôi" hoặc "Đã vẽ file"
 //   2. Đã tới "ĐÃ SẴN SÀNG CHẠY MÁY" hoặc các bước sau đó mà phôi/file vẫn chưa xong
 //
 // Quy tắc mới chỉ chặn được lỗi phát sinh TỪ NAY VỀ SAU (khi ai đó sửa dữ liệu qua app) — không tự
@@ -20,9 +20,9 @@ const idxSanSang = chiSoTinhTrang('ĐÃ SẴN SÀNG CHẠY MÁY');
 function timLoi(don) {
   const loi = [];
 
-  if (don.TRANG_THAI_XUONG === 'Chưa xác nhận') {
-    if (don.TRANG_THAI_PHOI === 'Đã lấy phôi') loi.push('Chưa xác nhận nhưng Đã lấy phôi');
-    if (don.TRANG_THAI_VE_FILE === 'Đã vẽ file') loi.push('Chưa xác nhận nhưng Đã vẽ file');
+  if (don.TRANG_THAI_XUONG === 'Chưa in mã') {
+    if (don.TRANG_THAI_PHOI === 'Đã lấy phôi') loi.push('Chưa in mã nhưng Đã lấy phôi');
+    if (don.TRANG_THAI_VE_FILE === 'Đã vẽ file') loi.push('Chưa in mã nhưng Đã vẽ file');
   }
 
   const idx = chiSoTinhTrang(don.TRANG_THAI_XUONG);

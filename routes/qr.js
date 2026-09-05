@@ -27,7 +27,7 @@ function duocPhepDungKichBan(scenario, user) {
 // "Van an toàn" chung (bổ sung 26/08/2026, theo Prompt_Ver_25.docx): trước đây mỗi kịch bản chỉ tự
 // kiểm tra ĐÚNG cột nó nhắm tới (scenario.requireStatus), không quan tâm TRANG_THAI_XUONG tổng của đơn là
 // gì. Về mặt dữ liệu không nguy hiểm (tinhTinhTrangTuDong() chỉ tự đồng bộ khi TRANG_THAI_XUONG đang
-// "Đã xác nhận" nên đơn đã kết thúc sẽ không bị kéo lung tung), nhưng vẫn có thể tạo tình huống lạ —
+// "Đã in mã" nên đơn đã kết thúc sẽ không bị kéo lung tung), nhưng vẫn có thể tạo tình huống lạ —
 // vd đánh dấu "đã lấy phôi" cho 1 đơn đã bị huỷ. Chặn CHUNG mọi kịch bản khi đơn đang ở 1 trong 3
 // trạng thái kết thúc — áp dụng cho MỌI vai trò kể cả admin (đây là lớp chống quét nhầm bằng máy
 // quét/camera, không phải giới hạn quyền hạn; admin muốn sửa đơn đã kết thúc thì vào sửa tay ở
@@ -125,9 +125,9 @@ router.post('/kich-ban/:scenarioId/quet', async (req, res) => {
     }, user, { donDaDoc: { headers, row } }); // đã đọc thật ở trên, khỏi đọc lại lần nữa (xem orderService.update)
   } catch (err) {
     // Đơn ĐÚNG trạng thái cột này yêu cầu, nhưng đổi xong sẽ xung đột với 1 trong 2 cột còn lại
-    // (vd đơn đang "Chưa xác nhận" mà quét "lấy phôi" — TRANG_THAI_PHOI đúng "Chưa lấy phôi" nên
+    // (vd đơn đang "Chưa in mã" mà quét "lấy phôi" — TRANG_THAI_PHOI đúng "Chưa lấy phôi" nên
     // qua được kiểm tra requireStatus ở trên, nhưng orderService.update() chặn lại vì TRANG_THAI_XUONG
-    // vẫn "Chưa xác nhận", chưa hợp lý để đánh dấu đã có phôi). admin vẫn có thể gặp lỗi này nếu
+    // vẫn "Chưa in mã", chưa hợp lý để đánh dấu đã có phôi). admin vẫn có thể gặp lỗi này nếu
     // dữ liệu THỰC SỰ mâu thuẫn ở cột khác — override chỉ áp dụng cho 2 quy tắc trong
     // kiemTraTinhHopLy(), không tắt hẳn kiểm tra.
     ghiKhongCho(ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_LOI', sttKey, chiTiet: { scenario: scenario.label, cot: scenario.column, loi: err.message } }));

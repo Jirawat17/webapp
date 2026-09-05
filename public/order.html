@@ -24,7 +24,7 @@ const NHAN_CANH_BAO = { VANG: 'Cảnh báo Vàng · 3 ngày ít tiến triển',
 const NHAN_NGUOI_VAN_HANH_KHONG_RO = 'ĐƠN SỬA TRONG GGSHEET, KHÔNG RÕ TÀI KHOẢN SẢN XUẤT NÀO ĐANG CHẠY';
 
 const DANH_SACH_TINH_TRANG = [
-  'Chưa xác nhận', 'Đã xác nhận', 'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đang chạy máy', 'Đã sản xuất', 'LỖI SẢN XUẤT CẦN LÀM LẠI',
+  'Chưa in mã', 'Đã in mã', 'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đang chạy máy', 'Đã sản xuất', 'LỖI SẢN XUẤT CẦN LÀM LẠI',
   'Đã đóng gói', 'ĐÃ DÁN TEM', 'DELIVERED_Đã giao đến khách', 'CANCELLED_Đã hủy', 'REFUNDED_Hoàn đơn',
 ];
 
@@ -76,7 +76,7 @@ async function taiChiTiet() {
       <span class="badge ${lopTrangThai(don.TRANG_THAI_XUONG)}">${escapeHtml(don.TRANG_THAI_XUONG || '')}</span>
       ${don.TRANG_THAI_XUONG === 'Đang chạy máy' ? `
         <span class="badge trang-thai-info">${icon('users', {size:14})} Đang vận hành: <strong>${escapeHtml(don.NguoiVanHanh || NHAN_NGUOI_VAN_HANH_KHONG_RO)}</strong></span>` : ''}
-      ${['Chưa xác nhận', 'Đã xác nhận'].includes(don.TRANG_THAI_XUONG) ? `
+      ${['Chưa in mã', 'Đã in mã'].includes(don.TRANG_THAI_XUONG) ? `
         <span class="badge ${lopTrangThai(don.TRANG_THAI_PHOI)}">${escapeHtml(don.TRANG_THAI_PHOI || '')}</span>
         <span class="badge ${lopTrangThai(don.TRANG_THAI_VE_FILE)}">${escapeHtml(don.TRANG_THAI_VE_FILE || '')}</span>` : ''}
       ${don.DANH_DAU_IN ? `<span class="badge trang-thai-info">${icon('check', {size:14})} Đã đánh dấu in</span>` : ''}
@@ -186,7 +186,7 @@ function renderKhuVucThaoTac(don) {
       </select>
       <div id="canh-bao-to-hop"></div>
       <button id="nut-luu-trang-thai" class="btn-hanh-dong phu" onclick="luuTrangThaiThuCong()">${icon('check')} Lưu trạng thái</button>
-      <p style="margin:0;font-size:0.8rem;color:var(--color-text-faint)">Nếu cả Phôi và Vẽ file cùng chuyển sang "Đã..." trong khi Trạng thái chung đang là "Đã xác nhận", hệ thống tự chuyển Trạng thái chung sang "ĐÃ SẴN SÀNG CHẠY MÁY".</p>
+      <p style="margin:0;font-size:0.8rem;color:var(--color-text-faint)">Nếu cả Phôi và Vẽ file cùng chuyển sang "Đã..." trong khi Trạng thái chung đang là "Đã in mã", hệ thống tự chuyển Trạng thái chung sang "ĐÃ SẴN SÀNG CHẠY MÁY".</p>
     </div>`;
 
   // Ảnh "File thêu" (bổ sung 26/08/2026) — ve_file upload sau khi vẽ file xong, để san_xuat xem
@@ -229,9 +229,9 @@ function renderKhuVucThaoTac(don) {
 // mới biết bị từ chối. Đây CHỈ là gợi ý trên giao diện — server vẫn kiểm tra lại đầy đủ (không thể
 // bỏ qua bằng cách sửa JS trên trình duyệt), đây không phải là chốt bảo mật.
 function loiToHopTrangThai(tinhTrang, phoi, veFile) {
-  if (tinhTrang === 'Chưa xác nhận') {
-    if (phoi === 'Đã lấy phôi') return 'Đơn đang "Chưa xác nhận" thì chưa thể "Đã lấy phôi" — xác nhận đơn trước.';
-    if (veFile === 'Đã vẽ file') return 'Đơn đang "Chưa xác nhận" thì chưa thể "Đã vẽ file" — xác nhận đơn trước.';
+  if (tinhTrang === 'Chưa in mã') {
+    if (phoi === 'Đã lấy phôi') return 'Đơn đang "Chưa in mã" thì chưa thể "Đã lấy phôi" — in mã đơn trước.';
+    if (veFile === 'Đã vẽ file') return 'Đơn đang "Chưa in mã" thì chưa thể "Đã vẽ file" — in mã đơn trước.';
   }
   const CAC_TRANG_THAI_TU_SAN_SANG_TRO_DI = [
     'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đang chạy máy', 'Đã sản xuất', 'Đã đóng gói',

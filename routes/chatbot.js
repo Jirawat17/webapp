@@ -28,7 +28,7 @@ const MO_TA_PIPELINE =
   'Từ 24/08/2026, hệ thống theo dõi tiến trình đơn hàng bằng 3 CỘT RIÊNG (không còn 1 cột duy nhất ' +
   'như trước): TRANG_THAI_XUONG (tiến trình chung), TRANG_THAI_PHOI (lấy phôi), TRANG_THAI_VE_FILE (vẽ file) ' +
   '— lấy phôi và vẽ file là 2 việc ĐỘC LẬP, làm song song, không phải làm tuần tự.\n\n' +
-  'Giá trị TRANG_THAI_XUONG theo đúng thứ tự: Chưa xác nhận → Đã xác nhận → ĐÃ SẴN SÀNG CHẠY MÁY (hệ ' +
+  'Giá trị TRANG_THAI_XUONG theo đúng thứ tự: Chưa in mã → Đã in mã → ĐÃ SẴN SÀNG CHẠY MÁY (hệ ' +
   'thống tự động chuyển sang trạng thái này khi TRANG_THAI_PHOI="Đã lấy phôi" VÀ TRANG_THAI_VE_FILE=' +
   '"Đã vẽ file" cùng lúc) → Đã sản xuất → Đã đóng gói → ĐÃ DÁN TEM → ' +
   'DELIVERED_Đã giao đến khách. Nhánh rẽ: LỖI SẢN XUẤT CẦN LÀM LẠI (lỗi khi sản xuất, người phụ ' +
