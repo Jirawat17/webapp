@@ -636,6 +636,7 @@ async function inMaPhoiDonDangChon(nut) {
 
   const nhanGoc = nut.innerHTML;
   nut.disabled = true;
+  document.querySelectorAll('.nhanh-phoi-ve-file, #nut-ap-dung').forEach(b => b.disabled = true);
 
   // Bước 1 — đổi trạng thái sang "Đã in mã", tuần tự từng đơn để hiện được tiến độ thật (cùng cơ chế
   // nút "Đã in mã" ở thanh hành động hàng loạt đang dùng — xem apDungNhanh()).
@@ -679,6 +680,7 @@ async function inMaPhoiDonDangChon(nut) {
   thongBao += `\n\n3) File PDF phôi (IN DANH SÁCH PHÔI CỦA ĐƠN ĐANG CHỌN):\n   ${ketQuaInPhoi.ok ? '✔ Đã tạo và tải về thành công' : '✘ Lỗi: ' + ketQuaInPhoi.loi}`;
   alert(thongBao);
 
+  document.querySelectorAll('.nhanh-phoi-ve-file, #nut-ap-dung').forEach(b => b.disabled = false);
   nut.disabled = false;
   nut.innerHTML = nhanGoc;
   donDaChonSet.clear();
