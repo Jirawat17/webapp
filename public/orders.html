@@ -622,6 +622,68 @@ async function inDonDangChon(nut) {
 
   await inDonHangLoatCoTienDo(nut, nhanGoc, { sttKeys: Array.from(donDaChonSet) });
 }
+
+// Nút gộp "IN MÃ + IN DANH SÁCH PHÔI ĐƠN ĐANG CHỌN + IN ĐƠN ĐANG CHỌN" — làm 1 lần cả 3 việc:
+// (1) đổi TRANG_THAI_XUONG các đơn đã chọn sang "Đã in mã", (2) in PDF thẻ đơn, (3) in PDF danh sách
+// phôi gộp. Chụp lại `danhSach` NGAY khi bấm — cả 3 bước dùng chung danh sách này, không phụ thuộc
+// donDaChonSet có bị đổi giữa chừng hay không (xem spec 2026-09-05). 3 bước ĐỘC LẬP: lỗi (hoặc lỗi 1
+// phần) ở bước nào chỉ được ghi nhận trong alert tổng kết cuối cùng, không chặn bước sau.
+async function inMaPhoiDonDangChon(nut) {
+  if (donDaChonSet.size === 0) { alert('Hãy chọn ít nhất 1 đơn muốn in.'); return; }
+
+  const danhSach = Array.from(donDaChonSet);
+  if (!confirm(`Đánh dấu ${danhSach.length} đơn đã chọn thành "Đã in mã", đồng thời in file PDF đơn và file PDF danh sách phôi. Tiếp tục?`)) return;
+
+  const nhanGoc = nut.innerHTML;
+  nut.disabled = true;
+
+  // Bước 1 — đổi trạng thái sang "Đã in mã", tuần tự từng đơn để hiện được tiến độ thật (cùng cơ chế
+  // nút "Đã in mã" ở thanh hành động hàng loạt đang dùng — xem apDungNhanh()).
+  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Đang đổi trạng thái...';
+  let daHuyDoiTrangThai = false;
+  const thanhTienDoTrangThai = taoThanhTienDo(nut, { onHuy: () => { daHuyDoiTrangThai = true; } });
+  thanhTienDoTrangThai.capNhat(0, danhSach.length);
+  const ketQuaTrangThai = await chayHangLoatCoTienDo(
+    danhSach,
+    sttKey => apiFetch('/orders/chuyen-trang-thai-hang-loat', {
+      method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], cot: 'TRANG_THAI_XUONG', trangThaiMoi: 'Đã in mã' }),
+    }),
+    { onTienDo: (hienTai, tong) => thanhTienDoTrangThai.capNhat(hienTai, tong), kiemTraHuy: () => daHuyDoiTrangThai }
+  );
+  thanhTienDoTrangThai.xoa();
+
+  // Bước 2 — in PDF đơn cho TOÀN BỘ đơn đã chọn ban đầu (không phụ thuộc kết quả bước 1 — đã xác nhận
+  // với người dùng: luôn in cho toàn bộ đơn đã chọn dù bước đổi trạng thái có lỗi 1 phần hay không).
+  nut.disabled = true;
+  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Đang tạo file đơn...';
+  const ketQuaInDon = await inDonHangLoatCoTienDo(nut, nhanGoc, { sttKeys: danhSach }, { baoLoiBangAlert: false });
+
+  // Bước 3 — in PDF phôi cho TOÀN BỘ đơn đã chọn ban đầu (không phụ thuộc kết quả bước 1/2).
+  const ketQuaInPhoi = await inPhoiDangChon(nut, { sttKeys: danhSach, baoLoiBangAlert: false });
+
+  // Alert tổng kết — ghi rõ đơn nào OK/chưa OK ở bước đổi trạng thái (bước duy nhất xử lý TỪNG đơn
+  // riêng nên có được danh sách này); 2 bước in PDF xử lý theo cả lô/bảng tổng hợp nên chỉ báo được
+  // thành công/lỗi của CẢ FILE, không tách được theo từng đơn (xem spec 2026-09-05, mục 4).
+  let thongBao = `KẾT QUẢ:\n\n1) Đổi trạng thái "Đã in mã" — ${ketQuaTrangThai.thanhCong.length}/${danhSach.length} đơn OK`;
+  if (ketQuaTrangThai.thanhCong.length > 0) {
+    thongBao += `:\n   ✔ OK: ${ketQuaTrangThai.thanhCong.join(', ')}`;
+  }
+  if (ketQuaTrangThai.loi.length > 0) {
+    thongBao += `\n   ✘ Chưa OK (${ketQuaTrangThai.loi.length} đơn):\n` +
+      ketQuaTrangThai.loi.map(l => `     - ${l.sttKey}: ${l.lyDo}`).join('\n');
+  }
+  if (ketQuaTrangThai.daHuy) {
+    thongBao += `\n   (Đã HỦY giữa chừng bước đổi trạng thái — các đơn còn lại chưa được xử lý.)`;
+  }
+  thongBao += `\n\n2) File PDF đơn (IN ĐƠN ĐANG CHỌN):\n   ${ketQuaInDon.ok ? '✔ Đã tạo và tải về thành công' : '✘ Lỗi: ' + ketQuaInDon.loi}`;
+  thongBao += `\n\n3) File PDF phôi (IN DANH SÁCH PHÔI CỦA ĐƠN ĐANG CHỌN):\n   ${ketQuaInPhoi.ok ? '✔ Đã tạo và tải về thành công' : '✘ Lỗi: ' + ketQuaInPhoi.loi}`;
+  alert(thongBao);
+
+  nut.disabled = false;
+  nut.innerHTML = nhanGoc;
+  donDaChonSet.clear();
+  await taiDon();
+}
 </script>
 </body>
 </html>
