@@ -19,8 +19,8 @@
 <div class="page">
   <h2>Quét mã QR</h2>
   <div class="scan-mode">
-    <button id="mode-lookup" class="active"></button>
-    <button id="mode-batch"></button>
+    <button id="mode-lookup"></button>
+    <button id="mode-batch" class="active"></button>
     <button id="mode-photo-san-xuat"></button>
     <button id="mode-photo-dong-goi"></button>
   </div>
@@ -79,7 +79,10 @@
 <script src="/js/api.js?v=79"></script>
 <script>
 let user;
-let mode = 'lookup';
+// Mặc định mở vào "Quét kịch bản" (batch) khi vào trang — theo yêu cầu người dùng 05/09/2026, vì đây
+// là chế độ dùng thường xuyên nhất, "Tra cứu" (lookup) ít dùng hơn hẳn (đã đẩy xuống cuối dropdown
+// chọn chế độ, xem MODE_OPTIONS bên dưới).
+let mode = 'batch';
 let scanner = null;
 let cameraDangChayCho = null;
 let dangXuLyQuet = false;
@@ -121,7 +124,7 @@ const CAU_HINH_ANH = {
 };
 let dsDaChupTheoMoc = { photo_san_xuat: [], photo_dong_goi: [] };
 
-document.getElementById('mode-lookup').innerHTML = icon('scan') + ' Tra cứu';
+document.getElementById('mode-lookup').innerHTML = icon('scan') + ' Quét mã QR xem thông tin 1 đơn';
 document.getElementById('mode-batch').innerHTML = icon('check') + ' Quét kịch bản';
 document.getElementById('mode-photo-san-xuat').innerHTML = icon('camera', { size: 18 }) + ' ' + CAU_HINH_ANH.photo_san_xuat.nhanTab;
 document.getElementById('mode-photo-dong-goi').innerHTML = icon('camera', { size: 18 }) + ' ' + CAU_HINH_ANH.photo_dong_goi.nhanTab;
@@ -133,12 +136,15 @@ capNhatNutFlash();
 // Dropdown là cách DUY NHẤT để chọn chế độ (đã bỏ hẳn menu 4 nút — xem .mode-select / .scan-mode
 // trong style.css). 4 nút cũ vẫn còn trong DOM (ẩn) vì JS phía dưới vẫn toggle class active lên
 // chúng — vô hại, không cần dọn vì không hiển thị.
+// Thứ tự hiện trong dropdown — "Tra cứu" xếp CUỐI CÙNG (ít dùng nhất, theo yêu cầu người dùng
+// 05/09/2026), không ảnh hưởng chế độ mặc định khi vào trang (vẫn là 'lookup', xem biến `mode` khai
+// báo phía trên — đổi thứ tự dropdown không tự đổi luôn mặc định, 2 việc độc lập nhau).
 const MODE_OPTIONS = [
-  { value: 'lookup', label: 'Tra cứu' },
   { value: 'batch', label: 'Quét kịch bản' },
   { value: 'photo_san_xuat', label: CAU_HINH_ANH.photo_san_xuat.nhanTab },
   { value: 'photo_dong_goi', label: CAU_HINH_ANH.photo_dong_goi.nhanTab },
   { value: 'gke_tracking', label: 'Quét mã QR Tracking' },
+  { value: 'lookup', label: 'Quét mã QR xem thông tin 1 đơn' },
 ];
 const elModeSelect = document.getElementById('mode-select');
 elModeSelect.innerHTML = MODE_OPTIONS.map(o => `<option value="${o.value}">${escapeHtml(o.label)}</option>`).join('');
