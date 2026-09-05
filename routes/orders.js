@@ -413,7 +413,17 @@ router.post('/quet-hang-loat/bat-dau', async (req, res) => {
   };
   _congViecHangLoat.set(jobId, job);
 
-  const { headers, rows } = await orderService.getAll({ fresh: true });
+  // Job đã đăng ký (đồng bộ) TRƯỚC dòng await này để đóng khe hở race (xem commit trước) — nghĩa là
+  // nếu chính lệnh đọc Sheet dưới đây lỗi (vd Google Sheets API tạm trục trặc), phải tự dọn job "ma"
+  // vừa đăng ký, nếu không nó sẽ kẹt mãi ở 'dang_chay' và chặn MỌI lượt quét sau đó qua vòng kiểm tra
+  // ở đầu route này (tới tận khi hết hạn dọn job 15 phút) dù thực ra không có job nào đang chạy thật.
+  let headers, rows;
+  try {
+    ({ headers, rows } = await orderService.getAll({ fresh: true }));
+  } catch (err) {
+    _congViecHangLoat.delete(jobId);
+    throw err;
+  }
   if (!headers.includes('HASH_ANH_MAU') || !headers.includes('NHOM_HANG_LOAT')) {
     _congViecHangLoat.delete(jobId); // bỏ chỗ đã đặt — không có job thật nào chạy, tránh job "ma" kẹt ở trạng thái dang_chay mãi
     return res.status(400).json({ error: 'Sheet chưa có đủ 2 cột HASH_ANH_MAU/NHOM_HANG_LOAT — cần thêm vào Don_Hang_ALL trước khi dùng tính năng "Đơn hàng loạt"' });
