@@ -538,23 +538,28 @@ async function inPhoiDangChon(nut) {
 // Có nút "DỪNG" (onHuy) — bấm vào sẽ báo server đặt cờ hủy thật (route '/don-can-in/huy/:jobId'),
 // server dừng xử lý các đơn CÒN LẠI ngay (đơn đang xử lý dở vẫn hoàn tất bình thường), không chỉ đơn
 // thuần ẩn thanh tiến độ ở trình duyệt — xem routes/reports.js router.post('/don-can-in/bat-dau').
-async function inDonHangLoatCoTienDo(nut, nhanGoc, than) {
+// `tuyChon.baoLoiBangAlert` (mặc định true) — false thì KHÔNG tự alert() khi lỗi, chỉ trả về
+// {ok:false, loi} để bên gọi (vd inMaPhoiDonDangChon()) tự gộp vào 1 alert tổng kết khác. Luôn trả về
+// {ok:true} hoặc {ok:false, loi} ở mọi nhánh, kể cả khi baoLoiBangAlert=true, để bên gọi luôn biết
+// kết quả mà không phải đoán qua side-effect của alert().
+async function inDonHangLoatCoTienDo(nut, nhanGoc, than, tuyChon = {}) {
+  const baoLoiBangAlert = tuyChon.baoLoiBangAlert !== false;
   let ketQuaBatDau;
   try {
     ketQuaBatDau = await apiFetch('/reports/don-can-in/bat-dau', {
       method: 'POST', body: JSON.stringify({ ...than, dinhDang: 'pdf' }),
     });
   } catch (e) {
-    alert('Lỗi: ' + e.message);
+    if (baoLoiBangAlert) alert('Lỗi: ' + e.message);
     nut.disabled = false; nut.innerHTML = nhanGoc;
-    return;
+    return { ok: false, loi: e.message };
   }
 
   const { jobId, tongSo } = ketQuaBatDau;
   if (tongSo === 0) {
-    alert('Không có đơn nào để in.');
+    if (baoLoiBangAlert) alert('Không có đơn nào để in.');
     nut.disabled = false; nut.innerHTML = nhanGoc;
-    return;
+    return { ok: false, loi: 'Không có đơn nào để in.' };
   }
 
   const thanhTienDo = taoThanhTienDo(nut, {
@@ -572,8 +577,9 @@ async function inDonHangLoatCoTienDo(nut, nhanGoc, than) {
     } while (tienDo.trangThai !== 'xong' && tienDo.trangThai !== 'huy');
 
     if (tienDo.trangThai === 'huy') {
-      alert(`Đã dừng. Đã tạo xong ${tienDo.daXong}/${tienDo.tongSo} đơn trước khi dừng (không tải về được nữa, hãy in lại nếu cần).`);
-      return;
+      const thongBaoHuy = `Đã dừng. Đã tạo xong ${tienDo.daXong}/${tienDo.tongSo} đơn trước khi dừng (không tải về được nữa, hãy in lại nếu cần).`;
+      if (baoLoiBangAlert) alert(thongBaoHuy);
+      return { ok: false, loi: thongBaoHuy };
     }
 
     const res = await fetch(`/api/reports/don-can-in/tai-ve/${jobId}`, { credentials: 'include' });
@@ -583,8 +589,10 @@ async function inDonHangLoatCoTienDo(nut, nhanGoc, than) {
     }
     const blob = await res.blob();
     taiFileTuBlob(blob, res.headers.get('Content-Disposition'), 'don-can-in.pdf');
+    return { ok: true };
   } catch (e) {
-    alert('Lỗi: ' + e.message);
+    if (baoLoiBangAlert) alert('Lỗi: ' + e.message);
+    return { ok: false, loi: e.message };
   } finally {
     thanhTienDo.xoa();
     nut.disabled = false;
