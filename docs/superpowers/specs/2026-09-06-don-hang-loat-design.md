@@ -49,9 +49,24 @@ hoàn toàn vô hại với các bản cài đặt chưa thêm 2 cột mới.
   chọn đúng bản — nhưng PHẢI build thử Docker image sau khi thêm để xác nhận, không giả định suông.
 - **dHash 64-bit**: resize ảnh về 9×8 pixel, chuyển xám, so sánh độ sáng từng cặp pixel liền kề theo
   hàng → 64 bit → lưu dạng hex (16 ký tự).
-- **So khớp**: khoảng cách Hamming (đếm số bit khác nhau) giữa 2 hash. Ngưỡng **≤ 5/64 bit** coi là
-  cùng thiết kế — hằng số dễ chỉnh (`NGUONG_HAMMING` trong code), ưu tiên chặt để tránh gộp nhầm 2
-  thiết kế khác nhau; có thể nới lỏng sau khi thấy dữ liệu thật.
+- **Kernel resize — ĐÃ TỰ KIỂM THỬ, quan trọng**: dùng `kernel: 'nearest'` khi resize về 9×8, KHÔNG
+  dùng mặc định của `sharp` (`lanczos3`). Đã tự tạo ảnh mẫu giả lập (hình khối SVG đơn giản, không
+  đụng tới dữ liệu thật) và đo thử: với `lanczos3`, chỉ cần đổi từ PNG sang JPEG (dù chất lượng 100%,
+  gần như không mất dữ liệu) đã làm khoảng cách Hamming nhảy lên ~20/64 bit — tức COI NHƯ KHÁC HẲN
+  thiết kế dù là đúng 1 ảnh chỉ đổi định dạng. Đổi sang `kernel: 'nearest'` giảm mức chênh lệch này
+  xuống còn 0–11/64 bit tuỳ trường hợp — vẫn không hoàn hảo nhưng khá hơn nhiều. Đây là điểm dễ bị bỏ
+  qua vì trực giác thường nghĩ resize "mượt" (lanczos) tốt hơn — SAI với ảnh nét thẳng/khối màu phẳng
+  kiểu thiết kế thêu, `lanczos3` càng mượt càng phá vỡ đúng cạnh sắc mà dHash dựa vào để so sánh.
+- **Ngưỡng — CHƯA CHẮC CHẮN, cần tinh chỉnh với dữ liệu thật**: kiểm thử bằng ảnh giả lập cho thấy
+  khoảng cách giữa CÙNG 1 thiết kế (chỉ đổi định dạng/kích thước) và khoảng cách giữa 2 thiết kế THỰC
+  SỰ KHÁC NHAU **có chồng lấn** (cùng thiết kế: 0–11 bit; khác thiết kế: 6–14 bit, tuỳ ảnh) — không có
+  1 ngưỡng nào tách bạch hoàn hảo 2 nhóm này trên bộ ảnh giả lập đơn giản. Thiết kế thêu thật (nhiều
+  chi tiết hơn khối hình đơn giản trong bài test) nhiều khả năng tách bạch tốt hơn, nhưng KHÔNG có gì
+  đảm bảo trước khi thử với ảnh thật. Chọn khởi điểm **≤ 8/64 bit** (hằng số `NGUONG_HAMMING`, dễ
+  chỉnh trong code) — thiên về bắt được nhiều trường hợp cùng thiết kế hơn, chấp nhận rủi ro gộp nhầm
+  một số ít trường hợp ban đầu. **Bắt buộc phải xem lại kết quả nhóm thực tế sau lần quét đầu tiên
+  trên dữ liệu thật và chỉnh lại ngưỡng nếu cần** — đây không phải chi tiết có thể "làm đúng ngay từ
+  đầu" mà không có dữ liệu thật để đối chiếu.
 - **Gom nhóm**: coi mỗi đơn có hash là 1 đỉnh đồ thị, nối cạnh giữa 2 đơn có khoảng cách Hamming ≤
   ngưỡng, tìm các thành phần liên thông (union-find). Thành phần có ≥ 2 đơn → gán `NHOM_HANG_LOAT`
   (mã = STT_Key nhỏ nhất trong thành phần); thành phần chỉ có 1 đơn → để trống. Đây là phép so khớp
