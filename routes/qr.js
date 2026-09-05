@@ -193,7 +193,7 @@ router.post('/kich-ban/:scenarioId/kiem-tra', async (req, res) => {
   const giaTriHienTai = row[scenario.column];
 
   if (donDaKetThuc(row)) {
-    const lyDo = `Đơn đã ở trạng thái kết thúc "${row.TRANG_THAI_XUONG}" — không thể dùng kịch bản quét nào nữa`;
+    const lyDo = `Đơn ${sttKey} lỗi do đơn đã kết thúc ở trạng thái "${row.TRANG_THAI_XUONG}", không thể dùng kịch bản quét nào nữa`;
     ghiKhongCho(ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_KIEM_TRA_CHAN_DON_KET_THUC', sttKey, chiTiet: { scenario: scenario.label, tinhTrang: row.TRANG_THAI_XUONG } }));
     ghiKhongCho(ghiNhatKyQuetHangLoat({
       nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey,
@@ -205,7 +205,20 @@ router.post('/kich-ban/:scenarioId/kiem-tra', async (req, res) => {
   }
 
   if (scenario.requireStatus && giaTriHienTai !== scenario.requireStatus) {
-    const lyDo = `Đang ở '${giaTriHienTai}' (cột ${scenario.column}), kịch bản này yêu cầu đang ở '${scenario.requireStatus}'`;
+    // Diễn đạt lý do lỗi thành 1 câu tự chứa mã đơn, không lộ tên cột kỹ thuật (TRANG_THAI_PHOI/
+    // TRANG_THAI_VE_FILE) và không nhắc lại "kịch bản yêu cầu gì" (người quét đã biết mình đang dùng
+    // kịch bản nào) — theo đúng yêu cầu người dùng. Khi cột đang TRỐNG (chưa có giá trị), suy luận
+    // nguyên nhân gốc thay vì hiện dấu nháy rỗng: cột phôi/vẽ file chỉ còn trống khi đơn vẫn đang
+    // "Chưa in mã" (đã xác nhận với người dùng) — nếu đơn đã qua mốc đó mà cột vẫn trống thì đây là
+    // dữ liệu bất thường, dùng câu chung chung thay vì đổ lỗi sai nguyên nhân.
+    let lyDo;
+    if (!giaTriHienTai) {
+      lyDo = (scenario.column !== 'TRANG_THAI_XUONG' && row.TRANG_THAI_XUONG === 'Chưa in mã')
+        ? `Đơn ${sttKey} lỗi do đơn chưa được đánh dấu "Đã in mã"`
+        : `Đơn ${sttKey} lỗi do đơn chưa có dữ liệu ở bước này`;
+    } else {
+      lyDo = `Đơn ${sttKey} lỗi do đơn đang "${giaTriHienTai}"`;
+    }
     ghiKhongCho(ghiLog({
       nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_KIEM_TRA_SAI_TRANG_THAI',
       sttKey, chiTiet: { scenario: scenario.label, cot: scenario.column, trangThaiHienTai: giaTriHienTai, trangThaiCanCo: scenario.requireStatus },

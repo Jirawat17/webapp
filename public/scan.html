@@ -724,6 +724,22 @@ function renderDemNhom() {
     <div class="dem-o loi"><div class="hang-tren"><span class="dem-icon">❌</span><span class="dem-so">${soLoi}</span></div><div class="dem-nhan">Không tìm thấy</div></div>`;
 }
 
+// Nội dung 1 dòng kết quả quét (dùng chung cho "Danh sách đang quét" và "Xem lại", nhóm cảnh báo/
+// lỗi ở dongXemLaiCanBaoLoi bên dưới) — nhóm SAI_TRANG_THAI có `lyDo` do server dựng sẵn đã TỰ CHỨA
+// mã đơn (vd `Đơn 9U6.2 lỗi do đơn đang "Đã lấy phôi"` — xem routes/qr.js) nên KHÔNG hiện lại dòng
+// tiêu đề mã/loại/size/màu nữa, tránh lặp mã đơn 2 lần trên cùng 1 thẻ (theo yêu cầu người dùng).
+// Nhóm khác (KHONG_TIM_THAY, OK, trùng) có `lyDo`/nội dung không nhắc mã đơn nên vẫn cần dòng tiêu đề
+// — `item.tieuDe` (services/orderService.js, tieuDeSanPham) đã tự chứa STT_Key ở đầu rồi nên chỉ
+// hiện `tieuDe`, không ghép thêm `sttKey` phía trước (trước đây ghép thêm gây lặp, vd "9U6.2 · 9U6.2 ·...").
+function noiDungDongQuet(item) {
+  if (item.nhom === 'SAI_TRANG_THAI') {
+    return `<div class="ly-do">${escapeHtml(item.lyDo)}</div>`;
+  }
+  return `
+        <strong>${escapeHtml(item.tieuDe || item.sttKey)}</strong>
+        <div class="ly-do">${escapeHtml(item.lyDo || (item.nhom === 'OK' ? `Sẽ chuyển: ${item.trangThaiHienTai} → ${item.trangThaiSau}` : ''))}</div>`;
+}
+
 function renderDsDangQuet() {
   const el = document.getElementById('ds-dang-quet');
   if (dsQuet.length === 0) { el.innerHTML = '<p style="color:var(--color-text-faint)">Chưa quét mã nào.</p>'; return; }
@@ -731,10 +747,7 @@ function renderDsDangQuet() {
   el.innerHTML = dsQuet.map(item => `
     <div class="dong-quet ${lopNhom(item.nhom)}" id="dong-${item.key}">
       <span style="font-size:1.3rem">${nhanIconNhom(item.nhom)}</span>
-      <div class="noi-dung">
-        <strong>${escapeHtml(item.sttKey)}${item.tieuDe ? ' · ' + escapeHtml(item.tieuDe) : ''}</strong>
-        <div class="ly-do">${escapeHtml(item.lyDo || (item.nhom === 'OK' ? `Sẽ chuyển: ${item.trangThaiHienTai} → ${item.trangThaiSau}` : ''))}</div>
-      </div>
+      <div class="noi-dung">${noiDungDongQuet(item)}</div>
       <button class="btn-xoa-dong" onclick="xoaKhoiDsQuet('${item.key}', false)">XÓA</button>
     </div>`).join('');
 }
@@ -858,7 +871,7 @@ function dongTrong() {
 function dongXemLaiOK(item) {
   return `<div class="dong-xem-lai">
     <div class="noi-dung">
-      <strong>${escapeHtml(item.sttKey)}${item.tieuDe ? ' · ' + escapeHtml(item.tieuDe) : ''}</strong>
+      <strong>${escapeHtml(item.tieuDe || item.sttKey)}</strong>
       <div class="ly-do">${escapeHtml(item.tenKhachHang || '')} · Sẽ chuyển: ${escapeHtml(item.trangThaiHienTai)} → ${escapeHtml(item.trangThaiSau)}</div>
     </div>
   </div>`;
@@ -866,10 +879,7 @@ function dongXemLaiOK(item) {
 
 function dongXemLaiCanBaoLoi(item) {
   return `<div class="dong-xem-lai">
-    <div class="noi-dung">
-      <strong>${escapeHtml(item.sttKey)}${item.tieuDe ? ' · ' + escapeHtml(item.tieuDe) : ''}</strong>
-      <div class="ly-do">${escapeHtml(item.lyDo)}</div>
-    </div>
+    <div class="noi-dung">${noiDungDongQuet(item)}</div>
     <div class="nhom-nut">
       <button class="btn-daxem-xemlai" data-danxem="${item.key}">Đã xem</button>
       <button class="btn-xoa-xemlai" data-xoa="${item.key}">XÓA</button>
