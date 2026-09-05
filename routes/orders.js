@@ -402,19 +402,25 @@ router.post('/quet-hang-loat/bat-dau', async (req, res) => {
     }
   }
 
+  // Đặt chỗ (đăng ký job) NGAY, ĐỒNG BỘ, TRƯỚC bất kỳ await nào — nếu đăng ký job sau lượt đọc Sheet
+  // bên dưới (có await, nhường CPU) thì 2 request đến gần như cùng lúc vẫn có thể CÙNG lọt qua vòng
+  // kiểm tra ở trên trước khi request nào kịp đăng ký, vô hiệu hoá đúng mục đích chặn ở trên. Đăng ký
+  // trước, biết tongSo sau (điền vào job.tongSo khi đã đọc xong Sheet).
+  const jobId = crypto.randomUUID();
+  const job = {
+    tongSo: 0, daXong: 0, trangThai: 'dang_chay', daHuy: false,
+    loi: null, ketQua: null, capNhatLucNao: Date.now(),
+  };
+  _congViecHangLoat.set(jobId, job);
+
   const { headers, rows } = await orderService.getAll({ fresh: true });
   if (!headers.includes('HASH_ANH_MAU') || !headers.includes('NHOM_HANG_LOAT')) {
+    _congViecHangLoat.delete(jobId); // bỏ chỗ đã đặt — không có job thật nào chạy, tránh job "ma" kẹt ở trạng thái dang_chay mãi
     return res.status(400).json({ error: 'Sheet chưa có đủ 2 cột HASH_ANH_MAU/NHOM_HANG_LOAT — cần thêm vào Don_Hang_ALL trước khi dùng tính năng "Đơn hàng loạt"' });
   }
 
   const donThieuHash = rows.filter(d => d.DUONG_DAN_URL && !d.HASH_ANH_MAU);
-
-  const jobId = crypto.randomUUID();
-  const job = {
-    tongSo: donThieuHash.length, daXong: 0, trangThai: 'dang_chay', daHuy: false,
-    loi: null, ketQua: null, capNhatLucNao: Date.now(),
-  };
-  _congViecHangLoat.set(jobId, job);
+  job.tongSo = donThieuHash.length;
 
   res.json({ jobId, tongSo: donThieuHash.length });
 
