@@ -502,8 +502,17 @@ function taiFileTuBlob(blob, contentDisposition, tenMacDinh) {
 // Nút "IN DANH SÁCH PHÔI CỦA ĐƠN ĐANG CHỌN" — in ĐÚNG các đơn đang tick chọn (donDaChonSet), bỏ qua
 // mọi ô lọc đang hiển thị trên trang. Không cần chạy nền + tiến độ như "IN ĐƠN ĐANG CHỌN" (mẫu
 // 'phoi_ao_gop' là bảng dữ liệu thuần, không tải ảnh từng đơn nên luôn đủ nhanh) — gọi thẳng /pdf.
-async function inPhoiDangChon(nut) {
-  if (donDaChonSet.size === 0) { alert('Hãy chọn ít nhất 1 đơn muốn in.'); return; }
+// `tuyChon.sttKeys` (tuỳ chọn) — in đúng danh sách này thay vì đọc donDaChonSet hiện tại, dùng khi cần
+// in 1 danh sách đã CHỤP LẠI từ trước (xem inMaPhoiDonDangChon()), không phụ thuộc donDaChonSet có bị
+// đổi sau đó hay không. `tuyChon.baoLoiBangAlert` (mặc định true) — false thì không tự alert() khi
+// lỗi, chỉ trả {ok:false, loi} để bên gọi tự gộp vào 1 alert tổng kết khác.
+async function inPhoiDangChon(nut, tuyChon = {}) {
+  const danhSach = tuyChon.sttKeys || Array.from(donDaChonSet);
+  const baoLoiBangAlert = tuyChon.baoLoiBangAlert !== false;
+  if (danhSach.length === 0) {
+    if (baoLoiBangAlert) alert('Hãy chọn ít nhất 1 đơn muốn in.');
+    return { ok: false, loi: 'Hãy chọn ít nhất 1 đơn muốn in.' };
+  }
 
   const nhanGoc = nut.innerHTML;
   nut.disabled = true;
@@ -511,7 +520,7 @@ async function inPhoiDangChon(nut) {
 
   const qs = new URLSearchParams();
   qs.set('mau', 'phoi_ao_gop');
-  Array.from(donDaChonSet).forEach(sttKey => qs.append('sttKeys', sttKey));
+  danhSach.forEach(sttKey => qs.append('sttKeys', sttKey));
 
   try {
     const res = await fetch('/api/reports/pdf?' + qs.toString(), { credentials: 'include' });
@@ -521,8 +530,10 @@ async function inPhoiDangChon(nut) {
     }
     const blob = await res.blob();
     taiFileTuBlob(blob, res.headers.get('Content-Disposition'), 'bao-cao.pdf');
+    return { ok: true };
   } catch (e) {
-    alert('Lỗi: ' + e.message);
+    if (baoLoiBangAlert) alert('Lỗi: ' + e.message);
+    return { ok: false, loi: e.message };
   } finally {
     nut.disabled = false;
     nut.innerHTML = nhanGoc;
