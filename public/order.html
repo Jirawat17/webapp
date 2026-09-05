@@ -317,7 +317,10 @@ async function inDonHang(btn) {
     document.body.appendChild(a);
     a.click();
     a.remove();
-    URL.revokeObjectURL(url);
+    // KHÔNG revoke ngay — cùng lỗi Safari iPad/iPhone đã sửa ở taiFileTuBlob() bên orders.html: Safari
+    // tự mở tab mới trỏ tới blob: URL này (bất đồng bộ) thay vì tải file, revoke ngay khiến tab đó gặp
+    // lỗi "Lỗi WebKitBlobResource 1" vì blob đã bị huỷ trước khi kịp đọc. Trễ 1 giây cho an toàn.
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   } catch (e) {
     alert('Lỗi: ' + e.message);
   } finally {

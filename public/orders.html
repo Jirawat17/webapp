@@ -480,7 +480,12 @@ function taiFileTuBlob(blob, contentDisposition, tenMacDinh) {
   document.body.appendChild(a);
   a.click();
   a.remove();
-  URL.revokeObjectURL(url);
+  // KHÔNG revoke object URL ngay — Safari trên iPad/iPhone không tải file qua a.download như trình
+  // duyệt khác mà tự MỞ TAB MỚI trỏ thẳng tới blob: URL này (xử lý bất đồng bộ); revoke ngay khiến tab
+  // mới mở lên gặp lỗi "Safari không thể mở trang — Lỗi WebKitBlobResource 1" vì blob đã bị huỷ trước
+  // khi Safari kịp đọc (lỗi thật người dùng gặp trên iPad khi bấm IN ĐƠN ĐANG CHỌN/IN DANH SÁCH PHÔI
+  // CỦA ĐƠN ĐANG CHỌN). Trễ 1 giây đủ để Safari đọc xong nội dung trước khi dọn bộ nhớ.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 // Nút "IN DANH SÁCH PHÔI CỦA ĐƠN ĐANG CHỌN" — in ĐÚNG các đơn đang tick chọn (donDaChonSet), bỏ qua
