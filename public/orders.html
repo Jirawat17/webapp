@@ -18,6 +18,7 @@
     <button type="button" class="btn-hanh-dong phu" id="btn-in-phoi-ao" onclick="inPhoiDangChon(this)"></button>
     <button type="button" class="btn-hanh-dong phu" id="btn-in-don-dang-chon" onclick="inDonDangChon(this)"></button>
     <button type="button" class="btn-hanh-dong phu" id="btn-in-ma-phoi-don" onclick="inMaPhoiDonDangChon(this)"></button>
+    <button type="button" class="btn-hanh-dong phu" id="btn-quet-hang-loat" onclick="quetDonHangLoat(this)"></button>
   </div>
 
   <div id="panel-loc" class="panel-dieu-khien" style="display:none">
@@ -65,6 +66,10 @@
           <option value="DO">Đỏ · 7 ngày</option>
         </select>
       </div>
+      <label class="chon-tat-ca-hang truong-hang-loat" for="loc-hang-loat">
+        <input type="checkbox" id="loc-hang-loat">
+        Chỉ đơn hàng loạt
+      </label>
       <div class="truong">
         <label for="loc-loai">Loại</label>
         <select id="loc-loai"><option value="">Tất cả loại</option></select>
@@ -161,6 +166,7 @@ let donDaChonSet = new Set();
   document.getElementById('loc-phoi').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-ve-file').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-canh-bao').onchange = () => { boChonTatCaDon(); taiDon(); };
+  document.getElementById('loc-hang-loat').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-loai').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-kich-thuoc').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-mau-sac').onchange = () => { boChonTatCaDon(); taiDon(); };
@@ -191,6 +197,8 @@ let donDaChonSet = new Set();
   } else {
     btnInMaPhoiDon.style.display = 'none';
   }
+
+  document.getElementById('btn-quet-hang-loat').innerHTML = icon('scan') + ' QUÉT TÌM ĐƠN HÀNG LOẠT';
 
   // Nút "Đã..." (positive) dùng icon check, nút "Chưa..." (negative, đưa trạng thái quay lại) dùng
   // icon undo — phân biệt trực quan, không chỉ dựa vào màu (xem thêm .trang-thai-tich-cuc/.trang-thai-tieu-cuc trong style.css)
@@ -233,6 +241,7 @@ const CAC_O_LOC = ['loc-trang-thai', 'loc-phoi', 'loc-ve-file', 'loc-canh-bao', 
 
 function xoaTatCaLoc() {
   CAC_O_LOC.forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('loc-hang-loat').checked = false; // checkbox — .value không tự bỏ tick, phải set .checked riêng
   boChonTatCaDon();
   taiDon();
 }
@@ -276,6 +285,7 @@ async function taiDon() {
   const trangThaiPhoi = document.getElementById('loc-phoi').value;
   const trangThaiVeFile = document.getElementById('loc-ve-file').value;
   const canhBao = document.getElementById('loc-canh-bao').value;
+  const hangLoat = document.getElementById('loc-hang-loat').checked;
   const loai = document.getElementById('loc-loai').value;
   const kichThuoc = document.getElementById('loc-kich-thuoc').value;
   const mauSac = document.getElementById('loc-mau-sac').value;
@@ -290,6 +300,7 @@ async function taiDon() {
   if (trangThaiPhoi) qs.set('trangThaiPhoi', trangThaiPhoi);
   if (trangThaiVeFile) qs.set('trangThaiVeFile', trangThaiVeFile);
   if (canhBao) qs.set('canhBao', canhBao);
+  if (hangLoat) qs.set('hangLoat', '1');
   if (loai) qs.set('loai', loai);
   if (kichThuoc) qs.set('kichThuoc', kichThuoc);
   if (mauSac) qs.set('mauSac', mauSac);
@@ -609,6 +620,57 @@ async function inDonHangLoatCoTienDo(nut, nhanGoc, than, tuyChon = {}) {
     nut.disabled = false;
     nut.innerHTML = nhanGoc;
   }
+}
+
+// Nút "QUÉT TÌM ĐƠN HÀNG LOẠT" — quét TOÀN BỘ đơn (không phụ thuộc donDaChonSet/bộ lọc đang áp dụng)
+// đang thiếu HASH_ANH_MAU, tính hash cho ảnh mẫu, rồi gộp nhóm lại. Chạy nền + hỏi tiến độ + có nút
+// Dừng, cùng khuôn mẫu với inDonHangLoatCoTienDo() ở trên — chỉ khác domain (ảnh/hash thay vì PDF).
+async function quetDonHangLoat(nut) {
+  if (!confirm('Quét toàn bộ đơn để tìm và gộp nhóm "Đơn hàng loạt"? Có thể mất vài phút nếu nhiều đơn chưa từng được quét.')) return;
+
+  const nhanGoc = nut.innerHTML;
+  nut.disabled = true;
+  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 18 }) + ' Đang bắt đầu...';
+
+  let ketQuaBatDau;
+  try {
+    ketQuaBatDau = await apiFetch('/orders/quet-hang-loat/bat-dau', { method: 'POST' });
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
+    nut.disabled = false; nut.innerHTML = nhanGoc;
+    return;
+  }
+
+  const { jobId, tongSo } = ketQuaBatDau;
+  const thanhTienDo = taoThanhTienDo(nut, {
+    onHuy: () => { apiFetch(`/orders/quet-hang-loat/huy/${jobId}`, { method: 'POST' }).catch(() => {}); },
+  });
+  thanhTienDo.capNhat(0, tongSo);
+
+  try {
+    let tienDo;
+    do {
+      await new Promise(r => setTimeout(r, 700));
+      tienDo = await apiFetch(`/orders/quet-hang-loat/tien-do/${jobId}`);
+      thanhTienDo.capNhat(tienDo.daXong, tienDo.tongSo);
+      if (tienDo.trangThai === 'loi') throw new Error(tienDo.loi || 'Quét thất bại');
+    } while (tienDo.trangThai !== 'xong' && tienDo.trangThai !== 'huy');
+
+    const kq = tienDo.ketQua;
+    const tienToDaDung = tienDo.trangThai === 'huy' ? 'Đã dừng giữa chừng. ' : '';
+    alert(
+      `${tienToDaDung}Đã quét ${kq.soDaQuet}/${tongSo} đơn, tính được hash cho ${kq.soTinhDuocHash} đơn.\n` +
+      `Tìm thấy ${kq.soNhomTimThay} nhóm hàng loạt (tổng cộng ${kq.soDonTrongNhom} đơn thuộc 1 nhóm nào đó).`
+    );
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
+  } finally {
+    thanhTienDo.xoa();
+    nut.disabled = false;
+    nut.innerHTML = nhanGoc;
+  }
+
+  await taiDon();
 }
 
 // Nút "IN ĐƠN ĐANG CHỌN" — in ĐÚNG các đơn đang tick chọn (donDaChonSet), bỏ qua mọi ô lọc đang hiển
