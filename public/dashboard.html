@@ -44,11 +44,16 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
 <script src="/js/icons.js?v=79"></script>
 <script src="/js/api.js?v=79"></script>
 <script>
 let kyHienTai = 'toan_bo';
 const cacBieuDo = {};
+// Ghi rõ con số ngay trên biểu đồ (chartjs-plugin-datalabels) — trước đây phải bấm/rê chuột vào mới
+// thấy số qua tooltip, theo yêu cầu người dùng muốn nhìn thấy ngay không cần thao tác gì thêm.
+Chart.register(ChartDataLabels);
+let dangCheDoToiHienTai = false;
 
 (async () => {
   const user = await requireLoginOrRedirect();
@@ -57,9 +62,9 @@ const cacBieuDo = {};
 
   // Chart.js vẽ bằng <canvas>, KHÔNG tự đọc CSS variable của trang — nếu không set thủ công,
   // chữ tiêu đề/chú thích/lưới sẽ giữ nguyên màu tối mặc định, khó đọc khi bật Chế độ tối.
-  const dangToi = typeof dangCheDoToi === 'function' && dangCheDoToi();
-  Chart.defaults.color = dangToi ? '#a6a6ad' : '#52525b';
-  Chart.defaults.borderColor = dangToi ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
+  dangCheDoToiHienTai = typeof dangCheDoToi === 'function' && dangCheDoToi();
+  Chart.defaults.color = dangCheDoToiHienTai ? '#a6a6ad' : '#52525b';
+  Chart.defaults.borderColor = dangCheDoToiHienTai ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
 
   document.querySelectorAll('#thanh-chon-ky button').forEach(btn => {
     btn.onclick = () => {
@@ -136,6 +141,23 @@ async function taiThongKe() {
 // Bảng màu đủ tương phản, không chỉ dựa vào màu sắc để phân biệt (mỗi cột/lát đều có nhãn kèm theo)
 const MAU = ['#4338ca','#22c55e','#f59e0b','#ef4444','#0891b2','#a855f7','#65a30d','#64748b'];
 
+// Cấu hình chartjs-plugin-datalabels theo TỪNG loại biểu đồ — mỗi loại cần vẽ số ở vị trí/màu khác
+// nhau mới đọc rõ: lát tròn (pie) nền màu đậm nên chữ trắng nổi giữa lát; cột/đường (bar/line) vẽ
+// trên nền trong suốt nên dùng đúng màu chữ theo Chế độ tối/sáng hiện tại, kèm khung nền mờ phía sau
+// để không bị lẫn vào lưới biểu đồ.
+function datalabelsChoLoai(type) {
+  const mauChu = dangCheDoToiHienTai ? '#f4f4f5' : '#1f2937';
+  const chung = { font: { weight: 'bold', size: 11 }, formatter: v => v };
+  if (type === 'pie') {
+    return { ...chung, color: '#ffffff', textStrokeColor: 'rgba(0,0,0,0.35)', textStrokeWidth: 2 };
+  }
+  return {
+    ...chung, color: mauChu, anchor: 'end', align: 'top',
+    backgroundColor: dangCheDoToiHienTai ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.75)',
+    borderRadius: 4, padding: { top: 1, bottom: 1, left: 4, right: 4 },
+  };
+}
+
 function veBieuDo(canvasId, type, title, dataObj) {
   // taiThongKe() có thể gọi lại nhiều lần khi đổi kỳ thống kê — phải huỷ biểu đồ cũ trên cùng
   // canvas trước, nếu không Chart.js báo lỗi "Canvas is already in use".
@@ -152,6 +174,7 @@ function veBieuDo(canvasId, type, title, dataObj) {
         title: { display: true, text: title, font: { size: 14 } },
         legend: { display: type === 'pie', position: 'bottom' },
         tooltip: { enabled: true },
+        datalabels: datalabelsChoLoai(type),
       },
     },
   });

@@ -515,8 +515,10 @@ async function taiAnhChoDon(don) {
   const dinhDangMau = nhanDangDinhDangAnh(mauChinh);
   const dinhDangMockup = nhanDangDinhDangAnh(mockupChinh);
 
-  // Ảnh DƯ (thư mục có nhiều hơn 1 ảnh) — KHÔNG vẽ vào thẻ chính (không đủ chỗ), gộp lại in bổ sung ở
-  // trang riêng cuối file (xem veTrangAnhDuPdf) — chỉ giữ ảnh đúng định dạng PNG/JPEG nhận diện được.
+  // Ảnh DƯ (thư mục có nhiều hơn 1 ảnh) — KHÔNG vẽ vào thẻ chính (không đủ chỗ). Trước đây gộp lại in
+  // bổ sung ở 1 trang A4 riêng cuối file (veTrangAnhDuPdf, đã bỏ 05/09/2026 theo yêu cầu người dùng —
+  // trang đó không cần nữa); giờ chỉ dùng để BIẾT có ảnh dư hay không (anh.anhDu.length > 0) và ghi 1
+  // dòng nhắc trên chính thẻ đơn đó (xem veTheDonPdf) — chỉ giữ ảnh đúng định dạng PNG/JPEG nhận diện được.
   const anhDu = [...dsMau.slice(1), ...dsMockup.slice(1)].filter(buf => nhanDangDinhDangAnh(buf));
 
   return {
@@ -586,8 +588,24 @@ function veTheDonPdf(doc, don, anh, offsetY, caoThe) {
   doc.font('NotoSans').fontSize(9).text(`SL: ${don.SO_LUONG ?? ''} · Áo/đơn: ${don.SO_LUONG_AO_TREN_DON ?? ''}`, infoX, yInfo, { width: infoRong });
   yInfo += 13;
   doc.font('NotoSans').fontSize(9).text(`Ngày: ${dinhDangNgay(don.NGAY_LEN_DON)}`, infoX, yInfo, { width: infoRong });
+  yInfo += 13;
+
+  // Đơn có ẢNH DƯ (nguồn ảnh là thư mục Drive nhiều hơn 1 ảnh, ảnh đầu đã dùng cho 2 ô ảnh chính ở
+  // trên, các ảnh còn lại KHÔNG có chỗ trên thẻ) — bổ sung 05/09/2026, theo yêu cầu người dùng. Trước
+  // đó gộp in bổ sung ở 1 trang A4 riêng cuối file (đã bỏ hẳn trang đó), giờ ghi thẳng 1 dòng nhắc lên
+  // chính thẻ đơn để người vận hành biết cần xem thêm ở đâu, không đi kèm link URL (thẻ in giấy khổ
+  // nhỏ 100x150mm, không bấm được) — dùng doc.heightOfString() đo đúng chiều cao THẬT SỰ (có thể xuống
+  // dòng) để trừ đúng vào chỗ còn lại cho Ghi chú bên dưới, tránh đè chữ lên nhau.
+  if (anh.anhDu && anh.anhDu.length > 0) {
+    const CO_CHU_ANH_DU = 7.5;
+    const NOI_DUNG_ANH_DU = 'Còn ảnh chưa hiển thị hết, xem thêm tại trang chi tiết đơn (quét QR hoặc tìm theo mã đơn).';
+    doc.font('NotoSans-Bold').fontSize(CO_CHU_ANH_DU);
+    const caoAnhDu = doc.heightOfString(NOI_DUNG_ANH_DU, { width: infoRong });
+    doc.text(NOI_DUNG_ANH_DU, infoX, yInfo, { width: infoRong });
+    yInfo += caoAnhDu + 3;
+  }
+
   if (don.GHI_CHU) {
-    yInfo += 13;
     // In đậm + cỡ chữ lớn hẳn (15, so với 9 của các dòng khác) để nổi bật, dễ nhìn hơn hẳn — theo
     // đúng yêu cầu người dùng. Giới hạn CHIỀU CAO còn lại tới trước dòng chú thích cuối trang
     // (dongNguoiXuat, vẽ bởi veTrangDonCanInPdf) + ellipsis: true để pdfkit tự cắt bớt nếu ghi chú
@@ -602,53 +620,6 @@ function veTheDonPdf(doc, don, anh, offsetY, caoThe) {
   }
 }
 
-// Trang phụ gộp ẢNH DƯ (đơn có link THƯ MỤC Drive chứa nhiều hơn 1 ảnh — ảnh đầu đã dùng cho thẻ
-// chính, các ảnh còn lại không có chỗ trên thẻ 100x150mm nên in bổ sung ở đây) — bổ sung 04/09/2026,
-// theo yêu cầu người dùng. Khổ A4 dọc bình thường (khác khổ thẻ chính) để đủ chỗ xếp lưới nhiều ảnh,
-// mỗi ảnh ghi rõ mã đơn (STT_Key) bên dưới để dễ đối chiếu lại đúng đơn nào. KHÔNG thêm trang nào nếu
-// không có ảnh dư nào cả (trường hợp thường gặp — mỗi url chỉ trỏ đúng 1 ảnh).
-function veTrangAnhDuPdf(doc, danhSachAnhDu) {
-  if (danhSachAnhDu.length === 0) return;
-
-  const soCot = 3;
-  const le = 24;
-  const khoangCach = 10;
-  const caoNhan = 14;
-
-  function trangGomMoi() {
-    doc.addPage({ size: 'A4', margin: le });
-    return { rongTrang: doc.page.width, caoTrang: doc.page.height };
-  }
-
-  let { rongTrang, caoTrang } = trangGomMoi();
-  const rongO = (rongTrang - le * 2 - khoangCach * (soCot - 1)) / soCot;
-  const caoO = rongO + caoNhan + khoangCach;
-
-  doc.font('NotoSans-Bold').fontSize(12)
-    .text('ẢNH BỔ SUNG TỪ THƯ MỤC (ngoài ảnh chính đã in trên thẻ)', le, le);
-
-  let x = le;
-  let y = le + 26;
-
-  danhSachAnhDu.forEach((item, i) => {
-    if (y + caoO > caoTrang - le) {
-      ({ rongTrang, caoTrang } = trangGomMoi());
-      x = le; y = le;
-    }
-    try {
-      doc.image(item.buffer, x, y, { fit: [rongO, rongO] });
-    } catch (e) {
-      veOTrongPdf(doc, x, y, rongO, 'Lỗi ảnh');
-    }
-    doc.font('NotoSans').fontSize(8).fillColor('#374151')
-      .text(item.sttKey, x, y + rongO + 2, { width: rongO, align: 'center' });
-    doc.fillColor('#000000');
-
-    x += rongO + khoangCach;
-    if ((i + 1) % soCot === 0) { x = le; y += caoO; }
-  });
-}
-
 // onTienDo (tuỳ chọn) — gọi lại SAU MỖI đơn đã xử lý xong (đã tải ảnh xong), dùng để báo tiến độ ra
 // ngoài cho luồng tạo file chạy nền + polling (xem router.post('/don-can-in/bat-dau') bên dưới).
 // kiemTraHuy (tuỳ chọn) — gọi TRƯỚC MỖI đơn, trả true thì dừng ngay (không xử lý tiếp các đơn còn
@@ -661,8 +632,6 @@ async function veTrangDonCanInPdf(doc, list, dongNguoiXuat, onTienDo, kiemTraHuy
   // 1 đơn 1 trang — ảnh to hơn hẳn, dễ đối chiếu khi dán lên áo (trước đây 2 đơn/trang, ảnh nhỏ)
   const caoThe = cao - caoFooter;
 
-  const anhDuTatCa = []; // gộp ảnh dư từ MỌI đơn trong lượt in này, in bổ sung 1 lần ở cuối
-
   for (let i = 0; i < list.length; i++) {
     if (kiemTraHuy && kiemTraHuy()) break;
     if (i > 0) doc.addPage({ size: [rong, cao], margin: 0 });
@@ -674,11 +643,8 @@ async function veTrangDonCanInPdf(doc, list, dongNguoiXuat, onTienDo, kiemTraHuy
       .text(dongNguoiXuat, 4, cao - caoFooter + 1, { width: rong - 8, align: 'center' });
     doc.fillColor('#000000');
 
-    anh.anhDu.forEach(buffer => anhDuTatCa.push({ sttKey: list[i].STT_Key || '', buffer }));
     if (onTienDo) onTienDo();
   }
-
-  veTrangAnhDuPdf(doc, anhDuTatCa);
 }
 
 // onTienDo/kiemTraHuy (tuỳ chọn) — xem chú thích ở veTrangDonCanInPdf(), cùng mục đích.
@@ -770,6 +736,9 @@ const COT_PHOI_AO_CHI_TIET = [
 ];
 
 const COT_PHOI_AO_GOP = [
+  // Cũng như NGAY_LEN_DON bên dưới — 1 dòng gộp có thể đại diện NHIỀU đơn, nên STT_Key liệt kê ĐẦY
+  // ĐỦ mọi mã đơn đã gộp vào dòng đó, cách nhau dấu phẩy (xem gomNhomPhoiAo).
+  { header: 'STT_Key (MÃ ĐƠN)', key: 'STT_Key', width: 40 },
   // KHÔNG đánh dấu laNgay — cột này có thể chứa NHIỀU ngày gộp lại (xem gomNhomPhoiAo), đã được
   // định dạng sẵn thành chuỗi hiển thị, không phải 1 giá trị ngày đơn để tự format nữa.
   { header: 'NGAY_LEN_DON', key: 'NGAY_LEN_DON', width: 26 },
@@ -816,7 +785,10 @@ function soSanhKichThuoc(a, b) {
 // nhau (cập nhật 04/09/2026, theo yêu cầu người dùng — trước đó còn gộp riêng theo từng ngày, cùng
 // loại/kích/màu nhưng khác ngày bị tách thành nhiều dòng). Cột NGAY_LEN_DON của dòng gộp liệt kê ĐẦY
 // ĐỦ mọi ngày khác nhau có góp mặt trong nhóm đó, mỗi ngày chỉ hiện 1 lần (nhiều đơn cùng ngày không
-// lặp lại), sắp theo thời gian tăng dần, cách nhau bằng dấu phẩy.
+// lặp lại), sắp theo thời gian tăng dần, cách nhau bằng dấu phẩy. Cột STT_Key (bổ sung 05/09/2026,
+// theo yêu cầu người dùng) cũng liệt kê ĐẦY ĐỦ mọi mã đơn đã gộp vào dòng đó, cách nhau dấu phẩy —
+// KHÔNG loại trùng/sắp xếp lại (mỗi đơn 1 STT_Key riêng biệt, không trùng nhau như ngày), giữ đúng
+// thứ tự đơn xuất hiện trong danh sách đầu vào.
 function gomNhomPhoiAo(list) {
   const nhom = new Map();
   list.forEach(r => {
@@ -825,10 +797,11 @@ function gomNhomPhoiAo(list) {
     const mauSac = chuanHoaPhoiAo(r.MAU_SAC);
     const khoa = [loai, kichThuoc, mauSac].join('|');
     if (!nhom.has(khoa)) {
-      nhom.set(khoa, { cacNgay: new Map(), LOAI: loai, KICH_THUOC: kichThuoc, MAU_SAC: mauSac, SO_LUONG: 0 });
+      nhom.set(khoa, { cacNgay: new Map(), dsSttKey: [], LOAI: loai, KICH_THUOC: kichThuoc, MAU_SAC: mauSac, SO_LUONG: 0 });
     }
     const n = nhom.get(khoa);
     n.SO_LUONG += Number(r.SO_LUONG) || 0;
+    if (r.STT_Key) n.dsSttKey.push(r.STT_Key);
 
     const ngay = parseNgay(r.NGAY_LEN_DON);
     if (ngay) {
@@ -838,6 +811,7 @@ function gomNhomPhoiAo(list) {
   });
 
   const ketQua = Array.from(nhom.values()).map(n => ({
+    STT_Key: n.dsSttKey.join(', '),
     LOAI: n.LOAI, KICH_THUOC: n.KICH_THUOC, MAU_SAC: n.MAU_SAC, SO_LUONG: n.SO_LUONG,
     NGAY_LEN_DON: Array.from(n.cacNgay.values()).sort((a, b) => a - b).map(d => dinhDangNgay(d)).join(', '),
   }));
@@ -1015,7 +989,10 @@ function veBangPdf(doc, bang, canTrangMoi) {
   function veHang(values, dam) {
     doc.font(dam ? 'NotoSans-Bold' : 'NotoSans').fontSize(9);
     values.forEach((v, i) => {
-      doc.text(String(v ?? ''), startX + i * colWidth, y, { width: colWidth - 4, ellipsis: true });
+      // PHẢI có 'height' thì 'ellipsis' mới thật sự cắt bớt (…) ở 1 dòng — thiếu 'height' thì pdfkit
+      // XUỐNG DÒNG nội dung dài thay vì cắt, đè chồng lên dòng bảng kế tiếp (đã thấy lỗi thật khi ô
+      // gộp nhiều mã đơn/nhiều ngày — cột STT_Key/NGAY_LEN_DON ở bảng "phôi áo gộp").
+      doc.text(String(v ?? ''), startX + i * colWidth, y, { width: colWidth - 4, height: caoHang - 4, ellipsis: true });
     });
     veDuongKeNgang(y);
     y += caoHang;
