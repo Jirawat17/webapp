@@ -308,12 +308,14 @@ router.put('/:sttKey', async (req, res) => {
 });
 
 // ============================================================
-// "ĐƠN HÀNG LOẠT" — quét toàn bộ đơn thiếu HASH_ANH_MAU, tính perceptual hash (dHash) cho ảnh mẫu
-// (DUONG_DAN_URL), rồi gom nhóm các đơn có ảnh mẫu giống/gần giống nhau (khoảng cách Hamming nhỏ)
-// vào cùng 1 mã NHOM_HANG_LOAT. Chạy THỦ CÔNG khi người dùng bấm nút "QUÉT TÌM ĐƠN HÀNG LOẠT" ở
-// public/orders.html — KHÔNG có lịch chạy nền tự động. Dùng đúng mô hình "job chạy nền + hỏi tiến độ
-// + có nút Dừng" đã có ở routes/reports.js (_congViecInDon) cho "IN ĐƠN ĐANG CHỌN", chỉ khác domain.
-// Xem thiết kế đầy đủ ở docs/superpowers/specs/2026-09-06-don-hang-loat-design.md.
+// "ĐƠN HÀNG LOẠT" — quét đơn thiếu HASH_ANH_MAU TRONG PHẠM VI ĐƠN ĐANG CHỌN (tick) trên trang, tính
+// perceptual hash (dHash) cho ảnh mẫu (DUONG_DAN_URL), rồi gom nhóm các đơn có ảnh mẫu giống/gần
+// giống nhau (khoảng cách Hamming nhỏ) vào cùng 1 mã NHOM_HANG_LOAT — CHỈ so khớp nội bộ trong lô
+// đang chọn, không đụng đơn ngoài lựa chọn. Chạy THỦ CÔNG khi người dùng bấm nút "QUÉT TÌM ĐƠN HÀNG
+// LOẠT" ở public/orders.html — KHÔNG có lịch chạy nền tự động. Dùng đúng mô hình "job chạy nền + hỏi
+// tiến độ + có nút Dừng" đã có ở routes/reports.js (_congViecInDon) cho "IN ĐƠN ĐANG CHỌN", chỉ khác
+// domain. Xem thiết kế đầy đủ ở docs/superpowers/specs/2026-09-06-don-hang-loat-design.md và
+// docs/superpowers/specs/2026-09-06-quet-hang-loat-theo-lua-chon-design.md (giới hạn theo lựa chọn).
 // ============================================================
 
 // ≤ 8/64 bit khác nhau coi là cùng thiết kế — mốc KHỞI ĐIỂM, CHƯA được xác nhận bằng dữ liệu thật
@@ -340,17 +342,18 @@ function taoDSU(n) {
   return { tim, hop };
 }
 
-// Tính lại NHOM_HANG_LOAT cho TOÀN BỘ đơn đang có HASH_ANH_MAU (không chỉ các đơn vừa hash xong) — 1
-// đơn cũ đã có hash từ trước vẫn cần được xét lại vì 1 đơn MỚI vừa hash xong có thể khớp với nó. Chỉ
-// ghi lại Sheet những đơn có mã nhóm THAY ĐỔI so với hiện tại (kể cả ghi '' để xoá mã nhóm cũ không
-// còn đúng) — tránh ghi thừa hàng trăm ô không đổi mỗi lần quét.
-async function tinhLaiNhomHangLoat() {
+// Tính lại NHOM_HANG_LOAT — CHỈ trong phạm vi đơn nằm trong `sttKeySet` (lô đơn người dùng đang chọn
+// lúc bấm quét, xem docs/superpowers/specs/2026-09-06-quet-hang-loat-theo-lua-chon-design.md). Đơn
+// ngoài `sttKeySet` — dù đã có HASH_ANH_MAU — hoàn toàn không được đọc để so khớp, không bị đụng tới.
+// 1 đơn cũ đã có hash từ trước NẰM TRONG sttKeySet vẫn cần được xét lại vì 1 đơn MỚI vừa hash xong
+// trong cùng lô có thể khớp với nó. Chỉ ghi lại Sheet những đơn có mã nhóm THAY ĐỔI so với hiện tại.
+async function tinhLaiNhomHangLoat(sttKeySet) {
   // Đọc lại CẢ headers lẫn rows ở đây (không nhận headers truyền vào từ lúc job bắt đầu) — bước gộp
   // nhóm này có thể chạy sau khi vòng lặp tính hash phía trên đã kéo dài, cấu trúc cột trong Sheet có
   // thể đã đổi trong lúc đó; ghi bằng headers cũ có thể ghi nhầm cột (xem quy ước tương tự ở
   // services/orderService.js update() — luôn đọc thật ngay trước khi ghi).
   const { headers, rows: tatCaDon } = await orderService.getAll();
-  const coHash = tatCaDon.filter(d => d.HASH_ANH_MAU);
+  const coHash = tatCaDon.filter(d => sttKeySet.has(d.STT_Key) && d.HASH_ANH_MAU);
 
   const dsu = taoDSU(coHash.length);
   for (let i = 0; i < coHash.length; i++) {
@@ -368,19 +371,31 @@ async function tinhLaiNhomHangLoat() {
     theoNhom.get(root).push(don);
   });
 
-  const maNhomTheoSttKey = new Map(); // STT_Key -> mã nhóm (chỉ chứa đơn thuộc nhóm ≥ 2 đơn)
+  const maNhomTheoSttKey = new Map(); // STT_Key -> mã nhóm (chỉ chứa đơn thuộc component ≥ 2 đơn)
   let soNhomTimThay = 0;
   for (const dsDonTrongNhom of theoNhom.values()) {
-    if (dsDonTrongNhom.length < 2) continue;
+    if (dsDonTrongNhom.length < 2) continue; // component chỉ 1 đơn — giữ nguyên mã nhóm hiện có, xem bên dưới
     soNhomTimThay++;
-    const maNhom = dsDonTrongNhom.map(d => d.STT_Key).sort()[0];
+    // Nếu trong component đã có sẵn ≥1 mã nhóm cũ (đơn từng được gộp nhóm ở lần quét trước, có thể
+    // với đơn KHÔNG nằm trong lô đang chọn) — NHẬP vào nhóm cũ đó (mã nhỏ nhất nếu có nhiều mã khác
+    // nhau) thay vì tạo mã mới, để không "tách" đơn ra khỏi nhóm cũ nó vẫn đang thuộc về.
+    const cacMaCu = dsDonTrongNhom.map(d => d.NHOM_HANG_LOAT).filter(Boolean).sort((a, b) => a.localeCompare(b, 'vi'));
+    const maNhom = cacMaCu[0] || dsDonTrongNhom.map(d => d.STT_Key).sort()[0];
     dsDonTrongNhom.forEach(d => maNhomTheoSttKey.set(d.STT_Key, maNhom));
   }
 
   let soDonTrongNhom = 0;
   for (const don of tatCaDon) {
-    const maNhomMoi = maNhomTheoSttKey.get(don.STT_Key) || '';
-    if (maNhomMoi) soDonTrongNhom++;
+    if (!sttKeySet.has(don.STT_Key)) continue; // ngoài lô đang chọn — không đọc/so/ghi
+    // Đơn KHÔNG khớp ai khác trong lô lần này (không có trong maNhomTheoSttKey) — giữ nguyên mã nhóm
+    // hiện tại (có thể nó vẫn thực sự trùng thiết kế với 1 đơn ngoài lô ta không kiểm tra lại lần
+    // này), TUYỆT ĐỐI không suy ra maNhomMoi = '' rồi xoá mất mã nhóm cũ.
+    if (!maNhomTheoSttKey.has(don.STT_Key)) {
+      if (don.NHOM_HANG_LOAT) soDonTrongNhom++;
+      continue;
+    }
+    const maNhomMoi = maNhomTheoSttKey.get(don.STT_Key);
+    soDonTrongNhom++;
     if ((don.NHOM_HANG_LOAT || '') !== maNhomMoi) {
       await updateCells(orderService.TAB, headers, don._row, { NHOM_HANG_LOAT: maNhomMoi });
     }
@@ -390,6 +405,14 @@ async function tinhLaiNhomHangLoat() {
 }
 
 router.post('/quet-hang-loat/bat-dau', async (req, res) => {
+  // Chỉ quét/gộp nhóm trong phạm vi đơn đang được chọn (tick) trên trang — xem
+  // docs/superpowers/specs/2026-09-06-quet-hang-loat-theo-lua-chon-design.md.
+  const { sttKeys } = req.body;
+  if (!Array.isArray(sttKeys) || sttKeys.length === 0 || sttKeys.some(k => typeof k !== 'string')) {
+    return res.status(400).json({ error: 'Thiếu danh sách đơn đang chọn (sttKeys) — hãy chọn ít nhất 1 đơn trước khi quét.' });
+  }
+  const sttKeySet = new Set(sttKeys);
+
   donDepJobHangLoatCu();
 
   // Chặn chạy 2 lượt quét cùng lúc (double-click, 2 tab, 2 người cùng bấm) — job này GHI vào Sheet
@@ -429,7 +452,7 @@ router.post('/quet-hang-loat/bat-dau', async (req, res) => {
     return res.status(400).json({ error: 'Sheet chưa có đủ 2 cột HASH_ANH_MAU/NHOM_HANG_LOAT — cần thêm vào Don_Hang_ALL trước khi dùng tính năng "Đơn hàng loạt"' });
   }
 
-  const donThieuHash = rows.filter(d => d.DUONG_DAN_URL && !d.HASH_ANH_MAU);
+  const donThieuHash = rows.filter(d => sttKeySet.has(d.STT_Key) && d.DUONG_DAN_URL && !d.HASH_ANH_MAU);
   job.tongSo = donThieuHash.length;
 
   res.json({ jobId, tongSo: donThieuHash.length });
@@ -463,7 +486,7 @@ router.post('/quet-hang-loat/bat-dau', async (req, res) => {
       // Luôn tính lại nhóm SAU vòng lặp trên, kể cả khi bị hủy giữa chừng — tận dụng các hash đã tính
       // được thay vì bỏ phí, và cũng để bắt các thay đổi khác (đơn bị xoá ảnh mẫu chẳng hạn — xem
       // services/orderService.js) kể cả khi không có đơn nào mới cần tính hash ở vòng lặp trên.
-      const { soNhomTimThay, soDonTrongNhom } = await tinhLaiNhomHangLoat();
+      const { soNhomTimThay, soDonTrongNhom } = await tinhLaiNhomHangLoat(sttKeySet);
 
       job.ketQua = { soDaQuet: job.daXong, soTinhDuocHash, soNhomTimThay, soDonTrongNhom };
       job.trangThai = job.daHuy ? 'huy' : 'xong';

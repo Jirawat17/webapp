@@ -622,11 +622,15 @@ async function inDonHangLoatCoTienDo(nut, nhanGoc, than, tuyChon = {}) {
   }
 }
 
-// Nút "QUÉT TÌM ĐƠN HÀNG LOẠT" — quét TOÀN BỘ đơn (không phụ thuộc donDaChonSet/bộ lọc đang áp dụng)
-// đang thiếu HASH_ANH_MAU, tính hash cho ảnh mẫu, rồi gộp nhóm lại. Chạy nền + hỏi tiến độ + có nút
-// Dừng, cùng khuôn mẫu với inDonHangLoatCoTienDo() ở trên — chỉ khác domain (ảnh/hash thay vì PDF).
+// Nút "QUÉT TÌM ĐƠN HÀNG LOẠT" — CHỈ quét trong phạm vi đơn đang tick chọn (donDaChonSet), tính hash
+// cho ảnh mẫu rồi gộp nhóm — không đụng đơn ngoài lựa chọn (xem
+// docs/superpowers/specs/2026-09-06-quet-hang-loat-theo-lua-chon-design.md). Chạy nền + hỏi tiến độ
+// + có nút Dừng, cùng khuôn mẫu với inDonHangLoatCoTienDo() ở trên — chỉ khác domain (ảnh/hash thay vì PDF).
 async function quetDonHangLoat(nut) {
-  if (!confirm('Quét toàn bộ đơn để tìm và gộp nhóm "Đơn hàng loạt"? Có thể mất vài phút nếu nhiều đơn chưa từng được quét.')) return;
+  if (donDaChonSet.size === 0) { alert('Hãy chọn ít nhất 1 đơn muốn quét.'); return; }
+
+  const danhSach = Array.from(donDaChonSet);
+  if (!confirm(`Quét ${danhSach.length} đơn đang chọn để tìm và gộp nhóm "Đơn hàng loạt"? Có thể mất vài phút nếu nhiều đơn chưa từng được quét.`)) return;
 
   const nhanGoc = nut.innerHTML;
   nut.disabled = true;
@@ -634,7 +638,7 @@ async function quetDonHangLoat(nut) {
 
   let ketQuaBatDau;
   try {
-    ketQuaBatDau = await apiFetch('/orders/quet-hang-loat/bat-dau', { method: 'POST' });
+    ketQuaBatDau = await apiFetch('/orders/quet-hang-loat/bat-dau', { method: 'POST', body: JSON.stringify({ sttKeys: danhSach }) });
   } catch (e) {
     alert('Lỗi: ' + e.message);
     nut.disabled = false; nut.innerHTML = nhanGoc;
