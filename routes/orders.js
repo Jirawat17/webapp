@@ -444,7 +444,15 @@ router.post('/quet-hang-loat/bat-dau', async (req, res) => {
         const dsMau = await taiDsAnh(don.DUONG_DAN_URL);
         const hash = dsMau[0] ? await tinhHashAnh(dsMau[0]) : null;
         if (hash) {
-          await updateCells(orderService.TAB, headers, don._row, { HASH_ANH_MAU: hash });
+          // Đọc lại headers ngay trước khi ghi (không dùng `headers` chụp từ đầu job) — vòng lặp này
+          // có thể chạy nhiều phút cho lô lớn, cấu trúc cột trong Sheet có thể đổi giữa chừng (đặc
+          // biệt dễ xảy ra ở lần dùng đầu tiên — người dùng vừa tự thêm 2 cột HASH_ANH_MAU/
+          // NHOM_HANG_LOAT xong là bấm quét ngay). orderService.getAll() (không truyền fresh) dùng
+          // cache 10 giây (services/sheetsService.js readTabCached) nên gần như miễn phí, không phải
+          // 1 lượt gọi mạng mới cho mỗi đơn — cùng quy ước "đọc thật ngay trước khi ghi" đã áp dụng ở
+          // tinhLaiNhomHangLoat() bên dưới và services/orderService.js update().
+          const { headers: headersHienTai } = await orderService.getAll();
+          await updateCells(orderService.TAB, headersHienTai, don._row, { HASH_ANH_MAU: hash });
           soTinhDuocHash++;
         }
 
