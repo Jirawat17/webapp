@@ -152,6 +152,21 @@ async function update(sttKey, updates, user, tuyChon = {}) {
 
   const updatesSauInMa = tinhPhoiVeFileTuDongKhiInMa(row, updates);
   const updatesDaTinh = tinhTinhTrangTuDong(row, updatesSauInMa);
+
+  // Ảnh mẫu đổi thì hash cũ (nếu Sheet đã có cột) không còn đúng nữa — xoá để lượt "Quét tìm đơn hàng
+  // loạt" kế tiếp (routes/orders.js) tính lại, tránh nhóm hàng loạt sai lặng lẽ theo ảnh cũ đã không
+  // còn tồn tại. Guard theo headers.includes(...) — vô hại với Sheet chưa thêm 2 cột này (xem
+  // docs/superpowers/specs/2026-09-06-don-hang-loat-design.md mục 2).
+  if (
+    headers.includes('HASH_ANH_MAU') &&
+    updatesDaTinh.DUONG_DAN_URL !== undefined &&
+    updatesDaTinh.DUONG_DAN_URL !== row.DUONG_DAN_URL &&
+    updatesDaTinh.HASH_ANH_MAU === undefined
+  ) {
+    updatesDaTinh.HASH_ANH_MAU = '';
+    if (headers.includes('NHOM_HANG_LOAT')) updatesDaTinh.NHOM_HANG_LOAT = '';
+  }
+
   kiemTraTinhHopLy(row, updatesDaTinh); // kiểm tra SAU khi đã tính tự động, để không báo nhầm khi chính việc tự động hoá làm cho tổ hợp trở nên hợp lệ
 
   await updateCells(TAB, headers, row._row, updatesDaTinh); // tự xoá cache của tab sau khi ghi (xem sheetsService)

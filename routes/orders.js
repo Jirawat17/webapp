@@ -1,11 +1,15 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const orderService = require('../services/orderService');
 const alertService = require('../services/alertService');
 const scenarioService = require('../services/scenarioService');
 const { parseNgay } = require('../services/dateUtils');
 const { DANH_SACH_TRANG_THAI_BAO_CAO, TRANG_THAI_PHOI_VALUES, TRANG_THAI_VE_FILE_VALUES, khopGiaTriLoc } = require('../data/pipelineTinhTrang');
 const { ghiLog, layLichSuTheoDon, layLichSuChuyenSangTrangThai } = require('../services/logService');
+const { updateCells } = require('../services/sheetsService');
+const { taiDsAnh } = require('../services/anhNguonService');
+const { tinhHashAnh, khoangCachHamming } = require('../services/perceptualHashService');
 const { requireLogin } = require('../middleware/auth');
 
 router.use(requireLogin);
@@ -106,7 +110,7 @@ router.get('/', async (req, res) => {
 
   const {
     trangThai, trangThaiPhoi, trangThaiVeFile, kh, tuNgay, denNgay,
-    loai, kichThuoc, mauSac, hangVanChuyen, canhBao, sapXep,
+    loai, kichThuoc, mauSac, hangVanChuyen, canhBao, sapXep, hangLoat,
   } = req.query;
   if (trangThai) list = list.filter(r => khopGiaTriLoc(r.TRANG_THAI_XUONG, trangThai));
   if (trangThaiPhoi) list = list.filter(r => khopGiaTriLoc(r.TRANG_THAI_PHOI, trangThaiPhoi));
@@ -116,6 +120,7 @@ router.get('/', async (req, res) => {
   if (mauSac) list = list.filter(r => r.MAU_SAC === mauSac);
   if (hangVanChuyen) list = list.filter(r => r.HANG_VAN_CHUYEN === hangVanChuyen);
   if (canhBao) list = list.filter(r => r.CanhBao === canhBao);
+  if (hangLoat) list = list.filter(r => !!r.NHOM_HANG_LOAT);
   if (kh) {
     const tuKhoa = kh.toLowerCase();
     list = list.filter(r =>
@@ -300,6 +305,189 @@ router.put('/:sttKey', async (req, res) => {
     },
   });
   res.json(updated);
+});
+
+// ============================================================
+// "ĐƠN HÀNG LOẠT" — quét toàn bộ đơn thiếu HASH_ANH_MAU, tính perceptual hash (dHash) cho ảnh mẫu
+// (DUONG_DAN_URL), rồi gom nhóm các đơn có ảnh mẫu giống/gần giống nhau (khoảng cách Hamming nhỏ)
+// vào cùng 1 mã NHOM_HANG_LOAT. Chạy THỦ CÔNG khi người dùng bấm nút "QUÉT TÌM ĐƠN HÀNG LOẠT" ở
+// public/orders.html — KHÔNG có lịch chạy nền tự động. Dùng đúng mô hình "job chạy nền + hỏi tiến độ
+// + có nút Dừng" đã có ở routes/reports.js (_congViecInDon) cho "IN ĐƠN ĐANG CHỌN", chỉ khác domain.
+// Xem thiết kế đầy đủ ở docs/superpowers/specs/2026-09-06-don-hang-loat-design.md.
+// ============================================================
+
+// ≤ 8/64 bit khác nhau coi là cùng thiết kế — mốc KHỞI ĐIỂM, CHƯA được xác nhận bằng dữ liệu thật
+// (chỉ kiểm thử bằng ảnh giả lập lúc thiết kế tính năng, xem services/perceptualHashService.js và
+// spec mục 3). BẮT BUỘC xem lại kết quả nhóm thực tế sau lần quét đầu và chỉnh lại nếu nhóm sai/thiếu.
+const NGUONG_HAMMING = 8;
+
+const _congViecHangLoat = new Map(); // jobId -> { tongSo, daXong, trangThai, daHuy, loi, ketQua, capNhatLucNao }
+const THOI_GIAN_GIU_JOB_HANG_LOAT_MS = 15 * 60 * 1000;
+
+function donDepJobHangLoatCu() {
+  const gioiHan = Date.now() - THOI_GIAN_GIU_JOB_HANG_LOAT_MS;
+  for (const [id, job] of _congViecHangLoat) {
+    if (job.capNhatLucNao < gioiHan) _congViecHangLoat.delete(id);
+  }
+}
+
+// Union-Find (Disjoint Set Union) đơn giản — dùng để gom các đơn có hash gần nhau (khoảng cách
+// Hamming ≤ NGUONG_HAMMING) thành từng nhóm liên thông, thay vì chỉ so khớp CHÍNH XÁC từng cặp.
+function taoDSU(n) {
+  const cha = Array.from({ length: n }, (_, i) => i);
+  function tim(x) { return cha[x] === x ? x : (cha[x] = tim(cha[x])); }
+  function hop(a, b) { const ra = tim(a), rb = tim(b); if (ra !== rb) cha[ra] = rb; }
+  return { tim, hop };
+}
+
+// Tính lại NHOM_HANG_LOAT cho TOÀN BỘ đơn đang có HASH_ANH_MAU (không chỉ các đơn vừa hash xong) — 1
+// đơn cũ đã có hash từ trước vẫn cần được xét lại vì 1 đơn MỚI vừa hash xong có thể khớp với nó. Chỉ
+// ghi lại Sheet những đơn có mã nhóm THAY ĐỔI so với hiện tại (kể cả ghi '' để xoá mã nhóm cũ không
+// còn đúng) — tránh ghi thừa hàng trăm ô không đổi mỗi lần quét.
+async function tinhLaiNhomHangLoat() {
+  // Đọc lại CẢ headers lẫn rows ở đây (không nhận headers truyền vào từ lúc job bắt đầu) — bước gộp
+  // nhóm này có thể chạy sau khi vòng lặp tính hash phía trên đã kéo dài, cấu trúc cột trong Sheet có
+  // thể đã đổi trong lúc đó; ghi bằng headers cũ có thể ghi nhầm cột (xem quy ước tương tự ở
+  // services/orderService.js update() — luôn đọc thật ngay trước khi ghi).
+  const { headers, rows: tatCaDon } = await orderService.getAll();
+  const coHash = tatCaDon.filter(d => d.HASH_ANH_MAU);
+
+  const dsu = taoDSU(coHash.length);
+  for (let i = 0; i < coHash.length; i++) {
+    for (let j = i + 1; j < coHash.length; j++) {
+      if (khoangCachHamming(coHash[i].HASH_ANH_MAU, coHash[j].HASH_ANH_MAU) <= NGUONG_HAMMING) {
+        dsu.hop(i, j);
+      }
+    }
+  }
+
+  const theoNhom = new Map(); // root -> [đơn...]
+  coHash.forEach((don, i) => {
+    const root = dsu.tim(i);
+    if (!theoNhom.has(root)) theoNhom.set(root, []);
+    theoNhom.get(root).push(don);
+  });
+
+  const maNhomTheoSttKey = new Map(); // STT_Key -> mã nhóm (chỉ chứa đơn thuộc nhóm ≥ 2 đơn)
+  let soNhomTimThay = 0;
+  for (const dsDonTrongNhom of theoNhom.values()) {
+    if (dsDonTrongNhom.length < 2) continue;
+    soNhomTimThay++;
+    const maNhom = dsDonTrongNhom.map(d => d.STT_Key).sort()[0];
+    dsDonTrongNhom.forEach(d => maNhomTheoSttKey.set(d.STT_Key, maNhom));
+  }
+
+  let soDonTrongNhom = 0;
+  for (const don of tatCaDon) {
+    const maNhomMoi = maNhomTheoSttKey.get(don.STT_Key) || '';
+    if (maNhomMoi) soDonTrongNhom++;
+    if ((don.NHOM_HANG_LOAT || '') !== maNhomMoi) {
+      await updateCells(orderService.TAB, headers, don._row, { NHOM_HANG_LOAT: maNhomMoi });
+    }
+  }
+
+  return { soNhomTimThay, soDonTrongNhom };
+}
+
+router.post('/quet-hang-loat/bat-dau', async (req, res) => {
+  donDepJobHangLoatCu();
+
+  // Chặn chạy 2 lượt quét cùng lúc (double-click, 2 tab, 2 người cùng bấm) — job này GHI vào Sheet
+  // (khác job in PDF ở routes/reports.js chỉ tạo buffer tạm), nên 2 lượt chồng nhau vừa lãng phí tải
+  // lại ảnh trùng, vừa có thể ghi đè NHOM_HANG_LOAT lộn xộn nếu lượt cũ (snapshot cũ hơn) ghi SAU lượt
+  // mới.
+  for (const job of _congViecHangLoat.values()) {
+    if (job.trangThai === 'dang_chay') {
+      return res.status(409).json({ error: 'Đang có 1 lượt quét đơn hàng loạt khác đang chạy — vui lòng đợi lượt đó xong trước khi quét lại.' });
+    }
+  }
+
+  // Đặt chỗ (đăng ký job) NGAY, ĐỒNG BỘ, TRƯỚC bất kỳ await nào — nếu đăng ký job sau lượt đọc Sheet
+  // bên dưới (có await, nhường CPU) thì 2 request đến gần như cùng lúc vẫn có thể CÙNG lọt qua vòng
+  // kiểm tra ở trên trước khi request nào kịp đăng ký, vô hiệu hoá đúng mục đích chặn ở trên. Đăng ký
+  // trước, biết tongSo sau (điền vào job.tongSo khi đã đọc xong Sheet).
+  const jobId = crypto.randomUUID();
+  const job = {
+    tongSo: 0, daXong: 0, trangThai: 'dang_chay', daHuy: false,
+    loi: null, ketQua: null, capNhatLucNao: Date.now(),
+  };
+  _congViecHangLoat.set(jobId, job);
+
+  // Job đã đăng ký (đồng bộ) TRƯỚC dòng await này để đóng khe hở race (xem commit trước) — nghĩa là
+  // nếu chính lệnh đọc Sheet dưới đây lỗi (vd Google Sheets API tạm trục trặc), phải tự dọn job "ma"
+  // vừa đăng ký, nếu không nó sẽ kẹt mãi ở 'dang_chay' và chặn MỌI lượt quét sau đó qua vòng kiểm tra
+  // ở đầu route này (tới tận khi hết hạn dọn job 15 phút) dù thực ra không có job nào đang chạy thật.
+  let headers, rows;
+  try {
+    ({ headers, rows } = await orderService.getAll({ fresh: true }));
+  } catch (err) {
+    _congViecHangLoat.delete(jobId);
+    throw err;
+  }
+  if (!headers.includes('HASH_ANH_MAU') || !headers.includes('NHOM_HANG_LOAT')) {
+    _congViecHangLoat.delete(jobId); // bỏ chỗ đã đặt — không có job thật nào chạy, tránh job "ma" kẹt ở trạng thái dang_chay mãi
+    return res.status(400).json({ error: 'Sheet chưa có đủ 2 cột HASH_ANH_MAU/NHOM_HANG_LOAT — cần thêm vào Don_Hang_ALL trước khi dùng tính năng "Đơn hàng loạt"' });
+  }
+
+  const donThieuHash = rows.filter(d => d.DUONG_DAN_URL && !d.HASH_ANH_MAU);
+  job.tongSo = donThieuHash.length;
+
+  res.json({ jobId, tongSo: donThieuHash.length });
+
+  // Xử lý THẬT chạy nền sau khi đã trả response — KHÔNG await ở trên.
+  (async () => {
+    try {
+      let soTinhDuocHash = 0;
+      for (const don of donThieuHash) {
+        if (job.daHuy) break;
+
+        const dsMau = await taiDsAnh(don.DUONG_DAN_URL);
+        const hash = dsMau[0] ? await tinhHashAnh(dsMau[0]) : null;
+        if (hash) {
+          // Đọc lại headers ngay trước khi ghi (không dùng `headers` chụp từ đầu job) — vòng lặp này
+          // có thể chạy nhiều phút cho lô lớn, cấu trúc cột trong Sheet có thể đổi giữa chừng (đặc
+          // biệt dễ xảy ra ở lần dùng đầu tiên — người dùng vừa tự thêm 2 cột HASH_ANH_MAU/
+          // NHOM_HANG_LOAT xong là bấm quét ngay). orderService.getAll() (không truyền fresh) dùng
+          // cache 10 giây (services/sheetsService.js readTabCached) nên gần như miễn phí, không phải
+          // 1 lượt gọi mạng mới cho mỗi đơn — cùng quy ước "đọc thật ngay trước khi ghi" đã áp dụng ở
+          // tinhLaiNhomHangLoat() bên dưới và services/orderService.js update().
+          const { headers: headersHienTai } = await orderService.getAll();
+          await updateCells(orderService.TAB, headersHienTai, don._row, { HASH_ANH_MAU: hash });
+          soTinhDuocHash++;
+        }
+
+        job.daXong++;
+        job.capNhatLucNao = Date.now();
+      }
+
+      // Luôn tính lại nhóm SAU vòng lặp trên, kể cả khi bị hủy giữa chừng — tận dụng các hash đã tính
+      // được thay vì bỏ phí, và cũng để bắt các thay đổi khác (đơn bị xoá ảnh mẫu chẳng hạn — xem
+      // services/orderService.js) kể cả khi không có đơn nào mới cần tính hash ở vòng lặp trên.
+      const { soNhomTimThay, soDonTrongNhom } = await tinhLaiNhomHangLoat();
+
+      job.ketQua = { soDaQuet: job.daXong, soTinhDuocHash, soNhomTimThay, soDonTrongNhom };
+      job.trangThai = job.daHuy ? 'huy' : 'xong';
+    } catch (err) {
+      console.error('[Orders] Lỗi quét đơn hàng loạt (chạy nền):', err.message);
+      job.trangThai = 'loi';
+      job.loi = err.message;
+    }
+    job.capNhatLucNao = Date.now();
+  })();
+});
+
+router.get('/quet-hang-loat/tien-do/:jobId', (req, res) => {
+  const job = _congViecHangLoat.get(req.params.jobId);
+  if (!job) return res.status(404).json({ error: 'Không tìm thấy tiến trình (có thể đã hết hạn)' });
+  res.json({ tongSo: job.tongSo, daXong: job.daXong, trangThai: job.trangThai, loi: job.loi, ketQua: job.ketQua });
+});
+
+// Nút "DỪNG" ở public/orders.html gọi route này — chỉ đặt cờ 'daHuy', KHÔNG xoá job ngay (job vẫn
+// đang chạy nền, cần tự đọc cờ này rồi mới dừng đúng chỗ — xem router.post('/quet-hang-loat/bat-dau')).
+router.post('/quet-hang-loat/huy/:jobId', (req, res) => {
+  const job = _congViecHangLoat.get(req.params.jobId);
+  if (job && job.trangThai === 'dang_chay') job.daHuy = true;
+  res.json({ ok: true });
 });
 
 module.exports = router;
