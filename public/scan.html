@@ -40,6 +40,8 @@
       <div id="toast-vua-quet" class="toast-vua-quet"></div>
     </div>
 
+    <div id="ket-qua-vua-quet-kich-ban" class="khoi-ket-qua-vua-quet chi-che-do-kich-ban" style="display:none"></div>
+
     <div id="ket-qua-tra-cuu"></div>
 
     <button id="btn-dung-quet" class="btn-dung-quet chi-che-do-kich-ban" style="display:none"></button>
@@ -206,6 +208,10 @@ async function capNhatManHinh() {
   // style.css) — dễ ngắm hơn khi thao tác 1 mình trên máy tính có gắn máy in, không ảnh hưởng các
   // tab quét khác.
   document.getElementById('camera-wrap').classList.toggle('che-do-to', mode === 'gke_tracking');
+  // Khung camera "Quét kịch bản" rộng hơn, thấp hơn mặc định (xem .che-do-rong trong style.css +
+  // aspectRatio truyền riêng cho luồng 'batch' ở dieuChinhCamera) — dễ ngắm hơn khi cầm điện thoại
+  // ngang, dành thêm chỗ cho khối "Kết quả vừa quét" phía dưới camera.
+  document.getElementById('camera-wrap').classList.toggle('che-do-rong', mode === 'batch');
 
   let cameraCanChay = null;
 
@@ -238,6 +244,7 @@ async function capNhatManHinh() {
     setBatchOnlyVisible(true);
     renderDemNhom();
     renderDsDangQuet();
+    renderKetQuaVuaQuet();
     cameraCanChay = 'batch';
   } else {
     document.getElementById('khu-xem-lai').style.display = 'block';
@@ -339,7 +346,9 @@ async function dieuChinhCamera(muonChay) {
   if (cameraDangChayCho !== null) await dungCamera();
   cameraDangChayCho = muonChay;
   if (muonChay === 'lookup') await batDauCamera(xuLyQuetTraCuu);
-  else if (muonChay === 'batch') await batDauCamera(xuLyQuetKichBan);
+  // aspectRatio 16/9 (kết hợp .che-do-rong trong style.css) — khung camera rộng-thấp thật sự (yêu cầu
+  // thẳng camera stream theo tỉ lệ này, không chỉ crop bằng CSS) cho riêng "Quét kịch bản".
+  else if (muonChay === 'batch') await batDauCamera(xuLyQuetKichBan, 260, { aspectRatio: 16 / 9 });
   // qrbox to gấp đôi (520 so với 260 mặc định) khớp với khung camera to gấp đôi của tab này (xem
   // .che-do-to) — giữ tỉ lệ khung ngắm QR so với khung hình camera như các tab khác. facingMode
   // 'environment' (camera SAU) — bổ sung 02/09/2026: tab này giờ cũng dùng được trên điện thoại
@@ -361,7 +370,7 @@ function laLoiCameraDangBanRoi(err) {
 }
 
 async function batDauCamera(onScan, qrboxSize, tuyChon = {}) {
-  const { soLanThuLai = 2, facingMode = 'environment' } = tuyChon;
+  const { soLanThuLai = 2, facingMode = 'environment', aspectRatio } = tuyChon;
   if (!scanner) scanner = new Html5Qrcode('qr-reader');
 
   // Ghi ra Console (F12) trạng thái quyền camera THẬT SỰ theo trình duyệt (nếu hỗ trợ Permissions
@@ -377,7 +386,7 @@ async function batDauCamera(onScan, qrboxSize, tuyChon = {}) {
   for (let lan = 0; lan <= soLanThuLai; lan++) {
     const gioBatDau = Date.now();
     try {
-      await scanner.start({ facingMode }, { fps: 10, qrbox: qrboxSize || 260 }, onScan);
+      await scanner.start({ facingMode }, { fps: 10, qrbox: qrboxSize || 260, ...(aspectRatio ? { aspectRatio } : {}) }, onScan);
       capNhatHoTroFlash();
       console.log(`[Camera] Mở camera thành công sau ${Date.now() - gioBatDau}ms (facingMode=${facingMode})`);
       return;
@@ -691,6 +700,7 @@ async function xuLyQuetKichBan(sttKey) {
 
   renderDemNhom();
   renderDsDangQuet();
+  renderKetQuaVuaQuet();
 
   setTimeout(() => { dangXuLyQuet = false; }, 700);
 }
@@ -752,6 +762,34 @@ function renderDsDangQuet() {
     </div>`).join('');
 }
 
+function nhanTenNhom(nhom) { return nhom === 'OK' ? 'Sẵn sàng' : nhom === 'SAI_TRANG_THAI' ? 'Sai trạng thái' : 'Không tìm thấy'; }
+
+// Khối "Kết quả vừa quét" — luôn hiện ĐÚNG 1 đơn vừa quét gần nhất (dsQuet[0]), KHÔNG tự ẩn như
+// toast-vua-quet (biến mất sau 3.5s) — người quét thường đang thao tác tay ngoài kho, cần đủ thời
+// gian đọc kỹ tình trạng đơn vừa quét thay vì phải nhìn đúng lúc toast còn hiện. Chỉ bị ghi đè khi
+// có lượt quét MỚI (gọi lại hàm này), không tự đổi theo thời gian.
+function renderKetQuaVuaQuet() {
+  const el = document.getElementById('ket-qua-vua-quet-kich-ban');
+  // LUÔN giữ "chi-che-do-kich-ban" trong className (không ghi đè mất) — setBatchOnlyVisible() dựa
+  // vào đúng class này để ẩn khối này khi chuyển sang chế độ khác (Tra cứu/Tracking/Chụp ảnh); nếu
+  // mất class này ở đây, khối sẽ bị kẹt hiện luôn kể cả sau khi rời khỏi "Quét kịch bản".
+  if (dsQuet.length === 0) {
+    el.className = 'khoi-ket-qua-vua-quet chi-che-do-kich-ban';
+    el.innerHTML = '<p style="color:var(--color-text-faint);margin:0">Chưa quét mã nào.</p>';
+    return;
+  }
+  const item = dsQuet[0];
+  el.className = 'khoi-ket-qua-vua-quet chi-che-do-kich-ban ' + lopNhom(item.nhom);
+  const dongTrangThai = item.nhom === 'OK'
+    ? `Trạng thái: ${escapeHtml(item.trangThaiHienTai)} → ${escapeHtml(item.trangThaiSau)}`
+    : escapeHtml(item.lyDo);
+  el.innerHTML = `
+    <div class="hang-tren"><span class="icon-lon">${nhanIconNhom(item.nhom)}</span><strong>${escapeHtml(nhanTenNhom(item.nhom))}</strong></div>
+    <div class="tieu-de-lon">${escapeHtml(item.tieuDe || item.sttKey)}</div>
+    ${item.tenKhachHang ? `<div class="dong-khach-hang">Khách hàng: ${escapeHtml(item.tenKhachHang)}</div>` : ''}
+    <div class="dong-trang-thai">${dongTrangThai}</div>`;
+}
+
 function nhayDong(key) {
   const el = document.getElementById('dong-' + key);
   if (!el) return;
@@ -762,7 +800,7 @@ function nhayDong(key) {
 function xoaKhoiDsQuet(key, tuManXemLai) {
   dsQuet = dsQuet.filter(x => x.key !== key);
   renderDemNhom();
-  if (tuManXemLai) renderXemLai(); else renderDsDangQuet();
+  if (tuManXemLai) renderXemLai(); else { renderDsDangQuet(); renderKetQuaVuaQuet(); }
 }
 
 document.getElementById('btn-dung-quet').onclick = async () => {
