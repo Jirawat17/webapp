@@ -13,11 +13,36 @@
   <h2>Đơn của tôi</h2>
   <p style="color:var(--color-text-muted);margin:-8px 0 20px">Đơn bạn đang chạy máy, chưa chuyển sang "Đã sản xuất" — chỉ đúng việc đang dở, không lẫn với toàn bộ đơn hàng.</p>
 
-  <div id="loc-nguoi-van-hanh-wrap" class="inline-form" style="display:none">
+  <div class="inline-form">
     <div class="truong">
+      <label for="loc-trang-thai">Trạng thái</label>
+      <select id="loc-trang-thai"><option value="Đang chạy máy" selected>Đang chạy máy</option></select>
+    </div>
+    <div class="truong truong-rong">
+      <label for="loc-kh">Tìm theo tên đơn / mã KH</label>
+      <input id="loc-kh" placeholder="STT_Key hoặc mã khách hàng">
+    </div>
+    <div class="truong truong-ngay">
+      <label for="loc-tu-ngay">Từ ngày</label>
+      <input type="date" id="loc-tu-ngay">
+    </div>
+    <div class="truong truong-ngay">
+      <label for="loc-den-ngay">Đến ngày</label>
+      <input type="date" id="loc-den-ngay">
+    </div>
+    <div class="truong">
+      <label for="sap-xep">Sắp xếp theo</label>
+      <select id="sap-xep">
+        <option value="">Ngày lên đơn — mới nhất trước (mặc định)</option>
+        <option value="ngay_cu_nhat">Ngày lên đơn — cũ nhất trước</option>
+        <option value="ma_don">Mã đơn (STT_Key) — A đến Z</option>
+      </select>
+    </div>
+    <div id="loc-nguoi-van-hanh-wrap" class="truong" style="display:none">
       <label for="loc-nguoi-van-hanh">Người sản xuất</label>
       <select id="loc-nguoi-van-hanh"><option value="">Tất cả người sản xuất</option></select>
     </div>
+    <button type="button" class="btn-hanh-dong phu" onclick="xoaTatCaLoc()">Xoá bộ lọc</button>
   </div>
 
   <div id="danh-sach-don" class="order-list"></div>
@@ -45,8 +70,35 @@ let user; // dùng lại ở taiDon() (biết vaiTro để quyết định hiệ
     document.getElementById('loc-nguoi-van-hanh').onchange = () => taiDon();
   }
 
+  document.getElementById('loc-kh').oninput = debounce(() => taiDon(), 400);
+  document.getElementById('loc-tu-ngay').onchange = () => {
+    const denNgay = document.getElementById('loc-den-ngay');
+    if (document.getElementById('loc-tu-ngay').value && !denNgay.value) denNgay.value = ngayHomNayYYYYMMDD();
+    taiDon();
+  };
+  document.getElementById('loc-den-ngay').onchange = () => taiDon();
+  document.getElementById('sap-xep').onchange = () => taiDon();
+
   await taiDon();
 })();
+
+function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+
+function ngayHomNayYYYYMMDD() {
+  const d = new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
+
+function xoaTatCaLoc() {
+  document.getElementById('loc-kh').value = '';
+  document.getElementById('loc-tu-ngay').value = '';
+  document.getElementById('loc-den-ngay').value = '';
+  document.getElementById('sap-xep').value = '';
+  if (user.vaiTro === 'admin') document.getElementById('loc-nguoi-van-hanh').value = '';
+  taiDon();
+}
 
 // Ngày rút gọn D/M (không năm) — khớp cách hiển thị đang dùng ở trang Danh sách đơn hàng
 function dinhDangNgayNgan(giaTri) {
@@ -60,9 +112,17 @@ async function taiDon() {
 
   const laAdmin = user.vaiTro === 'admin';
   const nguoiVanHanhDangLoc = laAdmin ? document.getElementById('loc-nguoi-van-hanh').value : '';
+  const kh = document.getElementById('loc-kh').value;
+  const tuNgay = document.getElementById('loc-tu-ngay').value;
+  const denNgay = document.getElementById('loc-den-ngay').value;
+  const sapXep = document.getElementById('sap-xep').value;
 
   const qs = new URLSearchParams({ trangThai: 'Đang chạy máy' });
   if (nguoiVanHanhDangLoc) qs.set('nguoiVanHanh', nguoiVanHanhDangLoc);
+  if (kh) qs.set('kh', kh);
+  if (tuNgay) qs.set('tuNgay', tuNgay);
+  if (denNgay) qs.set('denNgay', denNgay);
+  if (sapXep) qs.set('sapXep', sapXep);
 
   let list;
   try {
@@ -87,7 +147,8 @@ async function taiDon() {
   // đúng đơn mình đang vận hành, hoặc đơn không xác định được ai đang chạy (an toàn, tránh thất lạc)
   // — không cần lọc lại lần nữa ở đây.
   if (list.length === 0) {
-    el.innerHTML = `<div class="trang-thai-rong">${icon('package')}<p>${nguoiVanHanhDangLoc ? 'Không có đơn nào khớp bộ lọc.' : 'Bạn chưa chạy máy đơn nào — mọi việc đã xong hoặc chưa bắt đầu.'}</p></div>`;
+    const coLocNaoDangChon = nguoiVanHanhDangLoc || kh || tuNgay || denNgay;
+    el.innerHTML = `<div class="trang-thai-rong">${icon('package')}<p>${coLocNaoDangChon ? 'Không có đơn nào khớp bộ lọc.' : 'Bạn chưa chạy máy đơn nào — mọi việc đã xong hoặc chưa bắt đầu.'}</p></div>`;
     return;
   }
 
