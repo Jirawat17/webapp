@@ -91,3 +91,36 @@ quét chậm/nhầm ranh giới.
   bền khi mã bị bẩn/rách nhưng cũng làm module dày đặc hơn cho cùng 1 kích thước in, có thể phản tác
   dụng (khó quét hơn ở khoảng cách thường) — dữ liệu mã hoá (STT_Key) đã rất ngắn nên lợi ích không
   rõ ràng, giữ nguyên để tránh rủi ro không cần thiết.
+
+## Cập nhật 3 — BỎ HẲN sharp, vẽ viền/khung bằng PDFKit (đổi kiến trúc)
+
+Người dùng báo tiếp: sau Cập nhật 1 (chặn treo bằng timeout 5s), "IN ĐƠN" không còn treo vô hạn
+nhưng CHẬM RÕ RỆT, không chấp nhận được — khớp đúng giả thuyết đã nêu ở Cập nhật 1: `sharp` không
+treo mãi mãi nhưng vẫn liên tục THẤT BẠI/CHẬM ở tầng native trên môi trường production, khiến MỖI mã
+QR đều ăn trọn (hoặc gần trọn) 5 giây hẹn giờ trước khi rơi vào nhánh dự phòng — với 1 lô nhiều đơn,
+tổng thời gian cộng dồn rất lớn (vd 20 đơn × 5s = 100 giây).
+
+Đây là lần thất bại thứ 2 liên tiếp của hướng "dùng sharp raster hoá viền/khung" (Cập nhật 1 lẫn 2
+đều dựa trên sharp) — theo đúng nguyên tắc "2-3 lần vá không xong thì xem lại kiến trúc", chuyển hẳn
+sang cách tiếp cận KHÁC BẢN CHẤT thay vì vá thêm lần 3: **không cần sharp/raster hoá gì cả** — viền
+trắng + khung đen chỉ là 2 hình chữ nhật tô màu đặc, PDFKit (thư viện đã dùng sẵn để tạo toàn bộ PDF
+này) vẽ hình chữ nhật NGAY TRONG NÓ, hoàn toàn bằng vector, không qua ảnh raster/binary native nào.
+
+- `services/qrService.js`: bỏ hẳn `require('sharp')`, quay lại đúng bản gốc — chỉ sinh mã QR thô,
+  không vẽ viền/khung gì trong hàm này nữa. Không còn `TY_LE_KICH_THUOC_CO_KHUNG`, không còn cơ chế
+  timeout/fallback (không cần nữa — không có gì để treo/chậm).
+- `routes/reports.js` (`veTheDonPdf()`): vẽ TRỰC TIẾP bằng `doc.rect(...).fill(...)` — hình chữ nhật
+  ĐEN kích thước đầy đủ trước (khung ngoài), rồi hình chữ nhật TRẮNG nhỏ hơn đè lên (viền), rồi
+  `doc.image()` đặt mã QR thô lên trên cùng, đúng giữa — 3 lệnh vẽ vector, không có gì để chậm/treo.
+  **Lưu ý dễ mắc lỗi**: `.fill(color)` của PDFKit ĐỔI LUÔN `fillColor` hiện tại của cả `doc` — PHẢI
+  gọi lại `doc.fillColor('#000000')` ngay sau đó, nếu không toàn bộ chữ vẽ tiếp theo (thông tin đơn
+  bên cạnh QR) sẽ vô hình vì bị vẽ màu trắng lên nền trắng.
+- Đã render thử 1 file PDF mẫu thật bằng script độc lập (PDFKit + qrcode có sẵn trong `node_modules`
+  của sandbox) và xem trực tiếp qua trình duyệt — khung đen/viền trắng/mã QR hiển thị đúng, xếp lớp
+  chính xác như ảnh tham khảo người dùng gửi.
+- Bản Excel (`veSheetDonCanInExcel`) KHÔNG có viền/khung (quay lại đúng hành vi gốc trước khi có tính
+  năng này) — chỉ nhúng mã QR thô như cũ. Ưu tiên khôi phục tốc độ ổn định cho bản PDF (thứ thực sự
+  được in/chụp ảnh để quét) trước; thêm viền/khung cho Excel (nếu cần) là việc RIÊNG, để sau.
+- `sharp` vẫn còn dùng cho tính năng đối chiếu ảnh hàng loạt (`services/perceptualHashService.js`,
+  dùng `.resize()` chứ không phải `.extend()`) — KHÔNG đụng gì, đã có bằng chứng hoạt động ổn định
+  trên production (người dùng đã dùng thật tính năng đó thành công) nên không nằm trong diện nghi vấn.
