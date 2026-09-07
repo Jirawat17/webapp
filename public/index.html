@@ -14,6 +14,14 @@
   <h1>Xưởng Thêu <span style="font-size:0.4em;font-weight:400;color:var(--color-text-muted);vertical-align:middle">Phiên bản 68</span></h1>
   <p>Chào mừng đến với Giao diện quản lý xưởng thêu</p>
   <div id="danh-sach-ten" class="ten-list">Đang tải danh sách nhân viên...</div>
+  <div id="khoi-nhap-mat-khau" style="display:none;margin-top:16px">
+    <p>Nhập mật khẩu cho <strong id="ten-dang-chon"></strong>:</p>
+    <input type="password" id="o-mat-khau" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" style="font-size:1.4rem;text-align:center;letter-spacing:0.3em;width:100%;max-width:200px;padding:12px;border-radius:8px;border:1px solid var(--color-border)">
+    <div style="display:flex;gap:8px;margin-top:12px;justify-content:center">
+      <button type="button" id="btn-dang-nhap-mat-khau" class="btn-ten">Đăng nhập</button>
+      <button type="button" id="btn-quay-lai-ten" class="btn-ten">Quay lại</button>
+    </div>
+  </div>
 
   <details class="quy-trinh">
     <summary>
@@ -97,14 +105,32 @@ async function taiDanhSach() {
     btn.className = 'btn-ten';
     btn.textContent = u.ten;
     btn.setAttribute('aria-label', 'Đăng nhập với tên ' + u.ten);
-    btn.onclick = () => dangNhap(u.ten);
+    // Tài khoản CHƯA có mật khẩu (coMatKhau=false, tài khoản cũ) — đăng nhập ngay như trước, không
+    // cần hiện ô nhập PIN. Tài khoản ĐÃ có mật khẩu — hiện ô nhập PIN trước khi đăng nhập.
+    btn.onclick = () => u.coMatKhau ? hienONhapMatKhau(u.ten) : dangNhap(u.ten);
     el.appendChild(btn);
   });
 }
 
-async function dangNhap(ten) {
+function hienONhapMatKhau(ten) {
+  document.getElementById('danh-sach-ten').style.display = 'none';
+  document.getElementById('ten-dang-chon').textContent = ten;
+  document.getElementById('khoi-nhap-mat-khau').style.display = 'block';
+  const o = document.getElementById('o-mat-khau');
+  o.value = '';
+  o.focus();
+  o.onkeydown = (e) => { if (e.key === 'Enter') dangNhap(ten, o.value); };
+  document.getElementById('btn-dang-nhap-mat-khau').onclick = () => dangNhap(ten, o.value);
+}
+
+document.getElementById('btn-quay-lai-ten').onclick = () => {
+  document.getElementById('khoi-nhap-mat-khau').style.display = 'none';
+  document.getElementById('danh-sach-ten').style.display = '';
+};
+
+async function dangNhap(ten, matKhau) {
   try {
-    await apiFetch('/auth/dang-nhap', { method: 'POST', body: JSON.stringify({ ten }) });
+    await apiFetch('/auth/dang-nhap', { method: 'POST', body: JSON.stringify({ ten, matKhau }) });
     window.location.href = '/orders.html';
   } catch (e) { alert(e.message); }
 }

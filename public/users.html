@@ -29,6 +29,10 @@
       <label for="team-moi">Team (nếu là Sản xuất)</label>
       <input id="team-moi">
     </div>
+    <div class="truong">
+      <label for="matkhau-moi">Mật khẩu (tối đa 4 số)</label>
+      <input id="matkhau-moi" inputmode="numeric" pattern="[0-9]{1,4}" maxlength="4" required>
+    </div>
     <button type="submit" class="btn-hanh-dong">Thêm nhân viên</button>
   </form>
   <table id="bang-nv" class="info-table"></table>
@@ -53,8 +57,9 @@ document.getElementById('form-them').onsubmit = async (e) => {
   const ten = document.getElementById('ten-moi').value.trim();
   const vaiTro = document.getElementById('vaitro-moi').value;
   const team = document.getElementById('team-moi').value.trim();
+  const matKhau = document.getElementById('matkhau-moi').value.trim();
   try {
-    await apiFetch('/users', { method: 'POST', body: JSON.stringify({ ten, vaiTro, team }) });
+    await apiFetch('/users', { method: 'POST', body: JSON.stringify({ ten, vaiTro, team, matKhau }) });
     e.target.reset();
     await taiDanhSach();
   } catch (err) { alert(err.message); }
@@ -63,13 +68,15 @@ document.getElementById('form-them').onsubmit = async (e) => {
 async function taiDanhSach() {
   const list = await apiFetch('/users');
   document.getElementById('bang-nv').innerHTML = `
-    <tr><th>Tên</th><th>Vai trò</th><th>Team</th><th>Trạng thái</th><th></th></tr>
+    <tr><th>Tên</th><th>Vai trò</th><th>Team</th><th>Trạng thái</th><th>Mật khẩu</th><th></th><th></th></tr>
     ${list.map(u => `
       <tr>
         <td>${escapeHtml(u.Ten)}</td>
         <td>${escapeHtml(NHAN_VAI_TRO[u.VaiTro] || u.VaiTro)}</td>
         <td>${escapeHtml(u.Team || '')}</td>
         <td>${String(u.KichHoat).toUpperCase() === 'TRUE' ? 'Đang hoạt động' : 'Đã khoá'}</td>
+        <td>${u.MatKhau ? escapeHtml(u.MatKhau) : '(chưa đặt)'}</td>
+        <td><button class="btn-hanh-dong phu" onclick="datMatKhau('${encodeURIComponent(u.Ten)}')">Đặt mật khẩu</button></td>
         <td><button class="btn-hanh-dong phu" onclick="doiKichHoat('${encodeURIComponent(u.Ten)}','${u.KichHoat}')">
           ${String(u.KichHoat).toUpperCase() === 'TRUE' ? 'Khoá' : 'Mở lại'}
         </button></td>
@@ -80,6 +87,18 @@ async function doiKichHoat(tenMaHoa, kichHoatHienTai) {
   const moi = String(kichHoatHienTai).toUpperCase() === 'TRUE' ? 'FALSE' : 'TRUE';
   await apiFetch('/users/' + tenMaHoa, { method: 'PUT', body: JSON.stringify({ KichHoat: moi }) });
   await taiDanhSach();
+}
+
+// Đặt/đặt lại mật khẩu — dùng prompt() thay vì mở form riêng, đủ dùng cho thao tác admin ít khi làm.
+async function datMatKhau(tenMaHoa) {
+  const ten = decodeURIComponent(tenMaHoa);
+  const moi = prompt(`Nhập mật khẩu mới (1-4 chữ số) cho "${ten}":`);
+  if (moi === null) return; // bấm Huỷ
+  if (!/^\d{1,4}$/.test(moi.trim())) { alert('Mật khẩu phải là 1-4 chữ số.'); return; }
+  try {
+    await apiFetch('/users/' + tenMaHoa, { method: 'PUT', body: JSON.stringify({ MatKhau: moi.trim() }) });
+    await taiDanhSach();
+  } catch (err) { alert(err.message); }
 }
 </script>
 </body>
