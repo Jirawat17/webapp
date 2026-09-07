@@ -15,10 +15,12 @@
   <div class="thanh-cong-cu-danh-sach">
     <button type="button" class="btn-hanh-dong phu" id="btn-mo-loc" onclick="batTatPanel('panel-loc')"></button>
     <button type="button" class="btn-hanh-dong phu" id="btn-mo-sap-xep" onclick="batTatPanel('panel-sap-xep')"></button>
-    <button type="button" class="btn-hanh-dong phu" id="btn-in-phoi-ao" onclick="inPhoiDangChon(this)"></button>
-    <button type="button" class="btn-hanh-dong phu" id="btn-in-don-dang-chon" onclick="inDonDangChon(this)"></button>
+    <!-- 3 nút dưới đây TẠM ẨN theo yêu cầu người dùng 07/09/2026 — CHỈ ẩn (style="display:none"),
+         KHÔNG xoá code/JS liên quan — bỏ thuộc tính style này để hiện lại khi cần. -->
+    <button type="button" class="btn-hanh-dong phu" id="btn-in-phoi-ao" onclick="inPhoiDangChon(this)" style="display:none"></button>
+    <button type="button" class="btn-hanh-dong phu" id="btn-in-don-dang-chon" onclick="inDonDangChon(this)" style="display:none"></button>
     <button type="button" class="btn-hanh-dong phu" id="btn-in-ma-phoi-don" onclick="inMaPhoiDonDangChon(this)"></button>
-    <button type="button" class="btn-hanh-dong phu" id="btn-quet-hang-loat" onclick="quetDonHangLoat(this)"></button>
+    <button type="button" class="btn-hanh-dong phu" id="btn-quet-hang-loat" onclick="quetDonHangLoat(this)" style="display:none"></button>
   </div>
 
   <div id="panel-loc" class="panel-dieu-khien" style="display:none">
