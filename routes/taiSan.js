@@ -34,7 +34,7 @@ router.post('/nhap-kho', async (req, res) => {
 
   await taiSanService.nhapKho({
     loai: String(loai).trim(), kichThuoc: String(kichThuoc).trim(), mauSac: String(mauSac).trim(),
-    soLuong: soLuongSo, nguoiNhap: user.ten, ghiChu: (ghiChu || '').trim(),
+    soLuong: soLuongSo, nguoiNhap: user.ten, vaiTro: user.vaiTro, ghiChu: (ghiChu || '').trim(),
   });
   res.json({ ok: true });
 });

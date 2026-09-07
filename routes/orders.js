@@ -294,18 +294,31 @@ router.put('/:sttKey', async (req, res) => {
   updates.NguoiCapNhatCuoi = user.ten;
   updates.ThoiGianCapNhatCuoi = new Date().toISOString();
 
+  // Đọc thật TRƯỚC khi ghi (không phải thêm 1 lượt đọc — truyền qua donDaDoc bên dưới để
+  // orderService.update() dùng lại đúng lượt đọc này, không đọc lại lần nữa) — cần biết giá trị CŨ
+  // của 3 cột trạng thái để ghi log đủ chi tiết {tu, sang} như quét QR/sửa hàng loạt đang có, thay vì
+  // chỉ ghi mỗi giá trị mới (xem docs/superpowers/specs/2026-09-07-mo-rong-log-hoat-dong-design.md).
+  const { headers, row } = await orderService.getByKey(req.params.sttKey, { fresh: true });
+  if (!row) return res.status(404).json({ error: 'Không tìm thấy đơn hàng: ' + req.params.sttKey });
+
   let updated;
   try {
-    updated = await orderService.update(req.params.sttKey, updates, user);
+    updated = await orderService.update(req.params.sttKey, updates, user, { donDaDoc: { headers, row } });
   } catch (err) {
     return res.status(400).json({ error: err.message });
   }
+
+  const truocKhiSua = {};
+  Object.keys(GIA_TRI_HOP_LE_THEO_COT).forEach(cot => {
+    if (updates[cot] !== undefined && updates[cot] !== row[cot]) truocKhiSua[cot] = row[cot] || '';
+  });
 
   await ghiLog({
     nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'CAP_NHAT_DON',
     sttKey: req.params.sttKey,
     chiTiet: {
       ...updates,
+      ...(Object.keys(truocKhiSua).length ? { _truocKhiSua: truocKhiSua } : {}),
       ...(updated._daTuDongChuyenTinhTrang ? { tuDongChuyenTinhTrangSang: updated._tinhTrangTuDongMoi } : {}),
     },
   });
@@ -412,6 +425,7 @@ async function tinhLaiNhomHangLoat(sttKeySet) {
 router.post('/quet-hang-loat/bat-dau', async (req, res) => {
   // Chỉ quét/gộp nhóm trong phạm vi đơn đang được chọn (tick) trên trang — xem
   // docs/superpowers/specs/2026-09-06-quet-hang-loat-theo-lua-chon-design.md.
+  const user = req.session.user;
   const { sttKeys } = req.body;
   if (!Array.isArray(sttKeys) || sttKeys.length === 0 || sttKeys.some(k => typeof k !== 'string')) {
     return res.status(400).json({ error: 'Thiếu danh sách đơn đang chọn (sttKeys) — hãy chọn ít nhất 1 đơn trước khi quét.' });
@@ -495,10 +509,21 @@ router.post('/quet-hang-loat/bat-dau', async (req, res) => {
 
       job.ketQua = { soDaQuet: job.daXong, soTinhDuocHash, soNhomTimThay, soDonTrongNhom };
       job.trangThai = job.daHuy ? 'huy' : 'xong';
+      // Hoạt động chạy nền, không phải 1 lần bấm-1 kết quả tức thời như các hành động khác — ghi log
+      // SAU KHI job xong (thành công hoặc bị dừng giữa chừng) vì lúc đó mới có đủ số liệu kết quả.
+      // Không gắn sttKey đơn lẻ (thao tác trên cả lô, không phải 1 đơn).
+      ghiLog({
+        nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_HANG_LOAT',
+        chiTiet: { soDonDaChon: sttKeySet.size, daHuy: job.daHuy, ...job.ketQua },
+      }).catch(err => console.error('[Orders] Lỗi ghi log nền:', err.message));
     } catch (err) {
       console.error('[Orders] Lỗi quét đơn hàng loạt (chạy nền):', err.message);
       job.trangThai = 'loi';
       job.loi = err.message;
+      ghiLog({
+        nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_HANG_LOAT_LOI',
+        chiTiet: { soDonDaChon: sttKeySet.size, loi: err.message },
+      }).catch(err2 => console.error('[Orders] Lỗi ghi log nền:', err2.message));
     }
     job.capNhatLucNao = Date.now();
   })();

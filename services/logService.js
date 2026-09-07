@@ -1,4 +1,5 @@
 const { readTabCached, getHeadersCached, appendRow } = require('./sheetsService');
+const { thoiGianVNISOString } = require('./dateUtils');
 
 const TAB = 'LichSuHoatDong';
 
@@ -8,7 +9,7 @@ const TAB = 'LichSuHoatDong';
 async function ghiLog({ nguoiDung, vaiTro, hanhDong, sttKey = '', chiTiet = '' }) {
   const headers = await getHeadersCached(TAB);
   await appendRow(TAB, headers, {
-    ThoiGian: new Date().toISOString(),
+    ThoiGian: thoiGianVNISOString(),
     NguoiDung: nguoiDung,
     VaiTro: vaiTro,
     HanhDong: hanhDong,
@@ -32,7 +33,7 @@ async function ghiNhatKyQuetHangLoat({ nguoiQuet, tenKichBan, sttKey, trangThaiC
   const TAB_QUET = 'NhatKyQuetHangLoat';
   const headers = await getHeadersCached(TAB_QUET);
   await appendRow(TAB_QUET, headers, {
-    Thoi_Gian: new Date().toISOString(),
+    Thoi_Gian: thoiGianVNISOString(),
     Nguoi_Quet: nguoiQuet,
     Ten_Kich_Ban: tenKichBan,
     STT_Key: sttKey,
@@ -136,8 +137,12 @@ async function layHoatDongCuaToi({ nguoiDung, tuNgay, denNgay }) {
       continue;
     }
     if (r.HanhDong === 'CAP_NHAT_DON') {
+      // _truocKhiSua (bổ sung 07/09/2026, xem routes/orders.js PUT /:sttKey) chứa giá trị TRƯỚC khi
+      // sửa cho từng cột trạng thái thực sự đổi — log CŨ (ghi trước ngày này) không có trường này,
+      // vẫn ra tu:'' như trước giờ (tương thích ngược hoàn toàn).
+      const truoc = (chiTiet._truocKhiSua && typeof chiTiet._truocKhiSua === 'object') ? chiTiet._truocKhiSua : {};
       COT_TRANG_THAI_CUA_DON.filter(cot => chiTiet[cot] !== undefined).forEach(cot => {
-        doiTrangThai.push({ sttKey: r.STT_Key, thoiGian: r.ThoiGian, nguon: 'Sửa tay', cot, tu: '', sang: chiTiet[cot] });
+        doiTrangThai.push({ sttKey: r.STT_Key, thoiGian: r.ThoiGian, nguon: 'Sửa tay', cot, tu: truoc[cot] || '', sang: chiTiet[cot] });
       });
       continue;
     }

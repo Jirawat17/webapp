@@ -73,4 +73,21 @@ function dinhDangNgayGioVN(d = new Date()) {
   return `${lay('day')}/${lay('month')}/${lay('year')} ${lay('hour')}:${lay('minute')}`;
 }
 
-module.exports = { parseNgay, dinhDangNgay, dinhDangNgayGioVN, dinhDangNgayGioNgan };
+// Chuỗi thời gian ISO nhưng theo giờ Việt Nam (GMT+7), dùng khi GHI (không chỉ hiển thị) cột
+// "Thời gian" vào các tab lịch sử/nhật ký (LichSuHoatDong, NhatKyQuetHangLoat, LichSuNhapPhoi) — để
+// ai mở thẳng Google Sheet ra xem cũng thấy đúng giờ Việt Nam, không phải giờ UTC dễ hiểu nhầm lệch
+// 7 tiếng. Vẫn giữ hậu tố "+07:00" (không bỏ trống/không phải "Z") nên new Date(...) ở MỌI nơi khác
+// (sắp xếp theo thời gian, lọc khoảng ngày...) vẫn đọc ra ĐÚNG thời điểm tuyệt đối — chỉ đổi CÁCH
+// HIỂN THỊ trong chuỗi lưu trữ, không đổi giá trị thời gian thật.
+function thoiGianVNISOString(d = new Date()) {
+  const phan = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+  }).formatToParts(d);
+  const lay = (type) => phan.find(p => p.type === type)?.value;
+  const ms = String(d.getMilliseconds()).padStart(3, '0');
+  return `${lay('year')}-${lay('month')}-${lay('day')}T${lay('hour')}:${lay('minute')}:${lay('second')}.${ms}+07:00`;
+}
+
+module.exports = { parseNgay, dinhDangNgay, dinhDangNgayGioVN, dinhDangNgayGioNgan, thoiGianVNISOString };

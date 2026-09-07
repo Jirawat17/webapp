@@ -1,5 +1,6 @@
 const { readTab, readTabCached, appendRow, updateCells } = require('./sheetsService');
 const { ghiLog } = require('./logService');
+const { thoiGianVNISOString } = require('./dateUtils');
 
 // 2 TAB MỚI TRONG SHEET (phải tự tạo tay trên Google Sheet trước khi dùng tính năng này):
 //   Ton_Kho_Phoi   — cột: LOAI | KICH_THUOC | MAU_SAC | TON_HIEN_TAI — mỗi dòng là 1 TỔ HỢP phôi
@@ -41,7 +42,7 @@ async function layLichSuNhap({ gioiHan = 50 } = {}) {
 
 // Nhập kho 1 lô phôi mới — cộng dồn vào tồn hiện tại (tạo dòng tồn kho mới bắt đầu từ 0 nếu đây là
 // lần đầu tiên nhập loại phôi này), đồng thời lưu lại lịch sử để tra cứu/đối chiếu sau này.
-async function nhapKho({ loai, kichThuoc, mauSac, soLuong, nguoiNhap, ghiChu = '' }) {
+async function nhapKho({ loai, kichThuoc, mauSac, soLuong, nguoiNhap, vaiTro, ghiChu = '' }) {
   const { headers, rows } = await readTab(TAB_TON_KHO); // đọc thật trước khi ghi, tránh ghi nhầm dòng
   const dong = rows.find(r => khopLoaiPhoi(r, loai, kichThuoc, mauSac));
 
@@ -54,10 +55,19 @@ async function nhapKho({ loai, kichThuoc, mauSac, soLuong, nguoiNhap, ghiChu = '
 
   const { headers: headersLichSu } = await readTab(TAB_LICH_SU_NHAP);
   await appendRow(TAB_LICH_SU_NHAP, headersLichSu, {
-    ThoiGian: new Date().toISOString(),
+    ThoiGian: thoiGianVNISOString(),
     LOAI: loai, KICH_THUOC: kichThuoc, MAU_SAC: mauSac,
     SoLuongNhap: soLuong, NguoiNhap: nguoiNhap, GhiChu: ghiChu,
   });
+
+  // Ghi thêm vào log trung tâm (LichSuHoatDong) — trước đây CHỈ có ở LichSuNhapPhoi riêng, không hiện
+  // trong "Hoạt động của tôi"/công cụ tra cứu hoạt động chung của admin (xem
+  // docs/superpowers/specs/2026-09-07-mo-rong-log-hoat-dong-design.md). Giữ nguyên LichSuNhapPhoi ở
+  // trên — tab đó vẫn là nguồn dữ liệu cho trang Quản lý tài sản, không thay thế.
+  ghiLog({
+    nguoiDung: nguoiNhap, vaiTro: vaiTro || '-', hanhDong: 'NHAP_KHO_PHOI',
+    chiTiet: { loai, kichThuoc, mauSac, soLuong, ghiChu },
+  }).catch(err => console.error('[TaiSan] Lỗi ghi log nền:', err.message));
 }
 
 // TỰ ĐỘNG trừ kho khi 1 đơn được đánh dấu "Đã lấy phôi" (gọi từ orderService.update() — xem ở đó).
