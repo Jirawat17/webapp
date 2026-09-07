@@ -420,12 +420,27 @@ function nhanDangDinhDangAnh(buffer) {
   return null;
 }
 
+// Đo thời gian TỪNG BƯỚC riêng (QR / ảnh mẫu / ảnh mockup) — bổ sung 08/09/2026 để xác định ĐÚNG chỗ
+// chậm thật khi người dùng báo "IN ĐƠN chậm": đã đo tay taoQRCodeBuffer() ~5ms/mã (không đáng kể) —
+// nghi ngờ chính là 2 lượt TẢI ẢNH chạy song song (mạng thật tới MinIO/Google Drive/link ngoài, có
+// thể tới cả trình duyệt ảo cho link Gemini — xem services/anhNguonService.js) chứ không phải QR.
+// Log này CHỦ ĐỘNG giữ lại (không phải tạm thời) — chi phí gần như 0, giúp chẩn đoán nhanh nếu về
+// sau lại có đơn/nguồn ảnh nào đó gây chậm.
+async function doThoiGian(nhan, fn) {
+  const t0 = Date.now();
+  const ketQua = await fn();
+  console.log(`[IN ĐƠN]   - ${nhan}: ${Date.now() - t0}ms`);
+  return ketQua;
+}
+
 async function taiAnhChoDon(don) {
+  const t0 = Date.now();
   const [qr, dsMau, dsMockup] = await Promise.all([
-    taoQRCodeBuffer(don.STT_Key || '', 300),
-    taiDsAnh(don.DUONG_DAN_URL),
-    taiDsAnh(don.MOCKUP),
+    doThoiGian('QR ' + don.STT_Key, () => taoQRCodeBuffer(don.STT_Key || '', 300)),
+    doThoiGian('DUONG_DAN_URL ' + don.STT_Key, () => taiDsAnh(don.DUONG_DAN_URL)),
+    doThoiGian('MOCKUP ' + don.STT_Key, () => taiDsAnh(don.MOCKUP)),
   ]);
+  console.log(`[IN ĐƠN] ${don.STT_Key}: tổng ${Date.now() - t0}ms`);
 
   // Ảnh ĐẦU TIÊN (theo tên file nếu là thư mục) dùng cho đúng 2 ô ảnh cố định của thẻ chính — giữ
   // nguyên bố cục thẻ như trước, không đổi gì khi url chỉ trỏ tới đúng 1 ảnh (trường hợp thường gặp).
