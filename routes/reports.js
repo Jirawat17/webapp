@@ -72,7 +72,7 @@ function locDon(rows, { stt, sttKeys, tuNgay, denNgay, khachHang, trangThai, tra
 // 'don_can_in' không còn suy tự động được nữa (xem chú thích ở khai báo hằng số phía trên).
 function xacDinhMau(query) {
   const { mau, trangThai } = query;
-  if (mau === 'don_can_in' || mau === 'phoi_ao_gop' || mau === 'tracking') return mau;
+  if (mau === 'don_can_in' || mau === 'phoi_ao_gop' || mau === 'tracking' || mau === 'hai_quan') return mau;
   if (trangThai === TRANG_THAI_TRACKING) return 'tracking';
   return 'chi_tiet';
 }
@@ -707,6 +707,20 @@ const COT_TRACKING = [
   { header: 'SO_LUONG', key: 'SO_LUONG', width: 10 },
 ];
 
+// "IN KÊ KHAI HẢI QUAN ĐƠN ĐANG CHỌN" (bổ sung 08/09/2026, theo yêu cầu người dùng) — CỐ Ý dùng
+// DIA_CHI_NUOC (cột thật, dùng nhất quán ở mọi nơi khác — README, order.html, gkeService.js) cho
+// "Quốc gia", KHÔNG copy theo QUOC_GIA của COT_TRACKING ở trên — cột đó không khớp tên cột thật nào
+// trong Sheet (nhiều khả năng là lỗi cũ, COT_TRACKING hiện không gắn với nút nào ở giao diện nên
+// chưa ai phát hiện ra). "Mã đơn" dùng STT_Key (mã nội bộ xưởng, đã xác nhận với người dùng — không
+// phải MA_DON_HANG_ORDERID của sàn TMĐT).
+const COT_HAI_QUAN = [
+  { header: 'Mã đơn', key: 'STT_Key', width: 16 },
+  { header: 'Loại', key: 'LOAI', width: 16 },
+  { header: 'Số lượng', key: 'SO_LUONG', width: 10 },
+  { header: 'Mã tracking', key: 'TRACKING_ID', width: 20 },
+  { header: 'Quốc gia', key: 'DIA_CHI_NUOC', width: 14 },
+];
+
 // Chuẩn hoá LOAI/KICH_THUOC/MAU_SAC để gộp nhóm ở gomNhomPhoiAo() KHÔNG phân biệt hoa/thường (vd
 // "SWEAT"/"Sweat"/"sweat" tính là CÙNG 1 dòng, không tách lẻ vì lỗi gõ hoa/thường) — cắt khoảng
 // trắng thừa 2 đầu, luôn IN HOA để hiển thị đồng nhất trong file PDF/Excel xuất ra, bất kể dữ liệu
@@ -781,6 +795,20 @@ function gomNhomPhoiAo(list) {
 function xayDungBaoCaoDangBang(list, query, tenNguoiXuat) {
   const dongNguoiXuat = dongNguoiXuatChuoi(tenNguoiXuat);
   const mau = xacDinhMau(query);
+
+  if (mau === 'hai_quan') {
+    return {
+      tenFileGoc: 'KeKhaiHaiQuan',
+      bang: [{
+        tenSheet: 'KeKhaiHaiQuan',
+        tieuDe: 'KÊ KHAI HẢI QUAN ĐƠN ĐANG CHỌN',
+        dongThongTin: dongThongTinLoc(query, 'hai_quan'),
+        dongNguoiXuat,
+        cot: COT_HAI_QUAN,
+        rows: list,
+      }],
+    };
+  }
 
   if (mau === 'tracking') {
     return {

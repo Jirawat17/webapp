@@ -21,6 +21,7 @@
     <button type="button" class="btn-hanh-dong phu" id="btn-in-don-dang-chon" onclick="inDonDangChon(this)" style="display:none"></button>
     <button type="button" class="btn-hanh-dong phu" id="btn-in-ma-phoi-don" onclick="inMaPhoiDonDangChon(this)"></button>
     <button type="button" class="btn-hanh-dong phu" id="btn-quet-hang-loat" onclick="quetDonHangLoat(this)" style="display:none"></button>
+    <button type="button" class="btn-hanh-dong phu" id="btn-in-hai-quan" onclick="inHaiQuanDangChon(this)" style="display:none"></button>
   </div>
 
   <div id="panel-loc" class="panel-dieu-khien" style="display:none">
@@ -202,6 +203,14 @@ let donDaChonSet = new Set();
   }
 
   document.getElementById('btn-quet-hang-loat').innerHTML = icon('scan') + ' QUÉT TÌM ĐƠN HÀNG LOẠT';
+
+  // "IN KÊ KHAI HẢI QUAN ĐƠN ĐANG CHỌN" (bổ sung 08/09/2026) — chỉ admin/ve_file, cùng phạm vi với
+  // nút gộp phía trên.
+  const btnInHaiQuan = document.getElementById('btn-in-hai-quan');
+  if (user.vaiTro === 'admin' || user.vaiTro === 've_file') {
+    btnInHaiQuan.style.display = '';
+    btnInHaiQuan.innerHTML = icon('printer') + ' IN KÊ KHAI HẢI QUAN ĐƠN ĐANG CHỌN';
+  }
 
   // Nút "Đã..." (positive) dùng icon check, nút "Chưa..." (negative, đưa trạng thái quay lại) dùng
   // icon undo — phân biệt trực quan, không chỉ dựa vào màu (xem thêm .trang-thai-tich-cuc/.trang-thai-tieu-cuc trong style.css)
@@ -605,6 +614,36 @@ async function inPhoiDangChon(nut, tuyChon = {}) {
   } catch (e) {
     if (baoLoiBangAlert) alert('Lỗi: ' + e.message);
     return { ok: false, loi: e.message };
+  } finally {
+    nut.disabled = false;
+    nut.innerHTML = nhanGoc;
+  }
+}
+
+// "IN KÊ KHAI HẢI QUAN ĐƠN ĐANG CHỌN" (bổ sung 08/09/2026) — bảng Excel thuần (Mã đơn/Loại/Số lượng/
+// Mã tracking/Quốc gia, mẫu 'hai_quan' — xem routes/reports.js xayDungBaoCaoDangBang), không tải ảnh
+// từng đơn nên luôn đủ nhanh — gọi thẳng /excel, không cần chạy nền + tiến độ như "IN ĐƠN ĐANG CHỌN".
+async function inHaiQuanDangChon(nut) {
+  if (donDaChonSet.size === 0) { alert('Hãy chọn ít nhất 1 đơn muốn in.'); return; }
+
+  const nhanGoc = nut.innerHTML;
+  nut.disabled = true;
+  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 18 }) + ' Đang tạo file...';
+
+  const qs = new URLSearchParams();
+  qs.set('mau', 'hai_quan');
+  Array.from(donDaChonSet).forEach(sttKey => qs.append('sttKeys', sttKey));
+
+  try {
+    const res = await fetch('/api/reports/excel?' + qs.toString(), { credentials: 'include' });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Không xuất được file');
+    }
+    const blob = await res.blob();
+    taiFileTuBlob(blob, res.headers.get('Content-Disposition'), 'ke-khai-hai-quan.xlsx');
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
   } finally {
     nut.disabled = false;
     nut.innerHTML = nhanGoc;
