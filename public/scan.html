@@ -42,6 +42,8 @@
 
     <div id="ket-qua-vua-quet-kich-ban" class="khoi-ket-qua-vua-quet chi-che-do-kich-ban" style="display:none"></div>
 
+    <p id="mo-ta-quet-chup-anh" style="display:none;text-align:center;font-weight:600"></p>
+
     <div id="ket-qua-tra-cuu"></div>
 
     <button id="btn-dung-quet" class="btn-dung-quet chi-che-do-kich-ban" style="display:none"></button>
@@ -55,18 +57,10 @@
 
   <div id="photo-wrap" style="display:none">
     <p id="photo-mo-ta"></p>
+    <div id="thong-tin-don-cho-chup" class="khoi-ket-qua-vua-quet ok"></div>
     <input type="file" accept="image/*" capture="environment" id="input-chup-anh" style="display:none">
-    <!--
-      SỬA LỖI (xem log trao đổi): trước đây div này dùng "display:none", khiến clientWidth/
-      clientHeight luôn bằng 0. Thư viện html5-qrcode dùng chính 2 giá trị này để tính kích thước
-      canvas nội bộ khi giải mã ảnh tĩnh (scanFile) — container rộng/cao = 0 khiến canvas dựng ra
-      rỗng, nên MỌI lần chụp đều báo "không đọc được mã" dù ảnh có rõ nét hay không, không phân biệt
-      thiết bị. Cách sửa: đẩy hẳn ra ngoài màn hình bằng position:fixed + toạ độ âm lớn (khiến người
-      dùng không thấy gì, giữ nguyên trải nghiệm cũ) nhưng vẫn có kích thước LAYOUT THẬT (1000x1000)
-      để thư viện tính toán canvas đúng.
-    -->
-    <div id="qr-reader-file-an" style="position:fixed; top:-9999px; left:-9999px; width:1000px; height:1000px; overflow:hidden;"></div>
     <button id="btn-chup-anh" class="btn-dung-quet san-sang"></button>
+    <button type="button" id="btn-quet-lai-chup-anh" class="btn-hanh-dong phu">Quét lại</button>
     <div id="toast-chup-anh" class="toast-vua-quet"></div>
     <div id="dem-nhom-anh" class="dem-nhom"></div>
     <h3 style="margin-top:20px">Danh sách đã chụp</h3>
@@ -97,8 +91,14 @@ let dsQuet = [];
 let dangQuetKichBan = true;
 let audioCtx = null;
 
-let scannerFile = null; // instance Html5Qrcode RIÊNG cho việc đọc QR từ ảnh tĩnh (2 mode chụp ảnh) — tách khỏi `scanner` (camera sống) để không đụng tới trạng thái đang quét kịch bản
 let toastAnhTimer = null;
+// Đơn ĐÃ XÁC ĐỊNH (qua quét QR sống) cho 2 tab "Chụp ảnh đã sản xuất"/"Chụp ảnh đóng gói" — null =
+// đang ở trạng thái "Đang quét" (hiện camera sống), có giá trị = đang ở trạng thái "Sẵn sàng chụp"
+// (xem docs/superpowers/specs/2026-09-07-tach-quet-chup-anh-design.md). Trước đây đọc QR TỪ ẢNH VỪA
+// CHỤP bằng html5-qrcode.scanFile() — tỉ lệ đọc thất bại cao (giải mã ảnh tĩnh 1 lần thử, khác hẳn
+// quét sống nhiều khung hình/giây) — giờ quét sống TRƯỚC để xác định đơn, ảnh chụp sau không cần đọc
+// được mã QR trong đó nữa.
+let donDaXacDinhChoAnh = null;
 
 // Tab "Quét mã QR Tracking" — riêng, KHÔNG dùng chung dsQuet/dangQuetKichBan của "Quét kịch bản" vì
 // khác hẳn mô hình: mỗi lượt quét ở đây đã áp dụng NGAY (gọi GKE + ghi Sheet + in tem thật), không
@@ -150,7 +150,17 @@ const MODE_OPTIONS = [
 ];
 const elModeSelect = document.getElementById('mode-select');
 elModeSelect.innerHTML = MODE_OPTIONS.map(o => `<option value="${o.value}">${escapeHtml(o.label)}</option>`).join('');
-elModeSelect.onchange = () => { mode = elModeSelect.value; capNhatManHinh(); };
+
+// Đổi mode LUÔN đi qua đây (không gán thẳng biến `mode`) — reset donDaXacDinhChoAnh mỗi lần đổi mode
+// để không lỡ giữ "đơn đã xác định" cũ từ trước sang 1 phiên chụp ảnh mới đối tượng vật lý đã khác
+// (rủi ro gán nhầm ảnh cho sai đơn nếu người dùng rời màn hình rồi quay lại sau 1 lúc).
+function doiMode(moiMode) {
+  mode = moiMode;
+  donDaXacDinhChoAnh = null;
+  capNhatManHinh();
+}
+
+elModeSelect.onchange = () => doiMode(elModeSelect.value);
 
 // Tự ẩn header khi cuộn xuống, hiện lại khi cuộn lên (chỉ trang này — xem <style> ở đầu file).
 // Không đụng tới thanh tab điều hướng dưới cùng, vẫn cố định như trước.
@@ -178,10 +188,10 @@ elModeSelect.onchange = () => { mode = elModeSelect.value; capNhatManHinh(); };
   capNhatManHinh();
 })();
 
-document.getElementById('mode-lookup').onclick = () => { mode = 'lookup'; capNhatManHinh(); };
-document.getElementById('mode-batch').onclick = () => { mode = 'batch'; capNhatManHinh(); };
-document.getElementById('mode-photo-san-xuat').onclick = () => { mode = 'photo_san_xuat'; capNhatManHinh(); };
-document.getElementById('mode-photo-dong-goi').onclick = () => { mode = 'photo_dong_goi'; capNhatManHinh(); };
+document.getElementById('mode-lookup').onclick = () => doiMode('lookup');
+document.getElementById('mode-batch').onclick = () => doiMode('batch');
+document.getElementById('mode-photo-san-xuat').onclick = () => doiMode('photo_san_xuat');
+document.getElementById('mode-photo-dong-goi').onclick = () => doiMode('photo_dong_goi');
 
 async function taiKichBan() {
   try {
@@ -202,6 +212,7 @@ async function capNhatManHinh() {
   document.getElementById('camera-wrap').style.display = 'none';
   document.getElementById('khu-xem-lai').style.display = 'none';
   document.getElementById('photo-wrap').style.display = 'none';
+  document.getElementById('mo-ta-quet-chup-anh').style.display = 'none';
   document.getElementById('btn-dung-quet-tracking').style.display = 'none';
   hienThiTrangThaiCamera(''); // dọn sạch, phòng khi đổi mode ngay giữa lúc đang khởi động lại camera tab Tracking
   // Khung camera tab "Quét mã QR Tracking" hiển thị to gấp đôi mặc định (xem .che-do-to trong
@@ -231,10 +242,25 @@ async function capNhatManHinh() {
     document.getElementById('khu-xem-lai').style.display = 'block';
     renderTongHopTracking();
   } else if (mode === 'photo_san_xuat' || mode === 'photo_dong_goi') {
-    document.getElementById('photo-wrap').style.display = 'block';
-    document.getElementById('photo-mo-ta').textContent = CAU_HINH_ANH[mode].moTa;
-    renderDemNhomAnh();
-    renderDsDaChup();
+    const cauHinh = CAU_HINH_ANH[mode];
+    if (!donDaXacDinhChoAnh) {
+      // [Đang quét] — quét QR sống để xác định đơn trước, CHƯA cho chụp ảnh (xem
+      // docs/superpowers/specs/2026-09-07-tach-quet-chup-anh-design.md).
+      document.getElementById('camera-wrap').style.display = 'block';
+      document.getElementById('ket-qua-tra-cuu').style.display = 'none';
+      setBatchOnlyVisible(false);
+      const moTa = document.getElementById('mo-ta-quet-chup-anh');
+      moTa.style.display = 'block';
+      moTa.textContent = `Quét mã QR để xác định đơn cần "${cauHinh.nhanTab}". ${cauHinh.moTa}`;
+      cameraCanChay = 'photo_scan';
+    } else {
+      // [Sẵn sàng chụp] — đơn đã xác định, không cần camera sống nữa (dùng camera máy qua input file).
+      document.getElementById('photo-wrap').style.display = 'block';
+      document.getElementById('photo-mo-ta').textContent = cauHinh.moTa;
+      renderThongTinDonChoAnh();
+      renderDemNhomAnh();
+      renderDsDaChup();
+    }
   } else if (!kichBanDangChon) {
     renderChonKichBan();
     document.getElementById('chon-kich-ban-wrap').style.display = 'block';
@@ -359,6 +385,9 @@ async function dieuChinhCamera(muonChay) {
   // như trước giờ vẫn vậy), không phải nguyên nhân đã gây lỗi NotReadableError hôm trước (đã có
   // retry + log riêng trong batDauCamera lo phần đó).
   else if (muonChay === 'gke_tracking') await batDauCamera(xuLyQuetTracking, 520, { facingMode: 'environment' });
+  // "Chụp ảnh đã sản xuất"/"đóng gói" — bước quét QR SỐNG để xác định đơn, trước khi cho chụp ảnh
+  // thật (xem docs/superpowers/specs/2026-09-07-tach-quet-chup-anh-design.md).
+  else if (muonChay === 'photo_scan') await batDauCamera(xuLyQuetDeXacDinhDon);
 }
 
 // "NotReadableError: Could not start video source" KHÔNG PHẢI lỗi quyền — trình duyệt/OS chưa kịp
@@ -597,9 +626,9 @@ function base64ThanhBlob(base64, kieuMime) {
 // tính chạy tab này cần đã cài driver Xprinter XP-480B qua USB và đặt sẵn làm máy in mặc định/khổ
 // giấy 100x150mm để hộp thoại in hiện đúng máy ngay (xem hướng dẫn cài đặt).
 //
-// 2 lỗi thực tế khiến máy in không nhận được gì dù không báo lỗi (đã gặp đúng kiểu iframe ẩn này ở
-// #qr-reader-file-an phía trên, xem ghi chú ở đó): (1) iframe rộng/cao = 0 khiến trình xem PDF nội
-// bộ của Chrome không có chỗ để dựng hình, .print() gọi ra nhưng không có nội dung nào để in — phải
+// 2 lỗi thực tế khiến máy in không nhận được gì dù không báo lỗi (cùng kiểu lỗi "container ẩn khiến
+// clientWidth/clientHeight = 0" từng gặp với html5-qrcode.scanFile() trước đây): (1) iframe rộng/cao
+// = 0 khiến trình xem PDF nội bộ của Chrome không có chỗ để dựng hình, .print() gọi ra nhưng không có nội dung nào để in — phải
 // để kích thước LAYOUT THẬT, chỉ đẩy ra ngoài màn hình bằng toạ độ âm; (2) gọi print() ngay lúc
 // iframe "onload" đôi khi sớm hơn lúc trình xem PDF bên trong dựng xong nội dung — phải chờ thêm 1
 // nhịp ngắn. Dùng blob: URL thay vì data: URI vì trình xem PDF của Chrome nhận diện ổn định hơn.
@@ -978,20 +1007,55 @@ async function tiepTucQuet() {
 }
 
 // ============================================================
-// CHỤP ẢNH HÀNG LOẠT KÈM CHUYỂN GIAI ĐOẠN (bổ sung 26/08/2026, tách 2 mốc riêng 31/08/2026)
+// CHỤP ẢNH HÀNG LOẠT KÈM CHUYỂN GIAI ĐOẠN (bổ sung 26/08/2026, tách 2 mốc riêng 31/08/2026,
+// TÁCH QUÉT/CHỤP THÀNH 2 BƯỚC 07/09/2026)
 // Dùng CHUNG 1 bộ UI/logic cho 2 tab "Chụp ảnh đã sản xuất" và "Chụp ảnh đóng gói" — chỉ khác nhau
 // ở CAU_HINH_ANH[mode] (mốc ảnh + trạng thái yêu cầu/đích), lấy theo biến `mode` đang chọn.
-// Luồng: bấm "Chụp ảnh" → mở camera máy (input file capture) → có ảnh → ĐỌC MÃ QR NGAY TỪ ẢNH bằng
-// html5-qrcode (scanFile — hoàn toàn ở trình duyệt, không cần AI/OCR, không tốn quota) → nếu KHÔNG
-// đọc được mã, báo lỗi và bắt chụp lại NGAY (không upload gì cả) → nếu đọc được, upload thẳng lên
-// server kèm mã đã giải; server tự kiểm tra đơn đang đúng trạng thái yêu cầu rồi lưu ảnh + chuyển
-// giai đoạn trong cùng 1 lần ghi (xem routes/photos.js). Mở cho CẢ 4 vai trò.
 //
-// SỬA LỖI 28/08/2026: trước đây "Không đọc được mã" xảy ra 100% các lần chụp, kể cả ảnh rõ nét,
-// trên mọi thiết bị — nguyên nhân là div #qr-reader-file-an dùng display:none (xem chú thích tại
-// nơi khai báo div trong phần HTML phía trên). Đã sửa bằng cách đẩy div ra ngoài màn hình thay vì
-// ẩn hẳn, giữ nguyên layout thật để html5-qrcode tính đúng canvas giải mã.
+// Luồng (xem docs/superpowers/specs/2026-09-07-tach-quet-chup-anh-design.md):
+//   [Đang quét] --quét QR sống OK + đơn đủ điều kiện (POST /photos/kiem-tra)--> [Sẵn sàng chụp]
+//   [Đang quét] --quét QR nhưng đơn không đủ điều kiện/không tìm thấy--> báo lỗi, VẪN Ở [Đang quét]
+//   [Sẵn sàng chụp] --bấm "Quét lại"--> [Đang quét] (không upload gì)
+//   [Sẵn sàng chụp] --chụp ảnh, upload OK--> ghi log, TỰ QUAY LẠI [Đang quét] cho đơn tiếp theo
+//   [Sẵn sàng chụp] --chụp ảnh, upload lỗi--> báo lỗi, VẪN Ở [Sẵn sàng chụp] (đơn đã biết, chụp lại
+//                                              ngay không cần quét lại)
+//
+// TRƯỚC ĐÂY (đến 07/09/2026): đọc mã QR NGAY TỪ ẢNH VỪA CHỤP bằng html5-qrcode.scanFile() — giải mã
+// ẢNH TĨNH, đúng 1 lần thử, không có "khung hình kế tiếp" để cứu như quét sống — tỉ lệ thất bại cao
+// trên thực tế (mờ/loá sáng/góc chụp xấu tại đúng khoảnh khắc bấm chụp, mã QR chỉ chiếm 1 góc nhỏ
+// trong ảnh vì ảnh còn phải chụp cả sản phẩm). Quét QR SỐNG (nhiều khung hình/giây, tự lấy nét) đáng
+// tin cậy hơn hẳn — giờ quét sống TRƯỚC để xác định đơn, ảnh chụp sau không cần đọc được mã QR nữa.
 // ============================================================
+
+// Quét được mã trong trạng thái [Đang quét] — kiểm tra đơn đủ điều kiện chụp TRƯỚC khi cho chụp ảnh
+// thật (tránh lãng phí 1 lần chụp cho đơn sai trạng thái/không tồn tại).
+async function xuLyQuetDeXacDinhDon(sttKeyThoDoc) {
+  if (dangXuLyQuet) return;
+  dangXuLyQuet = true;
+  const cauHinh = CAU_HINH_ANH[mode];
+
+  try {
+    const ketQua = await apiFetch('/photos/kiem-tra', {
+      method: 'POST', body: JSON.stringify({ sttKey: sttKeyThoDoc, moc: cauHinh.moc }),
+    });
+    donDaXacDinhChoAnh = { sttKey: ketQua.sttKey || sttKeyThoDoc, tieuDe: ketQua.tieuDe, tenKhachHang: ketQua.tenKhachHang };
+    hienThiToast('OK', ketQua.tieuDe || sttKeyThoDoc);
+    phatAmThanhKetQua('OK');
+    await capNhatManHinh();
+  } catch (err) {
+    hienThiToast('SAI_TRANG_THAI', err.message);
+    phatAmThanhKetQua('SAI_TRANG_THAI');
+  }
+
+  setTimeout(() => { dangXuLyQuet = false; }, 700);
+}
+
+// Bấm "Quét lại" ở trạng thái [Sẵn sàng chụp] — quay về [Đang quét], KHÔNG upload gì.
+document.getElementById('btn-quet-lai-chup-anh').onclick = async () => {
+  donDaXacDinhChoAnh = null;
+  await capNhatManHinh();
+};
+
 document.getElementById('btn-chup-anh').onclick = () => {
   document.getElementById('input-chup-anh').value = ''; // reset để chọn lại đúng ảnh mới chụp, kể cả khi trùng tên file với lần trước
   document.getElementById('input-chup-anh').click();
@@ -1004,34 +1068,11 @@ document.getElementById('input-chup-anh').addEventListener('change', async (e) =
 });
 
 async function xuLyChupAnh(file) {
+  if (!donDaXacDinhChoAnh) { alert('Chưa xác định được đơn — quét lại mã QR trước khi chụp.'); return; }
   const cauHinh = CAU_HINH_ANH[mode];
+  const sttKey = donDaXacDinhChoAnh.sttKey;
   const btn = document.getElementById('btn-chup-anh');
   btn.disabled = true;
-  btn.innerHTML = icon('spinner', { className: 'icon-spin', size: 24 }) + ' Đang đọc mã QR...';
-
-  if (!scannerFile) scannerFile = new Html5Qrcode('qr-reader-file-an', /* verbose= */ false);
-
-  let sttKey;
-  try {
-    const ketQuaDoc = await scannerFile.scanFile(file, false);
-    sttKey = (typeof ketQuaDoc === 'string' ? ketQuaDoc : ketQuaDoc.decodedText || '').trim();
-    if (!sttKey) throw new Error('Rỗng');
-  } catch (err) {
-    // Log lỗi thật ra console để chẩn đoán nếu về sau vẫn còn trường hợp lỗi khác (ảnh thật sự mờ,
-    // định dạng file lạ...) — KHÔNG hiện chi tiết kỹ thuật này cho người dùng, chỉ hiện thông báo
-    // dễ hiểu bên dưới.
-    console.error('[Chụp ảnh] Lỗi đọc QR từ ảnh:', err);
-
-    // Không đọc được mã QR trong ảnh (mờ, thiếu sáng, tem bị che, góc chụp xấu...) — theo đúng yêu
-    // cầu: báo NGAY và bắt chụp lại ngay lập tức, KHÔNG upload gì lên server.
-    hienThiToastAnh('loi', 'Không đọc được mã QR trong ảnh — chụp lại ngay, đảm bảo tem QR rõ nét và đủ sáng.');
-    phatAmThanhKetQua('KHONG_TIM_THAY');
-    themDongDaChup({ trangThai: 'loi', sttKey: '(không đọc được mã)', ghiChu: 'Ảnh mờ/thiếu sáng/tem bị che — chụp lại' });
-    btn.disabled = false;
-    btn.innerHTML = icon('camera', { size: 40 }) + ' Chụp lại';
-    return;
-  }
-
   btn.innerHTML = icon('spinner', { className: 'icon-spin', size: 24 }) + ' Đang tải ảnh lên...';
 
   const form = new FormData();
@@ -1048,14 +1089,31 @@ async function xuLyChupAnh(file) {
     hienThiToastAnh('ok', `${don.STT_Key || sttKey}${don.TenKhachHang ? ' · ' + don.TenKhachHang : ''} — đã chuyển sang "${cauHinh.chuyenSang}"`);
     phatAmThanhKetQua('OK');
     themDongDaChup({ trangThai: 'ok', sttKey: don.STT_Key || sttKey, ghiChu: `${don.TenKhachHang || ''} — ${cauHinh.yeuCau} → ${cauHinh.chuyenSang}` });
+
+    // Xong 1 đơn — quay lại [Đang quét] cho đơn tiếp theo, giữ đúng nhịp quét→chụp liên tục cho cả lô.
+    donDaXacDinhChoAnh = null;
+    btn.disabled = false;
+    btn.innerHTML = icon('camera', { size: 40 }) + ' Chụp ảnh';
+    await capNhatManHinh();
   } catch (err) {
+    // Lỗi upload thật (mất mạng, server từ chối vì đơn vừa đổi trạng thái...) — đơn ĐÃ BIẾT vẫn giữ
+    // nguyên (donDaXacDinhChoAnh không đổi), cho chụp lại NGAY không cần quét lại QR từ đầu.
     hienThiToastAnh('canh-bao', `${sttKey}: ${err.message}`);
     phatAmThanhKetQua('SAI_TRANG_THAI');
     themDongDaChup({ trangThai: 'canh-bao', sttKey, ghiChu: err.message });
+    btn.disabled = false;
+    btn.innerHTML = icon('camera', { size: 40 }) + ' Chụp lại';
   }
+}
 
-  btn.disabled = false;
-  btn.innerHTML = icon('camera', { size: 40 }) + ' Chụp ảnh tiếp theo';
+// Hiện thông tin đơn đã xác định ở trạng thái [Sẵn sàng chụp] — dùng lại đúng class
+// .khoi-ket-qua-vua-quet đã có cho khối "Kết quả vừa quét" ở Quét kịch bản, nhất quán hình ảnh.
+function renderThongTinDonChoAnh() {
+  const el = document.getElementById('thong-tin-don-cho-chup');
+  if (!donDaXacDinhChoAnh) { el.innerHTML = ''; return; }
+  el.innerHTML = `
+    <div class="tieu-de-lon">${escapeHtml(donDaXacDinhChoAnh.tieuDe || donDaXacDinhChoAnh.sttKey)}</div>
+    ${donDaXacDinhChoAnh.tenKhachHang ? `<div class="dong-khach-hang">Khách hàng: ${escapeHtml(donDaXacDinhChoAnh.tenKhachHang)}</div>` : ''}`;
 }
 
 function hienThiToastAnh(loai, noiDung) {
@@ -1078,11 +1136,12 @@ function renderDemNhomAnh() {
   const ds = dsDaChupTheoMoc[mode];
   const soOK = ds.filter(x => x.trangThai === 'ok').length;
   const soCanhBao = ds.filter(x => x.trangThai === 'canh-bao').length;
-  const soLoi = ds.filter(x => x.trangThai === 'loi').length;
+  // Bỏ ô đếm "Không đọc được mã" (07/09/2026) — từ khi tách quét/chụp thành 2 bước, ảnh chụp không
+  // còn cần tự đọc mã QR nữa nên themDongDaChup() không bao giờ còn gọi với trangThai:'loi' (xem
+  // docs/superpowers/specs/2026-09-07-tach-quet-chup-anh-design.md) — ô đếm này sẽ luôn là 0.
   el.innerHTML = `
     <div class="dem-o ok"><div class="hang-tren"><span class="dem-icon">✅</span><span class="dem-so">${soOK}</span></div><div class="dem-nhan">Thành công</div></div>
-    <div class="dem-o canh-bao"><div class="hang-tren"><span class="dem-icon">⚠️</span><span class="dem-so">${soCanhBao}</span></div><div class="dem-nhan">Lỗi nghiệp vụ</div></div>
-    <div class="dem-o loi"><div class="hang-tren"><span class="dem-icon">❌</span><span class="dem-so">${soLoi}</span></div><div class="dem-nhan">Không đọc được mã</div></div>`;
+    <div class="dem-o canh-bao"><div class="hang-tren"><span class="dem-icon">⚠️</span><span class="dem-so">${soCanhBao}</span></div><div class="dem-nhan">Lỗi nghiệp vụ</div></div>`;
 }
 
 function renderDsDaChup() {

@@ -35,11 +35,40 @@ const MOC_TU_DONG_CHUYEN_TRANG_THAI = {
   da_san_xuat: { yeuCau: 'Đang chạy máy', chuyenSang: 'Đã sản xuất' },
 };
 
+// Kiểm tra ĐỦ ĐIỀU KIỆN chụp ảnh cho 1 đơn — KHÔNG cần file ảnh. Dùng NGAY SAU khi quét QR sống để
+// xác định đơn (public/scan.html, mode photo_san_xuat/photo_dong_goi — xem
+// docs/superpowers/specs/2026-09-07-tach-quet-chup-anh-design.md), TRƯỚC KHI mở camera chụp thật —
+// tránh lãng phí 1 lần chụp cho đơn không hợp lệ (sai trạng thái/không tồn tại).
+// CỐ Ý không dùng GET /orders/:sttKey — route đó ẩn hẳn (404) đơn "Đang chạy máy" của san_xuat KHÁC
+// (locDonDangChayMayTheoNguoiVanHanh), không áp dụng ở đây vì tính năng chụp ảnh mở cho CẢ 4 vai trò,
+// không phân biệt ai đang vận hành máy — dùng lại ĐÚNG logic kiểm tra của POST /upload bên dưới
+// (trừ phần lưu file), giữ 2 nơi nhất quán.
+router.post('/kiem-tra', async (req, res) => {
+  const { sttKey, moc } = req.body;
+  if (!sttKey) return res.status(400).json({ error: 'Thiếu mã đơn hàng' });
+
+  const cotAnh = COT_ANH_THEO_MOC[moc];
+  if (!cotAnh) return res.status(400).json({ error: 'Mốc ảnh không hợp lệ: ' + moc });
+
+  const { headers, row } = await orderService.getByKey(sttKey, { fresh: true });
+  if (!row) return res.status(404).json({ error: 'Không tìm thấy đơn hàng: ' + sttKey });
+  if (!headers.includes(cotAnh)) {
+    return res.status(400).json({ error: `Sheet chưa có cột '${cotAnh}' — cần thêm cột này vào Don_Hang_ALL trước khi dùng mốc ảnh "${moc}"` });
+  }
+
+  const chuyenTuDong = MOC_TU_DONG_CHUYEN_TRANG_THAI[moc];
+  if (chuyenTuDong && row.TRANG_THAI_XUONG !== chuyenTuDong.yeuCau) {
+    return res.status(400).json({
+      error: `Đơn "${sttKey}" đang ở trạng thái "${row.TRANG_THAI_XUONG}" — chỉ chụp ảnh được khi đơn đang ở "${chuyenTuDong.yeuCau}".`,
+    });
+  }
+
+  const [daGanKH] = await orderService.ganTenKhachHang([row]);
+  res.json({ sttKey: row.STT_Key, tieuDe: orderService.tieuDeSanPham(row), tenKhachHang: daGanKH.TenKhachHang });
+});
+
 // Vì mã đơn đã lấy từ bước quét QR ngay trước đó trong cùng luồng thao tác (sttKey gửi kèm trong
 // form), KHÔNG cần AI đọc ảnh để nhận diện mã — nhanh hơn, không tốn quota Gemini, chính xác 100%.
-// (Với màn "Chụp ảnh hoàn thành hàng loạt", việc đọc mã QR trong ảnh diễn ra ở TRÌNH DUYỆT bằng
-// html5-qrcode.scanFile() trước khi gọi API này — server luôn nhận sttKey đã giải mã sẵn, không tự
-// đọc ảnh.)
 router.post('/upload', upload.single('photo'), async (req, res) => {
   const { sttKey, moc } = req.body;
   const user = req.session.user;
