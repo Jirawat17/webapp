@@ -41,11 +41,22 @@ function tsDep(isoStr) {
 }
 
 let user;
+let dsSanXuatDangHoatDong = []; // chỉ admin cần, nạp 1 lần lúc vào trang (xem renderKhuVucThaoTac)
 
 (async () => {
   user = await requireLoginOrRedirect();
   if (!user) return;
   renderNav(user, 'orders');
+
+  // "Chỉ định người chạy máy" (bổ sung 07/09/2026, xem docs/superpowers/specs/2026-09-07-nguoi-chay-may-design.md)
+  // — CHỈ admin. /users vốn đã chỉ mở cho admin (requireRole trong routes/users.js).
+  if (user.vaiTro === 'admin') {
+    try {
+      const dsNhanVien = await apiFetch('/users');
+      dsSanXuatDangHoatDong = dsNhanVien.filter(u => u.VaiTro === 'san_xuat' && String(u.KichHoat).toUpperCase() === 'TRUE');
+    } catch (e) { /* không tải được danh sách — ô chọn sẽ hiện rỗng, không chặn tải trang */ }
+  }
+
   await taiChiTiet();
 })();
 
@@ -189,6 +200,23 @@ function renderKhuVucThaoTac(don) {
       <p style="margin:0;font-size:0.8rem;color:var(--color-text-faint)">Nếu cả Phôi và Vẽ file cùng chuyển sang "Đã..." trong khi Trạng thái chung đang là "Đã in mã", hệ thống tự chuyển Trạng thái chung sang "ĐÃ SẴN SÀNG CHẠY MÁY".</p>
     </div>`;
 
+  // Admin chỉ định người chạy máy NGAY tại trang chi tiết — cơ chế thứ 2 song song với việc chọn
+  // nhiều đơn ở trang Đơn hàng (routes/orders.js POST /chi-dinh-nguoi-chay-may, dùng chung route).
+  // Không giới hạn đơn phải đang ở "ĐÃ SẴN SÀNG CHẠY MÁY" — cùng triết lý "chọn tự do" như bên đó,
+  // orderService.update()'s kiemTraTinhHopLy() vẫn chặn nếu phôi/vẽ file chưa xong.
+  if (user.vaiTro === 'admin') {
+    html += `
+      <div class="upload-box">
+        <label for="chi-dinh-nguoi-chay-may">${icon('users', { size: 18 })} Chỉ định người chạy máy</label>
+        <select id="chi-dinh-nguoi-chay-may">
+          <option value="">Chọn người sản xuất...</option>
+          ${dsSanXuatDangHoatDong.map(u => `<option value="${escapeHtml(u.Ten)}" ${u.Ten === don.NGUOI_CHAY_MAY ? 'selected' : ''}>${escapeHtml(u.Ten)}</option>`).join('')}
+        </select>
+        <button class="btn-hanh-dong" onclick="apDungChiDinhNguoiChayMayChiTiet(this)">${icon('check')} Chỉ định chạy máy</button>
+        <p style="margin:0;font-size:0.8rem;color:var(--color-text-faint)">Chuyển đơn này sang "Đang chạy máy" và ghi nhận người được chỉ định (ghi chú "Admin chỉ định").</p>
+      </div>`;
+  }
+
   // Ảnh "File thêu" (bổ sung 26/08/2026) — ve_file upload sau khi vẽ file xong, để san_xuat xem
   // trước khi chọn chỉ thêu. Thuần lưu ảnh, KHÔNG đụng gì tới trạng thái (khác với "Chụp ảnh hoàn
   // thành" bên dưới).
@@ -271,6 +299,33 @@ async function luuTrangThaiThuCong() {
     await apiFetch('/orders/' + encodeURIComponent(sttKey), { method: 'PUT', body: JSON.stringify(updates) });
     await taiChiTiet();
   } catch (e) { alert(e.message); }
+}
+
+async function apDungChiDinhNguoiChayMayChiTiet(btn) {
+  const nguoiSanXuat = document.getElementById('chi-dinh-nguoi-chay-may').value;
+  if (!nguoiSanXuat) { alert('Hãy chọn người sản xuất muốn chỉ định'); return; }
+  if (!confirm(`Chỉ định "${nguoiSanXuat}" chạy máy cho đơn này (chuyển sang "Đang chạy máy")?`)) return;
+
+  const nhanGoc = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Đang xử lý...';
+
+  try {
+    const ketQua = await apiFetch('/orders/chi-dinh-nguoi-chay-may', {
+      method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], nguoiSanXuat }),
+    });
+    if (ketQua.loi && ketQua.loi.length > 0) {
+      alert('Không chỉ định được: ' + ketQua.loi[0].lyDo);
+      btn.disabled = false;
+      btn.innerHTML = nhanGoc;
+    } else {
+      await taiChiTiet(); // vẽ lại toàn bộ khu vực thao tác — không cần tự khôi phục nút cũ
+    }
+  } catch (e) {
+    alert(e.message);
+    btn.disabled = false;
+    btn.innerHTML = nhanGoc;
+  }
 }
 
 async function chuyenGiaiDoan(scenarioId, btn) {
