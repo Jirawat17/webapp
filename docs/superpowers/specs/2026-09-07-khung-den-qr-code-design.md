@@ -124,3 +124,31 @@ này) vẽ hình chữ nhật NGAY TRONG NÓ, hoàn toàn bằng vector, không 
 - `sharp` vẫn còn dùng cho tính năng đối chiếu ảnh hàng loạt (`services/perceptualHashService.js`,
   dùng `.resize()` chứ không phải `.extend()`) — KHÔNG đụng gì, đã có bằng chứng hoạt động ổn định
   trên production (người dùng đã dùng thật tính năng đó thành công) nên không nằm trong diện nghi vấn.
+
+## Cập nhật 4 — cố định QR version + căn khớp số nguyên chấm in 203 DPI
+
+Theo yêu cầu người dùng (máy in nhiệt 203 DPI, khổ tem 100x150mm, `STT_Key` dài nhất ~7 ký tự) —
+tối ưu tốc độ NHẬN DIỆN của máy quét (khác hẳn Cập nhật 1-3, vốn về tốc độ TẠO FILE).
+
+Vấn đề: để thư viện `qrcode` tự chọn "version" (lưới module) theo độ dài chuỗi thì lưới module
+không cố định, và ở kích thước in cũ (26mm tròn / 21 module ở version 1 ≈ 9.9 chấm/module tại
+203 DPI) mỗi module không rơi đúng số nguyên chấm in — dễ mờ/lệch biên module, máy quét mất thêm
+thời gian định vị finder pattern.
+
+- `services/qrService.js`: cố định `version: 1` (21×21 module) cho MỌI đơn — sức chứa version 1 ở
+  mức sửa lỗi M, chế độ alphanumeric là 20 ký tự, thừa xa so với 7 ký tự dài nhất thực tế. Có
+  `try/catch` dự phòng: nếu 1 `STT_Key` nào đó (ngoài dự kiến) vượt sức chứa version 1, tự động
+  chuyển sang để thư viện tự chọn version — KHÔNG BAO GIỜ để việc này chặn đứng in đơn, chỉ mất lợi
+  ích căn khớp chấm in cho riêng mã đó.
+- `margin: 0` (bỏ hẳn quiet zone nội bộ của thư viện) — viền trắng thật đã vẽ riêng bằng PDFKit
+  (Cập nhật 3), không cần lớp quiet zone thứ 2 chồng lên.
+- `KICH_THUOC_QR_CHUAN_DPI_MM` = 21 module × 10 chấm/module ÷ 203 DPI × 25.4 ≈ 26.28mm — CHIA HẾT
+  cho số chấm in thật (210 chấm), không module nào bị lệch. Gần như không đổi so với 26mm cũ (chênh
+  ~0.28mm), không ảnh hưởng bố cục thẻ in.
+- Đã kiểm tra: sinh QR thật với chuỗi 7 ký tự (`version:1` thành công), và với chuỗi rất dài (throw
+  đúng lỗi "vượt sức chứa version 1", nhánh dự phòng tự động chuyển version chạy đúng). Đã render lại
+  1 PDF mẫu thật với thiết lập mới, xem qua trình duyệt — khung/viền/QR (lưới 21×21 module) hiển thị
+  đúng.
+- 203 DPI là con số CỤ THỂ của máy in người dùng đang dùng — đổi máy in khác DPI thì cần sửa lại
+  `DPI_MAY_IN` trong `services/qrService.js` (không đọc tự động từ máy in, dự án chưa có cơ chế cấu
+  hình theo từng máy in).

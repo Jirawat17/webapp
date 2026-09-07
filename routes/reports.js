@@ -9,7 +9,7 @@ const { layDanhSachKhachHang, layBanDoTenKhachHang } = require('../services/khac
 const { layLichSuChuyenSangTrangThai } = require('../services/logService');
 const { readTabCached } = require('../services/sheetsService');
 const { parseNgay, dinhDangNgay, dinhDangNgayGioVN, dinhDangNgayGioNgan } = require('../services/dateUtils');
-const { taoQRCodeBuffer } = require('../services/qrService');
+const { taoQRCodeBuffer, KICH_THUOC_QR_CHUAN_DPI_MM } = require('../services/qrService');
 const { taiDsAnh } = require('../services/anhNguonService');
 const { DANH_SACH_TRANG_THAI_BAO_CAO, GIA_TRI_LOC_TRONG, khopGiaTriLoc } = require('../data/pipelineTinhTrang');
 const { requireLogin } = require('../middleware/auth');
@@ -491,12 +491,14 @@ function veTheDonPdf(doc, don, anh, offsetY, caoThe) {
   }
   y = anhY + anhKichThuoc + 6;
 
-  // KHỐI DƯỚI: QR nhỏ (26mm, vẫn đủ quét bằng điện thoại/máy QR) + thông tin bên phải
+  // KHỐI DƯỚI: QR nhỏ (~26.3mm, vẫn đủ quét bằng điện thoại/máy QR) + thông tin bên phải
   // Viền trắng + khung đen quanh mã VẼ BẰNG HÌNH CHỮ NHẬT PDFKit (vector, cực nhanh, không qua ảnh
   // raster) — KHÔNG dùng sharp nữa (từng gây treo/rất chậm thật trên production khi raster hoá qua
-  // sharp, xem docs/superpowers/specs/2026-09-07-khung-den-qr-code-design.md). Mã QR thật giữ đúng
-  // 26mm, viền/khung cộng thêm ra ngoài — cùng tỉ lệ (10%/8%) như bản dùng sharp trước đó.
-  const qrThatKichThuoc = mmToPt(26);
+  // sharp, xem docs/superpowers/specs/2026-09-07-khung-den-qr-code-design.md). Mã QR thật dùng đúng
+  // KICH_THUOC_QR_CHUAN_DPI_MM (qrService.js) — kích thước đã tính sẵn để mỗi module QR khớp số
+  // nguyên chấm in của máy in nhiệt 203 DPI đang dùng, tránh module mờ/lệch biên khi in — thay vì
+  // 26mm tròn trước đây. Viền/khung cộng thêm ra ngoài — cùng tỉ lệ (10%/8%) như trước.
+  const qrThatKichThuoc = mmToPt(KICH_THUOC_QR_CHUAN_DPI_MM);
   const doDayVienTrang = qrThatKichThuoc * 0.10;
   const doDayKhungDen = qrThatKichThuoc * 0.08;
   const qrKichThuoc = qrThatKichThuoc + 2 * (doDayVienTrang + doDayKhungDen); // tổng cả viền + khung
