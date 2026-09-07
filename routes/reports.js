@@ -9,7 +9,7 @@ const { layDanhSachKhachHang, layBanDoTenKhachHang } = require('../services/khac
 const { layLichSuChuyenSangTrangThai } = require('../services/logService');
 const { readTabCached } = require('../services/sheetsService');
 const { parseNgay, dinhDangNgay, dinhDangNgayGioVN, dinhDangNgayGioNgan } = require('../services/dateUtils');
-const { taoQRCodeBuffer } = require('../services/qrService');
+const { taoQRCodeBuffer, TY_LE_KICH_THUOC_CO_KHUNG } = require('../services/qrService');
 const { taiDsAnh } = require('../services/anhNguonService');
 const { DANH_SACH_TRANG_THAI_BAO_CAO, GIA_TRI_LOC_TRONG, khopGiaTriLoc } = require('../data/pipelineTinhTrang');
 const { requireLogin } = require('../middleware/auth');
@@ -492,7 +492,10 @@ function veTheDonPdf(doc, don, anh, offsetY, caoThe) {
   y = anhY + anhKichThuoc + 6;
 
   // KHỐI DƯỚI: QR nhỏ (24mm, vẫn đủ quét bằng điện thoại/máy QR) + thông tin bên phải
-  const qrKichThuoc = mmToPt(26); // 26mm — đủ quét bằng điện thoại/máy QR
+  // Ô hiển thị to hơn kích thước QR "thật" 1 chút (TY_LE_KICH_THUOC_CO_KHUNG, ~1.16 lần) để chứa
+  // khung đen taoQRCodeBuffer() đã vẽ sẵn quanh ảnh — mã QR bên trong khung vẫn to đúng 26mm như cũ,
+  // khung chỉ cộng thêm ra ngoài (xem docs/superpowers/specs/2026-09-07-khung-den-qr-code-design.md).
+  const qrKichThuoc = mmToPt(26) * TY_LE_KICH_THUOC_CO_KHUNG; // 26mm QR thật + khung đen bao quanh
   const qrY = y;
   if (anh.qr) doc.image(anh.qr, x0, qrY, { width: qrKichThuoc, height: qrKichThuoc });
   else veOTrongPdf(doc, x0, qrY, qrKichThuoc, 'Không có QR');
