@@ -110,11 +110,16 @@ router.get('/', async (req, res) => {
 
   const {
     trangThai, trangThaiPhoi, trangThaiVeFile, kh, tuNgay, denNgay,
-    loai, kichThuoc, mauSac, hangVanChuyen, canhBao, sapXep, hangLoat,
+    loai, kichThuoc, mauSac, hangVanChuyen, canhBao, sapXep, hangLoat, nguoiVanHanh,
   } = req.query;
   if (trangThai) list = list.filter(r => khopGiaTriLoc(r.TRANG_THAI_XUONG, trangThai));
   if (trangThaiPhoi) list = list.filter(r => khopGiaTriLoc(r.TRANG_THAI_PHOI, trangThaiPhoi));
   if (trangThaiVeFile) list = list.filter(r => khopGiaTriLoc(r.TRANG_THAI_VE_FILE, trangThaiVeFile));
+  // "Đơn của tôi" (admin) — lọc còn đúng 1 người sản xuất đang vận hành. NguoiVanHanh là trường TÍNH
+  // TOÁN (gắn ở lamGiauDon() phía trên, không phải cột thật) nên phải lọc SAU khi đã gắn xong. An
+  // toàn với san_xuat dù truyền tham số này: locDonDangChayMayTheoNguoiVanHanh() luôn chạy SAU CÙNG,
+  // vẫn giới hạn san_xuat chỉ thấy đơn "Đang chạy máy" của chính họ bất kể nguoiVanHanh là gì.
+  if (nguoiVanHanh) list = list.filter(r => r.NguoiVanHanh === nguoiVanHanh);
   if (loai) list = list.filter(r => r.LOAI === loai);
   if (kichThuoc) list = list.filter(r => r.KICH_THUOC === kichThuoc);
   if (mauSac) list = list.filter(r => r.MAU_SAC === mauSac);

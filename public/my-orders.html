@@ -12,6 +12,14 @@
 <div class="page">
   <h2>Đơn của tôi</h2>
   <p style="color:var(--color-text-muted);margin:-8px 0 20px">Đơn bạn đang chạy máy, chưa chuyển sang "Đã sản xuất" — chỉ đúng việc đang dở, không lẫn với toàn bộ đơn hàng.</p>
+
+  <div id="loc-nguoi-van-hanh-wrap" class="inline-form" style="display:none">
+    <div class="truong">
+      <label for="loc-nguoi-van-hanh">Người sản xuất</label>
+      <select id="loc-nguoi-van-hanh"><option value="">Tất cả người sản xuất</option></select>
+    </div>
+  </div>
+
   <div id="danh-sach-don" class="order-list"></div>
 </div>
 
@@ -21,10 +29,22 @@
 const NHAN_CANH_BAO = { VANG: 'Vàng · 3 ngày', CAM: 'Cam · 5 ngày', DO: 'Đỏ · 7 ngày' };
 const NHAN_NGUOI_VAN_HANH_KHONG_RO = 'ĐƠN SỬA TRONG GGSHEET, KHÔNG RÕ TÀI KHOẢN SẢN XUẤT NÀO ĐANG CHẠY';
 
+let user; // dùng lại ở taiDon() (biết vaiTro để quyết định hiện bộ lọc/badge người vận hành cho admin)
+
 (async () => {
-  const user = await requireLoginOrRedirect();
+  user = await requireLoginOrRedirect();
   if (!user) return;
   renderNav(user, 'my-orders');
+
+  // Bộ lọc "Người sản xuất" — bổ sung 07/09/2026, CHỈ dành cho admin (xem
+  // docs/superpowers/specs/2026-09-07-loc-nguoi-san-xuat-don-cua-toi-design.md). san_xuat vốn đã chỉ
+  // thấy đơn của chính mình (lọc ở server, routes/orders.js locDonDangChayMayTheoNguoiVanHanh) nên
+  // không cần bộ lọc này.
+  if (user.vaiTro === 'admin') {
+    document.getElementById('loc-nguoi-van-hanh-wrap').style.display = '';
+    document.getElementById('loc-nguoi-van-hanh').onchange = () => taiDon();
+  }
+
   await taiDon();
 })();
 
@@ -38,19 +58,36 @@ async function taiDon() {
   const el = document.getElementById('danh-sach-don');
   el.innerHTML = skeletonList(4);
 
+  const laAdmin = user.vaiTro === 'admin';
+  const nguoiVanHanhDangLoc = laAdmin ? document.getElementById('loc-nguoi-van-hanh').value : '';
+
+  const qs = new URLSearchParams({ trangThai: 'Đang chạy máy' });
+  if (nguoiVanHanhDangLoc) qs.set('nguoiVanHanh', nguoiVanHanhDangLoc);
+
   let list;
   try {
-    list = await apiFetch('/orders?trangThai=' + encodeURIComponent('Đang chạy máy'));
+    list = await apiFetch('/orders?' + qs.toString());
   } catch (e) {
     el.innerHTML = `<p>Không tải được danh sách: ${escapeHtml(e.message)}</p>`;
     return;
+  }
+
+  // Chỉ đổ lại danh sách người sản xuất trong ô lọc khi CHƯA lọc theo người nào — nếu đã lọc rồi mà
+  // vẫn đổ lại theo đúng danh sách đã bị thu hẹp (chỉ còn 1 người) thì các tên khác sẽ biến mất khỏi
+  // ô, không bấm lại được nữa (giống hệt quy ước capNhatCacBoLocDong() ở orders.html).
+  if (laAdmin && !nguoiVanHanhDangLoc) {
+    const sel = document.getElementById('loc-nguoi-van-hanh');
+    const dangChon = sel.value;
+    const cacTen = [...new Set(list.map(o => o.NguoiVanHanh).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'vi'));
+    sel.innerHTML = '<option value="">Tất cả người sản xuất</option>' + cacTen.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+    sel.value = dangChon;
   }
 
   // Server (routes/orders.js, locDonDangChayMayTheoNguoiVanHanh) đã tự lọc: san_xuat chỉ nhận về
   // đúng đơn mình đang vận hành, hoặc đơn không xác định được ai đang chạy (an toàn, tránh thất lạc)
   // — không cần lọc lại lần nữa ở đây.
   if (list.length === 0) {
-    el.innerHTML = `<div class="trang-thai-rong">${icon('package')}<p>Bạn chưa chạy máy đơn nào — mọi việc đã xong hoặc chưa bắt đầu.</p></div>`;
+    el.innerHTML = `<div class="trang-thai-rong">${icon('package')}<p>${nguoiVanHanhDangLoc ? 'Không có đơn nào khớp bộ lọc.' : 'Bạn chưa chạy máy đơn nào — mọi việc đã xong hoặc chưa bắt đầu.'}</p></div>`;
     return;
   }
 
@@ -67,6 +104,8 @@ async function taiDon() {
           <span class="badge ${lopTrangThai(o.TRANG_THAI_XUONG)}">${escapeHtml(o.TRANG_THAI_XUONG || '')}</span>
           ${!o.NguoiVanHanh ? `
             <span class="badge trang-thai-danger" style="white-space:normal;max-width:100%">${icon('alert', {size:14})} ${escapeHtml(NHAN_NGUOI_VAN_HANH_KHONG_RO)}</span>` : ''}
+          ${laAdmin && o.NguoiVanHanh ? `
+            <span class="badge trang-thai-info">${icon('users', {size:14})} Đang vận hành: <strong>${escapeHtml(o.NguoiVanHanh)}</strong></span>` : ''}
           ${o.CanhBao ? `
             <span class="badge badge-canh-bao ${o.CanhBao.toLowerCase()}">
               ${icon('alert')} ${escapeHtml(NHAN_CANH_BAO[o.CanhBao] || o.CanhBao)}
