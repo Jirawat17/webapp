@@ -123,6 +123,13 @@
   <button id="btn-chua-lay-phoi" class="btn-hanh-dong phu nhanh-phoi-ve-file trang-thai-tieu-cuc" onclick="apDungNhanh('TRANG_THAI_PHOI', 'Chưa lấy phôi', this)"></button>
   <button id="btn-da-ve-file" class="btn-hanh-dong phu nhanh-phoi-ve-file trang-thai-tich-cuc" onclick="apDungNhanh('TRANG_THAI_VE_FILE', 'Đã vẽ file', this)"></button>
   <button id="btn-chua-ve-file" class="btn-hanh-dong phu nhanh-phoi-ve-file trang-thai-tieu-cuc" onclick="apDungNhanh('TRANG_THAI_VE_FILE', 'Chưa vẽ file', this)"></button>
+  <span id="khoi-chi-dinh-nguoi-chay-may" style="display:none">
+    <span class="thanh-hanh-dong-cach"></span>
+    <select id="nguoi-chay-may-dich">
+      <option value="">Chỉ định người chạy máy...</option>
+    </select>
+    <button id="nut-ap-dung-chi-dinh" class="btn-hanh-dong" onclick="apDungChiDinhNguoiChayMay()">Áp dụng</button>
+  </span>
   <button class="btn-hanh-dong phu" onclick="boChonTatCaDon()">Bỏ chọn</button>
 </div>
 
@@ -204,6 +211,23 @@ let donDaChonSet = new Set();
 
   document.getElementById('trang-thai-dich').innerHTML = '<option value="">Chuyển đến trạng thái...</option>' +
     DANH_SACH_TRANG_THAI_DAY_DU.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+
+  // "Chỉ định người chạy máy" — CHỈ admin (xem docs/superpowers/specs/2026-09-07-nguoi-chay-may-design.md).
+  // Đổ danh sách san_xuat đang hoạt động từ /users (route này vốn đã chỉ mở cho admin — requireRole
+  // trong routes/users.js — nên không lộ danh sách nhân viên cho vai trò khác qua đường này).
+  if (user.vaiTro === 'admin') {
+    // display:contents (không phải '') — khối bọc này chỉ để gom nhóm cho dễ ẩn/hiện bằng JS, KHÔNG
+    // được tính là 1 phần tử flex riêng của .thanh-hanh-dong-hang-loat, nếu không .thanh-hanh-dong-cach
+    // (align-self:stretch) và <select> (flex:1) bên trong sẽ mất tác dụng vì không còn là con trực
+    // tiếp của flex container nữa.
+    document.getElementById('khoi-chi-dinh-nguoi-chay-may').style.display = 'contents';
+    try {
+      const dsNhanVien = await apiFetch('/users');
+      const dsSanXuat = dsNhanVien.filter(u => u.VaiTro === 'san_xuat' && String(u.KichHoat).toUpperCase() === 'TRUE');
+      document.getElementById('nguoi-chay-may-dich').innerHTML = '<option value="">Chỉ định người chạy máy...</option>' +
+        dsSanXuat.map(u => `<option value="${escapeHtml(u.Ten)}">${escapeHtml(u.Ten)}</option>`).join('');
+    } catch (e) { /* không tải được danh sách nhân viên — ô chọn giữ nguyên rỗng, không chặn tải trang */ }
+  }
 
   taiDon();
 })();
@@ -472,6 +496,50 @@ async function apDungChuyenTrangThai() {
   if (ketQua.daHuy) thongBao += `\n\nĐã HỦY giữa chừng — các đơn còn lại vẫn đang được chọn, bấm lại nếu muốn tiếp tục.`;
   if (ketQua.loi.length > 0) {
     thongBao += `\n\nKhông chuyển được ${ketQua.loi.length} đơn:\n` +
+      ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
+  }
+  alert(thongBao);
+
+  nutApDung.disabled = false;
+  nutApDung.textContent = 'Áp dụng';
+  if (ketQua.daHuy) ketQua.thanhCong.forEach(sttKey => donDaChonSet.delete(sttKey));
+  else donDaChonSet.clear();
+  await taiDon();
+}
+
+// Admin CHỈ ĐỊNH 1 người sản xuất chạy máy cho toàn bộ đơn đang chọn — chuyển thẳng sang "Đang chạy
+// máy" (không cần đơn đang ở "ĐÃ SẴN SÀNG CHẠY MÁY" trước đó, giống triết lý "chọn tự do" của
+// apDungChuyenTrangThai() ở trên). Ghi NGUOI_CHAY_MAY = người được chọn + GHI_CHU_CHAY_MAY = "Admin
+// chỉ định" (xem routes/orders.js POST /chi-dinh-nguoi-chay-may).
+async function apDungChiDinhNguoiChayMay() {
+  const nguoiSanXuat = document.getElementById('nguoi-chay-may-dich').value;
+  if (!nguoiSanXuat) { alert('Hãy chọn người sản xuất muốn chỉ định'); return; }
+
+  const soLuong = donDaChonSet.size;
+  if (!confirm(`Chỉ định "${nguoiSanXuat}" chạy máy cho ${soLuong} đơn đã chọn (chuyển sang "Đang chạy máy")?`)) return;
+
+  const nutApDung = document.getElementById('nut-ap-dung-chi-dinh');
+  nutApDung.disabled = true;
+  nutApDung.textContent = 'Đang xử lý...';
+
+  let daHuy = false;
+  const danhSach = Array.from(donDaChonSet);
+  const thanhTienDo = taoThanhTienDo(nutApDung, { onHuy: () => { daHuy = true; } });
+  thanhTienDo.capNhat(0, danhSach.length);
+
+  const ketQua = await chayHangLoatCoTienDo(
+    danhSach,
+    sttKey => apiFetch('/orders/chi-dinh-nguoi-chay-may', {
+      method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], nguoiSanXuat }),
+    }),
+    { onTienDo: (hienTai, tong) => thanhTienDo.capNhat(hienTai, tong), kiemTraHuy: () => daHuy }
+  );
+  thanhTienDo.xoa();
+
+  let thongBao = `Đã chỉ định "${nguoiSanXuat}" chạy máy cho ${ketQua.thanhCong.length}/${soLuong} đơn.`;
+  if (ketQua.daHuy) thongBao += `\n\nĐã HỦY giữa chừng — các đơn còn lại vẫn đang được chọn, bấm lại nếu muốn tiếp tục.`;
+  if (ketQua.loi.length > 0) {
+    thongBao += `\n\nKhông chỉ định được ${ketQua.loi.length} đơn:\n` +
       ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
   }
   alert(thongBao);

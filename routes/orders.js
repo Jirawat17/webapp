@@ -6,8 +6,8 @@ const alertService = require('../services/alertService');
 const scenarioService = require('../services/scenarioService');
 const { parseNgay } = require('../services/dateUtils');
 const { DANH_SACH_TRANG_THAI_BAO_CAO, TRANG_THAI_PHOI_VALUES, TRANG_THAI_VE_FILE_VALUES, khopGiaTriLoc } = require('../data/pipelineTinhTrang');
-const { ghiLog, layLichSuTheoDon, layLichSuChuyenSangTrangThai } = require('../services/logService');
-const { updateCells } = require('../services/sheetsService');
+const { ghiLog, layLichSuTheoDon } = require('../services/logService');
+const { updateCells, readTabCached } = require('../services/sheetsService');
 const { taiDsAnh } = require('../services/anhNguonService');
 const { tinhHashAnh, khoangCachHamming } = require('../services/perceptualHashService');
 const { requireLogin } = require('../middleware/auth');
@@ -16,33 +16,20 @@ router.use(requireLogin);
 
 const TRANG_THAI_DANG_CHAY_MAY = 'Đang chạy máy';
 
-// "Người vận hành máy": đơn không lưu trực tiếp trường này — tra LỊCH SỬ (LichSuHoatDong) tìm lần
-// GẦN NHẤT đơn được chuyển sang "Đang chạy máy" (chính xác hơn dùng NguoiCapNhatCuoi, vì trường đó
-// bị ghi đè bởi BẤT KỲ lần sửa nào sau đó, kể cả chỉ sửa Ghi chú). Chỉ cần tính khi có ít nhất 1 đơn
-// đang ở trạng thái này, tránh đọc lịch sử không cần thiết ở các trang không liên quan.
-async function layNguoiVanHanhTheoDon() {
-  const lanChuyen = await layLichSuChuyenSangTrangThai(TRANG_THAI_DANG_CHAY_MAY);
-  const ketQua = {};
-  for (const l of lanChuyen) {
-    const hienTai = ketQua[l.sttKey];
-    if (!hienTai || new Date(l.thoiGian) > new Date(hienTai.thoiGian)) ketQua[l.sttKey] = l;
-  }
-  return ketQua;
-}
-
 // Gắn thêm các trường tính toán (không phải cột thật trong Sheet) để hiển thị — dùng chung cho list/detail
+// "Người vận hành máy" (bổ sung 07/09/2026): đọc THẲNG cột NGUOI_CHAY_MAY (ghi trực tiếp bởi
+// services/orderService.js update() — xem docs/superpowers/specs/2026-09-07-nguoi-chay-may-design.md)
+// — TRƯỚC ĐÂY phải dò ngược LichSuHoatDong tìm lần gần nhất đơn chuyển sang "Đang chạy máy", giờ
+// không cần nữa. Giữ nguyên tên trường JSON trả về là NguoiVanHanh (không đổi thành NguoiChayMay) để
+// không phải sửa gì ở orders.html/my-orders.html/order.html đang đọc o.NguoiVanHanh.
 async function lamGiauDon(rows) {
   const daGanKH = await orderService.ganTenKhachHang(rows);
-  const canNguoiVanHanh = daGanKH.some(r => r.TRANG_THAI_XUONG === TRANG_THAI_DANG_CHAY_MAY);
-  const nguoiVanHanhTheoDon = canNguoiVanHanh ? await layNguoiVanHanhTheoDon() : {};
   return daGanKH.map(r => ({
     ...r,
     TieuDeSanPham: orderService.tieuDeSanPham(r),
     ViTriTheu: orderService.danhSachViTriTheu(r),
     CanhBao: alertService.tinhMucCanhBao(r),
-    NguoiVanHanh: r.TRANG_THAI_XUONG === TRANG_THAI_DANG_CHAY_MAY
-      ? ((nguoiVanHanhTheoDon[r.STT_Key] && nguoiVanHanhTheoDon[r.STT_Key].nguoiDung) || null)
-      : null,
+    NguoiVanHanh: r.TRANG_THAI_XUONG === TRANG_THAI_DANG_CHAY_MAY ? (r.NGUOI_CHAY_MAY || null) : null,
   }));
 }
 
@@ -215,6 +202,64 @@ router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
           cot, tu: trangThaiCu, sang: trangThaiMoi,
           ...(ketQuaUpdate._daTuDongChuyenTinhTrang ? { tuDongChuyenTinhTrangSang: ketQuaUpdate._tinhTrangTuDongMoi } : {}),
         },
+      }).catch(err => console.error('[Orders] Lỗi ghi log nền:', err.message));
+    } catch (err) {
+      loi.push({ sttKey, lyDo: err.message });
+    }
+  }
+
+  res.json({ ok: true, thanhCong, loi });
+});
+
+// Admin CHỈ ĐỊNH người sản xuất chạy máy cho 1 lô đơn đã chọn (cơ chế 2 — khác cơ chế 1 là san_xuat
+// tự đổi trạng thái đơn của mình qua chuyen-trang-thai-hang-loat/sửa tay/quét QR ở trên, tự động
+// stamp NGUOI_CHAY_MAY qua orderService.update()). Chỉ admin — người sản xuất không tự chỉ định
+// người khác được. Xem docs/superpowers/specs/2026-09-07-nguoi-chay-may-design.md.
+router.post('/chi-dinh-nguoi-chay-may', async (req, res) => {
+  const user = req.session.user;
+  if (user.vaiTro !== 'admin') {
+    return res.status(403).json({ error: 'Chỉ admin mới được chỉ định người chạy máy' });
+  }
+
+  const { sttKeys, nguoiSanXuat } = req.body;
+  if (!Array.isArray(sttKeys) || sttKeys.length === 0) {
+    return res.status(400).json({ error: 'Danh sách đơn trống' });
+  }
+  if (!nguoiSanXuat || typeof nguoiSanXuat !== 'string') {
+    return res.status(400).json({ error: 'Thiếu người sản xuất được chỉ định' });
+  }
+
+  // Kiểm tra tên được chỉ định đúng là 1 tài khoản san_xuat đang hoạt động — tránh gõ nhầm tên ghi
+  // thẳng vào Sheet mà không ai phát hiện ra (khác hẳn nguy cơ chọn nhầm trong 1 dropdown có sẵn).
+  const { rows: dsNhanVien } = await readTabCached('NguoiDung', 30000);
+  const hopLe = dsNhanVien.some(r => r.Ten === nguoiSanXuat && r.VaiTro === 'san_xuat' && String(r.KichHoat).toUpperCase() === 'TRUE');
+  if (!hopLe) {
+    return res.status(400).json({ error: `"${nguoiSanXuat}" không phải tài khoản sản xuất đang hoạt động` });
+  }
+
+  const thanhCong = [];
+  const loi = [];
+
+  for (const sttKey of sttKeys) {
+    try {
+      const { headers, row } = await orderService.getByKey(sttKey, { fresh: true });
+      if (!row) {
+        loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
+        continue;
+      }
+
+      await orderService.update(sttKey, {
+        TRANG_THAI_XUONG: 'Đang chạy máy',
+        NGUOI_CHAY_MAY: nguoiSanXuat,
+        GHI_CHU_CHAY_MAY: 'Admin chỉ định',
+        NguoiCapNhatCuoi: user.ten,
+        ThoiGianCapNhatCuoi: new Date().toISOString(),
+      }, user, { donDaDoc: { headers, row } });
+
+      thanhCong.push(sttKey);
+      ghiLog({
+        nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'CHI_DINH_NGUOI_CHAY_MAY',
+        sttKey, chiTiet: { nguoiDuocChiDinh: nguoiSanXuat, tuTrangThai: row.TRANG_THAI_XUONG },
       }).catch(err => console.error('[Orders] Lỗi ghi log nền:', err.message));
     } catch (err) {
       loi.push({ sttKey, lyDo: err.message });

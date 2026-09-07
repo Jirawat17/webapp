@@ -167,6 +167,25 @@ async function update(sttKey, updates, user, tuyChon = {}) {
     if (headers.includes('NHOM_HANG_LOAT')) updatesDaTinh.NHOM_HANG_LOAT = '';
   }
 
+  // Đơn VỪA chuyển sang "Đang chạy máy" (từ 1 trạng thái KHÁC) — ghi lại AI đang vận hành thẳng vào
+  // cột NGUOI_CHAY_MAY (thay cho dò lịch sử hoạt động như trước — xem
+  // docs/superpowers/specs/2026-09-07-nguoi-chay-may-design.md). Áp dụng cho MỌI đường ghi đi qua
+  // update() này — quét QR, đổi trạng thái hàng loạt, sửa tay 1 đơn.
+  // Nếu người gọi đã TỰ truyền sẵn NGUOI_CHAY_MAY trong chính updates (nhánh admin chỉ định người
+  // KHÁC chạy máy, xem routes/orders.js POST /chi-dinh-nguoi-chay-may) thì GIỮ NGUYÊN giá trị đó,
+  // không ghi đè bằng người đang thao tác — ngược lại (ai đó tự đổi trạng thái đơn của chính họ) thì
+  // tự stamp NGUOI_CHAY_MAY = người đang thao tác, đồng thời xoá ghi chú cũ (nếu có, từ lượt chạy
+  // trước) vì đây là 1 lượt gán MỚI, không phải tiếp nối lượt cũ.
+  if (
+    headers.includes('NGUOI_CHAY_MAY') &&
+    updatesDaTinh.TRANG_THAI_XUONG === 'Đang chạy máy' &&
+    row.TRANG_THAI_XUONG !== 'Đang chạy máy' &&
+    updatesDaTinh.NGUOI_CHAY_MAY === undefined
+  ) {
+    updatesDaTinh.NGUOI_CHAY_MAY = (user && user.ten) || '';
+    if (headers.includes('GHI_CHU_CHAY_MAY')) updatesDaTinh.GHI_CHU_CHAY_MAY = '';
+  }
+
   kiemTraTinhHopLy(row, updatesDaTinh); // kiểm tra SAU khi đã tính tự động, để không báo nhầm khi chính việc tự động hoá làm cho tổ hợp trở nên hợp lệ
 
   await updateCells(TAB, headers, row._row, updatesDaTinh); // tự xoá cache của tab sau khi ghi (xem sheetsService)
