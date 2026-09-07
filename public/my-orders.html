@@ -11,6 +11,23 @@
 <div id="nav"></div>
 <div class="page">
   <h2>Đơn của tôi</h2>
+
+  <h3>Đơn sẵn sàng chạy máy</h3>
+  <p style="color:var(--color-text-muted);margin:-8px 0 16px">Đơn đã xong phôi + vẽ file, đang chờ người nhận chạy máy — chọn đơn rồi bấm nút bên dưới để nhận.</p>
+
+  <div id="thanh-hanh-dong-san-sang" class="thanh-hanh-dong-hang-loat" style="display:none">
+    <span>Đã chọn <strong id="so-luong-da-chon-san-sang">0</strong> đơn</span>
+    <button id="nut-nhan-chay-may" class="btn-hanh-dong" onclick="apDungNhanChayMay()">Chuyển các đơn đã chọn từ ĐÃ SẴN SÀNG CHẠY MÁY sang Đang chạy máy</button>
+    <button type="button" class="btn-hanh-dong phu" onclick="boChonTatCaDonSanSang()">Bỏ chọn</button>
+  </div>
+  <label class="chon-tat-ca-hang">
+    <input type="checkbox" id="chon-tat-ca-san-sang" onchange="chonTatCaSanSang(this.checked)">
+    Chọn tất cả đơn sẵn sàng đang hiển thị
+  </label>
+
+  <div id="danh-sach-san-sang" class="order-list"></div>
+
+  <h3 style="margin-top:32px">Đơn đang chạy máy của tôi</h3>
   <p style="color:var(--color-text-muted);margin:-8px 0 20px">Đơn bạn đang chạy máy, chưa chuyển sang "Đã sản xuất" — chỉ đúng việc đang dở, không lẫn với toàn bộ đơn hàng.</p>
 
   <div class="inline-form">
@@ -55,6 +72,8 @@ const NHAN_CANH_BAO = { VANG: 'Vàng · 3 ngày', CAM: 'Cam · 5 ngày', DO: 'Đ
 const NHAN_NGUOI_VAN_HANH_KHONG_RO = 'ĐƠN SỬA TRONG GGSHEET, KHÔNG RÕ TÀI KHOẢN SẢN XUẤT NÀO ĐANG CHẠY';
 
 let user; // dùng lại ở taiDon() (biết vaiTro để quyết định hiện bộ lọc/badge người vận hành cho admin)
+let danhSachSanSang = [];
+let donSanSangChonSet = new Set();
 
 (async () => {
   user = await requireLoginOrRedirect();
@@ -79,8 +98,139 @@ let user; // dùng lại ở taiDon() (biết vaiTro để quyết định hiệ
   document.getElementById('loc-den-ngay').onchange = () => taiDon();
   document.getElementById('sap-xep').onchange = () => taiDon();
 
-  await taiDon();
+  await Promise.all([taiDonSanSang(), taiDon()]);
 })();
+
+async function taiDonSanSang() {
+  const el = document.getElementById('danh-sach-san-sang');
+  el.innerHTML = skeletonList(2);
+
+  try {
+    danhSachSanSang = await apiFetch('/orders?' + new URLSearchParams({ trangThai: 'ĐÃ SẴN SÀNG CHẠY MÁY' }).toString());
+  } catch (e) {
+    el.innerHTML = `<p>Không tải được danh sách: ${escapeHtml(e.message)}</p>`;
+    return;
+  }
+
+  // Bỏ khỏi tập đang chọn những đơn không còn trong danh sách (đã bị người khác nhận/xử lý ở nơi
+  // khác giữa 2 lần tải) — tránh giữ trạng thái "đã chọn" cho 1 đơn không còn hiển thị.
+  const cacSttHienTai = new Set(danhSachSanSang.map(o => o.STT_Key));
+  [...donSanSangChonSet].forEach(k => { if (!cacSttHienTai.has(k)) donSanSangChonSet.delete(k); });
+
+  renderDanhSachSanSang();
+}
+
+function renderDanhSachSanSang() {
+  const el = document.getElementById('danh-sach-san-sang');
+
+  if (danhSachSanSang.length === 0) {
+    el.innerHTML = `<div class="trang-thai-rong">${icon('package')}<p>Hiện không có đơn nào đang sẵn sàng chạy máy.</p></div>`;
+    capNhatThanhHanhDongSanSang();
+    return;
+  }
+
+  el.innerHTML = danhSachSanSang.map(o => {
+    const daChon = donSanSangChonSet.has(o.STT_Key);
+    return `
+    <div class="order-card ${daChon ? 'da-chon' : ''}" data-stt-san-sang="${escapeHtml(o.STT_Key)}"
+         onclick="location.href='/order.html?stt=${encodeURIComponent(o.STT_Key)}'">
+      <input type="checkbox" class="order-checkbox" ${daChon ? 'checked' : ''}
+             aria-label="Chọn đơn ${escapeHtml(o.STT_Key)}"
+             onclick="event.stopPropagation()"
+             onchange="toggleChonDonSanSang('${escapeHtml(o.STT_Key)}', this.checked)">
+      ${o.MOCKUP || o.DUONG_DAN_URL
+        ? `<img src="${escapeHtml(o.MOCKUP || o.DUONG_DAN_URL)}" alt="" loading="lazy" onerror="this.remove()">`
+        : ''}
+      <div class="thong-tin">
+        <strong class="tieu-de-the">${escapeHtml(o.TieuDeSanPham || o.STT_Key)}</strong>
+        <div class="meta">${escapeHtml(o.TenKhachHang || '')} · SL: <strong>${escapeHtml(o.SO_LUONG || '')}</strong></div>
+        <div class="meta">Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgayNgan(o.NGAY_LEN_DON) : '—')}</div>
+        <div class="badge-row">
+          <span class="badge ${lopTrangThai(o.TRANG_THAI_XUONG)}">${escapeHtml(o.TRANG_THAI_XUONG || '')}</span>
+          ${o.CanhBao ? `
+            <span class="badge badge-canh-bao ${o.CanhBao.toLowerCase()}">
+              ${icon('alert')} ${escapeHtml(NHAN_CANH_BAO[o.CanhBao] || o.CanhBao)}
+            </span>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  capNhatCheckboxChonTatCaSanSang();
+  capNhatThanhHanhDongSanSang();
+}
+
+function toggleChonDonSanSang(sttKey, daChon) {
+  if (daChon) donSanSangChonSet.add(sttKey); else donSanSangChonSet.delete(sttKey);
+  const the = document.querySelector(`[data-stt-san-sang="${CSS.escape(sttKey)}"]`);
+  if (the) the.classList.toggle('da-chon', daChon);
+  capNhatCheckboxChonTatCaSanSang();
+  capNhatThanhHanhDongSanSang();
+}
+
+function chonTatCaSanSang(daChonHet) {
+  danhSachSanSang.forEach(o => {
+    if (daChonHet) donSanSangChonSet.add(o.STT_Key); else donSanSangChonSet.delete(o.STT_Key);
+  });
+  renderDanhSachSanSang();
+}
+
+function boChonTatCaDonSanSang() {
+  donSanSangChonSet.clear();
+  renderDanhSachSanSang();
+}
+
+function capNhatCheckboxChonTatCaSanSang() {
+  const cb = document.getElementById('chon-tat-ca-san-sang');
+  cb.checked = danhSachSanSang.length > 0 && danhSachSanSang.every(o => donSanSangChonSet.has(o.STT_Key));
+}
+
+function capNhatThanhHanhDongSanSang() {
+  const thanh = document.getElementById('thanh-hanh-dong-san-sang');
+  if (donSanSangChonSet.size === 0) { thanh.style.display = 'none'; return; }
+  thanh.style.display = 'flex';
+  document.getElementById('so-luong-da-chon-san-sang').textContent = donSanSangChonSet.size;
+}
+
+async function apDungNhanChayMay() {
+  const soLuong = donSanSangChonSet.size;
+  if (!confirm(`Chuyển ${soLuong} đơn đã chọn sang "Đang chạy máy"?`)) return;
+
+  const nut = document.getElementById('nut-nhan-chay-may');
+  const nhanGoc = nut.innerHTML;
+  document.querySelectorAll('#thanh-hanh-dong-san-sang button').forEach(b => b.disabled = true);
+  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Đang xử lý...';
+
+  let daHuy = false;
+  const danhSach = Array.from(donSanSangChonSet);
+  const thanhTienDo = taoThanhTienDo(nut, { onHuy: () => { daHuy = true; } });
+  thanhTienDo.capNhat(0, danhSach.length);
+
+  const ketQua = await chayHangLoatCoTienDo(
+    danhSach,
+    sttKey => apiFetch('/orders/chuyen-trang-thai-hang-loat', {
+      method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], trangThaiMoi: 'Đang chạy máy' }),
+    }),
+    { onTienDo: (hienTai, tong) => thanhTienDo.capNhat(hienTai, tong), kiemTraHuy: () => daHuy }
+  );
+  thanhTienDo.xoa();
+
+  let thongBao = `Đã chuyển ${ketQua.thanhCong.length}/${soLuong} đơn sang "Đang chạy máy".`;
+  if (ketQua.daHuy) thongBao += `\n\nĐã HỦY giữa chừng — các đơn còn lại vẫn đang được chọn, bấm lại nếu muốn tiếp tục.`;
+  if (ketQua.loi.length > 0) {
+    thongBao += `\n\nKhông chuyển được ${ketQua.loi.length} đơn:\n` +
+      ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
+  }
+  alert(thongBao);
+
+  document.querySelectorAll('#thanh-hanh-dong-san-sang button').forEach(b => b.disabled = false);
+  nut.innerHTML = nhanGoc;
+  if (ketQua.daHuy) ketQua.thanhCong.forEach(sttKey => donSanSangChonSet.delete(sttKey));
+  else donSanSangChonSet.clear();
+
+  await taiDonSanSang();
+  await taiDon(); // đơn vừa chuyển có thể giờ xuất hiện ở "Đang chạy máy của tôi" bên dưới
+}
 
 function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
 
