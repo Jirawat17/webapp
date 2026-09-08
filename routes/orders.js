@@ -85,6 +85,11 @@ function sapXepDon(list, kieu) {
         const chenhLech = String(a.STT_Key || '').localeCompare(String(b.STT_Key || ''), 'vi');
         return chenhLech !== 0 ? chenhLech : soSanhNgayTang(a, b);
       });
+    case 'ma_don_desc':
+      return daSap.sort((a, b) => {
+        const chenhLech = String(b.STT_Key || '').localeCompare(String(a.STT_Key || ''), 'vi');
+        return chenhLech !== 0 ? chenhLech : soSanhNgayTang(a, b);
+      });
     default:
       return daSap.sort((a, b) => -soSanhNgayTang(a, b));
   }

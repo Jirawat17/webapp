@@ -13,7 +13,6 @@
   <h2>Đơn của tôi</h2>
 
   <h3>Đơn sẵn sàng chạy máy</h3>
-  <p style="color:var(--color-text-muted);margin:-8px 0 16px">Đơn đã xong phôi + vẽ file, đang chờ người nhận chạy máy — chọn đơn rồi bấm nút bên dưới để nhận.</p>
 
   <div id="thanh-hanh-dong-san-sang" class="thanh-hanh-dong-hang-loat" style="display:none">
     <span>Đã chọn <strong id="so-luong-da-chon-san-sang">0</strong> đơn</span>
@@ -35,7 +34,6 @@
   <div id="danh-sach-san-sang" class="order-list"></div>
 
   <h3 style="margin-top:32px">Đơn đang chạy máy của tôi</h3>
-  <p style="color:var(--color-text-muted);margin:-8px 0 20px">Đơn bạn đang chạy máy, chưa chuyển sang "Đã sản xuất" — chỉ đúng việc đang dở, không lẫn với toàn bộ đơn hàng.</p>
 
   <div class="inline-form">
     <div class="truong">
@@ -57,9 +55,10 @@
     <div class="truong">
       <label for="sap-xep">Sắp xếp theo</label>
       <select id="sap-xep">
-        <option value="">Ngày lên đơn — mới nhất trước (mặc định)</option>
-        <option value="ngay_cu_nhat">Ngày lên đơn — cũ nhất trước</option>
+        <option value="ngay_cu_nhat">Ngày lên đơn — cũ nhất trước (mặc định)</option>
+        <option value="">Ngày lên đơn — mới nhất trước</option>
         <option value="ma_don">Mã đơn (STT_Key) — A đến Z</option>
+        <option value="ma_don_desc">Mã đơn (STT_Key) — Z đến A</option>
       </select>
     </div>
     <div id="loc-nguoi-van-hanh-wrap" class="truong" style="display:none">
@@ -310,7 +309,7 @@ function xoaTatCaLoc() {
   document.getElementById('loc-kh').value = '';
   document.getElementById('loc-tu-ngay').value = '';
   document.getElementById('loc-den-ngay').value = '';
-  document.getElementById('sap-xep').value = '';
+  document.getElementById('sap-xep').value = 'ngay_cu_nhat'; // khớp mặc định mới của ô Sắp xếp
   if (user.vaiTro === 'admin') document.getElementById('loc-nguoi-van-hanh').value = '';
   taiDon();
 }
