@@ -119,8 +119,14 @@ function renderNav(user, active) {
   // right (bản trong .app-header, ẩn/hiện theo chính .app-header) và .tab-links-user (bản trong
   // .tab-links, style.css tự bật/tắt riêng theo breakpoint) — gộp chung 1 class sẽ khiến CSS ẩn/hiện
   // NHẦM cả 2 bản cùng lúc thay vì đúng 1 bản theo màn hình.
+  // Nút bật/tắt toàn màn hình (bổ sung 09/09/2026, theo yêu cầu người dùng — tiết kiệm diện tích hiển
+  // thị). Đứng cạnh nút đăng xuất, đổi icon maximize/minimize + nhãn theo ĐÚNG trạng thái thật của
+  // trình duyệt (nghe sự kiện fullscreenchange — xem toggleFullscreen()/capNhatNutFullscreen() bên
+  // dưới) chứ không tự suy đoán, vì người dùng có thể thoát bằng phím Esc thay vì bấm lại nút này.
+  const dangFullscreenLucVe = !!document.fullscreenElement;
   const noiDungNguoiDung = `
     <span class="nav-user">${escapeHtml(user.ten)} · ${escapeHtml(NHAN_VAI_TRO[user.vaiTro] || user.vaiTro)}</span>
+    <button class="icon-btn btn-fullscreen" onclick="toggleFullscreen()" aria-label="${dangFullscreenLucVe ? 'Thoát toàn màn hình' : 'Toàn màn hình'}">${icon(dangFullscreenLucVe ? 'minimize' : 'maximize')}</button>
     <button class="icon-btn" onclick="dangXuat()" aria-label="Đăng xuất">${icon('logout')}</button>`;
   nav.innerHTML = `
     <header class="app-header">
@@ -136,6 +142,26 @@ function renderNav(user, active) {
       </div>
       <div class="header-right tab-links-user">${noiDungNguoiDung}</div>
     </nav>`;
+  document.removeEventListener('fullscreenchange', capNhatNutFullscreen);
+  document.addEventListener('fullscreenchange', capNhatNutFullscreen);
+}
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen();
+  }
+}
+
+// Vẽ lại CẢ 2 bản nút (điện thoại trong .app-header, desktop trong .tab-links-user — xem renderNav())
+// mỗi khi trạng thái toàn màn hình thật sự đổi, kể cả đổi do bấm Esc chứ không chỉ do bấm nút này.
+function capNhatNutFullscreen() {
+  const dangFullscreen = !!document.fullscreenElement;
+  document.querySelectorAll('.btn-fullscreen').forEach(btn => {
+    btn.innerHTML = icon(dangFullscreen ? 'minimize' : 'maximize');
+    btn.setAttribute('aria-label', dangFullscreen ? 'Thoát toàn màn hình' : 'Toàn màn hình');
+  });
 }
 
 // Khối skeleton dùng khi đang tải dữ liệu — thay cho chữ "Đang tải..." khô khan

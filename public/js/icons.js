@@ -10,7 +10,10 @@ const ICONS = {
   chat: '<path d="M4.5 5.5h15a1 1 0 0 1 1 1V15a1 1 0 0 1-1 1H10l-4.2 3.4a.5.5 0 0 1-.8-.4V16h-.5a1 1 0 0 1-1-1V6.5a1 1 0 0 1 1-1z"/>',
   send: '<path d="M21 3 3 10.5l7 2.5 2.5 7L21 3z"/><path d="M12.9 13 21 3"/>',
   close: '<line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/>',
-  minimize: '<line x1="6" y1="15" x2="18" y2="15" />',
+  // 4 góc hướng RA NGOÀI = vào toàn màn hình; hướng VÀO TRONG = thoát — cặp icon chuẩn dùng chung
+  // (bổ sung 09/09/2026, theo yêu cầu người dùng — nút bật/tắt toàn màn hình ở menu chính).
+  maximize: '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>',
+  minimize: '<path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/>',
   check: '<polyline points="5.5 12.5 9.5 16.5 18.5 7.5"/>',
   alert: '<path d="M12 3.2 2.5 20h19L12 3.2z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><circle cx="12" cy="16.6" r="0.9" fill="currentColor" stroke="none"/>',
   package: '<path d="M12 3 4 7v10l8 4 8-4V7l-8-4z"/><path d="M4 7l8 4 8-4"/><line x1="12" y1="11" x2="12" y2="21"/>',
