@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tracking — Xưởng Thêu</title>
+<link rel="stylesheet" href="/css/style.css?v=79">
+<script src="/js/theme.js?v=79"></script>
+<style>
+/* Popup báo "vừa tự động mua tracking" — trang này tự chứa, chưa có class modal/popup dùng chung nào
+   trong style.css để tái dùng (đã rà trước khi thêm). */
+.tk-lop-phu {
+  position: fixed; inset: 0; background: rgba(24,24,27,0.45); z-index: 100;
+  display: flex; align-items: center; justify-content: center; padding: var(--space-4);
+}
+.tk-popup {
+  background: var(--color-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-lg, 0 12px 40px rgba(0,0,0,0.25));
+  max-width: 440px; width: 100%; padding: var(--space-5); max-height: 80vh; overflow-y: auto;
+}
+.tk-popup h3 { margin-top: 0; }
+.tk-popup ul { margin: 0; padding-left: 1.2em; }
+.tk-popup li { margin-bottom: 4px; }
+.tk-trang-thai { font-size: 0.82rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.tk-trang-thai.da-mua { background: color-mix(in srgb, #16a34a 15%, transparent); color: #16a34a; }
+.tk-trang-thai.dang-cho-tem { background: color-mix(in srgb, #2563eb 15%, transparent); color: #2563eb; }
+.tk-trang-thai.den-han { background: color-mix(in srgb, #d97706 15%, transparent); color: #d97706; }
+.tk-trang-thai.dang-cho { background: var(--color-bg); color: var(--color-text-muted); }
+.tk-trang-thai.thieu-du-lieu { background: color-mix(in srgb, #dc2626 15%, transparent); color: #dc2626; }
+</style>
+</head>
+<body>
+<div id="nav"></div>
+<div class="page">
+  <h2>Tracking</h2>
+  <p style="color:var(--color-text-muted);margin:-8px 0 20px">Tự động mua tracking GKE cho đơn đánh dấu <code>AUTO_TRACKING = "YES"</code>, sau khi đủ số phút chờ kể từ lúc đơn chuyển "Đã in mã".</p>
+
+  <div class="cong-tac-hang">
+    <span class="cong-tac-nhan">Tự động mua tracking</span>
+    <span class="cong-tac">
+      <input type="checkbox" id="cong-tac-bat-tat">
+      <span class="cong-tac-slider"></span>
+    </span>
+  </div>
+
+  <div class="inline-form" style="margin-top:var(--space-3)">
+    <div class="truong">
+      <label for="so-phut-cho">Chờ bao nhiêu phút kể từ lúc "Đã in mã" thì mua</label>
+      <input type="number" id="so-phut-cho" min="1" step="1" style="max-width:120px">
+    </div>
+    <button type="button" class="btn-hanh-dong" id="btn-luu-cau-hinh">Lưu</button>
+  </div>
+  <p id="thong-bao-luu" style="display:none;margin-top:8px"></p>
+
+  <h3 style="margin-top:var(--space-5)">Danh sách đơn AUTO_TRACKING</h3>
+  <div id="bang-danh-sach">Đang tải...</div>
+</div>
+
+<div id="tk-popup-moi" class="tk-lop-phu" style="display:none">
+  <div class="tk-popup">
+    <h3>🎉 Vừa tự động mua tracking</h3>
+    <ul id="tk-popup-danh-sach"></ul>
+    <button type="button" class="btn-hanh-dong" style="margin-top:var(--space-3)" id="btn-dong-popup">Đã biết</button>
+  </div>
+</div>
+
+<script src="/js/icons.js?v=79"></script>
+<script src="/js/api.js?v=79"></script>
+<script>
+// Nhãn + class hiển thị cho từng trạng thái trả về từ services/trackingAutoService.js
+// (layDanhSachDonAutoTracking) — xem docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md.
+const NHAN_TRANG_THAI = {
+  DA_MUA: { nhan: 'Đã mua', lop: 'da-mua' },
+  DANG_CHO_TEM: { nhan: 'Đang chờ tem GKE', lop: 'dang-cho-tem' },
+  DEN_HAN_CHO_XU_LY: { nhan: 'Đến hạn, chờ xử lý', lop: 'den-han' },
+  DANG_CHO: { nhan: 'Đang chờ đủ giờ', lop: 'dang-cho' },
+  THIEU_THOI_GIAN_IN_MA: { nhan: 'Thiếu THOI_GIAN_IN_MA', lop: 'thieu-du-lieu' },
+};
+
+const KHOA_LAN_XEM_CUOI = 'trackingLanXemCuoi';
+
+(async () => {
+  const user = await requireLoginOrRedirect();
+  if (!user) return;
+  renderNav(user, 'tracking');
+
+  await taiCauHinh();
+  document.getElementById('btn-luu-cau-hinh').onclick = luuCauHinh;
+  document.getElementById('btn-dong-popup').onclick = () => {
+    document.getElementById('tk-popup-moi').style.display = 'none';
+  };
+
+  await taiDanhSach();
+})();
+
+async function taiCauHinh() {
+  try {
+    const cauHinh = await apiFetch('/tracking/cau-hinh');
+    document.getElementById('cong-tac-bat-tat').checked = cauHinh.bat;
+    document.getElementById('so-phut-cho').value = cauHinh.soPhutCho;
+  } catch (e) {
+    document.getElementById('thong-bao-luu').style.display = 'block';
+    document.getElementById('thong-bao-luu').style.color = 'var(--color-primary)';
+    document.getElementById('thong-bao-luu').textContent = 'Không tải được cấu hình: ' + e.message;
+  }
+}
+
+async function luuCauHinh() {
+  const bat = document.getElementById('cong-tac-bat-tat').checked;
+  const soPhutCho = Number(document.getElementById('so-phut-cho').value);
+  const thongBao = document.getElementById('thong-bao-luu');
+  const nut = document.getElementById('btn-luu-cau-hinh');
+
+  if (!Number.isFinite(soPhutCho) || soPhutCho <= 0) {
+    thongBao.style.display = 'block';
+    thongBao.style.color = 'var(--color-primary)';
+    thongBao.textContent = 'Số phút chờ phải là số dương.';
+    return;
+  }
+
+  nut.disabled = true;
+  nut.textContent = 'Đang lưu...';
+  try {
+    await apiFetch('/tracking/cau-hinh', { method: 'POST', body: JSON.stringify({ bat, soPhutCho }) });
+    thongBao.style.display = 'block';
+    thongBao.style.color = '#16a34a';
+    thongBao.textContent = 'Đã lưu cấu hình.';
+  } catch (e) {
+    thongBao.style.display = 'block';
+    thongBao.style.color = 'var(--color-primary)';
+    thongBao.textContent = 'Lỗi khi lưu: ' + e.message;
+  } finally {
+    nut.disabled = false;
+    nut.textContent = 'Lưu';
+  }
+}
+
+async function taiDanhSach() {
+  const el = document.getElementById('bang-danh-sach');
+  let ds;
+  try {
+    ds = await apiFetch('/tracking/danh-sach');
+  } catch (e) {
+    el.innerHTML = `<p style="color:var(--color-primary)">Không tải được danh sách: ${escapeHtml(e.message)}</p>`;
+    return;
+  }
+
+  if (ds.length === 0) {
+    el.innerHTML = '<p style="color:var(--color-text-muted)">Chưa có đơn nào đánh dấu AUTO_TRACKING = "YES".</p>';
+  } else {
+    el.innerHTML = `
+      <table class="bang-xem-truoc">
+        <thead><tr><th>Mã đơn</th><th>Trạng thái</th><th>Mã tracking</th><th>Hãng vận chuyển</th><th>Thời gian in mã</th></tr></thead>
+        <tbody>
+          ${ds.map(d => {
+            const tt = NHAN_TRANG_THAI[d.trangThai] || { nhan: d.trangThai, lop: 'dang-cho' };
+            return `<tr>
+              <td><a href="/order.html?stt=${encodeURIComponent(d.sttKey)}">${escapeHtml(d.sttKey)}</a></td>
+              <td><span class="tk-trang-thai ${tt.lop}">${escapeHtml(tt.nhan)}</span></td>
+              <td>${escapeHtml(d.trackingId || '—')}</td>
+              <td>${escapeHtml(d.hangVanChuyen || '—')}</td>
+              <td>${d.thoiGianInMa ? dinhDangNgayGioNganAnToan(d.thoiGianInMa) : '—'}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  hienPopupNeuCoMoi(ds);
+}
+
+// Copy tsDep từ order.html/hoat-dong.html (mỗi trang tự chứa, dự án không có bước build để chia sẻ
+// code giữa các trang tĩnh) — đổi tên để không đụng biến cùng tên nếu sau này gộp script dùng chung.
+function dinhDangNgayGioNganAnToan(isoStr) {
+  const d = new Date(isoStr);
+  if (isNaN(d)) return escapeHtml(String(isoStr));
+  const fmt = (n) => String(n).padStart(2, '0');
+  const vn = new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' }));
+  return `${fmt(vn.getDate())}-${fmt(vn.getMonth() + 1)} ${fmt(vn.getHours())}:${fmt(vn.getMinutes())}:${fmt(vn.getSeconds())}`;
+}
+
+// Popup "vừa tự động mua tracking" — không có cơ chế đẩy tin thời gian thực nào trong dự án (đã trao
+// đổi với người dùng), nên so ThoiGianCapNhatCuoi của các đơn "Đã mua" với mốc "lần cuối xem trang
+// này" (lưu localStorage, riêng theo máy) — có đơn mới hơn thì hiện popup, rồi cập nhật lại mốc.
+function hienPopupNeuCoMoi(ds) {
+  let lanXemCuoi = 0;
+  try { lanXemCuoi = Number(localStorage.getItem(KHOA_LAN_XEM_CUOI)) || 0; } catch (e) { /* bỏ qua */ }
+
+  const donMoi = ds.filter(d => {
+    if (d.trangThai !== 'DA_MUA' || !d.thoiGianCapNhatCuoi) return false;
+    const thoiDiem = new Date(d.thoiGianCapNhatCuoi).getTime();
+    return !isNaN(thoiDiem) && thoiDiem > lanXemCuoi;
+  });
+
+  if (donMoi.length > 0) {
+    document.getElementById('tk-popup-danh-sach').innerHTML = donMoi.map(d =>
+      `<li><strong>${escapeHtml(d.sttKey)}</strong> — mã tracking ${escapeHtml(d.trackingId)} (${escapeHtml(d.hangVanChuyen || '')})</li>`
+    ).join('');
+    document.getElementById('tk-popup-moi').style.display = 'flex';
+  }
+
+  try { localStorage.setItem(KHOA_LAN_XEM_CUOI, String(Date.now())); } catch (e) { /* bỏ qua */ }
+}
+</script>
+</body>
+</html>

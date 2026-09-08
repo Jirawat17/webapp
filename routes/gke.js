@@ -12,13 +12,10 @@ function ghiKhongCho(promise) {
   promise.catch(err => console.error('[GKE] Lỗi ghi log nền:', err.message));
 }
 
-// Giá trị tạm ghi vào TRACKING_ID NGAY SAU KHI order/create/ thành công, TRƯỚC KHI thử lấy tem —
-// đóng lại "khoảng hở" nguy hiểm: nếu không ghi gì cho tới lúc có tem thật, mà lấy tem lại thất bại
-// (GKE cần thời gian generate tem, có thể chưa xong ngay — xem gkeService.layTemIn), quét lại đơn
-// sẽ hiểu nhầm "chưa tạo đơn" và gọi order/create/ THÊM 1 LẦN, tạo ra 2 vận đơn thật trùng nhau bên
-// GKE. Phát hiện qua test thật 01/09/2026. Giá trị này KHÔNG PHẢI mã vận đơn thật — nhân viên nhìn
-// trong Sheet thấy giá trị này thì biết đơn đang chờ, không phải lỗi hiển thị.
-const MA_DANG_CHO_TEM = 'DANG_CHO_GKE_TAO_TEM';
+// MA_DANG_CHO_TEM chuyển sang services/gkeService.js (bổ sung 09/09/2026) — services/
+// trackingAutoService.js (job tự động mua tracking) cần dùng LẠI ĐÚNG hằng số này để nhận diện đơn
+// "đang chờ tem từ lượt trước", tránh định nghĩa trùng 2 nơi dễ lệch nhau về sau.
+const { MA_DANG_CHO_TEM } = gkeService;
 
 // Tab "Quét mã QR Tracking" (scan.html) — quét mã QR trên tem đã dán (chính là STT_Key), gọi GKE
 // Logistics tạo vận đơn thật + lấy tem in, rồi TỰ ĐỘNG mở hộp thoại in ở trình duyệt (client lo,

@@ -2,6 +2,7 @@ const { readTab, readTabCached, updateCells } = require('./sheetsService');
 const { layBanDoTenKhachHang } = require('./khachHangService');
 const taiSanService = require('./taiSanService');
 const { chiSoTinhTrang, TINH_TRANG_VALUES, TRANG_THAI_PHOI_VALUES, TRANG_THAI_VE_FILE_VALUES } = require('../data/pipelineTinhTrang');
+const { thoiGianVNISOString } = require('./dateUtils');
 
 const TAB = 'Don_Hang_ALL';
 const KEY_COL = 'STT_Key';
@@ -202,6 +203,18 @@ async function update(sttKey, updates, user, tuyChon = {}) {
   ) {
     updatesDaTinh.NGUOI_VE_FILE = (user && user.ten) || '';
     if (headers.includes('GHI_CHU_VE_FILE')) updatesDaTinh.GHI_CHU_VE_FILE = '';
+  }
+
+  // Đơn VỪA chuyển sang "Đã in mã" (từ 1 giá trị KHÁC) — ghi lại THỜI ĐIỂM này để job tự động mua
+  // tracking (services/trackingAutoService.js) biết đơn đã "đủ tuổi" bao lâu, không phụ thuộc
+  // ThoiGianCapNhatCuoi (bị ghi đè bởi MỌI lần sửa sau đó, không chỉ riêng lần chuyển "Đã in mã") —
+  // bổ sung 09/09/2026, theo yêu cầu người dùng, cột THOI_GIAN_IN_MA người dùng đã tự thêm vào Sheet.
+  if (
+    headers.includes('THOI_GIAN_IN_MA') &&
+    updatesDaTinh.TRANG_THAI_XUONG === 'Đã in mã' &&
+    row.TRANG_THAI_XUONG !== 'Đã in mã'
+  ) {
+    updatesDaTinh.THOI_GIAN_IN_MA = thoiGianVNISOString();
   }
 
   kiemTraTinhHopLy(row, updatesDaTinh); // kiểm tra SAU khi đã tính tự động, để không báo nhầm khi chính việc tự động hoá làm cho tổ hợp trở nên hợp lệ

@@ -95,6 +95,10 @@ function renderNav(user, active) {
       links.splice(2, 0, { href: '/my-orders.html', label: 'Đơn của tôi · ' + escapeHtml(user.ten), icon: 'navMyOrders', key: 'my-orders' });
       links.splice(3, 0, { href: '/my-orders-ve-file.html', label: 'Đơn của tôi (Vẽ file) · ' + escapeHtml(user.ten), icon: 'navMyOrders', key: 'my-orders-ve-file' });
       links.push({ href: '/users.html', label: 'Nhân viên', icon: 'navUsers', key: 'users' });
+      // "Tracking" (bổ sung 09/09/2026, xem
+      // docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md) — CHỈ admin, quản lý bật/tắt
+      // + cấu hình tự động mua tracking GKE. Có thể phát sinh chi phí thật nên không mở cho vai trò khác.
+      links.push({ href: '/tracking.html', label: 'Tracking', icon: 'navTracking', key: 'tracking' });
     }
     // "Đơn của tôi (Vẽ file)" (bổ sung 08/09/2026, theo yêu cầu người dùng — xem
     // docs/superpowers/specs/2026-09-08-don-cua-toi-ve-file-design.md) — ve_file. KHÔNG ẩn menu nào

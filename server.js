@@ -35,6 +35,7 @@ app.use('/api/reports', require('./routes/reports'));
 app.use('/api/tai-san', require('./routes/taiSan'));
 app.use('/api/hoat-dong', require('./routes/hoatDong'));
 app.use('/api/gke', require('./routes/gke'));
+app.use('/api/tracking', require('./routes/tracking'));
 
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -49,3 +50,8 @@ app.listen(PORT, () => console.log(`Xưởng Thêu app đang chạy tại http:/
 
 // Bật lịch kiểm tra cảnh báo 3 tầng + nhắc ship — chạy nền, độc lập với request nào đang tới
 require('./services/canhBaoJob').batDauLichCanhBao();
+
+// Bật lịch quét tự động mua tracking GKE (bổ sung 09/09/2026, xem
+// docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md) — TẮT theo mặc định cho tới khi
+// admin tự bật ở trang "Tracking" (services/trackingAutoService.js tự đọc cấu hình mỗi lượt quét).
+require('./services/trackingJob').batDauLichTracking();

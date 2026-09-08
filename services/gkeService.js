@@ -212,7 +212,17 @@ function tinhCanNangKg(donHang) {
   return Math.max(soLuong * canNangMoiCai, 0.01);
 }
 
-// Tạo 1 vận đơn THẬT bên GKE — routes/gke.js chỉ gọi hàm này khi đơn CHƯA từng tạo vận đơn lần nào.
+// Giá trị tạm ghi vào TRACKING_ID NGAY SAU KHI order/create/ thành công, TRƯỚC KHI thử lấy tem —
+// đóng lại "khoảng hở" nguy hiểm: nếu không ghi gì cho tới lúc có tem thật, mà lấy tem lại thất bại
+// (GKE cần thời gian generate tem, có thể chưa xong ngay — xem layTemIn), quét/quét-tự-động lại đơn
+// sẽ hiểu nhầm "chưa tạo đơn" và gọi order/create/ THÊM 1 LẦN, tạo ra 2 vận đơn thật trùng nhau bên
+// GKE. Phát hiện qua test thật 01/09/2026. Giá trị này KHÔNG PHẢI mã vận đơn thật — nhân viên nhìn
+// trong Sheet thấy giá trị này thì biết đơn đang chờ, không phải lỗi hiển thị. Đặt Ở ĐÂY (không phải
+// routes/gke.js) vì CẢ luồng quét tay (routes/gke.js) LẪN job tự động (services/trackingAutoService.js,
+// bổ sung 09/09/2026) đều cần nhận diện đúng giá trị này.
+const MA_DANG_CHO_TEM = 'DANG_CHO_GKE_TAO_TEM';
+
+// Tạo 1 vận đơn THẬT bên GKE — chỉ gọi hàm này khi đơn CHƯA từng tạo vận đơn lần nào.
 async function taoDonGke(donHang) {
   const thieuCauHinh = ['GKE_SERVICE_CODE', 'GKE_CUSTOMS_HS_CODE', 'GKE_CUSTOMS_DECLARED_PRICE']
     .filter(k => !process.env[k]);
@@ -290,4 +300,4 @@ async function layTemIn(donHang, { laLanDauSauKhiTao = false } = {}) {
 //      lại vài lần (xem layTemIn); chỉ thực sự lỗi nếu hết số lần thử vẫn chưa xong.
 //   5. Thông báo hiện trên điện thoại/trình duyệt (mục ket-qua-tra-cuu) LUÔN kèm tên bước trong
 //      ngoặc vuông ở đầu câu, vd "[tạo đơn] ..." — khớp đúng với log server để đối chiếu nhanh.
-module.exports = { taoDonGke, layTemIn, maQuocGia };
+module.exports = { taoDonGke, layTemIn, maQuocGia, MA_DANG_CHO_TEM };
