@@ -63,3 +63,68 @@ Mỗi lượt quét (`services/trackingAutoService.js`):
 ## 5. Vị trí menu
 
 "Tracking" — chỉ admin, đặt cạnh các trang quản trị khác (sau "Nhân viên") trong `renderNav()`.
+
+## 6. Bổ sung 09/09/2026: cấu hình GKE lên giao diện + Logs xem ngay trên web
+
+Sau khi dùng thử, người dùng nhận thấy nhiều thông số phục vụ việc mua tracking (tài khoản API,
+thông tin người gửi, khai báo hải quan, cân nặng mặc định...) đang nằm cứng trong `.env` — muốn đổi
+phải sửa code + build lại container. Cập nhật 2 điểm:
+
+### 6.1. Cấu hình GKE chuyển lên tab `CauHinhTracking` (gộp chung, không tạo tab mới)
+
+`services/gkeService.js` thêm `layCauHinhGke()`/`luuCauHinhGke()` — cùng khuôn với
+`layCauHinh()`/`luuCauHinh()` ở mục 2 (đọc `readTabCached` TTL 60s, `luuCauHinhGke()` tự thêm dòng đầu
+tiên nếu chưa có, ghi đè dòng đó các lần sau). Mọi hàm gọi GKE (`layToken`, `goiApi`, `taoDonGke`,
+`layTemIn`, `thongTinNguoiGui`, `tinhCanNangKg`) đổi từ tự đọc `process.env.GKE_*` trực tiếp sang
+NHẬN `cauHinh` làm tham số — gọi `layCauHinhGke()` đúng 1 lần ở nơi gọi (`routes/gke.js` cho quét tay,
+`trackingAutoService.chayQuetTuDongMuaTracking()` cho job tự động) rồi truyền xuống, tránh gọi lặp lại
+Sheet nhiều lần trong cùng 1 lượt xử lý nhiều đơn.
+
+**14 cột mới cần thêm vào tab `CauHinhTracking`** (bên cạnh 2 cột `BatTuDongMuaTracking`, `SoPhutCho`
+đã có) — thiếu cột nào thì `.env` cùng tên vẫn dùng làm giá trị ngầm định (không phá cấu hình đang
+chạy khi mới nâng cấp), xem `layGiaTri()`:
+
+| Cột Sheet | Ý nghĩa | .env tương ứng (ngầm định nếu ô Sheet trống) |
+|---|---|---|
+| `GkeUsername` | Tài khoản đăng nhập API GKE | `GKE_API_USERNAME` |
+| `GkePassword` | Mật khẩu đăng nhập API GKE | `GKE_API_PASSWORD` |
+| `GkeServiceCode` | Mã dịch vụ vận chuyển | `GKE_SERVICE_CODE` |
+| `GkeShipperName` | Tên xưởng (người gửi) | `GKE_SHIPPER_NAME` (mặc định "Maxthread VN") |
+| `GkeShipperPhone` | SĐT xưởng | `GKE_SHIPPER_PHONE` |
+| `GkeShipperAddress` | Địa chỉ xưởng | `GKE_SHIPPER_ADDRESS` |
+| `GkeShipperCity` | Thành phố xưởng | `GKE_SHIPPER_CITY` |
+| `GkeShipperProvince` | Tỉnh/bang xưởng | `GKE_SHIPPER_PROVINCE` |
+| `GkeShipperPostcode` | Mã bưu điện xưởng | `GKE_SHIPPER_POSTCODE` |
+| `GkeCustomsItemName` | Tên hàng khai hải quan | `GKE_CUSTOMS_ITEM_NAME` (mặc định "Embroidered garment") |
+| `GkeCustomsHsCode` | Mã HS khai hải quan | `GKE_CUSTOMS_HS_CODE` |
+| `GkeCustomsDeclaredPrice` | Giá trị khai báo/kiện | `GKE_CUSTOMS_DECLARED_PRICE` |
+| `GkeCustomsCurrency` | Đơn vị tiền tệ khai báo | `GKE_CUSTOMS_CURRENCY` (mặc định "USD") |
+| `CanNangMoiAoKg` | Cân nặng mặc định/áo (kg) khi đơn thiếu `TRONG_LUONG` | *(không có, mặc định cứng 0.05)* |
+
+**Quyết định bảo mật — người dùng CHỦ ĐỘNG chọn đưa cả `GkeUsername`/`GkePassword` lên giao diện**
+(không giữ riêng trong `.env` như đề xuất ban đầu của trợ lý AI, vì lo ngại hiển thị dạng chữ thường
+trên 1 trang chỉ admin mới vào được). Sau khi trình bày rủi ro, người dùng xác nhận muốn đưa lên giao
+diện để dễ tự chỉnh — quyết định này được tôn trọng, cùng đánh đổi bảo mật đã chấp nhận từ trước với
+mã PIN đăng nhập (lưu dạng chữ thường trong Sheet). `public/tracking.html` dùng `<input type="password">`
+cho ô Password (ẩn mặc định trên màn hình, có nút hiện/ẩn riêng của trình duyệt) — chỉ là quy ước hiển
+thị, KHÔNG phải lớp bảo mật thật (giá trị vẫn về dạng chữ thường qua API/Sheet như mọi trường khác).
+
+### 6.2. Logs ngắn gọn — xem ngay trên trang "Tracking"
+
+Thêm bộ đệm mảng trong bộ nhớ (`services/trackingAutoService.js`, hàm `ghiLogTracking()`/
+`layLogTracking()`, tối đa 300 dòng, mới nhất trước) — cùng đánh đổi "mất khi khởi động lại server" đã
+chấp nhận với `presenceService.js`. Ghi 1 dòng mỗi khi: mua tracking thành công (mã đơn + mã tracking +
+hãng vận chuyển), hoặc lỗi khi mua cho 1 đơn (mã đơn + thông báo lỗi) — mức độ "ngắn gọn, mỗi việc 1
+dòng" theo lựa chọn của người dùng (không phải log kỹ thuật chi tiết từng bước gọi GKE — mức đó vẫn chỉ
+xem qua console server như `services/gkeService.js` đã làm từ trước).
+
+`routes/tracking.js` thêm `GET /logs` (trả mảng, chỉ admin — cùng `chiAdmin` middleware). Trang
+`tracking.html` thêm khối "Logs", cỡ chữ nhỏ (0.72rem) + font đơn cách để hiện nhiều dòng mà ít chiếm
+diện tích (theo đúng yêu cầu), tự tải lại mỗi 60 giây (cùng chu kỳ "hiển thị động" với Bảng điều khiển).
+
+### 6.3. Giao diện cấu hình GKE
+
+`tracking.html` thêm khối "Cấu hình GKE" — tái dùng khung `.bao-cao-form` sẵn có, nhóm theo 4 phần:
+tài khoản API, dịch vụ & khai báo hải quan, thông tin người gửi, cân nặng mặc định. Có nút Lưu + thông
+báo riêng, gọi `GET/POST /tracking/cau-hinh-gke` (mới, `routes/tracking.js`, delegate thẳng tới
+`gkeService.layCauHinhGke()`/`luuCauHinhGke()`).
