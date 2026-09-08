@@ -69,7 +69,7 @@ function renderNav(user, active) {
     // và "Đơn của tôi" lên ĐẦU TIÊN (không còn đứng sau "Đơn hàng") vì đây là màn hình họ cần thấy
     // ngay khi vào — cũng là trang mặc định sau đăng nhập (xem trangChu bên dưới và index.html).
     links = [
-      { href: '/my-orders.html', label: 'Đơn của tôi · ' + escapeHtml(user.ten), icon: 'navMyOrders', key: 'my-orders' },
+      { href: '/my-orders.html', label: 'Chạy máy', icon: 'navMyOrders', key: 'my-orders' },
       { href: '/orders.html', label: 'Đơn hàng', icon: 'navOrders', key: 'orders' },
       { href: '/scan.html', label: 'Quét QR', icon: 'navScan', key: 'scan' },
       { href: '/hoat-dong.html', label: 'Lịch sử', icon: 'navActivity', key: 'hoat-dong' },
@@ -87,25 +87,32 @@ function renderNav(user, active) {
     // "Đơn của tôi" (bổ sung 31/08/2026) — CHỈ admin còn dùng nhánh này (san_xuat có nhánh riêng ở
     // trên từ 08/09/2026). Admin xem nhanh mọi đơn đang "Đang chạy máy" — routes/orders.js
     // (locDonDangChayMayTheoNguoiVanHanh) chỉ lọc theo NguoiVanHanh cho san_xuat, admin xem được hết.
+    // Đổi nhãn "Đơn của tôi · <tên>" → "Chạy máy" và "Đơn của tôi (Vẽ file) · <tên>" → "Vẽ file"
+    // (bổ sung 09/09/2026, theo yêu cầu người dùng — áp dụng cho MỌI vai trò dùng nhãn này, kể cả
+    // san_xuat/ve_file ở các nhánh khác trong hàm, không chỉ riêng admin) — bỏ hẳn phần ghép tên
+    // (+ escapeHtml(user.ten)) vì tên không còn xuất hiện trong nhãn nữa.
     if (user.vaiTro === 'admin') {
       // "Bảng điều khiển" (bổ sung 08/09/2026, xem
       // docs/superpowers/specs/2026-09-08-bang-dieu-khien-admin-design.md) — CHỈ admin, lên ĐẦU TIÊN
       // (khác "Thống kê" vẫn mở cho cả ve_file) vì là màn hình tổng quan nhanh, hợp lý để thấy ngay.
       links.splice(0, 0, { href: '/bang-dieu-khien.html', label: 'BĐK', icon: 'navChart', key: 'bang-dieu-khien' });
-      links.splice(2, 0, { href: '/my-orders.html', label: 'Đơn của tôi · ' + escapeHtml(user.ten), icon: 'navMyOrders', key: 'my-orders' });
-      links.splice(3, 0, { href: '/my-orders-ve-file.html', label: 'Đơn của tôi (Vẽ file) · ' + escapeHtml(user.ten), icon: 'navMyOrders', key: 'my-orders-ve-file' });
-      links.push({ href: '/users.html', label: 'Nhân viên', icon: 'navUsers', key: 'users' });
+      links.splice(2, 0, { href: '/my-orders.html', label: 'Chạy máy', icon: 'navMyOrders', key: 'my-orders' });
+      links.splice(3, 0, { href: '/my-orders-ve-file.html', label: 'Vẽ file', icon: 'navMyOrders', key: 'my-orders-ve-file' });
       // "Tracking" (bổ sung 09/09/2026, xem
       // docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md) — CHỈ admin, quản lý bật/tắt
       // + cấu hình tự động mua tracking GKE. Có thể phát sinh chi phí thật nên không mở cho vai trò khác.
-      links.push({ href: '/tracking.html', label: 'Tracking', icon: 'navTracking', key: 'tracking' });
+      // Đặt GIỮA "Quét QR" và "TK" (bổ sung 09/09/2026 lần 2, theo yêu cầu người dùng) — ngay tại đây
+      // index 5 đúng vị trí "TK" (2 splice phía trên đã đẩy TK từ index 2 lên 5: BĐK/Chạy máy/Vẽ file
+      // chèn vào trước nó), nên chèn TRƯỚC index 5 là chèn đúng giữa Quét QR (4) và TK (5 sau khi đẩy).
+      links.splice(5, 0, { href: '/tracking.html', label: 'Tracking', icon: 'navTracking', key: 'tracking' });
+      links.push({ href: '/users.html', label: 'Nhân viên', icon: 'navUsers', key: 'users' });
     }
     // "Đơn của tôi (Vẽ file)" (bổ sung 08/09/2026, theo yêu cầu người dùng — xem
     // docs/superpowers/specs/2026-09-08-don-cua-toi-ve-file-design.md) — ve_file. KHÔNG ẩn menu nào
     // khác, KHÔNG đổi trang mặc định sau đăng nhập của ve_file (khác hẳn cách làm cho san_xuat ở
     // trên) — ngoài phạm vi yêu cầu lần này.
     if (user.vaiTro === 've_file') {
-      links.splice(1, 0, { href: '/my-orders-ve-file.html', label: 'Đơn của tôi (Vẽ file) · ' + escapeHtml(user.ten), icon: 'navMyOrders', key: 'my-orders-ve-file' });
+      links.splice(1, 0, { href: '/my-orders-ve-file.html', label: 'Vẽ file', icon: 'navMyOrders', key: 'my-orders-ve-file' });
     }
     links.push({ href: '/hoat-dong.html', label: 'Lịch sử', icon: 'navActivity', key: 'hoat-dong' });
     links.push({ href: '/settings.html', label: 'Setting', icon: 'navSettings', key: 'settings' });
