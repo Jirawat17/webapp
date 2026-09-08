@@ -60,7 +60,7 @@ function renderNav(user, active) {
       { href: '/tai-san.html', label: 'SL Phôi', icon: 'navAssets', key: 'tai-san' },
       // Ngoại lệ thứ 3 cho nguoi_lay_phoi (sau Quét QR, SL Phôi) — xem lại hoạt động CHÍNH MÌNH
       // không phải xem đơn hàng nói chung nên không phá chính sách "chỉ thấy Quét QR" ban đầu.
-      { href: '/hoat-dong.html', label: 'Hoạt động của tôi', icon: 'navActivity', key: 'hoat-dong' },
+      { href: '/hoat-dong.html', label: 'Lịch sử', icon: 'navActivity', key: 'hoat-dong' },
     ];
   } else if (user.vaiTro === 'san_xuat') {
     // Nhánh riêng cho san_xuat (bổ sung 08/09/2026, theo yêu cầu người dùng) — trước đây dùng chung
@@ -72,14 +72,14 @@ function renderNav(user, active) {
       { href: '/my-orders.html', label: 'Đơn của tôi · ' + escapeHtml(user.ten), icon: 'navMyOrders', key: 'my-orders' },
       { href: '/orders.html', label: 'Đơn hàng', icon: 'navOrders', key: 'orders' },
       { href: '/scan.html', label: 'Quét QR', icon: 'navScan', key: 'scan' },
-      { href: '/hoat-dong.html', label: 'Hoạt động của tôi', icon: 'navActivity', key: 'hoat-dong' },
-      { href: '/settings.html', label: 'Thiết lập', icon: 'navSettings', key: 'settings' },
+      { href: '/hoat-dong.html', label: 'Lịch sử', icon: 'navActivity', key: 'hoat-dong' },
+      { href: '/settings.html', label: 'Setting', icon: 'navSettings', key: 'settings' },
     ];
   } else {
     links = [
       { href: '/orders.html', label: 'Đơn hàng', icon: 'navOrders', key: 'orders' },
       { href: '/scan.html', label: 'Quét QR', icon: 'navScan', key: 'scan' },
-      { href: '/dashboard.html', label: 'Thống kê', icon: 'navChart', key: 'dashboard' },
+      { href: '/dashboard.html', label: 'TK', icon: 'navChart', key: 'dashboard' },
       { href: '/tai-san.html', label: 'SL Phôi', icon: 'navAssets', key: 'tai-san' },
       { href: '/chatbot.html', label: 'Trợ lý', icon: 'navSupport', key: 'chatbot' },
       { href: '/reports.html', label: 'Báo cáo', icon: 'navReports', key: 'reports' },
@@ -91,7 +91,7 @@ function renderNav(user, active) {
       // "Bảng điều khiển" (bổ sung 08/09/2026, xem
       // docs/superpowers/specs/2026-09-08-bang-dieu-khien-admin-design.md) — CHỈ admin, lên ĐẦU TIÊN
       // (khác "Thống kê" vẫn mở cho cả ve_file) vì là màn hình tổng quan nhanh, hợp lý để thấy ngay.
-      links.splice(0, 0, { href: '/bang-dieu-khien.html', label: 'Bảng điều khiển', icon: 'navChart', key: 'bang-dieu-khien' });
+      links.splice(0, 0, { href: '/bang-dieu-khien.html', label: 'BĐK', icon: 'navChart', key: 'bang-dieu-khien' });
       links.splice(2, 0, { href: '/my-orders.html', label: 'Đơn của tôi · ' + escapeHtml(user.ten), icon: 'navMyOrders', key: 'my-orders' });
       links.splice(3, 0, { href: '/my-orders-ve-file.html', label: 'Đơn của tôi (Vẽ file) · ' + escapeHtml(user.ten), icon: 'navMyOrders', key: 'my-orders-ve-file' });
       links.push({ href: '/users.html', label: 'Nhân viên', icon: 'navUsers', key: 'users' });
@@ -103,8 +103,8 @@ function renderNav(user, active) {
     if (user.vaiTro === 've_file') {
       links.splice(1, 0, { href: '/my-orders-ve-file.html', label: 'Đơn của tôi (Vẽ file) · ' + escapeHtml(user.ten), icon: 'navMyOrders', key: 'my-orders-ve-file' });
     }
-    links.push({ href: '/hoat-dong.html', label: 'Hoạt động của tôi', icon: 'navActivity', key: 'hoat-dong' });
-    links.push({ href: '/settings.html', label: 'Thiết lập', icon: 'navSettings', key: 'settings' });
+    links.push({ href: '/hoat-dong.html', label: 'Lịch sử', icon: 'navActivity', key: 'hoat-dong' });
+    links.push({ href: '/settings.html', label: 'Setting', icon: 'navSettings', key: 'settings' });
   }
 
   const nav = document.getElementById('nav');
