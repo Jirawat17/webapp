@@ -22,11 +22,11 @@ const TRANG_THAI_DANG_CHAY_MAY = 'Đang chạy máy';
 // — TRƯỚC ĐÂY phải dò ngược LichSuHoatDong tìm lần gần nhất đơn chuyển sang "Đang chạy máy", giờ
 // không cần nữa. Giữ nguyên tên trường JSON trả về là NguoiVanHanh (không đổi thành NguoiChayMay) để
 // không phải sửa gì ở orders.html/my-orders.html/order.html đang đọc o.NguoiVanHanh.
-// "Người vẽ file" (bổ sung 08/09/2026, xem docs/superpowers/specs/2026-09-08-don-cua-toi-ve-file-design.md):
-// đọc thẳng cột NGUOI_VE_FILE — KHÔNG gắn điều kiện theo TRANG_THAI_VE_FILE như NguoiVanHanh, vì vẽ
-// file không có trạng thái "đang làm dở" riêng để làm mốc (chỉ có "Chưa vẽ file"/"Đã vẽ file") — cột
-// này mang ý nghĩa "ai đang/đã phụ trách" trong suốt lúc còn "Chưa vẽ file", vẫn đọc được sau khi đã
-// xong (dấu vết lịch sử), không cần ẩn.
+// "Người vẽ file" (bổ sung 08/09/2026, cập nhật cùng ngày khi có trạng thái "Đang vẽ file" — xem
+// docs/superpowers/specs/2026-09-08-trang-thai-dang-ve-file-design.md): đọc cột NGUOI_VE_FILE, giờ
+// ĐÚNG KHUÔN NguoiVanHanh — chỉ trả về khi TRANG_THAI_VE_FILE đang là "Đang vẽ file". Đơn đã "Đã vẽ
+// file" hoặc bị reset về "Chưa vẽ file" (vd sau lỗi sản xuất) sẽ không còn hiện "ai đang vẽ" ở đây
+// nữa, dù cột thật trong Sheet vẫn giữ giá trị cũ làm dấu vết.
 async function lamGiauDon(rows) {
   const daGanKH = await orderService.ganTenKhachHang(rows);
   return daGanKH.map(r => ({
@@ -35,7 +35,7 @@ async function lamGiauDon(rows) {
     ViTriTheu: orderService.danhSachViTriTheu(r),
     CanhBao: alertService.tinhMucCanhBao(r),
     NguoiVanHanh: r.TRANG_THAI_XUONG === TRANG_THAI_DANG_CHAY_MAY ? (r.NGUOI_CHAY_MAY || null) : null,
-    NguoiVeFile: r.NGUOI_VE_FILE || null,
+    NguoiVeFile: r.TRANG_THAI_VE_FILE === 'Đang vẽ file' ? (r.NGUOI_VE_FILE || null) : null,
   }));
 }
 
@@ -114,7 +114,7 @@ router.get('/', async (req, res) => {
   const {
     trangThai, trangThaiPhoi, trangThaiVeFile, kh, tuNgay, denNgay,
     loai, kichThuoc, mauSac, hangVanChuyen, canhBao, sapXep, hangLoat, nguoiVanHanh,
-    canVeFile, chuaNhanVeFile, nguoiVeFile,
+    canVeFile, nguoiVeFile,
   } = req.query;
   if (trangThai) list = list.filter(r => khopGiaTriLoc(r.TRANG_THAI_XUONG, trangThai));
   if (trangThaiPhoi) list = list.filter(r => khopGiaTriLoc(r.TRANG_THAI_PHOI, trangThaiPhoi));
@@ -128,9 +128,10 @@ router.get('/', async (req, res) => {
   // đơn LỖI SẢN XUẤT CẦN LÀM LẠI (bị reset về Chưa vẽ file nhưng KHÔNG quay lại "Đã in mã" — xem
   // docs/superpowers/specs/2026-09-08-don-cua-toi-ve-file-design.md). Không so khớp được bằng
   // khopGiaTriLoc (cần loại trừ 1 giá trị, không phải so khớp đúng 1 giá trị) nên thêm cờ riêng, đúng
-  // tiền lệ hangLoat=1 bên dưới.
+  // tiền lệ hangLoat=1 bên dưới. Không cần cờ "chưa ai nhận" riêng nữa (đã bỏ, xem
+  // docs/superpowers/specs/2026-09-08-trang-thai-dang-ve-file-design.md) — từ khi có "Đang vẽ file",
+  // "Chưa vẽ file" tự nó đã luôn đúng nghĩa "chưa ai nhận".
   if (canVeFile) list = list.filter(r => r.TRANG_THAI_VE_FILE === 'Chưa vẽ file' && r.TRANG_THAI_XUONG !== 'Chưa in mã');
-  if (chuaNhanVeFile) list = list.filter(r => !r.NguoiVeFile);
   if (nguoiVeFile) list = list.filter(r => r.NguoiVeFile === nguoiVeFile);
   if (loai) list = list.filter(r => r.LOAI === loai);
   if (kichThuoc) list = list.filter(r => r.KICH_THUOC === kichThuoc);
@@ -294,51 +295,12 @@ router.post('/chi-dinh-nguoi-chay-may', async (req, res) => {
   res.json({ ok: true, thanhCong, loi });
 });
 
-// Tự NHẬN vẽ file cho 1 lô đơn đã chọn (cơ chế 1 của "Đơn của tôi (Vẽ file)" — ve_file/admin, xem
-// docs/superpowers/specs/2026-09-08-don-cua-toi-ve-file-design.md). KHÁC hẳn cơ chế tự stamp
-// NGUOI_CHAY_MAY của san_xuat: vẽ file không có trạng thái "đang làm dở" riêng để làm mốc chuyển đổi
-// (TRANG_THAI_VE_FILE chỉ có Chưa/Đã), nên route này ghi THẲNG NGUOI_VE_FILE, không đụng
-// TRANG_THAI_VE_FILE — CHỈ ghi khi đơn đang CHƯA có ai nhận, tránh cướp việc đã có người nhận trước.
-router.post('/nhan-ve-file', async (req, res) => {
-  const user = req.session.user;
-  if (!['ve_file', 'admin'].includes(user.vaiTro)) {
-    return res.status(403).json({ error: 'Chỉ ve_file/admin mới được tự nhận vẽ file' });
-  }
-
-  const { sttKeys } = req.body;
-  if (!Array.isArray(sttKeys) || sttKeys.length === 0) {
-    return res.status(400).json({ error: 'Danh sách đơn trống' });
-  }
-
-  const thanhCong = [];
-  const loi = [];
-
-  for (const sttKey of sttKeys) {
-    try {
-      const { headers, row } = await orderService.getByKey(sttKey, { fresh: true });
-      if (!row) {
-        loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
-        continue;
-      }
-      if (row.NGUOI_VE_FILE) {
-        loi.push({ sttKey, lyDo: `Đã có người nhận: ${row.NGUOI_VE_FILE}` });
-        continue;
-      }
-
-      await orderService.update(sttKey, { NGUOI_VE_FILE: user.ten }, user, { donDaDoc: { headers, row } });
-
-      thanhCong.push(sttKey);
-      ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'NHAN_VE_FILE', sttKey }).catch(err => console.error('[Orders] Lỗi ghi log nền:', err.message));
-    } catch (err) {
-      loi.push({ sttKey, lyDo: err.message });
-    }
-  }
-
-  res.json({ ok: true, thanhCong, loi });
-});
-
 // Admin CHỈ ĐỊNH người vẽ file cho 1 lô đơn đã chọn (cơ chế 2, sao chép đúng khuôn
-// /chi-dinh-nguoi-chay-may) — chỉ admin.
+// /chi-dinh-nguoi-chay-may) — chỉ admin. Cơ chế 1 (ve_file tự nhận) không cần route riêng nữa — từ
+// khi có "Đang vẽ file" (08/09/2026, xem docs/superpowers/specs/2026-09-08-trang-thai-dang-ve-file-design.md),
+// "Nhận vẽ file" chỉ là 1 lượt CHUYỂN TRẠNG THÁI như bao lượt khác, gọi thẳng route chung
+// /chuyen-trang-thai-hang-loat (cot=TRANG_THAI_VE_FILE) — hook tự stamp NGUOI_VE_FILE đã có sẵn trong
+// orderService.update() lo hết, đúng y hệt cách san_xuat tự nhận "Đang chạy máy".
 router.post('/chi-dinh-nguoi-ve-file', async (req, res) => {
   const user = req.session.user;
   if (user.vaiTro !== 'admin') {
@@ -371,6 +333,7 @@ router.post('/chi-dinh-nguoi-ve-file', async (req, res) => {
       }
 
       await orderService.update(sttKey, {
+        TRANG_THAI_VE_FILE: 'Đang vẽ file',
         NGUOI_VE_FILE: nguoiVeFile,
         GHI_CHU_VE_FILE: 'Admin chỉ định',
         NguoiCapNhatCuoi: user.ten,

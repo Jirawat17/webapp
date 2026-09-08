@@ -73,7 +73,11 @@ const TINH_TRANG_VALUES = [
 ];
 
 const TRANG_THAI_PHOI_VALUES = ['Chưa lấy phôi', 'Đã lấy phôi'];
-const TRANG_THAI_VE_FILE_VALUES = ['Chưa vẽ file', 'Đã vẽ file'];
+// "Đang vẽ file" (thêm 08/09/2026, theo yêu cầu người dùng) — chèn giữa "Chưa"/"Đã vẽ file", đúng
+// khuôn "Đang chạy máy" của san_xuat: người vẽ file TỰ NHẬN hoặc được admin CHỈ ĐỊNH thì chuyển sang
+// giá trị này (tự stamp NGUOI_VE_FILE, xem services/orderService.js) thay vì chỉ ghi lặng lẽ vào cột
+// phụ như bản đầu tiên của tính năng — xem docs/superpowers/specs/2026-09-08-trang-thai-dang-ve-file-design.md.
+const TRANG_THAI_VE_FILE_VALUES = ['Chưa vẽ file', 'Đang vẽ file', 'Đã vẽ file'];
 
 // Giá trị đặc biệt cho bộ lọc "(Trống)" ở trang Đơn hàng (TRANG_THAI_XUONG/TRANG_THAI_PHOI/
 // TRANG_THAI_VE_FILE) — CHỈ dùng cho lọc/hiển thị, KHÔNG BAO GIỜ được ghi vào Sheet. Không dùng chuỗi

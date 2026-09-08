@@ -216,6 +216,7 @@ const MAU_TRANG_THAI = {
   'Đã lấy phôi': 'trang-thai-success',
   // TRANG_THAI_VE_FILE
   'Chưa vẽ file': 'trang-thai-warning',
+  'Đang vẽ file': 'trang-thai-info',
   'Đã vẽ file': 'trang-thai-success',
 };
 function lopTrangThai(tinhTrang) {

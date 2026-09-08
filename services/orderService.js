@@ -63,8 +63,11 @@ function kiemTraTinhHopLy(rowHienTai, updates) {
     if (phoiMoi === 'Đã lấy phôi') {
       throw new Error('Không hợp lệ: đơn đang "Chưa in mã" thì chưa thể "Đã lấy phôi" — in mã đơn trước.');
     }
-    if (veFileMoi === 'Đã vẽ file') {
-      throw new Error('Không hợp lệ: đơn đang "Chưa in mã" thì chưa thể "Đã vẽ file" — in mã đơn trước.');
+    // Đơn "Chưa in mã" bắt buộc vẽ file phải ĐÚNG "Chưa vẽ file" (không chỉ chặn riêng "Đã vẽ file")
+    // — từ khi có thêm "Đang vẽ file" (08/09/2026), không ai được phép "đang vẽ" cho 1 đơn còn chưa
+    // in mã, tức chưa ai chuẩn bị được gì để vẽ.
+    if (veFileMoi !== 'Chưa vẽ file') {
+      throw new Error(`Không hợp lệ: đơn đang "Chưa in mã" thì vẽ file phải đang "Chưa vẽ file" (đang là "${veFileMoi}") — in mã đơn trước.`);
     }
   }
 
@@ -184,6 +187,21 @@ async function update(sttKey, updates, user, tuyChon = {}) {
   ) {
     updatesDaTinh.NGUOI_CHAY_MAY = (user && user.ten) || '';
     if (headers.includes('GHI_CHU_CHAY_MAY')) updatesDaTinh.GHI_CHU_CHAY_MAY = '';
+  }
+
+  // Đơn VỪA chuyển sang "Đang vẽ file" (từ 1 giá trị KHÁC) — Y HỆT hook NGUOI_CHAY_MAY ở trên, áp
+  // dụng cho vẽ file thay vì chạy máy (thêm 08/09/2026, xem
+  // docs/superpowers/specs/2026-09-08-trang-thai-dang-ve-file-design.md). Nếu người gọi đã tự truyền
+  // sẵn NGUOI_VE_FILE (nhánh admin chỉ định người KHÁC vẽ, routes/orders.js POST
+  // /chi-dinh-nguoi-ve-file) thì giữ nguyên, không ghi đè bằng người đang thao tác.
+  if (
+    headers.includes('NGUOI_VE_FILE') &&
+    updatesDaTinh.TRANG_THAI_VE_FILE === 'Đang vẽ file' &&
+    row.TRANG_THAI_VE_FILE !== 'Đang vẽ file' &&
+    updatesDaTinh.NGUOI_VE_FILE === undefined
+  ) {
+    updatesDaTinh.NGUOI_VE_FILE = (user && user.ten) || '';
+    if (headers.includes('GHI_CHU_VE_FILE')) updatesDaTinh.GHI_CHU_VE_FILE = '';
   }
 
   kiemTraTinhHopLy(row, updatesDaTinh); // kiểm tra SAU khi đã tính tự động, để không báo nhầm khi chính việc tự động hoá làm cho tổ hợp trở nên hợp lệ

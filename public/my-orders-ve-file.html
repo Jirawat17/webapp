@@ -397,7 +397,7 @@ async function taiDonCanVe() {
   el.innerHTML = skeletonList(2);
 
   const o = docCacOLoc('-cv');
-  const qs = new URLSearchParams({ canVeFile: '1', chuaNhanVeFile: '1' });
+  const qs = new URLSearchParams({ canVeFile: '1' });
   apDungCacOLoc(qs, o);
 
   try {
@@ -490,8 +490,10 @@ function capNhatThanhHanhDongCanVe() {
   document.getElementById('so-luong-da-chon-can-ve').textContent = donCanVeChonSet.size;
 }
 
-// Tự NHẬN vẽ file — gọi route mới POST /orders/nhan-ve-file (chỉ ghi NGUOI_VE_FILE, không đổi
-// TRANG_THAI_VE_FILE — xem lý do trong spec).
+// Tự NHẬN vẽ file — giờ là 1 lượt CHUYỂN TRẠNG THÁI thật (Chưa vẽ file -> Đang vẽ file), gọi thẳng
+// route chung /chuyen-trang-thai-hang-loat đúng y hệt cách san_xuat tự nhận "Đang chạy máy" — hook tự
+// stamp NGUOI_VE_FILE đã có sẵn trong orderService.update() (xem
+// docs/superpowers/specs/2026-09-08-trang-thai-dang-ve-file-design.md).
 async function apDungNhanVeFile() {
   const soLuong = donCanVeChonSet.size;
   if (!confirm(`Nhận vẽ file cho ${soLuong} đơn đã chọn?`)) return;
@@ -508,8 +510,8 @@ async function apDungNhanVeFile() {
 
   const ketQua = await chayHangLoatCoTienDo(
     danhSach,
-    sttKey => apiFetch('/orders/nhan-ve-file', {
-      method: 'POST', body: JSON.stringify({ sttKeys: [sttKey] }),
+    sttKey => apiFetch('/orders/chuyen-trang-thai-hang-loat', {
+      method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], cot: 'TRANG_THAI_VE_FILE', trangThaiMoi: 'Đang vẽ file' }),
     }),
     { onTienDo: (hienTai, tong) => thanhTienDo.capNhat(hienTai, tong), kiemTraHuy: () => daHuy }
   );
@@ -596,7 +598,7 @@ async function taiDonToiVe() {
   const nguoiVeFileDangLoc = laAdmin ? document.getElementById('loc-nguoi-ve-file').value : user.ten;
 
   const o = docCacOLoc('-tv');
-  const qs = new URLSearchParams({ canVeFile: '1' });
+  const qs = new URLSearchParams({ trangThaiVeFile: 'Đang vẽ file' });
   if (nguoiVeFileDangLoc) qs.set('nguoiVeFile', nguoiVeFileDangLoc);
   apDungCacOLoc(qs, o);
 
