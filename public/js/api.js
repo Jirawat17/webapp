@@ -88,8 +88,12 @@ function renderNav(user, active) {
     // trên từ 08/09/2026). Admin xem nhanh mọi đơn đang "Đang chạy máy" — routes/orders.js
     // (locDonDangChayMayTheoNguoiVanHanh) chỉ lọc theo NguoiVanHanh cho san_xuat, admin xem được hết.
     if (user.vaiTro === 'admin') {
-      links.splice(1, 0, { href: '/my-orders.html', label: 'Đơn của tôi · ' + escapeHtml(user.ten), icon: 'navMyOrders', key: 'my-orders' });
-      links.splice(2, 0, { href: '/my-orders-ve-file.html', label: 'Đơn của tôi (Vẽ file) · ' + escapeHtml(user.ten), icon: 'navMyOrders', key: 'my-orders-ve-file' });
+      // "Bảng điều khiển" (bổ sung 08/09/2026, xem
+      // docs/superpowers/specs/2026-09-08-bang-dieu-khien-admin-design.md) — CHỈ admin, lên ĐẦU TIÊN
+      // (khác "Thống kê" vẫn mở cho cả ve_file) vì là màn hình tổng quan nhanh, hợp lý để thấy ngay.
+      links.splice(0, 0, { href: '/bang-dieu-khien.html', label: 'Bảng điều khiển', icon: 'navChart', key: 'bang-dieu-khien' });
+      links.splice(2, 0, { href: '/my-orders.html', label: 'Đơn của tôi · ' + escapeHtml(user.ten), icon: 'navMyOrders', key: 'my-orders' });
+      links.splice(3, 0, { href: '/my-orders-ve-file.html', label: 'Đơn của tôi (Vẽ file) · ' + escapeHtml(user.ten), icon: 'navMyOrders', key: 'my-orders-ve-file' });
       links.push({ href: '/users.html', label: 'Nhân viên', icon: 'navUsers', key: 'users' });
     }
     // "Đơn của tôi (Vẽ file)" (bổ sung 08/09/2026, theo yêu cầu người dùng — xem

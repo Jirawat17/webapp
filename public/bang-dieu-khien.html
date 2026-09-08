@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bảng điều khiển — Xưởng Thêu</title>
+<link rel="stylesheet" href="/css/style.css?v=79">
+<script src="/js/theme.js?v=79"></script>
+<style>
+/* Giao diện riêng cho trang này (không đụng style.css dùng chung toàn app) — cố ý LUÔN tối, không
+   theo Chế độ Sáng/Tối của trang, vì cả phong cách "HUD" này chỉ hợp nền tối (xem
+   docs/superpowers/specs/2026-09-08-bang-dieu-khien-admin-design.md). */
+.bdk-page {
+  min-height: 100vh;
+  padding: 24px;
+  background:
+    radial-gradient(ellipse 1200px 600px at 20% -10%, rgba(30,70,130,0.35), transparent 60%),
+    radial-gradient(ellipse 900px 500px at 100% 10%, rgba(60,30,110,0.25), transparent 60%),
+    linear-gradient(180deg, #060b17 0%, #0a1428 100%);
+  color: #cfe8ff;
+  font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.bdk-header { display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px; margin-bottom:18px; }
+.bdk-header h2 { color:#7ee8fa; text-transform:uppercase; letter-spacing:3px; text-shadow:0 0 14px rgba(126,232,250,0.6); margin:0; font-size:1.4rem; }
+.bdk-cap-nhat { font-size:0.78rem; color:#8fb8d9; }
+.bdk-cap-nhat span { color:#ffd76b; font-weight:700; font-variant-numeric:tabular-nums; }
+
+.bdk-chon-ky { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
+.bdk-chon-ky button {
+  background: rgba(15,35,60,0.55); border:1px solid rgba(126,232,250,0.3); color:#bfe4ff;
+  padding:7px 16px; border-radius:6px; cursor:pointer; font-size:0.82rem; font-weight:600;
+  letter-spacing:0.3px; transition: all .18s ease;
+}
+.bdk-chon-ky button:hover { border-color:#7ee8fa; color:#fff; }
+.bdk-chon-ky button.dang-mo {
+  background: rgba(126,232,250,0.18); border-color:#7ee8fa; color:#fff;
+  box-shadow: 0 0 14px rgba(126,232,250,0.45);
+}
+.bdk-khoang-ngay { display:flex; gap:10px; align-items:center; margin:-8px 0 20px; flex-wrap:wrap; }
+.bdk-khoang-ngay input {
+  background: rgba(15,35,60,0.55); border:1px solid rgba(126,232,250,0.3); color:#cfe8ff;
+  border-radius:6px; padding:6px 10px; font-size:0.82rem;
+}
+.bdk-khoang-ngay button {
+  background: rgba(126,232,250,0.18); border:1px solid #7ee8fa; color:#fff; border-radius:6px;
+  padding:6px 16px; cursor:pointer; font-weight:600; font-size:0.82rem;
+}
+
+.bdk-kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:16px; margin-bottom:22px; }
+.bdk-kpi-card {
+  position:relative; background: linear-gradient(160deg, rgba(22,48,86,0.65), rgba(9,18,36,0.75));
+  border:1px solid rgba(126,232,250,0.28); border-radius:10px; padding:16px 18px;
+  box-shadow: 0 0 18px rgba(126,232,250,0.10), inset 0 0 24px rgba(126,232,250,0.03);
+}
+.bdk-kpi-card::before, .bdk-kpi-card::after {
+  content:''; position:absolute; width:14px; height:14px; border-color:#7ee8fa; opacity:0.85; pointer-events:none;
+}
+.bdk-kpi-card::before { top:-1px; left:-1px; border-top:2px solid; border-left:2px solid; border-top-left-radius:6px; }
+.bdk-kpi-card::after { bottom:-1px; right:-1px; border-bottom:2px solid; border-right:2px solid; border-bottom-right-radius:6px; }
+.bdk-kpi-nhan { font-size:0.72rem; text-transform:uppercase; letter-spacing:1px; color:#8fb8d9; margin-bottom:8px; }
+.bdk-kpi-so { font-size:2.1rem; font-weight:700; color:#fff; text-shadow:0 0 12px rgba(126,232,250,0.5); font-variant-numeric:tabular-nums; line-height:1; }
+.bdk-kpi-vang { border-color: rgba(255,215,107,0.4); }
+.bdk-kpi-vang .bdk-kpi-so, .bdk-kpi-vang::before, .bdk-kpi-vang::after { color:#ffd76b; border-color:#ffd76b; }
+.bdk-kpi-vang .bdk-kpi-so { text-shadow:0 0 12px rgba(255,215,107,0.6); }
+.bdk-kpi-cam { border-color: rgba(255,159,67,0.4); }
+.bdk-kpi-cam .bdk-kpi-so, .bdk-kpi-cam::before, .bdk-kpi-cam::after { color:#ff9f43; border-color:#ff9f43; }
+.bdk-kpi-cam .bdk-kpi-so { text-shadow:0 0 12px rgba(255,159,67,0.6); }
+.bdk-kpi-do { border-color: rgba(255,94,94,0.4); }
+.bdk-kpi-do .bdk-kpi-so, .bdk-kpi-do::before, .bdk-kpi-do::after { color:#ff5e5e; border-color:#ff5e5e; }
+.bdk-kpi-do .bdk-kpi-so { text-shadow:0 0 12px rgba(255,94,94,0.6); animation: bdkNhap 1.6s ease-in-out infinite; }
+@keyframes bdkNhap { 0%,100% { opacity:1; } 50% { opacity:0.55; } }
+
+.bdk-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+@media (max-width: 900px) { .bdk-grid-2 { grid-template-columns:1fr; } }
+
+.bdk-card {
+  position:relative; background: rgba(12,26,48,0.55); backdrop-filter: blur(6px);
+  border:1px solid rgba(126,232,250,0.22); border-radius:12px; padding:18px;
+  box-shadow: 0 0 24px rgba(0,0,0,0.35), inset 0 0 30px rgba(126,232,250,0.025);
+  min-width: 0;
+}
+.bdk-card h3 {
+  margin:0 0 14px; color:#a8d8f0; font-size:0.9rem; text-transform:uppercase; letter-spacing:1px;
+  padding-bottom:10px; border-bottom:1px solid rgba(126,232,250,0.2); position:relative; font-weight:700;
+}
+.bdk-card h3::after {
+  content:''; position:absolute; bottom:-1px; left:0; width:56px; height:2px;
+  background: linear-gradient(90deg,#7ee8fa,transparent); box-shadow:0 0 8px #7ee8fa;
+}
+.bdk-card canvas { max-height: 260px; }
+.bdk-full { grid-column: 1 / -1; }
+
+.bdk-xep-hang-item { display:flex; align-items:center; gap:12px; padding:9px 0; border-bottom:1px dashed rgba(126,232,250,0.14); }
+.bdk-xep-hang-item:last-child { border-bottom:none; }
+.bdk-hang-so {
+  flex-shrink:0; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-weight:700; font-size:0.78rem; background:rgba(126,232,250,0.15); color:#7ee8fa; border:1px solid rgba(126,232,250,0.4);
+}
+.bdk-hang-so.top1 { background:rgba(255,215,107,0.22); color:#ffd76b; border-color:#ffd76b; box-shadow:0 0 10px rgba(255,215,107,0.5); }
+.bdk-xep-hang-ten { flex:1; color:#e0f2ff; font-weight:600; font-size:0.9rem; }
+.bdk-xep-hang-vaitro { font-size:0.72rem; color:#8fb8d9; font-weight:400; margin-top:1px; }
+.bdk-xep-hang-so { font-weight:700; color:#7ee8fa; font-size:1.05rem; font-variant-numeric:tabular-nums; }
+</style>
+</head>
+<body>
+<div id="nav"></div>
+<div class="bdk-page">
+  <div class="bdk-header">
+    <h2>Bảng điều khiển</h2>
+    <div class="bdk-cap-nhat">Cập nhật lúc <span id="bdk-gio-cap-nhat">--:--:--</span> (tự làm mới mỗi 60 giây)</div>
+  </div>
+
+  <div class="bdk-chon-ky" id="thanh-chon-ky">
+    <button type="button" data-ky="hom_nay">Hôm nay</button>
+    <button type="button" data-ky="tuan_nay">Tuần này</button>
+    <button type="button" data-ky="thang_nay">Tháng này</button>
+    <button type="button" data-ky="toan_bo" class="dang-mo">Toàn bộ</button>
+    <button type="button" data-ky="tuy_chon">Tuỳ chọn...</button>
+  </div>
+
+  <div id="panel-khoang-ngay" class="bdk-khoang-ngay" style="display:none">
+    <input type="date" id="bdk-tu-ngay">
+    <input type="date" id="bdk-den-ngay">
+    <button type="button" id="btn-ap-dung-khoang">Áp dụng</button>
+  </div>
+
+  <div class="bdk-kpi-grid">
+    <div class="bdk-kpi-card">
+      <div class="bdk-kpi-nhan">Tổng số đơn</div>
+      <div class="bdk-kpi-so" id="kpi-tong-don">0</div>
+    </div>
+    <div class="bdk-kpi-card bdk-kpi-vang">
+      <div class="bdk-kpi-nhan">Cảnh báo Vàng</div>
+      <div class="bdk-kpi-so" id="kpi-vang">0</div>
+    </div>
+    <div class="bdk-kpi-card bdk-kpi-cam">
+      <div class="bdk-kpi-nhan">Cảnh báo Cam</div>
+      <div class="bdk-kpi-so" id="kpi-cam">0</div>
+    </div>
+    <div class="bdk-kpi-card bdk-kpi-do">
+      <div class="bdk-kpi-nhan">Cảnh báo Đỏ</div>
+      <div class="bdk-kpi-so" id="kpi-do">0</div>
+    </div>
+    <div class="bdk-kpi-card">
+      <div class="bdk-kpi-nhan">Tỷ lệ lỗi sản xuất</div>
+      <div class="bdk-kpi-so" id="kpi-ty-le-loi">0%</div>
+    </div>
+  </div>
+
+  <div class="bdk-grid-2">
+    <div class="bdk-card">
+      <h3>Số đơn theo giai đoạn</h3>
+      <canvas id="chart-pipeline"></canvas>
+    </div>
+    <div class="bdk-card">
+      <h3>Mức cảnh báo trễ hạn</h3>
+      <canvas id="chart-canh-bao"></canvas>
+    </div>
+  </div>
+
+  <div class="bdk-grid-2">
+    <div class="bdk-card">
+      <h3>Khối lượng công việc cả xưởng</h3>
+      <canvas id="chart-khoi-luong"></canvas>
+    </div>
+    <div class="bdk-card">
+      <h3>Top người làm việc nhiều nhất</h3>
+      <div id="bdk-xep-hang">Đang tải...</div>
+    </div>
+  </div>
+
+  <div class="bdk-grid-2">
+    <div class="bdk-card">
+      <h3>Phân bố theo loại sản phẩm</h3>
+      <canvas id="chart-loai"></canvas>
+    </div>
+    <div class="bdk-card">
+      <h3>Phân bố theo khách hàng (top 8)</h3>
+      <canvas id="chart-khach-hang"></canvas>
+    </div>
+  </div>
+
+  <div class="bdk-card bdk-full">
+    <h3>Xu hướng đơn theo tuần</h3>
+    <canvas id="chart-tuan"></canvas>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="/js/icons.js?v=79"></script>
+<script src="/js/api.js?v=79"></script>
+<script>
+let kyHienTai = 'toan_bo';
+let user;
+const cacBieuDo = {};
+
+const PALETTE_NEON = ['#7ee8fa', '#ffd76b', '#ff5e5e', '#4ecb71', '#c792ea', '#ff9f43', '#54a0ff', '#ee5a6f'];
+const PALETTE_PIPELINE = ['#4a6fa5','#5b8fd4','#7ee8fa','#54c6a8','#4ecb71','#ffd76b','#ff9f43','#ff5e5e','#c792ea','#8892b0','#5c6b8a'];
+const NHAN_VAI_TRO = { san_xuat: 'Sản xuất', ve_file: 'Vẽ file', nguoi_lay_phoi: 'Lấy phôi / Đóng gói' };
+
+(async () => {
+  user = await requireLoginOrRedirect();
+  if (!user) return;
+  renderNav(user, 'bang-dieu-khien');
+
+  // Chart.js vẽ bằng <canvas>, phải tự đặt màu chữ/lưới khớp nền tối luôn cố định của trang này
+  // (không đọc CSS variable theo Chế độ Sáng/Tối như dashboard.html, vì trang này luôn tối).
+  Chart.defaults.color = '#a8d8f0';
+  Chart.defaults.borderColor = 'rgba(126,232,250,0.12)';
+
+  document.querySelectorAll('#thanh-chon-ky button').forEach(btn => {
+    btn.onclick = () => {
+      kyHienTai = btn.dataset.ky;
+      document.querySelectorAll('#thanh-chon-ky button').forEach(b => b.classList.toggle('dang-mo', b === btn));
+      document.getElementById('panel-khoang-ngay').style.display = kyHienTai === 'tuy_chon' ? 'flex' : 'none';
+      if (kyHienTai !== 'tuy_chon') taiBangDieuKhien();
+    };
+  });
+  document.getElementById('btn-ap-dung-khoang').onclick = () => taiBangDieuKhien();
+
+  await taiBangDieuKhien();
+  // "Hiển thị động" thật sự (không chỉ hiệu ứng thị giác) — tự tải lại dữ liệu mỗi 60 giây.
+  setInterval(taiBangDieuKhien, 60000);
+})();
+
+// Giống hệt logic ở dashboard.html/reports.html/hoat-dong.html — mỗi trang tự chứa, dự án không có
+// bước build để chia sẻ code giữa các trang tĩnh.
+function tinhKhoangTheoKy(ky) {
+  const homNay = new Date();
+  homNay.setHours(0, 0, 0, 0);
+  if (ky === 'hom_nay') return { tu: homNay, den: homNay };
+  if (ky === 'tuan_nay') {
+    const thu = homNay.getDay();
+    const lechDauTuan = thu === 0 ? 6 : thu - 1;
+    const dau = new Date(homNay); dau.setDate(homNay.getDate() - lechDauTuan);
+    const cuoi = new Date(dau); cuoi.setDate(dau.getDate() + 6);
+    return { tu: dau, den: cuoi };
+  }
+  if (ky === 'thang_nay') {
+    const dau = new Date(homNay.getFullYear(), homNay.getMonth(), 1);
+    const cuoi = new Date(homNay.getFullYear(), homNay.getMonth() + 1, 0);
+    return { tu: dau, den: cuoi };
+  }
+  return null; // toan_bo — không giới hạn
+}
+
+function dinhDangYMD(d) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+// Số chạy từ 0 lên target lúc tải — chỉ hiệu ứng thị giác, KHÔNG thay cho việc dữ liệu phải mới thật
+// (xem setInterval tự tải lại 60s ở trên).
+function demSo(el, target, thoiGian = 700) {
+  const bienDich = Number(target) || 0;
+  const tBatDau = performance.now();
+  function buoc(now) {
+    const tienDo = Math.min((now - tBatDau) / thoiGian, 1);
+    const easeOut = 1 - Math.pow(1 - tienDo, 3);
+    el.textContent = Math.round(bienDich * easeOut).toLocaleString('vi-VN');
+    if (tienDo < 1) requestAnimationFrame(buoc);
+  }
+  requestAnimationFrame(buoc);
+}
+
+function topN(obj, n) {
+  return Object.fromEntries(Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, n));
+}
+
+async function taiBangDieuKhien() {
+  const qs = new URLSearchParams();
+  if (kyHienTai === 'tuy_chon') {
+    const tu = document.getElementById('bdk-tu-ngay').value;
+    const den = document.getElementById('bdk-den-ngay').value;
+    if (tu) qs.set('tuNgay', tu);
+    if (den) qs.set('denNgay', den);
+  } else {
+    const khoang = tinhKhoangTheoKy(kyHienTai);
+    if (khoang) {
+      qs.set('tuNgay', dinhDangYMD(khoang.tu));
+      qs.set('denNgay', dinhDangYMD(khoang.den));
+    }
+  }
+  const qsStr = qs.toString();
+
+  // Ghép 3 API đã có sẵn (không route mới) + /orders để đếm cảnh báo hiện tại (KHÔNG theo kỳ — "đơn
+  // nào đang trễ hạn" là ảnh chụp NGAY LÚC XEM, không phải việc xảy ra trong quá khứ) — xem
+  // docs/superpowers/specs/2026-09-08-bang-dieu-khien-admin-design.md.
+  let thongKe, thongKeLoi, hieuSuat, dsDon;
+  try {
+    [thongKe, thongKeLoi, hieuSuat, dsDon] = await Promise.all([
+      apiFetch('/dashboard/thong-ke?' + qsStr),
+      apiFetch('/reports/thong-ke-loi?' + qsStr),
+      apiFetch('/reports/hieu-suat-theo-nguoi?' + qsStr),
+      apiFetch('/orders'),
+    ]);
+  } catch (e) {
+    document.getElementById('bdk-xep-hang').innerHTML = `<p style="color:#ff5e5e">Không tải được dữ liệu: ${escapeHtml(e.message)}</p>`;
+    return;
+  }
+
+  document.getElementById('bdk-gio-cap-nhat').textContent = new Date().toLocaleTimeString('vi-VN');
+
+  demSo(document.getElementById('kpi-tong-don'), thongKe.tongSoDon);
+
+  const demCanhBao = { VANG: 0, CAM: 0, DO: 0 };
+  dsDon.forEach(o => { if (o.CanhBao && demCanhBao[o.CanhBao] !== undefined) demCanhBao[o.CanhBao]++; });
+  demSo(document.getElementById('kpi-vang'), demCanhBao.VANG);
+  demSo(document.getElementById('kpi-cam'), demCanhBao.CAM);
+  demSo(document.getElementById('kpi-do'), demCanhBao.DO);
+
+  const tyLeLoi = thongKe.tongSoDon > 0 ? (thongKeLoi.tongSoLoi / thongKe.tongSoDon * 100) : 0;
+  document.getElementById('kpi-ty-le-loi').textContent = tyLeLoi.toFixed(1) + '%';
+
+  veBieuDoNgang('chart-pipeline', thongKe.theoTrangThai, PALETTE_PIPELINE);
+  veBieuDoTron('chart-canh-bao', { 'Vàng': demCanhBao.VANG, 'Cam': demCanhBao.CAM, 'Đỏ': demCanhBao.DO }, ['#ffd76b', '#ff9f43', '#ff5e5e']);
+
+  const tongChayMay = hieuSuat.san_xuat.reduce((t, x) => t + x.soDonDaChayMay, 0);
+  const tongVeFile = hieuSuat.ve_file.reduce((t, x) => t + x.soFileDaVe, 0);
+  const tongLayPhoi = hieuSuat.nguoi_lay_phoi.reduce((t, x) => t + x.soDonDaLayPhoi, 0);
+  const tongDongGoi = hieuSuat.nguoi_lay_phoi.reduce((t, x) => t + x.soDonDaDongGoi, 0);
+  veBieuDoCot('chart-khoi-luong', { 'Chạy máy': tongChayMay, 'Vẽ file': tongVeFile, 'Lấy phôi': tongLayPhoi, 'Đóng gói': tongDongGoi });
+
+  const xepHang = [
+    ...hieuSuat.san_xuat.map(x => ({ ten: x.ten, vaiTro: 'san_xuat', so: x.soDonDaChayMay })),
+    ...hieuSuat.ve_file.map(x => ({ ten: x.ten, vaiTro: 've_file', so: x.soFileDaVe })),
+    ...hieuSuat.nguoi_lay_phoi.map(x => ({ ten: x.ten, vaiTro: 'nguoi_lay_phoi', so: x.soDonDaLayPhoi + x.soDonDaDongGoi })),
+  ].sort((a, b) => b.so - a.so).slice(0, 8);
+
+  document.getElementById('bdk-xep-hang').innerHTML = xepHang.length === 0
+    ? '<p style="color:#8fb8d9">Chưa có hoạt động nào trong khoảng thời gian này.</p>'
+    : xepHang.map((x, i) => `
+      <div class="bdk-xep-hang-item">
+        <div class="bdk-hang-so ${i === 0 ? 'top1' : ''}">${i + 1}</div>
+        <div class="bdk-xep-hang-ten">${escapeHtml(x.ten)}<div class="bdk-xep-hang-vaitro">${NHAN_VAI_TRO[x.vaiTro]}</div></div>
+        <div class="bdk-xep-hang-so">${x.so}</div>
+      </div>`).join('');
+
+  veBieuDoTron('chart-loai', thongKe.theoLoaiSanPham, PALETTE_NEON);
+  veBieuDoCot('chart-khach-hang', topN(thongKe.theoKhachHang, 8));
+  veBieuDoDuong('chart-tuan', thongKe.theoTuan);
+}
+
+function huyBieuDoCu(id) {
+  if (cacBieuDo[id]) { cacBieuDo[id].destroy(); delete cacBieuDo[id]; }
+}
+
+function veBieuDoNgang(id, dataObj, mau) {
+  huyBieuDoCu(id);
+  cacBieuDo[id] = new Chart(document.getElementById(id), {
+    type: 'bar',
+    data: { labels: Object.keys(dataObj), datasets: [{ data: Object.values(dataObj), backgroundColor: mau, borderRadius: 4 }] },
+    options: {
+      indexAxis: 'y', responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: 'rgba(126,232,250,0.08)' }, ticks: { color: '#a8d8f0' }, beginAtZero: true },
+        y: { grid: { display: false }, ticks: { color: '#cfe8ff', font: { size: 11 } } },
+      },
+    },
+  });
+}
+
+function veBieuDoTron(id, dataObj, mau) {
+  huyBieuDoCu(id);
+  cacBieuDo[id] = new Chart(document.getElementById(id), {
+    type: 'doughnut',
+    data: { labels: Object.keys(dataObj), datasets: [{ data: Object.values(dataObj), backgroundColor: mau, borderColor: 'rgba(6,11,23,0.9)', borderWidth: 2 }] },
+    options: { plugins: { legend: { position: 'bottom', labels: { color: '#cfe8ff', padding: 10, font: { size: 11 } } } } },
+  });
+}
+
+function veBieuDoCot(id, dataObj) {
+  huyBieuDoCu(id);
+  cacBieuDo[id] = new Chart(document.getElementById(id), {
+    type: 'bar',
+    data: { labels: Object.keys(dataObj), datasets: [{ data: Object.values(dataObj), backgroundColor: 'rgba(126,232,250,0.45)', borderColor: '#7ee8fa', borderWidth: 1.5, borderRadius: 4 }] },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#a8d8f0', font: { size: 11 } } },
+        y: { grid: { color: 'rgba(126,232,250,0.08)' }, ticks: { color: '#a8d8f0' }, beginAtZero: true },
+      },
+    },
+  });
+}
+
+function veBieuDoDuong(id, dataObj) {
+  huyBieuDoCu(id);
+  cacBieuDo[id] = new Chart(document.getElementById(id), {
+    type: 'line',
+    data: {
+      labels: Object.keys(dataObj),
+      datasets: [{ data: Object.values(dataObj), borderColor: '#ffd76b', backgroundColor: 'rgba(255,215,107,0.15)', fill: true, tension: 0.35, pointBackgroundColor: '#ffd76b', pointBorderColor: '#0a1428', pointRadius: 4, pointHoverRadius: 6 }],
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: 'rgba(126,232,250,0.05)' }, ticks: { color: '#a8d8f0' } },
+        y: { grid: { color: 'rgba(126,232,250,0.08)' }, ticks: { color: '#a8d8f0' }, beginAtZero: true },
+      },
+    },
+  });
+}
+</script>
+</body>
+</html>
