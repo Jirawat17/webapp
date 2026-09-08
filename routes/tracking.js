@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { layCauHinh, luuCauHinh, layDanhSachDonAutoTracking, layLogTracking } = require('../services/trackingAutoService');
+const { layCauHinh, luuCauHinh, layDanhSachDonAutoTracking, layLogTracking, muaTrackingChoDon } = require('../services/trackingAutoService');
 const { layCauHinhGke, luuCauHinhGke } = require('../services/gkeService');
 const { requireLogin } = require('../middleware/auth');
 
@@ -50,6 +50,28 @@ router.post('/cau-hinh-gke', async (req, res) => {
 
 router.get('/logs', (req, res) => {
   res.json(layLogTracking());
+});
+
+// Mua tracking THỦ CÔNG cho 1 đơn bất kỳ — bổ sung 09/09/2026, theo yêu cầu người dùng. Dùng CHUNG
+// lõi muaTrackingChoDon() với job tự động (chống trùng vận đơn, không đổi TRANG_THAI_XUONG
+// — xem services/trackingAutoService.js) — CHỈ khác ở chỗ truyền người dùng đang đăng nhập thật vào,
+// để log/lịch sử ghi đúng người bấm. Gọi từ CẢ 2 nơi: bảng danh sách ở trang "Tracking" (đơn đã bật
+// AUTO_TRACKING) và trang chi tiết đơn order.html (đơn bất kỳ, không cần AUTO_TRACKING="YES").
+router.post('/mua-thu-cong', async (req, res) => {
+  const { sttKey } = req.body;
+  const user = req.session.user;
+  if (!sttKey) return res.status(400).json({ error: 'Thiếu mã đơn' });
+
+  try {
+    const cauHinhGke = await layCauHinhGke();
+    const ketQua = await muaTrackingChoDon(sttKey, cauHinhGke, user);
+    if (!ketQua) return res.status(400).json({ error: 'Đơn này đã có mã tracking thật rồi — không mua lại.' });
+    res.json({ ok: true, trackingNum: ketQua.tracking_num, hangVanChuyen: ketQua.delivery_carrier });
+  } catch (err) {
+    const khongTimThayDon = /Không tìm thấy đơn/.test(err.message);
+    console.error(`[TrackingThuCong] Lỗi mua tracking cho ${sttKey}:`, err.stack || err.message);
+    res.status(khongTimThayDon ? 404 : 502).json({ error: err.message });
+  }
 });
 
 module.exports = router;

@@ -298,7 +298,7 @@ async function taiDanhSach() {
   } else {
     el.innerHTML = `
       <table class="bang-xem-truoc">
-        <thead><tr><th>Mã đơn</th><th>Trạng thái</th><th>Mã tracking</th><th>Hãng vận chuyển</th><th>Thời gian in mã</th></tr></thead>
+        <thead><tr><th>Mã đơn</th><th>Trạng thái</th><th>Mã tracking</th><th>Hãng vận chuyển</th><th>Thời gian in mã</th><th>Hành động</th></tr></thead>
         <tbody>
           ${ds.map(d => {
             const tt = NHAN_TRANG_THAI[d.trangThai] || { nhan: d.trangThai, lop: 'dang-cho' };
@@ -308,6 +308,7 @@ async function taiDanhSach() {
               <td>${escapeHtml(d.trackingId || '—')}</td>
               <td>${escapeHtml(d.hangVanChuyen || '—')}</td>
               <td>${d.thoiGianInMa ? dinhDangNgayGioNganAnToan(d.thoiGianInMa) : '—'}</td>
+              <td>${d.trangThai === 'DA_MUA' ? '—' : `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="muaThuCongTuBang(this, '${d.sttKey.replace(/'/g, "\\'")}')">Mua ngay</button>`}</td>
             </tr>`;
           }).join('')}
         </tbody>
@@ -315,6 +316,26 @@ async function taiDanhSach() {
   }
 
   hienPopupNeuCoMoi(ds);
+}
+
+// Nút "Mua ngay" — mua tracking THỦ CÔNG cho 1 đơn, bỏ qua bộ đếm "x phút" (bổ sung 09/09/2026, theo
+// yêu cầu người dùng). Dùng CHUNG API /tracking/mua-thu-cong với nút tương tự ở order.html.
+async function muaThuCongTuBang(btn, sttKey) {
+  if (!confirm(`Mua tracking GKE thủ công cho đơn ${sttKey} ngay bây giờ? Đây là thao tác tạo vận đơn THẬT, có thể phát sinh chi phí.`)) return;
+
+  const nhanGoc = btn.innerHTML;
+  btn.disabled = true;
+  btn.textContent = 'Đang mua...';
+
+  try {
+    await apiFetch('/tracking/mua-thu-cong', { method: 'POST', body: JSON.stringify({ sttKey }) });
+    await taiDanhSach();
+    await taiLogs();
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
+    btn.disabled = false;
+    btn.innerHTML = nhanGoc;
+  }
 }
 
 // Copy tsDep từ order.html/hoat-dong.html (mỗi trang tự chứa, dự án không có bước build để chia sẻ

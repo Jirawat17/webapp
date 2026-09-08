@@ -73,28 +73,32 @@ async function luuCauHinh({ bat, soPhutCho }) {
 // (khác luồng quét tay) — đơn tự động mua tracking sớm vẫn còn nguyên trạng thái sản xuất, "ĐÃ DÁN
 // TEM" chỉ nên đúng nghĩa khi tem thật được dán lên hộp lúc đóng gói xong (vẫn làm ở scan.html như cũ,
 // lúc đó TRACKING_ID đã có sẵn nên chỉ lấy tem in, không tạo vận đơn lần 2).
-async function muaTrackingChoDon(sttKey, cauHinhGke) {
+// `user` mặc định = "người dùng hệ thống" (job tự động gọi không truyền gì thêm) — bổ sung
+// 09/09/2026: routes/tracking.js#POST /mua-thu-cong TRUYỀN người admin đang đăng nhập thật vào đây,
+// để log ghi đúng AI đã bấm mua thủ công thay vì luôn hiện "Hệ thống (tự động)".
+async function muaTrackingChoDon(sttKey, cauHinhGke, user = NGUOI_HE_THONG) {
   const { row } = await orderService.getByKey(sttKey, { fresh: true });
   if (!row) throw new Error('Không tìm thấy đơn: ' + sttKey);
   if (row.TRACKING_ID && row.TRACKING_ID !== gkeService.MA_DANG_CHO_TEM) return null; // đã có tracking thật rồi (vd vừa được quét tay) — bỏ qua
 
   const chuaTungTaoDon = !row.TRACKING_ID;
   const dangChoTuLanTruoc = row.TRACKING_ID === gkeService.MA_DANG_CHO_TEM;
+  const laThuCong = user !== NGUOI_HE_THONG;
 
   if (chuaTungTaoDon) {
     await gkeService.taoDonGke(row, cauHinhGke);
-    await orderService.update(sttKey, { TRACKING_ID: gkeService.MA_DANG_CHO_TEM }, NGUOI_HE_THONG);
+    await orderService.update(sttKey, { TRACKING_ID: gkeService.MA_DANG_CHO_TEM }, user);
   }
 
   const ketQuaTem = await gkeService.layTemIn(row, cauHinhGke, { laLanDauSauKhiTao: chuaTungTaoDon || dangChoTuLanTruoc });
   await orderService.update(sttKey, {
     TRACKING_ID: ketQuaTem.tracking_num,
     HANG_VAN_CHUYEN: ketQuaTem.delivery_carrier,
-  }, NGUOI_HE_THONG);
+  }, user);
 
-  ghiLogTracking(`${sttKey}: đã mua tracking ${ketQuaTem.tracking_num} (${ketQuaTem.delivery_carrier})`);
+  ghiLogTracking(`${sttKey}: đã mua tracking ${ketQuaTem.tracking_num} (${ketQuaTem.delivery_carrier})${laThuCong ? ` — thủ công bởi ${user.ten}` : ''}`);
   ghiLog({
-    nguoiDung: NGUOI_HE_THONG.ten, vaiTro: NGUOI_HE_THONG.vaiTro, hanhDong: 'TU_DONG_MUA_TRACKING',
+    nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: laThuCong ? 'MUA_TRACKING_THU_CONG' : 'TU_DONG_MUA_TRACKING',
     sttKey, chiTiet: { trackingNum: ketQuaTem.tracking_num, hangVanChuyen: ketQuaTem.delivery_carrier },
   }).catch(err => console.error('[TrackingTuDong] Lỗi ghi log nền:', err.message));
 
@@ -167,4 +171,4 @@ async function layDanhSachDonAutoTracking() {
     .sort((a, b) => new Date(b.thoiGianCapNhatCuoi || 0) - new Date(a.thoiGianCapNhatCuoi || 0));
 }
 
-module.exports = { layCauHinh, luuCauHinh, chayQuetTuDongMuaTracking, layDanhSachDonAutoTracking, layLogTracking };
+module.exports = { layCauHinh, luuCauHinh, chayQuetTuDongMuaTracking, layDanhSachDonAutoTracking, layLogTracking, muaTrackingChoDon };

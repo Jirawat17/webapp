@@ -22,6 +22,9 @@ const NHAN_CANH_BAO = { VANG: 'Cảnh báo Vàng · 3 ngày ít tiến triển',
 // (bổ sung 26/08/2026) Đơn "Đang chạy máy" nhưng không tra được người vận hành (vd sửa thẳng trên
 // Sheet, log bị thiếu) — vẫn cho xem (an toàn hơn) nhưng cảnh báo TO, RÕ thay vì chỉ ghi "Không xác định".
 const NHAN_NGUOI_VAN_HANH_KHONG_RO = 'ĐƠN SỬA TRONG GGSHEET, KHÔNG RÕ TÀI KHOẢN SẢN XUẤT NÀO ĐANG CHẠY';
+// Phải khớp ĐÚNG hằng số MA_DANG_CHO_TEM trong services/gkeService.js — giá trị tạm ghi vào
+// TRACKING_ID ngay sau khi tạo vận đơn GKE thành công, trước khi lấy được tem in.
+const MA_DANG_CHO_TEM_TRACKING = 'DANG_CHO_GKE_TAO_TEM';
 
 const DANH_SACH_TINH_TRANG = [
   'Chưa in mã', 'Đã in mã', 'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đang chạy máy', 'Đã sản xuất', 'LỖI SẢN XUẤT CẦN LÀM LẠI',
@@ -228,6 +231,20 @@ function renderKhuVucThaoTac(don) {
         <button class="btn-hanh-dong" onclick="apDungChiDinhNguoiVeFileChiTiet(this)">${icon('check')} Chỉ định vẽ file</button>
         <p style="margin:0;font-size:0.8rem;color:var(--color-text-faint)">Chuyển đơn này sang "Đang vẽ file" và ghi nhận người được chỉ định (ghi chú "Admin chỉ định").</p>
       </div>`;
+
+    // Mua tracking GKE THỦ CÔNG (bổ sung 09/09/2026) — chỉ hiện khi đơn CHƯA có tracking thật (trống
+    // hẳn, hoặc đang kẹt ở placeholder "chờ tem" — MA_DANG_CHO_TEM_TRACKING bên dưới phải khớp đúng
+    // gkeService.MA_DANG_CHO_TEM). Không cần AUTO_TRACKING="YES", không cần đợi x phút hay đúng
+    // TRANG_THAI_XUONG như quét QR — bấm là mua ngay cho đơn ĐANG XEM. Dùng chung API
+    // /tracking/mua-thu-cong với nút tương tự ở tracking.html (trang danh sách đơn AUTO_TRACKING).
+    if (!don.TRACKING_ID || don.TRACKING_ID === MA_DANG_CHO_TEM_TRACKING) {
+      html += `
+      <div class="upload-box">
+        <label>${icon('package', { size: 18 })} Mua tracking GKE thủ công</label>
+        <button class="btn-hanh-dong" onclick="muaTrackingThuCongChiTiet(this)">${icon('package')} Mua tracking ngay</button>
+        <p style="margin:0;font-size:0.8rem;color:var(--color-text-faint)">Tạo vận đơn GKE thật + lấy mã tracking cho đơn này ngay bây giờ, không cần đợi tự động hoặc quét QR. Cấu hình GKE chỉnh ở menu "Tracking".</p>
+      </div>`;
+    }
   }
 
   // Ảnh "File thêu" (bổ sung 26/08/2026) — ve_file upload sau khi vẽ file xong, để san_xuat xem
@@ -361,6 +378,23 @@ async function apDungChiDinhNguoiVeFileChiTiet(btn) {
     } else {
       await taiChiTiet();
     }
+  } catch (e) {
+    alert(e.message);
+    btn.disabled = false;
+    btn.innerHTML = nhanGoc;
+  }
+}
+
+async function muaTrackingThuCongChiTiet(btn) {
+  if (!confirm(`Mua tracking GKE thủ công cho đơn ${sttKey} ngay bây giờ? Đây là thao tác tạo vận đơn THẬT, có thể phát sinh chi phí.`)) return;
+
+  const nhanGoc = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Đang mua...';
+
+  try {
+    await apiFetch('/tracking/mua-thu-cong', { method: 'POST', body: JSON.stringify({ sttKey }) });
+    await taiChiTiet();
   } catch (e) {
     alert(e.message);
     btn.disabled = false;

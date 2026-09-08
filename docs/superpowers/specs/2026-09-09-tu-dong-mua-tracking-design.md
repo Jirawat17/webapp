@@ -128,3 +128,34 @@ diện tích (theo đúng yêu cầu), tự tải lại mỗi 60 giây (cùng ch
 tài khoản API, dịch vụ & khai báo hải quan, thông tin người gửi, cân nặng mặc định. Có nút Lưu + thông
 báo riêng, gọi `GET/POST /tracking/cau-hinh-gke` (mới, `routes/tracking.js`, delegate thẳng tới
 `gkeService.layCauHinhGke()`/`luuCauHinhGke()`).
+
+## 7. Bổ sung 09/09/2026: nút "Mua tracking thủ công"
+
+Yêu cầu người dùng: thêm 1 nút mua tracking thủ công, không cần đợi job tự động hay quét QR. Hỏi
+người dùng nên đặt ở đâu — trả lời "cả hai": bảng danh sách ở trang "Tracking" (cho đơn đã bật
+`AUTO_TRACKING`) VÀ trang chi tiết đơn `order.html` (cho đơn bất kỳ).
+
+**Lõi dùng chung**: `trackingAutoService.muaTrackingChoDon(sttKey, cauHinhGke, user = NGUOI_HE_THONG)`
+— thêm tham số `user` (mặc định vẫn là "người dùng hệ thống" cho job tự động, không đổi hành vi cũ).
+Khi gọi thủ công, `user` là người admin đang đăng nhập thật — dùng để attribute đúng trong
+`orderService.update()`/`ghiLog()` (hanhDong đổi thành `MUA_TRACKING_THU_CONG` thay vì
+`TU_DONG_MUA_TRACKING`) và dòng log ngắn gọn có thêm hậu tố "— thủ công bởi {tên}". Không đổi
+`TRANG_THAI_XUONG`, không yêu cầu `AUTO_TRACKING="YES"`, không yêu cầu đủ x phút hay đúng trạng thái sản
+xuất — hoàn toàn tách biệt khỏi các điều kiện của job tự động và của luồng quét QR
+(`routes/gke.js`), chỉ tái dùng đúng phần lõi chống tạo vận đơn trùng.
+
+**Endpoint dùng chung**: `POST /tracking/mua-thu-cong` (`routes/tracking.js`, cùng `chiAdmin` middleware
+như các route khác trong file — tính năng có thể phát sinh chi phí thật, giữ nguyên triết lý chỉ admin
+của cả trang "Tracking" lẫn nút mới này). Trả 404 nếu không tìm thấy đơn, 400 nếu đơn đã có tracking
+thật rồi (không mua lại), 502 kèm thông báo lỗi gốc nếu GKE từ chối.
+
+**`tracking.html`**: thêm cột "Hành động" vào bảng danh sách — nút "Mua ngay" cho MỌI đơn chưa ở trạng
+thái `DA_MUA` (kể cả đang chờ tem hoặc đến hạn), có `confirm()` cảnh báo chi phí thật trước khi gọi.
+Thành công thì tải lại cả danh sách lẫn Logs; lỗi thì `alert()` và khôi phục nút.
+
+**`order.html`**: thêm mục "Mua tracking GKE thủ công" trong cùng khối chỉ-admin với "Chỉ định người
+chạy máy"/"Chỉ định người vẽ file" — CHỈ hiện khi đơn chưa có tracking thật (`TRACKING_ID` rỗng, hoặc
+đang là placeholder chờ tem — hằng số `DANG_CHO_GKE_TAO_TEM` lặp lại ở client, phải khớp
+`gkeService.MA_DANG_CHO_TEM`, theo đúng cách dự án đang xử lý các chuỗi hằng dùng chung giữa
+client/server — không có module hằng số dùng chung). Thành công thì gọi lại `taiChiTiet()` — bảng
+thông tin đơn tự cập nhật Mã tracking/Hãng vận chuyển và nút tự ẩn.
