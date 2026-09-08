@@ -213,7 +213,13 @@ const cacBieuDo = {};
 
 const PALETTE_NEON = ['#7ee8fa', '#ffd76b', '#ff5e5e', '#4ecb71', '#c792ea', '#ff9f43', '#54a0ff', '#ee5a6f'];
 const PALETTE_PIPELINE = ['#4a6fa5','#5b8fd4','#7ee8fa','#54c6a8','#4ecb71','#ffd76b','#ff9f43','#ff5e5e','#c792ea','#8892b0','#5c6b8a'];
-const NHAN_VAI_TRO = { san_xuat: 'Sản xuất', ve_file: 'Vẽ file', nguoi_lay_phoi: 'Lấy phôi / Đóng gói', admin: 'Quản trị' };
+// ĐẶT TÊN KHÁC api.js (không dùng lại NHAN_VAI_TRO) — api.js đã khai báo top-level const cùng tên,
+// 2 thẻ <script> thường (không phải module) DÙNG CHUNG 1 scope cho let/const/class, khai báo trùng
+// tên là SyntaxError lúc PARSE (làm hỏng luôn cả khối script, kể cả try/catch bên trong cũng không
+// kịp chạy) — đây chính là lỗi thật gặp khi rebuild 08/09/2026: "Identifier 'NHAN_VAI_TRO' has
+// already been declared". Giá trị ở đây CỐ Ý khác api.js (mô tả đúng ngữ cảnh Bảng điều khiển,
+// vd gộp "Lấy phôi / Đóng gói") nên không thể dùng lại thẳng biến của api.js.
+const NHAN_VAI_TRO_BDK = { san_xuat: 'Sản xuất', ve_file: 'Vẽ file', nguoi_lay_phoi: 'Lấy phôi / Đóng gói', admin: 'Quản trị' };
 
 (async () => {
   try {
@@ -302,7 +308,7 @@ function topN(obj, n) {
 // Dòng phụ hiển thị dưới tên trong danh sách "Đang hoạt động ngay bây giờ" — với san_xuat/ve_file
 // thì kèm luôn số việc đang xử lý (đúng ý người dùng: biết đang online VÀ đang bận bao nhiêu việc).
 function moTaVaiTroVaViec(nguoiDangHD, demChayMay, demVeFile) {
-  const nhanVaiTro = NHAN_VAI_TRO[nguoiDangHD.vaiTro] || nguoiDangHD.vaiTro;
+  const nhanVaiTro = NHAN_VAI_TRO_BDK[nguoiDangHD.vaiTro] || nguoiDangHD.vaiTro;
   if (nguoiDangHD.vaiTro === 'san_xuat') {
     const so = demChayMay.get(nguoiDangHD.ten) || 0;
     return so > 0 ? `${nhanVaiTro} · đang chạy máy ${so} đơn` : `${nhanVaiTro} · chưa nhận đơn nào`;
@@ -416,7 +422,7 @@ async function taiBangDieuKhien() {
     : xepHang.map((x, i) => `
       <div class="bdk-xep-hang-item">
         <div class="bdk-hang-so ${i === 0 ? 'top1' : ''}">${i + 1}</div>
-        <div class="bdk-xep-hang-ten">${escapeHtml(x.ten)}<div class="bdk-xep-hang-vaitro">${NHAN_VAI_TRO[x.vaiTro]}</div></div>
+        <div class="bdk-xep-hang-ten">${escapeHtml(x.ten)}<div class="bdk-xep-hang-vaitro">${NHAN_VAI_TRO_BDK[x.vaiTro]}</div></div>
         <div class="bdk-xep-hang-so">${x.so}</div>
       </div>`).join('');
 
