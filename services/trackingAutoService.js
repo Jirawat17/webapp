@@ -4,11 +4,18 @@
 // docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md.
 const orderService = require('./orderService');
 const gkeService = require('./gkeService');
-const { readTab, readTabCached, updateCells, appendRow } = require('./sheetsService');
+const { readTab, readTabCached, updateCells, appendRow, getHeadersCached } = require('./sheetsService');
 const { ghiLog } = require('./logService');
+const { thoiGianVNISOString } = require('./dateUtils');
 
 const TAB_CAU_HINH = 'CauHinhTracking';
 const SO_PHUT_MAC_DINH = 10;
+
+// Tab Sheet CHI TIẾT cho tracking — bổ sung 09/09/2026 lần 4, theo yêu cầu người dùng: log ngắn gọn
+// trong bộ nhớ (_logs bên dưới) không đủ để xem lại VỀ SAU (mất khi restart) và không đủ chi tiết để
+// debug (chỉ 1 dòng tóm tắt). Tab riêng, người dùng tự tạo trước (xem ghiLogTrackingVaoSheet) — 9 cột:
+// ThoiGian, STT_Key, Nguon, NguoiDung, VaiTro, KetQua, TRACKING_ID, HANG_VAN_CHUYEN, ChiTiet.
+const TAB_LOGS_TRACKING = 'LogsTracking';
 
 // "Người dùng" hệ thống — dùng khi ghi qua orderService.update()/ghiLog() từ job chạy nền, không có
 // ai thật đang đăng nhập. Chưa có tiền lệ nào khác trong dự án (job cảnh báo hiện có ghi thẳng
@@ -31,6 +38,37 @@ function ghiLogTracking(dong) {
 
 function layLogTracking() {
   return [..._logs].reverse(); // mới nhất trước
+}
+
+// Ghi 1 dòng log CHI TIẾT vào tab Sheet "LogsTracking" — bổ sung 09/09/2026 lần 4, theo yêu cầu người
+// dùng: "ghi toàn bộ Logs chi tiết cho phần tracking (gồm cả thủ công và tự động)" + cột ChiTiet phải
+// "ghi lại đầy đủ mọi logs liên quan kể cả khi lỗi hoặc thành công (tất cả các bước)" — đây là bản ghi
+// LÂU DÀI trên Sheet, khác hẳn _logs (bộ nhớ, ngắn gọn, mất khi restart) ở trên: mỗi dòng chứa TOÀN BỘ
+// log kỹ thuật từng bước gọi GKE (y hệt console server, xem gkeService.js#ghi/ghiLoi + tham số nhatKy
+// truyền xuyên suốt taoDonGke/layTemIn), không chỉ 1 câu tóm tắt.
+//
+// KHÔNG BAO GIỜ throw — lỗi ghi Sheet (tab chưa tạo, mạng lỗi...) chỉ console.error, không được làm
+// hỏng luồng mua tracking THẬT đang chạy (cùng triết lý ghiLog() trong logService.js). Người dùng tự
+// tạo tab LogsTracking trước với ĐÚNG 9 cột: ThoiGian, STT_Key, Nguon, NguoiDung, VaiTro, KetQua,
+// TRACKING_ID, HANG_VAN_CHUYEN, ChiTiet — chưa tạo tab thì chỉ mất phần ghi Sheet này, KHÔNG mất log
+// ngắn gọn trong _logs (vẫn xem được trên trang Tracking như trước).
+async function ghiLogTrackingVaoSheet({ sttKey, nguon, nguoiDung, vaiTro, ketQua, trackingId = '', hangVanChuyen = '', chiTiet = '' }) {
+  try {
+    const headers = await getHeadersCached(TAB_LOGS_TRACKING);
+    await appendRow(TAB_LOGS_TRACKING, headers, {
+      ThoiGian: thoiGianVNISOString(),
+      STT_Key: sttKey,
+      Nguon: nguon,
+      NguoiDung: nguoiDung,
+      VaiTro: vaiTro,
+      KetQua: ketQua,
+      TRACKING_ID: trackingId,
+      HANG_VAN_CHUYEN: hangVanChuyen,
+      ChiTiet: chiTiet,
+    });
+  } catch (err) {
+    console.error('[TrackingTuDong] Lỗi ghi tab LogsTracking (có thể chưa tạo tab):', err.message);
+  }
 }
 
 // Đọc cấu hình bật/tắt + số phút chờ. Tab CauHinhTracking do người dùng tự tạo trước (2 cột
@@ -88,21 +126,32 @@ async function luuCauHinh({ bat, soPhutCho }) {
 async function muaTrackingChoDon(sttKey, cauHinhGke, user = NGUOI_HE_THONG) {
   const laThuCong = user !== NGUOI_HE_THONG;
   const nhanNguon = laThuCong ? `[Thủ công - ${user.ten}]` : '[Tự động]';
+  const nguonSheet = laThuCong ? 'Thủ công' : 'Tự động';
+  // Gộp TOÀN BỘ log kỹ thuật từng bước gọi GKE (đăng nhập/tạo đơn/in tem) vào đây, truyền xuyên suốt
+  // qua gkeService.taoDonGke()/layTemIn() — xem gkeService.js#ghi/ghiLoi. Dùng cho cột ChiTiet ở
+  // ghiLogTrackingVaoSheet() bên dưới, y hệt nội dung sẽ in ra console server.
+  const nhatKy = [];
 
   try {
     const { row } = await orderService.getByKey(sttKey, { fresh: true });
     if (!row) throw new Error('Không tìm thấy đơn: ' + sttKey);
-    if (row.TRACKING_ID && row.TRACKING_ID !== gkeService.MA_DANG_CHO_TEM) return null; // đã có tracking thật rồi (vd vừa được quét tay) — bỏ qua
+    if (row.TRACKING_ID && row.TRACKING_ID !== gkeService.MA_DANG_CHO_TEM) {
+      ghiLogTrackingVaoSheet({
+        sttKey, nguon: nguonSheet, nguoiDung: user.ten, vaiTro: user.vaiTro,
+        ketQua: 'Bỏ qua', chiTiet: 'Đơn này đã có mã tracking thật rồi — không mua lại.',
+      });
+      return null; // đã có tracking thật rồi (vd vừa được quét tay) — bỏ qua
+    }
 
     const chuaTungTaoDon = !row.TRACKING_ID;
     const dangChoTuLanTruoc = row.TRACKING_ID === gkeService.MA_DANG_CHO_TEM;
 
     if (chuaTungTaoDon) {
-      await gkeService.taoDonGke(row, cauHinhGke);
+      await gkeService.taoDonGke(row, cauHinhGke, nhatKy);
       await orderService.update(sttKey, { TRACKING_ID: gkeService.MA_DANG_CHO_TEM }, user);
     }
 
-    const ketQuaTem = await gkeService.layTemIn(row, cauHinhGke, { laLanDauSauKhiTao: chuaTungTaoDon || dangChoTuLanTruoc });
+    const ketQuaTem = await gkeService.layTemIn(row, cauHinhGke, { laLanDauSauKhiTao: chuaTungTaoDon || dangChoTuLanTruoc }, nhatKy);
     await orderService.update(sttKey, {
       TRACKING_ID: ketQuaTem.tracking_num,
       HANG_VAN_CHUYEN: ketQuaTem.delivery_carrier,
@@ -113,10 +162,18 @@ async function muaTrackingChoDon(sttKey, cauHinhGke, user = NGUOI_HE_THONG) {
       nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: laThuCong ? 'MUA_TRACKING_THU_CONG' : 'TU_DONG_MUA_TRACKING',
       sttKey, chiTiet: { trackingNum: ketQuaTem.tracking_num, hangVanChuyen: ketQuaTem.delivery_carrier },
     }).catch(err => console.error('[TrackingTuDong] Lỗi ghi log nền:', err.message));
+    ghiLogTrackingVaoSheet({
+      sttKey, nguon: nguonSheet, nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: 'Thành công',
+      trackingId: ketQuaTem.tracking_num, hangVanChuyen: ketQuaTem.delivery_carrier, chiTiet: nhatKy.join('\n'),
+    });
 
     return ketQuaTem;
   } catch (err) {
     ghiLogTracking(`${nhanNguon} ${sttKey}: LỖI — ${err.message}`);
+    ghiLogTrackingVaoSheet({
+      sttKey, nguon: nguonSheet, nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: 'Lỗi',
+      chiTiet: nhatKy.concat(`LỖI: ${err.message}`).join('\n'),
+    });
     throw err;
   }
 }

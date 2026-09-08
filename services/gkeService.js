@@ -96,23 +96,39 @@ const BASE_URL = 'https://order.gkelogistics.com/openapi/customer';
 // nên rơi vào thông báo mặc định). Đặt timeout rõ ràng để báo đúng nguyên nhân "quá thời gian chờ".
 const TIMEOUT_MS = 45000;
 
+// Ghi 1 dòng log — LUÔN in ra console server như cũ (không đổi hành vi debug hiện có), ĐỒNG THỜI gộp
+// vào mảng `nhatKy` nếu có truyền vào — bổ sung 09/09/2026 lần 4, theo yêu cầu người dùng: cột ChiTiet
+// trong tab Sheet mới "LogsTracking" cần ghi lại ĐẦY ĐỦ mọi dòng log liên quan (tất cả các bước gọi
+// GKE), không chỉ mỗi thông báo lỗi cuối cùng — xem ảnh chụp console server người dùng gửi kèm.
+// `nhatKy` là THAM SỐ TUỲ CHỌN truyền xuyên suốt fetchJson → layToken/goiApi → taoDonGke/layTemIn (chỉ
+// services/trackingAutoService.js#muaTrackingChoDon() truyền vào; routes/gke.js luồng quét QR KHÔNG
+// truyền, giữ nguyên hành vi cũ — ngoài phạm vi yêu cầu "thủ công và tự động" lần này).
+function ghi(nhatKy, ...doiSo) {
+  console.log(...doiSo);
+  if (nhatKy) nhatKy.push(doiSo.map(d => (typeof d === 'string' ? d : JSON.stringify(d))).join(' '));
+}
+function ghiLoi(nhatKy, ...doiSo) {
+  console.error(...doiSo);
+  if (nhatKy) nhatKy.push(doiSo.map(d => (typeof d === 'string' ? d : JSON.stringify(d))).join(' '));
+}
+
 // Gọi 1 URL, LUÔN đọc response dạng text trước rồi mới thử parse JSON — nếu parse lỗi thì in ra
 // console 500 ký tự đầu của response thật (thường là trang lỗi HTML từ proxy/GKE) thay vì nuốt lỗi
 // âm thầm như cách cũ (res.json().catch(() => ({}))) từng làm, khiến không biết GKE trả về CÁI GÌ.
-async function fetchJson(buoc, url, options) {
+async function fetchJson(buoc, url, options, nhatKy) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-  console.log(`[GKE] [${buoc}] Gọi ${options.method} ${url}`);
+  ghi(nhatKy, `[GKE] [${buoc}] Gọi ${options.method} ${url}`);
 
   let res;
   try {
     res = await fetch(url, { ...options, signal: controller.signal });
   } catch (err) {
     if (err.name === 'AbortError') {
-      console.error(`[GKE] [${buoc}] Quá thời gian chờ (${TIMEOUT_MS / 1000}s) — kiểm tra mạng/tường lửa tới order.gkelogistics.com`);
+      ghiLoi(nhatKy, `[GKE] [${buoc}] Quá thời gian chờ (${TIMEOUT_MS / 1000}s) — kiểm tra mạng/tường lửa tới order.gkelogistics.com`);
       throw new Error(`[${buoc}] Gọi GKE quá thời gian chờ (${TIMEOUT_MS / 1000}s) — kiểm tra kết nối mạng của server tới order.gkelogistics.com`);
     }
-    console.error(`[GKE] [${buoc}] Lỗi mạng:`, err.message);
+    ghiLoi(nhatKy, `[GKE] [${buoc}] Lỗi mạng:`, err.message);
     throw new Error(`[${buoc}] Lỗi kết nối tới GKE: ${err.message}`);
   } finally {
     clearTimeout(timer);
@@ -123,11 +139,11 @@ async function fetchJson(buoc, url, options) {
   try {
     data = JSON.parse(text);
   } catch (e) {
-    console.error(`[GKE] [${buoc}] Phản hồi KHÔNG phải JSON (HTTP ${res.status}) — 500 ký tự đầu:`, text.slice(0, 500));
+    ghiLoi(nhatKy, `[GKE] [${buoc}] Phản hồi KHÔNG phải JSON (HTTP ${res.status}) — 500 ký tự đầu:`, text.slice(0, 500));
     throw new Error(`[${buoc}] GKE trả về dữ liệu không hợp lệ (HTTP ${res.status}) — xem log server để thấy nguyên văn phản hồi`);
   }
 
-  console.log(`[GKE] [${buoc}] Phản hồi: HTTP ${res.status}, code=${data.code}, success=${data.success}`);
+  ghi(nhatKy, `[GKE] [${buoc}] Phản hồi: HTTP ${res.status}, code=${data.code}, success=${data.success}`);
   return { res, data };
 }
 
@@ -137,7 +153,7 @@ async function fetchJson(buoc, url, options) {
 const TOKEN_TTL_MS = 12 * 60 * 60 * 1000;
 let tokenCache = { token: null, thoiDiemLay: 0 };
 
-async function layToken(cauHinh, { boQuaCache = false } = {}) {
+async function layToken(cauHinh, { boQuaCache = false } = {}, nhatKy) {
   if (!boQuaCache && tokenCache.token && Date.now() - tokenCache.thoiDiemLay < TOKEN_TTL_MS) {
     return tokenCache.token;
   }
@@ -152,26 +168,26 @@ async function layToken(cauHinh, { boQuaCache = false } = {}) {
       username: cauHinh.username,
       password: cauHinh.password,
     }),
-  });
+  }, nhatKy);
   if (!data.success || !data.data || !data.data.token) {
     throw new Error('[đăng nhập] Đăng nhập GKE thất bại: ' + (data.detail || 'phản hồi thiếu token'));
   }
 
   tokenCache = { token: data.data.token, thoiDiemLay: Date.now() };
-  console.log('[GKE] [đăng nhập] Lấy token mới thành công, hiệu lực tới', new Date(Date.now() + TOKEN_TTL_MS).toLocaleString('vi-VN'));
+  ghi(nhatKy, '[GKE] [đăng nhập] Lấy token mới thành công, hiệu lực tới', new Date(Date.now() + TOKEN_TTL_MS).toLocaleString('vi-VN'));
   return tokenCache.token;
 }
 
 // Gọi 1 endpoint POST của GKE, tự đính token — nếu bị từ chối do token hỏng (401, hoặc code khác
 // 200 kèm chữ "token"/"unauthorized" trong detail) thì làm mới token 1 lần rồi thử lại đúng 1 lần,
 // không lặp vô hạn. `buoc` = tên bước để log/báo lỗi rõ ràng theo đúng giai đoạn (đăng nhập/tạo đơn/in tem).
-async function goiApi(buoc, path, body, cauHinh, { daThuLai = false } = {}) {
-  const token = await layToken(cauHinh);
+async function goiApi(buoc, path, body, cauHinh, { daThuLai = false } = {}, nhatKy) {
+  const token = await layToken(cauHinh, {}, nhatKy);
   const { res, data } = await fetchJson(buoc, `${BASE_URL}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify(body),
-  });
+  }, nhatKy);
 
   if (!data.success) {
     // code=301 "Repeated" — KHÔNG phải lỗi thật, GKE đang báo "đơn này (theo customer_order_num) đã
@@ -180,16 +196,16 @@ async function goiApi(buoc, path, body, cauHinh, { daThuLai = false } = {}) {
     // ghi lại vận đơn đã tạo, quét lại tưởng nhầm chưa tạo và gọi order/create/ lần nữa — GKE tự
     // chặn trùng ở phía họ và trả thẳng data cũ, coi như thành công để đi tiếp lấy tem, không báo lỗi.
     if (data.code === 301 && data.data) {
-      console.log(`[GKE] [${buoc}] GKE báo "đã tồn tại từ trước" (code 301) — dùng lại dữ liệu cũ:`, JSON.stringify(data.data));
+      ghi(nhatKy, `[GKE] [${buoc}] GKE báo "đã tồn tại từ trước" (code 301) — dùng lại dữ liệu cũ:`, JSON.stringify(data.data));
       return data.data;
     }
     const loiTokenHong = res.status === 401 || /token/i.test(data.detail || '');
     if (loiTokenHong && !daThuLai) {
-      console.log(`[GKE] [${buoc}] Token có vẻ đã hỏng — làm mới token và thử lại 1 lần`);
-      await layToken(cauHinh, { boQuaCache: true });
-      return goiApi(buoc, path, body, cauHinh, { daThuLai: true });
+      ghi(nhatKy, `[GKE] [${buoc}] Token có vẻ đã hỏng — làm mới token và thử lại 1 lần`);
+      await layToken(cauHinh, { boQuaCache: true }, nhatKy);
+      return goiApi(buoc, path, body, cauHinh, { daThuLai: true }, nhatKy);
     }
-    console.error(`[GKE] [${buoc}] GKE từ chối:`, JSON.stringify(data));
+    ghiLoi(nhatKy, `[GKE] [${buoc}] GKE từ chối:`, JSON.stringify(data));
     throw new Error(`[${buoc}] ${data.detail || `Lỗi GKE (mã ${data.code ?? res.status})`}`);
   }
   return data.data;
@@ -287,7 +303,7 @@ function tinhCanNangKg(donHang, cauHinh) {
 const MA_DANG_CHO_TEM = 'DANG_CHO_GKE_TAO_TEM';
 
 // Tạo 1 vận đơn THẬT bên GKE — chỉ gọi hàm này khi đơn CHƯA từng tạo vận đơn lần nào.
-async function taoDonGke(donHang, cauHinh) {
+async function taoDonGke(donHang, cauHinh, nhatKy) {
   const thieuCauHinh = ['serviceCode', 'customsHsCode', 'customsDeclaredPrice'].filter(k => !cauHinh[k]);
   if (thieuCauHinh.length) {
     throw new Error(`[chuẩn bị dữ liệu] Thiếu ${thieuCauHinh.join(', ')} trong cấu hình GKE — vào menu Tracking để nhập.`);
@@ -317,9 +333,9 @@ async function taoDonGke(donHang, cauHinh) {
       }],
     }],
   };
-  console.log(`[GKE] [tạo đơn] Body gửi cho đơn ${donHang.STT_Key}:`, JSON.stringify(body));
+  ghi(nhatKy, `[GKE] [tạo đơn] Body gửi cho đơn ${donHang.STT_Key}:`, JSON.stringify(body));
 
-  return goiApi('tạo đơn', '/order/create/', body, cauHinh);
+  return goiApi('tạo đơn', '/order/create/', body, cauHinh, {}, nhatKy);
 }
 
 // Ngay sau khi order/create/ thành công, tem thường CHƯA generate xong ngay — gọi label/print/
@@ -335,15 +351,15 @@ function dangChoTemSanSang(thongBaoLoi) {
 
 // Lấy tem in (PDF base64) — dùng num_type=1 (Customer Order Number) + STT_Key, KHÔNG cần biết
 // order_num/waybill number nội bộ của GKE vì lúc tạo đơn đã đặt customer_order_num = STT_Key.
-async function layTemIn(donHang, cauHinh, { laLanDauSauKhiTao = false } = {}) {
+async function layTemIn(donHang, cauHinh, { laLanDauSauKhiTao = false } = {}, nhatKy) {
   const soLanThu = laLanDauSauKhiTao ? SO_LAN_THU_LAI_TEM : 1;
   for (let lan = 1; lan <= soLanThu; lan++) {
     try {
-      return await goiApi('in tem', '/label/print/', { num_type: 1, num: donHang.STT_Key }, cauHinh);
+      return await goiApi('in tem', '/label/print/', { num_type: 1, num: donHang.STT_Key }, cauHinh, {}, nhatKy);
     } catch (err) {
       const conThuTiep = laLanDauSauKhiTao && lan < soLanThu && dangChoTemSanSang(err.message);
       if (!conThuTiep) throw err;
-      console.log(`[GKE] [in tem] Tem chưa sẵn sàng (lần ${lan}/${soLanThu}), đợi ${KHOANG_CACH_THU_LAI_MS / 1000}s rồi thử lại...`);
+      ghi(nhatKy, `[GKE] [in tem] Tem chưa sẵn sàng (lần ${lan}/${soLanThu}), đợi ${KHOANG_CACH_THU_LAI_MS / 1000}s rồi thử lại...`);
       await new Promise(r => setTimeout(r, KHOANG_CACH_THU_LAI_MS));
     }
   }
