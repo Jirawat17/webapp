@@ -16,11 +16,14 @@
        "Sẵn sàng chạy máy" để tiện hơn (việc đang làm dở quan trọng hơn, nên thấy ngay). Chỉ đổi thứ
        tự hiển thị — ID/tên hàm JS giữ nguyên (hậu tố -ss/-dc không còn phản ánh đúng vị trí trên
        trang nữa, chỉ còn ý nghĩa lịch sử, không đổi vì đổi tên sẽ phải sửa rất nhiều chỗ không cần thiết). -->
-  <h3>Đơn đang chạy máy của tôi</h3>
-
-  <div class="thanh-cong-cu-danh-sach">
-    <button type="button" class="btn-hanh-dong phu" id="btn-mo-loc-dc" onclick="batTatPanel('dc','loc')"></button>
-    <button type="button" class="btn-hanh-dong phu" id="btn-mo-sap-xep-dc" onclick="batTatPanel('dc','sap-xep')"></button>
+  <!-- Tiêu đề gộp CHUNG 1 hàng với Lọc/Sắp xếp (bổ sung 09/09/2026, theo yêu cầu người dùng — tăng
+       diện tích hiển thị, cùng tinh thần đã gộp nav thành 1 hàng ở desktop). -->
+  <div class="tieu-de-cong-cu">
+    <h3>Đơn đang chạy máy của tôi</h3>
+    <div class="thanh-cong-cu-danh-sach">
+      <button type="button" class="btn-hanh-dong phu" id="btn-mo-loc-dc" onclick="batTatPanel('dc','loc')"></button>
+      <button type="button" class="btn-hanh-dong phu" id="btn-mo-sap-xep-dc" onclick="batTatPanel('dc','sap-xep')"></button>
+    </div>
   </div>
 
   <div id="panel-loc-dc" class="panel-dieu-khien" style="display:none">
@@ -97,11 +100,12 @@
 
   <div id="danh-sach-don" class="order-list"></div>
 
-  <h3 style="margin-top:32px">DANH MỤC CÁC ĐƠN CHƯA AI CHẠY MÁY</h3>
-
-  <div class="thanh-cong-cu-danh-sach">
-    <button type="button" class="btn-hanh-dong phu" id="btn-mo-loc-ss" onclick="batTatPanel('ss','loc')"></button>
-    <button type="button" class="btn-hanh-dong phu" id="btn-mo-sap-xep-ss" onclick="batTatPanel('ss','sap-xep')"></button>
+  <div class="tieu-de-cong-cu" style="margin-top:32px">
+    <h3>DANH MỤC CÁC ĐƠN CHƯA AI CHẠY MÁY</h3>
+    <div class="thanh-cong-cu-danh-sach">
+      <button type="button" class="btn-hanh-dong phu" id="btn-mo-loc-ss" onclick="batTatPanel('ss','loc')"></button>
+      <button type="button" class="btn-hanh-dong phu" id="btn-mo-sap-xep-ss" onclick="batTatPanel('ss','sap-xep')"></button>
+    </div>
   </div>
 
   <div id="panel-loc-ss" class="panel-dieu-khien" style="display:none">

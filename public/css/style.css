@@ -284,6 +284,15 @@ body.trang-dang-nhap {
 /* ============================================================
    DANH SÁCH ĐƠN HÀNG — lưới tự co giãn theo bề rộng màn hình
    ============================================================ */
+/* Gộp tiêu đề (h2/h3) CHUNG 1 hàng với thanh Lọc/Sắp xếp/chọn kỳ ngay dưới nó (bổ sung 09/09/2026,
+   theo yêu cầu người dùng — tăng diện tích hiển thị, cùng tinh thần đã gộp nav thành 1 hàng ở desktop,
+   xem docs/superpowers/specs/2026-09-09-gop-1-hang-nav-desktop-design.md). Bọc <h2>/<h3> +
+   .thanh-cong-cu-danh-sach trong 1 div mang class này. flex-wrap tự xuống dòng khi màn hình hẹp không
+   đủ chỗ — KHÔNG cần quy tắc riêng cho mobile như .tab-links (không có layout đặc biệt nào cần giữ). */
+.tieu-de-cong-cu { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-2); }
+.tieu-de-cong-cu > h2, .tieu-de-cong-cu > h3 { margin: 0; }
+.tieu-de-cong-cu > .thanh-cong-cu-danh-sach { margin-bottom: 0; }
+
 /* Nút "Lọc"/"Sắp xếp" (bổ sung 31/08/2026) — thay cho hàng bộ lọc luôn hiện sẵn trước đây, đỡ chật
    giao diện nhất là trên điện thoại. Bấm mở đúng 1 trong 2 panel xổ xuống bên dưới (xem batTatPanel
    trong orders.html), nút đang mở tô màu đậm để biết panel nào đang hiện. */

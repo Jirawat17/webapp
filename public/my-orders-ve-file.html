@@ -17,11 +17,14 @@
        tinh thần đã áp dụng cho public/my-orders.html (đổi thứ tự Đơn đang chạy máy/Đơn sẵn sàng chạy
        máy). GIỮ NGUYÊN id/hậu tố -cv/-tv dù không còn khớp thứ tự hiển thị — tránh phải sửa lại toàn
        bộ JS chỉ vì đổi chỗ hiển thị. -->
-  <h3>Đơn vẽ file của tôi</h3>
-
-  <div class="thanh-cong-cu-danh-sach">
-    <button type="button" class="btn-hanh-dong phu" id="btn-mo-loc-tv" onclick="batTatPanel('tv','loc')"></button>
-    <button type="button" class="btn-hanh-dong phu" id="btn-mo-sap-xep-tv" onclick="batTatPanel('tv','sap-xep')"></button>
+  <!-- Tiêu đề gộp CHUNG 1 hàng với Lọc/Sắp xếp (bổ sung 09/09/2026, theo yêu cầu người dùng — tăng
+       diện tích hiển thị, cùng tinh thần đã gộp nav thành 1 hàng ở desktop). -->
+  <div class="tieu-de-cong-cu">
+    <h3>Đơn vẽ file của tôi</h3>
+    <div class="thanh-cong-cu-danh-sach">
+      <button type="button" class="btn-hanh-dong phu" id="btn-mo-loc-tv" onclick="batTatPanel('tv','loc')"></button>
+      <button type="button" class="btn-hanh-dong phu" id="btn-mo-sap-xep-tv" onclick="batTatPanel('tv','sap-xep')"></button>
+    </div>
   </div>
 
   <div id="panel-loc-tv" class="panel-dieu-khien" style="display:none">
@@ -116,11 +119,12 @@
 
   <div id="danh-sach-toi-ve" class="order-list"></div>
 
-  <h3 style="margin-top:32px">DANH MỤC CÁC ĐƠN CHƯA AI VẼ FILE</h3>
-
-  <div class="thanh-cong-cu-danh-sach">
-    <button type="button" class="btn-hanh-dong phu" id="btn-mo-loc-cv" onclick="batTatPanel('cv','loc')"></button>
-    <button type="button" class="btn-hanh-dong phu" id="btn-mo-sap-xep-cv" onclick="batTatPanel('cv','sap-xep')"></button>
+  <div class="tieu-de-cong-cu" style="margin-top:32px">
+    <h3>DANH MỤC CÁC ĐƠN CHƯA AI VẼ FILE</h3>
+    <div class="thanh-cong-cu-danh-sach">
+      <button type="button" class="btn-hanh-dong phu" id="btn-mo-loc-cv" onclick="batTatPanel('cv','loc')"></button>
+      <button type="button" class="btn-hanh-dong phu" id="btn-mo-sap-xep-cv" onclick="batTatPanel('cv','sap-xep')"></button>
+    </div>
   </div>
 
   <div id="panel-loc-cv" class="panel-dieu-khien" style="display:none">

@@ -10,18 +10,22 @@
 <body>
 <div id="nav"></div>
 <div class="page">
-  <h2>Danh sách đơn hàng</h2>
-
-  <div class="thanh-cong-cu-danh-sach">
-    <button type="button" class="btn-hanh-dong phu" id="btn-mo-loc" onclick="batTatPanel('panel-loc')"></button>
-    <button type="button" class="btn-hanh-dong phu" id="btn-mo-sap-xep" onclick="batTatPanel('panel-sap-xep')"></button>
-    <!-- 3 nút dưới đây TẠM ẨN theo yêu cầu người dùng 07/09/2026 — CHỈ ẩn (style="display:none"),
-         KHÔNG xoá code/JS liên quan — bỏ thuộc tính style này để hiện lại khi cần. -->
-    <button type="button" class="btn-hanh-dong phu" id="btn-in-phoi-ao" onclick="inPhoiDangChon(this)" style="display:none"></button>
-    <button type="button" class="btn-hanh-dong phu" id="btn-in-don-dang-chon" onclick="inDonDangChon(this)" style="display:none"></button>
-    <button type="button" class="btn-hanh-dong phu" id="btn-in-ma-phoi-don" onclick="inMaPhoiDonDangChon(this)"></button>
-    <button type="button" class="btn-hanh-dong phu" id="btn-quet-hang-loat" onclick="quetDonHangLoat(this)" style="display:none"></button>
-    <button type="button" class="btn-hanh-dong phu" id="btn-in-hai-quan" onclick="inHaiQuanDangChon(this)" style="display:none"></button>
+  <!-- Tiêu đề gộp CHUNG 1 hàng với thanh Lọc/Sắp xếp (bổ sung 09/09/2026, theo yêu cầu người dùng —
+       tăng diện tích hiển thị, cùng tinh thần đã gộp nav thành 1 hàng ở desktop). Bọc trong
+       .tieu-de-cong-cu (style.css) — tự xuống dòng (flex-wrap) nếu màn hình hẹp không đủ chỗ. -->
+  <div class="tieu-de-cong-cu">
+    <h2>Danh sách đơn hàng</h2>
+    <div class="thanh-cong-cu-danh-sach">
+      <button type="button" class="btn-hanh-dong phu" id="btn-mo-loc" onclick="batTatPanel('panel-loc')"></button>
+      <button type="button" class="btn-hanh-dong phu" id="btn-mo-sap-xep" onclick="batTatPanel('panel-sap-xep')"></button>
+      <!-- 3 nút dưới đây TẠM ẨN theo yêu cầu người dùng 07/09/2026 — CHỈ ẩn (style="display:none"),
+           KHÔNG xoá code/JS liên quan — bỏ thuộc tính style này để hiện lại khi cần. -->
+      <button type="button" class="btn-hanh-dong phu" id="btn-in-phoi-ao" onclick="inPhoiDangChon(this)" style="display:none"></button>
+      <button type="button" class="btn-hanh-dong phu" id="btn-in-don-dang-chon" onclick="inDonDangChon(this)" style="display:none"></button>
+      <button type="button" class="btn-hanh-dong phu" id="btn-in-ma-phoi-don" onclick="inMaPhoiDonDangChon(this)"></button>
+      <button type="button" class="btn-hanh-dong phu" id="btn-quet-hang-loat" onclick="quetDonHangLoat(this)" style="display:none"></button>
+      <button type="button" class="btn-hanh-dong phu" id="btn-in-hai-quan" onclick="inHaiQuanDangChon(this)" style="display:none"></button>
+    </div>
   </div>
 
   <div id="panel-loc" class="panel-dieu-khien" style="display:none">

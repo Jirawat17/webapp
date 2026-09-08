@@ -10,14 +10,17 @@
 <body>
 <div id="nav"></div>
 <div class="page">
-  <h2>Thống kê</h2>
-
-  <div class="thanh-cong-cu-danh-sach" id="thanh-chon-ky">
-    <button type="button" class="btn-hanh-dong phu dang-mo" data-ky="toan_bo">Toàn bộ</button>
-    <button type="button" class="btn-hanh-dong phu" data-ky="hom_nay">Hôm nay</button>
-    <button type="button" class="btn-hanh-dong phu" data-ky="tuan_nay">Tuần này</button>
-    <button type="button" class="btn-hanh-dong phu" data-ky="thang_nay">Tháng này</button>
-    <button type="button" class="btn-hanh-dong phu" data-ky="tuy_chon">Tuỳ chọn...</button>
+  <!-- Tiêu đề gộp CHUNG 1 hàng với thanh chọn kỳ (bổ sung 09/09/2026, theo yêu cầu người dùng — tăng
+       diện tích hiển thị, cùng tinh thần đã gộp nav thành 1 hàng ở desktop). -->
+  <div class="tieu-de-cong-cu">
+    <h2>Thống kê</h2>
+    <div class="thanh-cong-cu-danh-sach" id="thanh-chon-ky">
+      <button type="button" class="btn-hanh-dong phu dang-mo" data-ky="toan_bo">Toàn bộ</button>
+      <button type="button" class="btn-hanh-dong phu" data-ky="hom_nay">Hôm nay</button>
+      <button type="button" class="btn-hanh-dong phu" data-ky="tuan_nay">Tuần này</button>
+      <button type="button" class="btn-hanh-dong phu" data-ky="thang_nay">Tháng này</button>
+      <button type="button" class="btn-hanh-dong phu" data-ky="tuy_chon">Tuỳ chọn...</button>
+    </div>
   </div>
 
   <div id="panel-khoang-ngay" class="panel-dieu-khien" style="display:none">
