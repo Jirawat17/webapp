@@ -146,8 +146,9 @@ xuất — hoàn toàn tách biệt khỏi các điều kiện của job tự đ
 
 **Endpoint dùng chung**: `POST /tracking/mua-thu-cong` (`routes/tracking.js`, cùng `chiAdmin` middleware
 như các route khác trong file — tính năng có thể phát sinh chi phí thật, giữ nguyên triết lý chỉ admin
-của cả trang "Tracking" lẫn nút mới này). Trả 404 nếu không tìm thấy đơn, 400 nếu đơn đã có tracking
-thật rồi (không mua lại), 502 kèm thông báo lỗi gốc nếu GKE từ chối.
+của cả trang "Tracking" lẫn nút mới này). *(Hình dạng request/response ban đầu ở đây — nhận `sttKey`
+đơn lẻ, trả lỗi qua mã HTTP 404/400/502 — đã đổi sang nhận `sttKeys` mảng + trả `{thanhCong, loi}` ở
+mục 8.1 bên dưới, để dùng chung được với nút "Mua tracking" hàng loạt mới thêm.)*
 
 **`tracking.html`**: thêm cột "Hành động" vào bảng danh sách — nút "Mua ngay" cho MỌI đơn chưa ở trạng
 thái `DA_MUA` (kể cả đang chờ tem hoặc đến hạn), có `confirm()` cảnh báo chi phí thật trước khi gọi.
@@ -159,3 +160,79 @@ chạy máy"/"Chỉ định người vẽ file" — CHỈ hiện khi đơn chưa
 `gkeService.MA_DANG_CHO_TEM`, theo đúng cách dự án đang xử lý các chuỗi hằng dùng chung giữa
 client/server — không có module hằng số dùng chung). Thành công thì gọi lại `taiChiTiet()` — bảng
 thông tin đơn tự cập nhật Mã tracking/Hãng vận chuyển và nút tự ẩn.
+
+## 8. Bổ sung 09/09/2026 (lần 3): nút hàng loạt ở "Đơn hàng", log chi tiết hơn, giao diện GKE gọn hơn, chờ theo giờ
+
+Yêu cầu người dùng (4 điểm trong 1 lượt):
+
+### 8.1. Nút "Mua tracking" hàng loạt ở `orders.html` (Danh sách đơn hàng) — chỉ admin
+
+Đặt trong thanh hành động hàng loạt (`#thanh-hanh-dong`), cùng hàng với "Chỉ định người chạy máy"/"Chỉ
+định người vẽ file" — bọc trong `<span id="khoi-mua-tracking-thu-cong" style="display:contents">` khi
+admin, giống hệt khuôn 2 khối kia (không có `<select>` vì không có giá trị đích để chọn, chỉ là 1 hành
+động). `apDungMuaTrackingThuCong()` tái dùng `chayHangLoatCoTienDo()`/`taoThanhTienDo()` (đã có sẵn
+trong `public/js/api.js`, dùng chung với 2 nút "Chỉ định") — chạy tuần tự từng đơn (không phải 1 request
+gộp) để có thanh tiến độ + nút Hủy giữa chừng, vì mỗi lượt gọi GKE có thể mất vài giây.
+
+**Đổi hình dạng route `POST /tracking/mua-thu-cong`** để tái dùng được với `chayHangLoatCoTienDo()` —
+đây là lý do chính khiến phải sửa route thay vì chỉ thêm nút mới: hàm này yêu cầu callback trả về
+`{thanhCong: [...], loi: [...]}` (đúng hình dạng `routes/orders.js` `/chi-dinh-nguoi-chay-may` /
+`/chi-dinh-nguoi-ve-file` đã dùng). Route đổi từ nhận `sttKey` đơn lẻ → nhận `sttKeys` MẢNG (kể cả gọi
+cho 1 đơn), lỗi từng đơn (không tìm thấy, đã có tracking, GKE từ chối) rơi vào `loi[]` thay vì mã lỗi
+HTTP riêng — luôn trả `200 {ok:true, thanhCong, loi}` trừ khi `sttKeys` trống/sai kiểu (400). Cả 2 nút
+đơn lẻ có từ trước (`tracking.html`, `order.html`) đổi theo: gửi `sttKeys: [sttKey]`, kiểm tra
+`ketQua.loi` thay vì bắt lỗi qua mã HTTP.
+
+### 8.2. Log chi tiết hơn cho cả 2 luồng (thủ công + tự động)
+
+Trước bản này, lỗi ở luồng THỦ CÔNG hoàn toàn không được ghi vào Logs xem trên web (chỉ hiện qua
+`alert()` nhất thời cho đúng người bấm) — chỉ luồng tự động mới log lỗi. Chuyển việc ghi log (cả thành
+công lẫn lỗi) vào NGAY BÊN TRONG `muaTrackingChoDon()` (bọc toàn bộ thân hàm trong try/catch, log lỗi
+rồi `throw` lại) — nhờ vậy CẢ 3 nơi gọi hàm này (job tự động, route `/mua-thu-cong` cho cả nút đơn lẻ
+lẫn nút hàng loạt mới) đều tự động được ghi log đầy đủ, không cần lặp lại try/catch+log ở từng nơi gọi.
+
+Mỗi dòng log giờ gắn nhãn nguồn NGAY ĐẦU DÒNG — `[Tự động]` hoặc `[Thủ công - <tên người bấm>]` — thay
+vì chỉ có hậu tố "— thủ công bởi..." cho riêng trường hợp thủ công như bản trước (khiến dòng tự động
+trông "thiếu thông tin" hơn, phải suy luận ngầm "không có hậu tố = tự động"). Vẫn giữ đúng tinh thần
+"ngắn gọn, mỗi việc 1 dòng" đã chọn trước đó — đây là làm cho mỗi dòng ĐẦY ĐỦ thông tin hơn (ai/việc
+gì/thành công hay lỗi), không phải chuyển sang log kỹ thuật nhiều dòng/bước.
+
+### 8.3. Giao diện Cấu hình GKE — nhiều thông tin hơn mỗi hàng ngang
+
+`tracking.html`: `.tk-cau-hinh-gke` nới từ 720px lên 1400px (trang `.page` cho phép tới 1800px — xem
+`style.css`), `.tk-luoi-2` đổi từ 2 cột cố định sang `grid-template-columns: repeat(auto-fit,
+minmax(170px, 1fr))` — mỗi nhóm trường tự xếp được nhiều cột nhất có thể trong bề rộng hiện có, KHÔNG
+cần đoán trước số cột theo breakpoint. Kết quả: nhóm 5 trường "Dịch vụ & khai báo hải quan" và nhóm 6
+trường "Thông tin người gửi" đều gói gọn trong ĐÚNG 1 hàng trên màn hình rộng (trước đó trải 3 hàng mỗi
+nhóm) — giảm hẳn số lần cuộn chuột để thấy hết thông tin, đúng yêu cầu người dùng. Ở màn hình hẹp,
+`auto-fit` tự co về 1 cột như CSS Grid tiêu chuẩn, không cần media query riêng.
+
+### 8.4. Chọn số GIỜ chờ (không chỉ số phút)
+
+Trước đó chỉ có 1 ô "số phút chờ" (`SoPhutCho`) — chờ hàng chục giờ phải tự quy đổi ra phút, dễ nhầm.
+Thêm 1 ô "Số giờ" đứng CẠNH ô "Số phút" trên `tracking.html`, 2 ô CỘNG DỒN thành 1 tổng số phút duy nhất
+khi bấm Lưu (`soGio*60 + soPhut`) — Sheet vẫn chỉ có đúng 1 cột `SoPhutCho` như cũ, KHÔNG đổi schema.
+Khi tải lại cấu hình, tách tổng số phút ngược lại thành giờ + phút để hiện đúng lên 2 ô (vd 130 phút →
+hiện "2 giờ", "10 phút"). Thuần là UX phía client — `trackingAutoService.layCauHinh()`/`luuCauHinh()`
+và cột Sheet không đổi gì.
+
+### 8.5. Đã kiểm tra
+
+- `node --check` toàn bộ file sửa; tách riêng `<script>` từng trang `.html` để check cú pháp.
+- Test HTTP thật (Express + `fetch()`, mount đúng `routes/tracking.js`) cho `POST /mua-thu-cong` xử lý
+  ĐÚNG 1 request gồm cả đơn thành công, đơn đã có tracking, đơn GKE từ chối — `thanhCong`/`loi` đúng
+  từng trường hợp, `GET /logs` sau đó có ĐÚNG 2 dòng (bỏ qua đơn "đã có tracking" — không log), cả 2
+  dòng đúng nhãn `[Thủ công - <tên>]`; gọi thẳng `muaTrackingChoDon()` không qua route (mô phỏng job) ra
+  đúng nhãn `[Tự động]`.
+- Chạy lại toàn bộ 12 kịch bản hồi quy của `chayQuetTuDongMuaTracking()`/`layDanhSachDonAutoTracking()`
+  — không hồi quy, cộng thêm assert nhãn log đúng cho các kịch bản thành công/lỗi/bỏ qua-vì-đã-có.
+- Dựng lại nguyên trạng CẢ 3 trang thật (`orders.html`, `tracking.html`, `order.html`) qua Browser pane
+  với `api.js`/`icons.js` thật, chỉ giả `requireLoginOrRedirect`/`renderNav`/`apiFetch`: nút hàng loạt ở
+  `orders.html` hiện đúng cho admin, chạy đúng qua `chayHangLoatCoTienDo()` (3 đơn chọn, 1 đơn lỗi vì đã
+  có tracking, tổng kết đúng "2/3", danh sách + lựa chọn tự làm mới); nút đơn lẻ ở `tracking.html`/
+  `order.html` xử lý đúng cả nhánh thành công lẫn nhánh `loi` mới; layout GKE đúng nhiều cột trên màn
+  rộng; ô giờ/phút tải/tách/gộp đúng, validate tổng = 0 bị chặn đúng.
+
+*(Lưu ý: 1 lần test ban đầu trên `order.html` báo lỗi "Cannot read properties of undefined" — hoá ra do
+dựng nhầm bản mock CŨ (trước khi sửa route), không phải lỗi thật; dựng lại mock từ đúng file hiện tại
+thì qua hết.)*
