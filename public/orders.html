@@ -145,6 +145,10 @@
     </select>
     <button id="nut-ap-dung-chi-dinh-ve-file" class="btn-hanh-dong" onclick="apDungChiDinhNguoiVeFile()">Áp dụng</button>
   </span>
+  <span id="khoi-mua-tracking-thu-cong" style="display:none">
+    <span class="thanh-hanh-dong-cach"></span>
+    <button id="nut-mua-tracking-thu-cong" class="btn-hanh-dong" onclick="apDungMuaTrackingThuCong()">Mua tracking</button>
+  </span>
   <button class="btn-hanh-dong phu" onclick="boChonTatCaDon()">Bỏ chọn</button>
 </div>
 
@@ -245,6 +249,9 @@ let donDaChonSet = new Set();
     // tiếp của flex container nữa.
     document.getElementById('khoi-chi-dinh-nguoi-chay-may').style.display = 'contents';
     document.getElementById('khoi-chi-dinh-nguoi-ve-file').style.display = 'contents';
+    // Nút "Mua tracking" thủ công hàng loạt (bổ sung 09/09/2026, theo yêu cầu người dùng) — không cần
+    // đổ danh sách gì thêm (khác 2 khối trên cần danh sách nhân viên), chỉ cần hiện đúng cho admin.
+    document.getElementById('khoi-mua-tracking-thu-cong').style.display = 'contents';
     try {
       const dsNhanVien = await apiFetch('/users');
       const dsSanXuat = dsNhanVien.filter(u => u.VaiTro === 'san_xuat' && String(u.KichHoat).toUpperCase() === 'TRUE');
@@ -621,6 +628,51 @@ async function apDungChiDinhNguoiVeFile() {
   nutApDungVeFile.disabled = false;
   nutApDungVeFile.textContent = 'Áp dụng';
   if (ketQuaVeFile.daHuy) ketQuaVeFile.thanhCong.forEach(sttKey => donDaChonSet.delete(sttKey));
+  else donDaChonSet.clear();
+  await taiDon();
+}
+
+// Admin MUA TRACKING GKE THỦ CÔNG cho toàn bộ đơn đang chọn — bổ sung 09/09/2026, theo yêu cầu người
+// dùng. Không có ô chọn giá trị đích như 2 nút "Chỉ định" ở trên (không có gì để chọn, chỉ là 1 hành
+// động), còn lại CÙNG khuôn: confirm cảnh báo chi phí thật, chạy tuần tự qua chayHangLoatCoTienDo() để
+// có thanh tiến độ + cho phép Hủy giữa chừng (mỗi lượt gọi GKE có thể mất vài giây, hàng loạt nhiều
+// đơn cộng dồn có thể khá lâu). Gọi CHUNG route POST /tracking/mua-thu-cong với nút đơn lẻ ở
+// tracking.html/order.html (route nhận `sttKeys` dạng mảng, ở đây chỉ khác là gọi lặp mỗi lần 1 phần
+// tử để lấy được tiến độ từng đơn một — xem routes/tracking.js).
+async function apDungMuaTrackingThuCong() {
+  const soLuong = donDaChonSet.size;
+  if (!confirm(`Mua tracking GKE thủ công cho ${soLuong} đơn đã chọn? Đây là thao tác tạo vận đơn THẬT, có thể phát sinh chi phí — đơn đã có tracking thật rồi sẽ tự bỏ qua.`)) return;
+
+  const nutApDung = document.getElementById('nut-mua-tracking-thu-cong');
+  const nhanGoc = nutApDung.innerHTML;
+  nutApDung.disabled = true;
+  nutApDung.textContent = 'Đang xử lý...';
+
+  let daHuy = false;
+  const danhSach = Array.from(donDaChonSet);
+  const thanhTienDo = taoThanhTienDo(nutApDung, { onHuy: () => { daHuy = true; } });
+  thanhTienDo.capNhat(0, danhSach.length);
+
+  const ketQua = await chayHangLoatCoTienDo(
+    danhSach,
+    sttKey => apiFetch('/tracking/mua-thu-cong', {
+      method: 'POST', body: JSON.stringify({ sttKeys: [sttKey] }),
+    }),
+    { onTienDo: (hienTai, tong) => thanhTienDo.capNhat(hienTai, tong), kiemTraHuy: () => daHuy }
+  );
+  thanhTienDo.xoa();
+
+  let thongBao = `Đã mua tracking cho ${ketQua.thanhCong.length}/${soLuong} đơn.`;
+  if (ketQua.daHuy) thongBao += `\n\nĐã HỦY giữa chừng — các đơn còn lại vẫn đang được chọn, bấm lại nếu muốn tiếp tục.`;
+  if (ketQua.loi.length > 0) {
+    thongBao += `\n\nKhông mua được ${ketQua.loi.length} đơn:\n` +
+      ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
+  }
+  alert(thongBao);
+
+  nutApDung.disabled = false;
+  nutApDung.innerHTML = nhanGoc;
+  if (ketQua.daHuy) ketQua.thanhCong.forEach(sttKey => donDaChonSet.delete(sttKey));
   else donDaChonSet.clear();
   await taiDon();
 }

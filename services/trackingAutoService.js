@@ -73,36 +73,52 @@ async function luuCauHinh({ bat, soPhutCho }) {
 // (khác luồng quét tay) — đơn tự động mua tracking sớm vẫn còn nguyên trạng thái sản xuất, "ĐÃ DÁN
 // TEM" chỉ nên đúng nghĩa khi tem thật được dán lên hộp lúc đóng gói xong (vẫn làm ở scan.html như cũ,
 // lúc đó TRACKING_ID đã có sẵn nên chỉ lấy tem in, không tạo vận đơn lần 2).
-// `user` mặc định = "người dùng hệ thống" (job tự động gọi không truyền gì thêm) — bổ sung
-// 09/09/2026: routes/tracking.js#POST /mua-thu-cong TRUYỀN người admin đang đăng nhập thật vào đây,
-// để log ghi đúng AI đã bấm mua thủ công thay vì luôn hiện "Hệ thống (tự động)".
+// `user` mặc định = "người dùng hệ thống" (job tự động gọi không truyền gì thêm) — routes/tracking.js
+// #POST /mua-thu-cong TRUYỀN người admin đang đăng nhập thật vào đây, để log ghi đúng AI đã bấm mua
+// thủ công thay vì luôn hiện "Hệ thống (tự động)".
+//
+// GHI LOG CẢ THÀNH CÔNG LẪN LỖI ngay tại đây (bổ sung 09/09/2026, theo yêu cầu người dùng "ghi logs
+// chi tiết với đơn mua Tracking thủ công và Tracking tự động") — trước đó lỗi ở luồng THỦ CÔNG hoàn
+// toàn KHÔNG được ghi vào Logs xem trên web (chỉ hiện qua alert() nhất thời cho đúng người bấm, ai
+// khác không biết), chỉ luồng tự động (chayQuetTuDongMuaTracking) mới log lỗi. Chuyển việc log lỗi
+// vào ĐÂY (rồi throw lại) để CẢ 3 nơi gọi hàm này (job tự động, POST /mua-thu-cong cho cả nút đơn lẻ
+// lẫn nút hàng loạt) đều tự động được ghi log đầy đủ, không phải lặp lại try/catch+log ở từng nơi gọi.
+// Mỗi dòng log gắn nhãn nguồn [Tự động]/[Thủ công - <tên>] ở đầu để phân biệt rõ ngay khi lướt qua,
+// không phải suy luận "không có hậu tố nghĩa là tự động" như cách làm cũ.
 async function muaTrackingChoDon(sttKey, cauHinhGke, user = NGUOI_HE_THONG) {
-  const { row } = await orderService.getByKey(sttKey, { fresh: true });
-  if (!row) throw new Error('Không tìm thấy đơn: ' + sttKey);
-  if (row.TRACKING_ID && row.TRACKING_ID !== gkeService.MA_DANG_CHO_TEM) return null; // đã có tracking thật rồi (vd vừa được quét tay) — bỏ qua
-
-  const chuaTungTaoDon = !row.TRACKING_ID;
-  const dangChoTuLanTruoc = row.TRACKING_ID === gkeService.MA_DANG_CHO_TEM;
   const laThuCong = user !== NGUOI_HE_THONG;
+  const nhanNguon = laThuCong ? `[Thủ công - ${user.ten}]` : '[Tự động]';
 
-  if (chuaTungTaoDon) {
-    await gkeService.taoDonGke(row, cauHinhGke);
-    await orderService.update(sttKey, { TRACKING_ID: gkeService.MA_DANG_CHO_TEM }, user);
+  try {
+    const { row } = await orderService.getByKey(sttKey, { fresh: true });
+    if (!row) throw new Error('Không tìm thấy đơn: ' + sttKey);
+    if (row.TRACKING_ID && row.TRACKING_ID !== gkeService.MA_DANG_CHO_TEM) return null; // đã có tracking thật rồi (vd vừa được quét tay) — bỏ qua
+
+    const chuaTungTaoDon = !row.TRACKING_ID;
+    const dangChoTuLanTruoc = row.TRACKING_ID === gkeService.MA_DANG_CHO_TEM;
+
+    if (chuaTungTaoDon) {
+      await gkeService.taoDonGke(row, cauHinhGke);
+      await orderService.update(sttKey, { TRACKING_ID: gkeService.MA_DANG_CHO_TEM }, user);
+    }
+
+    const ketQuaTem = await gkeService.layTemIn(row, cauHinhGke, { laLanDauSauKhiTao: chuaTungTaoDon || dangChoTuLanTruoc });
+    await orderService.update(sttKey, {
+      TRACKING_ID: ketQuaTem.tracking_num,
+      HANG_VAN_CHUYEN: ketQuaTem.delivery_carrier,
+    }, user);
+
+    ghiLogTracking(`${nhanNguon} ${sttKey}: đã mua tracking ${ketQuaTem.tracking_num} (${ketQuaTem.delivery_carrier})`);
+    ghiLog({
+      nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: laThuCong ? 'MUA_TRACKING_THU_CONG' : 'TU_DONG_MUA_TRACKING',
+      sttKey, chiTiet: { trackingNum: ketQuaTem.tracking_num, hangVanChuyen: ketQuaTem.delivery_carrier },
+    }).catch(err => console.error('[TrackingTuDong] Lỗi ghi log nền:', err.message));
+
+    return ketQuaTem;
+  } catch (err) {
+    ghiLogTracking(`${nhanNguon} ${sttKey}: LỖI — ${err.message}`);
+    throw err;
   }
-
-  const ketQuaTem = await gkeService.layTemIn(row, cauHinhGke, { laLanDauSauKhiTao: chuaTungTaoDon || dangChoTuLanTruoc });
-  await orderService.update(sttKey, {
-    TRACKING_ID: ketQuaTem.tracking_num,
-    HANG_VAN_CHUYEN: ketQuaTem.delivery_carrier,
-  }, user);
-
-  ghiLogTracking(`${sttKey}: đã mua tracking ${ketQuaTem.tracking_num} (${ketQuaTem.delivery_carrier})${laThuCong ? ` — thủ công bởi ${user.ten}` : ''}`);
-  ghiLog({
-    nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: laThuCong ? 'MUA_TRACKING_THU_CONG' : 'TU_DONG_MUA_TRACKING',
-    sttKey, chiTiet: { trackingNum: ketQuaTem.tracking_num, hangVanChuyen: ketQuaTem.delivery_carrier },
-  }).catch(err => console.error('[TrackingTuDong] Lỗi ghi log nền:', err.message));
-
-  return ketQuaTem;
 }
 
 // 1 lượt quét — gọi từ services/trackingJob.js (cron mỗi 2 phút). Lỗi ở 1 đơn (thiếu địa chỉ, GKE từ
@@ -130,8 +146,9 @@ async function chayQuetTuDongMuaTracking() {
       const ketQua = await muaTrackingChoDon(don.STT_Key, cauHinhGke);
       if (ketQua) soDonDaMua++;
     } catch (err) {
+      // Đã ghi vào layLogTracking() BÊN TRONG muaTrackingChoDon() rồi (xem ghi chú ở đó) — ở đây chỉ
+      // cần in thêm ra console server để xem full stack khi cần debug sâu hơn dòng log ngắn gọn.
       console.error(`[TrackingTuDong] Lỗi mua tracking cho ${don.STT_Key}:`, err.message);
-      ghiLogTracking(`${don.STT_Key}: LỖI — ${err.message}`);
     }
   }
 

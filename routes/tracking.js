@@ -52,26 +52,41 @@ router.get('/logs', (req, res) => {
   res.json(layLogTracking());
 });
 
-// Mua tracking THỦ CÔNG cho 1 đơn bất kỳ — bổ sung 09/09/2026, theo yêu cầu người dùng. Dùng CHUNG
-// lõi muaTrackingChoDon() với job tự động (chống trùng vận đơn, không đổi TRANG_THAI_XUONG
-// — xem services/trackingAutoService.js) — CHỈ khác ở chỗ truyền người dùng đang đăng nhập thật vào,
-// để log/lịch sử ghi đúng người bấm. Gọi từ CẢ 2 nơi: bảng danh sách ở trang "Tracking" (đơn đã bật
-// AUTO_TRACKING) và trang chi tiết đơn order.html (đơn bất kỳ, không cần AUTO_TRACKING="YES").
+// Mua tracking THỦ CÔNG cho 1 hoặc nhiều đơn — bổ sung 09/09/2026, theo yêu cầu người dùng. Dùng
+// CHUNG lõi muaTrackingChoDon() với job tự động (chống trùng vận đơn, không đổi TRANG_THAI_XUONG —
+// xem services/trackingAutoService.js) — CHỈ khác ở chỗ truyền người dùng đang đăng nhập thật vào, để
+// log/lịch sử ghi đúng người bấm.
+//
+// Nhận `sttKeys` (MẢNG, kể cả khi chỉ mua 1 đơn) + trả `{ok, thanhCong, loi}` — CÙNG khuôn với
+// routes/orders.js POST /chi-dinh-nguoi-chay-may /chi-dinh-nguoi-ve-file, để dùng chung được hàm
+// chayHangLoatCoTienDo()/taoThanhTienDo() (public/js/api.js) cho nút "Mua tracking" hàng loạt ở
+// orders.html (bổ sung 09/09/2026) — nút đơn lẻ ở tracking.html/order.html gọi CÙNG route này với
+// mảng 1 phần tử, không cần route riêng. Lỗi ở 1 đơn (không tìm thấy, đã có tracking, GKE từ chối...)
+// rơi vào `loi[]` thay vì làm hỏng cả yêu cầu — khớp đúng "lỗi 1 đơn không dừng cả lượt" đã áp dụng ở
+// job tự động.
 router.post('/mua-thu-cong', async (req, res) => {
-  const { sttKey } = req.body;
+  const { sttKeys } = req.body;
   const user = req.session.user;
-  if (!sttKey) return res.status(400).json({ error: 'Thiếu mã đơn' });
-
-  try {
-    const cauHinhGke = await layCauHinhGke();
-    const ketQua = await muaTrackingChoDon(sttKey, cauHinhGke, user);
-    if (!ketQua) return res.status(400).json({ error: 'Đơn này đã có mã tracking thật rồi — không mua lại.' });
-    res.json({ ok: true, trackingNum: ketQua.tracking_num, hangVanChuyen: ketQua.delivery_carrier });
-  } catch (err) {
-    const khongTimThayDon = /Không tìm thấy đơn/.test(err.message);
-    console.error(`[TrackingThuCong] Lỗi mua tracking cho ${sttKey}:`, err.stack || err.message);
-    res.status(khongTimThayDon ? 404 : 502).json({ error: err.message });
+  if (!Array.isArray(sttKeys) || sttKeys.length === 0) {
+    return res.status(400).json({ error: 'Danh sách đơn trống' });
   }
+
+  const cauHinhGke = await layCauHinhGke();
+  const thanhCong = [];
+  const loi = [];
+
+  for (const sttKey of sttKeys) {
+    try {
+      const ketQua = await muaTrackingChoDon(sttKey, cauHinhGke, user);
+      if (!ketQua) { loi.push({ sttKey, lyDo: 'Đơn này đã có mã tracking thật rồi — không mua lại.' }); continue; }
+      thanhCong.push(sttKey);
+    } catch (err) {
+      console.error(`[TrackingThuCong] Lỗi mua tracking cho ${sttKey}:`, err.stack || err.message);
+      loi.push({ sttKey, lyDo: err.message });
+    }
+  }
+
+  res.json({ ok: true, thanhCong, loi });
 });
 
 module.exports = router;

@@ -393,8 +393,14 @@ async function muaTrackingThuCongChiTiet(btn) {
   btn.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Đang mua...';
 
   try {
-    await apiFetch('/tracking/mua-thu-cong', { method: 'POST', body: JSON.stringify({ sttKey }) });
-    await taiChiTiet();
+    const ketQua = await apiFetch('/tracking/mua-thu-cong', { method: 'POST', body: JSON.stringify({ sttKeys: [sttKey] }) });
+    if (ketQua.loi && ketQua.loi.length > 0) {
+      alert('Không mua được tracking: ' + ketQua.loi[0].lyDo);
+      btn.disabled = false;
+      btn.innerHTML = nhanGoc;
+    } else {
+      await taiChiTiet();
+    }
   } catch (e) {
     alert(e.message);
     btn.disabled = false;

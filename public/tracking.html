@@ -27,12 +27,15 @@
 .tk-trang-thai.dang-cho { background: var(--color-bg); color: var(--color-text-muted); }
 .tk-trang-thai.thieu-du-lieu { background: color-mix(in srgb, #dc2626 15%, transparent); color: #dc2626; }
 
-/* Cấu hình GKE (bổ sung 09/09/2026) — tái dùng khung .bao-cao-form (thẻ nền + input/label sẵn có),
-   chỉ nới rộng max-width vì nhiều trường hơn form báo cáo gốc, và thêm lưới 2 cột cho gọn. */
-.tk-cau-hinh-gke { max-width: 720px; }
+/* Cấu hình GKE (bổ sung 09/09/2026) — tái dùng khung .bao-cao-form (thẻ nền + input/label sẵn có).
+   Nới rộng đáng kể + lưới auto-fit (thay vì cố định 2 cột) — bổ sung 09/09/2026 lần 2, theo yêu cầu
+   người dùng "xem nhiều thông tin hơn ở hàng ngang, đỡ phải cuộn chuột": mỗi nhóm trường tự xếp được
+   nhiều cột nhất có thể trong bề rộng hiện có (vd nhóm 6 trường "người gửi" gói gọn 1 hàng trên màn
+   hình rộng, thay vì trải dài 3 hàng như trước), KHÔNG cần đoán trước số cột theo breakpoint cố định.
+   .page cho phép rộng tới 1800px (xem style.css) nên 1400px vẫn còn dư nhiều đất so với trước (720px). */
+.tk-cau-hinh-gke { max-width: 1400px; }
 .tk-cau-hinh-gke h4 { margin: 0 0 var(--space-2); font-size: 0.85rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.03em; }
-.tk-luoi-2 { display: grid; grid-template-columns: 1fr; gap: var(--space-3); }
-@media (min-width: 640px) { .tk-luoi-2 { grid-template-columns: 1fr 1fr; } }
+.tk-luoi-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: var(--space-3); }
 .tk-ghi-chu-truong { font-size: 0.78rem; color: var(--color-text-muted); margin: 4px 0 0; }
 
 /* Logs ngắn gọn (mỗi việc 1 dòng) — cỡ chữ nhỏ + font đơn cách để hiện được nhiều dòng mà ít chiếm
@@ -51,7 +54,7 @@
 <div id="nav"></div>
 <div class="page">
   <h2>Tracking</h2>
-  <p style="color:var(--color-text-muted);margin:-8px 0 20px">Tự động mua tracking GKE cho đơn đánh dấu <code>AUTO_TRACKING = "YES"</code>, sau khi đủ số phút chờ kể từ lúc đơn chuyển "Đã in mã".</p>
+  <p style="color:var(--color-text-muted);margin:-8px 0 20px">Tự động mua tracking GKE cho đơn đánh dấu <code>AUTO_TRACKING = "YES"</code>, sau khi đủ thời gian chờ kể từ lúc đơn chuyển "Đã in mã".</p>
 
   <div class="cong-tac-hang">
     <span class="cong-tac-nhan">Tự động mua tracking</span>
@@ -61,10 +64,18 @@
     </span>
   </div>
 
-  <div class="inline-form" style="margin-top:var(--space-3)">
+  <!-- Thêm ô "Số giờ" cạnh "Số phút" (bổ sung 09/09/2026, theo yêu cầu người dùng — chờ hàng chục
+       giờ mà chỉ có ô phút thì phải tự quy đổi, dễ nhầm). 2 ô CỘNG DỒN thành 1 tổng số phút duy nhất
+       khi lưu (xem luuCauHinh()) — Sheet vẫn chỉ lưu 1 cột SoPhutCho như cũ, không đổi schema. -->
+  <p style="margin:var(--space-3) 0 4px;font-weight:700;font-size:0.9rem">Chờ bao lâu kể từ lúc "Đã in mã" thì mua (giờ + phút cộng dồn)</p>
+  <div class="inline-form">
     <div class="truong">
-      <label for="so-phut-cho">Chờ bao nhiêu phút kể từ lúc "Đã in mã" thì mua</label>
-      <input type="number" id="so-phut-cho" min="1" step="1" style="max-width:120px">
+      <label for="so-gio-cho">Số giờ</label>
+      <input type="number" id="so-gio-cho" min="0" step="1" style="max-width:100px">
+    </div>
+    <div class="truong">
+      <label for="so-phut-cho">Số phút</label>
+      <input type="number" id="so-phut-cho" min="0" step="1" style="max-width:100px">
     </div>
     <button type="button" class="btn-hanh-dong" id="btn-luu-cau-hinh">Lưu</button>
   </div>
@@ -245,7 +256,9 @@ async function taiCauHinh() {
   try {
     const cauHinh = await apiFetch('/tracking/cau-hinh');
     document.getElementById('cong-tac-bat-tat').checked = cauHinh.bat;
-    document.getElementById('so-phut-cho').value = cauHinh.soPhutCho;
+    // Tách tổng số phút lưu ở Sheet thành giờ + phút để hiện lên 2 ô riêng — xem luuCauHinh() bên dưới.
+    document.getElementById('so-gio-cho').value = Math.floor(cauHinh.soPhutCho / 60);
+    document.getElementById('so-phut-cho').value = cauHinh.soPhutCho % 60;
   } catch (e) {
     document.getElementById('thong-bao-luu').style.display = 'block';
     document.getElementById('thong-bao-luu').style.color = 'var(--color-primary)';
@@ -255,14 +268,16 @@ async function taiCauHinh() {
 
 async function luuCauHinh() {
   const bat = document.getElementById('cong-tac-bat-tat').checked;
-  const soPhutCho = Number(document.getElementById('so-phut-cho').value);
+  const soGio = Number(document.getElementById('so-gio-cho').value) || 0;
+  const soPhut = Number(document.getElementById('so-phut-cho').value) || 0;
+  const soPhutCho = soGio * 60 + soPhut; // Sheet vẫn chỉ lưu 1 tổng số phút, không đổi schema
   const thongBao = document.getElementById('thong-bao-luu');
   const nut = document.getElementById('btn-luu-cau-hinh');
 
   if (!Number.isFinite(soPhutCho) || soPhutCho <= 0) {
     thongBao.style.display = 'block';
     thongBao.style.color = 'var(--color-primary)';
-    thongBao.textContent = 'Số phút chờ phải là số dương.';
+    thongBao.textContent = 'Tổng thời gian chờ (giờ + phút) phải lớn hơn 0.';
     return;
   }
 
@@ -328,7 +343,13 @@ async function muaThuCongTuBang(btn, sttKey) {
   btn.textContent = 'Đang mua...';
 
   try {
-    await apiFetch('/tracking/mua-thu-cong', { method: 'POST', body: JSON.stringify({ sttKey }) });
+    const ketQua = await apiFetch('/tracking/mua-thu-cong', { method: 'POST', body: JSON.stringify({ sttKeys: [sttKey] }) });
+    if (ketQua.loi && ketQua.loi.length > 0) {
+      alert('Không mua được tracking: ' + ketQua.loi[0].lyDo);
+      btn.disabled = false;
+      btn.innerHTML = nhanGoc;
+      return;
+    }
     await taiDanhSach();
     await taiLogs();
   } catch (e) {
