@@ -14,6 +14,79 @@
 
   <h3>Đơn sẵn sàng chạy máy</h3>
 
+  <div class="thanh-cong-cu-danh-sach">
+    <button type="button" class="btn-hanh-dong phu" id="btn-mo-loc-ss" onclick="batTatPanel('ss','loc')"></button>
+    <button type="button" class="btn-hanh-dong phu" id="btn-mo-sap-xep-ss" onclick="batTatPanel('ss','sap-xep')"></button>
+  </div>
+
+  <div id="panel-loc-ss" class="panel-dieu-khien" style="display:none">
+    <div class="inline-form">
+      <div class="truong">
+        <label for="loc-trang-thai-ss">Trạng thái</label>
+        <select id="loc-trang-thai-ss"><option value="ĐÃ SẴN SÀNG CHẠY MÁY" selected>ĐÃ SẴN SÀNG CHẠY MÁY</option></select>
+      </div>
+      <div class="truong truong-rong">
+        <label for="loc-kh-ss">Tìm theo tên đơn / mã KH</label>
+        <input id="loc-kh-ss" placeholder="STT_Key hoặc mã khách hàng">
+      </div>
+      <div class="truong truong-ngay">
+        <label for="loc-tu-ngay-ss">Từ ngày</label>
+        <input type="date" id="loc-tu-ngay-ss">
+      </div>
+      <div class="truong truong-ngay">
+        <label for="loc-den-ngay-ss">Đến ngày</label>
+        <input type="date" id="loc-den-ngay-ss">
+      </div>
+      <div class="truong">
+        <label for="loc-canh-bao-ss">Mức cảnh báo</label>
+        <select id="loc-canh-bao-ss">
+          <option value="">Tất cả mức cảnh báo</option>
+          <option value="VANG">Vàng · 3 ngày</option>
+          <option value="CAM">Cam · 5 ngày</option>
+          <option value="DO">Đỏ · 7 ngày</option>
+        </select>
+      </div>
+      <label class="chon-tat-ca-hang truong-hang-loat" for="loc-hang-loat-ss">
+        <input type="checkbox" id="loc-hang-loat-ss">
+        Chỉ đơn hàng loạt
+      </label>
+      <div class="truong">
+        <label for="loc-loai-ss">Loại</label>
+        <select id="loc-loai-ss"><option value="">Tất cả loại</option></select>
+      </div>
+      <div class="truong">
+        <label for="loc-kich-thuoc-ss">Kích thước</label>
+        <select id="loc-kich-thuoc-ss"><option value="">Tất cả kích thước</option></select>
+      </div>
+      <div class="truong">
+        <label for="loc-mau-sac-ss">Màu sắc</label>
+        <select id="loc-mau-sac-ss"><option value="">Tất cả màu sắc</option></select>
+      </div>
+      <div class="truong">
+        <label for="loc-hang-van-chuyen-ss">Hãng vận chuyển</label>
+        <select id="loc-hang-van-chuyen-ss"><option value="">Tất cả hãng vận chuyển</option></select>
+      </div>
+      <button type="button" class="btn-hanh-dong phu" onclick="xoaTatCaLocSs()">Xoá bộ lọc</button>
+    </div>
+  </div>
+
+  <div id="panel-sap-xep-ss" class="panel-dieu-khien" style="display:none">
+    <div class="inline-form">
+      <div class="truong">
+        <label for="sap-xep-ss">Sắp xếp theo</label>
+        <select id="sap-xep-ss">
+          <option value="ngay_cu_nhat">Ngày lên đơn — cũ nhất trước (mặc định)</option>
+          <option value="">Ngày lên đơn — mới nhất trước</option>
+          <option value="ma_don">Mã đơn (STT_Key) — A đến Z</option>
+          <option value="ma_don_desc">Mã đơn (STT_Key) — Z đến A</option>
+          <option value="canh_bao">Mức cảnh báo — khẩn cấp nhất trước</option>
+          <option value="so_luong">Số lượng — nhiều nhất trước</option>
+          <option value="khach_hang">Tên khách hàng — A đến Z</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
   <div id="thanh-hanh-dong-san-sang" class="thanh-hanh-dong-hang-loat" style="display:none">
     <span>Đã chọn <strong id="so-luong-da-chon-san-sang">0</strong> đơn</span>
     <button id="nut-nhan-chay-may" class="btn-hanh-dong" onclick="apDungNhanChayMay()">Chuyển các đơn đã chọn từ ĐÃ SẴN SÀNG CHẠY MÁY sang Đang chạy máy</button>
@@ -35,37 +108,81 @@
 
   <h3 style="margin-top:32px">Đơn đang chạy máy của tôi</h3>
 
-  <div class="inline-form">
-    <div class="truong">
-      <label for="loc-trang-thai">Trạng thái</label>
-      <select id="loc-trang-thai"><option value="Đang chạy máy" selected>Đang chạy máy</option></select>
+  <div class="thanh-cong-cu-danh-sach">
+    <button type="button" class="btn-hanh-dong phu" id="btn-mo-loc-dc" onclick="batTatPanel('dc','loc')"></button>
+    <button type="button" class="btn-hanh-dong phu" id="btn-mo-sap-xep-dc" onclick="batTatPanel('dc','sap-xep')"></button>
+  </div>
+
+  <div id="panel-loc-dc" class="panel-dieu-khien" style="display:none">
+    <div class="inline-form">
+      <div class="truong">
+        <label for="loc-trang-thai">Trạng thái</label>
+        <select id="loc-trang-thai"><option value="Đang chạy máy" selected>Đang chạy máy</option></select>
+      </div>
+      <div class="truong truong-rong">
+        <label for="loc-kh">Tìm theo tên đơn / mã KH</label>
+        <input id="loc-kh" placeholder="STT_Key hoặc mã khách hàng">
+      </div>
+      <div class="truong truong-ngay">
+        <label for="loc-tu-ngay">Từ ngày</label>
+        <input type="date" id="loc-tu-ngay">
+      </div>
+      <div class="truong truong-ngay">
+        <label for="loc-den-ngay">Đến ngày</label>
+        <input type="date" id="loc-den-ngay">
+      </div>
+      <div class="truong">
+        <label for="loc-canh-bao">Mức cảnh báo</label>
+        <select id="loc-canh-bao">
+          <option value="">Tất cả mức cảnh báo</option>
+          <option value="VANG">Vàng · 3 ngày</option>
+          <option value="CAM">Cam · 5 ngày</option>
+          <option value="DO">Đỏ · 7 ngày</option>
+        </select>
+      </div>
+      <label class="chon-tat-ca-hang truong-hang-loat" for="loc-hang-loat">
+        <input type="checkbox" id="loc-hang-loat">
+        Chỉ đơn hàng loạt
+      </label>
+      <div class="truong">
+        <label for="loc-loai">Loại</label>
+        <select id="loc-loai"><option value="">Tất cả loại</option></select>
+      </div>
+      <div class="truong">
+        <label for="loc-kich-thuoc">Kích thước</label>
+        <select id="loc-kich-thuoc"><option value="">Tất cả kích thước</option></select>
+      </div>
+      <div class="truong">
+        <label for="loc-mau-sac">Màu sắc</label>
+        <select id="loc-mau-sac"><option value="">Tất cả màu sắc</option></select>
+      </div>
+      <div class="truong">
+        <label for="loc-hang-van-chuyen">Hãng vận chuyển</label>
+        <select id="loc-hang-van-chuyen"><option value="">Tất cả hãng vận chuyển</option></select>
+      </div>
+      <div id="loc-nguoi-van-hanh-wrap" class="truong" style="display:none">
+        <label for="loc-nguoi-van-hanh">Người sản xuất</label>
+        <select id="loc-nguoi-van-hanh"><option value="">Tất cả người sản xuất</option></select>
+      </div>
+      <button type="button" class="btn-hanh-dong phu" onclick="xoaTatCaLoc()">Xoá bộ lọc</button>
     </div>
-    <div class="truong truong-rong">
-      <label for="loc-kh">Tìm theo tên đơn / mã KH</label>
-      <input id="loc-kh" placeholder="STT_Key hoặc mã khách hàng">
+  </div>
+
+  <div id="panel-sap-xep-dc" class="panel-dieu-khien" style="display:none">
+    <div class="inline-form">
+      <div class="truong">
+        <label for="sap-xep">Sắp xếp theo</label>
+        <select id="sap-xep">
+          <option value="ngay_cu_nhat">Ngày lên đơn — cũ nhất trước (mặc định)</option>
+          <option value="">Ngày lên đơn — mới nhất trước</option>
+          <option value="ma_don">Mã đơn (STT_Key) — A đến Z</option>
+          <option value="ma_don_desc">Mã đơn (STT_Key) — Z đến A</option>
+          <option value="canh_bao">Mức cảnh báo — khẩn cấp nhất trước</option>
+          <option value="so_luong">Số lượng — nhiều nhất trước</option>
+          <option value="khach_hang">Tên khách hàng — A đến Z</option>
+        </select>
+      </div>
     </div>
-    <div class="truong truong-ngay">
-      <label for="loc-tu-ngay">Từ ngày</label>
-      <input type="date" id="loc-tu-ngay">
-    </div>
-    <div class="truong truong-ngay">
-      <label for="loc-den-ngay">Đến ngày</label>
-      <input type="date" id="loc-den-ngay">
-    </div>
-    <div class="truong">
-      <label for="sap-xep">Sắp xếp theo</label>
-      <select id="sap-xep">
-        <option value="ngay_cu_nhat">Ngày lên đơn — cũ nhất trước (mặc định)</option>
-        <option value="">Ngày lên đơn — mới nhất trước</option>
-        <option value="ma_don">Mã đơn (STT_Key) — A đến Z</option>
-        <option value="ma_don_desc">Mã đơn (STT_Key) — Z đến A</option>
-      </select>
-    </div>
-    <div id="loc-nguoi-van-hanh-wrap" class="truong" style="display:none">
-      <label for="loc-nguoi-van-hanh">Người sản xuất</label>
-      <select id="loc-nguoi-van-hanh"><option value="">Tất cả người sản xuất</option></select>
-    </div>
-    <button type="button" class="btn-hanh-dong phu" onclick="xoaTatCaLoc()">Xoá bộ lọc</button>
   </div>
 
   <div id="danh-sach-don" class="order-list"></div>
@@ -80,6 +197,12 @@ const NHAN_NGUOI_VAN_HANH_KHONG_RO = 'ĐƠN SỬA TRONG GGSHEET, KHÔNG RÕ TÀI
 let user; // dùng lại ở taiDon() (biết vaiTro để quyết định hiện bộ lọc/badge người vận hành cho admin)
 let danhSachSanSang = [];
 let donSanSangChonSet = new Set();
+let coLocNaoDangChonSanSang = false; // ghi lại ở taiDonSanSang(), renderDanhSachSanSang() đọc lại để chọn đúng thông báo khi danh sách rỗng
+
+// Các ô lọc (không tính Trạng thái — cố định, và Chỉ đơn hàng loạt — checkbox riêng) của mỗi mục —
+// dùng chung cho cả việc đếm số lọc đang áp dụng (capNhatNhanNutLoc) lẫn xoá trắng (xoaCacOLoc).
+const CAC_O_LOC_SS = ['loc-kh-ss', 'loc-tu-ngay-ss', 'loc-den-ngay-ss', 'loc-canh-bao-ss', 'loc-loai-ss', 'loc-kich-thuoc-ss', 'loc-mau-sac-ss', 'loc-hang-van-chuyen-ss'];
+const CAC_O_LOC_DC = ['loc-kh', 'loc-tu-ngay', 'loc-den-ngay', 'loc-canh-bao', 'loc-loai', 'loc-kich-thuoc', 'loc-mau-sac', 'loc-hang-van-chuyen'];
 
 (async () => {
   user = await requireLoginOrRedirect();
@@ -109,33 +232,139 @@ let donSanSangChonSet = new Set();
     } catch (e) { /* không tải được danh sách nhân viên — ô chọn giữ nguyên rỗng, không chặn tải trang */ }
   }
 
-  document.getElementById('loc-kh').oninput = debounce(() => taiDon(), 400);
-  document.getElementById('loc-tu-ngay').onchange = () => {
-    const denNgay = document.getElementById('loc-den-ngay');
-    if (document.getElementById('loc-tu-ngay').value && !denNgay.value) denNgay.value = ngayHomNayYYYYMMDD();
-    taiDon();
-  };
-  document.getElementById('loc-den-ngay').onchange = () => taiDon();
-  document.getElementById('sap-xep').onchange = () => taiDon();
+  document.getElementById('btn-mo-loc-ss').innerHTML = icon('filter', { size: 16 }) + ' Lọc';
+  document.getElementById('btn-mo-sap-xep-ss').innerHTML = icon('sort', { size: 16 }) + ' Sắp xếp';
+  document.getElementById('btn-mo-loc-dc').innerHTML = icon('filter', { size: 16 }) + ' Lọc';
+  document.getElementById('btn-mo-sap-xep-dc').innerHTML = icon('sort', { size: 16 }) + ' Sắp xếp';
+
+  ganSuKienLocSapXep('-ss', taiDonSanSang, boChonTatCaDonSanSang);
+  ganSuKienLocSapXep('', taiDon, null);
 
   await Promise.all([taiDonSanSang(), taiDon()]);
 })();
+
+// Gắn onchange/oninput cho đúng bộ 8 ô lọc + Chỉ đơn hàng loạt + Sắp xếp của 1 mục — dùng chung cho
+// cả 2 mục (hauTo='-ss' hoặc ''), tránh chép 2 lần cùng 1 khối wiring gần như giống hệt nhau.
+// boChonFn (tuỳ chọn) bỏ chọn các đơn đang chọn trước khi tải lại — lọc có thể làm đơn đang chọn biến
+// mất khỏi danh sách hiển thị (mục "Đang chạy máy của tôi" không có cơ chế chọn nhiều nên truyền null).
+function ganSuKienLocSapXep(hauTo, taiLaiFn, boChonFn) {
+  const chay = () => { if (boChonFn) boChonFn(); taiLaiFn(); };
+  document.getElementById('loc-kh' + hauTo).oninput = debounce(chay, 400);
+  document.getElementById('loc-tu-ngay' + hauTo).onchange = () => {
+    const denNgay = document.getElementById('loc-den-ngay' + hauTo);
+    if (document.getElementById('loc-tu-ngay' + hauTo).value && !denNgay.value) denNgay.value = ngayHomNayYYYYMMDD();
+    chay();
+  };
+  ['loc-den-ngay', 'loc-canh-bao', 'loc-hang-loat', 'loc-loai', 'loc-kich-thuoc', 'loc-mau-sac', 'loc-hang-van-chuyen'].forEach(id => {
+    document.getElementById(id + hauTo).onchange = chay;
+  });
+  document.getElementById('sap-xep' + hauTo).onchange = taiLaiFn;
+}
+
+// Đóng/mở 1 trong 2 panel "Lọc"/"Sắp xếp" của 1 mục — luôn đóng panel còn lại CỦA CHÍNH MỤC ĐÓ (mục
+// kia không bị đụng tới, độc lập hoàn toàn), bấm lại đúng nút đang mở thì đóng luôn (toggle). tienTo
+// là 'ss' (Đơn sẵn sàng chạy máy) hoặc 'dc' (Đang chạy máy của tôi), ten là 'loc' hoặc 'sap-xep'.
+function batTatPanel(tienTo, ten) {
+  const tenKia = ten === 'loc' ? 'sap-xep' : 'loc';
+  const idPanel = `panel-${ten}-${tienTo}`;
+  const idPanelKia = `panel-${tenKia}-${tienTo}`;
+  const idBtn = `btn-mo-${ten}-${tienTo}`;
+  const idBtnKia = `btn-mo-${tenKia}-${tienTo}`;
+  const dangMo = document.getElementById(idPanel).style.display !== 'none';
+  document.getElementById(idPanel).style.display = 'none';
+  document.getElementById(idPanelKia).style.display = 'none';
+  document.getElementById(idBtn).classList.remove('dang-mo');
+  document.getElementById(idBtnKia).classList.remove('dang-mo');
+  if (!dangMo) {
+    document.getElementById(idPanel).style.display = 'block';
+    document.getElementById(idBtn).classList.add('dang-mo');
+  }
+}
+
+// Đổ danh sách lựa chọn cho 1 ô <select> theo đúng GIÁ TRỊ THẬT đang có trong dữ liệu (không hardcode)
+// — giữ lại lựa chọn đang chọn (nếu còn hợp lệ) khi đổ lại danh sách. Sao chép từ orders.html.
+function domLaiOChon(id, nhanTatCa, giaTriList) {
+  const sel = document.getElementById(id);
+  const dangChon = sel.value;
+  const cacGiaTri = [...new Set(giaTriList.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'vi'));
+  sel.innerHTML = `<option value="">${nhanTatCa}</option>` +
+    cacGiaTri.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+  sel.value = dangChon;
+}
+
+// CHỈ đổ lại các ô lọc động (Loại/Kích thước/Màu sắc/Hãng vận chuyển) khi KHÔNG có bộ lọc nào đang áp
+// dụng — nếu đã lọc rồi mà vẫn đổ lại theo đúng danh sách đã bị thu hẹp thì các lựa chọn khác sẽ biến
+// mất khỏi ô, không bấm lại được nữa (giống hệt quy ước capNhatCacBoLocDong() ở orders.html).
+function capNhatCacBoLocDong(list, hauTo) {
+  domLaiOChon('loc-loai' + hauTo, 'Tất cả loại', list.map(o => o.LOAI));
+  domLaiOChon('loc-kich-thuoc' + hauTo, 'Tất cả kích thước', list.map(o => o.KICH_THUOC));
+  domLaiOChon('loc-mau-sac' + hauTo, 'Tất cả màu sắc', list.map(o => o.MAU_SAC));
+  domLaiOChon('loc-hang-van-chuyen' + hauTo, 'Tất cả hãng vận chuyển', list.map(o => o.HANG_VAN_CHUYEN));
+}
+
+// Số lọc đang thực sự áp dụng (không tính Trạng thái — luôn cố định 1 giá trị ở cả 2 mục) hiện thành
+// số trong nhãn nút "Lọc", giống orders.html.
+function capNhatNhanNutLoc(idBtn, cacOLoc, idHangLoat) {
+  const soLuong = cacOLoc.filter(id => document.getElementById(id).value).length + (document.getElementById(idHangLoat).checked ? 1 : 0);
+  document.getElementById(idBtn).innerHTML = icon('filter', { size: 16 }) + ' Lọc' + (soLuong ? ` (${soLuong})` : '');
+}
+
+// Xoá trắng đúng bộ ô lọc (không đụng ô Sắp xếp — theo đúng quy ước orders.html: Lọc và Sắp xếp là 2
+// mối quan tâm tách biệt, ô Sắp xếp có mặc định riêng ghi rõ trên option, không cần nút xoá).
+function xoaCacOLoc(cacOLoc, hauTo) {
+  cacOLoc.forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('loc-hang-loat' + hauTo).checked = false;
+}
+
+function xoaTatCaLocSs() {
+  xoaCacOLoc(CAC_O_LOC_SS, '-ss');
+  boChonTatCaDonSanSang();
+  taiDonSanSang();
+}
 
 async function taiDonSanSang() {
   const el = document.getElementById('danh-sach-san-sang');
   el.innerHTML = skeletonList(2);
 
+  const kh = document.getElementById('loc-kh-ss').value;
+  const tuNgay = document.getElementById('loc-tu-ngay-ss').value;
+  const denNgay = document.getElementById('loc-den-ngay-ss').value;
+  const canhBao = document.getElementById('loc-canh-bao-ss').value;
+  const hangLoat = document.getElementById('loc-hang-loat-ss').checked;
+  const loai = document.getElementById('loc-loai-ss').value;
+  const kichThuoc = document.getElementById('loc-kich-thuoc-ss').value;
+  const mauSac = document.getElementById('loc-mau-sac-ss').value;
+  const hangVanChuyen = document.getElementById('loc-hang-van-chuyen-ss').value;
+  const sapXep = document.getElementById('sap-xep-ss').value;
+
+  const qs = new URLSearchParams({ trangThai: 'ĐÃ SẴN SÀNG CHẠY MÁY' });
+  if (kh) qs.set('kh', kh);
+  if (tuNgay) qs.set('tuNgay', tuNgay);
+  if (denNgay) qs.set('denNgay', denNgay);
+  if (canhBao) qs.set('canhBao', canhBao);
+  if (hangLoat) qs.set('hangLoat', '1');
+  if (loai) qs.set('loai', loai);
+  if (kichThuoc) qs.set('kichThuoc', kichThuoc);
+  if (mauSac) qs.set('mauSac', mauSac);
+  if (hangVanChuyen) qs.set('hangVanChuyen', hangVanChuyen);
+  if (sapXep) qs.set('sapXep', sapXep);
+
   try {
-    danhSachSanSang = await apiFetch('/orders?' + new URLSearchParams({ trangThai: 'ĐÃ SẴN SÀNG CHẠY MÁY' }).toString());
+    danhSachSanSang = await apiFetch('/orders?' + qs.toString());
   } catch (e) {
     el.innerHTML = `<p>Không tải được danh sách: ${escapeHtml(e.message)}</p>`;
     return;
   }
 
   // Bỏ khỏi tập đang chọn những đơn không còn trong danh sách (đã bị người khác nhận/xử lý ở nơi
-  // khác giữa 2 lần tải) — tránh giữ trạng thái "đã chọn" cho 1 đơn không còn hiển thị.
+  // khác giữa 2 lần tải, hoặc vừa bị lọc bớt) — tránh giữ trạng thái "đã chọn" cho 1 đơn không còn
+  // hiển thị.
   const cacSttHienTai = new Set(danhSachSanSang.map(o => o.STT_Key));
   [...donSanSangChonSet].forEach(k => { if (!cacSttHienTai.has(k)) donSanSangChonSet.delete(k); });
+
+  coLocNaoDangChonSanSang = !!(kh || tuNgay || denNgay || canhBao || hangLoat || loai || kichThuoc || mauSac || hangVanChuyen);
+  if (!coLocNaoDangChonSanSang) capNhatCacBoLocDong(danhSachSanSang, '-ss');
+  capNhatNhanNutLoc('btn-mo-loc-ss', CAC_O_LOC_SS, 'loc-hang-loat-ss');
 
   renderDanhSachSanSang();
 }
@@ -144,7 +373,7 @@ function renderDanhSachSanSang() {
   const el = document.getElementById('danh-sach-san-sang');
 
   if (danhSachSanSang.length === 0) {
-    el.innerHTML = `<div class="trang-thai-rong">${icon('package')}<p>Hiện không có đơn nào đang sẵn sàng chạy máy.</p></div>`;
+    el.innerHTML = `<div class="trang-thai-rong">${icon('package')}<p>${coLocNaoDangChonSanSang ? 'Không có đơn nào khớp bộ lọc.' : 'Hiện không có đơn nào đang sẵn sàng chạy máy.'}</p></div>`;
     capNhatThanhHanhDongSanSang();
     return;
   }
@@ -306,10 +535,7 @@ function ngayHomNayYYYYMMDD() {
 }
 
 function xoaTatCaLoc() {
-  document.getElementById('loc-kh').value = '';
-  document.getElementById('loc-tu-ngay').value = '';
-  document.getElementById('loc-den-ngay').value = '';
-  document.getElementById('sap-xep').value = 'ngay_cu_nhat'; // khớp mặc định mới của ô Sắp xếp
+  xoaCacOLoc(CAC_O_LOC_DC, '');
   if (user.vaiTro === 'admin') document.getElementById('loc-nguoi-van-hanh').value = '';
   taiDon();
 }
@@ -329,6 +555,12 @@ async function taiDon() {
   const kh = document.getElementById('loc-kh').value;
   const tuNgay = document.getElementById('loc-tu-ngay').value;
   const denNgay = document.getElementById('loc-den-ngay').value;
+  const canhBao = document.getElementById('loc-canh-bao').value;
+  const hangLoat = document.getElementById('loc-hang-loat').checked;
+  const loai = document.getElementById('loc-loai').value;
+  const kichThuoc = document.getElementById('loc-kich-thuoc').value;
+  const mauSac = document.getElementById('loc-mau-sac').value;
+  const hangVanChuyen = document.getElementById('loc-hang-van-chuyen').value;
   const sapXep = document.getElementById('sap-xep').value;
 
   const qs = new URLSearchParams({ trangThai: 'Đang chạy máy' });
@@ -336,6 +568,12 @@ async function taiDon() {
   if (kh) qs.set('kh', kh);
   if (tuNgay) qs.set('tuNgay', tuNgay);
   if (denNgay) qs.set('denNgay', denNgay);
+  if (canhBao) qs.set('canhBao', canhBao);
+  if (hangLoat) qs.set('hangLoat', '1');
+  if (loai) qs.set('loai', loai);
+  if (kichThuoc) qs.set('kichThuoc', kichThuoc);
+  if (mauSac) qs.set('mauSac', mauSac);
+  if (hangVanChuyen) qs.set('hangVanChuyen', hangVanChuyen);
   if (sapXep) qs.set('sapXep', sapXep);
 
   let list;
@@ -357,11 +595,14 @@ async function taiDon() {
     sel.value = dangChon;
   }
 
+  const coLocNaoDangChon = nguoiVanHanhDangLoc || kh || tuNgay || denNgay || canhBao || hangLoat || loai || kichThuoc || mauSac || hangVanChuyen;
+  if (!coLocNaoDangChon) capNhatCacBoLocDong(list, '');
+  capNhatNhanNutLoc('btn-mo-loc-dc', CAC_O_LOC_DC, 'loc-hang-loat');
+
   // Server (routes/orders.js, locDonDangChayMayTheoNguoiVanHanh) đã tự lọc: san_xuat chỉ nhận về
   // đúng đơn mình đang vận hành, hoặc đơn không xác định được ai đang chạy (an toàn, tránh thất lạc)
   // — không cần lọc lại lần nữa ở đây.
   if (list.length === 0) {
-    const coLocNaoDangChon = nguoiVanHanhDangLoc || kh || tuNgay || denNgay;
     el.innerHTML = `<div class="trang-thai-rong">${icon('package')}<p>${coLocNaoDangChon ? 'Không có đơn nào khớp bộ lọc.' : 'Bạn chưa chạy máy đơn nào — mọi việc đã xong hoặc chưa bắt đầu.'}</p></div>`;
     return;
   }
