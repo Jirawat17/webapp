@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { layCauHinh, luuCauHinh, layDanhSachDonAutoTracking } = require('../services/trackingAutoService');
+const { layCauHinh, luuCauHinh, layDanhSachDonAutoTracking, layLogTracking } = require('../services/trackingAutoService');
+const { layCauHinhGke, luuCauHinhGke } = require('../services/gkeService');
 const { requireLogin } = require('../middleware/auth');
 
 router.use(requireLogin);
@@ -32,6 +33,23 @@ router.post('/cau-hinh', async (req, res) => {
 
 router.get('/danh-sach', async (req, res) => {
   res.json(await layDanhSachDonAutoTracking());
+});
+
+// Cấu hình GKE (tài khoản API, thông tin người gửi, khai báo hải quan, cân nặng mặc định) — thêm
+// 09/09/2026, theo yêu cầu người dùng đưa toàn bộ lên giao diện thay vì nằm cứng trong .env. Người
+// dùng đã CHỦ ĐỘNG chọn đưa cả username/password API GKE lên giao diện (không giữ riêng trong .env
+// như đề xuất ban đầu) — xem docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md.
+router.get('/cau-hinh-gke', async (req, res) => {
+  res.json(await layCauHinhGke());
+});
+
+router.post('/cau-hinh-gke', async (req, res) => {
+  await luuCauHinhGke(req.body || {});
+  res.json({ ok: true });
+});
+
+router.get('/logs', (req, res) => {
+  res.json(layLogTracking());
 });
 
 module.exports = router;

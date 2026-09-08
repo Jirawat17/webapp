@@ -34,6 +34,10 @@ router.post('/tracking/quet', async (req, res) => {
     ghiKhongCho(ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'GKE_QUET_LOI', sttKey, chiTiet: 'Không tìm thấy đơn' }));
     return res.status(404).json({ error: 'Không tìm thấy đơn hàng: ' + sttKey });
   }
+
+  // Cấu hình GKE đọc từ tab CauHinhTracking (bổ sung 09/09/2026, xem menu "Tracking") — 1 lần cho cả
+  // lượt quét này, dùng chung cho cả bước tạo vận đơn lẫn lấy tem bên dưới.
+  const cauHinhGke = await gkeService.layCauHinhGke();
   // Cho phép quét khi đang "Đã đóng gói" (lần đầu — sẽ tạo vận đơn + chuyển sang "ĐÃ DÁN TEM" ngay
   // dưới) HOẶC đã "ĐÃ DÁN TEM" từ trước (quét lại để in lại tem cũ, KHÔNG lùi trạng thái). Không cho
   // quét khi đã qua "DELIVERED" — tem đã dán xong từ lâu, quét nhầm không nên đụng vào đơn nữa.
@@ -55,7 +59,7 @@ router.post('/tracking/quet', async (req, res) => {
   // "chờ tem" từ lần quét trước, KHÔNG được gọi lại order/create/ — đơn thật đã tồn tại bên GKE rồi.
   if (chuaTungTaoDon) {
     try {
-      await gkeService.taoDonGke(row);
+      await gkeService.taoDonGke(row, cauHinhGke);
     } catch (err) {
       console.error(`[GKE] Lỗi khi tạo vận đơn cho ${sttKey}:`, err.stack || err.message);
       ghiKhongCho(ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'GKE_TAO_VAN_DON_LOI', sttKey, chiTiet: { loi: err.message } }));
@@ -79,7 +83,7 @@ router.post('/tracking/quet', async (req, res) => {
   // từ trước, xem gkeService.layTemIn). Đơn đã có mã vận đơn thật rồi thì chỉ gọi 1 lần, không cần đợi.
   let ketQuaTem;
   try {
-    ketQuaTem = await gkeService.layTemIn(row, { laLanDauSauKhiTao: chuaTungTaoDon || dangChoTuLanTruoc });
+    ketQuaTem = await gkeService.layTemIn(row, cauHinhGke, { laLanDauSauKhiTao: chuaTungTaoDon || dangChoTuLanTruoc });
   } catch (err) {
     console.error(`[GKE] Lỗi khi lấy tem cho ${sttKey}:`, err.stack || err.message);
     ghiKhongCho(ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'GKE_LAY_TEM_LOI', sttKey, chiTiet: { loi: err.message } }));

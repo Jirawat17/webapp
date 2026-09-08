@@ -26,6 +26,25 @@
 .tk-trang-thai.den-han { background: color-mix(in srgb, #d97706 15%, transparent); color: #d97706; }
 .tk-trang-thai.dang-cho { background: var(--color-bg); color: var(--color-text-muted); }
 .tk-trang-thai.thieu-du-lieu { background: color-mix(in srgb, #dc2626 15%, transparent); color: #dc2626; }
+
+/* Cấu hình GKE (bổ sung 09/09/2026) — tái dùng khung .bao-cao-form (thẻ nền + input/label sẵn có),
+   chỉ nới rộng max-width vì nhiều trường hơn form báo cáo gốc, và thêm lưới 2 cột cho gọn. */
+.tk-cau-hinh-gke { max-width: 720px; }
+.tk-cau-hinh-gke h4 { margin: 0 0 var(--space-2); font-size: 0.85rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.03em; }
+.tk-luoi-2 { display: grid; grid-template-columns: 1fr; gap: var(--space-3); }
+@media (min-width: 640px) { .tk-luoi-2 { grid-template-columns: 1fr 1fr; } }
+.tk-ghi-chu-truong { font-size: 0.78rem; color: var(--color-text-muted); margin: 4px 0 0; }
+
+/* Logs ngắn gọn (mỗi việc 1 dòng) — cỡ chữ nhỏ + font đơn cách để hiện được nhiều dòng mà ít chiếm
+   diện tích, theo đúng yêu cầu người dùng 09/09/2026. */
+.tk-logs {
+  font-size: 0.72rem; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3); max-height: 260px; overflow-y: auto; line-height: 1.7;
+}
+.tk-logs .dong { white-space: pre-wrap; word-break: break-word; border-bottom: 1px solid var(--color-bg); padding: 2px 0; }
+.tk-logs .dong:last-child { border-bottom: none; }
+.tk-logs .luc { color: var(--color-text-muted); margin-right: 6px; }
 </style>
 </head>
 <body>
@@ -51,8 +70,59 @@
   </div>
   <p id="thong-bao-luu" style="display:none;margin-top:8px"></p>
 
+  <h3 style="margin-top:var(--space-5)">Cấu hình GKE</h3>
+  <p style="color:var(--color-text-muted);margin:-8px 0 16px">Toàn bộ thông tin dưới đây trước kia nằm cứng trong code (.env) — nay chuyển lên đây để tự chỉnh khi cần, không phải sửa code/deploy lại.</p>
+  <div class="bao-cao-form tk-cau-hinh-gke">
+    <div class="tk-nhom">
+      <h4>Tài khoản API GKE</h4>
+      <div class="tk-luoi-2">
+        <div class="truong"><label for="gke-username">Username</label><input type="text" id="gke-username" autocomplete="off"></div>
+        <div class="truong"><label for="gke-password">Password</label><input type="password" id="gke-password" autocomplete="new-password"></div>
+      </div>
+    </div>
+
+    <div class="tk-nhom">
+      <h4>Dịch vụ &amp; khai báo hải quan</h4>
+      <div class="tk-luoi-2">
+        <div class="truong"><label for="gke-service-code">Mã dịch vụ (service_code)</label><input type="text" id="gke-service-code"></div>
+        <div class="truong"><label for="gke-customs-currency">Đơn vị tiền tệ khai báo</label><input type="text" id="gke-customs-currency" placeholder="USD" style="text-transform:uppercase"></div>
+        <div class="truong"><label for="gke-customs-item-name">Tên hàng khai báo</label><input type="text" id="gke-customs-item-name" placeholder="Embroidered garment"></div>
+        <div class="truong"><label for="gke-customs-hs-code">Mã HS</label><input type="text" id="gke-customs-hs-code"></div>
+        <div class="truong"><label for="gke-customs-declared-price">Giá trị khai báo (mỗi kiện)</label><input type="number" id="gke-customs-declared-price" min="0" step="0.01"></div>
+      </div>
+    </div>
+
+    <div class="tk-nhom">
+      <h4>Thông tin người gửi (xưởng)</h4>
+      <div class="tk-luoi-2">
+        <div class="truong"><label for="gke-shipper-name">Tên xưởng</label><input type="text" id="gke-shipper-name" placeholder="Maxthread VN"></div>
+        <div class="truong"><label for="gke-shipper-phone">Số điện thoại</label><input type="text" id="gke-shipper-phone"></div>
+        <div class="truong"><label for="gke-shipper-address">Địa chỉ</label><input type="text" id="gke-shipper-address"></div>
+        <div class="truong"><label for="gke-shipper-city">Thành phố</label><input type="text" id="gke-shipper-city"></div>
+        <div class="truong"><label for="gke-shipper-province">Tỉnh/Bang</label><input type="text" id="gke-shipper-province"></div>
+        <div class="truong"><label for="gke-shipper-postcode">Mã bưu điện</label><input type="text" id="gke-shipper-postcode"></div>
+      </div>
+    </div>
+
+    <div class="tk-nhom">
+      <h4>Cân nặng mặc định</h4>
+      <div class="truong">
+        <label for="gke-can-nang-moi-ao">Cân nặng mỗi áo (kg) — dùng khi đơn KHÔNG có sẵn TRONG_LUONG</label>
+        <input type="number" id="gke-can-nang-moi-ao" min="0" step="0.01" style="max-width:160px">
+        <p class="tk-ghi-chu-truong">Cân nặng cả kiện = TRONG_LUONG (nếu đơn có) × Số lượng; đơn thiếu TRONG_LUONG thì dùng giá trị này thay thế.</p>
+      </div>
+    </div>
+
+    <button type="button" class="btn-hanh-dong" id="btn-luu-cau-hinh-gke" style="justify-self:start">Lưu cấu hình GKE</button>
+    <p id="thong-bao-gke" style="display:none"></p>
+  </div>
+
   <h3 style="margin-top:var(--space-5)">Danh sách đơn AUTO_TRACKING</h3>
   <div id="bang-danh-sach">Đang tải...</div>
+
+  <h3 style="margin-top:var(--space-5)">Logs</h3>
+  <p style="color:var(--color-text-muted);margin:-8px 0 12px">Ghi ngắn gọn mỗi lần tự động mua tracking (thành công hoặc lỗi) — mất khi khởi động lại server.</p>
+  <div id="tk-logs" class="tk-logs">Đang tải...</div>
 </div>
 
 <div id="tk-popup-moi" class="tk-lop-phu" style="display:none">
@@ -89,8 +159,87 @@ const KHOA_LAN_XEM_CUOI = 'trackingLanXemCuoi';
     document.getElementById('tk-popup-moi').style.display = 'none';
   };
 
+  await taiCauHinhGke();
+  document.getElementById('btn-luu-cau-hinh-gke').onclick = luuCauHinhGke;
+
   await taiDanhSach();
+
+  await taiLogs();
+  // Cùng chu kỳ với Bảng điều khiển ("hiển thị động" — tự tải lại, không cần bấm gì thêm).
+  setInterval(taiLogs, 60000);
 })();
+
+// Ánh xạ field cấu hình GKE (khớp đúng tên trả về từ services/gkeService.js#layCauHinhGke) sang id
+// input trên trang — dùng chung cho cả tải và lưu để không lặp danh sách 2 lần.
+const TRUONG_CAU_HINH_GKE = [
+  ['username', 'gke-username'], ['password', 'gke-password'],
+  ['serviceCode', 'gke-service-code'],
+  ['customsCurrency', 'gke-customs-currency'], ['customsItemName', 'gke-customs-item-name'],
+  ['customsHsCode', 'gke-customs-hs-code'], ['customsDeclaredPrice', 'gke-customs-declared-price'],
+  ['shipperName', 'gke-shipper-name'], ['shipperPhone', 'gke-shipper-phone'],
+  ['shipperAddress', 'gke-shipper-address'], ['shipperCity', 'gke-shipper-city'],
+  ['shipperProvince', 'gke-shipper-province'], ['shipperPostcode', 'gke-shipper-postcode'],
+  ['canNangMoiAoKg', 'gke-can-nang-moi-ao'],
+];
+
+async function taiCauHinhGke() {
+  try {
+    const cauHinh = await apiFetch('/tracking/cau-hinh-gke');
+    TRUONG_CAU_HINH_GKE.forEach(([khoa, id]) => {
+      document.getElementById(id).value = cauHinh[khoa] ?? '';
+    });
+  } catch (e) {
+    const thongBao = document.getElementById('thong-bao-gke');
+    thongBao.style.display = 'block';
+    thongBao.style.color = 'var(--color-primary)';
+    thongBao.textContent = 'Không tải được cấu hình GKE: ' + e.message;
+  }
+}
+
+async function luuCauHinhGke() {
+  const giaTri = {};
+  TRUONG_CAU_HINH_GKE.forEach(([khoa, id]) => {
+    giaTri[khoa] = document.getElementById(id).value.trim();
+  });
+  if (giaTri.customsCurrency) giaTri.customsCurrency = giaTri.customsCurrency.toUpperCase();
+
+  const thongBao = document.getElementById('thong-bao-gke');
+  const nut = document.getElementById('btn-luu-cau-hinh-gke');
+  nut.disabled = true;
+  nut.textContent = 'Đang lưu...';
+  try {
+    await apiFetch('/tracking/cau-hinh-gke', { method: 'POST', body: JSON.stringify(giaTri) });
+    thongBao.style.display = 'block';
+    thongBao.style.color = '#16a34a';
+    thongBao.textContent = 'Đã lưu cấu hình GKE.';
+  } catch (e) {
+    thongBao.style.display = 'block';
+    thongBao.style.color = 'var(--color-primary)';
+    thongBao.textContent = 'Lỗi khi lưu: ' + e.message;
+  } finally {
+    nut.disabled = false;
+    nut.textContent = 'Lưu cấu hình GKE';
+  }
+}
+
+async function taiLogs() {
+  const el = document.getElementById('tk-logs');
+  let logs;
+  try {
+    logs = await apiFetch('/tracking/logs');
+  } catch (e) {
+    el.innerHTML = `<span style="color:var(--color-primary)">Không tải được logs: ${escapeHtml(e.message)}</span>`;
+    return;
+  }
+
+  if (logs.length === 0) {
+    el.innerHTML = '<span style="color:var(--color-text-muted)">Chưa có hoạt động nào.</span>';
+    return;
+  }
+  el.innerHTML = logs.map(l =>
+    `<div class="dong"><span class="luc">${dinhDangNgayGioNganAnToan(l.luc)}</span>${escapeHtml(l.dong)}</div>`
+  ).join('');
+}
 
 async function taiCauHinh() {
   try {

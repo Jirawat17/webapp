@@ -16,6 +16,23 @@ const SO_PHUT_MAC_DINH = 10;
 // đơn trùng đã có (xem muaTrackingChoDon bên dưới), không viết lại logic đó lần 2.
 const NGUOI_HE_THONG = { ten: 'Hệ thống (tự động)', vaiTro: 'admin' };
 
+// Log NGẮN GỌN (mỗi việc 1 dòng) cho tính năng này, xem NGAY trên trang "Tracking" — bổ sung
+// 09/09/2026, theo yêu cầu người dùng (chọn mức "ngắn gọn", không phải log kỹ thuật chi tiết từng
+// bước gọi GKE — mức đó vẫn chỉ xem qua console server như cũ). Mảng trong bộ nhớ, mất khi restart
+// server — cùng đánh đổi chấp nhận được như services/presenceService.js. Giới hạn số dòng để không
+// phình bộ nhớ vô hạn qua thời gian dài chạy.
+const SO_DONG_LOG_TOI_DA = 300;
+const _logs = []; // { luc: ISOString, dong: string }
+
+function ghiLogTracking(dong) {
+  _logs.push({ luc: new Date().toISOString(), dong });
+  if (_logs.length > SO_DONG_LOG_TOI_DA) _logs.shift();
+}
+
+function layLogTracking() {
+  return [..._logs].reverse(); // mới nhất trước
+}
+
 // Đọc cấu hình bật/tắt + số phút chờ. Tab CauHinhTracking do người dùng tự tạo trước (2 cột
 // BatTuDongMuaTracking, SoPhutCho) — CHƯA tạo tab/chưa có dòng dữ liệu thì coi như TẮT (mặc định an
 // toàn), không chặn phần còn lại của app.
@@ -56,7 +73,7 @@ async function luuCauHinh({ bat, soPhutCho }) {
 // (khác luồng quét tay) — đơn tự động mua tracking sớm vẫn còn nguyên trạng thái sản xuất, "ĐÃ DÁN
 // TEM" chỉ nên đúng nghĩa khi tem thật được dán lên hộp lúc đóng gói xong (vẫn làm ở scan.html như cũ,
 // lúc đó TRACKING_ID đã có sẵn nên chỉ lấy tem in, không tạo vận đơn lần 2).
-async function muaTrackingChoDon(sttKey) {
+async function muaTrackingChoDon(sttKey, cauHinhGke) {
   const { row } = await orderService.getByKey(sttKey, { fresh: true });
   if (!row) throw new Error('Không tìm thấy đơn: ' + sttKey);
   if (row.TRACKING_ID && row.TRACKING_ID !== gkeService.MA_DANG_CHO_TEM) return null; // đã có tracking thật rồi (vd vừa được quét tay) — bỏ qua
@@ -65,16 +82,17 @@ async function muaTrackingChoDon(sttKey) {
   const dangChoTuLanTruoc = row.TRACKING_ID === gkeService.MA_DANG_CHO_TEM;
 
   if (chuaTungTaoDon) {
-    await gkeService.taoDonGke(row);
+    await gkeService.taoDonGke(row, cauHinhGke);
     await orderService.update(sttKey, { TRACKING_ID: gkeService.MA_DANG_CHO_TEM }, NGUOI_HE_THONG);
   }
 
-  const ketQuaTem = await gkeService.layTemIn(row, { laLanDauSauKhiTao: chuaTungTaoDon || dangChoTuLanTruoc });
+  const ketQuaTem = await gkeService.layTemIn(row, cauHinhGke, { laLanDauSauKhiTao: chuaTungTaoDon || dangChoTuLanTruoc });
   await orderService.update(sttKey, {
     TRACKING_ID: ketQuaTem.tracking_num,
     HANG_VAN_CHUYEN: ketQuaTem.delivery_carrier,
   }, NGUOI_HE_THONG);
 
+  ghiLogTracking(`${sttKey}: đã mua tracking ${ketQuaTem.tracking_num} (${ketQuaTem.delivery_carrier})`);
   ghiLog({
     nguoiDung: NGUOI_HE_THONG.ten, vaiTro: NGUOI_HE_THONG.vaiTro, hanhDong: 'TU_DONG_MUA_TRACKING',
     sttKey, chiTiet: { trackingNum: ketQuaTem.tracking_num, hangVanChuyen: ketQuaTem.delivery_carrier },
@@ -89,7 +107,7 @@ async function chayQuetTuDongMuaTracking() {
   const cauHinh = await layCauHinh();
   if (!cauHinh.bat) return { daQuet: false, soDonDaMua: 0 };
 
-  const { rows } = await orderService.getAll();
+  const [{ rows }, cauHinhGke] = await Promise.all([orderService.getAll(), gkeService.layCauHinhGke()]);
   const bayGio = Date.now();
   const nguongMs = cauHinh.soPhutCho * 60 * 1000;
 
@@ -105,10 +123,11 @@ async function chayQuetTuDongMuaTracking() {
   let soDonDaMua = 0;
   for (const don of donDuDieuKien) {
     try {
-      const ketQua = await muaTrackingChoDon(don.STT_Key);
+      const ketQua = await muaTrackingChoDon(don.STT_Key, cauHinhGke);
       if (ketQua) soDonDaMua++;
     } catch (err) {
       console.error(`[TrackingTuDong] Lỗi mua tracking cho ${don.STT_Key}:`, err.message);
+      ghiLogTracking(`${don.STT_Key}: LỖI — ${err.message}`);
     }
   }
 
@@ -148,4 +167,4 @@ async function layDanhSachDonAutoTracking() {
     .sort((a, b) => new Date(b.thoiGianCapNhatCuoi || 0) - new Date(a.thoiGianCapNhatCuoi || 0));
 }
 
-module.exports = { layCauHinh, luuCauHinh, chayQuetTuDongMuaTracking, layDanhSachDonAutoTracking };
+module.exports = { layCauHinh, luuCauHinh, chayQuetTuDongMuaTracking, layDanhSachDonAutoTracking, layLogTracking };

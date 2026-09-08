@@ -18,6 +18,72 @@
 // chỉ thấy "Đã có lỗi xảy ra" chung chung, không biết lỗi ở bước nào): mọi bước gọi GKE đều in ra
 // console.log/console.error kèm tên bước, để mở terminal server lúc test là thấy ngay lỗi thật ở
 // đâu, không cần đoán. Xem thêm ghi chú "CÁCH TÌM LỖI" ở cuối file.
+//
+// CẤU HÌNH (bổ sung 09/09/2026, theo yêu cầu người dùng — trước đó toàn bộ nằm cứng trong .env, khó
+// chỉnh cho người không rành kỹ thuật): mọi hàm dưới đây nhận `cauHinh` làm tham số thay vì tự đọc
+// process.env.GKE_* trực tiếp — gọi layCauHinhGke() 1 lần rồi truyền xuống, xem
+// docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md mục cấu hình GKE trên giao diện.
+// Đọc/ghi CÙNG tab CauHinhTracking (gộp chung với cấu hình bật/tắt tự động mua tracking cho gọn, chỉ
+// 1 tab cần quản lý) — .env vẫn dùng làm GIÁ TRỊ NGẦM ĐỊNH nếu ô tương ứng trên Sheet còn trống, để
+// không phá vỡ cấu hình đang chạy khi mới nâng cấp lên bản có giao diện này.
+const { readTab, readTabCached, updateCells, appendRow } = require('./sheetsService');
+
+const TAB_CAU_HINH = 'CauHinhTracking';
+
+function layGiaTri(dong, tenCot, bienEnv, macDinh = '') {
+  if (dong && dong[tenCot]) return dong[tenCot];
+  if (bienEnv && process.env[bienEnv]) return process.env[bienEnv];
+  return macDinh;
+}
+
+async function layCauHinhGke() {
+  const { rows } = await readTabCached(TAB_CAU_HINH, 60000);
+  const dong = rows[0];
+  return {
+    username: layGiaTri(dong, 'GkeUsername', 'GKE_API_USERNAME'),
+    password: layGiaTri(dong, 'GkePassword', 'GKE_API_PASSWORD'),
+    serviceCode: layGiaTri(dong, 'GkeServiceCode', 'GKE_SERVICE_CODE'),
+    shipperName: layGiaTri(dong, 'GkeShipperName', 'GKE_SHIPPER_NAME', 'Maxthread VN'),
+    shipperPhone: layGiaTri(dong, 'GkeShipperPhone', 'GKE_SHIPPER_PHONE'),
+    shipperAddress: layGiaTri(dong, 'GkeShipperAddress', 'GKE_SHIPPER_ADDRESS'),
+    shipperCity: layGiaTri(dong, 'GkeShipperCity', 'GKE_SHIPPER_CITY'),
+    shipperProvince: layGiaTri(dong, 'GkeShipperProvince', 'GKE_SHIPPER_PROVINCE'),
+    shipperPostcode: layGiaTri(dong, 'GkeShipperPostcode', 'GKE_SHIPPER_POSTCODE'),
+    customsItemName: layGiaTri(dong, 'GkeCustomsItemName', 'GKE_CUSTOMS_ITEM_NAME', 'Embroidered garment'),
+    customsHsCode: layGiaTri(dong, 'GkeCustomsHsCode', 'GKE_CUSTOMS_HS_CODE'),
+    customsDeclaredPrice: layGiaTri(dong, 'GkeCustomsDeclaredPrice', 'GKE_CUSTOMS_DECLARED_PRICE'),
+    customsCurrency: layGiaTri(dong, 'GkeCustomsCurrency', 'GKE_CUSTOMS_CURRENCY', 'USD'),
+    canNangMoiAoKg: Number(layGiaTri(dong, 'CanNangMoiAoKg', null, '0.05')) || 0.05,
+  };
+}
+
+// Ghi cấu hình GKE — CÙNG khuôn với luuCauHinh() (tracking bật/tắt) trong trackingAutoService.js: tự
+// thêm dòng đầu tiên nếu tab mới chỉ có header, các lần sau ghi đè đúng dòng đó.
+async function luuCauHinhGke(giaTri) {
+  const { headers, rows } = await readTab(TAB_CAU_HINH).catch(() => {
+    throw new Error(`Chưa tìm thấy tab '${TAB_CAU_HINH}' trong Google Sheet — hãy tạo tab này trước (xem docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md).`);
+  });
+  const ghi = {
+    GkeUsername: giaTri.username || '', GkePassword: giaTri.password || '',
+    GkeServiceCode: giaTri.serviceCode || '',
+    GkeShipperName: giaTri.shipperName || '', GkeShipperPhone: giaTri.shipperPhone || '',
+    GkeShipperAddress: giaTri.shipperAddress || '', GkeShipperCity: giaTri.shipperCity || '',
+    GkeShipperProvince: giaTri.shipperProvince || '', GkeShipperPostcode: giaTri.shipperPostcode || '',
+    GkeCustomsItemName: giaTri.customsItemName || '', GkeCustomsHsCode: giaTri.customsHsCode || '',
+    GkeCustomsDeclaredPrice: giaTri.customsDeclaredPrice || '', GkeCustomsCurrency: giaTri.customsCurrency || '',
+    CanNangMoiAoKg: giaTri.canNangMoiAoKg || '',
+  };
+  // Chỉ ghi những cột THẬT SỰ có trong tab (updateCells ném lỗi nếu gặp cột lạ) — cho phép tab
+  // CauHinhTracking chỉ có 1 phần cột GKE (vd người dùng thêm dần), không bắt buộc đủ 1 lần.
+  const ghiHopLe = Object.fromEntries(Object.entries(ghi).filter(([k]) => headers.includes(k)));
+
+  if (rows[0]) {
+    await updateCells(TAB_CAU_HINH, headers, rows[0]._row, ghiHopLe);
+  } else {
+    await appendRow(TAB_CAU_HINH, headers, ghiHopLe);
+  }
+}
+
 const BASE_URL = 'https://order.gkelogistics.com/openapi/customer';
 
 // fetch() của Node không có timeout mặc định — nếu mạng tới GKE bị treo (chặn tường lửa, DNS lỗi...)
@@ -71,20 +137,20 @@ async function fetchJson(buoc, url, options) {
 const TOKEN_TTL_MS = 12 * 60 * 60 * 1000;
 let tokenCache = { token: null, thoiDiemLay: 0 };
 
-async function layToken({ boQuaCache = false } = {}) {
+async function layToken(cauHinh, { boQuaCache = false } = {}) {
   if (!boQuaCache && tokenCache.token && Date.now() - tokenCache.thoiDiemLay < TOKEN_TTL_MS) {
     return tokenCache.token;
   }
-  if (!process.env.GKE_API_USERNAME || !process.env.GKE_API_PASSWORD) {
-    throw new Error('[đăng nhập] Thiếu GKE_API_USERNAME/GKE_API_PASSWORD trong .env');
+  if (!cauHinh.username || !cauHinh.password) {
+    throw new Error('[đăng nhập] Thiếu tài khoản API GKE — vào menu Tracking để nhập.');
   }
 
   const { data } = await fetchJson('đăng nhập', `${BASE_URL}/auth/login/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      username: process.env.GKE_API_USERNAME,
-      password: process.env.GKE_API_PASSWORD,
+      username: cauHinh.username,
+      password: cauHinh.password,
     }),
   });
   if (!data.success || !data.data || !data.data.token) {
@@ -99,8 +165,8 @@ async function layToken({ boQuaCache = false } = {}) {
 // Gọi 1 endpoint POST của GKE, tự đính token — nếu bị từ chối do token hỏng (401, hoặc code khác
 // 200 kèm chữ "token"/"unauthorized" trong detail) thì làm mới token 1 lần rồi thử lại đúng 1 lần,
 // không lặp vô hạn. `buoc` = tên bước để log/báo lỗi rõ ràng theo đúng giai đoạn (đăng nhập/tạo đơn/in tem).
-async function goiApi(buoc, path, body, { daThuLai = false } = {}) {
-  const token = await layToken();
+async function goiApi(buoc, path, body, cauHinh, { daThuLai = false } = {}) {
+  const token = await layToken(cauHinh);
   const { res, data } = await fetchJson(buoc, `${BASE_URL}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -120,8 +186,8 @@ async function goiApi(buoc, path, body, { daThuLai = false } = {}) {
     const loiTokenHong = res.status === 401 || /token/i.test(data.detail || '');
     if (loiTokenHong && !daThuLai) {
       console.log(`[GKE] [${buoc}] Token có vẻ đã hỏng — làm mới token và thử lại 1 lần`);
-      await layToken({ boQuaCache: true });
-      return goiApi(buoc, path, body, { daThuLai: true });
+      await layToken(cauHinh, { boQuaCache: true });
+      return goiApi(buoc, path, body, cauHinh, { daThuLai: true });
     }
     console.error(`[GKE] [${buoc}] GKE từ chối:`, JSON.stringify(data));
     throw new Error(`[${buoc}] ${data.detail || `Lỗi GKE (mã ${data.code ?? res.status})`}`);
@@ -166,20 +232,20 @@ function maQuocGia(ten) {
   return ma;
 }
 
-function thongTinNguoiGui() {
-  const thieu = ['GKE_SHIPPER_PHONE', 'GKE_SHIPPER_ADDRESS', 'GKE_SHIPPER_POSTCODE'].filter(k => !process.env[k]);
+function thongTinNguoiGui(cauHinh) {
+  const thieu = ['shipperPhone', 'shipperAddress', 'shipperPostcode'].filter(k => !cauHinh[k]);
   if (thieu.length) {
-    throw new Error(`[chuẩn bị dữ liệu] Thiếu ${thieu.join(', ')} trong .env — cần đủ thông tin người gửi (xưởng)`);
+    throw new Error(`[chuẩn bị dữ liệu] Thiếu ${thieu.join(', ')} trong cấu hình GKE — vào menu Tracking để nhập đủ thông tin người gửi (xưởng)`);
   }
   return {
-    full_name: process.env.GKE_SHIPPER_NAME || 'Maxthread VN',
-    company: process.env.GKE_SHIPPER_NAME || 'Maxthread VN',
-    phone: process.env.GKE_SHIPPER_PHONE,
+    full_name: cauHinh.shipperName,
+    company: cauHinh.shipperName,
+    phone: cauHinh.shipperPhone,
     country: 'VN',
-    postcode: process.env.GKE_SHIPPER_POSTCODE || '',
-    province: process.env.GKE_SHIPPER_PROVINCE || '',
-    city: process.env.GKE_SHIPPER_CITY || '',
-    address: process.env.GKE_SHIPPER_ADDRESS,
+    postcode: cauHinh.shipperPostcode,
+    province: cauHinh.shipperProvince,
+    city: cauHinh.shipperCity,
+    address: cauHinh.shipperAddress,
   };
 }
 
@@ -199,16 +265,14 @@ function thongTinNguoiNhan(donHang) {
   };
 }
 
-// Mặc định mỗi áo khi đơn KHÔNG có TRONG_LUONG hợp lệ (trống, 0, hoặc không phải số) — giữ nguyên
-// ước lượng cũ (31/08/2026) làm lưới an toàn, không chặn quét/in chỉ vì thiếu 1 cột.
-const CAN_NANG_MOI_AO_KG = 0.05;
-
 // Cân nặng cả kiện = TRONG_LUONG (kg/áo, cột thật trong Sheet, người dùng xác nhận đơn vị kg
-// 01/09/2026) x SO_LUONG. TRONG_LUONG trống/0/không hợp lệ thì dùng CAN_NANG_MOI_AO_KG/áo thay thế.
-function tinhCanNangKg(donHang) {
+// 01/09/2026) x SO_LUONG. TRONG_LUONG trống/0/không hợp lệ thì dùng cauHinh.canNangMoiAoKg/áo thay
+// thế (trước đây cố định 0.05kg trong code — bổ sung 09/09/2026, chuyển lên giao diện Tracking để
+// chỉnh không cần sửa code, xem layCauHinhGke()).
+function tinhCanNangKg(donHang, cauHinh) {
   const soLuong = Number(donHang.SO_LUONG) || 1;
   const trongLuongMoiCai = Number(donHang.TRONG_LUONG);
-  const canNangMoiCai = trongLuongMoiCai > 0 ? trongLuongMoiCai : CAN_NANG_MOI_AO_KG;
+  const canNangMoiCai = trongLuongMoiCai > 0 ? trongLuongMoiCai : cauHinh.canNangMoiAoKg;
   return Math.max(soLuong * canNangMoiCai, 0.01);
 }
 
@@ -223,42 +287,39 @@ function tinhCanNangKg(donHang) {
 const MA_DANG_CHO_TEM = 'DANG_CHO_GKE_TAO_TEM';
 
 // Tạo 1 vận đơn THẬT bên GKE — chỉ gọi hàm này khi đơn CHƯA từng tạo vận đơn lần nào.
-async function taoDonGke(donHang) {
-  const thieuCauHinh = ['GKE_SERVICE_CODE', 'GKE_CUSTOMS_HS_CODE', 'GKE_CUSTOMS_DECLARED_PRICE']
-    .filter(k => !process.env[k]);
+async function taoDonGke(donHang, cauHinh) {
+  const thieuCauHinh = ['serviceCode', 'customsHsCode', 'customsDeclaredPrice'].filter(k => !cauHinh[k]);
   if (thieuCauHinh.length) {
-    throw new Error(`[chuẩn bị dữ liệu] Thiếu ${thieuCauHinh.join(', ')} trong .env`);
+    throw new Error(`[chuẩn bị dữ liệu] Thiếu ${thieuCauHinh.join(', ')} trong cấu hình GKE — vào menu Tracking để nhập.`);
   }
-
-  const tenHang = process.env.GKE_CUSTOMS_ITEM_NAME || 'Embroidered garment';
 
   const body = {
     customer_order_num: donHang.STT_Key,
-    service_code: process.env.GKE_SERVICE_CODE,
+    service_code: cauHinh.serviceCode,
     'need-track': 'Y',
     need_scan: false,
-    shipper_info: thongTinNguoiGui(),
+    shipper_info: thongTinNguoiGui(cauHinh),
     consignee_info: thongTinNguoiNhan(donHang),
     parcel_list: [{
-      weight: tinhCanNangKg(donHang),
+      weight: tinhCanNangKg(donHang, cauHinh),
       item_list: [{
-        export_declared: tenHang,
-        import_declared: tenHang,
-        export_hscode: process.env.GKE_CUSTOMS_HS_CODE,
-        import_hscode: process.env.GKE_CUSTOMS_HS_CODE,
+        export_declared: cauHinh.customsItemName,
+        import_declared: cauHinh.customsItemName,
+        export_hscode: cauHinh.customsHsCode,
+        import_hscode: cauHinh.customsHsCode,
         // GKE bắt buộc khai giá CẢ 2 chiều xuất/nhập cho đơn xuyên biên giới (phát hiện qua log lỗi
         // thật 01/09/2026: "import_price: Field required") — dùng CÙNG 1 mức cố định cho cả 2, đúng
         // quyết định "1 mức cố định" ban đầu, không tách riêng giá xuất/nhập.
-        export_price: Number(process.env.GKE_CUSTOMS_DECLARED_PRICE),
-        export_price_currency: process.env.GKE_CUSTOMS_CURRENCY || 'USD',
-        import_price: Number(process.env.GKE_CUSTOMS_DECLARED_PRICE),
-        import_price_currency: process.env.GKE_CUSTOMS_CURRENCY || 'USD',
+        export_price: Number(cauHinh.customsDeclaredPrice),
+        export_price_currency: cauHinh.customsCurrency,
+        import_price: Number(cauHinh.customsDeclaredPrice),
+        import_price_currency: cauHinh.customsCurrency,
       }],
     }],
   };
   console.log(`[GKE] [tạo đơn] Body gửi cho đơn ${donHang.STT_Key}:`, JSON.stringify(body));
 
-  return goiApi('tạo đơn', '/order/create/', body);
+  return goiApi('tạo đơn', '/order/create/', body, cauHinh);
 }
 
 // Ngay sau khi order/create/ thành công, tem thường CHƯA generate xong ngay — gọi label/print/
@@ -274,11 +335,11 @@ function dangChoTemSanSang(thongBaoLoi) {
 
 // Lấy tem in (PDF base64) — dùng num_type=1 (Customer Order Number) + STT_Key, KHÔNG cần biết
 // order_num/waybill number nội bộ của GKE vì lúc tạo đơn đã đặt customer_order_num = STT_Key.
-async function layTemIn(donHang, { laLanDauSauKhiTao = false } = {}) {
+async function layTemIn(donHang, cauHinh, { laLanDauSauKhiTao = false } = {}) {
   const soLanThu = laLanDauSauKhiTao ? SO_LAN_THU_LAI_TEM : 1;
   for (let lan = 1; lan <= soLanThu; lan++) {
     try {
-      return await goiApi('in tem', '/label/print/', { num_type: 1, num: donHang.STT_Key });
+      return await goiApi('in tem', '/label/print/', { num_type: 1, num: donHang.STT_Key }, cauHinh);
     } catch (err) {
       const conThuTiep = laLanDauSauKhiTao && lan < soLanThu && dangChoTemSanSang(err.message);
       if (!conThuTiep) throw err;
@@ -300,4 +361,4 @@ async function layTemIn(donHang, { laLanDauSauKhiTao = false } = {}) {
 //      lại vài lần (xem layTemIn); chỉ thực sự lỗi nếu hết số lần thử vẫn chưa xong.
 //   5. Thông báo hiện trên điện thoại/trình duyệt (mục ket-qua-tra-cuu) LUÔN kèm tên bước trong
 //      ngoặc vuông ở đầu câu, vd "[tạo đơn] ..." — khớp đúng với log server để đối chiếu nhanh.
-module.exports = { taoDonGke, layTemIn, maQuocGia, MA_DANG_CHO_TEM };
+module.exports = { taoDonGke, layTemIn, maQuocGia, MA_DANG_CHO_TEM, layCauHinhGke, luuCauHinhGke };
