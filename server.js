@@ -15,6 +15,14 @@ app.use(session({
   cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 }, // 30 ngày — chọn tên 1 lần là máy nhớ luôn
 }));
 
+// Ghi nhận "còn đang hoạt động" cho mọi request đã đăng nhập — phục vụ Bảng điều khiển admin, xem
+// services/presenceService.js. Đặt sau session, trước mọi route, để áp dụng cho toàn bộ API.
+const { ghiNhanHoatDong } = require('./services/presenceService');
+app.use((req, res, next) => {
+  if (req.session.user) ghiNhanHoatDong(req.session.user);
+  next();
+});
+
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/orders', require('./routes/orders'));

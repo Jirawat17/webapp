@@ -100,6 +100,12 @@
 .bdk-xep-hang-ten { flex:1; color:#e0f2ff; font-weight:600; font-size:0.9rem; }
 .bdk-xep-hang-vaitro { font-size:0.72rem; color:#8fb8d9; font-weight:400; margin-top:1px; }
 .bdk-xep-hang-so { font-weight:700; color:#7ee8fa; font-size:1.05rem; font-variant-numeric:tabular-nums; }
+.bdk-dot-xanh {
+  flex-shrink:0; width:9px; height:9px; border-radius:50%; background:#4ecb71;
+  box-shadow:0 0 8px #4ecb71; animation: bdkThoXanh 2s ease-in-out infinite;
+}
+@keyframes bdkThoXanh { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+.bdk-lan-cuoi { font-size:0.72rem; color:#8fb8d9; font-variant-numeric:tabular-nums; white-space:nowrap; }
 </style>
 </head>
 <body>
@@ -144,6 +150,17 @@
     <div class="bdk-kpi-card">
       <div class="bdk-kpi-nhan">Tỷ lệ lỗi sản xuất</div>
       <div class="bdk-kpi-so" id="kpi-ty-le-loi">0%</div>
+    </div>
+  </div>
+
+  <div class="bdk-grid-2">
+    <div class="bdk-card">
+      <h3>Đang hoạt động ngay bây giờ</h3>
+      <div id="bdk-dang-hoat-dong">Đang tải...</div>
+    </div>
+    <div class="bdk-card">
+      <h3>Khối lượng đang xử lý</h3>
+      <div id="bdk-dang-xu-ly">Đang tải...</div>
     </div>
   </div>
 
@@ -196,7 +213,7 @@ const cacBieuDo = {};
 
 const PALETTE_NEON = ['#7ee8fa', '#ffd76b', '#ff5e5e', '#4ecb71', '#c792ea', '#ff9f43', '#54a0ff', '#ee5a6f'];
 const PALETTE_PIPELINE = ['#4a6fa5','#5b8fd4','#7ee8fa','#54c6a8','#4ecb71','#ffd76b','#ff9f43','#ff5e5e','#c792ea','#8892b0','#5c6b8a'];
-const NHAN_VAI_TRO = { san_xuat: 'Sản xuất', ve_file: 'Vẽ file', nguoi_lay_phoi: 'Lấy phôi / Đóng gói' };
+const NHAN_VAI_TRO = { san_xuat: 'Sản xuất', ve_file: 'Vẽ file', nguoi_lay_phoi: 'Lấy phôi / Đóng gói', admin: 'Quản trị' };
 
 (async () => {
   user = await requireLoginOrRedirect();
@@ -267,6 +284,21 @@ function topN(obj, n) {
   return Object.fromEntries(Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, n));
 }
 
+// Dòng phụ hiển thị dưới tên trong danh sách "Đang hoạt động ngay bây giờ" — với san_xuat/ve_file
+// thì kèm luôn số việc đang xử lý (đúng ý người dùng: biết đang online VÀ đang bận bao nhiêu việc).
+function moTaVaiTroVaViec(nguoiDangHD, demChayMay, demVeFile) {
+  const nhanVaiTro = NHAN_VAI_TRO[nguoiDangHD.vaiTro] || nguoiDangHD.vaiTro;
+  if (nguoiDangHD.vaiTro === 'san_xuat') {
+    const so = demChayMay.get(nguoiDangHD.ten) || 0;
+    return so > 0 ? `${nhanVaiTro} · đang chạy máy ${so} đơn` : `${nhanVaiTro} · chưa nhận đơn nào`;
+  }
+  if (nguoiDangHD.vaiTro === 've_file') {
+    const so = demVeFile.get(nguoiDangHD.ten) || 0;
+    return so > 0 ? `${nhanVaiTro} · đang vẽ ${so} file` : `${nhanVaiTro} · chưa nhận file nào`;
+  }
+  return nhanVaiTro;
+}
+
 async function taiBangDieuKhien() {
   const qs = new URLSearchParams();
   if (kyHienTai === 'tuy_chon') {
@@ -286,16 +318,20 @@ async function taiBangDieuKhien() {
   // Ghép 3 API đã có sẵn (không route mới) + /orders để đếm cảnh báo hiện tại (KHÔNG theo kỳ — "đơn
   // nào đang trễ hạn" là ảnh chụp NGAY LÚC XEM, không phải việc xảy ra trong quá khứ) — xem
   // docs/superpowers/specs/2026-09-08-bang-dieu-khien-admin-design.md.
-  let thongKe, thongKeLoi, hieuSuat, dsDon;
+  let thongKe, thongKeLoi, hieuSuat, dsDon, dangHoatDong;
   try {
-    [thongKe, thongKeLoi, hieuSuat, dsDon] = await Promise.all([
+    [thongKe, thongKeLoi, hieuSuat, dsDon, dangHoatDong] = await Promise.all([
       apiFetch('/dashboard/thong-ke?' + qsStr),
       apiFetch('/reports/thong-ke-loi?' + qsStr),
       apiFetch('/reports/hieu-suat-theo-nguoi?' + qsStr),
       apiFetch('/orders'),
+      apiFetch('/auth/dang-hoat-dong'), // ai đang online — luôn ảnh chụp NGAY LÚC XEM, không theo kỳ chọn
     ]);
   } catch (e) {
-    document.getElementById('bdk-xep-hang').innerHTML = `<p style="color:#ff5e5e">Không tải được dữ liệu: ${escapeHtml(e.message)}</p>`;
+    const thongBaoLoi = `<p style="color:#ff5e5e">Không tải được dữ liệu: ${escapeHtml(e.message)}</p>`;
+    document.getElementById('bdk-xep-hang').innerHTML = thongBaoLoi;
+    document.getElementById('bdk-dang-hoat-dong').innerHTML = thongBaoLoi;
+    document.getElementById('bdk-dang-xu-ly').innerHTML = thongBaoLoi;
     return;
   }
 
@@ -308,6 +344,39 @@ async function taiBangDieuKhien() {
   demSo(document.getElementById('kpi-vang'), demCanhBao.VANG);
   demSo(document.getElementById('kpi-cam'), demCanhBao.CAM);
   demSo(document.getElementById('kpi-do'), demCanhBao.DO);
+
+  // Khối lượng ĐANG xử lý ngay lúc này (không phải đã xong trong kỳ) — đếm trực tiếp từ dsDon vừa
+  // tải, dùng lại NguoiVanHanh/NguoiVeFile mà routes/orders.js đã tính sẵn (chỉ khác rỗng khi đơn
+  // đang đúng ở trạng thái "Đang chạy máy"/"Đang vẽ file").
+  const demChayMay = new Map();
+  const demVeFile = new Map();
+  dsDon.forEach(o => {
+    if (o.NguoiVanHanh) demChayMay.set(o.NguoiVanHanh, (demChayMay.get(o.NguoiVanHanh) || 0) + 1);
+    if (o.NguoiVeFile) demVeFile.set(o.NguoiVeFile, (demVeFile.get(o.NguoiVeFile) || 0) + 1);
+  });
+
+  document.getElementById('bdk-dang-hoat-dong').innerHTML = dangHoatDong.length === 0
+    ? '<p style="color:#8fb8d9">Không có ai hoạt động trong 5 phút gần đây.</p>'
+    : dangHoatDong.map(nd => `
+      <div class="bdk-xep-hang-item">
+        <span class="bdk-dot-xanh"></span>
+        <div class="bdk-xep-hang-ten">${escapeHtml(nd.ten)}<div class="bdk-xep-hang-vaitro">${escapeHtml(moTaVaiTroVaViec(nd, demChayMay, demVeFile))}</div></div>
+        <div class="bdk-lan-cuoi">${new Date(nd.lanCuoi).toLocaleTimeString('vi-VN')}</div>
+      </div>`).join('');
+
+  const dangXuLy = [
+    ...[...demChayMay.entries()].map(([ten, so]) => ({ ten, nhan: 'Đang chạy máy', so })),
+    ...[...demVeFile.entries()].map(([ten, so]) => ({ ten, nhan: 'Đang vẽ file', so })),
+  ].sort((a, b) => b.so - a.so);
+
+  document.getElementById('bdk-dang-xu-ly').innerHTML = dangXuLy.length === 0
+    ? '<p style="color:#8fb8d9">Hiện không có đơn/file nào đang xử lý.</p>'
+    : dangXuLy.map((x, i) => `
+      <div class="bdk-xep-hang-item">
+        <div class="bdk-hang-so ${i === 0 ? 'top1' : ''}">${i + 1}</div>
+        <div class="bdk-xep-hang-ten">${escapeHtml(x.ten)}<div class="bdk-xep-hang-vaitro">${x.nhan}</div></div>
+        <div class="bdk-xep-hang-so">${x.so}</div>
+      </div>`).join('');
 
   const tyLeLoi = thongKe.tongSoDon > 0 ? (thongKeLoi.tongSoLoi / thongKe.tongSoDon * 100) : 0;
   document.getElementById('kpi-ty-le-loi').textContent = tyLeLoi.toFixed(1) + '%';

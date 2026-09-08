@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { readTabCached } = require('../services/sheetsService');
 const { ghiLog } = require('../services/logService');
+const { layDangHoatDong } = require('../services/presenceService');
 
 const TAB = 'NguoiDung';
 
@@ -77,6 +78,16 @@ router.post('/dang-xuat', (req, res) => {
 
 router.get('/hien-tai', (req, res) => {
   res.json(req.session.user || null);
+});
+
+// Danh sách nhân viên đang hoạt động (có request trong 5 phút gần đây) — dùng cho Bảng điều khiển
+// admin. Chỉ admin được xem (danh sách ai đang online cũng là thông tin nhạy cảm về nhân sự).
+router.get('/dang-hoat-dong', (req, res) => {
+  if (!req.session.user) return res.status(401).json({ error: 'Chưa đăng nhập' });
+  if (req.session.user.vaiTro !== 'admin') {
+    return res.status(403).json({ error: 'Chỉ admin mới được xem danh sách đang hoạt động' });
+  }
+  res.json(layDangHoatDong());
 });
 
 module.exports = router;
