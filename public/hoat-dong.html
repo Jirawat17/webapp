@@ -10,8 +10,19 @@
 <body>
 <div id="nav"></div>
 <div class="page">
-  <h2>Hoạt động của tôi</h2>
-  <p style="color:var(--color-text-muted);margin:-8px 0 20px">Nhật ký thao tác của chính bạn — quét QR, đổi trạng thái, upload ảnh — để tự đối soát cuối ngày/tuần.</p>
+  <h2 id="tieu-de-hoat-dong">Hoạt động của tôi</h2>
+  <p id="mo-ta-hoat-dong" style="color:var(--color-text-muted);margin:-8px 0 20px">Nhật ký thao tác của chính bạn — quét QR, đổi trạng thái, upload ảnh — để tự đối soát cuối ngày/tuần.</p>
+
+  <!-- Chỉ admin thấy (bổ sung 09/09/2026, theo yêu cầu người dùng — dễ theo dõi hoạt động của bất kỳ
+       ai). Gồm CẢ tài khoản admin khác, không chỉ 3 vai trò công nhân (xác nhận với người dùng). -->
+  <div class="thanh-cong-cu-danh-sach" id="khoi-chon-nguoi" style="display:none">
+    <label for="chon-nguoi-xem" style="display:flex;align-items:center;gap:8px;font-weight:600">
+      Xem hoạt động của:
+      <select id="chon-nguoi-xem" style="min-width:220px">
+        <option value="">Chính tôi (Admin)</option>
+      </select>
+    </label>
+  </div>
 
   <div class="thanh-cong-cu-danh-sach" id="thanh-chon-ky">
     <button type="button" class="btn-hanh-dong phu dang-mo" data-ky="hom_nay">Hôm nay</button>
@@ -63,6 +74,7 @@
 <script>
 let kyHienTai = 'hom_nay';
 let user; // dùng lại ở taiHoatDong() (biết vaiTro để hiện đúng nhóm chỉ tiêu công việc)
+let nguoiDangXem = ''; // rỗng = xem hoạt động của chính người đăng nhập; admin có thể đổi sang người khác
 
 const NHAN_COT_TRANG_THAI = { TRANG_THAI_XUONG: 'Trạng thái chung', TRANG_THAI_PHOI: 'Phôi', TRANG_THAI_VE_FILE: 'Vẽ file' };
 const NHAN_MOC_ANH = { mau: 'Ảnh mẫu (PNG)', mockup: 'Ảnh Mockup', ve_file: 'Ảnh file thêu', da_san_xuat: 'Ảnh đã sản xuất', dong_goi: 'Ảnh đóng gói' };
@@ -71,6 +83,21 @@ const NHAN_MOC_ANH = { mau: 'Ảnh mẫu (PNG)', mockup: 'Ảnh Mockup', ve_file
   user = await requireLoginOrRedirect();
   if (!user) return;
   renderNav(user, 'hoat-dong');
+
+  // "Xem hoạt động của bất kỳ ai" — chỉ admin. Dùng lại NHAN_VAI_TRO đã có sẵn từ api.js (KHÔNG khai
+  // báo lại — 2 thẻ <script> thường dùng chung 1 scope cho const, khai báo trùng tên là SyntaxError
+  // lúc parse, hỏng cả trang — gặp thật ở bang-dieu-khien.html 08/09/2026).
+  if (user.vaiTro === 'admin') {
+    try {
+      const dsNhanVien = await apiFetch('/users');
+      const dsChoChon = dsNhanVien.filter(u => String(u.KichHoat).toUpperCase() === 'TRUE' && u.Ten !== user.ten);
+      document.getElementById('khoi-chon-nguoi').style.display = 'flex';
+      const chon = document.getElementById('chon-nguoi-xem');
+      chon.innerHTML = '<option value="">Chính tôi (Admin)</option>' +
+        dsChoChon.map(u => `<option value="${escapeHtml(u.Ten)}">${escapeHtml(u.Ten)} (${escapeHtml(NHAN_VAI_TRO[u.VaiTro] || u.VaiTro)})</option>`).join('');
+      chon.onchange = () => { nguoiDangXem = chon.value; taiHoatDong(); };
+    } catch (e) { /* không tải được danh sách nhân viên — ẩn ô chọn, admin vẫn xem được hoạt động chính mình */ }
+  }
 
   document.querySelectorAll('#thanh-chon-ky button').forEach(btn => {
     btn.onclick = () => {
@@ -126,6 +153,7 @@ async function taiHoatDong() {
   document.getElementById('thong-ke-nhanh').textContent = 'Đang tải...';
 
   const qs = new URLSearchParams();
+  if (nguoiDangXem) qs.set('nguoiDung', nguoiDangXem);
   if (kyHienTai === 'tuy_chon') {
     const tu = document.getElementById('hd-tu-ngay').value;
     const den = document.getElementById('hd-den-ngay').value;
@@ -147,13 +175,23 @@ async function taiHoatDong() {
     return;
   }
 
+  // Tiêu đề/mô tả đổi theo đúng người đang xem (bổ sung 09/09/2026 — admin có thể xem người khác) —
+  // đọc data.nguoiXem.ten do SERVER trả về (đúng tên thật đã validate), không đọc thẳng biến
+  // nguoiDangXem ở client để tránh lệch nếu server từ chối tên gõ sai.
+  const dangXemNguoiKhac = data.nguoiXem && data.nguoiXem.ten !== user.ten;
+  document.getElementById('tieu-de-hoat-dong').textContent = dangXemNguoiKhac
+    ? `Hoạt động của ${data.nguoiXem.ten}` : 'Hoạt động của tôi';
+  document.getElementById('mo-ta-hoat-dong').textContent = dangXemNguoiKhac
+    ? `Nhật ký thao tác của ${data.nguoiXem.ten} — quét QR, đổi trạng thái, upload ảnh.`
+    : 'Nhật ký thao tác của chính bạn — quét QR, đổi trạng thái, upload ảnh — để tự đối soát cuối ngày/tuần.';
+
   document.getElementById('thong-ke-nhanh').innerHTML = `
     <div class="the-nhanh"><div class="so">${data.tongSoQuet}</div><div class="nhan">${icon('scan', {size:14})} Lượt quét thành công</div></div>
     <div class="the-nhanh"><div class="so">${data.tongSoDoiTrangThai}</div><div class="nhan">${icon('arrowRight', {size:14})} Lượt đổi trạng thái</div></div>
     <div class="the-nhanh"><div class="so">${data.tongSoUpload}</div><div class="nhan">${icon('camera', {size:14})} Ảnh đã upload</div></div>
   `;
 
-  renderChiTieuVaiTro(data.chiTieu);
+  renderChiTieuVaiTro(data.chiTieu, data.nguoiXem ? data.nguoiXem.vaiTro : user.vaiTro);
   renderDsQuet(data.quet);
   renderDsDoiTrangThai(data.doiTrangThai);
   renderDsUploadAnh(data.uploadAnh);
@@ -161,19 +199,21 @@ async function taiHoatDong() {
 
 // Chỉ tiêu công việc theo vai trò (bổ sung 08/09/2026, xem
 // docs/superpowers/specs/2026-09-08-chi-tieu-hoat-dong-theo-vai-tro-design.md) — backend luôn trả đủ
-// cả 3 nhóm, ở đây chỉ chọn đúng nhóm khớp user.vaiTro để hiện (admin không thuộc nhóm nào nên ẩn hẳn
-// khối này). Mỗi việc có 2 thẻ đi cùng nhau: số đơn + tổng số lượng.
-function renderChiTieuVaiTro(ct) {
+// cả 3 nhóm, ở đây chỉ chọn đúng nhóm khớp vaiTroXem để hiện (rỗng/admin không thuộc nhóm nào nên ẩn
+// hẳn khối này). Nhận vaiTroXem làm tham số (bổ sung 09/09/2026) thay vì luôn đọc user.vaiTro — khi
+// admin xem người khác, vaiTroXem là vai trò của NGƯỜI ĐƯỢC XEM, không phải vai trò admin. Mỗi việc
+// có 2 thẻ đi cùng nhau: số đơn + tổng số lượng.
+function renderChiTieuVaiTro(ct, vaiTroXem) {
   const khoi = document.getElementById('khoi-chi-tieu-vai-tro');
-  if (!ct || !['san_xuat', 've_file', 'nguoi_lay_phoi'].includes(user.vaiTro)) { khoi.style.display = 'none'; return; }
+  if (!ct || !['san_xuat', 've_file', 'nguoi_lay_phoi'].includes(vaiTroXem)) { khoi.style.display = 'none'; return; }
 
   const the = (so, nhan, tenIcon) => `<div class="the-nhanh"><div class="so">${so}</div><div class="nhan">${icon(tenIcon, {size:14})} ${nhan}</div></div>`;
   let html = '';
-  if (user.vaiTro === 'san_xuat') {
+  if (vaiTroXem === 'san_xuat') {
     html = the(ct.soDonDaChayMay, 'Đơn đã chạy máy', 'check') + the(ct.tongSlDaChayMay, 'Tổng SL sản phẩm đã chạy', 'check');
-  } else if (user.vaiTro === 've_file') {
+  } else if (vaiTroXem === 've_file') {
     html = the(ct.soFileDaVe, 'File đã vẽ', 'file') + the(ct.tongSlDaVe, 'Tổng SL sản phẩm đã vẽ file', 'file');
-  } else if (user.vaiTro === 'nguoi_lay_phoi') {
+  } else if (vaiTroXem === 'nguoi_lay_phoi') {
     html = the(ct.soDonDaLayPhoi, 'Đơn đã lấy phôi', 'package') + the(ct.tongSlPhoiDaLay, 'Tổng SL phôi đã lấy', 'package')
       + the(ct.soDonDaDongGoi, 'Đơn đã đóng gói', 'check') + the(ct.tongSlDaDongGoi, 'Tổng SL sản phẩm đã đóng gói', 'check');
   }
