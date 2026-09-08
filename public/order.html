@@ -42,6 +42,7 @@ function tsDep(isoStr) {
 
 let user;
 let dsSanXuatDangHoatDong = []; // chỉ admin cần, nạp 1 lần lúc vào trang (xem renderKhuVucThaoTac)
+let dsVeFileDangHoatDong = []; // chỉ admin cần, nạp 1 lần lúc vào trang (xem renderKhuVucThaoTac)
 
 (async () => {
   user = await requireLoginOrRedirect();
@@ -49,11 +50,13 @@ let dsSanXuatDangHoatDong = []; // chỉ admin cần, nạp 1 lần lúc vào tr
   renderNav(user, 'orders');
 
   // "Chỉ định người chạy máy" (bổ sung 07/09/2026, xem docs/superpowers/specs/2026-09-07-nguoi-chay-may-design.md)
-  // — CHỈ admin. /users vốn đã chỉ mở cho admin (requireRole trong routes/users.js).
+  // + "Chỉ định người vẽ file" (bổ sung 09/09/2026, cùng khuôn — route POST /orders/chi-dinh-nguoi-ve-file
+  // đã có sẵn từ trước) — CHỈ admin. /users vốn đã chỉ mở cho admin (requireRole trong routes/users.js).
   if (user.vaiTro === 'admin') {
     try {
       const dsNhanVien = await apiFetch('/users');
       dsSanXuatDangHoatDong = dsNhanVien.filter(u => u.VaiTro === 'san_xuat' && String(u.KichHoat).toUpperCase() === 'TRUE');
+      dsVeFileDangHoatDong = dsNhanVien.filter(u => u.VaiTro === 've_file' && String(u.KichHoat).toUpperCase() === 'TRUE');
     } catch (e) { /* không tải được danh sách — ô chọn sẽ hiện rỗng, không chặn tải trang */ }
   }
 
@@ -215,6 +218,15 @@ function renderKhuVucThaoTac(don) {
         </select>
         <button class="btn-hanh-dong" onclick="apDungChiDinhNguoiChayMayChiTiet(this)">${icon('check')} Chỉ định chạy máy</button>
         <p style="margin:0;font-size:0.8rem;color:var(--color-text-faint)">Chuyển đơn này sang "Đang chạy máy" và ghi nhận người được chỉ định (ghi chú "Admin chỉ định").</p>
+      </div>
+      <div class="upload-box">
+        <label for="chi-dinh-nguoi-ve-file">${icon('users', { size: 18 })} Chỉ định người vẽ file</label>
+        <select id="chi-dinh-nguoi-ve-file">
+          <option value="">Chọn người vẽ file...</option>
+          ${dsVeFileDangHoatDong.map(u => `<option value="${escapeHtml(u.Ten)}" ${u.Ten === don.NGUOI_VE_FILE ? 'selected' : ''}>${escapeHtml(u.Ten)}</option>`).join('')}
+        </select>
+        <button class="btn-hanh-dong" onclick="apDungChiDinhNguoiVeFileChiTiet(this)">${icon('check')} Chỉ định vẽ file</button>
+        <p style="margin:0;font-size:0.8rem;color:var(--color-text-faint)">Chuyển đơn này sang "Đang vẽ file" và ghi nhận người được chỉ định (ghi chú "Admin chỉ định").</p>
       </div>`;
   }
 
@@ -321,6 +333,33 @@ async function apDungChiDinhNguoiChayMayChiTiet(btn) {
       btn.innerHTML = nhanGoc;
     } else {
       await taiChiTiet(); // vẽ lại toàn bộ khu vực thao tác — không cần tự khôi phục nút cũ
+    }
+  } catch (e) {
+    alert(e.message);
+    btn.disabled = false;
+    btn.innerHTML = nhanGoc;
+  }
+}
+
+async function apDungChiDinhNguoiVeFileChiTiet(btn) {
+  const nguoiVeFile = document.getElementById('chi-dinh-nguoi-ve-file').value;
+  if (!nguoiVeFile) { alert('Hãy chọn người vẽ file muốn chỉ định'); return; }
+  if (!confirm(`Chỉ định "${nguoiVeFile}" vẽ file cho đơn này (chuyển sang "Đang vẽ file")?`)) return;
+
+  const nhanGoc = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Đang xử lý...';
+
+  try {
+    const ketQua = await apiFetch('/orders/chi-dinh-nguoi-ve-file', {
+      method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], nguoiVeFile }),
+    });
+    if (ketQua.loi && ketQua.loi.length > 0) {
+      alert('Không chỉ định được: ' + ketQua.loi[0].lyDo);
+      btn.disabled = false;
+      btn.innerHTML = nhanGoc;
+    } else {
+      await taiChiTiet();
     }
   } catch (e) {
     alert(e.message);

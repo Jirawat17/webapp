@@ -134,6 +134,13 @@
     </select>
     <button id="nut-ap-dung-chi-dinh" class="btn-hanh-dong" onclick="apDungChiDinhNguoiChayMay()">Áp dụng</button>
   </span>
+  <span id="khoi-chi-dinh-nguoi-ve-file" style="display:none">
+    <span class="thanh-hanh-dong-cach"></span>
+    <select id="nguoi-ve-file-dich">
+      <option value="">Chỉ định người vẽ file...</option>
+    </select>
+    <button id="nut-ap-dung-chi-dinh-ve-file" class="btn-hanh-dong" onclick="apDungChiDinhNguoiVeFile()">Áp dụng</button>
+  </span>
   <button class="btn-hanh-dong phu" onclick="boChonTatCaDon()">Bỏ chọn</button>
 </div>
 
@@ -233,11 +240,18 @@ let donDaChonSet = new Set();
     // (align-self:stretch) và <select> (flex:1) bên trong sẽ mất tác dụng vì không còn là con trực
     // tiếp của flex container nữa.
     document.getElementById('khoi-chi-dinh-nguoi-chay-may').style.display = 'contents';
+    document.getElementById('khoi-chi-dinh-nguoi-ve-file').style.display = 'contents';
     try {
       const dsNhanVien = await apiFetch('/users');
       const dsSanXuat = dsNhanVien.filter(u => u.VaiTro === 'san_xuat' && String(u.KichHoat).toUpperCase() === 'TRUE');
       document.getElementById('nguoi-chay-may-dich').innerHTML = '<option value="">Chỉ định người chạy máy...</option>' +
         dsSanXuat.map(u => `<option value="${escapeHtml(u.Ten)}">${escapeHtml(u.Ten)}</option>`).join('');
+      // "Chỉ định người vẽ file" — tái dùng luôn dsNhanVien vừa tải ở trên, không gọi thêm /users
+      // (đổ động, cùng khuôn "Chỉ định người chạy máy" — xem POST /orders/chi-dinh-nguoi-ve-file,
+      // route đã có sẵn từ trước, dùng chung cho "Đơn của tôi (Vẽ file)").
+      const dsVeFile = dsNhanVien.filter(u => u.VaiTro === 've_file' && String(u.KichHoat).toUpperCase() === 'TRUE');
+      document.getElementById('nguoi-ve-file-dich').innerHTML = '<option value="">Chỉ định người vẽ file...</option>' +
+        dsVeFile.map(u => `<option value="${escapeHtml(u.Ten)}">${escapeHtml(u.Ten)}</option>`).join('');
     } catch (e) { /* không tải được danh sách nhân viên — ô chọn giữ nguyên rỗng, không chặn tải trang */ }
   }
 
@@ -559,6 +573,50 @@ async function apDungChiDinhNguoiChayMay() {
   nutApDung.disabled = false;
   nutApDung.textContent = 'Áp dụng';
   if (ketQua.daHuy) ketQua.thanhCong.forEach(sttKey => donDaChonSet.delete(sttKey));
+  else donDaChonSet.clear();
+  await taiDon();
+}
+
+// Admin CHỈ ĐỊNH 1 người vẽ file cho toàn bộ đơn đang chọn — chuyển thẳng sang "Đang vẽ file" (không
+// cần đơn đang ở trạng thái nào trước đó, cùng triết lý "chọn tự do" như apDungChiDinhNguoiChayMay()
+// ở trên). Ghi NGUOI_VE_FILE = người được chọn + GHI_CHU_VE_FILE = "Admin chỉ định" (xem
+// routes/orders.js POST /chi-dinh-nguoi-ve-file, route đã có sẵn từ trước).
+async function apDungChiDinhNguoiVeFile() {
+  const nguoiVeFile = document.getElementById('nguoi-ve-file-dich').value;
+  if (!nguoiVeFile) { alert('Hãy chọn người vẽ file muốn chỉ định'); return; }
+
+  const soLuong = donDaChonSet.size;
+  if (!confirm(`Chỉ định "${nguoiVeFile}" vẽ file cho ${soLuong} đơn đã chọn (chuyển sang "Đang vẽ file")?`)) return;
+
+  const nutApDungVeFile = document.getElementById('nut-ap-dung-chi-dinh-ve-file');
+  nutApDungVeFile.disabled = true;
+  nutApDungVeFile.textContent = 'Đang xử lý...';
+
+  let daHuyVeFile = false;
+  const danhSachVeFile = Array.from(donDaChonSet);
+  const thanhTienDoVeFile = taoThanhTienDo(nutApDungVeFile, { onHuy: () => { daHuyVeFile = true; } });
+  thanhTienDoVeFile.capNhat(0, danhSachVeFile.length);
+
+  const ketQuaVeFile = await chayHangLoatCoTienDo(
+    danhSachVeFile,
+    sttKey => apiFetch('/orders/chi-dinh-nguoi-ve-file', {
+      method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], nguoiVeFile }),
+    }),
+    { onTienDo: (hienTai, tong) => thanhTienDoVeFile.capNhat(hienTai, tong), kiemTraHuy: () => daHuyVeFile }
+  );
+  thanhTienDoVeFile.xoa();
+
+  let thongBaoVeFile = `Đã chỉ định "${nguoiVeFile}" vẽ file cho ${ketQuaVeFile.thanhCong.length}/${soLuong} đơn.`;
+  if (ketQuaVeFile.daHuy) thongBaoVeFile += `\n\nĐã HỦY giữa chừng — các đơn còn lại vẫn đang được chọn, bấm lại nếu muốn tiếp tục.`;
+  if (ketQuaVeFile.loi.length > 0) {
+    thongBaoVeFile += `\n\nKhông chỉ định được ${ketQuaVeFile.loi.length} đơn:\n` +
+      ketQuaVeFile.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
+  }
+  alert(thongBaoVeFile);
+
+  nutApDungVeFile.disabled = false;
+  nutApDungVeFile.textContent = 'Áp dụng';
+  if (ketQuaVeFile.daHuy) ketQuaVeFile.thanhCong.forEach(sttKey => donDaChonSet.delete(sttKey));
   else donDaChonSet.clear();
   await taiDon();
 }
