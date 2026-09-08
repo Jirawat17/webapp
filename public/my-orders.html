@@ -18,6 +18,13 @@
   <div id="thanh-hanh-dong-san-sang" class="thanh-hanh-dong-hang-loat" style="display:none">
     <span>Đã chọn <strong id="so-luong-da-chon-san-sang">0</strong> đơn</span>
     <button id="nut-nhan-chay-may" class="btn-hanh-dong" onclick="apDungNhanChayMay()">Chuyển các đơn đã chọn từ ĐÃ SẴN SÀNG CHẠY MÁY sang Đang chạy máy</button>
+    <span id="khoi-chi-dinh-nguoi-chay-may-san-sang" style="display:none">
+      <span class="thanh-hanh-dong-cach"></span>
+      <select id="nguoi-chay-may-dich-san-sang">
+        <option value="">Chỉ định người chạy máy...</option>
+      </select>
+      <button id="nut-ap-dung-chi-dinh-san-sang" class="btn-hanh-dong" onclick="apDungChiDinhNguoiChayMaySanSang()">Áp dụng</button>
+    </span>
     <button type="button" class="btn-hanh-dong phu" onclick="boChonTatCaDonSanSang()">Bỏ chọn</button>
   </div>
   <label class="chon-tat-ca-hang">
@@ -87,6 +94,20 @@ let donSanSangChonSet = new Set();
   if (user.vaiTro === 'admin') {
     document.getElementById('loc-nguoi-van-hanh-wrap').style.display = '';
     document.getElementById('loc-nguoi-van-hanh').onchange = () => taiDon();
+  }
+
+  // "Chỉ định người chạy máy" ở mục "Đơn sẵn sàng chạy máy" — CHỈ admin (xem
+  // docs/superpowers/specs/2026-09-08-admin-chi-dinh-tai-san-sang-design.md). display:contents (không
+  // phải '') vì khối này nằm trong .thanh-hanh-dong-hang-loat (flex container) — dùng '' sẽ làm mất
+  // flex:1/align-self:stretch của các phần tử con (lỗi đã gặp ở orders.html trước đây).
+  if (user.vaiTro === 'admin') {
+    document.getElementById('khoi-chi-dinh-nguoi-chay-may-san-sang').style.display = 'contents';
+    try {
+      const dsNhanVien = await apiFetch('/users');
+      const dsSanXuat = dsNhanVien.filter(u => u.VaiTro === 'san_xuat' && String(u.KichHoat).toUpperCase() === 'TRUE');
+      document.getElementById('nguoi-chay-may-dich-san-sang').innerHTML = '<option value="">Chỉ định người chạy máy...</option>' +
+        dsSanXuat.map(u => `<option value="${escapeHtml(u.Ten)}">${escapeHtml(u.Ten)}</option>`).join('');
+    } catch (e) { /* không tải được danh sách nhân viên — ô chọn giữ nguyên rỗng, không chặn tải trang */ }
   }
 
   document.getElementById('loc-kh').oninput = debounce(() => taiDon(), 400);
@@ -198,7 +219,7 @@ async function apDungNhanChayMay() {
 
   const nut = document.getElementById('nut-nhan-chay-may');
   const nhanGoc = nut.innerHTML;
-  document.querySelectorAll('#thanh-hanh-dong-san-sang button').forEach(b => b.disabled = true);
+  document.querySelectorAll('#thanh-hanh-dong-san-sang button, #thanh-hanh-dong-san-sang select').forEach(el => el.disabled = true);
   nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Đang xử lý...';
 
   let daHuy = false;
@@ -223,13 +244,57 @@ async function apDungNhanChayMay() {
   }
   alert(thongBao);
 
-  document.querySelectorAll('#thanh-hanh-dong-san-sang button').forEach(b => b.disabled = false);
+  document.querySelectorAll('#thanh-hanh-dong-san-sang button, #thanh-hanh-dong-san-sang select').forEach(el => el.disabled = false);
   nut.innerHTML = nhanGoc;
   if (ketQua.daHuy) ketQua.thanhCong.forEach(sttKey => donSanSangChonSet.delete(sttKey));
   else donSanSangChonSet.clear();
 
   await taiDonSanSang();
   await taiDon(); // đơn vừa chuyển có thể giờ xuất hiện ở "Đang chạy máy của tôi" bên dưới
+}
+
+// Admin CHỈ ĐỊNH 1 người sản xuất chạy máy cho các đơn "sẵn sàng" đã chọn — cùng route/hành vi với
+// khối chỉ định ở orders.html (xem docs/superpowers/specs/2026-09-08-admin-chi-dinh-tai-san-sang-design.md).
+async function apDungChiDinhNguoiChayMaySanSang() {
+  const nguoiSanXuat = document.getElementById('nguoi-chay-may-dich-san-sang').value;
+  if (!nguoiSanXuat) { alert('Hãy chọn người sản xuất muốn chỉ định'); return; }
+
+  const soLuong = donSanSangChonSet.size;
+  if (!confirm(`Chỉ định "${nguoiSanXuat}" chạy máy cho ${soLuong} đơn đã chọn (chuyển sang "Đang chạy máy")?`)) return;
+
+  document.querySelectorAll('#thanh-hanh-dong-san-sang button, #thanh-hanh-dong-san-sang select').forEach(el => el.disabled = true);
+  const nutApDung = document.getElementById('nut-ap-dung-chi-dinh-san-sang');
+  nutApDung.textContent = 'Đang xử lý...';
+
+  let daHuy = false;
+  const danhSach = Array.from(donSanSangChonSet);
+  const thanhTienDo = taoThanhTienDo(nutApDung, { onHuy: () => { daHuy = true; } });
+  thanhTienDo.capNhat(0, danhSach.length);
+
+  const ketQua = await chayHangLoatCoTienDo(
+    danhSach,
+    sttKey => apiFetch('/orders/chi-dinh-nguoi-chay-may', {
+      method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], nguoiSanXuat }),
+    }),
+    { onTienDo: (hienTai, tong) => thanhTienDo.capNhat(hienTai, tong), kiemTraHuy: () => daHuy }
+  );
+  thanhTienDo.xoa();
+
+  let thongBao = `Đã chỉ định "${nguoiSanXuat}" chạy máy cho ${ketQua.thanhCong.length}/${soLuong} đơn.`;
+  if (ketQua.daHuy) thongBao += `\n\nĐã HỦY giữa chừng — các đơn còn lại vẫn đang được chọn, bấm lại nếu muốn tiếp tục.`;
+  if (ketQua.loi.length > 0) {
+    thongBao += `\n\nKhông chỉ định được ${ketQua.loi.length} đơn:\n` +
+      ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
+  }
+  alert(thongBao);
+
+  document.querySelectorAll('#thanh-hanh-dong-san-sang button, #thanh-hanh-dong-san-sang select').forEach(el => el.disabled = false);
+  nutApDung.textContent = 'Áp dụng';
+  if (ketQua.daHuy) ketQua.thanhCong.forEach(sttKey => donSanSangChonSet.delete(sttKey));
+  else donSanSangChonSet.clear();
+
+  await taiDonSanSang();
+  await taiDon();
 }
 
 function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
