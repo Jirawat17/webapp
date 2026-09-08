@@ -231,7 +231,7 @@ function renderDsQuet(list) {
   el.innerHTML = list.map(x => `
     <div class="timeline-item">
       <div class="timeline-info">
-        <strong>${escapeHtml(x.sttKey)}</strong>
+        <strong><a href="/order.html?stt=${encodeURIComponent(x.sttKey)}">${escapeHtml(x.sttKey)}</a></strong>
         <div style="font-size:0.85rem;color:var(--color-text-muted);margin-top:2px">
           ${escapeHtml(x.kichBan || NHAN_COT_TRANG_THAI[x.cot] || x.cot)}${x.tu ? `: ${escapeHtml(x.tu)} → ${escapeHtml(x.sang)}` : (x.sang ? ` → ${escapeHtml(x.sang)}` : '')}
         </div>
@@ -246,7 +246,7 @@ function renderDsDoiTrangThai(list) {
   el.innerHTML = list.map(x => `
     <div class="timeline-item">
       <div class="timeline-info">
-        <strong>${escapeHtml(x.sttKey)}</strong>
+        <strong><a href="/order.html?stt=${encodeURIComponent(x.sttKey)}">${escapeHtml(x.sttKey)}</a></strong>
         <div style="font-size:0.85rem;color:var(--color-text-muted);margin-top:2px">
           ${escapeHtml(NHAN_COT_TRANG_THAI[x.cot] || x.cot)} (${escapeHtml(x.nguon)}): ${x.tu ? `${escapeHtml(x.tu)} → ` : ''}${escapeHtml(x.sang)}
         </div>
@@ -261,7 +261,7 @@ function renderDsUploadAnh(list) {
   el.innerHTML = list.map(x => `
     <div class="timeline-item">
       <div class="timeline-info">
-        <strong>${escapeHtml(x.sttKey)}</strong>
+        <strong><a href="/order.html?stt=${encodeURIComponent(x.sttKey)}">${escapeHtml(x.sttKey)}</a></strong>
         <div style="font-size:0.85rem;color:var(--color-text-muted);margin-top:2px">
           ${escapeHtml(NHAN_MOC_ANH[x.moc] || x.moc)}${x.tuDongChuyenSang ? ` — tự động chuyển đơn sang "${escapeHtml(x.tuDongChuyenSang)}"` : ''}
         </div>
