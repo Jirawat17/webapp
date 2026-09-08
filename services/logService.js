@@ -175,4 +175,44 @@ async function layHoatDongCuaToi({ nguoiDung, tuNgay, denNgay }) {
   };
 }
 
-module.exports = { ghiLog, layLichSuTheoDon, ghiNhatKyQuetHangLoat, layHoatDongGanDay, layLichSuChuyenSangTrangThai, layHoatDongCuaToi };
+// Đếm số ĐƠN DUY NHẤT khớp điều kiện trong 1 mảng log (Set theo STT_Key) — tránh đếm trùng 1 đơn
+// nhiều lần nếu có nhiều lượt ghi log cho cùng đơn trong cùng khoảng thời gian (vd vẽ lại file sau
+// khi bị lỗi sản xuất cần làm lại).
+function demSoDonDuyNhat(list, dieuKien) {
+  return new Set(list.filter(dieuKien).map(x => x.sttKey)).size;
+}
+
+function tongSoLuongTheoDon(list, dieuKien, slTheoStt) {
+  const cacStt = new Set(list.filter(dieuKien).map(x => x.sttKey));
+  return [...cacStt].reduce((tong, stt) => tong + (slTheoStt.get(stt) || 0), 0);
+}
+
+// Chỉ tiêu công việc theo vai trò (bổ sung 08/09/2026, xem
+// docs/superpowers/specs/2026-09-08-chi-tieu-hoat-dong-theo-vai-tro-design.md) — dùng chung cho CẢ
+// "Hoạt động của tôi" (routes/hoatDong.js, 1 người) LẪN báo cáo "Hiệu suất theo người" (routes/reports.js,
+// nhiều người — xem docs/superpowers/specs/2026-09-08-hieu-suat-theo-nguoi-design.md). Nhận `hoatDong`
+// đúng hình dạng trả về từ layHoatDongCuaToi() (hoặc bucket tương đương tự dựng cho từng người ở
+// reports.js) + `slTheoStt` (Map STT_Key -> SO_LUONG, bên gọi tự đọc orderService.getAll() rồi truyền
+// vào) — KHÔNG tự đọc orderService ở đây để logService.js không phụ thuộc ngược orderService.
+function tinhChiTieuCongViec(hoatDong, slTheoStt) {
+  const laDaSanXuat = x => x.moc === 'da_san_xuat';
+  const laDongGoi = x => x.moc === 'dong_goi';
+  const laDaLayPhoi = x => x.cot === 'TRANG_THAI_PHOI' && x.sang === 'Đã lấy phôi';
+  const laDaVeFile = x => x.cot === 'TRANG_THAI_VE_FILE' && x.sang === 'Đã vẽ file';
+
+  return {
+    soDonDaChayMay: demSoDonDuyNhat(hoatDong.uploadAnh, laDaSanXuat),
+    tongSlDaChayMay: tongSoLuongTheoDon(hoatDong.uploadAnh, laDaSanXuat, slTheoStt),
+    soFileDaVe: demSoDonDuyNhat(hoatDong.doiTrangThai, laDaVeFile),
+    tongSlDaVe: tongSoLuongTheoDon(hoatDong.doiTrangThai, laDaVeFile, slTheoStt),
+    soDonDaLayPhoi: demSoDonDuyNhat(hoatDong.doiTrangThai, laDaLayPhoi),
+    tongSlPhoiDaLay: hoatDong.tongSoLuongPhoiDaLay || 0,
+    soDonDaDongGoi: demSoDonDuyNhat(hoatDong.uploadAnh, laDongGoi),
+    tongSlDaDongGoi: tongSoLuongTheoDon(hoatDong.uploadAnh, laDongGoi, slTheoStt),
+  };
+}
+
+module.exports = {
+  ghiLog, layLichSuTheoDon, ghiNhatKyQuetHangLoat, layHoatDongGanDay, layLichSuChuyenSangTrangThai,
+  layHoatDongCuaToi, tinhChiTieuCongViec, trongKhoangThoiGian,
+};

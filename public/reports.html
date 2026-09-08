@@ -70,6 +70,29 @@
   </form>
 
   <div id="khu-chay-may" style="margin-top:20px"></div>
+
+  <hr style="margin:32px 0; border:none; border-top:1px solid var(--color-border)">
+
+  <div id="khoi-hieu-suat" style="display:none">
+    <h2>Hiệu suất theo người</h2>
+    <p>Chỉ tiêu công việc của từng người sản xuất / vẽ file / lấy phôi trong khoảng thời gian đã chọn — gồm cả tài khoản chưa có hoạt động nào (hiện 0), không bị thiếu khỏi danh sách. Chỉ admin xem được mục này.</p>
+
+    <form id="form-hieu-suat" class="bao-cao-form">
+      <div class="truong">
+        <label for="hieusuat-tu-ngay">Từ ngày</label>
+        <input type="date" id="hieusuat-tu-ngay">
+      </div>
+      <div class="truong">
+        <label for="hieusuat-den-ngay">Đến ngày</label>
+        <input type="date" id="hieusuat-den-ngay">
+      </div>
+      <div class="nut-xuat">
+        <button type="button" class="btn-hanh-dong phu" id="btn-xem-hieu-suat"></button>
+      </div>
+    </form>
+
+    <div id="khu-hieu-suat" style="margin-top:20px"></div>
+  </div>
 </div>
 
 <script src="/js/icons.js?v=79"></script>
@@ -105,6 +128,21 @@
   document.getElementById('chaymay-tu-ngay').addEventListener('change', xemThoiGianChayMay);
   document.getElementById('chaymay-den-ngay').addEventListener('change', xemThoiGianChayMay);
   await xemThoiGianChayMay();
+
+  // "Hiệu suất theo người" — CHỈ admin (xem docs/superpowers/specs/2026-09-08-hieu-suat-theo-nguoi-design.md).
+  // Ẩn hẳn khối này cho vai trò khác chỉ để gọn giao diện — an toàn thật sự nằm ở chặn 403 phía server
+  // (routes/reports.js), không phải ở việc ẩn UI này.
+  if (user.vaiTro === 'admin') {
+    document.getElementById('khoi-hieu-suat').style.display = '';
+    document.getElementById('btn-xem-hieu-suat').innerHTML = icon('chart') + ' Xem hiệu suất';
+    const homNay30c = new Date(); homNay30c.setDate(homNay30c.getDate() - 30);
+    document.getElementById('hieusuat-tu-ngay').value = homNay30c.toISOString().slice(0, 10);
+    document.getElementById('hieusuat-den-ngay').value = ngayHomNayYYYYMMDD();
+    document.getElementById('btn-xem-hieu-suat').onclick = xemHieuSuatTheoNguoi;
+    document.getElementById('hieusuat-tu-ngay').addEventListener('change', xemHieuSuatTheoNguoi);
+    document.getElementById('hieusuat-den-ngay').addEventListener('change', xemHieuSuatTheoNguoi);
+    await xemHieuSuatTheoNguoi();
+  }
 })();
 
 function ngayHomNayYYYYMMDD() {
@@ -265,6 +303,64 @@ async function xemThoiGianChayMay() {
           </tr>`).join('')}</tbody>
         </table>
       </div>
+    </div>`;
+}
+
+// Bảng hiệu suất theo người, dùng chung cho cả 3 vai trò (mỗi vai trò 1 bộ cột khác nhau, xem
+// cacCot) — khác bangNhomChayMay() ở chỗ dữ liệu là MẢNG người (không phải object gộp nhóm), và số
+// cột thay đổi theo vai trò (nguoi_lay_phoi có 4 cột vì đảm nhận cả lấy phôi lẫn đóng gói).
+function bangHieuSuat(tieuDe, list, tenCotDau, cacCot) {
+  if (list.length === 0) {
+    return `<div class="xem-truoc-bang"><h3>${escapeHtml(tieuDe)}</h3><p style="color:var(--color-text-faint);margin:0">Không có tài khoản nào đang hoạt động.</p></div>`;
+  }
+  return `
+    <div class="xem-truoc-bang">
+      <h3>${escapeHtml(tieuDe)}</h3>
+      <div class="bang-cuon-ngang">
+        <table class="bang-xem-truoc">
+          <thead><tr><th>${escapeHtml(tenCotDau)}</th>${cacCot.map(c => `<th>${escapeHtml(c.nhan)}</th>`).join('')}</tr></thead>
+          <tbody>${list.map(nguoi => `<tr>
+            <td>${escapeHtml(nguoi.ten)}</td>${cacCot.map(c => `<td>${nguoi[c.key]}</td>`).join('')}
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+async function xemHieuSuatTheoNguoi() {
+  const khu = document.getElementById('khu-hieu-suat');
+  khu.innerHTML = spinnerInline('Đang tải thống kê...');
+
+  const qs = new URLSearchParams();
+  const tuNgay = document.getElementById('hieusuat-tu-ngay').value;
+  const denNgay = document.getElementById('hieusuat-den-ngay').value;
+  if (tuNgay) qs.set('tuNgay', tuNgay);
+  if (denNgay) qs.set('denNgay', denNgay);
+
+  let kq;
+  try {
+    kq = await apiFetch('/reports/hieu-suat-theo-nguoi?' + qs.toString());
+  } catch (e) {
+    khu.innerHTML = `<p>${icon('alert')} ${escapeHtml(e.message)}</p>`;
+    return;
+  }
+
+  khu.innerHTML = `
+    <div class="luoi-thong-ke-loi">
+      ${bangHieuSuat('Sản xuất', kq.san_xuat, 'Người sản xuất', [
+        { key: 'soDonDaChayMay', nhan: 'Đơn đã chạy máy' },
+        { key: 'tongSlDaChayMay', nhan: 'Tổng SL đã chạy máy' },
+      ])}
+      ${bangHieuSuat('Vẽ file', kq.ve_file, 'Người vẽ file', [
+        { key: 'soFileDaVe', nhan: 'File đã vẽ' },
+        { key: 'tongSlDaVe', nhan: 'Tổng SL đã vẽ file' },
+      ])}
+      ${bangHieuSuat('Lấy phôi / Đóng gói', kq.nguoi_lay_phoi, 'Người lấy phôi', [
+        { key: 'soDonDaLayPhoi', nhan: 'Đơn đã lấy phôi' },
+        { key: 'tongSlPhoiDaLay', nhan: 'Tổng SL phôi đã lấy' },
+        { key: 'soDonDaDongGoi', nhan: 'Đơn đã đóng gói' },
+        { key: 'tongSlDaDongGoi', nhan: 'Tổng SL đã đóng gói' },
+      ])}
     </div>`;
 }
 </script>

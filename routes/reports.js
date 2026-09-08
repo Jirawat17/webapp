@@ -6,7 +6,7 @@ const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const orderService = require('../services/orderService');
 const { layDanhSachKhachHang, layBanDoTenKhachHang } = require('../services/khachHangService');
-const { layLichSuChuyenSangTrangThai } = require('../services/logService');
+const { layLichSuChuyenSangTrangThai, tinhChiTieuCongViec, trongKhoangThoiGian } = require('../services/logService');
 const { readTabCached } = require('../services/sheetsService');
 const { parseNgay, dinhDangNgay, dinhDangNgayGioVN, dinhDangNgayGioNgan } = require('../services/dateUtils');
 const { taoQRCodeBuffer, KICH_THUOC_QR_CHUAN_DPI_MM } = require('../services/qrService');
@@ -403,6 +403,77 @@ router.get('/thoi-gian-chay-may', async (req, res) => {
     theoTuan: gomNhom(theoTuan),
     chiTiet: chiTiet.slice(0, 200),
   });
+});
+
+// ============================================================
+// "HIỆU SUẤT THEO NGƯỜI" (bổ sung 08/09/2026, CHỈ ADMIN — xem
+// docs/superpowers/specs/2026-09-08-hieu-suat-theo-nguoi-design.md) — bản "Hoạt động của tôi" (1
+// người) mở rộng cho MỌI người thuộc 3 vai trò san_xuat/ve_file/nguoi_lay_phoi cùng lúc. Chặn THẬT ở
+// server (không chỉ ẩn UI) vì đây là dữ liệu hiệu suất cá nhân từng nhân viên — khác các báo cáo khác
+// trên trang này vốn mở cho mọi vai trò đăng nhập.
+// ============================================================
+const VAI_TRO_HIEU_SUAT = ['san_xuat', 've_file', 'nguoi_lay_phoi'];
+const HANH_DONG_QUET_THANH_CONG_HS = ['QUET_KICH_BAN', 'QUET_KICH_BAN_HANG_LOAT'];
+const COT_TRANG_THAI_CUA_DON_HS = ['TRANG_THAI_XUONG', 'TRANG_THAI_PHOI', 'TRANG_THAI_VE_FILE'];
+
+router.get('/hieu-suat-theo-nguoi', async (req, res) => {
+  if (req.session.user.vaiTro !== 'admin') {
+    return res.status(403).json({ error: 'Chỉ admin mới được xem báo cáo hiệu suất theo người' });
+  }
+
+  const { tuNgay, denNgay } = req.query;
+
+  const [{ rows: logRows }, { rows: donRows }, { rows: nhanVienRows }] = await Promise.all([
+    readTabCached('LichSuHoatDong', 5000),
+    orderService.getAll(),
+    readTabCached('NguoiDung', 30000),
+  ]);
+
+  const slTheoStt = new Map(donRows.map(r => [r.STT_Key, Number(r.SO_LUONG) || 0]));
+
+  // Khởi tạo SẴN 1 giỏ rỗng cho MỌI tài khoản đang hoạt động thuộc 3 vai trò liên quan — kể cả người
+  // CHƯA có hoạt động nào trong kỳ, để vẫn hiện đúng 0 thay vì thiếu hẳn khỏi báo cáo.
+  const theoNguoi = new Map(); // ten -> { vaiTro, doiTrangThai: [], uploadAnh: [], tongSoLuongPhoiDaLay }
+  nhanVienRows
+    .filter(r => VAI_TRO_HIEU_SUAT.includes(r.VaiTro) && String(r.KichHoat).toUpperCase() === 'TRUE')
+    .forEach(r => theoNguoi.set(r.Ten, { vaiTro: r.VaiTro, doiTrangThai: [], uploadAnh: [], tongSoLuongPhoiDaLay: 0 }));
+
+  // Quét MỘT LƯỢT DUY NHẤT toàn bộ log, phân vào đúng giỏ của người ghi ra dòng đó — tránh đọc lại
+  // tab LichSuHoatDong riêng cho từng người (N lượt đọc nếu làm vậy, lãng phí). Cùng cách nhận diện
+  // hành động như layHoatDongCuaToi() (services/logService.js), rút gọn vì chỉ cần đủ trường cho
+  // tinhChiTieuCongViec() dùng, không cần đủ chi tiết hiển thị timeline.
+  for (const r of logRows) {
+    const bucket = theoNguoi.get(r.NguoiDung);
+    if (!bucket || !trongKhoangThoiGian(r.ThoiGian, tuNgay, denNgay)) continue;
+
+    let chiTiet;
+    try { chiTiet = JSON.parse(r.ChiTiet); } catch (e) { chiTiet = {}; }
+    if (!chiTiet || typeof chiTiet !== 'object') chiTiet = {};
+
+    if (HANH_DONG_QUET_THANH_CONG_HS.includes(r.HanhDong) || r.HanhDong === 'CHUYEN_TRANG_THAI_HANG_LOAT') {
+      bucket.doiTrangThai.push({ sttKey: r.STT_Key, cot: chiTiet.cot || 'TRANG_THAI_XUONG', sang: chiTiet.sang || '' });
+    } else if (r.HanhDong === 'CAP_NHAT_DON') {
+      COT_TRANG_THAI_CUA_DON_HS.filter(cot => chiTiet[cot] !== undefined).forEach(cot => {
+        bucket.doiTrangThai.push({ sttKey: r.STT_Key, cot, sang: chiTiet[cot] });
+      });
+    } else if (r.HanhDong === 'UPLOAD_ANH') {
+      bucket.uploadAnh.push({ sttKey: r.STT_Key, moc: chiTiet.moc || '' });
+    } else if (r.HanhDong === 'TRU_KHO_PHOI_TU_DON') {
+      bucket.tongSoLuongPhoiDaLay += Number(chiTiet.soLuong) || 0;
+    }
+  }
+
+  const ketQua = { san_xuat: [], ve_file: [], nguoi_lay_phoi: [] };
+  for (const [ten, bucket] of theoNguoi) {
+    ketQua[bucket.vaiTro].push({ ten, ...tinhChiTieuCongViec(bucket, slTheoStt) });
+  }
+
+  // Sắp mỗi nhóm theo đúng chỉ tiêu đếm CHÍNH của vai trò đó, giảm dần — người làm nhiều nhất lên đầu
+  ketQua.san_xuat.sort((a, b) => b.soDonDaChayMay - a.soDonDaChayMay);
+  ketQua.ve_file.sort((a, b) => b.soFileDaVe - a.soFileDaVe);
+  ketQua.nguoi_lay_phoi.sort((a, b) => (b.soDonDaLayPhoi + b.soDonDaDongGoi) - (a.soDonDaLayPhoi + a.soDonDaDongGoi));
+
+  res.json(ketQua);
 });
 
 // ============================================================
