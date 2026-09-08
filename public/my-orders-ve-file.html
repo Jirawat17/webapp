@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Đơn của tôi (Vẽ file) — Xưởng Thêu</title>
+<link rel="stylesheet" href="/css/style.css?v=79">
+<script src="/js/theme.js?v=79"></script>
+</head>
+<body>
+<div id="nav"></div>
+<div class="page">
+  <h2>Đơn của tôi (Vẽ file)</h2>
+
+  <h3>Đơn cần vẽ file</h3>
+
+  <div class="thanh-cong-cu-danh-sach">
+    <button type="button" class="btn-hanh-dong phu" id="btn-mo-loc-cv" onclick="batTatPanel('cv','loc')"></button>
+    <button type="button" class="btn-hanh-dong phu" id="btn-mo-sap-xep-cv" onclick="batTatPanel('cv','sap-xep')"></button>
+  </div>
+
+  <div id="panel-loc-cv" class="panel-dieu-khien" style="display:none">
+    <div class="inline-form">
+      <div class="truong">
+        <label for="loc-trang-thai-cv">Trạng thái</label>
+        <select id="loc-trang-thai-cv"><option value="">Tất cả trạng thái</option></select>
+      </div>
+      <div class="truong">
+        <label for="loc-phoi-cv">Phôi</label>
+        <select id="loc-phoi-cv">
+          <option value="">Tất cả (phôi)</option>
+          <option value="Chưa lấy phôi">Chưa lấy phôi</option>
+          <option value="Đã lấy phôi">Đã lấy phôi</option>
+        </select>
+      </div>
+      <div class="truong truong-rong">
+        <label for="loc-kh-cv">Tìm theo tên đơn / mã KH</label>
+        <input id="loc-kh-cv" placeholder="STT_Key hoặc mã khách hàng">
+      </div>
+      <div class="truong truong-ngay">
+        <label for="loc-tu-ngay-cv">Từ ngày</label>
+        <input type="date" id="loc-tu-ngay-cv">
+      </div>
+      <div class="truong truong-ngay">
+        <label for="loc-den-ngay-cv">Đến ngày</label>
+        <input type="date" id="loc-den-ngay-cv">
+      </div>
+      <div class="truong">
+        <label for="loc-canh-bao-cv">Mức cảnh báo</label>
+        <select id="loc-canh-bao-cv">
+          <option value="">Tất cả mức cảnh báo</option>
+          <option value="VANG">Vàng · 3 ngày</option>
+          <option value="CAM">Cam · 5 ngày</option>
+          <option value="DO">Đỏ · 7 ngày</option>
+        </select>
+      </div>
+      <label class="chon-tat-ca-hang truong-hang-loat" for="loc-hang-loat-cv">
+        <input type="checkbox" id="loc-hang-loat-cv">
+        Chỉ đơn hàng loạt
+      </label>
+      <div class="truong">
+        <label for="loc-loai-cv">Loại</label>
+        <select id="loc-loai-cv"><option value="">Tất cả loại</option></select>
+      </div>
+      <div class="truong">
+        <label for="loc-kich-thuoc-cv">Kích thước</label>
+        <select id="loc-kich-thuoc-cv"><option value="">Tất cả kích thước</option></select>
+      </div>
+      <div class="truong">
+        <label for="loc-mau-sac-cv">Màu sắc</label>
+        <select id="loc-mau-sac-cv"><option value="">Tất cả màu sắc</option></select>
+      </div>
+      <div class="truong">
+        <label for="loc-hang-van-chuyen-cv">Hãng vận chuyển</label>
+        <select id="loc-hang-van-chuyen-cv"><option value="">Tất cả hãng vận chuyển</option></select>
+      </div>
+      <button type="button" class="btn-hanh-dong phu" onclick="xoaTatCaLocCv()">Xoá bộ lọc</button>
+    </div>
+  </div>
+
+  <div id="panel-sap-xep-cv" class="panel-dieu-khien" style="display:none">
+    <div class="inline-form">
+      <div class="truong">
+        <label for="sap-xep-cv">Sắp xếp theo</label>
+        <select id="sap-xep-cv">
+          <option value="ngay_cu_nhat">Ngày lên đơn — cũ nhất trước (mặc định)</option>
+          <option value="">Ngày lên đơn — mới nhất trước</option>
+          <option value="ma_don">Mã đơn (STT_Key) — A đến Z</option>
+          <option value="ma_don_desc">Mã đơn (STT_Key) — Z đến A</option>
+          <option value="canh_bao">Mức cảnh báo — khẩn cấp nhất trước</option>
+          <option value="so_luong">Số lượng — nhiều nhất trước</option>
+          <option value="khach_hang">Tên khách hàng — A đến Z</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div id="thanh-hanh-dong-can-ve" class="thanh-hanh-dong-hang-loat" style="display:none">
+    <span>Đã chọn <strong id="so-luong-da-chon-can-ve">0</strong> đơn</span>
+    <button id="nut-nhan-ve-file" class="btn-hanh-dong" onclick="apDungNhanVeFile()">Nhận vẽ file các đơn đã chọn</button>
+    <span id="khoi-chi-dinh-nguoi-ve-file" style="display:none">
+      <span class="thanh-hanh-dong-cach"></span>
+      <select id="nguoi-ve-file-dich">
+        <option value="">Chỉ định người vẽ file...</option>
+      </select>
+      <button id="nut-ap-dung-chi-dinh-ve-file" class="btn-hanh-dong" onclick="apDungChiDinhNguoiVeFile()">Áp dụng</button>
+    </span>
+    <button type="button" class="btn-hanh-dong phu" onclick="boChonTatCaDonCanVe()">Bỏ chọn</button>
+  </div>
+  <label class="chon-tat-ca-hang">
+    <input type="checkbox" id="chon-tat-ca-can-ve" onchange="chonTatCaCanVe(this.checked)">
+    Chọn tất cả đơn đang hiển thị
+  </label>
+
+  <div id="danh-sach-can-ve" class="order-list"></div>
+
+  <h3 style="margin-top:32px">Đơn vẽ file của tôi</h3>
+
+  <div class="thanh-cong-cu-danh-sach">
+    <button type="button" class="btn-hanh-dong phu" id="btn-mo-loc-tv" onclick="batTatPanel('tv','loc')"></button>
+    <button type="button" class="btn-hanh-dong phu" id="btn-mo-sap-xep-tv" onclick="batTatPanel('tv','sap-xep')"></button>
+  </div>
+
+  <div id="panel-loc-tv" class="panel-dieu-khien" style="display:none">
+    <div class="inline-form">
+      <div class="truong">
+        <label for="loc-trang-thai-tv">Trạng thái</label>
+        <select id="loc-trang-thai-tv"><option value="">Tất cả trạng thái</option></select>
+      </div>
+      <div class="truong">
+        <label for="loc-phoi-tv">Phôi</label>
+        <select id="loc-phoi-tv">
+          <option value="">Tất cả (phôi)</option>
+          <option value="Chưa lấy phôi">Chưa lấy phôi</option>
+          <option value="Đã lấy phôi">Đã lấy phôi</option>
+        </select>
+      </div>
+      <div class="truong truong-rong">
+        <label for="loc-kh-tv">Tìm theo tên đơn / mã KH</label>
+        <input id="loc-kh-tv" placeholder="STT_Key hoặc mã khách hàng">
+      </div>
+      <div class="truong truong-ngay">
+        <label for="loc-tu-ngay-tv">Từ ngày</label>
+        <input type="date" id="loc-tu-ngay-tv">
+      </div>
+      <div class="truong truong-ngay">
+        <label for="loc-den-ngay-tv">Đến ngày</label>
+        <input type="date" id="loc-den-ngay-tv">
+      </div>
+      <div class="truong">
+        <label for="loc-canh-bao-tv">Mức cảnh báo</label>
+        <select id="loc-canh-bao-tv">
+          <option value="">Tất cả mức cảnh báo</option>
+          <option value="VANG">Vàng · 3 ngày</option>
+          <option value="CAM">Cam · 5 ngày</option>
+          <option value="DO">Đỏ · 7 ngày</option>
+        </select>
+      </div>
+      <label class="chon-tat-ca-hang truong-hang-loat" for="loc-hang-loat-tv">
+        <input type="checkbox" id="loc-hang-loat-tv">
+        Chỉ đơn hàng loạt
+      </label>
+      <div class="truong">
+        <label for="loc-loai-tv">Loại</label>
+        <select id="loc-loai-tv"><option value="">Tất cả loại</option></select>
+      </div>
+      <div class="truong">
+        <label for="loc-kich-thuoc-tv">Kích thước</label>
+        <select id="loc-kich-thuoc-tv"><option value="">Tất cả kích thước</option></select>
+      </div>
+      <div class="truong">
+        <label for="loc-mau-sac-tv">Màu sắc</label>
+        <select id="loc-mau-sac-tv"><option value="">Tất cả màu sắc</option></select>
+      </div>
+      <div class="truong">
+        <label for="loc-hang-van-chuyen-tv">Hãng vận chuyển</label>
+        <select id="loc-hang-van-chuyen-tv"><option value="">Tất cả hãng vận chuyển</option></select>
+      </div>
+      <div id="loc-nguoi-ve-file-wrap" class="truong" style="display:none">
+        <label for="loc-nguoi-ve-file">Người vẽ file</label>
+        <select id="loc-nguoi-ve-file"><option value="">Tất cả người vẽ file</option></select>
+      </div>
+      <button type="button" class="btn-hanh-dong phu" onclick="xoaTatCaLocTv()">Xoá bộ lọc</button>
+    </div>
+  </div>
+
+  <div id="panel-sap-xep-tv" class="panel-dieu-khien" style="display:none">
+    <div class="inline-form">
+      <div class="truong">
+        <label for="sap-xep-tv">Sắp xếp theo</label>
+        <select id="sap-xep-tv">
+          <option value="ngay_cu_nhat">Ngày lên đơn — cũ nhất trước (mặc định)</option>
+          <option value="">Ngày lên đơn — mới nhất trước</option>
+          <option value="ma_don">Mã đơn (STT_Key) — A đến Z</option>
+          <option value="ma_don_desc">Mã đơn (STT_Key) — Z đến A</option>
+          <option value="canh_bao">Mức cảnh báo — khẩn cấp nhất trước</option>
+          <option value="so_luong">Số lượng — nhiều nhất trước</option>
+          <option value="khach_hang">Tên khách hàng — A đến Z</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div id="thanh-hanh-dong-toi-ve" class="thanh-hanh-dong-hang-loat" style="display:none">
+    <span>Đã chọn <strong id="so-luong-da-chon-toi-ve">0</strong> đơn</span>
+    <button id="nut-danh-dau-da-ve" class="btn-hanh-dong" onclick="apDungDanhDauDaVe()">Đánh dấu Đã vẽ file</button>
+    <button type="button" class="btn-hanh-dong phu" onclick="boChonTatCaDonToiVe()">Bỏ chọn</button>
+  </div>
+  <label class="chon-tat-ca-hang">
+    <input type="checkbox" id="chon-tat-ca-toi-ve" onchange="chonTatCaToiVe(this.checked)">
+    Chọn tất cả đơn đang hiển thị
+  </label>
+
+  <div id="danh-sach-toi-ve" class="order-list"></div>
+</div>
+
+<script src="/js/icons.js?v=79"></script>
+<script src="/js/api.js?v=79"></script>
+<script>
+const NHAN_CANH_BAO = { VANG: 'Vàng · 3 ngày', CAM: 'Cam · 5 ngày', DO: 'Đỏ · 7 ngày' };
+
+let user;
+let danhSachCanVe = [];
+let donCanVeChonSet = new Set();
+let coLocNaoDangChonCanVe = false;
+
+let danhSachToiVe = [];
+let donToiVeChonSet = new Set();
+let coLocNaoDangChonToiVe = false;
+
+// Trạng thái và Phôi ĐƯA VÀO bộ lọc (khác trang my-orders.html của san_xuat, nơi 2 trường này luôn
+// cố định 1 giá trị nên bị loại) — ở đây "Đơn cần vẽ file"/"Đơn vẽ file của tôi" có thể là "Đã in mã"
+// HOẶC "LỖI SẢN XUẤT CẦN LÀM LẠI" (Trạng thái), và phôi có thể "Chưa"/"Đã lấy phôi" (2 việc phôi/vẽ
+// file chạy song song, độc lập nhau) — xem docs/superpowers/specs/2026-09-08-don-cua-toi-ve-file-design.md.
+const CAC_O_LOC_CV = ['loc-trang-thai-cv', 'loc-phoi-cv', 'loc-kh-cv', 'loc-tu-ngay-cv', 'loc-den-ngay-cv', 'loc-canh-bao-cv', 'loc-loai-cv', 'loc-kich-thuoc-cv', 'loc-mau-sac-cv', 'loc-hang-van-chuyen-cv'];
+const CAC_O_LOC_TV = ['loc-trang-thai-tv', 'loc-phoi-tv', 'loc-kh-tv', 'loc-tu-ngay-tv', 'loc-den-ngay-tv', 'loc-canh-bao-tv', 'loc-loai-tv', 'loc-kich-thuoc-tv', 'loc-mau-sac-tv', 'loc-hang-van-chuyen-tv'];
+
+(async () => {
+  user = await requireLoginOrRedirect();
+  if (!user) return;
+  renderNav(user, 'my-orders-ve-file');
+
+  // "Chỉ định người vẽ file" — CHỈ admin (xem docs/superpowers/specs/2026-09-08-don-cua-toi-ve-file-design.md).
+  // display:contents (không phải '') vì khối này nằm trong .thanh-hanh-dong-hang-loat (flex container).
+  if (user.vaiTro === 'admin') {
+    document.getElementById('khoi-chi-dinh-nguoi-ve-file').style.display = 'contents';
+    try {
+      const dsNhanVien = await apiFetch('/users');
+      const dsVeFile = dsNhanVien.filter(u => u.VaiTro === 've_file' && String(u.KichHoat).toUpperCase() === 'TRUE');
+      document.getElementById('nguoi-ve-file-dich').innerHTML = '<option value="">Chỉ định người vẽ file...</option>' +
+        dsVeFile.map(u => `<option value="${escapeHtml(u.Ten)}">${escapeHtml(u.Ten)}</option>`).join('');
+    } catch (e) { /* không tải được danh sách nhân viên — ô chọn giữ nguyên rỗng, không chặn tải trang */ }
+
+    // "Người vẽ file" — ô lọc mục 2, CHỈ admin (ve_file luôn tự lọc đúng tên mình, xem taiDonToiVe()).
+    document.getElementById('loc-nguoi-ve-file-wrap').style.display = '';
+    document.getElementById('loc-nguoi-ve-file').onchange = () => taiDonToiVe();
+  }
+
+  document.getElementById('btn-mo-loc-cv').innerHTML = icon('filter', { size: 16 }) + ' Lọc';
+  document.getElementById('btn-mo-sap-xep-cv').innerHTML = icon('sort', { size: 16 }) + ' Sắp xếp';
+  document.getElementById('btn-mo-loc-tv').innerHTML = icon('filter', { size: 16 }) + ' Lọc';
+  document.getElementById('btn-mo-sap-xep-tv').innerHTML = icon('sort', { size: 16 }) + ' Sắp xếp';
+
+  ganSuKienLocSapXep('-cv', taiDonCanVe, boChonTatCaDonCanVe);
+  ganSuKienLocSapXep('-tv', taiDonToiVe, boChonTatCaDonToiVe);
+
+  await Promise.all([taiDonCanVe(), taiDonToiVe()]);
+})();
+
+// Gắn onchange/oninput cho đúng bộ ô lọc + Chỉ đơn hàng loạt + Sắp xếp của 1 mục — dùng chung cho cả
+// 2 mục (hauTo='-cv' hoặc '-tv'). Khác bản ở my-orders.html (san_xuat): có thêm Trạng thái/Phôi vào
+// vòng lặp vì 2 trường này thật sự lọc được ở trang này (xem lý do ở khai báo CAC_O_LOC_CV/TV).
+function ganSuKienLocSapXep(hauTo, taiLaiFn, boChonFn) {
+  const chay = () => { if (boChonFn) boChonFn(); taiLaiFn(); };
+  document.getElementById('loc-kh' + hauTo).oninput = debounce(chay, 400);
+  document.getElementById('loc-tu-ngay' + hauTo).onchange = () => {
+    const denNgay = document.getElementById('loc-den-ngay' + hauTo);
+    if (document.getElementById('loc-tu-ngay' + hauTo).value && !denNgay.value) denNgay.value = ngayHomNayYYYYMMDD();
+    chay();
+  };
+  ['loc-trang-thai', 'loc-phoi', 'loc-den-ngay', 'loc-canh-bao', 'loc-hang-loat', 'loc-loai', 'loc-kich-thuoc', 'loc-mau-sac', 'loc-hang-van-chuyen'].forEach(id => {
+    document.getElementById(id + hauTo).onchange = chay;
+  });
+  document.getElementById('sap-xep' + hauTo).onchange = taiLaiFn;
+}
+
+// Đóng/mở 1 trong 2 panel "Lọc"/"Sắp xếp" của 1 mục — sao chép nguyên từ my-orders.html.
+function batTatPanel(tienTo, ten) {
+  const tenKia = ten === 'loc' ? 'sap-xep' : 'loc';
+  const idPanel = `panel-${ten}-${tienTo}`;
+  const idPanelKia = `panel-${tenKia}-${tienTo}`;
+  const idBtn = `btn-mo-${ten}-${tienTo}`;
+  const idBtnKia = `btn-mo-${tenKia}-${tienTo}`;
+  const dangMo = document.getElementById(idPanel).style.display !== 'none';
+  document.getElementById(idPanel).style.display = 'none';
+  document.getElementById(idPanelKia).style.display = 'none';
+  document.getElementById(idBtn).classList.remove('dang-mo');
+  document.getElementById(idBtnKia).classList.remove('dang-mo');
+  if (!dangMo) {
+    document.getElementById(idPanel).style.display = 'block';
+    document.getElementById(idBtn).classList.add('dang-mo');
+  }
+}
+
+function domLaiOChon(id, nhanTatCa, giaTriList) {
+  const sel = document.getElementById(id);
+  const dangChon = sel.value;
+  const cacGiaTri = [...new Set(giaTriList.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'vi'));
+  sel.innerHTML = `<option value="">${nhanTatCa}</option>` +
+    cacGiaTri.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+  sel.value = dangChon;
+}
+
+// Đổ động Trạng thái/Loại/Kích thước/Màu sắc/Hãng vận chuyển (Phôi KHÔNG đổ động — chỉ 2 giá trị cố
+// định, hardcode sẵn trong HTML giống orders.html) — CHỈ khi chưa lọc gì, tránh làm mất lựa chọn khỏi
+// ô khi danh sách đã bị thu hẹp.
+function capNhatCacBoLocDong(list, hauTo) {
+  domLaiOChon('loc-trang-thai' + hauTo, 'Tất cả trạng thái', list.map(o => o.TRANG_THAI_XUONG));
+  domLaiOChon('loc-loai' + hauTo, 'Tất cả loại', list.map(o => o.LOAI));
+  domLaiOChon('loc-kich-thuoc' + hauTo, 'Tất cả kích thước', list.map(o => o.KICH_THUOC));
+  domLaiOChon('loc-mau-sac' + hauTo, 'Tất cả màu sắc', list.map(o => o.MAU_SAC));
+  domLaiOChon('loc-hang-van-chuyen' + hauTo, 'Tất cả hãng vận chuyển', list.map(o => o.HANG_VAN_CHUYEN));
+}
+
+function capNhatNhanNutLoc(idBtn, cacOLoc, idHangLoat) {
+  const soLuong = cacOLoc.filter(id => document.getElementById(id).value).length + (document.getElementById(idHangLoat).checked ? 1 : 0);
+  document.getElementById(idBtn).innerHTML = icon('filter', { size: 16 }) + ' Lọc' + (soLuong ? ` (${soLuong})` : '');
+}
+
+function xoaCacOLoc(cacOLoc, hauTo) {
+  cacOLoc.forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('loc-hang-loat' + hauTo).checked = false;
+}
+
+function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+
+function ngayHomNayYYYYMMDD() {
+  const d = new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
+
+function dinhDangNgayNgan(giaTri) {
+  const d = parseNgay(giaTri);
+  return d ? `${d.getDate()}/${d.getMonth() + 1}` : '';
+}
+
+// Đọc giá trị của đúng bộ ô lọc theo hậu tố — dùng chung cho cả 2 hàm taiDon* bên dưới để khỏi lặp
+// 9 dòng document.getElementById gần như giống hệt nhau.
+function docCacOLoc(hauTo) {
+  return {
+    trangThai: document.getElementById('loc-trang-thai' + hauTo).value,
+    phoi: document.getElementById('loc-phoi' + hauTo).value,
+    kh: document.getElementById('loc-kh' + hauTo).value,
+    tuNgay: document.getElementById('loc-tu-ngay' + hauTo).value,
+    denNgay: document.getElementById('loc-den-ngay' + hauTo).value,
+    canhBao: document.getElementById('loc-canh-bao' + hauTo).value,
+    hangLoat: document.getElementById('loc-hang-loat' + hauTo).checked,
+    loai: document.getElementById('loc-loai' + hauTo).value,
+    kichThuoc: document.getElementById('loc-kich-thuoc' + hauTo).value,
+    mauSac: document.getElementById('loc-mau-sac' + hauTo).value,
+    hangVanChuyen: document.getElementById('loc-hang-van-chuyen' + hauTo).value,
+    sapXep: document.getElementById('sap-xep' + hauTo).value,
+  };
+}
+
+function apDungCacOLoc(qs, o) {
+  if (o.trangThai) qs.set('trangThai', o.trangThai);
+  if (o.phoi) qs.set('trangThaiPhoi', o.phoi);
+  if (o.kh) qs.set('kh', o.kh);
+  if (o.tuNgay) qs.set('tuNgay', o.tuNgay);
+  if (o.denNgay) qs.set('denNgay', o.denNgay);
+  if (o.canhBao) qs.set('canhBao', o.canhBao);
+  if (o.hangLoat) qs.set('hangLoat', '1');
+  if (o.loai) qs.set('loai', o.loai);
+  if (o.kichThuoc) qs.set('kichThuoc', o.kichThuoc);
+  if (o.mauSac) qs.set('mauSac', o.mauSac);
+  if (o.hangVanChuyen) qs.set('hangVanChuyen', o.hangVanChuyen);
+  if (o.sapXep) qs.set('sapXep', o.sapXep);
+}
+
+function coLocNaoDangChon(o) {
+  return !!(o.trangThai || o.phoi || o.kh || o.tuNgay || o.denNgay || o.canhBao || o.hangLoat || o.loai || o.kichThuoc || o.mauSac || o.hangVanChuyen);
+}
+
+// ============ Mục 1: "Đơn cần vẽ file" ============
+
+function xoaTatCaLocCv() {
+  xoaCacOLoc(CAC_O_LOC_CV, '-cv');
+  boChonTatCaDonCanVe();
+  taiDonCanVe();
+}
+
+async function taiDonCanVe() {
+  const el = document.getElementById('danh-sach-can-ve');
+  el.innerHTML = skeletonList(2);
+
+  const o = docCacOLoc('-cv');
+  const qs = new URLSearchParams({ canVeFile: '1', chuaNhanVeFile: '1' });
+  apDungCacOLoc(qs, o);
+
+  try {
+    danhSachCanVe = await apiFetch('/orders?' + qs.toString());
+  } catch (e) {
+    el.innerHTML = `<p>Không tải được danh sách: ${escapeHtml(e.message)}</p>`;
+    return;
+  }
+
+  const cacSttHienTai = new Set(danhSachCanVe.map(o => o.STT_Key));
+  [...donCanVeChonSet].forEach(k => { if (!cacSttHienTai.has(k)) donCanVeChonSet.delete(k); });
+
+  coLocNaoDangChonCanVe = coLocNaoDangChon(o);
+  if (!coLocNaoDangChonCanVe) capNhatCacBoLocDong(danhSachCanVe, '-cv');
+  capNhatNhanNutLoc('btn-mo-loc-cv', CAC_O_LOC_CV, 'loc-hang-loat-cv');
+
+  renderDanhSachCanVe();
+}
+
+function renderDanhSachCanVe() {
+  const el = document.getElementById('danh-sach-can-ve');
+
+  if (danhSachCanVe.length === 0) {
+    el.innerHTML = `<div class="trang-thai-rong">${icon('package')}<p>${coLocNaoDangChonCanVe ? 'Không có đơn nào khớp bộ lọc.' : 'Hiện không có đơn nào cần vẽ file.'}</p></div>`;
+    capNhatThanhHanhDongCanVe();
+    return;
+  }
+
+  el.innerHTML = danhSachCanVe.map(o => {
+    const daChon = donCanVeChonSet.has(o.STT_Key);
+    return `
+    <div class="order-card ${daChon ? 'da-chon' : ''}" data-stt-can-ve="${escapeHtml(o.STT_Key)}"
+         onclick="location.href='/order.html?stt=${encodeURIComponent(o.STT_Key)}'">
+      <input type="checkbox" class="order-checkbox" ${daChon ? 'checked' : ''}
+             aria-label="Chọn đơn ${escapeHtml(o.STT_Key)}"
+             onclick="event.stopPropagation()"
+             onchange="toggleChonDonCanVe('${escapeHtml(o.STT_Key)}', this.checked)">
+      ${o.MOCKUP || o.DUONG_DAN_URL
+        ? `<img src="${escapeHtml(o.MOCKUP || o.DUONG_DAN_URL)}" alt="" loading="lazy" onerror="this.remove()">`
+        : ''}
+      <div class="thong-tin">
+        <strong class="tieu-de-the">${escapeHtml(o.TieuDeSanPham || o.STT_Key)}</strong>
+        <div class="meta">${escapeHtml(o.TenKhachHang || '')} · SL: <strong>${escapeHtml(o.SO_LUONG || '')}</strong></div>
+        <div class="meta">Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgayNgan(o.NGAY_LEN_DON) : '—')}</div>
+        <div class="badge-row">
+          <span class="badge ${lopTrangThai(o.TRANG_THAI_XUONG)}">${escapeHtml(o.TRANG_THAI_XUONG || '')}</span>
+          <span class="badge ${lopTrangThai(o.TRANG_THAI_PHOI)}">${escapeHtml(o.TRANG_THAI_PHOI || '')}</span>
+          ${o.CanhBao ? `
+            <span class="badge badge-canh-bao ${o.CanhBao.toLowerCase()}">
+              ${icon('alert')} ${escapeHtml(NHAN_CANH_BAO[o.CanhBao] || o.CanhBao)}
+            </span>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  capNhatCheckboxChonTatCaCanVe();
+  capNhatThanhHanhDongCanVe();
+}
+
+function toggleChonDonCanVe(sttKey, daChon) {
+  if (daChon) donCanVeChonSet.add(sttKey); else donCanVeChonSet.delete(sttKey);
+  const the = document.querySelector(`[data-stt-can-ve="${CSS.escape(sttKey)}"]`);
+  if (the) the.classList.toggle('da-chon', daChon);
+  capNhatCheckboxChonTatCaCanVe();
+  capNhatThanhHanhDongCanVe();
+}
+
+function chonTatCaCanVe(daChonHet) {
+  danhSachCanVe.forEach(o => {
+    if (daChonHet) donCanVeChonSet.add(o.STT_Key); else donCanVeChonSet.delete(o.STT_Key);
+  });
+  renderDanhSachCanVe();
+}
+
+function boChonTatCaDonCanVe() {
+  donCanVeChonSet.clear();
+  renderDanhSachCanVe();
+}
+
+function capNhatCheckboxChonTatCaCanVe() {
+  const cb = document.getElementById('chon-tat-ca-can-ve');
+  cb.checked = danhSachCanVe.length > 0 && danhSachCanVe.every(o => donCanVeChonSet.has(o.STT_Key));
+}
+
+function capNhatThanhHanhDongCanVe() {
+  const thanh = document.getElementById('thanh-hanh-dong-can-ve');
+  if (donCanVeChonSet.size === 0) { thanh.style.display = 'none'; return; }
+  thanh.style.display = 'flex';
+  document.getElementById('so-luong-da-chon-can-ve').textContent = donCanVeChonSet.size;
+}
+
+// Tự NHẬN vẽ file — gọi route mới POST /orders/nhan-ve-file (chỉ ghi NGUOI_VE_FILE, không đổi
+// TRANG_THAI_VE_FILE — xem lý do trong spec).
+async function apDungNhanVeFile() {
+  const soLuong = donCanVeChonSet.size;
+  if (!confirm(`Nhận vẽ file cho ${soLuong} đơn đã chọn?`)) return;
+
+  const nut = document.getElementById('nut-nhan-ve-file');
+  const nhanGoc = nut.innerHTML;
+  document.querySelectorAll('#thanh-hanh-dong-can-ve button, #thanh-hanh-dong-can-ve select').forEach(el => el.disabled = true);
+  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Đang xử lý...';
+
+  let daHuy = false;
+  const danhSach = Array.from(donCanVeChonSet);
+  const thanhTienDo = taoThanhTienDo(nut, { onHuy: () => { daHuy = true; } });
+  thanhTienDo.capNhat(0, danhSach.length);
+
+  const ketQua = await chayHangLoatCoTienDo(
+    danhSach,
+    sttKey => apiFetch('/orders/nhan-ve-file', {
+      method: 'POST', body: JSON.stringify({ sttKeys: [sttKey] }),
+    }),
+    { onTienDo: (hienTai, tong) => thanhTienDo.capNhat(hienTai, tong), kiemTraHuy: () => daHuy }
+  );
+  thanhTienDo.xoa();
+
+  let thongBao = `Đã nhận vẽ file ${ketQua.thanhCong.length}/${soLuong} đơn.`;
+  if (ketQua.daHuy) thongBao += `\n\nĐã HỦY giữa chừng — các đơn còn lại vẫn đang được chọn, bấm lại nếu muốn tiếp tục.`;
+  if (ketQua.loi.length > 0) {
+    thongBao += `\n\nKhông nhận được ${ketQua.loi.length} đơn:\n` +
+      ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
+  }
+  alert(thongBao);
+
+  document.querySelectorAll('#thanh-hanh-dong-can-ve button, #thanh-hanh-dong-can-ve select').forEach(el => el.disabled = false);
+  nut.innerHTML = nhanGoc;
+  if (ketQua.daHuy) ketQua.thanhCong.forEach(sttKey => donCanVeChonSet.delete(sttKey));
+  else donCanVeChonSet.clear();
+
+  await taiDonCanVe();
+  await taiDonToiVe(); // đơn vừa nhận xuất hiện ở "Đơn vẽ file của tôi" bên dưới
+}
+
+// Admin CHỈ ĐỊNH 1 người vẽ file cho các đơn đã chọn — gọi POST /orders/chi-dinh-nguoi-ve-file.
+async function apDungChiDinhNguoiVeFile() {
+  const nguoiVeFile = document.getElementById('nguoi-ve-file-dich').value;
+  if (!nguoiVeFile) { alert('Hãy chọn người vẽ file muốn chỉ định'); return; }
+
+  const soLuong = donCanVeChonSet.size;
+  if (!confirm(`Chỉ định "${nguoiVeFile}" vẽ file cho ${soLuong} đơn đã chọn?`)) return;
+
+  document.querySelectorAll('#thanh-hanh-dong-can-ve button, #thanh-hanh-dong-can-ve select').forEach(el => el.disabled = true);
+  const nutApDung = document.getElementById('nut-ap-dung-chi-dinh-ve-file');
+  nutApDung.textContent = 'Đang xử lý...';
+
+  let daHuy = false;
+  const danhSach = Array.from(donCanVeChonSet);
+  const thanhTienDo = taoThanhTienDo(nutApDung, { onHuy: () => { daHuy = true; } });
+  thanhTienDo.capNhat(0, danhSach.length);
+
+  const ketQua = await chayHangLoatCoTienDo(
+    danhSach,
+    sttKey => apiFetch('/orders/chi-dinh-nguoi-ve-file', {
+      method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], nguoiVeFile }),
+    }),
+    { onTienDo: (hienTai, tong) => thanhTienDo.capNhat(hienTai, tong), kiemTraHuy: () => daHuy }
+  );
+  thanhTienDo.xoa();
+
+  let thongBao = `Đã chỉ định "${nguoiVeFile}" vẽ file cho ${ketQua.thanhCong.length}/${soLuong} đơn.`;
+  if (ketQua.daHuy) thongBao += `\n\nĐã HỦY giữa chừng — các đơn còn lại vẫn đang được chọn, bấm lại nếu muốn tiếp tục.`;
+  if (ketQua.loi.length > 0) {
+    thongBao += `\n\nKhông chỉ định được ${ketQua.loi.length} đơn:\n` +
+      ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
+  }
+  alert(thongBao);
+
+  document.querySelectorAll('#thanh-hanh-dong-can-ve button, #thanh-hanh-dong-can-ve select').forEach(el => el.disabled = false);
+  nutApDung.textContent = 'Áp dụng';
+  if (ketQua.daHuy) ketQua.thanhCong.forEach(sttKey => donCanVeChonSet.delete(sttKey));
+  else donCanVeChonSet.clear();
+
+  await taiDonCanVe();
+  await taiDonToiVe();
+}
+
+// ============ Mục 2: "Đơn vẽ file của tôi" ============
+
+function xoaTatCaLocTv() {
+  xoaCacOLoc(CAC_O_LOC_TV, '-tv');
+  if (user.vaiTro === 'admin') document.getElementById('loc-nguoi-ve-file').value = '';
+  boChonTatCaDonToiVe();
+  taiDonToiVe();
+}
+
+async function taiDonToiVe() {
+  const el = document.getElementById('danh-sach-toi-ve');
+  el.innerHTML = skeletonList(2);
+
+  const laAdmin = user.vaiTro === 'admin';
+  // ve_file LUÔN tự lọc đúng tên mình (không cho đổi) — admin mặc định xem TẤT CẢ người vẽ file,
+  // có thể tự thu hẹp qua ô "Người vẽ file". Khác hẳn cách san_xuat/"Đang chạy máy" bị CHẶN CỨNG ở
+  // server (locDonDangChayMayTheoNguoiVanHanh) — ve_file KHÔNG có hạn chế đó (xem lý do trong spec),
+  // nên phải tự gửi đúng tham số ở đây, không dựa vào server.
+  const nguoiVeFileDangLoc = laAdmin ? document.getElementById('loc-nguoi-ve-file').value : user.ten;
+
+  const o = docCacOLoc('-tv');
+  const qs = new URLSearchParams({ canVeFile: '1' });
+  if (nguoiVeFileDangLoc) qs.set('nguoiVeFile', nguoiVeFileDangLoc);
+  apDungCacOLoc(qs, o);
+
+  let list;
+  try {
+    list = await apiFetch('/orders?' + qs.toString());
+  } catch (e) {
+    el.innerHTML = `<p>Không tải được danh sách: ${escapeHtml(e.message)}</p>`;
+    return;
+  }
+  danhSachToiVe = list;
+
+  // Chỉ đổ lại danh sách người vẽ file trong ô lọc khi CHƯA lọc theo người nào — nếu đã lọc rồi mà
+  // vẫn đổ lại theo đúng danh sách đã bị thu hẹp (chỉ còn 1 người) thì các tên khác sẽ biến mất khỏi
+  // ô, không bấm lại được nữa.
+  if (laAdmin && !nguoiVeFileDangLoc) {
+    const sel = document.getElementById('loc-nguoi-ve-file');
+    const dangChon = sel.value;
+    const cacTen = [...new Set(list.map(o => o.NguoiVeFile).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'vi'));
+    sel.innerHTML = '<option value="">Tất cả người vẽ file</option>' + cacTen.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+    sel.value = dangChon;
+  }
+
+  const cacSttHienTai = new Set(danhSachToiVe.map(o => o.STT_Key));
+  [...donToiVeChonSet].forEach(k => { if (!cacSttHienTai.has(k)) donToiVeChonSet.delete(k); });
+
+  coLocNaoDangChonToiVe = coLocNaoDangChon(o);
+  if (!coLocNaoDangChonToiVe) capNhatCacBoLocDong(danhSachToiVe, '-tv');
+  capNhatNhanNutLoc('btn-mo-loc-tv', CAC_O_LOC_TV, 'loc-hang-loat-tv');
+
+  renderDanhSachToiVe();
+}
+
+function renderDanhSachToiVe() {
+  const el = document.getElementById('danh-sach-toi-ve');
+  const laAdmin = user.vaiTro === 'admin';
+
+  if (danhSachToiVe.length === 0) {
+    el.innerHTML = `<div class="trang-thai-rong">${icon('package')}<p>${coLocNaoDangChonToiVe ? 'Không có đơn nào khớp bộ lọc.' : 'Bạn chưa nhận vẽ file đơn nào — mọi việc đã xong hoặc chưa bắt đầu.'}</p></div>`;
+    capNhatThanhHanhDongToiVe();
+    return;
+  }
+
+  el.innerHTML = danhSachToiVe.map(o => {
+    const daChon = donToiVeChonSet.has(o.STT_Key);
+    return `
+    <div class="order-card ${daChon ? 'da-chon' : ''}" data-stt-toi-ve="${escapeHtml(o.STT_Key)}"
+         onclick="location.href='/order.html?stt=${encodeURIComponent(o.STT_Key)}'">
+      <input type="checkbox" class="order-checkbox" ${daChon ? 'checked' : ''}
+             aria-label="Chọn đơn ${escapeHtml(o.STT_Key)}"
+             onclick="event.stopPropagation()"
+             onchange="toggleChonDonToiVe('${escapeHtml(o.STT_Key)}', this.checked)">
+      ${o.MOCKUP || o.DUONG_DAN_URL
+        ? `<img src="${escapeHtml(o.MOCKUP || o.DUONG_DAN_URL)}" alt="" loading="lazy" onerror="this.remove()">`
+        : ''}
+      <div class="thong-tin">
+        <strong class="tieu-de-the">${escapeHtml(o.TieuDeSanPham || o.STT_Key)}</strong>
+        <div class="meta">${escapeHtml(o.TenKhachHang || '')} · SL: <strong>${escapeHtml(o.SO_LUONG || '')}</strong></div>
+        <div class="meta">Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgayNgan(o.NGAY_LEN_DON) : '—')}</div>
+        <div class="badge-row">
+          <span class="badge ${lopTrangThai(o.TRANG_THAI_XUONG)}">${escapeHtml(o.TRANG_THAI_XUONG || '')}</span>
+          <span class="badge ${lopTrangThai(o.TRANG_THAI_PHOI)}">${escapeHtml(o.TRANG_THAI_PHOI || '')}</span>
+          ${laAdmin && o.NguoiVeFile ? `
+            <span class="badge trang-thai-info">${icon('users', {size:14})} Đang vẽ: <strong>${escapeHtml(o.NguoiVeFile)}</strong></span>` : ''}
+          ${o.CanhBao ? `
+            <span class="badge badge-canh-bao ${o.CanhBao.toLowerCase()}">
+              ${icon('alert')} ${escapeHtml(NHAN_CANH_BAO[o.CanhBao] || o.CanhBao)}
+            </span>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  capNhatCheckboxChonTatCaToiVe();
+  capNhatThanhHanhDongToiVe();
+}
+
+function toggleChonDonToiVe(sttKey, daChon) {
+  if (daChon) donToiVeChonSet.add(sttKey); else donToiVeChonSet.delete(sttKey);
+  const the = document.querySelector(`[data-stt-toi-ve="${CSS.escape(sttKey)}"]`);
+  if (the) the.classList.toggle('da-chon', daChon);
+  capNhatCheckboxChonTatCaToiVe();
+  capNhatThanhHanhDongToiVe();
+}
+
+function chonTatCaToiVe(daChonHet) {
+  danhSachToiVe.forEach(o => {
+    if (daChonHet) donToiVeChonSet.add(o.STT_Key); else donToiVeChonSet.delete(o.STT_Key);
+  });
+  renderDanhSachToiVe();
+}
+
+function boChonTatCaDonToiVe() {
+  donToiVeChonSet.clear();
+  renderDanhSachToiVe();
+}
+
+function capNhatCheckboxChonTatCaToiVe() {
+  const cb = document.getElementById('chon-tat-ca-toi-ve');
+  cb.checked = danhSachToiVe.length > 0 && danhSachToiVe.every(o => donToiVeChonSet.has(o.STT_Key));
+}
+
+function capNhatThanhHanhDongToiVe() {
+  const thanh = document.getElementById('thanh-hanh-dong-toi-ve');
+  if (donToiVeChonSet.size === 0) { thanh.style.display = 'none'; return; }
+  thanh.style.display = 'flex';
+  document.getElementById('so-luong-da-chon-toi-ve').textContent = donToiVeChonSet.size;
+}
+
+// Đánh dấu Đã vẽ file — dùng lại NGUYÊN route chuyen-trang-thai-hang-loat có sẵn (cot=TRANG_THAI_VE_FILE)
+// — không đụng NGUOI_VE_FILE (giữ làm dấu vết ai đã vẽ).
+async function apDungDanhDauDaVe() {
+  const soLuong = donToiVeChonSet.size;
+  if (!confirm(`Đánh dấu ${soLuong} đơn đã chọn là "Đã vẽ file"?`)) return;
+
+  const nut = document.getElementById('nut-danh-dau-da-ve');
+  const nhanGoc = nut.innerHTML;
+  document.querySelectorAll('#thanh-hanh-dong-toi-ve button').forEach(b => b.disabled = true);
+  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Đang xử lý...';
+
+  let daHuy = false;
+  const danhSach = Array.from(donToiVeChonSet);
+  const thanhTienDo = taoThanhTienDo(nut, { onHuy: () => { daHuy = true; } });
+  thanhTienDo.capNhat(0, danhSach.length);
+
+  const ketQua = await chayHangLoatCoTienDo(
+    danhSach,
+    sttKey => apiFetch('/orders/chuyen-trang-thai-hang-loat', {
+      method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], cot: 'TRANG_THAI_VE_FILE', trangThaiMoi: 'Đã vẽ file' }),
+    }),
+    { onTienDo: (hienTai, tong) => thanhTienDo.capNhat(hienTai, tong), kiemTraHuy: () => daHuy }
+  );
+  thanhTienDo.xoa();
+
+  let thongBao = `Đã đánh dấu ${ketQua.thanhCong.length}/${soLuong} đơn là "Đã vẽ file".`;
+  if (ketQua.daHuy) thongBao += `\n\nĐã HỦY giữa chừng — các đơn còn lại vẫn đang được chọn, bấm lại nếu muốn tiếp tục.`;
+  if (ketQua.loi.length > 0) {
+    thongBao += `\n\nKhông đánh dấu được ${ketQua.loi.length} đơn:\n` +
+      ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
+  }
+  alert(thongBao);
+
+  document.querySelectorAll('#thanh-hanh-dong-toi-ve button').forEach(b => b.disabled = false);
+  nut.innerHTML = nhanGoc;
+  if (ketQua.daHuy) ketQua.thanhCong.forEach(sttKey => donToiVeChonSet.delete(sttKey));
+  else donToiVeChonSet.clear();
+
+  await taiDonToiVe();
+  await taiDonCanVe();
+}
+</script>
+</body>
+</html>

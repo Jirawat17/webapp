@@ -89,7 +89,15 @@ function renderNav(user, active) {
     // (locDonDangChayMayTheoNguoiVanHanh) chỉ lọc theo NguoiVanHanh cho san_xuat, admin xem được hết.
     if (user.vaiTro === 'admin') {
       links.splice(1, 0, { href: '/my-orders.html', label: 'Đơn của tôi · ' + escapeHtml(user.ten), icon: 'navMyOrders', key: 'my-orders' });
+      links.splice(2, 0, { href: '/my-orders-ve-file.html', label: 'Đơn của tôi (Vẽ file) · ' + escapeHtml(user.ten), icon: 'navMyOrders', key: 'my-orders-ve-file' });
       links.push({ href: '/users.html', label: 'Nhân viên', icon: 'navUsers', key: 'users' });
+    }
+    // "Đơn của tôi (Vẽ file)" (bổ sung 08/09/2026, theo yêu cầu người dùng — xem
+    // docs/superpowers/specs/2026-09-08-don-cua-toi-ve-file-design.md) — ve_file. KHÔNG ẩn menu nào
+    // khác, KHÔNG đổi trang mặc định sau đăng nhập của ve_file (khác hẳn cách làm cho san_xuat ở
+    // trên) — ngoài phạm vi yêu cầu lần này.
+    if (user.vaiTro === 've_file') {
+      links.splice(1, 0, { href: '/my-orders-ve-file.html', label: 'Đơn của tôi (Vẽ file) · ' + escapeHtml(user.ten), icon: 'navMyOrders', key: 'my-orders-ve-file' });
     }
     links.push({ href: '/hoat-dong.html', label: 'Hoạt động của tôi', icon: 'navActivity', key: 'hoat-dong' });
     links.push({ href: '/settings.html', label: 'Thiết lập', icon: 'navSettings', key: 'settings' });
