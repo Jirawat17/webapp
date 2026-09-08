@@ -144,11 +144,44 @@ function renderNav(user, active) {
     </nav>`;
   document.removeEventListener('fullscreenchange', capNhatNutFullscreen);
   document.addEventListener('fullscreenchange', capNhatNutFullscreen);
+  document.removeEventListener('click', ghiNhoTruocKhiDieuHuong, true);
+  document.addEventListener('click', ghiNhoTruocKhiDieuHuong, true);
+
+  // Cố VÀO LẠI toàn màn hình ngay khi trang mới vừa tải, nếu lần trước đang toàn màn hình lúc bấm
+  // sang trang này (bổ sung 09/09/2026, theo yêu cầu người dùng — trước đó bấm menu khác là thoát
+  // hẳn). LƯU Ý QUAN TRỌNG: trình duyệt CHỈ cho requestFullscreen() thành công khi có "user
+  // activation" thật (vừa có thao tác chuột/chạm), mà request này chạy TỰ ĐỘNG lúc tải trang — nhiều
+  // khả năng trình duyệt sẽ TỪ CHỐI (đây là giới hạn bảo mật của chính trình duyệt, không phải lỗi
+  // code). Cố hết sức + thất bại thì âm thầm bỏ qua (không báo lỗi làm phiền), xem ghi chú đầy đủ ở
+  // docs/superpowers/specs/2026-09-09-duy-tri-fullscreen-qua-trang-design.md.
+  let muonDuyTriFullscreen = false;
+  try { muonDuyTriFullscreen = sessionStorage.getItem('duyTriToanManHinh') === '1'; } catch (e) { /* trình duyệt chặn sessionStorage */ }
+  if (muonDuyTriFullscreen && !document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {
+      // Trình duyệt từ chối — xoá cờ luôn, tránh cố lại vô ích (và gọi API thất bại lặp lại không cần
+      // thiết) ở những trang tiếp theo cho tới khi người dùng chủ động bấm nút vào lại.
+      try { sessionStorage.removeItem('duyTriToanManHinh'); } catch (err) { /* bỏ qua */ }
+    });
+  }
+}
+
+// Bấm 1 link BẤT KỲ trong lúc đang toàn màn hình = sắp điều hướng sang trang khác — ghi nhớ Ý ĐỊNH
+// "muốn duy trì toàn màn hình" vào sessionStorage (còn tới khi đóng tab, đủ cho việc đi lại giữa các
+// trang) TRƯỚC KHI trang bắt đầu rời đi, và đánh dấu _vuaBamLinkKhiFullscreen để capNhatNutFullscreen()
+// KHÔNG hiểu nhầm đây là 1 lượt thoát chủ động (giống bấm nút/phím Esc) rồi xoá mất cờ vừa ghi.
+let _vuaBamLinkKhiFullscreen = false;
+function ghiNhoTruocKhiDieuHuong(e) {
+  if (!document.fullscreenElement) return;
+  if (!e.target.closest('a[href]')) return;
+  _vuaBamLinkKhiFullscreen = true;
+  try { sessionStorage.setItem('duyTriToanManHinh', '1'); } catch (err) { /* bỏ qua */ }
 }
 
 function toggleFullscreen() {
   if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen().catch(() => {});
+    document.documentElement.requestFullscreen()
+      .then(() => { try { sessionStorage.setItem('duyTriToanManHinh', '1'); } catch (e) { /* bỏ qua */ } })
+      .catch(() => {});
   } else {
     document.exitFullscreen();
   }
@@ -158,6 +191,12 @@ function toggleFullscreen() {
 // mỗi khi trạng thái toàn màn hình thật sự đổi, kể cả đổi do bấm Esc chứ không chỉ do bấm nút này.
 function capNhatNutFullscreen() {
   const dangFullscreen = !!document.fullscreenElement;
+  // Thoát KHÔNG phải do vừa bấm link điều hướng (bấm nút này, hoặc phím Esc) — coi là ý định thoát
+  // THẬT, xoá cờ để KHÔNG tự vào lại toàn màn hình ở trang kế tiếp nữa.
+  if (!dangFullscreen && !_vuaBamLinkKhiFullscreen) {
+    try { sessionStorage.removeItem('duyTriToanManHinh'); } catch (e) { /* bỏ qua */ }
+  }
+  _vuaBamLinkKhiFullscreen = false;
   document.querySelectorAll('.btn-fullscreen').forEach(btn => {
     btn.innerHTML = icon(dangFullscreen ? 'minimize' : 'maximize');
     btn.setAttribute('aria-label', dangFullscreen ? 'Thoát toàn màn hình' : 'Toàn màn hình');
