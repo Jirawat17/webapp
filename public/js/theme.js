@@ -1,7 +1,13 @@
 // Áp dụng màu chủ đạo + chế độ sáng/tối người dùng đã chọn NGAY LẬP TỨC, trước khi phần còn lại
 // của trang vẽ ra — tránh hiện tượng nháy màu/nền mặc định rồi mới đổi. File này PHẢI nạp trong <head>.
 const BANG_MAU_CHU_DAO = [
-  { id: 'rose',    ten: 'Đỏ mận (mặc định)', primary: '#be123c', dark: '#9f1239', light: '#fff1f2' },
+  // "Công nghệ (Navy)" đặt LÊN ĐẦU + là mặc định (đổi 09/09/2026, theo yêu cầu người dùng — trước đó
+  // 'rose' là mặc định). Theo đúng thiết kế gốc 26/08/2026, ở Chế độ Sáng đây chỉ là 1 màu chủ đạo
+  // xanh bình thường như mọi màu khác trong bảng — KHÔNG có xử lý riêng nào (đã rà lại style.css,
+  // không tìm thấy khối CSS scope theo [data-mau="navy"] như comment cũ mô tả — có thể là ý định ban
+  // đầu chưa từng được xây, không phải hành vi hiện tại; báo lại người dùng, chưa tự ý xây thêm phần
+  // "nền navy đậm + glow cam" đó vì ngoài phạm vi yêu cầu lần này).
+  { id: 'navy',    ten: 'Công nghệ (Navy) (mặc định)', primary: '#38bdf8', dark: '#0ea5e9', light: '#e0f2fe' },
   { id: 'blue',    ten: 'Xanh dương',        primary: '#1d4ed8', dark: '#1e40af', light: '#eff6ff' },
   { id: 'emerald', ten: 'Xanh lá',           primary: '#047857', dark: '#065f46', light: '#ecfdf5' },
   { id: 'orange',  ten: 'Cam',               primary: '#c2410c', dark: '#9a3412', light: '#fff7ed' },
@@ -9,15 +15,11 @@ const BANG_MAU_CHU_DAO = [
   { id: 'teal',    ten: 'Xanh ngọc',         primary: '#0f766e', dark: '#115e59', light: '#f0fdfa' },
   { id: 'pink',    ten: 'Hồng',              primary: '#be185d', dark: '#9d174d', light: '#fdf2f8' },
   { id: 'slate',   ten: 'Xám đậm',           primary: '#334155', dark: '#1e293b', light: '#f8fafc' },
-  // Theme mới 26/08/2026 — lấy tông từ ảnh AI/mạng lưới người dùng tham khảo (nền xanh navy đậm +
-  // chấm sáng cam). Ở Chế độ Sáng dùng như 1 màu chủ đạo xanh bình thường (không có gì đặc biệt);
-  // riêng ở Chế độ Tối, style.css có thêm 1 khối CSS riêng scope theo [data-mau="navy"] để đổi hẳn
-  // nền sang navy đậm + thêm glow màu cam — xem "Theme Công nghệ (Navy)" trong style.css.
-  { id: 'navy',    ten: 'Công nghệ (Navy)',  primary: '#38bdf8', dark: '#0ea5e9', light: '#e0f2fe' },
+  { id: 'rose',    ten: 'Đỏ mận',            primary: '#be123c', dark: '#9f1239', light: '#fff1f2' },
 ];
 
 function layMauDaChon() {
-  try { return localStorage.getItem('mauChuDao') || 'rose'; } catch (e) { return 'rose'; }
+  try { return localStorage.getItem('mauChuDao') || 'navy'; } catch (e) { return 'navy'; }
 }
 
 function luuMauDaChon(id) {

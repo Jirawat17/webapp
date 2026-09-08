@@ -21,10 +21,13 @@
    kiểu "AI look", không đổ bóng màu; đổ bóng trung tính, lan toả nhẹ để tạo chiều sâu.
    ============================================================ */
 :root {
-  /* 1 màu nhấn duy nhất — dùng cho mọi nút chính, liên kết, trạng thái active */
-  --color-primary: #be123c;
-  --color-primary-dark: #9f1239;
-  --color-primary-light: #fff1f2;
+  /* 1 màu nhấn duy nhất — dùng cho mọi nút chính, liên kết, trạng thái active. Đây là giá trị TĨNH
+     dự phòng trước khi theme.js (nạp trong <head>, chạy ngay lập tức) ghi đè theo màu người dùng đã
+     chọn — PHẢI khớp đúng preset mặc định 'navy' trong BANG_MAU_CHU_DAO (public/js/theme.js), đổi
+     09/09/2026 theo yêu cầu người dùng (trước đó khớp 'rose'), tránh nháy màu cũ rồi mới đổi. */
+  --color-primary: #38bdf8;
+  --color-primary-dark: #0ea5e9;
+  --color-primary-light: #e0f2fe;
 
   /* Nền trung tính (zinc) */
   --color-bg: #f8f8f9;
