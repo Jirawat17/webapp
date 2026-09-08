@@ -216,28 +216,43 @@ const PALETTE_PIPELINE = ['#4a6fa5','#5b8fd4','#7ee8fa','#54c6a8','#4ecb71','#ff
 const NHAN_VAI_TRO = { san_xuat: 'Sản xuất', ve_file: 'Vẽ file', nguoi_lay_phoi: 'Lấy phôi / Đóng gói', admin: 'Quản trị' };
 
 (async () => {
-  user = await requireLoginOrRedirect();
-  if (!user) return;
-  renderNav(user, 'bang-dieu-khien');
+  try {
+    user = await requireLoginOrRedirect();
+    if (!user) return;
+    renderNav(user, 'bang-dieu-khien');
 
-  // Chart.js vẽ bằng <canvas>, phải tự đặt màu chữ/lưới khớp nền tối luôn cố định của trang này
-  // (không đọc CSS variable theo Chế độ Sáng/Tối như dashboard.html, vì trang này luôn tối).
-  Chart.defaults.color = '#a8d8f0';
-  Chart.defaults.borderColor = 'rgba(126,232,250,0.12)';
+    // Chart.js vẽ bằng <canvas>, phải tự đặt màu chữ/lưới khớp nền tối luôn cố định của trang này
+    // (không đọc CSS variable theo Chế độ Sáng/Tối như dashboard.html, vì trang này luôn tối).
+    if (typeof Chart === 'undefined') {
+      throw new Error('Chưa tải được thư viện Chart.js từ CDN (cdn.jsdelivr.net) — kiểm tra mạng/tường lửa của máy chủ hoặc trình duyệt tới địa chỉ này.');
+    }
+    Chart.defaults.color = '#a8d8f0';
+    Chart.defaults.borderColor = 'rgba(126,232,250,0.12)';
 
-  document.querySelectorAll('#thanh-chon-ky button').forEach(btn => {
-    btn.onclick = () => {
-      kyHienTai = btn.dataset.ky;
-      document.querySelectorAll('#thanh-chon-ky button').forEach(b => b.classList.toggle('dang-mo', b === btn));
-      document.getElementById('panel-khoang-ngay').style.display = kyHienTai === 'tuy_chon' ? 'flex' : 'none';
-      if (kyHienTai !== 'tuy_chon') taiBangDieuKhien();
-    };
-  });
-  document.getElementById('btn-ap-dung-khoang').onclick = () => taiBangDieuKhien();
+    document.querySelectorAll('#thanh-chon-ky button').forEach(btn => {
+      btn.onclick = () => {
+        kyHienTai = btn.dataset.ky;
+        document.querySelectorAll('#thanh-chon-ky button').forEach(b => b.classList.toggle('dang-mo', b === btn));
+        document.getElementById('panel-khoang-ngay').style.display = kyHienTai === 'tuy_chon' ? 'flex' : 'none';
+        if (kyHienTai !== 'tuy_chon') taiBangDieuKhien();
+      };
+    });
+    document.getElementById('btn-ap-dung-khoang').onclick = () => taiBangDieuKhien();
 
-  await taiBangDieuKhien();
-  // "Hiển thị động" thật sự (không chỉ hiệu ứng thị giác) — tự tải lại dữ liệu mỗi 60 giây.
-  setInterval(taiBangDieuKhien, 60000);
+    await taiBangDieuKhien();
+    // "Hiển thị động" thật sự (không chỉ hiệu ứng thị giác) — tự tải lại dữ liệu mỗi 60 giây.
+    setInterval(taiBangDieuKhien, 60000);
+  } catch (e) {
+    // Bắt lỗi TOÀN TRANG — trước khi sửa lần này, bất kỳ lỗi nào ở ngoài taiBangDieuKhien() (vd
+    // Chart.js chưa tải xong, renderNav lỗi...) sẽ làm cả trang đứng im ở "Đang tải..."/"0" MÀ
+    // KHÔNG có bất kỳ dấu hiệu lỗi nào hiện ra — rất khó biết nguyên nhân thật khi debug từ xa qua
+    // Docker/VPS, không có sẵn màn hình để mở DevTools ngay. Hiện lỗi thật ngay trên trang.
+    console.error('[BangDieuKhien] Lỗi khởi tạo trang:', e);
+    const trangDiv = document.querySelector('.bdk-page');
+    if (trangDiv) {
+      trangDiv.insertAdjacentHTML('afterbegin', `<div style="background:#3a0d0d;border:1px solid #ff5e5e;color:#ffb3b3;padding:14px 18px;border-radius:8px;margin-bottom:18px;font-size:0.88rem;">Lỗi khởi tạo Bảng điều khiển: ${escapeHtml(e.message)} — mở Console trình duyệt (F12) để xem chi tiết.</div>`);
+    }
+  }
 })();
 
 // Giống hệt logic ở dashboard.html/reports.html/hoat-dong.html — mỗi trang tự chứa, dự án không có
