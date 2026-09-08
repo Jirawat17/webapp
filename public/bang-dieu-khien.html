@@ -153,14 +153,21 @@
     </div>
   </div>
 
+  <div class="bdk-card bdk-full">
+    <h3>Đang hoạt động ngay bây giờ</h3>
+    <div id="bdk-dang-hoat-dong">Đang tải...</div>
+  </div>
+
+  <!-- Tách riêng chạy máy/vẽ file thành 2 thẻ (đổi 09/09/2026, theo yêu cầu người dùng — trước gộp
+       chung 1 danh sách "Khối lượng đang xử lý", khó theo dõi riêng từng nhóm việc). -->
   <div class="bdk-grid-2">
     <div class="bdk-card">
-      <h3>Đang hoạt động ngay bây giờ</h3>
-      <div id="bdk-dang-hoat-dong">Đang tải...</div>
+      <h3>Khối lượng đang chạy máy</h3>
+      <div id="bdk-dang-chay-may">Đang tải...</div>
     </div>
     <div class="bdk-card">
-      <h3>Khối lượng đang xử lý</h3>
-      <div id="bdk-dang-xu-ly">Đang tải...</div>
+      <h3>Khối lượng vẽ file đang xử lý</h3>
+      <div id="bdk-dang-ve-file">Đang tải...</div>
     </div>
   </div>
 
@@ -305,6 +312,20 @@ function topN(obj, n) {
   return Object.fromEntries(Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, n));
 }
 
+// Vẽ 1 danh sách xếp hạng (tên -> số lượng) vào 1 thẻ — dùng chung cho "Khối lượng đang chạy máy"
+// và "Khối lượng vẽ file đang xử lý" (tách ra từ 1 thẻ gộp "Khối lượng đang xử lý" cũ, 09/09/2026).
+function renderXepHangDangXuLy(idThe, demTheoNguoi, thongBaoRong) {
+  const ds = [...demTheoNguoi.entries()].sort((a, b) => b[1] - a[1]);
+  document.getElementById(idThe).innerHTML = ds.length === 0
+    ? `<p style="color:#8fb8d9">${thongBaoRong}</p>`
+    : ds.map(([ten, so], i) => `
+      <div class="bdk-xep-hang-item">
+        <div class="bdk-hang-so ${i === 0 ? 'top1' : ''}">${i + 1}</div>
+        <div class="bdk-xep-hang-ten">${escapeHtml(ten)}</div>
+        <div class="bdk-xep-hang-so">${so}</div>
+      </div>`).join('');
+}
+
 // Dòng phụ hiển thị dưới tên trong danh sách "Đang hoạt động ngay bây giờ" — với san_xuat/ve_file
 // thì kèm luôn số việc đang xử lý (đúng ý người dùng: biết đang online VÀ đang bận bao nhiêu việc).
 function moTaVaiTroVaViec(nguoiDangHD, demChayMay, demVeFile) {
@@ -352,7 +373,8 @@ async function taiBangDieuKhien() {
     const thongBaoLoi = `<p style="color:#ff5e5e">Không tải được dữ liệu: ${escapeHtml(e.message)}</p>`;
     document.getElementById('bdk-xep-hang').innerHTML = thongBaoLoi;
     document.getElementById('bdk-dang-hoat-dong').innerHTML = thongBaoLoi;
-    document.getElementById('bdk-dang-xu-ly').innerHTML = thongBaoLoi;
+    document.getElementById('bdk-dang-chay-may').innerHTML = thongBaoLoi;
+    document.getElementById('bdk-dang-ve-file').innerHTML = thongBaoLoi;
     return;
   }
 
@@ -385,19 +407,10 @@ async function taiBangDieuKhien() {
         <div class="bdk-lan-cuoi">${new Date(nd.lanCuoi).toLocaleTimeString('vi-VN')}</div>
       </div>`).join('');
 
-  const dangXuLy = [
-    ...[...demChayMay.entries()].map(([ten, so]) => ({ ten, nhan: 'Đang chạy máy', so })),
-    ...[...demVeFile.entries()].map(([ten, so]) => ({ ten, nhan: 'Đang vẽ file', so })),
-  ].sort((a, b) => b.so - a.so);
-
-  document.getElementById('bdk-dang-xu-ly').innerHTML = dangXuLy.length === 0
-    ? '<p style="color:#8fb8d9">Hiện không có đơn/file nào đang xử lý.</p>'
-    : dangXuLy.map((x, i) => `
-      <div class="bdk-xep-hang-item">
-        <div class="bdk-hang-so ${i === 0 ? 'top1' : ''}">${i + 1}</div>
-        <div class="bdk-xep-hang-ten">${escapeHtml(x.ten)}<div class="bdk-xep-hang-vaitro">${x.nhan}</div></div>
-        <div class="bdk-xep-hang-so">${x.so}</div>
-      </div>`).join('');
+  // Tách riêng 2 danh sách (đổi 09/09/2026, theo yêu cầu người dùng) — mỗi thẻ chỉ 1 loại việc nên
+  // không cần dòng phụ ghi lại tên việc nữa (khác bản gộp chung trước đó).
+  renderXepHangDangXuLy('bdk-dang-chay-may', demChayMay, 'Hiện không có đơn nào đang chạy máy.');
+  renderXepHangDangXuLy('bdk-dang-ve-file', demVeFile, 'Hiện không có file nào đang vẽ.');
 
   const tyLeLoi = thongKe.tongSoDon > 0 ? (thongKeLoi.tongSoLoi / thongKe.tongSoDon * 100) : 0;
   document.getElementById('kpi-ty-le-loi').textContent = tyLeLoi.toFixed(1) + '%';
