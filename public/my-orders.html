@@ -12,7 +12,92 @@
 <div class="page">
   <h2>Đơn của tôi</h2>
 
-  <h3>Đơn sẵn sàng chạy máy</h3>
+  <!-- Thứ tự 2 mục ĐÃ ĐẢO (08/09/2026, theo yêu cầu người dùng) — "Đang chạy máy của tôi" lên trước
+       "Sẵn sàng chạy máy" để tiện hơn (việc đang làm dở quan trọng hơn, nên thấy ngay). Chỉ đổi thứ
+       tự hiển thị — ID/tên hàm JS giữ nguyên (hậu tố -ss/-dc không còn phản ánh đúng vị trí trên
+       trang nữa, chỉ còn ý nghĩa lịch sử, không đổi vì đổi tên sẽ phải sửa rất nhiều chỗ không cần thiết). -->
+  <h3>Đơn đang chạy máy của tôi</h3>
+
+  <div class="thanh-cong-cu-danh-sach">
+    <button type="button" class="btn-hanh-dong phu" id="btn-mo-loc-dc" onclick="batTatPanel('dc','loc')"></button>
+    <button type="button" class="btn-hanh-dong phu" id="btn-mo-sap-xep-dc" onclick="batTatPanel('dc','sap-xep')"></button>
+  </div>
+
+  <div id="panel-loc-dc" class="panel-dieu-khien" style="display:none">
+    <div class="inline-form">
+      <div class="truong">
+        <label for="loc-trang-thai">Trạng thái</label>
+        <select id="loc-trang-thai"><option value="Đang chạy máy" selected>Đang chạy máy</option></select>
+      </div>
+      <div class="truong truong-rong">
+        <label for="loc-kh">Tìm theo tên đơn / mã KH</label>
+        <input id="loc-kh" placeholder="STT_Key hoặc mã khách hàng">
+      </div>
+      <div class="truong truong-ngay">
+        <label for="loc-tu-ngay">Từ ngày</label>
+        <input type="date" id="loc-tu-ngay">
+      </div>
+      <div class="truong truong-ngay">
+        <label for="loc-den-ngay">Đến ngày</label>
+        <input type="date" id="loc-den-ngay">
+      </div>
+      <div class="truong">
+        <label for="loc-canh-bao">Mức cảnh báo</label>
+        <select id="loc-canh-bao">
+          <option value="">Tất cả mức cảnh báo</option>
+          <option value="VANG">Vàng · 3 ngày</option>
+          <option value="CAM">Cam · 5 ngày</option>
+          <option value="DO">Đỏ · 7 ngày</option>
+        </select>
+      </div>
+      <label class="chon-tat-ca-hang truong-hang-loat" for="loc-hang-loat">
+        <input type="checkbox" id="loc-hang-loat">
+        Chỉ đơn hàng loạt
+      </label>
+      <div class="truong">
+        <label for="loc-loai">Loại</label>
+        <select id="loc-loai"><option value="">Tất cả loại</option></select>
+      </div>
+      <div class="truong">
+        <label for="loc-kich-thuoc">Kích thước</label>
+        <select id="loc-kich-thuoc"><option value="">Tất cả kích thước</option></select>
+      </div>
+      <div class="truong">
+        <label for="loc-mau-sac">Màu sắc</label>
+        <select id="loc-mau-sac"><option value="">Tất cả màu sắc</option></select>
+      </div>
+      <div class="truong">
+        <label for="loc-hang-van-chuyen">Hãng vận chuyển</label>
+        <select id="loc-hang-van-chuyen"><option value="">Tất cả hãng vận chuyển</option></select>
+      </div>
+      <div id="loc-nguoi-van-hanh-wrap" class="truong" style="display:none">
+        <label for="loc-nguoi-van-hanh">Người sản xuất</label>
+        <select id="loc-nguoi-van-hanh"><option value="">Tất cả người sản xuất</option></select>
+      </div>
+      <button type="button" class="btn-hanh-dong phu" onclick="xoaTatCaLoc()">Xoá bộ lọc</button>
+    </div>
+  </div>
+
+  <div id="panel-sap-xep-dc" class="panel-dieu-khien" style="display:none">
+    <div class="inline-form">
+      <div class="truong">
+        <label for="sap-xep">Sắp xếp theo</label>
+        <select id="sap-xep">
+          <option value="ngay_cu_nhat">Ngày lên đơn — cũ nhất trước (mặc định)</option>
+          <option value="">Ngày lên đơn — mới nhất trước</option>
+          <option value="ma_don">Mã đơn (STT_Key) — A đến Z</option>
+          <option value="ma_don_desc">Mã đơn (STT_Key) — Z đến A</option>
+          <option value="canh_bao">Mức cảnh báo — khẩn cấp nhất trước</option>
+          <option value="so_luong">Số lượng — nhiều nhất trước</option>
+          <option value="khach_hang">Tên khách hàng — A đến Z</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div id="danh-sach-don" class="order-list"></div>
+
+  <h3 style="margin-top:32px">Đơn sẵn sàng chạy máy</h3>
 
   <div class="thanh-cong-cu-danh-sach">
     <button type="button" class="btn-hanh-dong phu" id="btn-mo-loc-ss" onclick="batTatPanel('ss','loc')"></button>
@@ -105,87 +190,6 @@
   </label>
 
   <div id="danh-sach-san-sang" class="order-list"></div>
-
-  <h3 style="margin-top:32px">Đơn đang chạy máy của tôi</h3>
-
-  <div class="thanh-cong-cu-danh-sach">
-    <button type="button" class="btn-hanh-dong phu" id="btn-mo-loc-dc" onclick="batTatPanel('dc','loc')"></button>
-    <button type="button" class="btn-hanh-dong phu" id="btn-mo-sap-xep-dc" onclick="batTatPanel('dc','sap-xep')"></button>
-  </div>
-
-  <div id="panel-loc-dc" class="panel-dieu-khien" style="display:none">
-    <div class="inline-form">
-      <div class="truong">
-        <label for="loc-trang-thai">Trạng thái</label>
-        <select id="loc-trang-thai"><option value="Đang chạy máy" selected>Đang chạy máy</option></select>
-      </div>
-      <div class="truong truong-rong">
-        <label for="loc-kh">Tìm theo tên đơn / mã KH</label>
-        <input id="loc-kh" placeholder="STT_Key hoặc mã khách hàng">
-      </div>
-      <div class="truong truong-ngay">
-        <label for="loc-tu-ngay">Từ ngày</label>
-        <input type="date" id="loc-tu-ngay">
-      </div>
-      <div class="truong truong-ngay">
-        <label for="loc-den-ngay">Đến ngày</label>
-        <input type="date" id="loc-den-ngay">
-      </div>
-      <div class="truong">
-        <label for="loc-canh-bao">Mức cảnh báo</label>
-        <select id="loc-canh-bao">
-          <option value="">Tất cả mức cảnh báo</option>
-          <option value="VANG">Vàng · 3 ngày</option>
-          <option value="CAM">Cam · 5 ngày</option>
-          <option value="DO">Đỏ · 7 ngày</option>
-        </select>
-      </div>
-      <label class="chon-tat-ca-hang truong-hang-loat" for="loc-hang-loat">
-        <input type="checkbox" id="loc-hang-loat">
-        Chỉ đơn hàng loạt
-      </label>
-      <div class="truong">
-        <label for="loc-loai">Loại</label>
-        <select id="loc-loai"><option value="">Tất cả loại</option></select>
-      </div>
-      <div class="truong">
-        <label for="loc-kich-thuoc">Kích thước</label>
-        <select id="loc-kich-thuoc"><option value="">Tất cả kích thước</option></select>
-      </div>
-      <div class="truong">
-        <label for="loc-mau-sac">Màu sắc</label>
-        <select id="loc-mau-sac"><option value="">Tất cả màu sắc</option></select>
-      </div>
-      <div class="truong">
-        <label for="loc-hang-van-chuyen">Hãng vận chuyển</label>
-        <select id="loc-hang-van-chuyen"><option value="">Tất cả hãng vận chuyển</option></select>
-      </div>
-      <div id="loc-nguoi-van-hanh-wrap" class="truong" style="display:none">
-        <label for="loc-nguoi-van-hanh">Người sản xuất</label>
-        <select id="loc-nguoi-van-hanh"><option value="">Tất cả người sản xuất</option></select>
-      </div>
-      <button type="button" class="btn-hanh-dong phu" onclick="xoaTatCaLoc()">Xoá bộ lọc</button>
-    </div>
-  </div>
-
-  <div id="panel-sap-xep-dc" class="panel-dieu-khien" style="display:none">
-    <div class="inline-form">
-      <div class="truong">
-        <label for="sap-xep">Sắp xếp theo</label>
-        <select id="sap-xep">
-          <option value="ngay_cu_nhat">Ngày lên đơn — cũ nhất trước (mặc định)</option>
-          <option value="">Ngày lên đơn — mới nhất trước</option>
-          <option value="ma_don">Mã đơn (STT_Key) — A đến Z</option>
-          <option value="ma_don_desc">Mã đơn (STT_Key) — Z đến A</option>
-          <option value="canh_bao">Mức cảnh báo — khẩn cấp nhất trước</option>
-          <option value="so_luong">Số lượng — nhiều nhất trước</option>
-          <option value="khach_hang">Tên khách hàng — A đến Z</option>
-        </select>
-      </div>
-    </div>
-  </div>
-
-  <div id="danh-sach-don" class="order-list"></div>
 </div>
 
 <script src="/js/icons.js?v=79"></script>
