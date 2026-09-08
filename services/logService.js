@@ -120,6 +120,11 @@ async function layHoatDongCuaToi({ nguoiDung, tuNgay, denNgay }) {
   const quet = [];
   const doiTrangThai = [];
   const uploadAnh = [];
+  // Bổ sung 08/09/2026 (xem docs/superpowers/specs/2026-09-08-chi-tieu-hoat-dong-theo-vai-tro-design.md)
+  // — dùng để tính chỉ tiêu "tổng số lượng phôi đã lấy" cho nguoi_lay_phoi ở routes/hoatDong.js. Log
+  // này (services/taiSanService.js truKhoTheoDon) đã ghi sẵn ĐÚNG số lượng phôi trừ kho theo từng đơn
+  // — chính xác hơn hẳn so với suy luận từ SO_LUONG (đơn vị) của đơn hàng.
+  const truKhoPhoi = [];
 
   for (const r of cuaToi) {
     let chiTiet;
@@ -148,6 +153,10 @@ async function layHoatDongCuaToi({ nguoiDung, tuNgay, denNgay }) {
     }
     if (r.HanhDong === 'UPLOAD_ANH') {
       uploadAnh.push({ sttKey: r.STT_Key, thoiGian: r.ThoiGian, moc: chiTiet.moc || '', tuDongChuyenSang: chiTiet.sang || '' });
+      continue;
+    }
+    if (r.HanhDong === 'TRU_KHO_PHOI_TU_DON') {
+      truKhoPhoi.push({ sttKey: r.STT_Key, thoiGian: r.ThoiGian, soLuong: Number(chiTiet.soLuong) || 0, loai: chiTiet.loai || '', kichThuoc: chiTiet.kichThuoc || '', mauSac: chiTiet.mauSac || '' });
     }
   }
 
@@ -155,12 +164,14 @@ async function layHoatDongCuaToi({ nguoiDung, tuNgay, denNgay }) {
   quet.sort(moiNhatTruoc);
   doiTrangThai.sort(moiNhatTruoc);
   uploadAnh.sort(moiNhatTruoc);
+  truKhoPhoi.sort(moiNhatTruoc);
 
   return {
     tongSoQuet: quet.length,
     tongSoDoiTrangThai: doiTrangThai.length,
     tongSoUpload: uploadAnh.length,
-    quet, doiTrangThai, uploadAnh,
+    tongSoLuongPhoiDaLay: truKhoPhoi.reduce((tong, x) => tong + x.soLuong, 0),
+    quet, doiTrangThai, uploadAnh, truKhoPhoi,
   };
 }
 
