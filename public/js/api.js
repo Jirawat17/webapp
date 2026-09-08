@@ -62,6 +62,19 @@ function renderNav(user, active) {
       // không phải xem đơn hàng nói chung nên không phá chính sách "chỉ thấy Quét QR" ban đầu.
       { href: '/hoat-dong.html', label: 'Hoạt động của tôi', icon: 'navActivity', key: 'hoat-dong' },
     ];
+  } else if (user.vaiTro === 'san_xuat') {
+    // Nhánh riêng cho san_xuat (bổ sung 08/09/2026, theo yêu cầu người dùng) — trước đây dùng chung
+    // nhánh else bên dưới với admin/ve_file, chỉ chèn thêm "Đơn của tôi". Giờ san_xuat CHỈ thấy đúng
+    // 5 menu (bớt Thống kê/SL Phôi/Trợ lý/Báo cáo — không phục vụ trực tiếp việc chạy máy hằng ngày),
+    // và "Đơn của tôi" lên ĐẦU TIÊN (không còn đứng sau "Đơn hàng") vì đây là màn hình họ cần thấy
+    // ngay khi vào — cũng là trang mặc định sau đăng nhập (xem trangChu bên dưới và index.html).
+    links = [
+      { href: '/my-orders.html', label: 'Đơn của tôi · ' + escapeHtml(user.ten), icon: 'navMyOrders', key: 'my-orders' },
+      { href: '/orders.html', label: 'Đơn hàng', icon: 'navOrders', key: 'orders' },
+      { href: '/scan.html', label: 'Quét QR', icon: 'navScan', key: 'scan' },
+      { href: '/hoat-dong.html', label: 'Hoạt động của tôi', icon: 'navActivity', key: 'hoat-dong' },
+      { href: '/settings.html', label: 'Thiết lập', icon: 'navSettings', key: 'settings' },
+    ];
   } else {
     links = [
       { href: '/orders.html', label: 'Đơn hàng', icon: 'navOrders', key: 'orders' },
@@ -71,14 +84,11 @@ function renderNav(user, active) {
       { href: '/chatbot.html', label: 'Trợ lý', icon: 'navSupport', key: 'chatbot' },
       { href: '/reports.html', label: 'Báo cáo', icon: 'navReports', key: 'reports' },
     ];
-    // "Đơn của tôi" (bổ sung 31/08/2026, theo yêu cầu người dùng) — chỉ san_xuat mới có khái niệm
-    // "đơn tôi đang chạy máy", nên chèn ngay sau "Đơn hàng" thay vì thêm cho mọi vai trò. Admin cũng
-    // thấy menu này (bổ sung sau) để xem nhanh mọi đơn đang "Đang chạy máy" — routes/orders.js
+    // "Đơn của tôi" (bổ sung 31/08/2026) — CHỈ admin còn dùng nhánh này (san_xuat có nhánh riêng ở
+    // trên từ 08/09/2026). Admin xem nhanh mọi đơn đang "Đang chạy máy" — routes/orders.js
     // (locDonDangChayMayTheoNguoiVanHanh) chỉ lọc theo NguoiVanHanh cho san_xuat, admin xem được hết.
-    if (user.vaiTro === 'san_xuat' || user.vaiTro === 'admin') {
-      links.splice(1, 0, { href: '/my-orders.html', label: 'Đơn của tôi · ' + escapeHtml(user.ten), icon: 'navMyOrders', key: 'my-orders' });
-    }
     if (user.vaiTro === 'admin') {
+      links.splice(1, 0, { href: '/my-orders.html', label: 'Đơn của tôi · ' + escapeHtml(user.ten), icon: 'navMyOrders', key: 'my-orders' });
       links.push({ href: '/users.html', label: 'Nhân viên', icon: 'navUsers', key: 'users' });
     }
     links.push({ href: '/hoat-dong.html', label: 'Hoạt động của tôi', icon: 'navActivity', key: 'hoat-dong' });
@@ -88,7 +98,7 @@ function renderNav(user, active) {
   const nav = document.getElementById('nav');
   if (!nav) return;
 
-  const trangChu = user.vaiTro === 'nguoi_lay_phoi' ? '/scan.html' : '/orders.html';
+  const trangChu = user.vaiTro === 'nguoi_lay_phoi' ? '/scan.html' : (user.vaiTro === 'san_xuat' ? '/my-orders.html' : '/orders.html');
   nav.innerHTML = `
     <header class="app-header">
       <a href="${trangChu}" class="brand">${icon('logo', { size: 26 })}<span>Xưởng Thêu</span></a>
