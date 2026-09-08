@@ -236,3 +236,67 @@ và cột Sheet không đổi gì.
 *(Lưu ý: 1 lần test ban đầu trên `order.html` báo lỗi "Cannot read properties of undefined" — hoá ra do
 dựng nhầm bản mock CŨ (trước khi sửa route), không phải lỗi thật; dựng lại mock từ đúng file hiện tại
 thì qua hết.)*
+
+## 9. Bổ sung 09/09/2026 (lần 4): tab Sheet "LogsTracking" — log chi tiết lâu dài
+
+Yêu cầu người dùng: ghi TOÀN BỘ log chi tiết cho cả 2 luồng (thủ công + tự động) vào 1 tab Sheet MỚI
+"LogsTracking" — khác với `_logs` (mảng trong bộ nhớ, mục 6.2) vốn mất khi restart server và chỉ có 1
+dòng tóm tắt ngắn gọn mỗi việc. Sau khi hỏi cột/tên cột, người dùng bổ sung thêm yêu cầu: cột `ChiTiet`
+phải ghi lại **đầy đủ mọi bước gọi GKE, y hệt log server** (kèm ảnh chụp console: từng dòng "Gọi POST
+...", "Phản hồi: HTTP ...", body request, xử lý code 301 "đã tồn tại"...), không chỉ mỗi thông báo lỗi
+cuối cùng.
+
+### 9.1. Cột tab `LogsTracking` (người dùng tự tạo trước, dòng 1 = header, đúng 9 cột)
+
+| Cột | Nội dung |
+|---|---|
+| `ThoiGian` | Thời gian (giờ VN — `thoiGianVNISOString()`, cùng hàm với `LichSuHoatDong`) |
+| `STT_Key` | Mã đơn hàng |
+| `Nguon` | `Tự động` hoặc `Thủ công` |
+| `NguoiDung` | Tên người bấm (thủ công) hoặc `Hệ thống (tự động)` |
+| `VaiTro` | Vai trò của người đó |
+| `KetQua` | `Thành công` / `Lỗi` / `Bỏ qua` (đơn đã có tracking thật, không mua lại — trước đây KHÔNG được ghi ở đâu cả, kể cả `_logs`) |
+| `TRACKING_ID` | Mã tracking (khi thành công) |
+| `HANG_VAN_CHUYEN` | Hãng vận chuyển (khi thành công) |
+| `ChiTiet` | TOÀN BỘ log kỹ thuật từng bước (khi thành công/lỗi) hoặc lý do tĩnh (khi bỏ qua) |
+
+### 9.2. Cơ chế thu thập log chi tiết — tham số `nhatKy` xuyên suốt `gkeService.js`
+
+Trước đây mọi bước gọi GKE (`fetchJson`, `layToken`, `goiApi`, `taoDonGke`, `layTemIn`) chỉ
+`console.log`/`console.error` trực tiếp — không có cách nào lấy lại đúng những dòng đó để lưu vào
+Sheet. Thêm 2 hàm nhỏ `ghi(nhatKy, ...)`/`ghiLoi(nhatKy, ...)` — LUÔN in console y hệt cũ (không đổi
+cách debug qua terminal/`docker logs` hiện có), ĐỒNG THỜI gộp cùng nội dung vào mảng `nhatKy` nếu được
+truyền vào. Tham số `nhatKy` (tuỳ chọn, thêm ở CUỐI mỗi chữ ký hàm) truyền xuyên suốt:
+`taoDonGke`/`layTemIn` → `goiApi` → `layToken`/`fetchJson`.
+
+**Chỉ `trackingAutoService.js#muaTrackingChoDon()` tạo và truyền `nhatKy`** (mảng rỗng mỗi lần gọi,
+gộp lại sau khi xong bằng `nhatKy.join('\n')` cho cột ChiTiet). `routes/gke.js` (luồng quét QR thủ công
+tại bàn đóng gói) KHÔNG truyền `nhatKy` — giữ nguyên hành vi cũ, KHÔNG ghi vào LogsTracking — vì yêu
+cầu chỉ nói "thủ công và tự động" (2 nhánh `muaTrackingChoDon()` đã phân biệt qua `laThuCong`), quét QR
+là luồng thứ 3, tách biệt, ngoài phạm vi lần này.
+
+### 9.3. Ghi vào Sheet — không chặn luồng mua tracking thật
+
+`ghiLogTrackingVaoSheet()` (mới, `trackingAutoService.js`) — dùng `getHeadersCached`/`appendRow` (CÙNG
+khuôn tối ưu với `logService.js#ghiLog()` — chỉ đọc dòng 1 lấy header, không đọc cả tab). Bọc trong
+try/catch KHÔNG BAO GIỜ throw — tab chưa tạo/lỗi mạng chỉ `console.error`, không được làm hỏng việc mua
+tracking THẬT đang chạy. Gọi ở ĐÚNG 3 điểm trong `muaTrackingChoDon()`: bỏ qua (đã có tracking), thành
+công (sau khi ghi `TRACKING_ID`/`HANG_VAN_CHUYEN` thật), lỗi (trong catch, nối thêm dòng `LỖI: <thông
+báo>` vào cuối `nhatKy` đã thu thập được TRƯỚC KHI lỗi xảy ra).
+
+**Không đổi gì khác**: `_logs` (bộ nhớ, xem Logs ngắn gọn trên trang Tracking) vẫn y nguyên như mục
+6.2/8.2 — tab Sheet mới là bản ghi lâu dài SONG SONG, không thay thế.
+
+### 9.4. Đã kiểm tra
+
+Test mock `global.fetch` (không mock `taoDonGke`/`layTemIn` như các test trước — lần này cần xác nhận
+ĐÚNG nội dung kỹ thuật `ghi`/`ghiLoi` thu thập được) qua 4 kịch bản: (1) thành công, tự động — `ChiTiet`
+có đủ 3 bước đăng nhập/tạo đơn/in tem, đúng thứ tự, có dòng body request lẫn dòng phản hồi, ≥5 dòng;
+(2) thành công, thủ công — `Nguon`/`NguoiDung` đúng người bấm; (3) lỗi thật ở bước "tạo đơn" — `ChiTiet`
+có đủ bước đăng nhập (chạy trước khi lỗi) + dòng "GKE từ chối" + dòng "LỖI: ..." cuối cùng, KHÔNG có
+bước "in tem" (chưa chạy tới); (4) đã có tracking thật — `KetQua = "Bỏ qua"`, xác nhận **0 lần gọi
+`fetch()`** (không tốn lượt gọi GKE nào). Phát hiện + tự sửa 1 lỗi TRONG TEST (không phải lỗi thật):
+`layToken()` có cache token 12h ở cấp module, test đầu không reset cache module giữa các kịch bản nên
+kịch bản 2/3 "thiếu" dòng đăng nhập — do token vẫn còn hiệu lực từ kịch bản 1 trước đó (đúng hành vi có
+sẵn), không phải bug; sửa test bằng cách xoá cache require + nạp lại module trước mỗi kịch bản. Chạy lại
+bộ hồi quy rút gọn (cấu hình, quét tự động, chống trùng, retry, phân loại danh sách) — không hồi quy.
