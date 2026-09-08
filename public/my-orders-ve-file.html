@@ -12,7 +12,111 @@
 <div class="page">
   <h2>Đơn của tôi (Vẽ file)</h2>
 
-  <h3>Đơn cần vẽ file</h3>
+  <!-- "Đơn vẽ file của tôi" đặt LÊN TRƯỚC "DANH MỤC CÁC ĐƠN CHƯA AI VẼ FILE" (đổi 09/09/2026, theo
+       yêu cầu người dùng — mục "đang làm" cần dễ theo dõi hơn mục "còn trống chưa ai nhận"), cùng
+       tinh thần đã áp dụng cho public/my-orders.html (đổi thứ tự Đơn đang chạy máy/Đơn sẵn sàng chạy
+       máy). GIỮ NGUYÊN id/hậu tố -cv/-tv dù không còn khớp thứ tự hiển thị — tránh phải sửa lại toàn
+       bộ JS chỉ vì đổi chỗ hiển thị. -->
+  <h3>Đơn vẽ file của tôi</h3>
+
+  <div class="thanh-cong-cu-danh-sach">
+    <button type="button" class="btn-hanh-dong phu" id="btn-mo-loc-tv" onclick="batTatPanel('tv','loc')"></button>
+    <button type="button" class="btn-hanh-dong phu" id="btn-mo-sap-xep-tv" onclick="batTatPanel('tv','sap-xep')"></button>
+  </div>
+
+  <div id="panel-loc-tv" class="panel-dieu-khien" style="display:none">
+    <div class="inline-form">
+      <div class="truong">
+        <label for="loc-trang-thai-tv">Trạng thái</label>
+        <select id="loc-trang-thai-tv"><option value="">Tất cả trạng thái</option></select>
+      </div>
+      <div class="truong">
+        <label for="loc-phoi-tv">Phôi</label>
+        <select id="loc-phoi-tv">
+          <option value="">Tất cả (phôi)</option>
+          <option value="Chưa lấy phôi">Chưa lấy phôi</option>
+          <option value="Đã lấy phôi">Đã lấy phôi</option>
+        </select>
+      </div>
+      <div class="truong truong-rong">
+        <label for="loc-kh-tv">Tìm theo tên đơn / mã KH</label>
+        <input id="loc-kh-tv" placeholder="STT_Key hoặc mã khách hàng">
+      </div>
+      <div class="truong truong-ngay">
+        <label for="loc-tu-ngay-tv">Từ ngày</label>
+        <input type="date" id="loc-tu-ngay-tv">
+      </div>
+      <div class="truong truong-ngay">
+        <label for="loc-den-ngay-tv">Đến ngày</label>
+        <input type="date" id="loc-den-ngay-tv">
+      </div>
+      <div class="truong">
+        <label for="loc-canh-bao-tv">Mức cảnh báo</label>
+        <select id="loc-canh-bao-tv">
+          <option value="">Tất cả mức cảnh báo</option>
+          <option value="VANG">Vàng · 3 ngày</option>
+          <option value="CAM">Cam · 5 ngày</option>
+          <option value="DO">Đỏ · 7 ngày</option>
+        </select>
+      </div>
+      <label class="chon-tat-ca-hang truong-hang-loat" for="loc-hang-loat-tv">
+        <input type="checkbox" id="loc-hang-loat-tv">
+        Chỉ đơn hàng loạt
+      </label>
+      <div class="truong">
+        <label for="loc-loai-tv">Loại</label>
+        <select id="loc-loai-tv"><option value="">Tất cả loại</option></select>
+      </div>
+      <div class="truong">
+        <label for="loc-kich-thuoc-tv">Kích thước</label>
+        <select id="loc-kich-thuoc-tv"><option value="">Tất cả kích thước</option></select>
+      </div>
+      <div class="truong">
+        <label for="loc-mau-sac-tv">Màu sắc</label>
+        <select id="loc-mau-sac-tv"><option value="">Tất cả màu sắc</option></select>
+      </div>
+      <div class="truong">
+        <label for="loc-hang-van-chuyen-tv">Hãng vận chuyển</label>
+        <select id="loc-hang-van-chuyen-tv"><option value="">Tất cả hãng vận chuyển</option></select>
+      </div>
+      <div id="loc-nguoi-ve-file-wrap" class="truong" style="display:none">
+        <label for="loc-nguoi-ve-file">Người vẽ file</label>
+        <select id="loc-nguoi-ve-file"><option value="">Tất cả người vẽ file</option></select>
+      </div>
+      <button type="button" class="btn-hanh-dong phu" onclick="xoaTatCaLocTv()">Xoá bộ lọc</button>
+    </div>
+  </div>
+
+  <div id="panel-sap-xep-tv" class="panel-dieu-khien" style="display:none">
+    <div class="inline-form">
+      <div class="truong">
+        <label for="sap-xep-tv">Sắp xếp theo</label>
+        <select id="sap-xep-tv">
+          <option value="ngay_cu_nhat">Ngày lên đơn — cũ nhất trước (mặc định)</option>
+          <option value="">Ngày lên đơn — mới nhất trước</option>
+          <option value="ma_don">Mã đơn (STT_Key) — A đến Z</option>
+          <option value="ma_don_desc">Mã đơn (STT_Key) — Z đến A</option>
+          <option value="canh_bao">Mức cảnh báo — khẩn cấp nhất trước</option>
+          <option value="so_luong">Số lượng — nhiều nhất trước</option>
+          <option value="khach_hang">Tên khách hàng — A đến Z</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div id="thanh-hanh-dong-toi-ve" class="thanh-hanh-dong-hang-loat" style="display:none">
+    <span>Đã chọn <strong id="so-luong-da-chon-toi-ve">0</strong> đơn</span>
+    <button id="nut-danh-dau-da-ve" class="btn-hanh-dong" onclick="apDungDanhDauDaVe()">Đánh dấu Đã vẽ file</button>
+    <button type="button" class="btn-hanh-dong phu" onclick="boChonTatCaDonToiVe()">Bỏ chọn</button>
+  </div>
+  <label class="chon-tat-ca-hang">
+    <input type="checkbox" id="chon-tat-ca-toi-ve" onchange="chonTatCaToiVe(this.checked)">
+    Chọn tất cả đơn đang hiển thị
+  </label>
+
+  <div id="danh-sach-toi-ve" class="order-list"></div>
+
+  <h3 style="margin-top:32px">DANH MỤC CÁC ĐƠN CHƯA AI VẼ FILE</h3>
 
   <div class="thanh-cong-cu-danh-sach">
     <button type="button" class="btn-hanh-dong phu" id="btn-mo-loc-cv" onclick="batTatPanel('cv','loc')"></button>
@@ -113,105 +217,6 @@
   </label>
 
   <div id="danh-sach-can-ve" class="order-list"></div>
-
-  <h3 style="margin-top:32px">Đơn vẽ file của tôi</h3>
-
-  <div class="thanh-cong-cu-danh-sach">
-    <button type="button" class="btn-hanh-dong phu" id="btn-mo-loc-tv" onclick="batTatPanel('tv','loc')"></button>
-    <button type="button" class="btn-hanh-dong phu" id="btn-mo-sap-xep-tv" onclick="batTatPanel('tv','sap-xep')"></button>
-  </div>
-
-  <div id="panel-loc-tv" class="panel-dieu-khien" style="display:none">
-    <div class="inline-form">
-      <div class="truong">
-        <label for="loc-trang-thai-tv">Trạng thái</label>
-        <select id="loc-trang-thai-tv"><option value="">Tất cả trạng thái</option></select>
-      </div>
-      <div class="truong">
-        <label for="loc-phoi-tv">Phôi</label>
-        <select id="loc-phoi-tv">
-          <option value="">Tất cả (phôi)</option>
-          <option value="Chưa lấy phôi">Chưa lấy phôi</option>
-          <option value="Đã lấy phôi">Đã lấy phôi</option>
-        </select>
-      </div>
-      <div class="truong truong-rong">
-        <label for="loc-kh-tv">Tìm theo tên đơn / mã KH</label>
-        <input id="loc-kh-tv" placeholder="STT_Key hoặc mã khách hàng">
-      </div>
-      <div class="truong truong-ngay">
-        <label for="loc-tu-ngay-tv">Từ ngày</label>
-        <input type="date" id="loc-tu-ngay-tv">
-      </div>
-      <div class="truong truong-ngay">
-        <label for="loc-den-ngay-tv">Đến ngày</label>
-        <input type="date" id="loc-den-ngay-tv">
-      </div>
-      <div class="truong">
-        <label for="loc-canh-bao-tv">Mức cảnh báo</label>
-        <select id="loc-canh-bao-tv">
-          <option value="">Tất cả mức cảnh báo</option>
-          <option value="VANG">Vàng · 3 ngày</option>
-          <option value="CAM">Cam · 5 ngày</option>
-          <option value="DO">Đỏ · 7 ngày</option>
-        </select>
-      </div>
-      <label class="chon-tat-ca-hang truong-hang-loat" for="loc-hang-loat-tv">
-        <input type="checkbox" id="loc-hang-loat-tv">
-        Chỉ đơn hàng loạt
-      </label>
-      <div class="truong">
-        <label for="loc-loai-tv">Loại</label>
-        <select id="loc-loai-tv"><option value="">Tất cả loại</option></select>
-      </div>
-      <div class="truong">
-        <label for="loc-kich-thuoc-tv">Kích thước</label>
-        <select id="loc-kich-thuoc-tv"><option value="">Tất cả kích thước</option></select>
-      </div>
-      <div class="truong">
-        <label for="loc-mau-sac-tv">Màu sắc</label>
-        <select id="loc-mau-sac-tv"><option value="">Tất cả màu sắc</option></select>
-      </div>
-      <div class="truong">
-        <label for="loc-hang-van-chuyen-tv">Hãng vận chuyển</label>
-        <select id="loc-hang-van-chuyen-tv"><option value="">Tất cả hãng vận chuyển</option></select>
-      </div>
-      <div id="loc-nguoi-ve-file-wrap" class="truong" style="display:none">
-        <label for="loc-nguoi-ve-file">Người vẽ file</label>
-        <select id="loc-nguoi-ve-file"><option value="">Tất cả người vẽ file</option></select>
-      </div>
-      <button type="button" class="btn-hanh-dong phu" onclick="xoaTatCaLocTv()">Xoá bộ lọc</button>
-    </div>
-  </div>
-
-  <div id="panel-sap-xep-tv" class="panel-dieu-khien" style="display:none">
-    <div class="inline-form">
-      <div class="truong">
-        <label for="sap-xep-tv">Sắp xếp theo</label>
-        <select id="sap-xep-tv">
-          <option value="ngay_cu_nhat">Ngày lên đơn — cũ nhất trước (mặc định)</option>
-          <option value="">Ngày lên đơn — mới nhất trước</option>
-          <option value="ma_don">Mã đơn (STT_Key) — A đến Z</option>
-          <option value="ma_don_desc">Mã đơn (STT_Key) — Z đến A</option>
-          <option value="canh_bao">Mức cảnh báo — khẩn cấp nhất trước</option>
-          <option value="so_luong">Số lượng — nhiều nhất trước</option>
-          <option value="khach_hang">Tên khách hàng — A đến Z</option>
-        </select>
-      </div>
-    </div>
-  </div>
-
-  <div id="thanh-hanh-dong-toi-ve" class="thanh-hanh-dong-hang-loat" style="display:none">
-    <span>Đã chọn <strong id="so-luong-da-chon-toi-ve">0</strong> đơn</span>
-    <button id="nut-danh-dau-da-ve" class="btn-hanh-dong" onclick="apDungDanhDauDaVe()">Đánh dấu Đã vẽ file</button>
-    <button type="button" class="btn-hanh-dong phu" onclick="boChonTatCaDonToiVe()">Bỏ chọn</button>
-  </div>
-  <label class="chon-tat-ca-hang">
-    <input type="checkbox" id="chon-tat-ca-toi-ve" onchange="chonTatCaToiVe(this.checked)">
-    Chọn tất cả đơn đang hiển thị
-  </label>
-
-  <div id="danh-sach-toi-ve" class="order-list"></div>
 </div>
 
 <script src="/js/icons.js?v=79"></script>
