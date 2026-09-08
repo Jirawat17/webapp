@@ -240,6 +240,14 @@ body.trang-dang-nhap {
   padding-bottom: env(safe-area-inset-bottom);
   box-shadow: 0 -4px 16px rgba(24,24,27,0.06);
 }
+/* display:contents — trên điện thoại wrapper này "biến mất" khỏi box model, các <a> bên trong thành
+   con flex trực tiếp của .tab-links như cũ, giữ NGUYÊN 100% cách chia đều (space-around) của thanh
+   icon dính đáy màn hình. Chỉ có tác dụng thật (display:flex) từ 768px trở lên, xem bên dưới. */
+.tab-links-menu { display: contents; }
+/* Bản tên/đăng xuất đi kèm menu — CHỈ dùng ở desktop (xem @media bên dưới), điện thoại vẫn dùng bản
+   trong .app-header như cũ (không đụng gì) — bổ sung 09/09/2026, xem docs/superpowers/specs/
+   2026-09-09-gop-1-hang-nav-desktop-design.md. */
+.tab-links-user { display: none; }
 .tab-links a {
   flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
   padding: 8px 4px; min-height: var(--tap-min);
@@ -251,10 +259,19 @@ body.trang-dang-nhap {
 .nav-icon-tile { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 10px; }
 
 @media (min-width: 768px) {
+  /* Bỏ hẳn brand "Xưởng Thêu" + hàng riêng phía trên ở desktop — dồn tên/đăng xuất xuống cùng hàng
+     với menu (.tab-links-user bên dưới) để tăng diện tích hiển thị, tham khảo layout 1 hàng của GKE
+     Logistics. Điện thoại KHÔNG đụng gì — .app-header vẫn hiện như cũ ở đó. */
+  .app-header { display: none; }
   .tab-links {
     position: static; box-shadow: none; border-top: none; border-bottom: 1px solid var(--color-border);
-    justify-content: flex-start; gap: var(--space-2); padding: 0 var(--space-4);
+    justify-content: space-between; padding: 0 var(--space-4);
   }
+  .tab-links-menu {
+    display: flex; align-items: center; gap: var(--space-2);
+    overflow-x: auto; /* nhiều menu (admin tới 12 mục) — lỡ không đủ chỗ thì cuộn ngang thay vì vỡ hàng */
+  }
+  .tab-links-user { display: flex; flex-shrink: 0; } /* .header-right đã có sẵn align-items/gap */
   .tab-links a {
     flex: none; flex-direction: row; font-size: 0.9rem; padding: 12px var(--space-3);
     border-bottom: 3px solid transparent;

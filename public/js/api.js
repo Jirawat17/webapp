@@ -111,19 +111,30 @@ function renderNav(user, active) {
   if (!nav) return;
 
   const trangChu = user.vaiTro === 'nguoi_lay_phoi' ? '/scan.html' : (user.vaiTro === 'san_xuat' ? '/my-orders.html' : '/orders.html');
+  // Tên/vai trò + nút đăng xuất — 2 BẢN có chủ đích (bổ sung 09/09/2026, theo yêu cầu người dùng, tham
+  // khảo layout 1 hàng của GKE Logistics): 1 bản trong .app-header (CHỈ hiện trên điện thoại — layout
+  // di động giữ NGUYÊN, menu vẫn là icon dính đáy màn hình, không đụng), 1 bản trong .tab-links-user
+  // (CHỈ hiện từ 768px trở lên, cùng hàng với menu, thay hẳn .app-header — .app-header ẩn ở desktop,
+  // bỏ luôn brand "Xưởng Thêu" để tăng diện tích hiển thị). PHẢI dùng nhãn class khác nhau cho .header-
+  // right (bản trong .app-header, ẩn/hiện theo chính .app-header) và .tab-links-user (bản trong
+  // .tab-links, style.css tự bật/tắt riêng theo breakpoint) — gộp chung 1 class sẽ khiến CSS ẩn/hiện
+  // NHẦM cả 2 bản cùng lúc thay vì đúng 1 bản theo màn hình.
+  const noiDungNguoiDung = `
+    <span class="nav-user">${escapeHtml(user.ten)} · ${escapeHtml(NHAN_VAI_TRO[user.vaiTro] || user.vaiTro)}</span>
+    <button class="icon-btn" onclick="dangXuat()" aria-label="Đăng xuất">${icon('logout')}</button>`;
   nav.innerHTML = `
     <header class="app-header">
       <a href="${trangChu}" class="brand">${icon('logo', { size: 26 })}<span>Xưởng Thêu</span></a>
-      <div class="header-right">
-        <span class="nav-user">${escapeHtml(user.ten)} · ${escapeHtml(NHAN_VAI_TRO[user.vaiTro] || user.vaiTro)}</span>
-        <button class="icon-btn" onclick="dangXuat()" aria-label="Đăng xuất">${icon('logout')}</button>
-      </div>
+      <div class="header-right">${noiDungNguoiDung}</div>
     </header>
     <nav class="tab-links" aria-label="Điều hướng chính">
-      ${links.map(l => `
-        <a href="${l.href}" class="${l.key === active ? 'active' : ''}">
-          <span class="nav-icon-tile">${icon(l.icon, { size: 20 })}</span><span>${l.label}</span>
-        </a>`).join('')}
+      <div class="tab-links-menu">
+        ${links.map(l => `
+          <a href="${l.href}" class="${l.key === active ? 'active' : ''}">
+            <span class="nav-icon-tile">${icon(l.icon, { size: 20 })}</span><span>${l.label}</span>
+          </a>`).join('')}
+      </div>
+      <div class="header-right tab-links-user">${noiDungNguoiDung}</div>
     </nav>`;
 }
 
