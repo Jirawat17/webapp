@@ -522,10 +522,11 @@ rộng thành "đã qua đúng luồng xác nhận hợp lệ".
 
 Không có quyền truy cập Sheet thật để kiểm tra trực tiếp — viết sẵn `scripts/migrate-trang-thai-v4.js`
 (CHẠY THỬ mặc định, cần `--apply` mới ghi thật, cùng khuôn `migrate-trang-thai-v2.js`/`v3.js`) để người
-dùng tự chạy: liệt kê mọi đơn đang `TRANG_THAI_XUONG="Đã đóng gói"`, chuyển VỀ `"Đã sản xuất"` (không tự
-đoán lên thẳng "ĐÃ DÁN TEM" vì không chắc đơn nào đã thực sự có mã tracking GKE thật — TRACKING_ID nếu
-có vẫn giữ nguyên, chỉ đổi TRANG_THAI_XUONG) — các đơn này cần được quét lại QR Tracking sau khi migrate
-để tạo vận đơn GKE thật và lên "ĐÃ DÁN TEM" đúng luồng mới.
+dùng tự chạy: liệt kê mọi đơn đang `TRANG_THAI_XUONG="Đã đóng gói"`, chuyển VỀ `"Đã sản xuất"` (TRACKING_ID
+nếu có vẫn giữ nguyên, chỉ đổi TRANG_THAI_XUONG) — các đơn này cần dùng lại 1 trong các cơ chế ở mục 12
+(chụp ảnh xác nhận và/hoặc mua tracking) sau khi migrate để lên "ĐÃ DÁN TEM" đúng luồng hiện tại. *(Ghi
+chú 09/09/2026 lần 4: script này viết TRƯỚC khi "Quét mã QR Tracking" bị xoá — vẫn đúng, chỉ đổi tên cơ
+chế đích.)*
 
 ### 11.5. Đã kiểm tra
 
@@ -550,3 +551,102 @@ có vẫn giữ nguyên, chỉ đổi TRANG_THAI_XUONG) — các đơn này cầ
   chọn (không còn "Chụp ảnh đóng gói"), phần tử `mode-photo-dong-goi` không còn trong DOM, chuyển sang
   mode "Chụp ảnh đã sản xuất" (mode còn lại duy nhất dùng chung cấu trúc cũ) hoạt động bình thường,
   không lỗi console.
+
+## 12. Bổ sung 09/09/2026 (lần 4): thay "Quét mã QR Tracking" (GKE) bằng "Chụp ảnh ĐÃ DÁN TEM" (thuần ảnh)
+
+Theo yêu cầu người dùng, qua 2 lượt hỏi lại để làm rõ (ban đầu gõ nhầm "ĐÃ DÁN NHÃN" thành trạng thái
+mới — thực ra là "ĐÃ DÁN TEM" đã có; sau đó xác nhận rõ đây là 1 đường THỨ 2 tới "ĐÃ DÁN TEM", chấp
+nhận đơn qua đường này có thể không có mã tracking thật; cuối cùng xác nhận CHỈ xoá chế độ quét camera
+"Quét mã QR Tracking", KHÔNG xoá phần còn lại của tích hợp GKE): thêm kịch bản "Chụp ảnh ĐÃ DÁN TEM" ở
+trang Quét mã QR — CÙNG khuôn "Chụp ảnh đã sản xuất" (quét QR xác định đơn → chụp ảnh → tự chuyển
+trạng thái), KHÔNG gọi GKE — thay thế hẳn chế độ "Quét mã QR Tracking" cũ (gọi GKE thật, tạo vận đơn).
+
+### 12.1. Quyết định cốt lõi: tách hẳn "ĐÃ DÁN TEM" khỏi việc có mã tracking GKE thật hay không
+
+Trước lần này: `TRANG_THAI_BAT_BUOC_CHUP_ANH`/`TRANG_THAI_NGUON_HOP_LE_CHO_DAN_TEM` (mục 11.2) coi "ĐÃ
+DÁN TEM" là kết quả của việc GỌI GKE THẬT — đúng tinh thần đã xây khi xoá "Đã đóng gói" (mục 11.1: xoá
+hẳn "Chụp ảnh đóng gói" để TRÁNH đơn "ĐÃ DÁN TEM" mà không có tracking thật). Lần này người dùng ĐẢO
+NGƯỢC quyết định đó — xác nhận rõ, kể cả sau khi được nhắc lại nguyên do đã xây dựng ở mục 11.1, vẫn
+CHỌN cho phép đơn đạt "ĐÃ DÁN TEM" qua thuần ảnh, không cần mã tracking thật. Tôn trọng quyết định mới
+nhất của người dùng — không tự ý giữ nguyên tắc cũ.
+
+**Cơ chế `orderService.js` KHÔNG cần đổi gì** — `TRANG_THAI_BAT_BUOC_CHUP_ANH`/
+`TRANG_THAI_NGUON_HOP_LE_CHO_DAN_TEM` (mục 11.2) vẫn y nguyên: bắt buộc phải qua `quaAnh:true` (chụp
+ảnh QR hợp lệ) hoặc admin sửa tay, VÀ bắt buộc nguồn đúng "Đã sản xuất". Chỉ đổi NGƯỜI GỌI hợp lệ —
+trước là `routes/gke.js` (đã xoá), giờ là `routes/photos.js` mốc `da_dan_tem` (cũng truyền `quaAnh:true`,
+đúng khuôn mốc `da_san_xuat` có sẵn).
+
+### 12.2. Xoá hẳn `routes/gke.js` — không chỉ ẩn chế độ quét
+
+Đã hỏi rõ mức độ xoá (giữ nguyên phần còn lại của GKE / xoá toàn bộ) — người dùng chọn: CHỈ xoá chế độ
+quét camera "Quét mã QR Tracking", GIỮ NGUYÊN nút "Mua Tracking" (thủ công/tự động), "IN LABEL"/"MUA
+TRACKING và IN LABEL", trang Tracking (cấu hình GKE, bật/tắt tự động, LogsTracking).
+
+Xác nhận `routes/gke.js` chỉ được `require` từ `server.js`, route `/tracking/quet` chỉ được gọi từ
+`scan.html#xuLyQuetTracking()` (không nơi nào khác) — an toàn để XOÁ HẲN file (không giữ lại dạng dead
+code), bỏ luôn dòng mount `app.use('/api/gke', ...)` trong `server.js`. `services/gkeService.js` (client
+GKE cấp thấp — `taoDonGke`/`layTemIn`/`layCauHinhGke`/`MA_DANG_CHO_TEM`) giữ nguyên, vẫn dùng bởi
+`trackingAutoService.js#muaTrackingChoDon()`/`inLabelChoDon()`.
+
+### 12.3. `public/scan.html` — xoá gọn cả khối, không chỉ ẩn
+
+Mode `gke_tracking` gắn với 1 khối code khá lớn và ĐAN XEN với code của mode "Quét kịch bản" (batch) —
+không nằm liền 1 khối duy nhất. Xoá theo 2 đoạn tách biệt (xác nhận ranh giới bằng cách đọc trực tiếp
+file, xoá bằng script Node theo đúng số dòng đã xác nhận, không dùng string-replace cho khối quá lớn để
+tránh sai lệch khi transcribe):
+- Đoạn 1: từ comment đầu `xuLyQuetTracking` tới hết `inTemTuDong()` (gồm `daBaoDangBanTracking`,
+  `xuLyQuetTracking()`, `hienThiTrangThaiCamera()`, `khoiDongLaiCameraTracking()`, `base64ThanhBlob()`,
+  `inTemTuDong()`) — ngay TRƯỚC `async function xuLyQuetKichBan()` (mode "Quét kịch bản", PHẢI giữ).
+- Đoạn 2: từ `document.getElementById('btn-dung-quet-tracking').onclick` tới hết
+  `dongTongHopTrackingLoi()` (gồm `renderTongHopTracking()`, `dongTongHopTrackingOK()`,
+  `dongTongHopTrackingLoi()`) — ngay TRƯỚC `function renderXemLai()` (mode "Quét kịch bản", PHẢI giữ).
+
+Cũng xoá: nút `<button id="btn-dung-quet-tracking">` + `<div id="trang-thai-camera-tracking">` trong
+HTML, entry `gke_tracking` trong `MODE_OPTIONS`, class `che-do-to` toggle, nhánh `mode === 'gke_tracking'`
+trong `capNhatManHinh()`/`dieuChinhCamera()`. Sau khi xoá, `document.getElementById('btn-dung-quet-
+tracking').onclick = ...` (nếu sót lại) sẽ THROW ngay lúc tải trang vì phần tử không còn tồn tại — đã rà
+kỹ để xoá đúng cả dòng này, không chỉ ẩn.
+
+### 12.4. Thêm mode `photo_da_dan_tem` — tái dùng 100% cơ chế chung sẵn có
+
+`CAU_HINH_ANH.photo_da_dan_tem = { moc:'da_dan_tem', nhanTab:'Chụp ảnh ĐÃ DÁN TEM', yeuCau:'Đã sản
+xuất', chuyenSang:'ĐÃ DÁN TEM' }` + `dsDaChupTheoMoc.photo_da_dan_tem = []` + thêm vào `MODE_OPTIONS`
++ mở rộng điều kiện nhánh chung `mode === 'photo_san_xuat' || mode === 'photo_da_dan_tem'` trong
+`capNhatManHinh()`. KHÔNG cần sửa `dieuChinhCamera()`, `xuLyQuetDeXacDinhDon()`, `xuLyChupAnh()`,
+`renderDemNhomAnh()`, `renderDsDaChup()` — tất cả đã đọc `CAU_HINH_ANH[mode]`/`dsDaChupTheoMoc[mode]`
+động theo biến `mode`, không hardcode tên mode cụ thể nào, nên thêm 1 mode mới hoàn toàn tái dùng được.
+KHÔNG thêm nút ẩn trong menu 4-nút-cũ (đã ghi rõ trong code là "vô hại, không cần dọn vì không hiển
+thị" — không perpetuate thêm phần tử DOM cho 1 UI đã deprecated).
+
+`routes/photos.js`: thêm `da_dan_tem` vào `COT_ANH_THEO_MOC` (cột `Anh_Da_Dan_Tem_URL` — CẦN NGƯỜI
+DÙNG TỰ THÊM vào Sheet) và `MOC_TU_DONG_CHUYEN_TRANG_THAI` (`{ yeuCau:'Đã sản xuất', chuyenSang:'ĐÃ
+DÁN TEM' }`) — 2 route sẵn có (`/kiem-tra`, `/upload`) đọc 2 dict này ĐỘNG theo `moc` gửi lên, không
+cần sửa logic route.
+
+`public/order.html`: thêm khối upload admin-only "Ảnh ĐÃ DÁN TEM" (mốc `da_dan_tem`), CÙNG khuôn khối
+"Ảnh đã sản xuất" — và thêm link xem ảnh (nếu có `Anh_Da_Dan_Tem_URL`) vào khối thông tin đơn.
+
+### 12.5. Dọn comment tham chiếu `routes/gke.js` còn sót trong code KHÔNG bị xoá
+
+Nhiều comment ở `services/gkeService.js`/`services/trackingAutoService.js`/`data/pipelineTinhTrang.js`
+mô tả hành vi/lịch sử gắn với `routes/gke.js` (đã xoá) — rà lại và viết lại nội dung (không chỉ xoá
+dòng) để không còn trỏ tới file không tồn tại, đồng thời cập nhật đúng "sự thật mới": việc đổi
+`TRANG_THAI_XUONG` và việc gọi GKE giờ HOÀN TOÀN TÁCH BIỆT (trước đây gắn liền trong `routes/gke.js`).
+
+### 12.6. Đã kiểm tra
+
+- Test tương tác qua trang mock MỚI cho `scan.html` (build lại từ file hiện tại sau khi xoá, không tái
+  dùng mock cũ) — dropdown còn ĐÚNG 4 lựa chọn (`batch`, `photo_san_xuat`, `photo_da_dan_tem`, `lookup`,
+  không còn `gke_tracking`); `CAU_HINH_ANH`/`dsDaChupTheoMoc` đúng 2 khoá; phần tử `btn-dung-quet-
+  tracking`/`trang-thai-camera-tracking` không còn trong DOM; không lỗi console, không có lời gọi
+  `apiFetch` nào ngoài dự kiến. Chuyển sang mode `photo_da_dan_tem` hiện đúng mô tả
+  (`Quét mã QR để xác định đơn cần "Chụp ảnh ĐÃ DÁN TEM". Đơn phải đang ở "Đã sản xuất".`). Gọi thẳng
+  `xuLyQuetDeXacDinhDon('DH999')` với `/photos/kiem-tra` mock — gửi đúng `{moc:'da_dan_tem', sttKey:
+  'DH999'}`, chuyển đúng sang trạng thái [Sẵn sàng chụp] (`photo-wrap` hiện, mô tả đúng).
+- `node --check` `data/pipelineTinhTrang.js`, `services/orderService.js`, `services/gkeService.js`,
+  `services/trackingAutoService.js`, `routes/photos.js`, `routes/chatbot.js`, `routes/reports.js`,
+  `server.js` + script inline trích từ `scan.html`/`order.html`.
+- Rà `grep` toàn repo xác nhận: không còn file `.js` nào (ngoài chính `server.js`/`data/pipelineTinhTrang.js`/
+  `gkeService.js` ghi chú LỊCH SỬ có chữ "ĐÃ XOÁ") tham chiếu `routes/gke.js`; không còn `gke_tracking`
+  trong bất kỳ file code nào (chỉ còn trong 1 spec doc cũ mô tả thiết kế TRƯỚC lần đổi này, giữ nguyên
+  làm lịch sử).
