@@ -27,7 +27,9 @@ const FONT_BOLD = path.join(__dirname, '..', 'fonts', 'NotoSans-Bold.ttf');
 // in đúng 100% theo bộ lọc đang hiển thị, kể cả khi không lọc gì thì in TOÀN BỘ đơn). 'mau' giờ CHỈ
 // còn quyết định ĐỊNH DẠNG file xuất (cột, tiêu đề, nhóm — xem xayDungBaoCaoDangBang()/veTheDonPdf()),
 // không còn ảnh hưởng gì tới việc đơn nào được đưa vào danh sách in nữa.
-const TRANG_THAI_TRACKING = 'Đã đóng gói'; // chỉ còn dùng để TỰ SUY mẫu 'tracking' khi không truyền 'mau' (xem xacDinhMau)
+// Đổi từ 'Đã đóng gói' sang 'Đã sản xuất' (09/09/2026 lần 3, XOÁ "Đã đóng gói" khỏi hệ thống — xem
+// data/pipelineTinhTrang.js): đây vẫn là trạng thái NGAY TRƯỚC bước tạo tem tracking GKE, chỉ đổi tên.
+const TRANG_THAI_TRACKING = 'Đã sản xuất'; // chỉ còn dùng để TỰ SUY mẫu 'tracking' khi không truyền 'mau' (xem xacDinhMau)
 
 function locDon(rows, { stt, sttKeys, tuNgay, denNgay, khachHang, trangThai, trangThaiPhoi, trangThaiVeFile, tuKhoa }) {
   // 'stt' — dùng riêng cho nút "IN ĐƠN" ở trang chi tiết 1 đơn (order.html): khớp CHÍNH XÁC theo

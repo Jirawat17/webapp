@@ -11,32 +11,31 @@ const { requireLogin } = require('../middleware/auth');
 router.use(requireLogin);
 
 // Mỗi "mốc nghiệp vụ" ghi URL vào đúng cột tương ứng trong Sheet.
-// LƯU Ý: Sheet thật KHÔNG có cột Anh_Dong_Goi_URL/Anh_File_Theu_URL/Anh_Da_San_Xuat_URL (khác với
-// bản thiết kế mẫu ban đầu) — muốn dùng các mốc "dong_goi"/"ve_file"/"da_san_xuat" cần tự thêm các
-// cột này vào Don_Hang_ALL trước.
+// LƯU Ý: Sheet thật KHÔNG có cột Anh_File_Theu_URL/Anh_Da_San_Xuat_URL (khác với bản thiết kế mẫu ban
+// đầu) — muốn dùng các mốc "ve_file"/"da_san_xuat" cần tự thêm các cột này vào Don_Hang_ALL trước.
+// Mốc "dong_goi" (Ảnh đóng gói, Anh_Dong_Goi_URL) ĐÃ XOÁ 09/09/2026 lần 3 cùng lúc xoá trạng thái "Đã
+// đóng gói" (theo yêu cầu người dùng — xem data/pipelineTinhTrang.js). "Đã sản xuất" giờ đi thẳng sang
+// "ĐÃ DÁN TEM" qua "Quét mã QR Tracking" (routes/gke.js), không cần bước chụp ảnh đóng gói riêng nữa.
 const COT_ANH_THEO_MOC = {
-  dong_goi: 'Anh_Dong_Goi_URL',
   da_san_xuat: 'Anh_Da_San_Xuat_URL', // bổ sung 31/08/2026 — ảnh chụp ngay khi vừa chạy máy xong
   mau: 'DUONG_DAN_URL',
   mockup: 'MOCKUP',
   ve_file: 'Anh_File_Theu_URL', // bổ sung 26/08/2026 — ảnh file thêu do ve_file upload sau khi vẽ file xong, để san_xuat xem trước khi chọn chỉ
 };
 
-// 2 mốc dưới đây KHÔNG chỉ lưu ảnh — mỗi mốc CHÍNH LÀ 1 hành động "chụp ảnh bằng chứng kèm chuyển
-// giai đoạn": tự động chuyển TRANG_THAI_XUONG trong CÙNG 1 lần ghi với việc lưu URL ảnh. Yêu cầu đơn ĐANG
-// ở đúng "yeuCau" trước khi chụp — kiemTraTinhHopLy() trong orderService.update() KHÔNG tự chặn việc
-// này (không phải 1 trong 3 quy tắc của nó) nên phải tự kiểm tra ở đây. Mở cho CẢ 4 vai trò (không
-// giới hạn gì thêm ngoài requireLogin ở trên) — dùng ở cả 2 tab "Chụp ảnh đã sản xuất"/"Chụp ảnh đóng
-// gói" (scan.html) lẫn 2 nút tải ảnh đơn lẻ tương ứng (order.html, admin).
-//   dong_goi     (bổ sung 26/08/2026) — "Ảnh đóng gói": Đã sản xuất -> Đã đóng gói
+// Mốc dưới đây KHÔNG chỉ lưu ảnh — CHÍNH LÀ 1 hành động "chụp ảnh bằng chứng kèm chuyển giai đoạn": tự
+// động chuyển TRANG_THAI_XUONG trong CÙNG 1 lần ghi với việc lưu URL ảnh. Yêu cầu đơn ĐANG ở đúng
+// "yeuCau" trước khi chụp — kiemTraTinhHopLy() trong orderService.update() KHÔNG tự chặn việc này
+// (không phải 1 trong 3 quy tắc của nó) nên phải tự kiểm tra ở đây. Mở cho CẢ 4 vai trò (không giới
+// hạn gì thêm ngoài requireLogin ở trên) — dùng ở cả tab "Chụp ảnh đã sản xuất" (scan.html) lẫn nút tải
+// ảnh đơn lẻ tương ứng (order.html, admin).
 //   da_san_xuat  (bổ sung 31/08/2026) — "Ảnh đã sản xuất": Đang chạy máy -> Đã sản xuất
 const MOC_TU_DONG_CHUYEN_TRANG_THAI = {
-  dong_goi: { yeuCau: 'Đã sản xuất', chuyenSang: 'Đã đóng gói' },
   da_san_xuat: { yeuCau: 'Đang chạy máy', chuyenSang: 'Đã sản xuất' },
 };
 
 // Kiểm tra ĐỦ ĐIỀU KIỆN chụp ảnh cho 1 đơn — KHÔNG cần file ảnh. Dùng NGAY SAU khi quét QR sống để
-// xác định đơn (public/scan.html, mode photo_san_xuat/photo_dong_goi — xem
+// xác định đơn (public/scan.html, mode photo_san_xuat — xem
 // docs/superpowers/specs/2026-09-07-tach-quet-chup-anh-design.md), TRƯỚC KHI mở camera chụp thật —
 // tránh lãng phí 1 lần chụp cho đơn không hợp lệ (sai trạng thái/không tồn tại).
 // CỐ Ý không dùng GET /orders/:sttKey — route đó ẩn hẳn (404) đơn "Đang chạy máy" của san_xuat KHÁC
@@ -79,7 +78,7 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
   const cotAnh = COT_ANH_THEO_MOC[moc];
   if (!cotAnh) return res.status(400).json({ error: 'Mốc ảnh không hợp lệ: ' + moc });
 
-  const { headers, row } = await orderService.getByKey(sttKey, { fresh: true }); // fresh: mốc dong_goi kiểm tra TRANG_THAI_XUONG ngay dưới đây, không được dùng bản cache cũ
+  const { headers, row } = await orderService.getByKey(sttKey, { fresh: true }); // fresh: mốc da_san_xuat kiểm tra TRANG_THAI_XUONG ngay dưới đây, không được dùng bản cache cũ
   if (!row) return res.status(404).json({ error: 'Không tìm thấy đơn hàng: ' + sttKey });
   if (!headers.includes(cotAnh)) {
     return res.status(400).json({ error: `Sheet chưa có cột '${cotAnh}' — cần thêm cột này vào Don_Hang_ALL trước khi dùng mốc ảnh "${moc}"` });
@@ -117,9 +116,9 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
 
   let updated;
   try {
-    // quaAnh: true — cho phép đặt thẳng TRANG_THAI_XUONG="Đã sản xuất"/"Đã đóng gói" ở đây, vì đây CHÍNH LÀ
-    // luồng chụp ảnh QR hợp lệ mà orderService.update() bắt buộc phải đi qua cho 2 trạng thái này
-    // (xem kiemTraCongAnhBatBuoc trong orderService.js).
+    // quaAnh: true — cho phép đặt thẳng TRANG_THAI_XUONG="Đã sản xuất" ở đây, vì đây CHÍNH LÀ luồng
+    // chụp ảnh QR hợp lệ mà orderService.update() bắt buộc phải đi qua cho trạng thái này (xem
+    // kiemTraCongAnhBatBuoc trong orderService.js).
     // headers/row đã đọc thật ở trên (dòng 53), khỏi đọc lại lần nữa (xem orderService.update)
     updated = await orderService.update(sttKey, updates, user, { quaAnh: true, donDaDoc: { headers, row } });
   } catch (err) {

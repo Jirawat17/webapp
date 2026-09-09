@@ -189,13 +189,16 @@ async function muaTrackingChoDon(sttKey, cauHinhGke, user = NGUOI_HE_THONG) {
 
 // Trạng thái TRANG_THAI_XUONG tối thiểu để được IN LABEL — bổ sung 09/09/2026 lần 2, theo yêu cầu
 // người dùng: 2 nút "IN LABEL"/"MUA TRACKING và IN LABEL" (khác nút "Mua Tracking" gốc phía trên,
-// KHÔNG kiểm tra trạng thái) phải bắt buộc đơn đã đóng gói xong mới cho in — tránh lãng phí tem thật
-// cho đơn còn chưa sẵn sàng gửi đi. Giống hệt điều kiện quét QR Tracking (routes/gke.js).
-const TRANG_THAI_DU_DIEU_KIEN_IN_LABEL = ['Đã đóng gói', 'ĐÃ DÁN TEM'];
+// KHÔNG kiểm tra trạng thái) phải bắt buộc đơn đã sản xuất xong mới cho in — tránh lãng phí tem thật
+// cho đơn còn chưa sẵn sàng gửi đi. Giống hệt điều kiện quét QR Tracking (routes/gke.js) và
+// TRANG_THAI_NGUON_HOP_LE_CHO_DAN_TEM (services/orderService.js).
+// (Đổi từ 'Đã đóng gói' sang 'Đã sản xuất' 09/09/2026 lần 3 — XOÁ "Đã đóng gói" khỏi hệ thống, xem
+// data/pipelineTinhTrang.js.)
+const TRANG_THAI_DU_DIEU_KIEN_IN_LABEL = ['Đã sản xuất', 'ĐÃ DÁN TEM'];
 
 function kiemTraDieuKienInLabel(row) {
   if (!TRANG_THAI_DU_DIEU_KIEN_IN_LABEL.includes(row.TRANG_THAI_XUONG)) {
-    throw new Error(`Đơn đang ở "${row.TRANG_THAI_XUONG}" — phải "Đã đóng gói" hoặc "ĐÃ DÁN TEM" mới in được label.`);
+    throw new Error(`Đơn đang ở "${row.TRANG_THAI_XUONG}" — phải "Đã sản xuất" hoặc "ĐÃ DÁN TEM" mới in được label.`);
   }
 }
 
@@ -219,7 +222,7 @@ async function ghiDaInLabel(sttKey, user) {
 // "IN LABEL" — chỉ IN LẠI tem cho đơn ĐÃ có tracking thật, không mua/tạo vận đơn gì thêm (bổ sung
 // 09/09/2026 lần 2, theo yêu cầu người dùng). Dùng lại ĐÚNG gkeService.layTemIn() — y hệt luồng "in lại
 // tem" ở routes/gke.js#tracking/quet, chỉ khác chỗ gọi từ Đơn hàng/Đơn hàng chi tiết/Tracking thay vì
-// quét QR sống. Bắt buộc đơn đang "Đã đóng gói"/"ĐÃ DÁN TEM" (xem kiemTraDieuKienInLabel).
+// quét QR sống. Bắt buộc đơn đang "Đã sản xuất"/"ĐÃ DÁN TEM" (xem kiemTraDieuKienInLabel).
 async function inLabelChoDon(sttKey, cauHinhGke, user) {
   const nhatKy = [];
   const { row } = await orderService.getByKey(sttKey, { fresh: true });
@@ -253,9 +256,9 @@ async function inLabelChoDon(sttKey, cauHinhGke, user) {
 // nên KHÔNG cần gọi GKE thêm lần nào cho bước in — label_base64 đã có sẵn trong kết quả trả về); đơn
 // ĐÃ có tracking thật rồi thì bỏ qua bước mua, chỉ in lại (uỷ quyền thẳng cho inLabelChoDon() ở trên,
 // hàm đó tự ghi log riêng của nó — TRÁNH ghi log trùng lặp 2 lần cho cùng 1 lần in).
-// Bắt buộc "Đã đóng gói"/"ĐÃ DÁN TEM" cho CẢ 2 nhánh — khác nút "Mua Tracking" gốc (không kiểm tra
-// trạng thái): đã xác nhận với người dùng, 2 nút MỚI này dành riêng cho lúc đóng gói/chuẩn bị gửi
-// hàng, không phải để lấy mã tracking sớm như nút gốc.
+// Bắt buộc "Đã sản xuất"/"ĐÃ DÁN TEM" cho CẢ 2 nhánh — khác nút "Mua Tracking" gốc (không kiểm tra
+// trạng thái): đã xác nhận với người dùng, 2 nút MỚI này dành riêng cho lúc chuẩn bị gửi hàng, không
+// phải để lấy mã tracking sớm như nút gốc.
 async function muaTrackingVaInLabelChoDon(sttKey, cauHinhGke, user) {
   const { row } = await orderService.getByKey(sttKey, { fresh: true });
   if (!row) throw new Error('Không tìm thấy đơn: ' + sttKey);

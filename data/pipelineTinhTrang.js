@@ -37,10 +37,22 @@
 // "ĐÃ SẴN SÀNG CHẠY MÁY" trở đi nên vẫn bắt buộc phôi/file phải xong (xem kiemTraTinhHopLy trong
 // services/orderService.js) và vẫn nằm trong phạm vi đơn mà san_xuat được thấy (filterForRole).
 //
-// "ĐÃ DÁN TEM" (thêm 01/09/2026): chèn giữa "Đã đóng gói" và "DELIVERED" — routes/gke.js tự đặt
-// TRANG_THAI_XUONG sang giá trị này ngay sau khi quét mã ở tab "Quét mã QR Tracking" lấy được tem GKE
-// thành công (xem routes/gke.js). Không có automation nào tự chuyển tiếp "ĐÃ DÁN TEM" -> "DELIVERED"
+// "ĐÃ DÁN TEM" (thêm 01/09/2026, XOÁ "Đã đóng gói" 09/09/2026 lần 3 — xem ngay dưới): routes/gke.js tự
+// đặt TRANG_THAI_XUONG sang giá trị này ngay sau khi quét mã ở tab "Quét mã QR Tracking" lấy được tem
+// GKE thành công (xem routes/gke.js). Không có automation nào tự chuyển tiếp "ĐÃ DÁN TEM" -> "DELIVERED"
 // — vẫn set tay như trước.
+//
+// XOÁ "Đã đóng gói" (09/09/2026 lần 3, theo yêu cầu người dùng — xác nhận không cần trạng thái này
+// nữa): trước đó nằm giữa "Đã sản xuất" và "ĐÃ DÁN TEM", đạt được qua chế độ "Chụp ảnh đóng gói"
+// (routes/photos.js, mốc dong_goi — ĐÃ XOÁ luôn mốc này, xem routes/photos.js). Giờ "Đã sản xuất" đi
+// THẲNG sang "ĐÃ DÁN TEM" — CHỈ qua 2 đường: (1) "Quét mã QR Tracking" (routes/gke.js, tạo vận đơn GKE
+// thật — điều kiện đơn phải đang đúng "Đã sản xuất", hoặc đã "ĐÃ DÁN TEM" để in lại); (2) admin sửa tay
+// (CŨNG bắt buộc đơn đang đúng "Đã sản xuất", không có ngoại lệ — xem kiemTraCongAnhBatBuoc trong
+// services/orderService.js).
+// Lý do xoá: "Đã đóng gói" (xác nhận đóng gói bằng ảnh, không tạo mã tracking) và "ĐÃ DÁN TEM" (tạo mã
+// tracking thật qua GKE) trước đây là 2 bước tách biệt nhưng thực tế luôn làm liền nhau — gộp lại cho
+// gọn quy trình. Cột Anh_Dong_Goi_URL (ảnh chụp lúc đóng gói) không còn dùng trong code nữa (vẫn còn
+// trên Sheet nếu người dùng muốn giữ dữ liệu ảnh cũ, không tự xoá cột).
 //
 // "IN TRANSIT_Tracking đã hoạt động" (XOÁ 04/09/2026, theo yêu cầu người dùng): từng nằm giữa "ĐÃ
 // DÁN TEM" và "DELIVERED", nhưng thực tế không đơn nào dùng tới (đã xác nhận không có đơn nào đang ở
@@ -65,7 +77,6 @@ const TINH_TRANG_VALUES = [
   'Đang chạy máy',
   'Đã sản xuất',
   'LỖI SẢN XUẤT CẦN LÀM LẠI',
-  'Đã đóng gói',
   'ĐÃ DÁN TEM',
   'DELIVERED_Đã giao đến khách',
   'CANCELLED_Đã hủy',
@@ -103,7 +114,6 @@ const THU_TU_TINH_TRANG = [
   'ĐÃ SẴN SÀNG CHẠY MÁY',
   'Đang chạy máy',
   'Đã sản xuất',
-  'Đã đóng gói',
   'ĐÃ DÁN TEM',
   'DELIVERED_Đã giao đến khách',
 ];

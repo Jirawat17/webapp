@@ -22,7 +22,6 @@
     <button id="mode-lookup"></button>
     <button id="mode-batch" class="active"></button>
     <button id="mode-photo-san-xuat"></button>
-    <button id="mode-photo-dong-goi"></button>
   </div>
   <select id="mode-select" class="mode-select"></select>
 
@@ -97,7 +96,7 @@ let dangQuetKichBan = true;
 let audioCtx = null;
 
 let toastAnhTimer = null;
-// Đơn ĐÃ XÁC ĐỊNH (qua quét QR sống) cho 2 tab "Chụp ảnh đã sản xuất"/"Chụp ảnh đóng gói" — null =
+// Đơn ĐÃ XÁC ĐỊNH (qua quét QR sống) cho tab "Chụp ảnh đã sản xuất" — null =
 // đang ở trạng thái "Đang quét" (hiện camera sống), có giá trị = đang ở trạng thái "Sẵn sàng chụp"
 // (xem docs/superpowers/specs/2026-09-07-tach-quet-chup-anh-design.md). Trước đây đọc QR TỪ ẢNH VỪA
 // CHỤP bằng html5-qrcode.scanFile() — tỉ lệ đọc thất bại cao (giải mã ảnh tĩnh 1 lần thử, khác hẳn
@@ -112,9 +111,11 @@ let donDaXacDinhChoAnh = null;
 let dsQuetTracking = [];
 let dangQuetTracking = true; // true = đang quét (camera sống); false = đã bấm Dừng quét, đang xem tổng hợp
 
-// 2 mốc "chụp ảnh kèm chuyển giai đoạn" dùng CHUNG 1 bộ UI/logic (chỉ khác mốc ảnh + trạng thái yêu
-// cầu/đích) — xem CAU_HINH_ANH bên dưới. Mỗi mốc giữ DANH SÁCH ĐÃ CHỤP riêng (dsDaChupTheoMoc) để
-// chuyển qua lại 2 tab không làm mất lịch sử của tab kia trong cùng phiên làm việc.
+// Mốc "chụp ảnh kèm chuyển giai đoạn" — xem CAU_HINH_ANH bên dưới. Giữ DANH SÁCH ĐÃ CHỤP riêng
+// (dsDaChupTheoMoc) để không mất lịch sử phiên làm việc khi đổi qua lại các mode khác rồi quay lại.
+// (Mốc "photo_dong_goi"/"Chụp ảnh đóng gói" ĐÃ XOÁ 09/09/2026 lần 3 cùng lúc xoá trạng thái "Đã đóng
+// gói" khỏi hệ thống, theo yêu cầu người dùng — xem data/pipelineTinhTrang.js. Sau "Đã sản xuất" giờ
+// dùng tab "Quét mã QR Tracking" để chuyển thẳng sang "ĐÃ DÁN TEM".)
 const CAU_HINH_ANH = {
   photo_san_xuat: {
     moc: 'da_san_xuat',
@@ -122,19 +123,12 @@ const CAU_HINH_ANH = {
     moTa: 'Đơn phải đang ở "Đang chạy máy".',
     yeuCau: 'Đang chạy máy', chuyenSang: 'Đã sản xuất',
   },
-  photo_dong_goi: {
-    moc: 'dong_goi',
-    nhanTab: 'Chụp ảnh đóng gói',
-    moTa: 'Đơn phải đang ở "Đã sản xuất".',
-    yeuCau: 'Đã sản xuất', chuyenSang: 'Đã đóng gói',
-  },
 };
-let dsDaChupTheoMoc = { photo_san_xuat: [], photo_dong_goi: [] };
+let dsDaChupTheoMoc = { photo_san_xuat: [] };
 
 document.getElementById('mode-lookup').innerHTML = icon('scan') + ' Quét mã QR xem thông tin 1 đơn';
 document.getElementById('mode-batch').innerHTML = icon('check') + ' Quét kịch bản';
 document.getElementById('mode-photo-san-xuat').innerHTML = icon('camera', { size: 18 }) + ' ' + CAU_HINH_ANH.photo_san_xuat.nhanTab;
-document.getElementById('mode-photo-dong-goi').innerHTML = icon('camera', { size: 18 }) + ' ' + CAU_HINH_ANH.photo_dong_goi.nhanTab;
 document.getElementById('btn-dung-quet').innerHTML = icon('stop', { size: 40 }) + ' Dừng quét → Xem lại';
 document.getElementById('btn-dung-quet-tracking').innerHTML = icon('stop', { size: 40 }) + ' Dừng quét → Xem tổng hợp';
 document.getElementById('btn-chup-anh').innerHTML = icon('camera', { size: 40 }) + ' Chụp ảnh';
@@ -149,7 +143,6 @@ capNhatNutFlash();
 const MODE_OPTIONS = [
   { value: 'batch', label: 'Quét kịch bản' },
   { value: 'photo_san_xuat', label: CAU_HINH_ANH.photo_san_xuat.nhanTab },
-  { value: 'photo_dong_goi', label: CAU_HINH_ANH.photo_dong_goi.nhanTab },
   { value: 'gke_tracking', label: 'Quét mã QR Tracking' },
   { value: 'lookup', label: 'Quét mã QR xem thông tin 1 đơn' },
 ];
@@ -196,7 +189,6 @@ elModeSelect.onchange = () => doiMode(elModeSelect.value);
 document.getElementById('mode-lookup').onclick = () => doiMode('lookup');
 document.getElementById('mode-batch').onclick = () => doiMode('batch');
 document.getElementById('mode-photo-san-xuat').onclick = () => doiMode('photo_san_xuat');
-document.getElementById('mode-photo-dong-goi').onclick = () => doiMode('photo_dong_goi');
 
 async function taiKichBan() {
   try {
@@ -210,7 +202,6 @@ async function capNhatManHinh() {
   document.getElementById('mode-lookup').classList.toggle('active', mode === 'lookup');
   document.getElementById('mode-batch').classList.toggle('active', mode === 'batch');
   document.getElementById('mode-photo-san-xuat').classList.toggle('active', mode === 'photo_san_xuat');
-  document.getElementById('mode-photo-dong-goi').classList.toggle('active', mode === 'photo_dong_goi');
   document.getElementById('mode-select').value = mode;
 
   document.getElementById('chon-kich-ban-wrap').style.display = 'none';
@@ -246,7 +237,7 @@ async function capNhatManHinh() {
     // Đã bấm "Dừng quét" — camera tắt hẳn (cameraCanChay giữ null), hiện tổng hợp phiên vừa quét.
     document.getElementById('khu-xem-lai').style.display = 'block';
     renderTongHopTracking();
-  } else if (mode === 'photo_san_xuat' || mode === 'photo_dong_goi') {
+  } else if (mode === 'photo_san_xuat') {
     const cauHinh = CAU_HINH_ANH[mode];
     if (!donDaXacDinhChoAnh) {
       // [Đang quét] — quét QR sống để xác định đơn trước, CHƯA cho chụp ảnh (xem
@@ -390,7 +381,7 @@ async function dieuChinhCamera(muonChay) {
   // như trước giờ vẫn vậy), không phải nguyên nhân đã gây lỗi NotReadableError hôm trước (đã có
   // retry + log riêng trong batDauCamera lo phần đó).
   else if (muonChay === 'gke_tracking') await batDauCamera(xuLyQuetTracking, 520, { facingMode: 'environment' });
-  // "Chụp ảnh đã sản xuất"/"đóng gói" — bước quét QR SỐNG để xác định đơn, trước khi cho chụp ảnh
+  // "Chụp ảnh đã sản xuất" — bước quét QR SỐNG để xác định đơn, trước khi cho chụp ảnh
   // thật (xem docs/superpowers/specs/2026-09-07-tach-quet-chup-anh-design.md).
   else if (muonChay === 'photo_scan') await batDauCamera(xuLyQuetDeXacDinhDon);
 }
@@ -504,7 +495,8 @@ async function xuLyQuetTraCuu(sttKey) {
   setTimeout(() => { dangXuLyQuet = false; }, 1500);
 }
 
-// Tab "Quét mã QR Tracking" (bổ sung 31/08/2026) — quét tem đã dán trên đơn "Đã đóng gói", gọi GKE
+// Tab "Quét mã QR Tracking" (bổ sung 31/08/2026, điều kiện đổi từ "Đã đóng gói" sang "Đã sản xuất"
+// 09/09/2026 lần 3 — xem data/pipelineTinhTrang.js) — quét tem đã dán trên đơn "Đã sản xuất", gọi GKE
 // Logistics tạo vận đơn thật (hoặc in lại nếu đơn đã có mã vận đơn từ trước) rồi TỰ ĐỘNG mở hộp
 // thoại in ngay, không cần bấm thêm nút xác nhận nào (xem inTemTuDong bên dưới). Dùng CHUNG cơ chế
 // debounce/hiển thị với xuLyQuetTraCuu ở trên — chỉ khác action gọi API và có thêm bước in.
@@ -1014,8 +1006,9 @@ async function tiepTucQuet() {
 // ============================================================
 // CHỤP ẢNH HÀNG LOẠT KÈM CHUYỂN GIAI ĐOẠN (bổ sung 26/08/2026, tách 2 mốc riêng 31/08/2026,
 // TÁCH QUÉT/CHỤP THÀNH 2 BƯỚC 07/09/2026)
-// Dùng CHUNG 1 bộ UI/logic cho 2 tab "Chụp ảnh đã sản xuất" và "Chụp ảnh đóng gói" — chỉ khác nhau
-// ở CAU_HINH_ANH[mode] (mốc ảnh + trạng thái yêu cầu/đích), lấy theo biến `mode` đang chọn.
+// Dùng UI/logic này cho tab "Chụp ảnh đã sản xuất" — lấy cấu hình (mốc ảnh + trạng thái yêu cầu/đích)
+// từ CAU_HINH_ANH[mode] theo biến `mode` đang chọn (trước đây dùng chung với "Chụp ảnh đóng gói", đã
+// xoá 09/09/2026 lần 3 — xem data/pipelineTinhTrang.js).
 //
 // Luồng (xem docs/superpowers/specs/2026-09-07-tach-quet-chup-anh-design.md):
 //   [Đang quét] --quét QR sống OK + đơn đủ điều kiện (POST /photos/kiem-tra)--> [Sẵn sàng chụp]

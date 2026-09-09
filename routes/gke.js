@@ -19,8 +19,10 @@ const { MA_DANG_CHO_TEM } = gkeService;
 
 // Tab "Quét mã QR Tracking" (scan.html) — quét mã QR trên tem đã dán (chính là STT_Key), gọi GKE
 // Logistics tạo vận đơn thật + lấy tem in, rồi TỰ ĐỘNG mở hộp thoại in ở trình duyệt (client lo,
-// xem scan.html). Đơn phải đang đúng "Đã đóng gói" mới cho làm (quyết định cùng người dùng
-// 31/08/2026). Mở cho CẢ 4 vai trò — không giới hạn gì thêm ngoài requireLogin ở trên.
+// xem scan.html). Đơn phải đang đúng "Đã sản xuất" mới cho làm (đổi từ "Đã đóng gói" 09/09/2026 lần 3
+// — trạng thái "Đã đóng gói" đã XOÁ khỏi hệ thống theo yêu cầu người dùng, "Đã sản xuất" giờ đi thẳng
+// sang "ĐÃ DÁN TEM", xem data/pipelineTinhTrang.js). Mở cho CẢ 4 vai trò — không giới hạn gì thêm
+// ngoài requireLogin ở trên.
 router.post('/tracking/quet', async (req, res) => {
   const { sttKey } = req.body;
   const user = req.session.user;
@@ -38,17 +40,18 @@ router.post('/tracking/quet', async (req, res) => {
   // Cấu hình GKE đọc từ tab CauHinhTracking (bổ sung 09/09/2026, xem menu "Tracking") — 1 lần cho cả
   // lượt quét này, dùng chung cho cả bước tạo vận đơn lẫn lấy tem bên dưới.
   const cauHinhGke = await gkeService.layCauHinhGke();
-  // Cho phép quét khi đang "Đã đóng gói" (lần đầu — sẽ tạo vận đơn + chuyển sang "ĐÃ DÁN TEM" ngay
+  // Cho phép quét khi đang "Đã sản xuất" (lần đầu — sẽ tạo vận đơn + chuyển sang "ĐÃ DÁN TEM" ngay
   // dưới) HOẶC đã "ĐÃ DÁN TEM" từ trước (quét lại để in lại tem cũ, KHÔNG lùi trạng thái). Không cho
   // quét khi đã qua "DELIVERED" — tem đã dán xong từ lâu, quét nhầm không nên đụng vào đơn nữa.
-  if (row.TRANG_THAI_XUONG !== 'Đã đóng gói' && row.TRANG_THAI_XUONG !== 'ĐÃ DÁN TEM') {
+  // (Đổi từ "Đã đóng gói" 09/09/2026 lần 3 — trạng thái này đã XOÁ khỏi hệ thống.)
+  if (row.TRANG_THAI_XUONG !== 'Đã sản xuất' && row.TRANG_THAI_XUONG !== 'ĐÃ DÁN TEM') {
     console.log(`[GKE] Sai trạng thái: ${sttKey} đang ở "${row.TRANG_THAI_XUONG}"`);
     ghiKhongCho(ghiLog({
       nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'GKE_QUET_SAI_TRANG_THAI', sttKey,
       chiTiet: { trangThaiHienTai: row.TRANG_THAI_XUONG },
     }));
     return res.status(400).json({
-      error: `Đơn đang ở "${row.TRANG_THAI_XUONG}" — phải "Đã đóng gói" hoặc "ĐÃ DÁN TEM" mới tạo/in được vận đơn GKE.`,
+      error: `Đơn đang ở "${row.TRANG_THAI_XUONG}" — phải "Đã sản xuất" hoặc "ĐÃ DÁN TEM" mới tạo/in được vận đơn GKE.`,
     });
   }
 
@@ -96,11 +99,16 @@ router.post('/tracking/quet', async (req, res) => {
   // Lấy tem THÀNH CÔNG — ghi đúng mã vận đơn thật + hãng vận chuyển, thay cho placeholder (nếu có).
   // Luôn kèm TRANG_THAI_XUONG='ĐÃ DÁN TEM' — vô hại khi ghi lại đúng giá trị cũ (trường hợp quét lại để in
   // lại tem, xem gate check ở trên và kiemTraCongAnhBatBuoc trong services/orderService.js).
+  // quaAnh: true (bổ sung 09/09/2026 lần 3) — "ĐÃ DÁN TEM" giờ NẰM TRONG danh sách bắt buộc xác nhận
+  // (TRANG_THAI_BAT_BUOC_CHUP_ANH, xem orderService.js) từ khi xoá "Đã đóng gói" — luồng quét QR này
+  // CHÍNH LÀ luồng xác nhận hợp lệ (dù không phải ảnh, tên tham số giữ nguyên để khỏi đổi chữ ký hàm ở
+  // nhiều nơi), phải truyền cờ này thì mới ghi được cho 3 vai trò không phải admin (nguoi_lay_phoi/
+  // ve_file/san_xuat) — thiếu cờ này sẽ bị chặn ngay ở kiemTraCongAnhBatBuoc.
   await orderService.update(sttKey, {
     TRACKING_ID: ketQuaTem.tracking_num,
     HANG_VAN_CHUYEN: ketQuaTem.delivery_carrier,
     TRANG_THAI_XUONG: 'ĐÃ DÁN TEM',
-  }, user);
+  }, user, { quaAnh: true });
 
   ghiKhongCho(ghiLog({
     nguoiDung: user.ten, vaiTro: user.vaiTro,

@@ -28,7 +28,7 @@ const MA_DANG_CHO_TEM_TRACKING = 'DANG_CHO_GKE_TAO_TEM';
 
 const DANH_SACH_TINH_TRANG = [
   'Chưa in mã', 'Đã in mã', 'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đang chạy máy', 'Đã sản xuất', 'LỖI SẢN XUẤT CẦN LÀM LẠI',
-  'Đã đóng gói', 'ĐÃ DÁN TEM', 'DELIVERED_Đã giao đến khách', 'CANCELLED_Đã hủy', 'REFUNDED_Hoàn đơn',
+  'ĐÃ DÁN TEM', 'DELIVERED_Đã giao đến khách', 'CANCELLED_Đã hủy', 'REFUNDED_Hoàn đơn',
 ];
 
 // Format timestamp ngắn gọn "DD-MM HH:mm:ss" — nhất quán với backend dinhDangNgayGioNgan()
@@ -261,7 +261,7 @@ function renderKhuVucThaoTac(don) {
           ${daCoTrackingThat ? `<button class="btn-hanh-dong phu" onclick="apDungInLabelChiTiet(this)">${icon('printer')} IN LABEL</button>` : ''}
           <button class="btn-hanh-dong" onclick="apDungMuaVaInLabelChiTiet(this)">${icon('printer')} MUA TRACKING và IN LABEL</button>
         </div>
-        <p style="margin:0;font-size:0.8rem;color:var(--color-text-faint)">Chỉ dùng được khi đơn đang "Đã đóng gói" hoặc "ĐÃ DÁN TEM". Khổ giấy mặc định 100x150mm theo máy in đang đặt mặc định trên máy tính này.</p>
+        <p style="margin:0;font-size:0.8rem;color:var(--color-text-faint)">Chỉ dùng được khi đơn đang "Đã sản xuất" hoặc "ĐÃ DÁN TEM". Khổ giấy mặc định 100x150mm theo máy in đang đặt mặc định trên máy tính này.</p>
       </div>`;
   }
 
@@ -285,13 +285,11 @@ function renderKhuVucThaoTac(don) {
         <input type="file" accept="image/*" capture="environment" id="anh-da-san-xuat">
         <button class="btn-hanh-dong" onclick="taiAnh('da_san_xuat')">${icon('download')} Tải ảnh lên</button>
         <p style="margin:0;font-size:0.8rem">Cần cột <code>Anh_Da_San_Xuat_URL</code> trong Sheet. Chỉ dùng được khi đơn đang ở "Đang chạy máy" — tải ảnh xong sẽ TỰ ĐỘNG chuyển đơn sang "Đã sản xuất". san_xuat/nguoi_lay_phoi nên dùng màn "Chụp ảnh đã sản xuất" ở trang Quét QR thay vì đây (nhanh hơn, không cần mở từng đơn).</p>
-      </div>
-      <div class="upload-box">
-        <label for="anh-dong-goi">${icon('camera', { size: 18 })} Ảnh đóng gói (sau khi đóng gói xong)</label>
-        <input type="file" accept="image/*" capture="environment" id="anh-dong-goi">
-        <button class="btn-hanh-dong" onclick="taiAnh('dong_goi')">${icon('download')} Tải ảnh lên</button>
-        <p style="margin:0;font-size:0.8rem">Cần cột <code>Anh_Dong_Goi_URL</code> trong Sheet. Chỉ dùng được khi đơn đang ở "Đã sản xuất" — tải ảnh xong sẽ TỰ ĐỘNG chuyển đơn sang "Đã đóng gói". san_xuat/nguoi_lay_phoi nên dùng màn "Chụp ảnh đóng gói" ở trang Quét QR thay vì đây (nhanh hơn, không cần mở từng đơn).</p>
       </div>`;
+    // Khối "Ảnh đóng gói" (Anh_Dong_Goi_URL) ĐÃ XOÁ 09/09/2026 lần 3 cùng lúc xoá trạng thái "Đã đóng
+    // gói" (theo yêu cầu người dùng) — sau "Đã sản xuất" giờ dùng khối "In label vận chuyển (GKE)" ở
+    // trên (quét mã QR Tracking hoặc admin sửa tay) để chuyển thẳng sang "ĐÃ DÁN TEM", không còn bước
+    // chụp ảnh đóng gói riêng nữa.
   }
 
   el.innerHTML = html;
@@ -309,8 +307,12 @@ function loiToHopTrangThai(tinhTrang, phoi, veFile) {
     if (phoi === 'Đã lấy phôi') return 'Đơn đang "Chưa in mã" thì chưa thể "Đã lấy phôi" — in mã đơn trước.';
     if (veFile !== 'Chưa vẽ file') return `Đơn đang "Chưa in mã" thì vẽ file phải đang "Chưa vẽ file" (đang là "${veFile}") — in mã đơn trước.`;
   }
+  // Cùng danh sách với THU_TU_TINH_TRANG trong data/pipelineTinhTrang.js (bỏ 2 bước đầu "Chưa/Đã in
+  // mã", xử lý riêng ở trên) — sửa 1 chỗ thì nhớ sửa chỗ kia. Đã bỏ "Đã đóng gói", thêm "ĐÃ DÁN TEM"
+  // (09/09/2026 lần 3 — trước đó thiếu "ĐÃ DÁN TEM" trong danh sách này, 1 lỗ hổng cảnh báo có sẵn từ
+  // trước, tiện sửa luôn).
   const CAC_TRANG_THAI_TU_SAN_SANG_TRO_DI = [
-    'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đang chạy máy', 'Đã sản xuất', 'Đã đóng gói',
+    'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đang chạy máy', 'Đã sản xuất', 'ĐÃ DÁN TEM',
     'DELIVERED_Đã giao đến khách',
   ];
   if (CAC_TRANG_THAI_TU_SAN_SANG_TRO_DI.includes(tinhTrang)) {

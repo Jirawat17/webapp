@@ -117,26 +117,43 @@ function tinhTinhTrangTuDong(rowHienTai, updates) {
   return updates;
 }
 
-// "Đã sản xuất" và "Đã đóng gói" chỉ được đặt qua đúng luồng chụp ảnh QR (routes/photos.js — mốc
-// da_san_xuat/dong_goi, gọi update() với tuyChon.quaAnh = true). Chặn MỌI đường khác (ô "Sửa trạng
-// thái thủ công" ở order.html, kịch bản quét chung trong CauHinhKichBan nếu còn sót cấu hình cũ,
-// chuyển hàng loạt...) — bất kể đơn đang ở trạng thái nào trước đó, không chỉ riêng 2 cặp chuyển tiếp
-// "chuẩn". admin vẫn ghi đè được (cần 1 lối thoát khi máy ảnh hỏng/QR không đọc được) — đã xác nhận
-// rõ với người dùng, chấp nhận rủi ro bị lạm dụng ở mức admin.
+// "Đã sản xuất" và "ĐÃ DÁN TEM" chỉ được đặt qua đúng luồng đã xác nhận: "Đã sản xuất" qua chụp ảnh QR
+// (routes/photos.js — mốc da_san_xuat, gọi update() với tuyChon.quaAnh = true); "ĐÃ DÁN TEM" qua quét
+// QR Tracking (routes/gke.js, tạo vận đơn GKE thật — CŨNG truyền quaAnh = true, dù không phải ảnh, xem
+// ghi chú tại đó). Chặn MỌI đường khác (ô "Sửa trạng thái thủ công" ở order.html, chuyển hàng loạt...)
+// — bất kể đơn đang ở trạng thái nào trước đó. admin vẫn ghi đè được cả 2 giá trị (cần 1 lối thoát khi
+// máy ảnh/QR hỏng) — đã xác nhận rõ với người dùng, chấp nhận rủi ro bị lạm dụng ở mức admin.
+// (Bổ sung 09/09/2026 lần 3, XOÁ "Đã đóng gói" — xem data/pipelineTinhTrang.js): riêng "ĐÃ DÁN TEM",
+// admin sửa tay KHÔNG được miễn trừ điều kiện trạng thái NGUỒN như "Đã sản xuất" — xem
+// TRANG_THAI_NGUON_HOP_LE_CHO_DAN_TEM bên dưới, kiểm tra TRƯỚC cả nhánh admin, áp dụng cho MỌI người gọi.
 // CHỈ chặn khi đây là 1 CHUYỂN ĐỔI THẬT (giá trị mới khác giá trị đang có) — ô "Sửa trạng thái thủ
 // công" ở order.html luôn gửi cả 3 cột TRANG_THAI_XUONG/PHOI/VE_FILE cùng lúc kể cả khi người dùng chỉ định
 // sửa 1 trong 2 cột kia, nên KHÔNG được chặn nhầm khi TRANG_THAI_XUONG gửi lên trùng với giá trị hiện tại.
-const TRANG_THAI_BAT_BUOC_CHUP_ANH = ['Đã sản xuất', 'Đã đóng gói'];
+const TRANG_THAI_BAT_BUOC_CHUP_ANH = ['Đã sản xuất', 'ĐÃ DÁN TEM'];
+
+// Trạng thái NGUỒN hợp lệ để được set "ĐÃ DÁN TEM" — ÁP DỤNG CHO MỌI NGƯỜI GỌI, kể cả admin sửa tay
+// (khác hẳn cơ chế quaAnh/admin-bypass ở kiemTraCongAnhBatBuoc, vốn miễn trừ hoàn toàn cho admin).
+// Theo đúng yêu cầu người dùng: "Đã sản xuất" là nguồn hợp lệ duy nhất; tự cho phép giữ nguyên "ĐÃ DÁN
+// TEM" (không coi là vi phạm) để không chặn lượt quét lại in tem/lưu lại đúng giá trị cũ.
+const TRANG_THAI_NGUON_HOP_LE_CHO_DAN_TEM = ['Đã sản xuất', 'ĐÃ DÁN TEM'];
 
 function kiemTraCongAnhBatBuoc(rowHienTai, updates, user, quaAnh) {
   if (!('TRANG_THAI_XUONG' in updates)) return;
   if (updates.TRANG_THAI_XUONG === rowHienTai.TRANG_THAI_XUONG) return; // gửi lại đúng giá trị cũ — không phải chuyển đổi
+
+  if (
+    updates.TRANG_THAI_XUONG === 'ĐÃ DÁN TEM' &&
+    !TRANG_THAI_NGUON_HOP_LE_CHO_DAN_TEM.includes(rowHienTai.TRANG_THAI_XUONG)
+  ) {
+    throw new Error(`Không hợp lệ: đơn đang "${rowHienTai.TRANG_THAI_XUONG}" — phải đang "Đã sản xuất" mới chuyển sang "ĐÃ DÁN TEM" được.`);
+  }
+
   if (quaAnh) return;
   if (user && user.vaiTro === 'admin') return;
 
   if (TRANG_THAI_BAT_BUOC_CHUP_ANH.includes(updates.TRANG_THAI_XUONG)) {
     throw new Error(
-      `Chuyển sang "${updates.TRANG_THAI_XUONG}" bắt buộc phải chụp ảnh QR ở trang Quét QR — vai trò này không set tay được.`
+      `Chuyển sang "${updates.TRANG_THAI_XUONG}" bắt buộc phải chụp ảnh QR/quét QR Tracking ở trang Quét QR — vai trò này không set tay được.`
     );
   }
 }

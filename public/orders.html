@@ -174,7 +174,6 @@ const DANH_SACH_TRANG_THAI_DAY_DU = [
   'ĐÃ SẴN SÀNG CHẠY MÁY',
   'Đang chạy máy',
   'Đã sản xuất', 'LỖI SẢN XUẤT CẦN LÀM LẠI',
-  'Đã đóng gói',
   'ĐÃ DÁN TEM',
   'DELIVERED_Đã giao đến khách', 'CANCELLED_Đã hủy', 'REFUNDED_Hoàn đơn',
 ];
@@ -698,14 +697,14 @@ async function apDungMuaTrackingThuCong() {
 async function apDungInLabel() {
   const danhSach = Array.from(donDaChonSet);
   if (danhSach.length === 0) return;
-  if (!confirm(`In label cho ${danhSach.length} đơn đã chọn?\n\nChỉ đơn ĐÃ có mã tracking và đang "Đã đóng gói"/"ĐÃ DÁN TEM" mới in được — đơn khác sẽ báo lỗi riêng, không chặn cả lượt.`)) return;
+  if (!confirm(`In label cho ${danhSach.length} đơn đã chọn?\n\nChỉ đơn ĐÃ có mã tracking và đang "Đã sản xuất"/"ĐÃ DÁN TEM" mới in được — đơn khác sẽ báo lỗi riêng, không chặn cả lượt.`)) return;
   await xuLyInLabel('/tracking/in-label', danhSach, 'nut-in-label', 'IN LABEL');
 }
 
 async function apDungMuaVaInLabel() {
   const danhSach = Array.from(donDaChonSet);
   if (danhSach.length === 0) return;
-  if (!confirm(`Mua tracking (nếu chưa có) và in label cho ${danhSach.length} đơn đã chọn?\n\nCó thể phát sinh phí thật với đơn chưa có tracking. Chỉ đơn đang "Đã đóng gói"/"ĐÃ DÁN TEM" mới thực hiện được — đơn khác sẽ báo lỗi riêng, không chặn cả lượt.`)) return;
+  if (!confirm(`Mua tracking (nếu chưa có) và in label cho ${danhSach.length} đơn đã chọn?\n\nCó thể phát sinh phí thật với đơn chưa có tracking. Chỉ đơn đang "Đã sản xuất"/"ĐÃ DÁN TEM" mới thực hiện được — đơn khác sẽ báo lỗi riêng, không chặn cả lượt.`)) return;
   await xuLyInLabel('/tracking/mua-va-in-label', danhSach, 'nut-mua-va-in-label', 'MUA TRACKING và IN LABEL');
 }
 

@@ -1,6 +1,6 @@
-// Tích hợp GKE Logistics (order.gkelogistics.com) — tạo vận đơn thật + lấy tem in khi đơn chuyển
-// sang "Đã đóng gói" (mục Quét mã QR Tracking, xem routes/gke.js). Quyết định cùng người dùng
-// 31/08/2026:
+// Tích hợp GKE Logistics (order.gkelogistics.com) — tạo vận đơn thật + lấy tem in khi đơn đang "Đã
+// sản xuất" (mục Quét mã QR Tracking, xem routes/gke.js — đổi từ "Đã đóng gói" 09/09/2026 lần 3, xem
+// data/pipelineTinhTrang.js). Quyết định cùng người dùng 31/08/2026:
 //   - customer_order_num khi tạo đơn LUÔN đặt = STT_Key của mình — nhờ vậy in lại tem sau này
 //     KHÔNG cần lưu riêng order_num/waybill number của GKE, chỉ cần num_type=1 + STT_Key.
 //   - Đơn đã tạo vận đơn GKE rồi (kể cả đang chờ tem, xem MA_DANG_CHO_TEM trong routes/gke.js) thì
