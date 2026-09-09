@@ -6,7 +6,7 @@ const orderService = require('./orderService');
 const gkeService = require('./gkeService');
 const { readTab, readTabCached, updateCells, appendRow, getHeadersCached } = require('./sheetsService');
 const { ghiLog } = require('./logService');
-const { thoiGianVNISOString } = require('./dateUtils');
+const { dinhDangNgayGioNgan } = require('./dateUtils');
 
 const TAB_CAU_HINH = 'CauHinhTracking';
 const SO_PHUT_MAC_DINH = 10;
@@ -52,11 +52,20 @@ function layLogTracking() {
 // tạo tab LogsTracking trước với ĐÚNG 9 cột: ThoiGian, STT_Key, Nguon, NguoiDung, VaiTro, KetQua,
 // TRACKING_ID, HANG_VAN_CHUYEN, ChiTiet — chưa tạo tab thì chỉ mất phần ghi Sheet này, KHÔNG mất log
 // ngắn gọn trong _logs (vẫn xem được trên trang Tracking như trước).
+//
+// Cột ThoiGian dùng dinhDangNgayGioNgan() — "09-09 06:59:25" (DD-MM HH:mm:ss, giờ VN, KHÔNG có năm)
+// thay vì chuỗi ISO đầy đủ kèm mili-giây/múi giờ (bổ sung 09/09/2026 lần 7, theo yêu cầu người dùng —
+// ISO tuy đúng giờ nhưng khó theo dõi khi mở trực tiếp trong Google Sheet). Hàm này vốn ĐÃ có sẵn
+// trong dateUtils.js, dùng chung với timeline lịch sử thay đổi/cột "Thời gian" báo cáo — tái dùng
+// nguyên, không viết lại. KHÔNG dùng cho LichSuHoatDong (vẫn giữ ISO đầy đủ như cũ, ngoài phạm vi yêu
+// cầu lần này) — chỉ áp dụng riêng cho tab LogsTracking mới. Không có consumer nào trong code đọc lại
+// giá trị này để parse/so sánh (khác ThoiGian của LichSuHoatDong, có dùng cho sắp xếp) nên bỏ năm là
+// an toàn — chỉ là bản ghi cho người xem trực tiếp trên Sheet.
 async function ghiLogTrackingVaoSheet({ sttKey, nguon, nguoiDung, vaiTro, ketQua, trackingId = '', hangVanChuyen = '', chiTiet = '' }) {
   try {
     const headers = await getHeadersCached(TAB_LOGS_TRACKING);
     await appendRow(TAB_LOGS_TRACKING, headers, {
-      ThoiGian: thoiGianVNISOString(),
+      ThoiGian: dinhDangNgayGioNgan(new Date()),
       STT_Key: sttKey,
       Nguon: nguon,
       NguoiDung: nguoiDung,

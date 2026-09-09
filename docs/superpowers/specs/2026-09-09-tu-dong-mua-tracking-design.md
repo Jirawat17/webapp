@@ -273,7 +273,7 @@ cuối cùng.
 
 | Cột | Nội dung |
 |---|---|
-| `ThoiGian` | Thời gian (giờ VN — `thoiGianVNISOString()`, cùng hàm với `LichSuHoatDong`) |
+| `ThoiGian` | Thời gian ngắn gọn giờ VN, vd `09-09 06:59:25` (DD-MM HH:mm:ss, không có năm — xem mục 9.5) |
 | `STT_Key` | Mã đơn hàng |
 | `Nguon` | `Tự động` hoặc `Thủ công` |
 | `NguoiDung` | Tên người bấm (thủ công) hoặc `Hệ thống (tự động)` |
@@ -323,3 +323,17 @@ bước "in tem" (chưa chạy tới); (4) đã có tracking thật — `KetQua 
 kịch bản 2/3 "thiếu" dòng đăng nhập — do token vẫn còn hiệu lực từ kịch bản 1 trước đó (đúng hành vi có
 sẵn), không phải bug; sửa test bằng cách xoá cache require + nạp lại module trước mỗi kịch bản. Chạy lại
 bộ hồi quy rút gọn (cấu hình, quét tự động, chống trùng, retry, phân loại danh sách) — không hồi quy.
+
+### 9.5. Bổ sung 09/09/2026 (lần 7): định dạng cột `ThoiGian` ngắn gọn
+
+Cột `ThoiGian` ban đầu dùng `thoiGianVNISOString()` — đúng giờ Việt Nam nhưng dạng chuỗi ISO đầy đủ
+(vd `2026-09-09T06:59:25.709+07:00`) khó theo dõi khi mở trực tiếp trong Google Sheet. Đổi sang
+`dinhDangNgayGioNgan(new Date())` — hàm NGẮN GỌN đã có sẵn từ trước trong `dateUtils.js` (dùng chung
+với timeline lịch sử thay đổi/cột "Thời gian" báo cáo), cho ra đúng dạng `09-09 06:59:25` (DD-MM
+HH:mm:ss, giờ VN, KHÔNG có năm) — tái dùng nguyên, không viết hàm mới. CHỈ áp dụng cho `LogsTracking`
+— tab `LichSuHoatDong` (dùng `ghiLog()` trong `logService.js`) vẫn giữ nguyên ISO đầy đủ như cũ, vì
+cột đó CÓ được đọc lại để sắp xếp theo thời gian (`layLichSuTheoDon()`), còn `LogsTracking` hiện chưa
+có consumer nào đọc lại cột này trong code — chỉ để người dùng xem trực tiếp trên Sheet, nên bỏ năm là
+an toàn. Đã kiểm tra: `dinhDangNgayGioNgan()` cho ra đúng chuỗi khớp ví dụ người dùng đưa ra; test ghi
+1 dòng qua `muaTrackingChoDon()` xác nhận cột `ThoiGian` thật sự ghi đúng định dạng `DD-MM HH:mm:ss`
+(regex `^\d{2}-\d{2} \d{2}:\d{2}:\d{2}$`).
