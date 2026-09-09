@@ -30,8 +30,9 @@ const MO_TA_PIPELINE =
   '— lấy phôi và vẽ file là 2 việc ĐỘC LẬP, làm song song, không phải làm tuần tự.\n\n' +
   'Giá trị TRANG_THAI_XUONG theo đúng thứ tự: Chưa in mã → Đã in mã → ĐÃ SẴN SÀNG CHẠY MÁY (hệ ' +
   'thống tự động chuyển sang trạng thái này khi TRANG_THAI_PHOI="Đã lấy phôi" VÀ TRANG_THAI_VE_FILE=' +
-  '"Đã vẽ file" cùng lúc) → Đang chạy máy → Đã sản xuất → ĐÃ DÁN TEM (quét mã QR Tracking, tạo vận ' +
-  'đơn GKE thật — không còn trạng thái "Đã đóng gói" trung gian, đã xoá 09/09/2026) → ' +
+  '"Đã vẽ file" cùng lúc) → Đang chạy máy → Đã sản xuất → ĐÃ DÁN TEM (chụp ảnh xác nhận ở trang Quét ' +
+  'mã QR, không gọi GKE — mã tracking GKE thật là việc RIÊNG, xem menu Tracking/IN LABEL — không còn ' +
+  'trạng thái "Đã đóng gói" trung gian, đã xoá 09/09/2026) → ' +
   'DELIVERED_Đã giao đến khách. Nhánh rẽ: LỖI SẢN XUẤT CẦN LÀM LẠI (lỗi khi sản xuất, người phụ ' +
   'trách set tay, sau đó làm lại từ phôi/file), CANCELLED_Đã hủy, REFUNDED_Hoàn đơn (đơn dừng hẳn).\n\n' +
   'Giá trị TRANG_THAI_PHOI: "Chưa lấy phôi" hoặc "Đã lấy phôi". Giá trị TRANG_THAI_VE_FILE: ' +

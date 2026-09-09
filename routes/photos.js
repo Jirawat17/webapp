@@ -11,13 +11,18 @@ const { requireLogin } = require('../middleware/auth');
 router.use(requireLogin);
 
 // Mỗi "mốc nghiệp vụ" ghi URL vào đúng cột tương ứng trong Sheet.
-// LƯU Ý: Sheet thật KHÔNG có cột Anh_File_Theu_URL/Anh_Da_San_Xuat_URL (khác với bản thiết kế mẫu ban
-// đầu) — muốn dùng các mốc "ve_file"/"da_san_xuat" cần tự thêm các cột này vào Don_Hang_ALL trước.
+// LƯU Ý: Sheet thật KHÔNG có cột Anh_File_Theu_URL/Anh_Da_San_Xuat_URL/Anh_Da_Dan_Tem_URL (khác với
+// bản thiết kế mẫu ban đầu) — muốn dùng các mốc "ve_file"/"da_san_xuat"/"da_dan_tem" cần tự thêm các
+// cột này vào Don_Hang_ALL trước.
 // Mốc "dong_goi" (Ảnh đóng gói, Anh_Dong_Goi_URL) ĐÃ XOÁ 09/09/2026 lần 3 cùng lúc xoá trạng thái "Đã
-// đóng gói" (theo yêu cầu người dùng — xem data/pipelineTinhTrang.js). "Đã sản xuất" giờ đi thẳng sang
-// "ĐÃ DÁN TEM" qua "Quét mã QR Tracking" (routes/gke.js), không cần bước chụp ảnh đóng gói riêng nữa.
+// đóng gói" (theo yêu cầu người dùng — xem data/pipelineTinhTrang.js).
+// Mốc "da_dan_tem" (bổ sung 09/09/2026 lần 4, theo yêu cầu người dùng) — THAY THẾ chế độ "Quét mã QR
+// Tracking" cũ (gọi GKE thật, đã xoá — xem public/scan.html) bằng xác nhận thuần ảnh: "Đã sản xuất" ->
+// "ĐÃ DÁN TEM", KHÔNG gọi GKE, KHÔNG tạo mã tracking thật. Cơ chế GKE (Mua Tracking, IN LABEL, trang
+// Tracking) vẫn giữ nguyên, hoàn toàn tách biệt khỏi mốc này.
 const COT_ANH_THEO_MOC = {
   da_san_xuat: 'Anh_Da_San_Xuat_URL', // bổ sung 31/08/2026 — ảnh chụp ngay khi vừa chạy máy xong
+  da_dan_tem: 'Anh_Da_Dan_Tem_URL', // bổ sung 09/09/2026 lần 4 — ảnh xác nhận đã dán tem lên kiện hàng
   mau: 'DUONG_DAN_URL',
   mockup: 'MOCKUP',
   ve_file: 'Anh_File_Theu_URL', // bổ sung 26/08/2026 — ảnh file thêu do ve_file upload sau khi vẽ file xong, để san_xuat xem trước khi chọn chỉ
@@ -27,15 +32,17 @@ const COT_ANH_THEO_MOC = {
 // động chuyển TRANG_THAI_XUONG trong CÙNG 1 lần ghi với việc lưu URL ảnh. Yêu cầu đơn ĐANG ở đúng
 // "yeuCau" trước khi chụp — kiemTraTinhHopLy() trong orderService.update() KHÔNG tự chặn việc này
 // (không phải 1 trong 3 quy tắc của nó) nên phải tự kiểm tra ở đây. Mở cho CẢ 4 vai trò (không giới
-// hạn gì thêm ngoài requireLogin ở trên) — dùng ở cả tab "Chụp ảnh đã sản xuất" (scan.html) lẫn nút tải
-// ảnh đơn lẻ tương ứng (order.html, admin).
+// hạn gì thêm ngoài requireLogin ở trên) — dùng ở cả 2 tab "Chụp ảnh đã sản xuất"/"Chụp ảnh ĐÃ DÁN TEM"
+// (scan.html) lẫn nút tải ảnh đơn lẻ tương ứng (order.html, admin).
 //   da_san_xuat  (bổ sung 31/08/2026) — "Ảnh đã sản xuất": Đang chạy máy -> Đã sản xuất
+//   da_dan_tem   (bổ sung 09/09/2026 lần 4) — "Ảnh ĐÃ DÁN TEM": Đã sản xuất -> ĐÃ DÁN TEM
 const MOC_TU_DONG_CHUYEN_TRANG_THAI = {
   da_san_xuat: { yeuCau: 'Đang chạy máy', chuyenSang: 'Đã sản xuất' },
+  da_dan_tem: { yeuCau: 'Đã sản xuất', chuyenSang: 'ĐÃ DÁN TEM' },
 };
 
 // Kiểm tra ĐỦ ĐIỀU KIỆN chụp ảnh cho 1 đơn — KHÔNG cần file ảnh. Dùng NGAY SAU khi quét QR sống để
-// xác định đơn (public/scan.html, mode photo_san_xuat — xem
+// xác định đơn (public/scan.html, mode photo_san_xuat/photo_da_dan_tem — xem
 // docs/superpowers/specs/2026-09-07-tach-quet-chup-anh-design.md), TRƯỚC KHI mở camera chụp thật —
 // tránh lãng phí 1 lần chụp cho đơn không hợp lệ (sai trạng thái/không tồn tại).
 // CỐ Ý không dùng GET /orders/:sttKey — route đó ẩn hẳn (404) đơn "Đang chạy máy" của san_xuat KHÁC

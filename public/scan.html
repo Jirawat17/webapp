@@ -32,7 +32,6 @@
       <div class="camera-vien">
         <div id="qr-reader" style="border-radius:12px;overflow:hidden;"></div>
         <button id="btn-flash" class="btn-flash-overlay" hidden></button>
-        <div id="trang-thai-camera-tracking" class="trang-thai-camera-tracking" style="display:none"></div>
       </div>
       <div id="toast-vua-quet" class="toast-vua-quet"></div>
     </div>
@@ -44,7 +43,6 @@
     <div id="ket-qua-tra-cuu"></div>
 
     <button id="btn-dung-quet" class="btn-dung-quet chi-che-do-kich-ban" style="display:none"></button>
-    <button id="btn-dung-quet-tracking" class="btn-dung-quet" style="display:none"></button>
 
     <!-- Chuyển "dem-nhom" (3 ô đếm Sẵn sàng/Sai trạng thái/Không tìm thấy) xuống SAU nút "Dừng quét"
          (bổ sung 09/09/2026, theo yêu cầu người dùng) — trước đó nằm NGAY ĐẦU trang, đẩy vùng camera/
@@ -104,18 +102,17 @@ let toastAnhTimer = null;
 // được mã QR trong đó nữa.
 let donDaXacDinhChoAnh = null;
 
-// Tab "Quét mã QR Tracking" — riêng, KHÔNG dùng chung dsQuet/dangQuetKichBan của "Quét kịch bản" vì
-// khác hẳn mô hình: mỗi lượt quét ở đây đã áp dụng NGAY (gọi GKE + ghi Sheet + in tem thật), không
-// có bước "xác nhận hàng loạt" nào — dsQuetTracking chỉ là NHẬT KÝ để xem lại sau khi dừng, không
-// dùng để chặn/gộp thao tác như dsQuet.
-let dsQuetTracking = [];
-let dangQuetTracking = true; // true = đang quét (camera sống); false = đã bấm Dừng quét, đang xem tổng hợp
-
 // Mốc "chụp ảnh kèm chuyển giai đoạn" — xem CAU_HINH_ANH bên dưới. Giữ DANH SÁCH ĐÃ CHỤP riêng
 // (dsDaChupTheoMoc) để không mất lịch sử phiên làm việc khi đổi qua lại các mode khác rồi quay lại.
 // (Mốc "photo_dong_goi"/"Chụp ảnh đóng gói" ĐÃ XOÁ 09/09/2026 lần 3 cùng lúc xoá trạng thái "Đã đóng
-// gói" khỏi hệ thống, theo yêu cầu người dùng — xem data/pipelineTinhTrang.js. Sau "Đã sản xuất" giờ
-// dùng tab "Quét mã QR Tracking" để chuyển thẳng sang "ĐÃ DÁN TEM".)
+// gói" khỏi hệ thống, theo yêu cầu người dùng — xem data/pipelineTinhTrang.js.)
+// "photo_da_dan_tem"/"Chụp ảnh ĐÃ DÁN TEM" (bổ sung 09/09/2026 lần 4, theo yêu cầu người dùng) — THAY
+// THẾ hẳn chế độ "Quét mã QR Tracking" cũ (gọi GKE thật tạo vận đơn — đã xoá) bằng xác nhận thuần ảnh,
+// CÙNG khuôn "Chụp ảnh đã sản xuất": quét QR xác định đơn đang "Đã sản xuất" → chụp ảnh → tự chuyển
+// TRANG_THAI_XUONG sang "ĐÃ DÁN TEM". KHÔNG gọi GKE, KHÔNG tạo mã tracking thật — cơ chế GKE (Mua
+// Tracking, IN LABEL, trang Tracking) vẫn giữ nguyên, tách biệt hoàn toàn khỏi việc đổi trạng thái này
+// (đã xác nhận rõ với người dùng, chấp nhận đơn "ĐÃ DÁN TEM" qua đường này sẽ không có mã tracking
+// thật trừ khi dùng thêm 1 trong các cơ chế GKE kể trên).
 const CAU_HINH_ANH = {
   photo_san_xuat: {
     moc: 'da_san_xuat',
@@ -123,14 +120,19 @@ const CAU_HINH_ANH = {
     moTa: 'Đơn phải đang ở "Đang chạy máy".',
     yeuCau: 'Đang chạy máy', chuyenSang: 'Đã sản xuất',
   },
+  photo_da_dan_tem: {
+    moc: 'da_dan_tem',
+    nhanTab: 'Chụp ảnh ĐÃ DÁN TEM',
+    moTa: 'Đơn phải đang ở "Đã sản xuất".',
+    yeuCau: 'Đã sản xuất', chuyenSang: 'ĐÃ DÁN TEM',
+  },
 };
-let dsDaChupTheoMoc = { photo_san_xuat: [] };
+let dsDaChupTheoMoc = { photo_san_xuat: [], photo_da_dan_tem: [] };
 
 document.getElementById('mode-lookup').innerHTML = icon('scan') + ' Quét mã QR xem thông tin 1 đơn';
 document.getElementById('mode-batch').innerHTML = icon('check') + ' Quét kịch bản';
 document.getElementById('mode-photo-san-xuat').innerHTML = icon('camera', { size: 18 }) + ' ' + CAU_HINH_ANH.photo_san_xuat.nhanTab;
 document.getElementById('btn-dung-quet').innerHTML = icon('stop', { size: 40 }) + ' Dừng quét → Xem lại';
-document.getElementById('btn-dung-quet-tracking').innerHTML = icon('stop', { size: 40 }) + ' Dừng quét → Xem tổng hợp';
 document.getElementById('btn-chup-anh').innerHTML = icon('camera', { size: 40 }) + ' Chụp ảnh';
 capNhatNutFlash();
 
@@ -143,7 +145,7 @@ capNhatNutFlash();
 const MODE_OPTIONS = [
   { value: 'batch', label: 'Quét kịch bản' },
   { value: 'photo_san_xuat', label: CAU_HINH_ANH.photo_san_xuat.nhanTab },
-  { value: 'gke_tracking', label: 'Quét mã QR Tracking' },
+  { value: 'photo_da_dan_tem', label: CAU_HINH_ANH.photo_da_dan_tem.nhanTab },
   { value: 'lookup', label: 'Quét mã QR xem thông tin 1 đơn' },
 ];
 const elModeSelect = document.getElementById('mode-select');
@@ -209,12 +211,6 @@ async function capNhatManHinh() {
   document.getElementById('khu-xem-lai').style.display = 'none';
   document.getElementById('photo-wrap').style.display = 'none';
   document.getElementById('mo-ta-quet-chup-anh').style.display = 'none';
-  document.getElementById('btn-dung-quet-tracking').style.display = 'none';
-  hienThiTrangThaiCamera(''); // dọn sạch, phòng khi đổi mode ngay giữa lúc đang khởi động lại camera tab Tracking
-  // Khung camera tab "Quét mã QR Tracking" hiển thị to gấp đôi mặc định (xem .che-do-to trong
-  // style.css) — dễ ngắm hơn khi thao tác 1 mình trên máy tính có gắn máy in, không ảnh hưởng các
-  // tab quét khác.
-  document.getElementById('camera-wrap').classList.toggle('che-do-to', mode === 'gke_tracking');
   // Khung camera "Quét kịch bản" rộng hơn, thấp hơn mặc định (xem .che-do-rong trong style.css +
   // aspectRatio truyền riêng cho luồng 'batch' ở dieuChinhCamera) — dễ ngắm hơn khi cầm điện thoại
   // ngang, dành thêm chỗ cho khối "Kết quả vừa quét" phía dưới camera.
@@ -227,17 +223,7 @@ async function capNhatManHinh() {
     document.getElementById('ket-qua-tra-cuu').style.display = 'block';
     setBatchOnlyVisible(false);
     cameraCanChay = 'lookup';
-  } else if (mode === 'gke_tracking' && dangQuetTracking) {
-    document.getElementById('camera-wrap').style.display = 'block';
-    document.getElementById('ket-qua-tra-cuu').style.display = 'block';
-    document.getElementById('btn-dung-quet-tracking').style.display = '';
-    setBatchOnlyVisible(false);
-    cameraCanChay = 'gke_tracking';
-  } else if (mode === 'gke_tracking' && !dangQuetTracking) {
-    // Đã bấm "Dừng quét" — camera tắt hẳn (cameraCanChay giữ null), hiện tổng hợp phiên vừa quét.
-    document.getElementById('khu-xem-lai').style.display = 'block';
-    renderTongHopTracking();
-  } else if (mode === 'photo_san_xuat') {
+  } else if (mode === 'photo_san_xuat' || mode === 'photo_da_dan_tem') {
     const cauHinh = CAU_HINH_ANH[mode];
     if (!donDaXacDinhChoAnh) {
       // [Đang quét] — quét QR sống để xác định đơn trước, CHƯA cho chụp ảnh (xem
@@ -371,25 +357,15 @@ async function dieuChinhCamera(muonChay) {
   // aspectRatio 16/9 (kết hợp .che-do-rong trong style.css) — khung camera rộng-thấp thật sự (yêu cầu
   // thẳng camera stream theo tỉ lệ này, không chỉ crop bằng CSS) cho riêng "Quét kịch bản".
   else if (muonChay === 'batch') await batDauCamera(xuLyQuetKichBan, 260, { aspectRatio: 16 / 9 });
-  // qrbox to gấp đôi (520 so với 260 mặc định) khớp với khung camera to gấp đôi của tab này (xem
-  // .che-do-to) — giữ tỉ lệ khung ngắm QR so với khung hình camera như các tab khác. facingMode
-  // 'environment' (camera SAU) — bổ sung 02/09/2026: tab này giờ cũng dùng được trên điện thoại
-  // (trước đó từng đổi tạm sang 'user' khi tưởng tab chỉ chạy trên PC, nay không còn đúng nữa), mà
-  // camera sau mới đúng hướng để quét tem dán trên kiện hàng (camera trước là selfie, không dùng
-  // được). Giống hệt facingMode của 2 tab Tra cứu/Quét kịch bản — chạy PC vẫn ổn (giá trị bare kiểu
-  // này chỉ là "ưu tiên", không "bắt buộc", nên PC không có camera sau thật vẫn tự dùng camera có sẵn
-  // như trước giờ vẫn vậy), không phải nguyên nhân đã gây lỗi NotReadableError hôm trước (đã có
-  // retry + log riêng trong batDauCamera lo phần đó).
-  else if (muonChay === 'gke_tracking') await batDauCamera(xuLyQuetTracking, 520, { facingMode: 'environment' });
   // "Chụp ảnh đã sản xuất" — bước quét QR SỐNG để xác định đơn, trước khi cho chụp ảnh
   // thật (xem docs/superpowers/specs/2026-09-07-tach-quet-chup-anh-design.md).
   else if (muonChay === 'photo_scan') await batDauCamera(xuLyQuetDeXacDinhDon);
 }
 
 // "NotReadableError: Could not start video source" KHÔNG PHẢI lỗi quyền — trình duyệt/OS chưa kịp
-// nhả hẳn camera từ lượt dừng ngay trước đó (hay gặp khi dừng rồi mở lại camera liên tiếp, xem
-// khoiDongLaiCameraTracking) HOẶC 1 app/tab khác đang giữ camera. Tự thử lại vài lần có chờ trước
-// khi báo lỗi thật — phần lớn trường hợp tự hết sau 1-2 lần thử vì camera vừa được nhả ra.
+// nhả hẳn camera từ lượt dừng ngay trước đó (hay gặp khi dừng rồi mở lại camera liên tiếp) HOẶC 1
+// app/tab khác đang giữ camera. Tự thử lại vài lần có chờ trước khi báo lỗi thật — phần lớn trường
+// hợp tự hết sau 1-2 lần thử vì camera vừa được nhả ra.
 function laLoiCameraDangBanRoi(err) {
   return /NotReadableError/i.test(String(err));
 }
@@ -493,196 +469,6 @@ async function xuLyQuetTraCuu(sttKey) {
   }
 
   setTimeout(() => { dangXuLyQuet = false; }, 1500);
-}
-
-// Tab "Quét mã QR Tracking" (bổ sung 31/08/2026, điều kiện đổi từ "Đã đóng gói" sang "Đã sản xuất"
-// 09/09/2026 lần 3 — xem data/pipelineTinhTrang.js) — quét tem đã dán trên đơn "Đã sản xuất", gọi GKE
-// Logistics tạo vận đơn thật (hoặc in lại nếu đơn đã có mã vận đơn từ trước) rồi TỰ ĐỘNG mở hộp
-// thoại in ngay, không cần bấm thêm nút xác nhận nào (xem inTemTuDong bên dưới). Dùng CHUNG cơ chế
-// debounce/hiển thị với xuLyQuetTraCuu ở trên — chỉ khác action gọi API và có thêm bước in.
-// Mỗi lượt quét chỉ xử lý ĐÚNG 1 đơn tại 1 thời điểm (đợi GKE tạo vận đơn + tem xong mới nhận đơn
-// tiếp theo) — khớp đúng quy trình thật: phải cầm tem VỪA IN xong mới dán lên ĐÚNG kiện đó rồi mới
-// chuyển sang kiện tiếp theo, nên không cần xếp hàng đợi nhiều đơn cùng lúc. daBaoDangBanTracking chỉ
-// để KHÔNG spam toast nếu người dùng lỡ quét thêm nhiều lần trong lúc đang đợi đơn trước xử lý xong.
-let daBaoDangBanTracking = false;
-
-async function xuLyQuetTracking(sttKey) {
-  if (dangXuLyQuet) {
-    // Đang xử lý đơn trước — mã này bị BỎ QUA, không phải lỗi. Trước đây im lặng hoàn toàn khiến
-    // người quét tưởng máy treo/không nhận được mã; giờ báo rõ 1 lần (không lặp lại liên tục) để họ
-    // biết chỉ cần đợi rồi quét lại, không phải quét lại ngay do lỗi đọc mã.
-    if (!daBaoDangBanTracking) {
-      daBaoDangBanTracking = true;
-      hienThiToast('trung', `Đang xử lý đơn trước — đợi xong rồi quét lại ${sttKey}`);
-    }
-    return;
-  }
-  dangXuLyQuet = true;
-  daBaoDangBanTracking = false;
-  phatAmThanhKetQua('DA_NHAN'); // báo NGAY lúc đọc được mã — không đợi tới khi GKE trả kết quả (có thể mất tới 1 phút)
-  const el = document.getElementById('ket-qua-tra-cuu');
-  el.innerHTML = `<div class="ket-qua-box">${spinnerInline('Đang tạo vận đơn và chờ GKE generate tem... (có thể mất tới 1 phút)')}</div>`;
-
-  let daGoiIn = false;
-  try {
-    const ketQua = await apiFetch('/gke/tracking/quet', {
-      method: 'POST', body: JSON.stringify({ sttKey }),
-    });
-    el.innerHTML = `<div class="ket-qua-box">
-      ${icon('printer')}
-      <div>
-        <strong>${escapeHtml(sttKey)}</strong> — ${ketQua.daTaoMoi ? 'Đã tạo vận đơn mới, đang in tem' : 'In lại tem cũ'}<br>
-        Hãng: <strong>${escapeHtml(ketQua.hangVanChuyen || '')}</strong> · Mã vận đơn: <strong>${escapeHtml(ketQua.trackingNum || '')}</strong>
-      </div>
-      <button id="btn-in-tem-tracking" class="btn-in-tem-tracking">${icon('printer', { size: 18 })} In tem</button>
-    </div>`;
-    phatAmThanhKetQua('OK');
-    daGoiIn = true;
-    dsQuetTracking.unshift({
-      sttKey, thanhCong: true, gio: new Date().toLocaleTimeString('vi-VN'),
-      daTaoMoi: ketQua.daTaoMoi, hangVanChuyen: ketQua.hangVanChuyen, trackingNum: ketQua.trackingNum,
-    });
-    // Gọi in NGAY (không đợi kết quả) — nhưng đăng ký callback để khởi động lại camera SỚM HƠN nếu
-    // trình duyệt báo được lúc hộp thoại in đóng lại (afterprint), thay vì luôn đợi cứng 3 giây.
-    //
-    // Nút "In tem" (bổ sung 02/09/2026): trên điện thoại (đặc biệt iOS Safari, và nhiều bản Android
-    // Chrome), trình duyệt CHẶN gọi print() bằng JS nếu không xuất phát trực tiếp từ 1 thao tác chạm/
-    // bấm thật của người dùng — mà lượt quét QR ở đây là do camera tự đọc được mã, không phải 1 cú
-    // bấm, nên trên điện thoại hộp thoại in có thể KHÔNG tự bật lên được (khác PC, nơi trình duyệt dễ
-    // dãi hơn nên vẫn tự bật được). trinhIn() trả về từ inTemTuDong dùng LẠI ĐÚNG iframe/tem đã tạo —
-    // bấm nút này là 1 cú bấm thật nên chắc chắn mở được hộp thoại in trên mọi trình duyệt/thiết bị.
-    const trinhIn = inTemTuDong(ketQua.labelBase64, () => { khoiDongLaiCameraTracking(); });
-    const btnInTem = document.getElementById('btn-in-tem-tracking');
-    if (btnInTem && trinhIn) btnInTem.onclick = trinhIn;
-  } catch (e) {
-    // In cả lỗi gốc ra console trình duyệt (F12 > Console) — ô đỏ trên màn hình chỉ hiện được
-    // đúng 1 dòng ngắn, console mới thấy đủ chi tiết khi cần đối chiếu với log server (xem
-    // "CÁCH TÌM LỖI" ở cuối services/gkeService.js).
-    console.error('[GKE Tracking] Lỗi khi quét', sttKey, ':', e);
-    el.innerHTML = `<div class="ket-qua-box loi">${icon('alert')} ${escapeHtml(e.message || 'Lỗi không rõ nguyên nhân — mở Console (F12) và log server để xem chi tiết')}</div>`;
-    phatAmThanhKetQua('KHONG_TIM_THAY');
-    dsQuetTracking.unshift({ sttKey, thanhCong: false, gio: new Date().toLocaleTimeString('vi-VN'), loi: e.message });
-  }
-
-  setTimeout(() => { dangXuLyQuet = false; }, 1500);
-
-  // Hộp thoại in PDF của trình duyệt là 1 cửa sổ tách biệt đè lên trang — trên nhiều máy, sau khi
-  // đóng hộp thoại này lại khung hình camera bị đứng hình/đen dù luồng vẫn còn sống bên dưới, khiến
-  // không quét tiếp được đơn kế tiếp. Chủ động khởi động lại camera sau khi in để chắc chắn luôn sẵn
-  // sàng quét tiếp — hẹn giờ DỰ PHÒNG ở đây (3s) phòng khi callback afterprint ở inTemTuDong không
-  // bắn ra (không phải trình duyệt nào cũng hỗ trợ với trình xem PDF nội bộ của Chrome).
-  // khoiDongLaiCameraTracking tự chặn chạy trùng (cờ dangKhoiDongLaiCameraTracking) nên dù afterprint
-  // VÀ hẹn giờ này cùng gọi tới cũng chỉ thực thi đúng 1 lần — không cần hiện trạng thái camera ở
-  // đây (camera vẫn đang sống bình thường lúc này), chỉ hiện NGAY LÚC thực sự dừng/mở lại (xem hàm dưới).
-  if (daGoiIn) setTimeout(khoiDongLaiCameraTracking, 3000);
-}
-
-// Hiện dòng trạng thái nhỏ ngay trên khung camera trong lúc camera tạm tắt để khởi động lại — tránh
-// người dùng tưởng camera bị treo/lỗi khi thấy khung hình đứng yên vài giây không rõ lý do.
-function hienThiTrangThaiCamera(noiDung) {
-  const el = document.getElementById('trang-thai-camera-tracking');
-  if (!el) return;
-  el.textContent = noiDung || '';
-  el.style.display = noiDung ? 'flex' : 'none';
-}
-
-let dangKhoiDongLaiCameraTracking = false;
-
-async function khoiDongLaiCameraTracking() {
-  // Đã chuyển sang tab khác, hoặc đã bấm "Dừng quét" trong lúc chờ — không đụng vào camera nữa.
-  if (mode !== 'gke_tracking' || !dangQuetTracking) return;
-  // afterprint (đường nhanh) và hẹn giờ 3s dự phòng có thể cùng gọi hàm này — chỉ chạy 1 lần
-  // (dangKhoiDongLaiCameraTracking bật suốt quá trình, tắt lại ở finally bên dưới).
-  if (dangKhoiDongLaiCameraTracking) return;
-  dangKhoiDongLaiCameraTracking = true;
-  hienThiTrangThaiCamera('Đang khởi động lại camera...');
-  try {
-    await dungCamera();
-    // Đợi 1 nhịp ngắn cho trình duyệt/OS nhả hẳn camera trước khi mở lại — dừng rồi mở lại NGAY LẬP
-    // TỨC dễ dính NotReadableError (xem batDauCamera) hơn nếu không có khoảng nghỉ này.
-    await new Promise(r => setTimeout(r, 400));
-    if (mode !== 'gke_tracking' || !dangQuetTracking) return; // kiểm tra lại — có thể đã đổi ý trong lúc chờ
-    cameraDangChayCho = 'gke_tracking';
-    await batDauCamera(xuLyQuetTracking, 520, { facingMode: 'environment' });
-  } finally {
-    hienThiTrangThaiCamera('');
-    dangKhoiDongLaiCameraTracking = false;
-  }
-}
-
-function base64ThanhBlob(base64, kieuMime) {
-  const nhiPhan = atob(base64);
-  const mang = new Uint8Array(nhiPhan.length);
-  for (let i = 0; i < nhiPhan.length; i++) mang[i] = nhiPhan.charCodeAt(i);
-  return new Blob([mang], { type: kieuMime });
-}
-
-// Mở tem PDF trong 1 iframe ẩn rồi gọi in ngay lập tức — trình duyệt VẪN sẽ hiện hộp thoại in của
-// chính nó (không có cách nào tắt bằng JS vì lý do bảo mật trình duyệt, ở mọi trình duyệt), nhưng
-// KHÔNG có bước xác nhận riêng nào của app trước đó — đúng yêu cầu "in luôn không cần hỏi". Máy
-// tính chạy tab này cần đã cài driver Xprinter XP-480B qua USB và đặt sẵn làm máy in mặc định/khổ
-// giấy 100x150mm để hộp thoại in hiện đúng máy ngay (xem hướng dẫn cài đặt).
-//
-// 2 lỗi thực tế khiến máy in không nhận được gì dù không báo lỗi (cùng kiểu lỗi "container ẩn khiến
-// clientWidth/clientHeight = 0" từng gặp với html5-qrcode.scanFile() trước đây): (1) iframe rộng/cao
-// = 0 khiến trình xem PDF nội bộ của Chrome không có chỗ để dựng hình, .print() gọi ra nhưng không có nội dung nào để in — phải
-// để kích thước LAYOUT THẬT, chỉ đẩy ra ngoài màn hình bằng toạ độ âm; (2) gọi print() ngay lúc
-// iframe "onload" đôi khi sớm hơn lúc trình xem PDF bên trong dựng xong nội dung — phải chờ thêm 1
-// nhịp ngắn. Dùng blob: URL thay vì data: URI vì trình xem PDF của Chrome nhận diện ổn định hơn.
-//
-// onXongIn (bổ sung 02/09/2026): gọi lại khi hộp thoại in ĐÃ ĐÓNG (sự kiện afterprint trên chính
-// cửa sổ iframe) — cho phép khoiDongLaiCameraTracking chạy SỚM HƠN 3 giây cố định, để camera sẵn
-// sàng quét đơn tiếp theo nhanh nhất có thể. Không phải trình duyệt/context nào cũng bắn đúng sự
-// kiện này với trình xem PDF nội bộ của Chrome — nếu không bắn thì gọi ý sẽ KHÔNG chạy, đây là lý do
-// xuLyQuetTracking VẪN giữ hẹn giờ 3 giây dự phòng song song, không phụ thuộc hoàn toàn vào đây.
-//
-// Trả về hàm goiIn — cho phép gọi LẠI thủ công qua nút "In tem" (xem xuLyQuetTracking). Trên điện
-// thoại (đặc biệt iOS Safari), trình duyệt thường CHẶN print() gọi từ JS nếu không xuất phát trực
-// tiếp từ 1 cú bấm/chạm thật (bổ sung 02/09/2026, phát hiện qua thực tế: PC tự bật hộp thoại in bình
-// thường nhưng điện thoại thì không) — lượt gọi TỰ ĐỘNG dưới đây vẫn thử trước (vô hại nếu bị chặn
-// im lặng), còn nút bấm thật đảm bảo LUÔN mở được hộp thoại in trên mọi thiết bị.
-function inTemTuDong(labelBase64, onXongIn) {
-  if (!labelBase64) { if (onXongIn) onXongIn(); return null; }
-  let urlBlob;
-  try {
-    urlBlob = URL.createObjectURL(base64ThanhBlob(labelBase64, 'application/pdf'));
-  } catch (e) {
-    console.error('[GKE] Lỗi tạo file tem để in:', e);
-    if (onXongIn) onXongIn();
-    return null;
-  }
-
-  const iframe = document.createElement('iframe');
-  iframe.style.position = 'fixed';
-  iframe.style.top = '-9999px';
-  iframe.style.left = '-9999px';
-  iframe.style.width = '800px';
-  iframe.style.height = '1200px';
-  iframe.style.border = '0';
-  iframe.src = urlBlob;
-  document.body.appendChild(iframe);
-
-  let daDangKyAfterprint = false;
-  function goiIn() {
-    try {
-      iframe.contentWindow.focus();
-      if (onXongIn && !daDangKyAfterprint) {
-        daDangKyAfterprint = true;
-        try { iframe.contentWindow.addEventListener('afterprint', onXongIn, { once: true }); } catch (e2) {}
-      }
-      iframe.contentWindow.print();
-    } catch (e) {
-      console.error('[GKE] Lỗi mở hộp thoại in:', e);
-    }
-  }
-
-  iframe.onload = () => { setTimeout(goiIn, 400); };
-
-  // Dọn iframe + giải phóng blob sau 5 phút — đủ thời gian bấm nút "In tem" thủ công (vd cầm điện
-  // thoại đi tới chỗ máy in) chứ không chỉ riêng lượt tự động lúc vừa quét xong, không giữ mãi trong DOM.
-  setTimeout(() => { iframe.remove(); URL.revokeObjectURL(urlBlob); }, 300000);
-
-  return goiIn;
 }
 
 async function xuLyQuetKichBan(sttKey) {
@@ -833,60 +619,6 @@ document.getElementById('btn-dung-quet').onclick = async () => {
   dangQuetKichBan = false;
   await capNhatManHinh();
 };
-
-document.getElementById('btn-dung-quet-tracking').onclick = async () => {
-  dangQuetTracking = false;
-  await capNhatManHinh();
-};
-
-// Tổng hợp phiên quét Tracking — hiện sau khi bấm "Dừng quét" ở tab "Quét mã QR Tracking". Chỉ là
-// NHẬT KÝ để xem lại (khác hẳn renderXemLai của "Quét kịch bản" — không có bước xác nhận hàng loạt
-// vì mỗi lượt quét ở tab này đã áp dụng thật ngay lúc quét, không có gì để "xác nhận" thêm nữa).
-function renderTongHopTracking() {
-  const el = document.getElementById('khu-xem-lai');
-  const thanhCong = dsQuetTracking.filter(x => x.thanhCong);
-  const loi = dsQuetTracking.filter(x => !x.thanhCong);
-
-  el.innerHTML = `
-    <h2>Tổng hợp phiên quét Tracking</h2>
-    <p>Tổng ${dsQuetTracking.length} lượt quét — ${thanhCong.length} thành công, ${loi.length} lỗi.</p>
-
-    <div class="luoi-3-nhom luoi-2-nhom">
-      <div class="nhom-xem-lai ok">
-        <div class="tieu-de-nhom">✅ Thành công (${thanhCong.length})</div>
-        <div class="danh-sach-nhom">${thanhCong.length ? thanhCong.map(dongTongHopTrackingOK).join('') : dongTrong()}</div>
-      </div>
-      <div class="nhom-xem-lai loi">
-        <div class="tieu-de-nhom">❌ Lỗi (${loi.length})</div>
-        <div class="danh-sach-nhom">${loi.length ? loi.map(dongTongHopTrackingLoi).join('') : dongTrong()}</div>
-      </div>
-    </div>
-
-    <button class="btn-tiep-tuc-quet san-sang" id="btn-tiep-tuc-tracking">Quét tiếp</button>
-  `;
-  document.getElementById('btn-tiep-tuc-tracking').onclick = async () => {
-    dangQuetTracking = true;
-    await capNhatManHinh();
-  };
-}
-
-function dongTongHopTrackingOK(item) {
-  return `<div class="dong-xem-lai">
-    <div class="noi-dung">
-      <strong>${escapeHtml(item.sttKey)}</strong>
-      <div class="ly-do">${item.daTaoMoi ? 'Tạo vận đơn mới' : 'In lại tem cũ'} · ${escapeHtml(item.hangVanChuyen || '')} · ${escapeHtml(item.trackingNum || '')} · ${item.gio}</div>
-    </div>
-  </div>`;
-}
-
-function dongTongHopTrackingLoi(item) {
-  return `<div class="dong-xem-lai">
-    <div class="noi-dung">
-      <strong>${escapeHtml(item.sttKey)}</strong>
-      <div class="ly-do">${escapeHtml(item.loi || '')} · ${item.gio}</div>
-    </div>
-  </div>`;
-}
 
 function renderXemLai() {
   const el = document.getElementById('khu-xem-lai');

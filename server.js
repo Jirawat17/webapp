@@ -34,7 +34,10 @@ app.use('/api/chatbot', require('./routes/chatbot'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/tai-san', require('./routes/taiSan'));
 app.use('/api/hoat-dong', require('./routes/hoatDong'));
-app.use('/api/gke', require('./routes/gke'));
+// routes/gke.js (mount '/api/gke') ĐÃ XOÁ 09/09/2026 lần 4, theo yêu cầu người dùng — chế độ "Quét mã
+// QR Tracking" (gọi GKE thật) thay bằng "Chụp ảnh ĐÃ DÁN TEM" thuần ảnh (routes/photos.js, mốc
+// da_dan_tem). gkeService.js vẫn dùng nguyên cho Mua Tracking/IN LABEL (services/trackingAutoService.js,
+// routes/tracking.js) — chỉ riêng route quét-QR-để-tạo-vận-đơn là bị xoá.
 app.use('/api/tracking', require('./routes/tracking'));
 
 app.use(express.static(path.join(__dirname, 'public')));

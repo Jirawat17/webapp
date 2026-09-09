@@ -115,11 +115,11 @@ async function luuCauHinh({ bat, soPhutCho }) {
   }
 }
 
-// Mua tracking cho 1 đơn — Y HỆT luồng quét tay (routes/gke.js): tạo vận đơn (nếu chưa từng) → ghi
-// placeholder chống trùng → lấy tem → ghi TRACKING_ID/HANG_VAN_CHUYEN thật. KHÔNG đổi TRANG_THAI_XUONG
-// (khác luồng quét tay) — đơn tự động mua tracking sớm vẫn còn nguyên trạng thái sản xuất, "ĐÃ DÁN
-// TEM" chỉ nên đúng nghĩa khi tem thật được dán lên hộp lúc đóng gói xong (vẫn làm ở scan.html như cũ,
-// lúc đó TRACKING_ID đã có sẵn nên chỉ lấy tem in, không tạo vận đơn lần 2).
+// Mua tracking cho 1 đơn — tạo vận đơn (nếu chưa từng) → ghi placeholder chống trùng → lấy tem → ghi
+// TRACKING_ID/HANG_VAN_CHUYEN thật. KHÔNG đổi TRANG_THAI_XUONG — việc mua tracking (mã vận đơn GKE
+// thật) và việc đổi trạng thái "ĐÃ DÁN TEM" (từ 09/09/2026 lần 4, qua chụp ảnh xác nhận thuần, xem
+// routes/photos.js mốc da_dan_tem) là 2 việc HOÀN TOÀN TÁCH BIỆT theo đúng yêu cầu người dùng — đơn có
+// thể mang "ĐÃ DÁN TEM" mà không có TRACKING_ID thật, hoặc có TRACKING_ID thật mà chưa "ĐÃ DÁN TEM".
 // `user` mặc định = "người dùng hệ thống" (job tự động gọi không truyền gì thêm) — routes/tracking.js
 // #POST /mua-thu-cong TRUYỀN người admin đang đăng nhập thật vào đây, để log ghi đúng AI đã bấm mua
 // thủ công thay vì luôn hiện "Hệ thống (tự động)".
@@ -190,8 +190,8 @@ async function muaTrackingChoDon(sttKey, cauHinhGke, user = NGUOI_HE_THONG) {
 // Trạng thái TRANG_THAI_XUONG tối thiểu để được IN LABEL — bổ sung 09/09/2026 lần 2, theo yêu cầu
 // người dùng: 2 nút "IN LABEL"/"MUA TRACKING và IN LABEL" (khác nút "Mua Tracking" gốc phía trên,
 // KHÔNG kiểm tra trạng thái) phải bắt buộc đơn đã sản xuất xong mới cho in — tránh lãng phí tem thật
-// cho đơn còn chưa sẵn sàng gửi đi. Giống hệt điều kiện quét QR Tracking (routes/gke.js) và
-// TRANG_THAI_NGUON_HOP_LE_CHO_DAN_TEM (services/orderService.js).
+// cho đơn còn chưa sẵn sàng gửi đi. Giống hệt điều kiện chụp ảnh xác nhận ĐÃ DÁN TEM (routes/photos.js,
+// mốc da_dan_tem) và TRANG_THAI_NGUON_HOP_LE_CHO_DAN_TEM (services/orderService.js).
 // (Đổi từ 'Đã đóng gói' sang 'Đã sản xuất' 09/09/2026 lần 3 — XOÁ "Đã đóng gói" khỏi hệ thống, xem
 // data/pipelineTinhTrang.js.)
 const TRANG_THAI_DU_DIEU_KIEN_IN_LABEL = ['Đã sản xuất', 'ĐÃ DÁN TEM'];
@@ -220,9 +220,10 @@ async function ghiDaInLabel(sttKey, user) {
 }
 
 // "IN LABEL" — chỉ IN LẠI tem cho đơn ĐÃ có tracking thật, không mua/tạo vận đơn gì thêm (bổ sung
-// 09/09/2026 lần 2, theo yêu cầu người dùng). Dùng lại ĐÚNG gkeService.layTemIn() — y hệt luồng "in lại
-// tem" ở routes/gke.js#tracking/quet, chỉ khác chỗ gọi từ Đơn hàng/Đơn hàng chi tiết/Tracking thay vì
-// quét QR sống. Bắt buộc đơn đang "Đã sản xuất"/"ĐÃ DÁN TEM" (xem kiemTraDieuKienInLabel).
+// 09/09/2026 lần 2, theo yêu cầu người dùng). Dùng lại ĐÚNG gkeService.layTemIn() — gọi từ Đơn hàng/
+// Đơn hàng chi tiết/Tracking. KHÔNG liên quan gì tới việc đổi TRANG_THAI_XUONG sang "ĐÃ DÁN TEM" (việc
+// đó nay làm qua chụp ảnh xác nhận thuần, xem routes/photos.js mốc da_dan_tem) — chỉ yêu cầu đơn đang
+// "Đã sản xuất"/"ĐÃ DÁN TEM" và đã có tracking thật để có gì mà in lại (xem kiemTraDieuKienInLabel).
 async function inLabelChoDon(sttKey, cauHinhGke, user) {
   const nhatKy = [];
   const { row } = await orderService.getByKey(sttKey, { fresh: true });

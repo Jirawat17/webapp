@@ -28,7 +28,8 @@ const FONT_BOLD = path.join(__dirname, '..', 'fonts', 'NotoSans-Bold.ttf');
 // còn quyết định ĐỊNH DẠNG file xuất (cột, tiêu đề, nhóm — xem xayDungBaoCaoDangBang()/veTheDonPdf()),
 // không còn ảnh hưởng gì tới việc đơn nào được đưa vào danh sách in nữa.
 // Đổi từ 'Đã đóng gói' sang 'Đã sản xuất' (09/09/2026 lần 3, XOÁ "Đã đóng gói" khỏi hệ thống — xem
-// data/pipelineTinhTrang.js): đây vẫn là trạng thái NGAY TRƯỚC bước tạo tem tracking GKE, chỉ đổi tên.
+// data/pipelineTinhTrang.js): đây vẫn là trạng thái NGAY TRƯỚC "ĐÃ DÁN TEM" (chỉ đổi tên trạng thái
+// dùng để suy mẫu — không liên quan gì tới việc "ĐÃ DÁN TEM" đạt được bằng cách nào, xem routes/photos.js).
 const TRANG_THAI_TRACKING = 'Đã sản xuất'; // chỉ còn dùng để TỰ SUY mẫu 'tracking' khi không truyền 'mau' (xem xacDinhMau)
 
 function locDon(rows, { stt, sttKeys, tuNgay, denNgay, khachHang, trangThai, trangThaiPhoi, trangThaiVeFile, tuKhoa }) {

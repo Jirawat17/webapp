@@ -112,6 +112,7 @@ async function taiChiTiet() {
           ${user.vaiTro !== 'nguoi_lay_phoi' && don.MOCKUP ? `<a href="${escapeHtml(don.MOCKUP)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh Mockup</a>` : ''}
           ${don.Anh_File_Theu_URL ? `<a href="${escapeHtml(don.Anh_File_Theu_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh file thêu</a>` : ''}
           ${don.Anh_Da_San_Xuat_URL ? `<a href="${escapeHtml(don.Anh_Da_San_Xuat_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh đã sản xuất</a>` : ''}
+          ${don.Anh_Da_Dan_Tem_URL ? `<a href="${escapeHtml(don.Anh_Da_Dan_Tem_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh ĐÃ DÁN TEM</a>` : ''}
           ${don.Anh_Dong_Goi_URL ? `<a href="${escapeHtml(don.Anh_Dong_Goi_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh đóng gói</a>` : ''}
         </div>` : ''}
         <table class="info-table">
@@ -285,11 +286,15 @@ function renderKhuVucThaoTac(don) {
         <input type="file" accept="image/*" capture="environment" id="anh-da-san-xuat">
         <button class="btn-hanh-dong" onclick="taiAnh('da_san_xuat')">${icon('download')} Tải ảnh lên</button>
         <p style="margin:0;font-size:0.8rem">Cần cột <code>Anh_Da_San_Xuat_URL</code> trong Sheet. Chỉ dùng được khi đơn đang ở "Đang chạy máy" — tải ảnh xong sẽ TỰ ĐỘNG chuyển đơn sang "Đã sản xuất". san_xuat/nguoi_lay_phoi nên dùng màn "Chụp ảnh đã sản xuất" ở trang Quét QR thay vì đây (nhanh hơn, không cần mở từng đơn).</p>
+      </div>
+      <div class="upload-box">
+        <label for="anh-da-dan-tem">${icon('camera', { size: 18 })} Ảnh ĐÃ DÁN TEM (sau khi dán tem lên kiện hàng)</label>
+        <input type="file" accept="image/*" capture="environment" id="anh-da-dan-tem">
+        <button class="btn-hanh-dong" onclick="taiAnh('da_dan_tem')">${icon('download')} Tải ảnh lên</button>
+        <p style="margin:0;font-size:0.8rem">Cần cột <code>Anh_Da_Dan_Tem_URL</code> trong Sheet. Chỉ dùng được khi đơn đang ở "Đã sản xuất" — tải ảnh xong sẽ TỰ ĐỘNG chuyển đơn sang "ĐÃ DÁN TEM". Không tạo mã tracking GKE thật (xem khối "In label vận chuyển (GKE)" ở trên nếu cần mã tracking thật — 2 việc hoàn toàn tách biệt). san_xuat/nguoi_lay_phoi nên dùng màn "Chụp ảnh ĐÃ DÁN TEM" ở trang Quét QR thay vì đây (nhanh hơn, không cần mở từng đơn).</p>
       </div>`;
     // Khối "Ảnh đóng gói" (Anh_Dong_Goi_URL) ĐÃ XOÁ 09/09/2026 lần 3 cùng lúc xoá trạng thái "Đã đóng
-    // gói" (theo yêu cầu người dùng) — sau "Đã sản xuất" giờ dùng khối "In label vận chuyển (GKE)" ở
-    // trên (quét mã QR Tracking hoặc admin sửa tay) để chuyển thẳng sang "ĐÃ DÁN TEM", không còn bước
-    // chụp ảnh đóng gói riêng nữa.
+    // gói" (theo yêu cầu người dùng).
   }
 
   el.innerHTML = html;

@@ -37,22 +37,27 @@
 // "ĐÃ SẴN SÀNG CHẠY MÁY" trở đi nên vẫn bắt buộc phôi/file phải xong (xem kiemTraTinhHopLy trong
 // services/orderService.js) và vẫn nằm trong phạm vi đơn mà san_xuat được thấy (filterForRole).
 //
-// "ĐÃ DÁN TEM" (thêm 01/09/2026, XOÁ "Đã đóng gói" 09/09/2026 lần 3 — xem ngay dưới): routes/gke.js tự
-// đặt TRANG_THAI_XUONG sang giá trị này ngay sau khi quét mã ở tab "Quét mã QR Tracking" lấy được tem
-// GKE thành công (xem routes/gke.js). Không có automation nào tự chuyển tiếp "ĐÃ DÁN TEM" -> "DELIVERED"
-// — vẫn set tay như trước.
+// "ĐÃ DÁN TEM" (thêm 01/09/2026) — trạng thái ngay sau "Đã sản xuất" trên đường chính. KHÔNG có
+// automation nào tự chuyển tiếp "ĐÃ DÁN TEM" -> "DELIVERED" — vẫn set tay như trước.
 //
 // XOÁ "Đã đóng gói" (09/09/2026 lần 3, theo yêu cầu người dùng — xác nhận không cần trạng thái này
 // nữa): trước đó nằm giữa "Đã sản xuất" và "ĐÃ DÁN TEM", đạt được qua chế độ "Chụp ảnh đóng gói"
-// (routes/photos.js, mốc dong_goi — ĐÃ XOÁ luôn mốc này, xem routes/photos.js). Giờ "Đã sản xuất" đi
-// THẲNG sang "ĐÃ DÁN TEM" — CHỈ qua 2 đường: (1) "Quét mã QR Tracking" (routes/gke.js, tạo vận đơn GKE
-// thật — điều kiện đơn phải đang đúng "Đã sản xuất", hoặc đã "ĐÃ DÁN TEM" để in lại); (2) admin sửa tay
-// (CŨNG bắt buộc đơn đang đúng "Đã sản xuất", không có ngoại lệ — xem kiemTraCongAnhBatBuoc trong
-// services/orderService.js).
-// Lý do xoá: "Đã đóng gói" (xác nhận đóng gói bằng ảnh, không tạo mã tracking) và "ĐÃ DÁN TEM" (tạo mã
-// tracking thật qua GKE) trước đây là 2 bước tách biệt nhưng thực tế luôn làm liền nhau — gộp lại cho
-// gọn quy trình. Cột Anh_Dong_Goi_URL (ảnh chụp lúc đóng gói) không còn dùng trong code nữa (vẫn còn
-// trên Sheet nếu người dùng muốn giữ dữ liệu ảnh cũ, không tự xoá cột).
+// (routes/photos.js, mốc dong_goi — ĐÃ XOÁ luôn mốc này). Cột Anh_Dong_Goi_URL (ảnh chụp lúc đóng gói)
+// không còn dùng trong code nữa (vẫn còn trên Sheet nếu người dùng muốn giữ dữ liệu ảnh cũ, không tự
+// xoá cột).
+//
+// ĐỔI CƠ CHẾ đạt "ĐÃ DÁN TEM" (09/09/2026 lần 4, theo yêu cầu người dùng): trước đó chỉ đạt được qua
+// "Quét mã QR Tracking" (routes/gke.js, gọi GKE Logistics thật tạo vận đơn + mã tracking) — ĐÃ XOÁ hẳn
+// route này (routes/gke.js không còn tồn tại). Thay bằng chế độ "Chụp ảnh ĐÃ DÁN TEM" thuần ảnh
+// (routes/photos.js, mốc da_dan_tem) — CÙNG khuôn "Chụp ảnh đã sản xuất": quét QR xác định đơn, chụp
+// ảnh, tự chuyển trạng thái — KHÔNG gọi GKE, KHÔNG tạo mã tracking thật. Cơ chế GKE (Mua Tracking, IN
+// LABEL, trang Tracking — xem mục 10 trong docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md)
+// vẫn giữ nguyên, HOÀN TOÀN TÁCH BIỆT khỏi việc đổi TRANG_THAI_XUONG — đơn đạt "ĐÃ DÁN TEM" qua ảnh có
+// thể KHÔNG có mã tracking GKE thật, trừ khi dùng thêm 1 trong các cơ chế GKE kể trên (đã xác nhận rõ
+// với người dùng, chấp nhận đánh đổi).
+// "ĐÃ DÁN TEM" giờ đạt được qua ĐÚNG 2 đường: (1) "Chụp ảnh ĐÃ DÁN TEM" (routes/photos.js, mốc
+// da_dan_tem — điều kiện đơn phải đang đúng "Đã sản xuất"); (2) admin sửa tay (CŨNG bắt buộc đơn đang
+// đúng "Đã sản xuất", không có ngoại lệ — xem kiemTraCongAnhBatBuoc trong services/orderService.js).
 //
 // "IN TRANSIT_Tracking đã hoạt động" (XOÁ 04/09/2026, theo yêu cầu người dùng): từng nằm giữa "ĐÃ
 // DÁN TEM" và "DELIVERED", nhưng thực tế không đơn nào dùng tới (đã xác nhận không có đơn nào đang ở

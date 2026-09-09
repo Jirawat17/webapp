@@ -117,10 +117,10 @@ function tinhTinhTrangTuDong(rowHienTai, updates) {
   return updates;
 }
 
-// "Đã sản xuất" và "ĐÃ DÁN TEM" chỉ được đặt qua đúng luồng đã xác nhận: "Đã sản xuất" qua chụp ảnh QR
-// (routes/photos.js — mốc da_san_xuat, gọi update() với tuyChon.quaAnh = true); "ĐÃ DÁN TEM" qua quét
-// QR Tracking (routes/gke.js, tạo vận đơn GKE thật — CŨNG truyền quaAnh = true, dù không phải ảnh, xem
-// ghi chú tại đó). Chặn MỌI đường khác (ô "Sửa trạng thái thủ công" ở order.html, chuyển hàng loạt...)
+// "Đã sản xuất" và "ĐÃ DÁN TEM" chỉ được đặt qua đúng luồng đã xác nhận — CẢ 2 đều qua chụp ảnh QR
+// (routes/photos.js, gọi update() với tuyChon.quaAnh = true): "Đã sản xuất" mốc da_san_xuat, "ĐÃ DÁN
+// TEM" mốc da_dan_tem (đổi từ "Quét mã QR Tracking" gọi GKE thật sang thuần ảnh 09/09/2026 lần 4, theo
+// yêu cầu người dùng — xem routes/photos.js). Chặn MỌI đường khác (ô "Sửa trạng thái thủ công" ở order.html, chuyển hàng loạt...)
 // — bất kể đơn đang ở trạng thái nào trước đó. admin vẫn ghi đè được cả 2 giá trị (cần 1 lối thoát khi
 // máy ảnh/QR hỏng) — đã xác nhận rõ với người dùng, chấp nhận rủi ro bị lạm dụng ở mức admin.
 // (Bổ sung 09/09/2026 lần 3, XOÁ "Đã đóng gói" — xem data/pipelineTinhTrang.js): riêng "ĐÃ DÁN TEM",

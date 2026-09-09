@@ -1,18 +1,22 @@
-// Tích hợp GKE Logistics (order.gkelogistics.com) — tạo vận đơn thật + lấy tem in khi đơn đang "Đã
-// sản xuất" (mục Quét mã QR Tracking, xem routes/gke.js — đổi từ "Đã đóng gói" 09/09/2026 lần 3, xem
-// data/pipelineTinhTrang.js). Quyết định cùng người dùng 31/08/2026:
+// Tích hợp GKE Logistics (order.gkelogistics.com) — tạo vận đơn thật + lấy tem in. Gọi từ
+// services/trackingAutoService.js (muaTrackingChoDon() — nút "Mua Tracking"/job tự động/"MUA TRACKING
+// và IN LABEL"; inLabelChoDon() — chỉ lấy lại tem, không tạo đơn mới). KHÔNG còn gắn với việc đổi
+// TRANG_THAI_XUONG nữa — trước đây có 1 chế độ quét QR riêng (routes/gke.js, "Quét mã QR Tracking")
+// vừa gọi GKE vừa tự chuyển trạng thái sang "ĐÃ DÁN TEM", đã XOÁ 09/09/2026 lần 4 theo yêu cầu người
+// dùng (thay bằng chụp ảnh xác nhận thuần, xem routes/photos.js mốc da_dan_tem) — việc đổi trạng thái
+// và việc gọi GKE giờ hoàn toàn tách biệt. Quyết định cùng người dùng 31/08/2026:
 //   - customer_order_num khi tạo đơn LUÔN đặt = STT_Key của mình — nhờ vậy in lại tem sau này
 //     KHÔNG cần lưu riêng order_num/waybill number của GKE, chỉ cần num_type=1 + STT_Key.
-//   - Đơn đã tạo vận đơn GKE rồi (kể cả đang chờ tem, xem MA_DANG_CHO_TEM trong routes/gke.js) thì
-//     KHÔNG được gọi order/create/ lại — mỗi lần gọi tạo 1 vận đơn thật, gọi lặp sẽ ra 2 vận đơn
-//     trùng nhau. routes/gke.js ghi 1 giá trị placeholder vào TRACKING_ID NGAY sau khi tạo đơn
-//     thành công, TRƯỚC KHI thử lấy tem — vì tem có thể chưa generate xong ngay (xem layTemIn),
-//     nếu không ghi gì ở bước này mà lấy tem thất bại thì quét lại sẽ tưởng nhầm là chưa tạo đơn.
+//   - Đơn đã tạo vận đơn GKE rồi (kể cả đang chờ tem, xem MA_DANG_CHO_TEM bên dưới) thì KHÔNG được gọi
+//     order/create/ lại — mỗi lần gọi tạo 1 vận đơn thật, gọi lặp sẽ ra 2 vận đơn trùng nhau.
+//     muaTrackingChoDon() ghi 1 giá trị placeholder vào TRACKING_ID NGAY sau khi tạo đơn thành công,
+//     TRƯỚC KHI thử lấy tem — vì tem có thể chưa generate xong ngay (xem layTemIn), nếu không ghi gì ở
+//     bước này mà lấy tem thất bại thì lượt sau sẽ tưởng nhầm là chưa tạo đơn.
 //   - Cân nặng: TRONG_LUONG (kg/áo, cột thật trong Sheet) x SO_LUONG; đơn chưa có TRONG_LUONG (trống/
 //     không hợp lệ) thì tạm dùng ước lượng 0.05kg/áo như cũ (bổ sung 01/09/2026, xem tinhCanNangKg).
 //   - Khai báo hải quan: dùng 1 mức giá/mã HS cố định cho MỌI đơn (đọc từ .env), không phân biệt
 //     loại sản phẩm — đơn giản hoá theo yêu cầu, có thể tách theo LOAI sau này nếu cần chính xác hơn.
-//   - Lỗi gọi GKE KHÔNG chặn màn quét (xem routes/gke.js) — chỉ báo lỗi rõ, nhân viên quét lại sau.
+//   - Lỗi gọi GKE KHÔNG chặn thao tác của người dùng — chỉ báo lỗi rõ, thử lại sau.
 //
 // GHI LOG CHI TIẾT RA CONSOLE SERVER (bổ sung 01/09/2026, theo yêu cầu người dùng — lần test đầu
 // chỉ thấy "Đã có lỗi xảy ra" chung chung, không biết lỗi ở bước nào): mọi bước gọi GKE đều in ra
@@ -101,9 +105,10 @@ const TIMEOUT_MS = 45000;
 // vào mảng `nhatKy` nếu có truyền vào — bổ sung 09/09/2026 lần 4, theo yêu cầu người dùng: cột ChiTiet
 // trong tab Sheet mới "LogsTracking" cần ghi lại ĐẦY ĐỦ mọi dòng log liên quan (tất cả các bước gọi
 // GKE), không chỉ mỗi thông báo lỗi cuối cùng — xem ảnh chụp console server người dùng gửi kèm.
-// `nhatKy` là THAM SỐ TUỲ CHỌN truyền xuyên suốt fetchJson → layToken/goiApi → taoDonGke/layTemIn (chỉ
-// services/trackingAutoService.js#muaTrackingChoDon() truyền vào; routes/gke.js luồng quét QR KHÔNG
-// truyền, giữ nguyên hành vi cũ — ngoài phạm vi yêu cầu "thủ công và tự động" lần này).
+// `nhatKy` là THAM SỐ TUỲ CHỌN truyền xuyên suốt fetchJson → layToken/goiApi → taoDonGke/layTemIn —
+// services/trackingAutoService.js truyền vào ở CẢ muaTrackingChoDon() lẫn inLabelChoDon() (mục 9/10
+// trong docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md), để cột ChiTiet trong tab
+// LogsTracking ghi lại đầy đủ mọi bước gọi GKE cho từng lượt.
 function ghi(nhatKy, ...doiSo) {
   console.log(...doiSo);
   if (nhatKy) nhatKy.push(doiSo.map(d => (typeof d === 'string' ? d : JSON.stringify(d))).join(' '));
@@ -193,7 +198,7 @@ async function goiApi(buoc, path, body, cauHinh, { daThuLai = false } = {}, nhat
   if (!data.success) {
     // code=301 "Repeated" — KHÔNG phải lỗi thật, GKE đang báo "đơn này (theo customer_order_num) đã
     // tồn tại rồi", kèm sẵn data của vận đơn đã tạo trước đó (order_num, tracking_num...). Gặp thật
-    // 01/09/2026: do 1 bug cũ (đã vá — xem MA_DANG_CHO_TEM trong routes/gke.js) khiến Sheet không
+    // 01/09/2026: do 1 bug cũ (đã vá — xem MA_DANG_CHO_TEM bên dưới) khiến Sheet không
     // ghi lại vận đơn đã tạo, quét lại tưởng nhầm chưa tạo và gọi order/create/ lần nữa — GKE tự
     // chặn trùng ở phía họ và trả thẳng data cũ, coi như thành công để đi tiếp lấy tem, không báo lỗi.
     if (data.code === 301 && data.data) {
@@ -298,9 +303,9 @@ function tinhCanNangKg(donHang, cauHinh) {
 // (GKE cần thời gian generate tem, có thể chưa xong ngay — xem layTemIn), quét/quét-tự-động lại đơn
 // sẽ hiểu nhầm "chưa tạo đơn" và gọi order/create/ THÊM 1 LẦN, tạo ra 2 vận đơn thật trùng nhau bên
 // GKE. Phát hiện qua test thật 01/09/2026. Giá trị này KHÔNG PHẢI mã vận đơn thật — nhân viên nhìn
-// trong Sheet thấy giá trị này thì biết đơn đang chờ, không phải lỗi hiển thị. Đặt Ở ĐÂY (không phải
-// routes/gke.js) vì CẢ luồng quét tay (routes/gke.js) LẪN job tự động (services/trackingAutoService.js,
-// bổ sung 09/09/2026) đều cần nhận diện đúng giá trị này.
+// trong Sheet thấy giá trị này thì biết đơn đang chờ, không phải lỗi hiển thị. Đặt ở gkeService.js
+// (không phải trackingAutoService.js) vì CẢ luồng thủ công/tự động (muaTrackingChoDon()) LẪN
+// inLabelChoDon() (services/trackingAutoService.js) đều cần nhận diện đúng giá trị này.
 const MA_DANG_CHO_TEM = 'DANG_CHO_GKE_TAO_TEM';
 
 // Tạo 1 vận đơn THẬT bên GKE — chỉ gọi hàm này khi đơn CHƯA từng tạo vận đơn lần nào.
