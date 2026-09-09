@@ -28,13 +28,14 @@
 .tk-trang-thai.thieu-du-lieu { background: color-mix(in srgb, #dc2626 15%, transparent); color: #dc2626; }
 
 /* Cấu hình GKE (bổ sung 09/09/2026) — tái dùng khung .bao-cao-form (thẻ nền + input/label sẵn có).
-   Nới rộng đáng kể + lưới auto-fit (thay vì cố định 2 cột) — bổ sung 09/09/2026 lần 2, theo yêu cầu
-   người dùng "xem nhiều thông tin hơn ở hàng ngang, đỡ phải cuộn chuột": mỗi nhóm trường tự xếp được
-   nhiều cột nhất có thể trong bề rộng hiện có (vd nhóm 6 trường "người gửi" gói gọn 1 hàng trên màn
-   hình rộng, thay vì trải dài 3 hàng như trước), KHÔNG cần đoán trước số cột theo breakpoint cố định.
+   Lưới auto-fit (thay vì cố định 2 cột) — bổ sung 09/09/2026 lần 2, theo yêu cầu người dùng "xem
+   nhiều thông tin hơn ở hàng ngang, đỡ phải cuộn chuột". Lần 5 (bổ sung 09/09/2026): vẫn còn tốn quá
+   nhiều hàng dù đã auto-fit — hoá ra do 4 nhóm trường trước đó MỖI NHÓM là 1 lưới RIÊNG kèm tiêu đề
+   <h4> riêng (ép xuống hàng giữa các nhóm dù còn dư chỗ ngang) — bỏ hẳn 4 tiêu đề nhóm, GỘP CHUNG cả
+   14 trường vào ĐÚNG 1 lưới duy nhất để trường của nhóm này có thể xếp cùng hàng với nhóm kia, không
+   bị chặn ở ranh giới nhóm nữa (nhãn từng ô input đã đủ rõ nghĩa, không cần tiêu đề nhóm riêng).
    .page cho phép rộng tới 1800px (xem style.css) nên 1400px vẫn còn dư nhiều đất so với trước (720px). */
 .tk-cau-hinh-gke { max-width: 1400px; }
-.tk-cau-hinh-gke h4 { margin: 0 0 var(--space-2); font-size: 0.85rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.03em; }
 .tk-luoi-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: var(--space-3); }
 .tk-ghi-chu-truong { font-size: 0.78rem; color: var(--color-text-muted); margin: 4px 0 0; }
 
@@ -84,45 +85,23 @@
   <h3 style="margin-top:var(--space-5)">Cấu hình GKE</h3>
   <p style="color:var(--color-text-muted);margin:-8px 0 16px">Toàn bộ thông tin dưới đây trước kia nằm cứng trong code (.env) — nay chuyển lên đây để tự chỉnh khi cần, không phải sửa code/deploy lại.</p>
   <div class="bao-cao-form tk-cau-hinh-gke">
-    <div class="tk-nhom">
-      <h4>Tài khoản API GKE</h4>
-      <div class="tk-luoi-2">
-        <div class="truong"><label for="gke-username">Username</label><input type="text" id="gke-username" autocomplete="off"></div>
-        <div class="truong"><label for="gke-password">Password</label><input type="password" id="gke-password" autocomplete="new-password"></div>
-      </div>
+    <div class="tk-luoi-2">
+      <div class="truong"><label for="gke-username">Username</label><input type="text" id="gke-username" autocomplete="off"></div>
+      <div class="truong"><label for="gke-password">Password</label><input type="password" id="gke-password" autocomplete="new-password"></div>
+      <div class="truong"><label for="gke-service-code">Mã dịch vụ (service_code)</label><input type="text" id="gke-service-code"></div>
+      <div class="truong"><label for="gke-customs-currency">Đơn vị tiền tệ khai báo</label><input type="text" id="gke-customs-currency" placeholder="USD" style="text-transform:uppercase"></div>
+      <div class="truong"><label for="gke-customs-item-name">Tên hàng khai báo</label><input type="text" id="gke-customs-item-name" placeholder="Embroidered garment"></div>
+      <div class="truong"><label for="gke-customs-hs-code">Mã HS</label><input type="text" id="gke-customs-hs-code"></div>
+      <div class="truong"><label for="gke-customs-declared-price">Giá trị khai báo (mỗi kiện)</label><input type="number" id="gke-customs-declared-price" min="0" step="0.01"></div>
+      <div class="truong"><label for="gke-shipper-name">Tên xưởng</label><input type="text" id="gke-shipper-name" placeholder="Maxthread VN"></div>
+      <div class="truong"><label for="gke-shipper-phone">Số điện thoại</label><input type="text" id="gke-shipper-phone"></div>
+      <div class="truong"><label for="gke-shipper-address">Địa chỉ</label><input type="text" id="gke-shipper-address"></div>
+      <div class="truong"><label for="gke-shipper-city">Thành phố</label><input type="text" id="gke-shipper-city"></div>
+      <div class="truong"><label for="gke-shipper-province">Tỉnh/Bang</label><input type="text" id="gke-shipper-province"></div>
+      <div class="truong"><label for="gke-shipper-postcode">Mã bưu điện</label><input type="text" id="gke-shipper-postcode"></div>
+      <div class="truong"><label for="gke-can-nang-moi-ao">Cân nặng mỗi áo (kg)</label><input type="number" id="gke-can-nang-moi-ao" min="0" step="0.01"></div>
     </div>
-
-    <div class="tk-nhom">
-      <h4>Dịch vụ &amp; khai báo hải quan</h4>
-      <div class="tk-luoi-2">
-        <div class="truong"><label for="gke-service-code">Mã dịch vụ (service_code)</label><input type="text" id="gke-service-code"></div>
-        <div class="truong"><label for="gke-customs-currency">Đơn vị tiền tệ khai báo</label><input type="text" id="gke-customs-currency" placeholder="USD" style="text-transform:uppercase"></div>
-        <div class="truong"><label for="gke-customs-item-name">Tên hàng khai báo</label><input type="text" id="gke-customs-item-name" placeholder="Embroidered garment"></div>
-        <div class="truong"><label for="gke-customs-hs-code">Mã HS</label><input type="text" id="gke-customs-hs-code"></div>
-        <div class="truong"><label for="gke-customs-declared-price">Giá trị khai báo (mỗi kiện)</label><input type="number" id="gke-customs-declared-price" min="0" step="0.01"></div>
-      </div>
-    </div>
-
-    <div class="tk-nhom">
-      <h4>Thông tin người gửi (xưởng)</h4>
-      <div class="tk-luoi-2">
-        <div class="truong"><label for="gke-shipper-name">Tên xưởng</label><input type="text" id="gke-shipper-name" placeholder="Maxthread VN"></div>
-        <div class="truong"><label for="gke-shipper-phone">Số điện thoại</label><input type="text" id="gke-shipper-phone"></div>
-        <div class="truong"><label for="gke-shipper-address">Địa chỉ</label><input type="text" id="gke-shipper-address"></div>
-        <div class="truong"><label for="gke-shipper-city">Thành phố</label><input type="text" id="gke-shipper-city"></div>
-        <div class="truong"><label for="gke-shipper-province">Tỉnh/Bang</label><input type="text" id="gke-shipper-province"></div>
-        <div class="truong"><label for="gke-shipper-postcode">Mã bưu điện</label><input type="text" id="gke-shipper-postcode"></div>
-      </div>
-    </div>
-
-    <div class="tk-nhom">
-      <h4>Cân nặng mặc định</h4>
-      <div class="truong">
-        <label for="gke-can-nang-moi-ao">Cân nặng mỗi áo (kg) — dùng khi đơn KHÔNG có sẵn TRONG_LUONG</label>
-        <input type="number" id="gke-can-nang-moi-ao" min="0" step="0.01" style="max-width:160px">
-        <p class="tk-ghi-chu-truong">Cân nặng cả kiện = TRONG_LUONG (nếu đơn có) × Số lượng; đơn thiếu TRONG_LUONG thì dùng giá trị này thay thế.</p>
-      </div>
-    </div>
+    <p class="tk-ghi-chu-truong">Cân nặng cả kiện = TRONG_LUONG (nếu đơn có) × Số lượng; đơn thiếu TRONG_LUONG thì dùng giá trị "Cân nặng mỗi áo" ở trên thay thế.</p>
 
     <button type="button" class="btn-hanh-dong" id="btn-luu-cau-hinh-gke" style="justify-self:start">Lưu cấu hình GKE</button>
     <p id="thong-bao-gke" style="display:none"></p>

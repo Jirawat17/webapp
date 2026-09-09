@@ -207,6 +207,17 @@ trường "Thông tin người gửi" đều gói gọn trong ĐÚNG 1 hàng tr�
 nhóm) — giảm hẳn số lần cuộn chuột để thấy hết thông tin, đúng yêu cầu người dùng. Ở màn hình hẹp,
 `auto-fit` tự co về 1 cột như CSS Grid tiêu chuẩn, không cần media query riêng.
 
+**Bổ sung 09/09/2026 (lần 5)**: vẫn còn tốn quá nhiều hàng — hoá ra vì 4 nhóm trường ("Tài khoản",
+"Dịch vụ & hải quan", "Người gửi", "Cân nặng") mỗi nhóm là 1 LƯỚI RIÊNG kèm tiêu đề `<h4>` riêng, ép
+xuống hàng mới ở MỌI ranh giới nhóm dù hàng ngang vẫn còn dư chỗ (rõ nhất ở nhóm "Cân nặng mặc định" —
+chiếm nguyên 1 hàng + 1 tiêu đề chỉ cho ĐÚNG 1 trường). Bỏ hẳn 4 tiêu đề `<h4>` + gộp CHUNG cả 14 trường
+vào ĐÚNG 1 lưới `auto-fit` duy nhất — trường của nhóm này giờ xếp cùng hàng với nhóm kia luôn, không bị
+chặn ở ranh giới nhóm nữa (nhãn từng ô input, vd "Tên xưởng"/"Số điện thoại", đã đủ rõ nghĩa mà không
+cần tiêu đề nhóm). Kết quả: cả 14 trường gói gọn trong ĐÚNG 2 hàng trên màn hình rộng (~1450px), so với
+~4-5 hàng-nhóm trước đó. Rút gọn nhãn trường cân nặng ("Cân nặng mỗi áo (kg) — dùng khi đơn KHÔNG có sẵn
+TRONG_LUONG" → "Cân nặng mỗi áo (kg)") — phần giải thích dài chuyển hẳn xuống dòng ghi chú bên dưới lưới
+để tránh 1 nhãn quá dài kéo cao cả hàng chứa nó.
+
 ### 8.4. Chọn số GIỜ chờ (không chỉ số phút)
 
 Trước đó chỉ có 1 ô "số phút chờ" (`SoPhutCho`) — chờ hàng chục giờ phải tự quy đổi ra phút, dễ nhầm.
