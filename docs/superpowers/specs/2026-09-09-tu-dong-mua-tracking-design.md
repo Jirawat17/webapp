@@ -218,6 +218,18 @@ cần tiêu đề nhóm). Kết quả: cả 14 trường gói gọn trong ĐÚNG
 TRONG_LUONG" → "Cân nặng mỗi áo (kg)") — phần giải thích dài chuyển hẳn xuống dòng ghi chú bên dưới lưới
 để tránh 1 nhãn quá dài kéo cao cả hàng chứa nó.
 
+**Bổ sung 09/09/2026 (lần 6)**: phần "Tự động mua tracking" + thiết lập thời gian chờ vẫn tốn 4 khối
+riêng (hàng công tắc bật/tắt, hàng chữ giải thích, hàng 2 label "Số giờ"/"Số phút", hàng 2 ô input +
+nút Lưu) chỉ để bật/tắt + chỉnh 1 con số. Gộp CHUNG vào lại đúng 1 hàng `.cong-tac-hang` duy nhất: nhét
+cả `<span class="cong-tac">` (công tắc) vào TRONG `.cong-tac-nhan` (vốn đã là flex-row có sẵn, xem
+`style.css`) để "nhãn + công tắc" vẫn dính liền nhau như thiết kế gốc; nhóm giờ/phút/Lưu là 1 `<span>`
+flex thứ 2, được `.cong-tac-hang`'s `justify-content:space-between` sẵn có đẩy sang phải — CHỈ thêm
+`flex-wrap:wrap` (inline style, không sửa class `.cong-tac-hang` dùng chung với trang Settings) để
+không vỡ ở màn hẹp. Bỏ hẳn đoạn chữ giải thích dài (đã nói ở mô tả đầu trang rồi) + 2 `<label>` riêng
+"Số giờ"/"Số phút" (thay bằng chữ đơn vị "giờ"/"phút" ngắn gọn ngay sau mỗi ô, giữ nguyên đầy đủ câu
+giải thích qua thuộc tính `title` — hiện khi rê chuột, không chiếm chỗ). Không đổi `id` nào, JS
+(`taiCauHinh`/`luuCauHinh`) không cần sửa. Kết quả: từ ~4-5 hàng xuống còn ĐÚNG 1 hàng.
+
 ### 8.4. Chọn số GIỜ chờ (không chỉ số phút)
 
 Trước đó chỉ có 1 ô "số phút chờ" (`SoPhutCho`) — chờ hàng chục giờ phải tự quy đổi ra phút, dễ nhầm.

@@ -57,28 +57,31 @@
   <h2>Tracking</h2>
   <p style="color:var(--color-text-muted);margin:-8px 0 20px">Tự động mua tracking GKE cho đơn đánh dấu <code>AUTO_TRACKING = "YES"</code>, sau khi đủ thời gian chờ kể từ lúc đơn chuyển "Đã in mã".</p>
 
-  <div class="cong-tac-hang">
-    <span class="cong-tac-nhan">Tự động mua tracking</span>
-    <span class="cong-tac">
-      <input type="checkbox" id="cong-tac-bat-tat">
-      <span class="cong-tac-slider"></span>
+  <!-- Gộp công tắc bật/tắt + ô giờ/phút + nút Lưu vào CHUNG 1 hàng .cong-tac-hang (bổ sung 09/09/2026
+       lần 6, theo yêu cầu người dùng "giảm số dòng") — trước đó là 4 khối riêng (hàng công tắc, hàng
+       chữ giải thích, hàng 2 label "Số giờ"/"Số phút", hàng 2 ô input + nút) chỉ để bật/tắt + chỉnh 1
+       con số. Bỏ hẳn đoạn giải thích dài (đã nói ở mô tả đầu trang) + 2 label riêng "Số giờ"/"Số phút"
+       (thay bằng chữ đơn vị "giờ"/"phút" ngay sau ô nhập, đủ rõ nghĩa mà không cần label riêng 1 dòng).
+       .cong-tac-nhan vốn đã là flex-row (xem style.css) nên nhét cả công tắc vào trong nó vẫn đúng
+       layout "nhãn + control cạnh nhau" như thiết kế gốc — chỉ thêm flex-wrap để không vỡ ở màn hẹp.
+       2 ô giờ/phút CỘNG DỒN thành 1 tổng số phút duy nhất khi lưu (xem luuCauHinh()) — Sheet vẫn chỉ
+       lưu 1 cột SoPhutCho như cũ, không đổi schema. -->
+  <div class="cong-tac-hang" style="flex-wrap:wrap;row-gap:var(--space-2)">
+    <span class="cong-tac-nhan">
+      Tự động mua tracking
+      <span class="cong-tac">
+        <input type="checkbox" id="cong-tac-bat-tat">
+        <span class="cong-tac-slider"></span>
+      </span>
     </span>
-  </div>
-
-  <!-- Thêm ô "Số giờ" cạnh "Số phút" (bổ sung 09/09/2026, theo yêu cầu người dùng — chờ hàng chục
-       giờ mà chỉ có ô phút thì phải tự quy đổi, dễ nhầm). 2 ô CỘNG DỒN thành 1 tổng số phút duy nhất
-       khi lưu (xem luuCauHinh()) — Sheet vẫn chỉ lưu 1 cột SoPhutCho như cũ, không đổi schema. -->
-  <p style="margin:var(--space-3) 0 4px;font-weight:700;font-size:0.9rem">Chờ bao lâu kể từ lúc "Đã in mã" thì mua (giờ + phút cộng dồn)</p>
-  <div class="inline-form">
-    <div class="truong">
-      <label for="so-gio-cho">Số giờ</label>
-      <input type="number" id="so-gio-cho" min="0" step="1" style="max-width:100px">
-    </div>
-    <div class="truong">
-      <label for="so-phut-cho">Số phút</label>
-      <input type="number" id="so-phut-cho" min="0" step="1" style="max-width:100px">
-    </div>
-    <button type="button" class="btn-hanh-dong" id="btn-luu-cau-hinh">Lưu</button>
+    <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap" title="Chờ bao lâu kể từ lúc &quot;Đã in mã&quot; thì mua (giờ + phút cộng dồn)">
+      <span style="font-size:0.85rem;color:var(--color-text-muted)">Chờ</span>
+      <input type="number" id="so-gio-cho" min="0" step="1" style="width:56px" aria-label="Số giờ">
+      <span style="font-size:0.85rem">giờ</span>
+      <input type="number" id="so-phut-cho" min="0" step="1" style="width:56px" aria-label="Số phút">
+      <span style="font-size:0.85rem">phút</span>
+      <button type="button" class="btn-hanh-dong" id="btn-luu-cau-hinh" style="padding:8px 16px">Lưu</button>
+    </span>
   </div>
   <p id="thong-bao-luu" style="display:none;margin-top:8px"></p>
 
