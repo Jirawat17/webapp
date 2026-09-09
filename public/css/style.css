@@ -512,16 +512,16 @@ select.chon-trang-thai-tieu-cuc { border-color: var(--color-warning-text); color
 .scan-mode button.active { background: var(--color-primary); color: white; border-color: var(--color-primary); }
 .scan-mode button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-#qr-reader { border-radius: var(--radius-md); overflow: hidden; max-width: 300px; margin: 0 auto; box-shadow: var(--shadow-md); }
-/* Tab "Quét mã QR Tracking" dùng khung camera to gấp đôi mặc định (xem toggle .che-do-to trong
-   scan.html) — dễ ngắm khi thao tác 1 mình trên máy tính gắn máy in, không đụng các tab quét khác. */
-#camera-wrap.che-do-to .camera-vien { max-width: 960px; }
-#camera-wrap.che-do-to #qr-reader { max-width: 600px; }
-/* Quét kịch bản (xem toggle .che-do-rong trong scan.html, chỉ bật khi mode === 'batch') — khung camera
-   rộng hơn, thấp hơn (kết hợp với aspectRatio 16/9 truyền cho Html5Qrcode.start()) để dễ ngắm hơn khi
-   cầm điện thoại ngang, dành thêm chỗ cho khối "Kết quả vừa quét" phía dưới. */
-#camera-wrap.che-do-rong .camera-vien { max-width: 640px; }
-#camera-wrap.che-do-rong #qr-reader { max-width: 640px; }
+/* Khung ngoài camera (#qr-reader) chỉ to hơn khung quét QR (qrbox, luôn 260px — xem batDauCamera() +
+   Html5Qrcode.start() trong scan.html) khoảng 10% (286px) — ÁP DỤNG THỐNG NHẤT cho MỌI chế độ quét
+   (bổ sung 09/09/2026, theo yêu cầu người dùng). Trước đó "Quét kịch bản" cố tình dùng khung to hơn hẳn
+   (640px, hình chữ nhật ngang qua aspectRatio 16/9) để dễ ngắm khi cầm điện thoại ngang — người dùng đã
+   xác nhận vẫn muốn thu nhỏ về đúng ~10% dù mất thiết kế đó (xem scan.html, đã bỏ tham số aspectRatio
+   cho "Quét kịch bản"). ".camera-vien" (bọc ngoài, chứa cả nút đèn flash định vị tuyệt đối) đặt CÙNG
+   giá trị với "#qr-reader" — không để hở khoảng trống nào giữa 2 lớp, tránh nút flash lệch khỏi góc
+   khung camera thật (2 lớp trước đây có kích thước khác nhau ở chế độ mặc định, 480px so với 300px).
+   Khung to "Quét mã QR Tracking" (.che-do-to) đã xoá cùng lúc xoá chế độ đó (09/09/2026 lần 4). */
+#qr-reader { border-radius: var(--radius-md); overflow: hidden; max-width: 286px; margin: 0 auto; box-shadow: var(--shadow-md); }
 .ket-qua-box { background: var(--color-surface); padding: var(--space-3); border-radius: var(--radius-md); margin-top: var(--space-3); box-shadow: var(--shadow-sm); border: 1px solid var(--color-border); display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; }
 .ket-qua-box.ok { border-left: 4px solid var(--color-success-text); }
 .ket-qua-box.loi { border-left: 4px solid var(--color-danger-text); }
@@ -566,7 +566,7 @@ select.chon-trang-thai-tieu-cuc { border-color: var(--color-warning-text); color
 
 /* --- Nút bật/tắt đèn flash — icon tròn nổi trên góc khung camera thay vì chiếm nguyên 1 hàng
    riêng; chỉ hiện khi thiết bị thực sự có torch (xem capNhatHoTroFlash trong scan.html). --- */
-.camera-vien { position: relative; max-width: 480px; margin: 0 auto; }
+.camera-vien { position: relative; max-width: 286px; margin: 0 auto; }
 .btn-flash-overlay {
   position: absolute; top: 10px; right: 10px; z-index: 5;
   width: 44px; height: 44px; padding: 0; border: none; border-radius: var(--radius-full);

@@ -213,10 +213,9 @@ async function capNhatManHinh() {
   document.getElementById('khu-xem-lai').style.display = 'none';
   document.getElementById('photo-wrap').style.display = 'none';
   document.getElementById('mo-ta-quet-chup-anh').style.display = 'none';
-  // Khung camera "Quét kịch bản" rộng hơn, thấp hơn mặc định (xem .che-do-rong trong style.css +
-  // aspectRatio truyền riêng cho luồng 'batch' ở dieuChinhCamera) — dễ ngắm hơn khi cầm điện thoại
-  // ngang, dành thêm chỗ cho khối "Kết quả vừa quét" phía dưới camera.
-  document.getElementById('camera-wrap').classList.toggle('che-do-rong', mode === 'batch');
+  // Khung camera "Quét kịch bản" TỪNG rộng hơn, thấp hơn mặc định (.che-do-rong) — ĐÃ BỎ 09/09/2026,
+  // theo yêu cầu người dùng: khung ngoài camera giờ chỉ to hơn khung quét QR ~10% ở MỌI chế độ, không
+  // còn ngoại lệ nào (xem #qr-reader trong style.css).
 
   let cameraCanChay = null;
 
@@ -356,9 +355,9 @@ async function dieuChinhCamera(muonChay) {
   if (cameraDangChayCho !== null) await dungCamera();
   cameraDangChayCho = muonChay;
   if (muonChay === 'lookup') await batDauCamera(xuLyQuetTraCuu);
-  // aspectRatio 16/9 (kết hợp .che-do-rong trong style.css) — khung camera rộng-thấp thật sự (yêu cầu
-  // thẳng camera stream theo tỉ lệ này, không chỉ crop bằng CSS) cho riêng "Quét kịch bản".
-  else if (muonChay === 'batch') await batDauCamera(xuLyQuetKichBan, 260, { aspectRatio: 16 / 9 });
+  // "Quét kịch bản" TỪNG truyền aspectRatio 16/9 riêng (khung camera rộng-thấp) — ĐÃ BỎ 09/09/2026,
+  // dùng chung đúng 1 cỡ khung mặc định (qrbox 260 + khung ngoài ~286px) như mọi chế độ khác.
+  else if (muonChay === 'batch') await batDauCamera(xuLyQuetKichBan);
   // "Chụp ảnh đã sản xuất" — bước quét QR SỐNG để xác định đơn, trước khi cho chụp ảnh
   // thật (xem docs/superpowers/specs/2026-09-07-tach-quet-chup-anh-design.md).
   else if (muonChay === 'photo_scan') await batDauCamera(xuLyQuetDeXacDinhDon);
