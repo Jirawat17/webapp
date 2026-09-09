@@ -650,3 +650,59 @@ dòng) để không còn trỏ tới file không tồn tại, đồng thời c�
   `gkeService.js` ghi chú LỊCH SỬ có chữ "ĐÃ XOÁ") tham chiếu `routes/gke.js`; không còn `gke_tracking`
   trong bất kỳ file code nào (chỉ còn trong 1 spec doc cũ mô tả thiết kế TRƯỚC lần đổi này, giữ nguyên
   làm lịch sử).
+
+## 13. Bổ sung 09/09/2026 (lần 5): bắt buộc ĐÃ có tracking thật mới được "ĐÃ DÁN TEM"
+
+Theo yêu cầu người dùng: "1 đơn nếu chưa có thông tin Tracking thì sẽ không thể chuyển sang trạng thái
+'ĐÃ DÁN TEM'". ĐẢO NGƯỢC lại đúng phần vừa chấp nhận đánh đổi ở mục 12.1 (cho phép "ĐÃ DÁN TEM" qua ảnh
+mà không cần tracking thật) — tôn trọng quyết định mới nhất, không tự ý giữ nguyên tắc cũ.
+
+### 13.1. `services/orderService.js` — chặn ở ĐÚNG 1 chỗ, universal, không ngoại lệ
+
+Thêm `MA_DANG_CHO_TEM_GKE = 'DANG_CHO_GKE_TAO_TEM'` (tự khai báo lại, PHẢI khớp `gkeService.js#MA_DANG_CHO_TEM`
+— KHÔNG import thẳng `gkeService.js` vào `orderService.js` để tránh module trung tâm này phải biết chi
+tiết 1 tích hợp bên thứ 3 cụ thể, cùng lý do `public/order.html` cũng tự khai báo lại hằng số này).
+
+Trong `kiemTraCongAnhBatBuoc()`, ngay sau kiểm tra trạng thái NGUỒN (mục 11.2), thêm kiểm tra: giá trị
+TRACKING_ID hiệu lực SAU KHI áp dụng `updates` (`updates.TRACKING_ID ?? rowHienTai.TRACKING_ID` — đúng
+cho cả trường hợp `updates` có tự set TRACKING_ID trong CÙNG lượt gọi lẫn trường hợp không) phải khác
+rỗng VÀ khác `MA_DANG_CHO_TEM_GKE` (placeholder "chờ tem", KHÔNG tính là tracking thật). Đặt TRƯỚC nhánh
+`quaAnh`/admin-bypass — giống hệt cách `TRANG_THAI_NGUON_HOP_LE_CHO_DAN_TEM` đã làm — nên áp dụng cho
+MỌI người gọi, kể cả admin sửa tay và `quaAnh:true`, không có ngoại lệ nào.
+
+Vì `services/trackingAutoService.js#muaTrackingChoDon()`/`inLabelChoDon()`/`muaTrackingVaInLabelChoDon()`
+KHÔNG BAO GIỜ tự set `TRANG_THAI_XUONG` (xác nhận từ mục 10/12 — thiết kế từ đầu đã tách 2 việc), các
+hàm này KHÔNG bao giờ chạm vào nhánh kiểm tra mới này — không cần sửa gì ở `trackingAutoService.js`,
+chỉ cần cập nhật lại comment cho đúng (2 việc giờ là "tách riêng NHƯNG có thứ tự bắt buộc": phải mua
+tracking trước, mới chụp ảnh/sửa tay "ĐÃ DÁN TEM" được — không còn "hoàn toàn tách biệt" như mục 12.1
+diễn đạt).
+
+### 13.2. `routes/photos.js` — chặn SỚM ở cả `/kiem-tra` lẫn `/upload`, không chỉ ở `/upload`
+
+`orderService.update()` (gọi trong `/upload`) đã tự chặn được việc GHI rồi — về mặt CHÍNH XÁC, chỉ cần
+sửa `orderService.js` là đủ. Nhưng thêm kiểm tra tương tự (hàm `thieuTrackingThat(row)`, cùng khuôn
+`MA_DANG_CHO_TEM_GKE`) vào CẢ `/kiem-tra` (trước khi cho mở camera chụp) lẫn `/upload` (trước khi tải
+ảnh lên MinIO) — đúng tinh thần SẴN CÓ của `/kiem-tra` ("TRƯỚC KHI mở camera chụp thật — tránh lãng phí
+1 lần chụp cho đơn không hợp lệ") — nếu không thêm ở `/kiem-tra`, người quét vẫn lọt qua bước kiểm tra
+ban đầu, mất công chụp ảnh xong mới bị `/upload` từ chối.
+
+Chỉ áp dụng cho mốc có `chuyenSang === 'ĐÃ DÁN TEM'` (hiện chỉ `da_dan_tem`) — không đụng tới mốc
+`da_san_xuat` (không có điều kiện tracking).
+
+### 13.3. Cập nhật chữ hiển thị
+
+`public/scan.html` — mô tả mode "Chụp ảnh ĐÃ DÁN TEM" thêm "và đã có thông tin Tracking (mua tracking
+trước ở menu Đơn hàng/Tracking)" để người quét biết điều kiện ngay từ đầu, không phải đợi bị từ chối.
+`public/order.html` — sửa lại chú thích khối "Ảnh ĐÃ DÁN TEM" cho đúng thứ tự bắt buộc (mua tracking
+trước, tải ảnh sau) thay vì diễn đạt "2 việc tách biệt" như trước.
+
+### 13.4. Đã kiểm tra
+
+- Cập nhật bộ test `orderService.js` (mục 11.5/12.6) — thêm TRACKING_ID thật vào các dòng giả lập vốn
+  cần "thành công" (test 3/6 lần trước vô tình chưa có TRACKING_ID, giờ mới lộ ra nếu không thêm sẽ bị
+  chặn bởi luật mới — đã sửa dữ liệu giả cho đúng ý đồ từng test), thêm 4 kịch bản mới: admin sửa tay
+  thiếu tracking bị chặn; đơn đang ở placeholder "chờ tem" bị chặn (không tính là tracking thật);
+  `quaAnh:true` không bỏ qua được điều kiện tracking; đơn ĐÃ có tracking thật thì chuyển bình thường,
+  không bị chặn nhầm. Tổng 14 nhóm test, toàn bộ pass, không hồi quy các nhóm cũ.
+- `node --check` `data/pipelineTinhTrang.js`, `services/orderService.js`, `services/trackingAutoService.js`,
+  `routes/photos.js`, `public/js/api.js` + script inline trích từ `scan.html`/`order.html`.
