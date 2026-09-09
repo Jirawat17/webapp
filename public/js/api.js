@@ -75,6 +75,10 @@ function renderNav(user, active) {
       { href: '/hoat-dong.html', label: 'Lịch sử', icon: 'navActivity', key: 'hoat-dong' },
       { href: '/settings.html', label: 'Setting', icon: 'navSettings', key: 'settings' },
     ];
+    // "Tracking" cho san_xuat (bổ sung 09/09/2026 lần 2, theo yêu cầu người dùng — mở toàn bộ trang
+    // Tracking cho cả ve_file/san_xuat để dùng 2 nút "IN LABEL"/"MUA TRACKING và IN LABEL", xem
+    // routes/tracking.js) — chèn ngay sau "Quét QR" (index 2), cùng vị trí tương đối với admin.
+    links.splice(3, 0, { href: '/tracking.html', label: 'Tracking', icon: 'navTracking', key: 'tracking' });
   } else {
     links = [
       { href: '/orders.html', label: 'Đơn hàng', icon: 'navOrders', key: 'orders' },
@@ -99,11 +103,14 @@ function renderNav(user, active) {
       links.splice(2, 0, { href: '/my-orders.html', label: 'Chạy máy', icon: 'navMyOrders', key: 'my-orders' });
       links.splice(3, 0, { href: '/my-orders-ve-file.html', label: 'Vẽ file', icon: 'navMyOrders', key: 'my-orders-ve-file' });
       // "Tracking" (bổ sung 09/09/2026, xem
-      // docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md) — CHỈ admin, quản lý bật/tắt
-      // + cấu hình tự động mua tracking GKE. Có thể phát sinh chi phí thật nên không mở cho vai trò khác.
-      // Đặt GIỮA "Quét QR" và "TK" (bổ sung 09/09/2026 lần 2, theo yêu cầu người dùng) — ngay tại đây
-      // index 5 đúng vị trí "TK" (2 splice phía trên đã đẩy TK từ index 2 lên 5: BĐK/Chạy máy/Vẽ file
-      // chèn vào trước nó), nên chèn TRƯỚC index 5 là chèn đúng giữa Quét QR (4) và TK (5 sau khi đẩy).
+      // docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md) — quản lý bật/tắt + cấu hình
+      // tự động mua tracking GKE, có thể phát sinh chi phí thật. Ban đầu CHỈ admin; mở thêm cho
+      // ve_file/san_xuat từ 09/09/2026 lần 2 (theo yêu cầu người dùng, để dùng 2 nút "IN LABEL"/"MUA
+      // TRACKING và IN LABEL") — người dùng đã cân nhắc và CHỌN mở toàn bộ trang, không chỉ riêng 2 nút
+      // đó (xem routes/tracking.js). nguoi_lay_phoi vẫn KHÔNG có mục này (nhánh riêng ở trên, không đi
+      // qua đây). Đặt GIỮA "Quét QR" và "TK" (bổ sung 09/09/2026 lần 2, theo yêu cầu người dùng) — ngay
+      // tại đây index 5 đúng vị trí "TK" (2 splice phía trên đã đẩy TK từ index 2 lên 5: BĐK/Chạy máy/Vẽ
+      // file chèn vào trước nó), nên chèn TRƯỚC index 5 là chèn đúng giữa Quét QR (4) và TK (5 sau khi đẩy).
       links.splice(5, 0, { href: '/tracking.html', label: 'Tracking', icon: 'navTracking', key: 'tracking' });
       links.push({ href: '/users.html', label: 'Nhân viên', icon: 'navUsers', key: 'users' });
     }
@@ -113,6 +120,11 @@ function renderNav(user, active) {
     // trên) — ngoài phạm vi yêu cầu lần này.
     if (user.vaiTro === 've_file') {
       links.splice(1, 0, { href: '/my-orders-ve-file.html', label: 'Vẽ file', icon: 'navMyOrders', key: 'my-orders-ve-file' });
+      // "Tracking" cho ve_file (bổ sung 09/09/2026 lần 2, cùng lý do với nhánh san_xuat ở trên) — chèn
+      // ngay sau "Quét QR". Mảng gốc (trước splice 'Vẽ file' ở dòng trên) là [Đơn hàng, Quét QR, TK,
+      // SL Phôi, Trợ lý, Báo cáo]; splice 'Vẽ file' vào index 1 đẩy Quét QR lên index 2 — chèn Tracking
+      // vào index 3 là đúng ngay sau Quét QR, trước TK.
+      links.splice(3, 0, { href: '/tracking.html', label: 'Tracking', icon: 'navTracking', key: 'tracking' });
     }
     links.push({ href: '/hoat-dong.html', label: 'Lịch sử', icon: 'navActivity', key: 'hoat-dong' });
     links.push({ href: '/settings.html', label: 'Setting', icon: 'navSettings', key: 'settings' });
@@ -221,6 +233,60 @@ function skeletonList(soDong = 4) {
 
 function spinnerInline(chuThich = 'Đang xử lý...') {
   return `<span class="inline-loading">${icon('spinner', { className: 'icon-spin', size: 18 })} ${escapeHtml(chuThich)}</span>`;
+}
+
+// ============================================================
+// IN LABEL/TEM PDF (GKE) — dùng chung cho orders.html/order.html/tracking.html (bổ sung 09/09/2026
+// lần 2). scan.html có cơ chế in RIÊNG (inTemTuDong, base64ThanhBlob cục bộ trong file đó) vì gắn chặt
+// với luồng camera/khởi động lại quét — KHÔNG đụng vào để tránh ảnh hưởng luồng đó, dù trùng lặp nhỏ.
+// ============================================================
+
+function base64ThanhBlob(base64, kieuMime) {
+  const nhiPhan = atob(base64);
+  const mang = new Uint8Array(nhiPhan.length);
+  for (let i = 0; i < nhiPhan.length; i++) mang[i] = nhiPhan.charCodeAt(i);
+  return new Blob([mang], { type: kieuMime });
+}
+
+// Mở 1 file PDF (tem/label GKE, base64) trong iframe ẩn rồi gọi hộp thoại in của trình duyệt — khổ
+// giấy 100x150mm mặc định phụ thuộc máy in đang đặt mặc định trên máy tính đang mở trang này (giống
+// hệt cơ chế ở scan.html#inTemTuDong), KHÔNG có cấu hình khổ giấy nào trong code vì PDF từ GKE vốn đã
+// đúng khổ tem chuẩn. Trả về hàm goiIn() để gắn thêm vào 1 nút bấm thật — trên điện thoại, trình duyệt
+// có thể CHẶN gọi in tự động ở đây vì đã có 1 nhịp chờ API (mất "user activation") giữa lúc bấm nút
+// gốc và lúc có label để in; nút thật đảm bảo luôn mở được hộp thoại in trên mọi thiết bị.
+function moHopThoaiInPdf(base64Pdf) {
+  if (!base64Pdf) return null;
+  let urlBlob;
+  try {
+    urlBlob = URL.createObjectURL(base64ThanhBlob(base64Pdf, 'application/pdf'));
+  } catch (e) {
+    console.error('[InLabel] Lỗi tạo file PDF để in:', e);
+    return null;
+  }
+
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.top = '-9999px';
+  iframe.style.left = '-9999px';
+  iframe.style.width = '800px';
+  iframe.style.height = '1200px';
+  iframe.style.border = '0';
+  iframe.src = urlBlob;
+  document.body.appendChild(iframe);
+
+  let daGoi = false;
+  function goiIn() {
+    if (daGoi) return;
+    daGoi = true;
+    try {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+    } catch (e) {
+      console.error('[InLabel] Lỗi gọi in:', e);
+    }
+  }
+  iframe.onload = () => setTimeout(goiIn, 300);
+  return goiIn;
 }
 
 // ============================================================

@@ -187,6 +187,106 @@ async function muaTrackingChoDon(sttKey, cauHinhGke, user = NGUOI_HE_THONG) {
   }
 }
 
+// Trạng thái TRANG_THAI_XUONG tối thiểu để được IN LABEL — bổ sung 09/09/2026 lần 2, theo yêu cầu
+// người dùng: 2 nút "IN LABEL"/"MUA TRACKING và IN LABEL" (khác nút "Mua Tracking" gốc phía trên,
+// KHÔNG kiểm tra trạng thái) phải bắt buộc đơn đã đóng gói xong mới cho in — tránh lãng phí tem thật
+// cho đơn còn chưa sẵn sàng gửi đi. Giống hệt điều kiện quét QR Tracking (routes/gke.js).
+const TRANG_THAI_DU_DIEU_KIEN_IN_LABEL = ['Đã đóng gói', 'ĐÃ DÁN TEM'];
+
+function kiemTraDieuKienInLabel(row) {
+  if (!TRANG_THAI_DU_DIEU_KIEN_IN_LABEL.includes(row.TRANG_THAI_XUONG)) {
+    throw new Error(`Đơn đang ở "${row.TRANG_THAI_XUONG}" — phải "Đã đóng gói" hoặc "ĐÃ DÁN TEM" mới in được label.`);
+  }
+}
+
+// Đánh dấu đơn ĐÃ in label — cột IN_LABEL (YES/NO, người dùng tự thêm 09/09/2026) + THOI_GIAN_IN_LABEL
+// (mốc thời gian lần in gần nhất, CÙNG khuôn THOI_GIAN_IN_MA — người dùng cần tự thêm cột này vào Sheet
+// nếu muốn dùng). Cả 2 cột đều TUỲ CHỌN (guard headers.includes) — chưa thêm cột nào thì bỏ qua việc
+// ghi cờ này, KHÔNG được làm hỏng việc in label thật (đã in được rồi thì không nên báo lỗi ngược lại).
+// Tự đọc fresh riêng (không nhận headers/row từ nơi gọi) — đơn giản hơn cho các hàm gọi bên dưới, đổi
+// lại tốn thêm 1 lượt đọc Sheet, chấp nhận được vì đây là thao tác thủ công, không phải đường nóng.
+async function ghiDaInLabel(sttKey, user) {
+  const { headers, row } = await orderService.getByKey(sttKey, { fresh: true });
+  if (!row) return;
+  const capNhat = {
+    ...(headers.includes('IN_LABEL') ? { IN_LABEL: 'YES' } : {}),
+    ...(headers.includes('THOI_GIAN_IN_LABEL') ? { THOI_GIAN_IN_LABEL: dinhDangNgayGioNgan(new Date()) } : {}),
+  };
+  if (Object.keys(capNhat).length === 0) return;
+  await orderService.update(sttKey, capNhat, user, { donDaDoc: { headers, row } });
+}
+
+// "IN LABEL" — chỉ IN LẠI tem cho đơn ĐÃ có tracking thật, không mua/tạo vận đơn gì thêm (bổ sung
+// 09/09/2026 lần 2, theo yêu cầu người dùng). Dùng lại ĐÚNG gkeService.layTemIn() — y hệt luồng "in lại
+// tem" ở routes/gke.js#tracking/quet, chỉ khác chỗ gọi từ Đơn hàng/Đơn hàng chi tiết/Tracking thay vì
+// quét QR sống. Bắt buộc đơn đang "Đã đóng gói"/"ĐÃ DÁN TEM" (xem kiemTraDieuKienInLabel).
+async function inLabelChoDon(sttKey, cauHinhGke, user) {
+  const nhatKy = [];
+  const { row } = await orderService.getByKey(sttKey, { fresh: true });
+  if (!row) throw new Error('Không tìm thấy đơn: ' + sttKey);
+
+  try {
+    kiemTraDieuKienInLabel(row);
+    if (!row.TRACKING_ID || row.TRACKING_ID === gkeService.MA_DANG_CHO_TEM) {
+      throw new Error('Đơn chưa có mã tracking thật — dùng nút "MUA TRACKING và IN LABEL" thay vì "IN LABEL".');
+    }
+
+    const ketQuaTem = await gkeService.layTemIn(row, cauHinhGke, { laLanDauSauKhiTao: false }, nhatKy);
+    await ghiDaInLabel(sttKey, user);
+
+    ghiLogTrackingVaoSheet({
+      sttKey, nguon: 'In label', nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: 'Thành công',
+      trackingId: row.TRACKING_ID, hangVanChuyen: row.HANG_VAN_CHUYEN, chiTiet: nhatKy.join('\n'),
+    });
+    return ketQuaTem;
+  } catch (err) {
+    ghiLogTrackingVaoSheet({
+      sttKey, nguon: 'In label', nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: 'Lỗi',
+      chiTiet: nhatKy.concat(`LỖI: ${err.message}`).join('\n'),
+    });
+    throw err;
+  }
+}
+
+// "MUA TRACKING và IN LABEL" — 1 nút làm CẢ 2 việc (bổ sung 09/09/2026 lần 2, theo yêu cầu người
+// dùng): đơn CHƯA có tracking thì mua trước (dùng lại muaTrackingChoDon(), đã tự lấy tem trong lúc mua
+// nên KHÔNG cần gọi GKE thêm lần nào cho bước in — label_base64 đã có sẵn trong kết quả trả về); đơn
+// ĐÃ có tracking thật rồi thì bỏ qua bước mua, chỉ in lại (uỷ quyền thẳng cho inLabelChoDon() ở trên,
+// hàm đó tự ghi log riêng của nó — TRÁNH ghi log trùng lặp 2 lần cho cùng 1 lần in).
+// Bắt buộc "Đã đóng gói"/"ĐÃ DÁN TEM" cho CẢ 2 nhánh — khác nút "Mua Tracking" gốc (không kiểm tra
+// trạng thái): đã xác nhận với người dùng, 2 nút MỚI này dành riêng cho lúc đóng gói/chuẩn bị gửi
+// hàng, không phải để lấy mã tracking sớm như nút gốc.
+async function muaTrackingVaInLabelChoDon(sttKey, cauHinhGke, user) {
+  const { row } = await orderService.getByKey(sttKey, { fresh: true });
+  if (!row) throw new Error('Không tìm thấy đơn: ' + sttKey);
+
+  try {
+    kiemTraDieuKienInLabel(row);
+  } catch (err) {
+    ghiLogTrackingVaoSheet({
+      sttKey, nguon: 'Mua tracking + In label', nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: 'Lỗi',
+      chiTiet: `LỖI: ${err.message}`,
+    });
+    throw err;
+  }
+
+  const daCoTrackingThat = row.TRACKING_ID && row.TRACKING_ID !== gkeService.MA_DANG_CHO_TEM;
+  if (daCoTrackingThat) {
+    return inLabelChoDon(sttKey, cauHinhGke, user);
+  }
+
+  const ketQuaTem = await muaTrackingChoDon(sttKey, cauHinhGke, user); // tự ghi log riêng (Nguồn "Thủ công"), cả 2 chiều
+  if (!ketQuaTem) throw new Error('Đơn vừa được mua tracking bởi người khác — thử lại thao tác này.');
+
+  await ghiDaInLabel(sttKey, user);
+  ghiLogTrackingVaoSheet({
+    sttKey, nguon: 'Mua tracking + In label', nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: 'Thành công',
+    trackingId: ketQuaTem.tracking_num, hangVanChuyen: ketQuaTem.delivery_carrier,
+    chiTiet: 'Đơn chưa có tracking — đã mua tracking mới và in label ngay (xem dòng log "Thủ công" liền trước để biết chi tiết kỹ thuật bước mua tracking).',
+  });
+  return ketQuaTem;
+}
+
 // 1 lượt quét — gọi từ services/trackingJob.js (cron mỗi 2 phút). Lỗi ở 1 đơn (thiếu địa chỉ, GKE từ
 // chối...) chỉ log, KHÔNG dừng cả lượt quét — đơn đó tự thử lại ở lượt sau.
 async function chayQuetTuDongMuaTracking() {
@@ -254,4 +354,7 @@ async function layDanhSachDonAutoTracking() {
     .sort((a, b) => new Date(b.thoiGianCapNhatCuoi || 0) - new Date(a.thoiGianCapNhatCuoi || 0));
 }
 
-module.exports = { layCauHinh, luuCauHinh, chayQuetTuDongMuaTracking, layDanhSachDonAutoTracking, layLogTracking, muaTrackingChoDon };
+module.exports = {
+  layCauHinh, luuCauHinh, chayQuetTuDongMuaTracking, layDanhSachDonAutoTracking, layLogTracking,
+  muaTrackingChoDon, inLabelChoDon, muaTrackingVaInLabelChoDon,
+};

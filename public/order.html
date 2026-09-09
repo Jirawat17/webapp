@@ -247,6 +247,24 @@ function renderKhuVucThaoTac(don) {
     }
   }
 
+  // "IN LABEL"/"MUA TRACKING và IN LABEL" (bổ sung 09/09/2026 lần 2, theo yêu cầu người dùng) — mở
+  // RỘNG hơn khối "Mua tracking GKE thủ công" ở trên (chỉ admin): cả admin/ve_file/san_xuat, CHỈ chặn
+  // nguoi_lay_phoi (nguoi_lay_phoi thực ra không vào được trang này qua menu — chặn thêm ở đây cho
+  // chắc). "IN LABEL" (chỉ in, không mua) CHỈ hiện khi đơn ĐÃ có tracking thật — đơn chưa có thì chỉ
+  // hiện nút gộp (tránh bấm nhầm vào nút không chạy được, đã xác nhận với người dùng).
+  if (user.vaiTro !== 'nguoi_lay_phoi') {
+    const daCoTrackingThat = don.TRACKING_ID && don.TRACKING_ID !== MA_DANG_CHO_TEM_TRACKING;
+    html += `
+      <div class="upload-box">
+        <label>${icon('printer', { size: 18 })} In label vận chuyển (GKE)</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${daCoTrackingThat ? `<button class="btn-hanh-dong phu" onclick="apDungInLabelChiTiet(this)">${icon('printer')} IN LABEL</button>` : ''}
+          <button class="btn-hanh-dong" onclick="apDungMuaVaInLabelChiTiet(this)">${icon('printer')} MUA TRACKING và IN LABEL</button>
+        </div>
+        <p style="margin:0;font-size:0.8rem;color:var(--color-text-faint)">Chỉ dùng được khi đơn đang "Đã đóng gói" hoặc "ĐÃ DÁN TEM". Khổ giấy mặc định 100x150mm theo máy in đang đặt mặc định trên máy tính này.</p>
+      </div>`;
+  }
+
   // Ảnh "File thêu" (bổ sung 26/08/2026) — ve_file upload sau khi vẽ file xong, để san_xuat xem
   // trước khi chọn chỉ thêu. Thuần lưu ảnh, KHÔNG đụng gì tới trạng thái (khác với "Chụp ảnh hoàn
   // thành" bên dưới).
@@ -403,6 +421,45 @@ async function muaTrackingThuCongChiTiet(btn) {
     }
   } catch (e) {
     alert(e.message);
+    btn.disabled = false;
+    btn.innerHTML = nhanGoc;
+  }
+}
+
+// "IN LABEL"/"MUA TRACKING và IN LABEL" (bổ sung 09/09/2026 lần 2, theo yêu cầu người dùng) — 1 đơn
+// duy nhất nên gửi mảng sttKeys 1 phần tử, cùng khuôn muaTrackingThuCongChiTiet() ở trên. Khác chỗ:
+// thành công thì MỞ LUÔN hộp thoại in (moHopThoaiInPdf(), định nghĩa trong js/api.js) trước khi tải
+// lại trang — không đợi taiChiTiet() xong mới in, vì lúc đó labelBase64 đã mất khỏi bộ nhớ.
+async function apDungInLabelChiTiet(btn) {
+  if (!confirm(`In label cho đơn ${sttKey}?`)) return;
+  await xuLyInLabelChiTiet(btn, '/tracking/in-label');
+}
+
+async function apDungMuaVaInLabelChiTiet(btn) {
+  if (!confirm(`Mua tracking (nếu chưa có) và in label cho đơn ${sttKey}? Có thể phát sinh phí thật với đơn chưa có tracking.`)) return;
+  await xuLyInLabelChiTiet(btn, '/tracking/mua-va-in-label');
+}
+
+async function xuLyInLabelChiTiet(btn, duongDan) {
+  const nhanGoc = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Đang xử lý...';
+
+  try {
+    const ketQua = await apiFetch(duongDan, { method: 'POST', body: JSON.stringify({ sttKeys: [sttKey] }) });
+    if (ketQua.loi && ketQua.loi.length > 0) {
+      alert('Lỗi: ' + ketQua.loi[0].lyDo);
+      btn.disabled = false;
+      btn.innerHTML = nhanGoc;
+      return;
+    }
+    if (ketQua.labelBase64) {
+      const goiIn = moHopThoaiInPdf(ketQua.labelBase64);
+      if (goiIn) goiIn();
+    }
+    await taiChiTiet();
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
     btn.disabled = false;
     btn.innerHTML = nhanGoc;
   }

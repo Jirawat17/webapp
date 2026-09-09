@@ -305,7 +305,11 @@ async function taiDanhSach() {
               <td>${escapeHtml(d.trackingId || '—')}</td>
               <td>${escapeHtml(d.hangVanChuyen || '—')}</td>
               <td>${d.thoiGianInMa ? dinhDangNgayGioNganAnToan(d.thoiGianInMa) : '—'}</td>
-              <td>${d.trangThai === 'DA_MUA' ? '—' : `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="muaThuCongTuBang(this, '${d.sttKey.replace(/'/g, "\\'")}')">Mua ngay</button>`}</td>
+              <td style="display:flex;gap:6px;flex-wrap:wrap">
+                ${d.trangThai === 'DA_MUA' ? '' : `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="muaThuCongTuBang(this, '${d.sttKey.replace(/'/g, "\\'")}')">Mua ngay</button>`}
+                ${d.trangThai === 'DA_MUA' ? `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="apDungInLabelTuBang(this, '${d.sttKey.replace(/'/g, "\\'")}')">IN LABEL</button>` : ''}
+                <button type="button" class="btn-hanh-dong" style="padding:6px 10px;font-size:0.82rem" onclick="apDungMuaVaInLabelTuBang(this, '${d.sttKey.replace(/'/g, "\\'")}')">MUA TRACKING và IN LABEL</button>
+              </td>
             </tr>`;
           }).join('')}
         </tbody>
@@ -331,6 +335,45 @@ async function muaThuCongTuBang(btn, sttKey) {
       btn.disabled = false;
       btn.innerHTML = nhanGoc;
       return;
+    }
+    await taiDanhSach();
+    await taiLogs();
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
+    btn.disabled = false;
+    btn.innerHTML = nhanGoc;
+  }
+}
+
+// "IN LABEL"/"MUA TRACKING và IN LABEL" theo hàng (bổ sung 09/09/2026 lần 2, theo yêu cầu người dùng)
+// — cùng khuôn muaThuCongTuBang() ở trên, khác chỗ mở hộp thoại in khi thành công (moHopThoaiInPdf(),
+// định nghĩa trong js/api.js) và tải lại cả danh sách lẫn logs sau đó.
+async function apDungInLabelTuBang(btn, sttKey) {
+  if (!confirm(`In label cho đơn ${sttKey}?`)) return;
+  await xuLyInLabelTuBang(btn, sttKey, '/tracking/in-label');
+}
+
+async function apDungMuaVaInLabelTuBang(btn, sttKey) {
+  if (!confirm(`Mua tracking (nếu chưa có) và in label cho đơn ${sttKey}? Có thể phát sinh phí thật với đơn chưa có tracking.`)) return;
+  await xuLyInLabelTuBang(btn, sttKey, '/tracking/mua-va-in-label');
+}
+
+async function xuLyInLabelTuBang(btn, sttKey, duongDan) {
+  const nhanGoc = btn.innerHTML;
+  btn.disabled = true;
+  btn.textContent = 'Đang xử lý...';
+
+  try {
+    const ketQua = await apiFetch(duongDan, { method: 'POST', body: JSON.stringify({ sttKeys: [sttKey] }) });
+    if (ketQua.loi && ketQua.loi.length > 0) {
+      alert('Lỗi: ' + ketQua.loi[0].lyDo);
+      btn.disabled = false;
+      btn.innerHTML = nhanGoc;
+      return;
+    }
+    if (ketQua.labelBase64) {
+      const goiIn = moHopThoaiInPdf(ketQua.labelBase64);
+      if (goiIn) goiIn();
     }
     await taiDanhSach();
     await taiLogs();

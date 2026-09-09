@@ -27,6 +27,7 @@
 // 1 tab cần quản lý) — .env vẫn dùng làm GIÁ TRỊ NGẦM ĐỊNH nếu ô tương ứng trên Sheet còn trống, để
 // không phá vỡ cấu hình đang chạy khi mới nâng cấp lên bản có giao diện này.
 const { readTab, readTabCached, updateCells, appendRow } = require('./sheetsService');
+const { PDFDocument } = require('pdf-lib');
 
 const TAB_CAU_HINH = 'CauHinhTracking';
 
@@ -377,4 +378,21 @@ async function layTemIn(donHang, cauHinh, { laLanDauSauKhiTao = false } = {}, nh
 //      lại vài lần (xem layTemIn); chỉ thực sự lỗi nếu hết số lần thử vẫn chưa xong.
 //   5. Thông báo hiện trên điện thoại/trình duyệt (mục ket-qua-tra-cuu) LUÔN kèm tên bước trong
 //      ngoặc vuông ở đầu câu, vd "[tạo đơn] ..." — khớp đúng với log server để đối chiếu nhanh.
-module.exports = { taoDonGke, layTemIn, maQuocGia, MA_DANG_CHO_TEM, layCauHinhGke, luuCauHinhGke };
+// Ghép nhiều tem PDF (mỗi tem là 1 chuỗi base64 lấy từ layTemIn()) thành 1 file PDF nhiều trang duy
+// nhất — bổ sung 09/09/2026, dùng khi in label HÀNG LOẠT tại menu Đơn hàng (chọn nhiều đơn cùng lúc):
+// chỉ hiện 1 hộp thoại in duy nhất (mỗi đơn 1 trang) thay vì mở lần lượt N hộp thoại in riêng biệt.
+// Chỉ 1 phần tử thì trả về NGUYÊN VĂN base64 đó, khỏi tốn công load/save lại qua pdf-lib.
+async function gopCacTemPdf(danhSachBase64) {
+  if (danhSachBase64.length === 1) return danhSachBase64[0];
+
+  const taiLieuGop = await PDFDocument.create();
+  for (const base64 of danhSachBase64) {
+    const taiLieuNguon = await PDFDocument.load(Buffer.from(base64, 'base64'));
+    const cacTrang = await taiLieuGop.copyPages(taiLieuNguon, taiLieuNguon.getPageIndices());
+    cacTrang.forEach(trang => taiLieuGop.addPage(trang));
+  }
+  const bytesGop = await taiLieuGop.save();
+  return Buffer.from(bytesGop).toString('base64');
+}
+
+module.exports = { taoDonGke, layTemIn, maQuocGia, MA_DANG_CHO_TEM, layCauHinhGke, luuCauHinhGke, gopCacTemPdf };

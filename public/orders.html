@@ -149,6 +149,11 @@
     <span class="thanh-hanh-dong-cach"></span>
     <button id="nut-mua-tracking-thu-cong" class="btn-hanh-dong" onclick="apDungMuaTrackingThuCong()">Mua tracking</button>
   </span>
+  <span id="khoi-in-label" style="display:none">
+    <span class="thanh-hanh-dong-cach"></span>
+    <button id="nut-in-label" class="btn-hanh-dong phu" onclick="apDungInLabel()">IN LABEL</button>
+    <button id="nut-mua-va-in-label" class="btn-hanh-dong" onclick="apDungMuaVaInLabel()">MUA TRACKING và IN LABEL</button>
+  </span>
   <button class="btn-hanh-dong phu" onclick="boChonTatCaDon()">Bỏ chọn</button>
 </div>
 
@@ -264,6 +269,14 @@ let donDaChonSet = new Set();
       document.getElementById('nguoi-ve-file-dich').innerHTML = '<option value="">Chỉ định người vẽ file...</option>' +
         dsVeFile.map(u => `<option value="${escapeHtml(u.Ten)}">${escapeHtml(u.Ten)}</option>`).join('');
     } catch (e) { /* không tải được danh sách nhân viên — ô chọn giữ nguyên rỗng, không chặn tải trang */ }
+  }
+
+  // "IN LABEL"/"MUA TRACKING và IN LABEL" (bổ sung 09/09/2026 lần 2, theo yêu cầu người dùng) — mở
+  // RỘNG hơn khối "Mua tracking" phía trên (chỉ admin): cả admin/ve_file/san_xuat, CHỈ chặn
+  // nguoi_lay_phoi (server routes/tracking.js#/in-label, /mua-va-in-label chặn lại y hệt nếu lỡ gọi
+  // trực tiếp API). nguoi_lay_phoi thực ra không có menu vào được trang này nên chỉ là phòng hờ.
+  if (user.vaiTro !== 'nguoi_lay_phoi') {
+    document.getElementById('khoi-in-label').style.display = 'contents';
   }
 
   taiDon();
@@ -675,6 +688,49 @@ async function apDungMuaTrackingThuCong() {
   if (ketQua.daHuy) ketQua.thanhCong.forEach(sttKey => donDaChonSet.delete(sttKey));
   else donDaChonSet.clear();
   await taiDon();
+}
+
+// "IN LABEL"/"MUA TRACKING và IN LABEL" (bổ sung 09/09/2026 lần 2, theo yêu cầu người dùng) — KHÁC
+// apDungMuaTrackingThuCong() ở trên: gửi CẢ MẢNG sttKeys trong 1 lượt gọi API duy nhất (không lặp
+// từng đơn ở client) vì server cần GHÉP tất cả tem lấy được thành 1 file PDF trước khi trả về (xem
+// routes/tracking.js#xuLyInLabelHangLoat) — không có thanh tiến độ từng đơn một như nút "Mua tracking"
+// (chỉ 1 vòng xoay chung), đơn nào lỗi vẫn rơi vào loi[] riêng, không chặn cả lượt.
+async function apDungInLabel() {
+  const danhSach = Array.from(donDaChonSet);
+  if (danhSach.length === 0) return;
+  if (!confirm(`In label cho ${danhSach.length} đơn đã chọn?\n\nChỉ đơn ĐÃ có mã tracking và đang "Đã đóng gói"/"ĐÃ DÁN TEM" mới in được — đơn khác sẽ báo lỗi riêng, không chặn cả lượt.`)) return;
+  await xuLyInLabel('/tracking/in-label', danhSach, 'nut-in-label', 'IN LABEL');
+}
+
+async function apDungMuaVaInLabel() {
+  const danhSach = Array.from(donDaChonSet);
+  if (danhSach.length === 0) return;
+  if (!confirm(`Mua tracking (nếu chưa có) và in label cho ${danhSach.length} đơn đã chọn?\n\nCó thể phát sinh phí thật với đơn chưa có tracking. Chỉ đơn đang "Đã đóng gói"/"ĐÃ DÁN TEM" mới thực hiện được — đơn khác sẽ báo lỗi riêng, không chặn cả lượt.`)) return;
+  await xuLyInLabel('/tracking/mua-va-in-label', danhSach, 'nut-mua-va-in-label', 'MUA TRACKING và IN LABEL');
+}
+
+async function xuLyInLabel(duongDan, danhSach, idNut, nhanGoc) {
+  const nut = document.getElementById(idNut);
+  nut.disabled = true;
+  nut.textContent = 'Đang xử lý...';
+  try {
+    const ketQua = await apiFetch(duongDan, { method: 'POST', body: JSON.stringify({ sttKeys: danhSach }) });
+    if (ketQua.labelBase64) {
+      const goiIn = moHopThoaiInPdf(ketQua.labelBase64);
+      if (goiIn) goiIn();
+    }
+    let thongBao = `Thành công: ${ketQua.thanhCong.length}/${danhSach.length}`;
+    if (ketQua.loi.length > 0) {
+      thongBao += `\n\nLỗi (${ketQua.loi.length}):\n` + ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
+    }
+    alert(thongBao);
+    if (ketQua.thanhCong.length > 0) await taiDon();
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
+  } finally {
+    nut.disabled = false;
+    nut.innerHTML = nhanGoc;
+  }
 }
 
 function taiFileTuBlob(blob, contentDisposition, tenMacDinh) {
