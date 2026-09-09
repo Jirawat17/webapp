@@ -337,3 +337,121 @@ có consumer nào đọc lại cột này trong code — chỉ để người d�
 an toàn. Đã kiểm tra: `dinhDangNgayGioNgan()` cho ra đúng chuỗi khớp ví dụ người dùng đưa ra; test ghi
 1 dòng qua `muaTrackingChoDon()` xác nhận cột `ThoiGian` thật sự ghi đúng định dạng `DD-MM HH:mm:ss`
 (regex `^\d{2}-\d{2} \d{2}:\d{2}:\d{2}$`).
+
+## 10. Bổ sung 09/09/2026 (lần 2): "IN LABEL" / "MUA TRACKING và IN LABEL"
+
+Theo yêu cầu người dùng: 2 nút mới tại menu Đơn hàng, Đơn hàng chi tiết, và Tracking, cho phép
+admin/ve_file/san_xuat (KHÔNG nguoi_lay_phoi) in nhãn vận chuyển GKE mà không cần quét QR sống. "IN
+LABEL" chỉ in lại tem cho đơn ĐÃ có tracking thật. "MUA TRACKING và IN LABEL" làm cả 2 việc trong 1
+nút, tự bỏ qua bước mua nếu đơn đã có tracking rồi.
+
+### 10.1. Cột Sheet mới
+
+- `IN_LABEL` (`Don_Hang_ALL`, YES/NO) — người dùng đã tự thêm trước khi code.
+- `THOI_GIAN_IN_LABEL` (`Don_Hang_ALL`) — đề xuất thêm, CÙNG khuôn `THOI_GIAN_IN_MA` (mục 9.5's anh em):
+  mốc thời gian lần in gần nhất, tách khỏi `ThoiGianCapNhatCuoi` (bị mọi lượt sửa khác ghi đè). Người
+  dùng đã đồng ý thêm. Cả 2 cột đều TUỲ CHỌN — code guard `headers.includes(...)` trước khi ghi (xem
+  `trackingAutoService.js#ghiDaInLabel`), thiếu cột nào thì chỉ bỏ qua việc ghi cờ đó, KHÔNG chặn việc
+  in label thật.
+
+### 10.2. Điều kiện — khác hẳn nút "Mua Tracking" gốc
+
+Nút "Mua Tracking" gốc (`muaTrackingChoDon()`) KHÔNG kiểm tra `TRANG_THAI_XUONG` — thiết kế có chủ đích
+để lấy mã tracking sớm bất kỳ lúc nào. 2 nút MỚI thì NGƯỢC LẠI: bắt buộc đơn đang `"Đã đóng gói"` hoặc
+`"ĐÃ DÁN TEM"` (`kiemTraDieuKienInLabel()`, giống hệt điều kiện quét QR Tracking ở `routes/gke.js`) —
+đã xác nhận với người dùng, in ra 1 tem giấy thật tốn kém hơn hẳn việc chỉ lấy mã vào hệ thống, nên cần
+chắc đơn đã đóng gói xong mới cho in.
+
+"IN LABEL" (không phải bản gộp) còn đòi thêm: đơn phải ĐÃ có tracking thật — không thì báo lỗi gợi ý
+dùng nút gộp thay vì tự ý mua hộ.
+
+### 10.3. `services/trackingAutoService.js` — 2 hàm mới, tái dùng tối đa
+
+- `inLabelChoDon(sttKey, cauHinhGke, user)` — gọi thẳng `gkeService.layTemIn()` (KHÔNG gọi `taoDonGke`),
+  y hệt nhánh "in lại tem" đã có ở `routes/gke.js`. Ghi log riêng, `Nguon: 'In label'`.
+- `muaTrackingVaInLabelChoDon(sttKey, cauHinhGke, user)` — kiểm tra điều kiện trạng thái 1 lần, rồi:
+  đơn ĐÃ có tracking → **uỷ quyền thẳng cho `inLabelChoDon()`** (không tự làm lại, tránh ghi log trùng
+  lặp 2 lần cho cùng 1 lần in); đơn CHƯA có tracking → gọi `muaTrackingChoDon()` (đã tự lấy tem trong
+  lúc mua — `label_base64` có sẵn trong kết quả trả về, KHÔNG cần gọi GKE thêm lần nào cho bước in),
+  rồi ghi thêm 1 dòng log phụ `Nguon: 'Mua tracking + In label'` bên cạnh dòng `Nguon: 'Thủ công'` mà
+  `muaTrackingChoDon()` đã tự ghi.
+- Đã cân nhắc kỹ để KHÔNG double-log: mỗi lần in chỉ sinh đúng 1 hoặc 2 dòng LogsTracking có chủ đích
+  (2 dòng CHỈ khi vừa mua vừa in — 1 dòng cho bước mua, 1 dòng xác nhận đã in), không bao giờ ghi trùng
+  cùng 1 sự kiện 2 lần.
+
+### 10.4. Ghép nhiều tem thành 1 file PDF khi in hàng loạt
+
+Tại menu Đơn hàng, có thể chọn NHIỀU đơn cùng lúc — theo lựa chọn người dùng (ưu tiên trải nghiệm hơn
+chi phí code), server GHÉP tất cả tem lấy được thành công thành 1 file PDF nhiều trang duy nhất
+(`gkeService.js#gopCacTemPdf()`, dùng thư viện mới `pdf-lib`) trước khi trả về — trình duyệt chỉ mở
+ĐÚNG 1 hộp thoại in, không phải mở lần lượt N hộp thoại. Đơn nào lỗi (chưa có tracking, sai trạng
+thái...) rơi vào `loi[]` riêng, không chặn cả lượt — cùng triết lý "lỗi 1 đơn không dừng cả lượt" đã áp
+dụng cho "Mua tracking" hàng loạt.
+
+Khác nút "Mua tracking" (chạy tuần tự CLIENT-SIDE qua `chayHangLoatCoTienDo()` để có thanh tiến độ +
+nút Hủy giữa chừng): 2 nút mới gửi CẢ MẢNG `sttKeys` trong 1 lượt gọi API duy nhất (server tự lặp +
+ghép PDF) — chỉ 1 vòng xoay chung, KHÔNG có thanh tiến độ từng đơn một. Đơn giản hơn cho lần đầu triển
+khai; có thể nâng cấp sau nếu số lượng đơn chọn nhiều khiến thời gian chờ khó chịu.
+
+### 10.5. Routes — đặt trong `routes/tracking.js`, KHÔNG phải `routes/gke.js`
+
+`POST /api/tracking/in-label` và `POST /api/tracking/mua-va-in-label` — đặt CÙNG file với
+`/mua-thu-cong` (cùng vai trò được phép, cùng "họ" tính năng), KHÔNG đặt trong `routes/gke.js` (file đó
+dành cho luồng quét QR mở cho CẢ 4 vai trò, khác hẳn 2 nút mới chặn `nguoi_lay_phoi` — nếu đặt chung sẽ
+phải thêm middleware riêng cho từng route thay vì áp dụng chung `router.use()`).
+
+### 10.6. Mở toàn bộ trang Tracking cho ve_file/san_xuat — thay đổi phân quyền quan trọng
+
+Phát sinh xung đột khi thiết kế: trang Tracking trước đó **admin-only** (menu ẩn với vai trò khác +
+MỌI route trong `routes/tracking.js` chặn qua `chiAdmin`), vì có tài khoản API GKE thật + bật/tắt tính
+năng phát sinh phí — nhưng yêu cầu "mọi vai trò trừ nguoi_lay_phoi dùng được 2 nút mới tại menu
+Tracking" cần ve_file/san_xuat vào được trang này.
+
+Đã hỏi người dùng 3 lựa chọn (giữ admin-only + dùng 2 nút qua Đơn hàng/chi tiết là đủ / chỉ mở riêng
+danh sách+2 nút / mở toàn bộ trang) — **người dùng CHỌN mở toàn bộ trang** (đơn giản nhất về code,
+chấp nhận đánh đổi ve_file/san_xuat cũng xem/sửa được cấu hình tài khoản API GKE + bật/tắt tự động mua
+tracking). Đổi `chiAdmin` → `khongPhaiNguoiLayPhoi` trong `routes/tracking.js` (áp dụng cho MỌI route
+trong file, không chỉ 2 route mới). Thêm mục "Tracking" vào `renderNav()` cho nhánh `san_xuat` (chèn
+sau "Quét QR") và nhánh `ve_file` (chèn sau "Quét QR", trước "TK") — `nguoi_lay_phoi` vẫn không có mục
+này (nhánh riêng, không đụng tới).
+
+### 10.7. Frontend — helper in dùng chung, KHÔNG đụng scan.html
+
+Thêm `base64ThanhBlob()`/`moHopThoaiInPdf()` vào `public/js/api.js` (dùng chung cho orders.html/
+order.html/tracking.html) — CỐ Ý KHÔNG sửa `scan.html` (đã có `base64ThanhBlob`/`inTemTuDong` riêng,
+gắn chặt với luồng camera/khởi động lại quét, nhiều chỉnh sửa tinh vi theo thời gian) dù trùng lặp nhỏ,
+để không rủi ro ảnh hưởng luồng quét QR Tracking đang chạy ổn định. `moHopThoaiInPdf()` trả về hàm
+`goiIn()` để có thể gắn thêm vào nút bấm thật — phòng khi trình duyệt (đặc biệt điện thoại) chặn gọi
+`print()` tự động vì đã mất "user activation" sau khi chờ API (có thể mất vài giây tới gần 1 phút cho
+GKE), dù trang order.html/orders.html/tracking.html hiện chưa có nút "In lại" riêng như scan.html (chưa
+thấy cần thiết ở lần đầu triển khai — bấm lại đúng nút "IN LABEL"/"MUA TRACKING và IN LABEL" gốc vẫn in
+lại được vì đơn đã có tracking, chỉ tốn thêm 1 lượt gọi GKE).
+
+### 10.8. `IN LABEL` khi đơn CHƯA có tracking — khác nhau giữa 3 nơi
+
+Theo lựa chọn người dùng: tại Đơn hàng chi tiết/Tracking (luôn đúng 1 đơn), nút "IN LABEL" ẨN HẲN khi
+đơn chưa có tracking (chỉ hiện "MUA TRACKING và IN LABEL"). Tại menu Đơn hàng (chọn NHIỀU đơn, có thể
+trộn lẫn đơn có/chưa tracking), việc ẩn theo điều kiện hỗn hợp không rõ ràng — quyết định LUÔN hiện cả
+2 nút, đơn nào chưa có tracking mà lỡ bấm "IN LABEL" sẽ rơi vào `loi[]` riêng với thông báo rõ ràng,
+không chặn cả lượt (nhất quán với cách xử lý lỗi từng đơn khác).
+
+### 10.9. Đã kiểm tra
+
+- Test độc lập `gkeService.js#gopCacTemPdf()` (dùng `pdfkit` tạo 3 PDF nhỏ thật) — gộp 1 phần tử trả về
+  nguyên văn (không qua `pdf-lib`); gộp 3 phần tử ra đúng file 3 trang.
+- Test độc lập (module-mock `orderService`/`gkeService`/`sheetsService`/`logService` qua
+  `require.cache`, không đụng Sheet/GKE thật) 7 kịch bản cho `inLabelChoDon()`/
+  `muaTrackingVaInLabelChoDon()`: chặn đúng khi sai trạng thái; chặn đúng khi chưa có tracking (gợi ý
+  dùng nút gộp); in thành công cho đơn đã có tracking (chỉ gọi `layTemIn`, không gọi `taoDonGke`, ghi
+  đúng `IN_LABEL`/`THOI_GIAN_IN_LABEL`); mua+in cho đơn chưa có tracking (chỉ 1 lần gọi `layTemIn` dù
+  vừa mua vừa in, đúng 2 dòng log); mua+in cho đơn đã có tracking (uỷ quyền đúng, KHÔNG double-log);
+  lỗi GKE giữa chừng (đúng 1 dòng log Lỗi); Sheet thiếu cột `IN_LABEL`/`THOI_GIAN_IN_LABEL` (vẫn in
+  được, chỉ bỏ qua ghi cờ) — cả 26 assertion pass.
+- `node --check` cho mọi file `.js` sửa/thêm + script inline trích xuất từ `orders.html`/`order.html`/
+  `tracking.html`.
+- Test tương tác qua trang mock (thật `/js/api.js`/`/js/icons.js`, mock `apiFetch`/`moHopThoaiInPdf`
+  qua `require.cache`-style override ở tầng JS trình duyệt) trên `order.html`: nút "IN LABEL" ẩn đúng
+  khi chưa có tracking, hiện đúng khi đã có; bấm nút gọi đúng API, in đúng label trả về, tải lại trang
+  thành công; đường lỗi hiện đúng thông báo, khôi phục đúng trạng thái nút. Trên `orders.html`: khối 2
+  nút ẩn đúng cho `nguoi_lay_phoi`, hiện đúng cho vai trò khác; bấm "IN LABEL" với 3 đơn chọn (2 thành
+  công + 1 lỗi) gửi đúng `sttKeys` cả 3, in đúng label gộp, báo đúng "Thành công: 2/3" kèm chi tiết lỗi.
