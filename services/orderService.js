@@ -137,15 +137,32 @@ const TRANG_THAI_BAT_BUOC_CHUP_ANH = ['Đã sản xuất', 'ĐÃ DÁN TEM'];
 // TEM" (không coi là vi phạm) để không chặn lượt quét lại in tem/lưu lại đúng giá trị cũ.
 const TRANG_THAI_NGUON_HOP_LE_CHO_DAN_TEM = ['Đã sản xuất', 'ĐÃ DÁN TEM'];
 
+// PHẢI khớp ĐÚNG hằng số MA_DANG_CHO_TEM trong services/gkeService.js — giá trị placeholder ghi vào
+// TRACKING_ID ngay sau khi tạo vận đơn GKE, TRƯỚC KHI lấy được tem thật (xem gkeService.js). KHÔNG
+// import thẳng gkeService.js vào đây để tránh orderService.js (module trung tâm, dùng ở khắp nơi) phải
+// biết chi tiết 1 tích hợp bên thứ 3 cụ thể — cùng lý do public/order.html cũng tự khai báo lại hằng số
+// này (MA_DANG_CHO_TEM_TRACKING) thay vì import.
+const MA_DANG_CHO_TEM_GKE = 'DANG_CHO_GKE_TAO_TEM';
+
 function kiemTraCongAnhBatBuoc(rowHienTai, updates, user, quaAnh) {
   if (!('TRANG_THAI_XUONG' in updates)) return;
   if (updates.TRANG_THAI_XUONG === rowHienTai.TRANG_THAI_XUONG) return; // gửi lại đúng giá trị cũ — không phải chuyển đổi
 
-  if (
-    updates.TRANG_THAI_XUONG === 'ĐÃ DÁN TEM' &&
-    !TRANG_THAI_NGUON_HOP_LE_CHO_DAN_TEM.includes(rowHienTai.TRANG_THAI_XUONG)
-  ) {
-    throw new Error(`Không hợp lệ: đơn đang "${rowHienTai.TRANG_THAI_XUONG}" — phải đang "Đã sản xuất" mới chuyển sang "ĐÃ DÁN TEM" được.`);
+  if (updates.TRANG_THAI_XUONG === 'ĐÃ DÁN TEM') {
+    if (!TRANG_THAI_NGUON_HOP_LE_CHO_DAN_TEM.includes(rowHienTai.TRANG_THAI_XUONG)) {
+      throw new Error(`Không hợp lệ: đơn đang "${rowHienTai.TRANG_THAI_XUONG}" — phải đang "Đã sản xuất" mới chuyển sang "ĐÃ DÁN TEM" được.`);
+    }
+    // Bổ sung 09/09/2026 lần 5, theo yêu cầu người dùng: đơn CHƯA có thông tin Tracking (mã vận đơn
+    // thật) thì KHÔNG được chuyển sang "ĐÃ DÁN TEM" — kể cả qua "Chụp ảnh ĐÃ DÁN TEM" (mục 12) lẫn admin
+    // sửa tay, không có ngoại lệ, cùng tinh thần TRANG_THAI_NGUON_HOP_LE_CHO_DAN_TEM ở trên. Phải mua
+    // tracking trước (nút "Mua Tracking"/"MUA TRACKING và IN LABEL") rồi mới chụp ảnh/đánh dấu được.
+    // Lấy giá trị TRACKING_ID SAU KHI áp dụng updates này (nếu updates có tự set TRACKING_ID trong CÙNG
+    // lượt gọi, dùng giá trị đó — hiện chưa có luồng nào làm vậy nhưng để đúng cho mọi trường hợp sau
+    // này) — ?? rowHienTai.TRACKING_ID nếu updates không đụng tới cột này.
+    const trackingSauKhiGhi = updates.TRACKING_ID ?? rowHienTai.TRACKING_ID;
+    if (!trackingSauKhiGhi || trackingSauKhiGhi === MA_DANG_CHO_TEM_GKE) {
+      throw new Error('Không hợp lệ: đơn chưa có thông tin Tracking (mã vận đơn thật) — phải mua tracking trước khi chuyển sang "ĐÃ DÁN TEM".');
+    }
   }
 
   if (quaAnh) return;

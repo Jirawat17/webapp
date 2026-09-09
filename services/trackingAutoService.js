@@ -116,10 +116,13 @@ async function luuCauHinh({ bat, soPhutCho }) {
 }
 
 // Mua tracking cho 1 đơn — tạo vận đơn (nếu chưa từng) → ghi placeholder chống trùng → lấy tem → ghi
-// TRACKING_ID/HANG_VAN_CHUYEN thật. KHÔNG đổi TRANG_THAI_XUONG — việc mua tracking (mã vận đơn GKE
-// thật) và việc đổi trạng thái "ĐÃ DÁN TEM" (từ 09/09/2026 lần 4, qua chụp ảnh xác nhận thuần, xem
-// routes/photos.js mốc da_dan_tem) là 2 việc HOÀN TOÀN TÁCH BIỆT theo đúng yêu cầu người dùng — đơn có
-// thể mang "ĐÃ DÁN TEM" mà không có TRACKING_ID thật, hoặc có TRACKING_ID thật mà chưa "ĐÃ DÁN TEM".
+// TRACKING_ID/HANG_VAN_CHUYEN thật. KHÔNG đổi TRANG_THAI_XUONG — việc mua tracking (hàm này) và việc
+// đổi trạng thái "ĐÃ DÁN TEM" (qua chụp ảnh xác nhận, xem routes/photos.js mốc da_dan_tem) là 2 THAO
+// TÁC riêng, nhưng KHÔNG độc lập: từ 09/09/2026 lần 5, theo yêu cầu người dùng, đơn BẮT BUỘC phải chạy
+// qua hàm này lấy được TRACKING_ID thật TRƯỚC thì mới chuyển sang "ĐÃ DÁN TEM" được (chặn ở
+// services/orderService.js#kiemTraCongAnhBatBuoc, áp dụng cho mọi người gọi kể cả admin) — thứ tự bắt
+// buộc: mua tracking trước, chụp ảnh ĐÃ DÁN TEM sau. Có TRACKING_ID thật mà chưa "ĐÃ DÁN TEM" thì vẫn
+// hợp lệ (đơn đang chờ dán tem thật lên kiện).
 // `user` mặc định = "người dùng hệ thống" (job tự động gọi không truyền gì thêm) — routes/tracking.js
 // #POST /mua-thu-cong TRUYỀN người admin đang đăng nhập thật vào đây, để log ghi đúng AI đã bấm mua
 // thủ công thay vì luôn hiện "Hệ thống (tự động)".

@@ -41,6 +41,16 @@ const MOC_TU_DONG_CHUYEN_TRANG_THAI = {
   da_dan_tem: { yeuCau: 'Đã sản xuất', chuyenSang: 'ĐÃ DÁN TEM' },
 };
 
+// PHẢI khớp ĐÚNG hằng số MA_DANG_CHO_TEM trong services/gkeService.js (đã tự khai báo lại tương tự ở
+// services/orderService.js và public/order.html — xem ghi chú tại đó). Bổ sung 09/09/2026 lần 5, theo
+// yêu cầu người dùng: đơn CHƯA có thông tin Tracking thật thì không được chuyển sang "ĐÃ DÁN TEM" — dù
+// orderService.update() (gọi ở /upload bên dưới) đã tự chặn việc GHI rồi, kiểm tra sớm ở CẢ /kiem-tra
+// lẫn /upload để không lãng phí 1 lần chụp ảnh/tải ảnh lên cho đơn chắc chắn sẽ bị từ chối.
+const MA_DANG_CHO_TEM_GKE = 'DANG_CHO_GKE_TAO_TEM';
+function thieuTrackingThat(row) {
+  return !row.TRACKING_ID || row.TRACKING_ID === MA_DANG_CHO_TEM_GKE;
+}
+
 // Kiểm tra ĐỦ ĐIỀU KIỆN chụp ảnh cho 1 đơn — KHÔNG cần file ảnh. Dùng NGAY SAU khi quét QR sống để
 // xác định đơn (public/scan.html, mode photo_san_xuat/photo_da_dan_tem — xem
 // docs/superpowers/specs/2026-09-07-tach-quet-chup-anh-design.md), TRƯỚC KHI mở camera chụp thật —
@@ -66,6 +76,11 @@ router.post('/kiem-tra', async (req, res) => {
   if (chuyenTuDong && row.TRANG_THAI_XUONG !== chuyenTuDong.yeuCau) {
     return res.status(400).json({
       error: `Đơn "${sttKey}" đang ở trạng thái "${row.TRANG_THAI_XUONG}" — chỉ chụp ảnh được khi đơn đang ở "${chuyenTuDong.yeuCau}".`,
+    });
+  }
+  if (chuyenTuDong && chuyenTuDong.chuyenSang === 'ĐÃ DÁN TEM' && thieuTrackingThat(row)) {
+    return res.status(400).json({
+      error: `Đơn "${sttKey}" chưa có thông tin Tracking (mã vận đơn thật) — phải mua tracking trước khi chuyển sang "ĐÃ DÁN TEM".`,
     });
   }
 
@@ -95,6 +110,11 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
   if (chuyenTuDong && row.TRANG_THAI_XUONG !== chuyenTuDong.yeuCau) {
     return res.status(400).json({
       error: `Đơn "${sttKey}" đang ở trạng thái "${row.TRANG_THAI_XUONG}" — chỉ chụp ảnh được khi đơn đang ở "${chuyenTuDong.yeuCau}".`,
+    });
+  }
+  if (chuyenTuDong && chuyenTuDong.chuyenSang === 'ĐÃ DÁN TEM' && thieuTrackingThat(row)) {
+    return res.status(400).json({
+      error: `Đơn "${sttKey}" chưa có thông tin Tracking (mã vận đơn thật) — phải mua tracking trước khi chuyển sang "ĐÃ DÁN TEM".`,
     });
   }
 

@@ -123,7 +123,9 @@ const CAU_HINH_ANH = {
   photo_da_dan_tem: {
     moc: 'da_dan_tem',
     nhanTab: 'Chụp ảnh ĐÃ DÁN TEM',
-    moTa: 'Đơn phải đang ở "Đã sản xuất".',
+    // Bổ sung 09/09/2026 lần 5: nhắc thêm điều kiện tracking ngay trong mô tả (routes/photos.js đã
+    // chặn thật ở /kiem-tra và /upload — đây chỉ là chữ hiển thị giúp người quét hiểu lý do sớm hơn).
+    moTa: 'Đơn phải đang ở "Đã sản xuất" và đã có thông tin Tracking (mua tracking trước ở menu Đơn hàng/Tracking).',
     yeuCau: 'Đã sản xuất', chuyenSang: 'ĐÃ DÁN TEM',
   },
 };

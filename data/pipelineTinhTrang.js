@@ -50,14 +50,21 @@
 // "Quét mã QR Tracking" (routes/gke.js, gọi GKE Logistics thật tạo vận đơn + mã tracking) — ĐÃ XOÁ hẳn
 // route này (routes/gke.js không còn tồn tại). Thay bằng chế độ "Chụp ảnh ĐÃ DÁN TEM" thuần ảnh
 // (routes/photos.js, mốc da_dan_tem) — CÙNG khuôn "Chụp ảnh đã sản xuất": quét QR xác định đơn, chụp
-// ảnh, tự chuyển trạng thái — KHÔNG gọi GKE, KHÔNG tạo mã tracking thật. Cơ chế GKE (Mua Tracking, IN
-// LABEL, trang Tracking — xem mục 10 trong docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md)
-// vẫn giữ nguyên, HOÀN TOÀN TÁCH BIỆT khỏi việc đổi TRANG_THAI_XUONG — đơn đạt "ĐÃ DÁN TEM" qua ảnh có
-// thể KHÔNG có mã tracking GKE thật, trừ khi dùng thêm 1 trong các cơ chế GKE kể trên (đã xác nhận rõ
-// với người dùng, chấp nhận đánh đổi).
+// ảnh, tự chuyển trạng thái — bản thân bước chụp ảnh này KHÔNG gọi GKE, KHÔNG tự tạo mã tracking. Cơ
+// chế GKE (Mua Tracking, IN LABEL, trang Tracking — xem mục 10 trong
+// docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md) vẫn giữ nguyên, là 1 THAO TÁC
+// RIÊNG (không tự động kèm theo chụp ảnh).
+//
+// BẮT BUỘC ĐÃ CÓ TRACKING TRƯỚC (09/09/2026 lần 5, theo yêu cầu người dùng — ĐẢO NGƯỢC lại phần "có
+// thể không có mã tracking" ở lần 4 phía trên): dù việc chụp ảnh không TỰ gọi GKE, đơn vẫn BẮT BUỘC
+// phải đã có TRACKING_ID thật (mua qua Mua Tracking/MUA TRACKING và IN LABEL trước đó) thì mới được
+// chuyển sang "ĐÃ DÁN TEM" — kiểm tra ở services/orderService.js (MA_DANG_CHO_TEM_GKE,
+// TRANG_THAI_NGUON_HOP_LE_CHO_DAN_TEM), áp dụng cho MỌI người gọi kể cả admin, không có ngoại lệ. Đơn
+// đang ở placeholder "chờ tem" (chưa lấy được tem thật) KHÔNG tính là đã có tracking.
 // "ĐÃ DÁN TEM" giờ đạt được qua ĐÚNG 2 đường: (1) "Chụp ảnh ĐÃ DÁN TEM" (routes/photos.js, mốc
-// da_dan_tem — điều kiện đơn phải đang đúng "Đã sản xuất"); (2) admin sửa tay (CŨNG bắt buộc đơn đang
-// đúng "Đã sản xuất", không có ngoại lệ — xem kiemTraCongAnhBatBuoc trong services/orderService.js).
+// da_dan_tem — điều kiện đơn phải đang đúng "Đã sản xuất" VÀ đã có tracking thật); (2) admin sửa tay
+// (CŨNG bắt buộc đơn đang đúng "Đã sản xuất" VÀ đã có tracking thật, không có ngoại lệ nào — xem
+// kiemTraCongAnhBatBuoc trong services/orderService.js).
 //
 // "IN TRANSIT_Tracking đã hoạt động" (XOÁ 04/09/2026, theo yêu cầu người dùng): từng nằm giữa "ĐÃ
 // DÁN TEM" và "DELIVERED", nhưng thực tế không đơn nào dùng tới (đã xác nhận không có đơn nào đang ở
