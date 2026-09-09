@@ -455,3 +455,98 @@ không chặn cả lượt (nhất quán với cách xử lý lỗi từng đơn
   thành công; đường lỗi hiện đúng thông báo, khôi phục đúng trạng thái nút. Trên `orders.html`: khối 2
   nút ẩn đúng cho `nguoi_lay_phoi`, hiện đúng cho vai trò khác; bấm "IN LABEL" với 3 đơn chọn (2 thành
   công + 1 lỗi) gửi đúng `sttKeys` cả 3, in đúng label gộp, báo đúng "Thành công: 2/3" kèm chi tiết lỗi.
+
+## 11. Bổ sung 09/09/2026 (lần 3): XOÁ trạng thái "Đã đóng gói"
+
+Theo yêu cầu người dùng, xác nhận không cần trạng thái "Đã đóng gói" nữa. "Đã sản xuất" giờ đi THẲNG
+sang "ĐÃ DÁN TEM" — pipeline chính còn 7 bước (trước đó 8): Chưa in mã → Đã in mã → ĐÃ SẴN SÀNG CHẠY
+MÁY → Đang chạy máy → Đã sản xuất → ĐÃ DÁN TEM → DELIVERED_Đã giao đến khách.
+
+### 11.1. Chế độ "Chụp ảnh đóng gói" — XOÁ hẳn (đã hỏi người dùng, chọn phương án này)
+
+Trước đó có 2 cơ chế độc lập cùng dẫn ra khỏi "Đã sản xuất": "Chụp ảnh đóng gói" (thuần ảnh, KHÔNG gọi
+GKE, KHÔNG tạo mã tracking — Đã sản xuất → Đã đóng gói) và "Quét mã QR Tracking" (gọi GKE thật, tạo mã
+tracking — Đã đóng gói → ĐÃ DÁN TEM). Xoá "Đã đóng gói" khiến 2 cơ chế này trỏ chung 1 đích — đã hỏi
+người dùng 3 lựa chọn (xoá hẳn / giữ lại chỉ để lưu ảnh, bỏ đổi trạng thái / vẫn cho chuyển thẳng sang
+"ĐÃ DÁN TEM" không qua GKE). **Người dùng chọn xoá hẳn** — tránh triệt để trường hợp đơn mang trạng
+thái "ĐÃ DÁN TEM" mà KHÔNG có mã tracking thật. Từ giờ, con đường DUY NHẤT rời khỏi "Đã sản xuất" là:
+(1) "Quét mã QR Tracking" (routes/gke.js, tạo vận đơn GKE thật); (2) admin sửa tay (vẫn bắt buộc đơn
+đang đúng "Đã sản xuất", xem mục 11.2).
+
+Đã xoá: mốc `dong_goi` trong `routes/photos.js` (`COT_ANH_THEO_MOC`, `MOC_TU_DONG_CHUYEN_TRANG_THAI`)
+— cột `Anh_Dong_Goi_URL` không còn dùng trong code (vẫn còn trên Sheet nếu người dùng muốn giữ ảnh cũ,
+không tự xoá cột); mode `photo_dong_goi` trong `public/scan.html` (nút ẩn trong DOM, entry trong
+`MODE_OPTIONS`/`CAU_HINH_ANH`/`dsDaChupTheoMoc`, mọi wiring onclick/classList.toggle liên quan); khối
+"Ảnh đóng gói" (upload tay, admin-only) trong `public/order.html`.
+
+### 11.2. Điều kiện MỚI cho "ĐÃ DÁN TEM" — admin sửa tay KHÔNG được miễn trừ trạng thái nguồn
+
+Khác hẳn cơ chế cũ (admin bypass hoàn toàn cho "Đã sản xuất"/"Đã đóng gói", không kiểm tra gì thêm):
+theo yêu cầu người dùng, admin sửa tay "ĐÃ DÁN TEM" CŨNG phải tuân theo điều kiện đơn đang đúng "Đã
+sản xuất" — không có ngoại lệ nào miễn trừ được điều kiện này, kể cả admin.
+
+`services/orderService.js#kiemTraCongAnhBatBuoc()`: thêm `TRANG_THAI_NGUON_HOP_LE_CHO_DAN_TEM = ['Đã
+sản xuất', 'ĐÃ DÁN TEM']` (cho giữ nguyên "ĐÃ DÁN TEM" để không chặn lượt lưu lại đúng giá trị cũ/quét
+lại in tem), kiểm tra TRƯỚC cả nhánh `quaAnh`/admin-bypass — áp dụng cho MỌI người gọi, không có lối
+tắt. `TRANG_THAI_BAT_BUOC_CHUP_ANH` đổi từ `['Đã sản xuất', 'Đã đóng gói']` thành `['Đã sản xuất', 'ĐÃ
+DÁN TEM']`.
+
+Hệ quả: `routes/gke.js` (luồng quét QR Tracking, mở cho cả `nguoi_lay_phoi`/`ve_file`/`san_xuat`, không
+chỉ admin) giờ PHẢI truyền `{ quaAnh: true }` khi gọi `orderService.update()` để ghi `TRANG_THAI_XUONG:
+'ĐÃ DÁN TEM'` — thiếu cờ này sẽ bị chặn ngay ở `kiemTraCongAnhBatBuoc` cho 3 vai trò không phải admin.
+Tên tham số `quaAnh` giữ nguyên dù không phải ảnh (tránh đổi chữ ký hàm ở nhiều nơi) — ý nghĩa hiểu
+rộng thành "đã qua đúng luồng xác nhận hợp lệ".
+
+### 11.3. Các chỗ khác đã cập nhật đồng bộ
+
+- `data/pipelineTinhTrang.js`: `TINH_TRANG_VALUES` (11→10 giá trị), `THU_TU_TINH_TRANG` (8→7).
+- `routes/gke.js`: điều kiện quét đổi `'Đã đóng gói'` → `'Đã sản xuất'` (giữ nguyên cho phép `'ĐÃ DÁN
+  TEM'` để in lại tem).
+- `routes/reports.js`: `TRANG_THAI_TRACKING` (suy mẫu báo cáo "tracking" khi không truyền `mau`) đổi
+  `'Đã đóng gói'` → `'Đã sản xuất'`.
+- `routes/chatbot.js`: mô tả pipeline cho chatbot cập nhật lại (nhân tiện sửa luôn 2 chỗ lỗi thời có
+  sẵn từ trước, không liên quan trực tiếp: thiếu "Đang chạy máy" trong mô tả, và
+  `TRANG_THAI_VE_FILE` thiếu giá trị "Đang vẽ file").
+- `public/order.html`, `public/orders.html`: bỏ `'Đã đóng gói'` khỏi danh sách trạng thái cho dropdown
+  tự do. `order.html#CAC_TRANG_THAI_TU_SAN_SANG_TRO_DI` (cảnh báo phía client, mirror
+  `THU_TU_TINH_TRANG`) — nhân tiện sửa luôn 1 lỗ hổng có sẵn từ trước: thiếu hẳn `'ĐÃ DÁN TEM'` trong
+  danh sách này.
+- `public/js/api.js#MAU_TRANG_THAI`: bỏ màu badge cho `'Đã đóng gói'`.
+- `public/index.html`: cập nhật bước 7 trong khối "Xem quy trình xử lý đơn hàng" (minh hoạ tĩnh ở
+  trang đăng nhập) từ "Đã đóng gói" sang "ĐÃ DÁN TEM" (quét mã QR Tracking).
+- `services/trackingAutoService.js`: điều kiện "IN LABEL"/"MUA TRACKING và IN LABEL" (mục 10) đổi theo
+  — `TRANG_THAI_DU_DIEU_KIEN_IN_LABEL` từ `['Đã đóng gói', 'ĐÃ DÁN TEM']` thành `['Đã sản xuất', 'ĐÃ
+  DÁN TEM']`.
+
+### 11.4. Dữ liệu đơn hàng CŨ đang ở "Đã đóng gói" trên Sheet thật
+
+Không có quyền truy cập Sheet thật để kiểm tra trực tiếp — viết sẵn `scripts/migrate-trang-thai-v4.js`
+(CHẠY THỬ mặc định, cần `--apply` mới ghi thật, cùng khuôn `migrate-trang-thai-v2.js`/`v3.js`) để người
+dùng tự chạy: liệt kê mọi đơn đang `TRANG_THAI_XUONG="Đã đóng gói"`, chuyển VỀ `"Đã sản xuất"` (không tự
+đoán lên thẳng "ĐÃ DÁN TEM" vì không chắc đơn nào đã thực sự có mã tracking GKE thật — TRACKING_ID nếu
+có vẫn giữ nguyên, chỉ đổi TRANG_THAI_XUONG) — các đơn này cần được quét lại QR Tracking sau khi migrate
+để tạo vận đơn GKE thật và lên "ĐÃ DÁN TEM" đúng luồng mới.
+
+### 11.5. Đã kiểm tra
+
+- Test độc lập (`data/pipelineTinhTrang.js` + `services/orderService.js` thật, mock `sheetsService`/
+  `taiSanService`/`khachHangService` qua `require.cache`) — 12 assertion: `TINH_TRANG_VALUES` đúng 10
+  giá trị, không còn "Đã đóng gói"; `THU_TU_TINH_TRANG` không còn "Đã đóng gói", "ĐÃ DÁN TEM" đứng ngay
+  sau "Đã sản xuất"; ghi "Đã đóng gói" bị từ chối (giá trị không hợp lệ); admin sửa tay ĐÃ DÁN TEM từ
+  đúng "Đã sản xuất" → thành công; admin sửa tay từ SAI nguồn ("Đang chạy máy") → BỊ CHẶN dù là admin;
+  vai trò khác không `quaAnh` → bị chặn; vai trò khác CÓ `quaAnh:true` từ đúng nguồn → thành công;
+  `quaAnh:true` từ SAI nguồn → VẪN bị chặn (xác nhận điều kiện nguồn không bị cờ `quaAnh` bỏ qua); lưu
+  lại đúng giá trị cũ (ĐÃ DÁN TEM → ĐÃ DÁN TEM) → không bị chặn; "Đã sản xuất" không bị áp điều kiện
+  nguồn mới; `chiSoTinhTrang("Đã đóng gói")` trả `null`.
+- Chạy lại 2 bộ test đã viết ở mục 9.4/10.9 (`gopCacTemPdf`, `inLabelChoDon`/
+  `muaTrackingVaInLabelChoDon`, đã cập nhật dữ liệu giả sang "Đã sản xuất") — vẫn pass toàn bộ, xác nhận
+  tính năng IN LABEL không bị hồi quy khi đổi điều kiện trạng thái nguồn.
+- `node --check` mọi file `.js` sửa/thêm (`data/pipelineTinhTrang.js`, `services/orderService.js`,
+  `routes/photos.js`, `routes/gke.js`, `routes/chatbot.js`, `routes/reports.js`,
+  `services/trackingAutoService.js`, `services/gkeService.js`, `scripts/migrate-trang-thai-v4.js`) +
+  script inline trích xuất từ `orders.html`/`order.html`/`tracking.html`/`scan.html`.
+- Test tương tác qua trang mock cho `scan.html` (thật `/js/api.js`/`/js/icons.js`, mock `apiFetch`, stub
+  3 hàm điều khiển camera để tránh gọi `navigator.mediaDevices` thật) — dropdown chế độ còn ĐÚNG 4 lựa
+  chọn (không còn "Chụp ảnh đóng gói"), phần tử `mode-photo-dong-goi` không còn trong DOM, chuyển sang
+  mode "Chụp ảnh đã sản xuất" (mode còn lại duy nhất dùng chung cấu trúc cũ) hoạt động bình thường,
+  không lỗi console.
