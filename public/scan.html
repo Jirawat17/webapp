@@ -29,8 +29,6 @@
   <div id="chon-kich-ban-wrap" style="display:none"></div>
 
   <div id="camera-wrap" style="display:none">
-    <div id="dem-nhom" class="dem-nhom chi-che-do-kich-ban" style="display:none"></div>
-
     <div class="khu-vuc-camera">
       <div class="camera-vien">
         <div id="qr-reader" style="border-radius:12px;overflow:hidden;"></div>
@@ -48,6 +46,13 @@
 
     <button id="btn-dung-quet" class="btn-dung-quet chi-che-do-kich-ban" style="display:none"></button>
     <button id="btn-dung-quet-tracking" class="btn-dung-quet" style="display:none"></button>
+
+    <!-- Chuyển "dem-nhom" (3 ô đếm Sẵn sàng/Sai trạng thái/Không tìm thấy) xuống SAU nút "Dừng quét"
+         (bổ sung 09/09/2026, theo yêu cầu người dùng) — trước đó nằm NGAY ĐẦU trang, đẩy vùng camera/
+         kết quả vừa quét (thông tin đơn đang cần xem NHẤT lúc đang quét) xuống thấp hơn. Chỉ đổi VỊ
+         TRÍ trong HTML, KHÔNG đổi id/class — renderDemNhom() vẫn document.getElementById('dem-nhom')
+         như cũ, không cần sửa JS. -->
+    <div id="dem-nhom" class="dem-nhom chi-che-do-kich-ban" style="display:none"></div>
 
     <div class="chi-che-do-kich-ban" style="display:none">
       <h3 style="margin-top:20px">Danh sách đang quét</h3>
