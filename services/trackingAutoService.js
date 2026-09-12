@@ -145,28 +145,37 @@ async function muaTrackingChoDon(sttKey, cauHinhGke, user = NGUOI_HE_THONG) {
   const nhatKy = [];
 
   try {
-    const { row } = await orderService.getByKey(sttKey, { fresh: true });
+    const { headers, row } = await orderService.getByKey(sttKey, { fresh: true });
     if (!row) throw new Error('Không tìm thấy đơn: ' + sttKey);
-    if (row.TRACKING_ID && row.TRACKING_ID !== gkeService.MA_DANG_CHO_TEM) {
+    if (row.TRACKING_ID) {
       ghiLogTrackingVaoSheet({
         sttKey, nguon: nguonSheet, nguoiDung: user.ten, vaiTro: user.vaiTro,
         ketQua: 'Bỏ qua', chiTiet: 'Đơn này đã có mã tracking thật rồi — không mua lại.',
       });
       return null; // đã có tracking thật rồi (vd vừa được quét tay) — bỏ qua
     }
+    // Từ 12/09/2026 lần 14, theo yêu cầu người dùng: trạng thái "đang chờ tem" KHÔNG còn ghi tạm vào
+    // TRACKING_ID nữa (cột này giờ LUÔN chỉ là rỗng hoặc mã thật) — chuyển hẳn sang cột TAM_THOI, người
+    // dùng tự thêm vào Sheet. Kiểm tra cột tồn tại NGAY TỪ ĐẦU (trước khi gọi GKE tạo đơn thật) — thiếu
+    // cột thì dừng hẳn ở đây, không được để mất dấu "đã tạo đơn thật hay chưa" giữa chừng (rủi ro tạo
+    // trùng vận đơn thật nếu ghi TAM_THOI thất bại ngay sau khi gọi taoDonGke() thành công).
+    if (!headers.includes('TAM_THOI')) {
+      throw new Error('Chưa có cột TAM_THOI trong tab Don_Hang_ALL — cần thêm cột này (đánh dấu đơn đang chờ tem GKE) trước khi mua tracking.');
+    }
 
-    const chuaTungTaoDon = !row.TRACKING_ID;
-    const dangChoTuLanTruoc = row.TRACKING_ID === gkeService.MA_DANG_CHO_TEM;
+    const chuaTungTaoDon = !row.TAM_THOI;
+    const dangChoTuLanTruoc = row.TAM_THOI === gkeService.MA_DANG_CHO_TEM;
 
     if (chuaTungTaoDon) {
       await gkeService.taoDonGke(row, cauHinhGke, nhatKy);
-      await orderService.update(sttKey, { TRACKING_ID: gkeService.MA_DANG_CHO_TEM }, user);
+      await orderService.update(sttKey, { TAM_THOI: gkeService.MA_DANG_CHO_TEM }, user);
     }
 
     const ketQuaTem = await gkeService.layTemIn(row, cauHinhGke, { laLanDauSauKhiTao: chuaTungTaoDon || dangChoTuLanTruoc }, nhatKy);
     await orderService.update(sttKey, {
       TRACKING_ID: ketQuaTem.tracking_num,
       HANG_VAN_CHUYEN: ketQuaTem.delivery_carrier,
+      TAM_THOI: '', // đã có tracking thật — không còn "tạm" nữa
     }, user);
 
     ghiLogTracking(`${nhanNguon} ${sttKey}: đã mua tracking ${ketQuaTem.tracking_num} (${ketQuaTem.delivery_carrier})`);
@@ -234,7 +243,7 @@ async function inLabelChoDon(sttKey, cauHinhGke, user) {
 
   try {
     kiemTraDieuKienInLabel(row);
-    if (!row.TRACKING_ID || row.TRACKING_ID === gkeService.MA_DANG_CHO_TEM) {
+    if (!row.TRACKING_ID) {
       throw new Error('Đơn chưa có mã tracking thật — dùng nút "MUA TRACKING và IN LABEL" thay vì "IN LABEL".');
     }
 
@@ -277,7 +286,7 @@ async function muaTrackingVaInLabelChoDon(sttKey, cauHinhGke, user) {
     throw err;
   }
 
-  const daCoTrackingThat = row.TRACKING_ID && row.TRACKING_ID !== gkeService.MA_DANG_CHO_TEM;
+  const daCoTrackingThat = !!row.TRACKING_ID;
   if (daCoTrackingThat) {
     return inLabelChoDon(sttKey, cauHinhGke, user);
   }
@@ -306,7 +315,7 @@ async function chayQuetTuDongMuaTracking() {
 
   const donDuDieuKien = rows.filter(r => {
     if (String(r.AUTO_TRACKING).toUpperCase() !== 'YES') return false;
-    if (r.TRACKING_ID && r.TRACKING_ID !== gkeService.MA_DANG_CHO_TEM) return false; // đã có tracking thật
+    if (r.TRACKING_ID) return false; // đã có tracking thật
     if (!r.THOI_GIAN_IN_MA) return false;
     const thoiDiem = new Date(r.THOI_GIAN_IN_MA).getTime();
     if (isNaN(thoiDiem)) return false;
@@ -337,8 +346,8 @@ async function layDanhSachDonAutoTracking() {
   return rows
     .filter(r => String(r.AUTO_TRACKING).toUpperCase() === 'YES')
     .map(r => {
-      const daCoTrackingThat = !!r.TRACKING_ID && r.TRACKING_ID !== gkeService.MA_DANG_CHO_TEM;
-      const dangChoTem = r.TRACKING_ID === gkeService.MA_DANG_CHO_TEM;
+      const daCoTrackingThat = !!r.TRACKING_ID;
+      const dangChoTem = !r.TRACKING_ID && r.TAM_THOI === gkeService.MA_DANG_CHO_TEM;
       const thoiDiemInMa = r.THOI_GIAN_IN_MA ? new Date(r.THOI_GIAN_IN_MA).getTime() : null;
       const daDuGio = thoiDiemInMa && !isNaN(thoiDiemInMa) ? (bayGio - thoiDiemInMa) >= nguongMs : false;
 

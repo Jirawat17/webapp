@@ -9,9 +9,11 @@
 //     KHÔNG cần lưu riêng order_num/waybill number của GKE, chỉ cần num_type=1 + STT_Key.
 //   - Đơn đã tạo vận đơn GKE rồi (kể cả đang chờ tem, xem MA_DANG_CHO_TEM bên dưới) thì KHÔNG được gọi
 //     order/create/ lại — mỗi lần gọi tạo 1 vận đơn thật, gọi lặp sẽ ra 2 vận đơn trùng nhau.
-//     muaTrackingChoDon() ghi 1 giá trị placeholder vào TRACKING_ID NGAY sau khi tạo đơn thành công,
-//     TRƯỚC KHI thử lấy tem — vì tem có thể chưa generate xong ngay (xem layTemIn), nếu không ghi gì ở
-//     bước này mà lấy tem thất bại thì lượt sau sẽ tưởng nhầm là chưa tạo đơn.
+//     muaTrackingChoDon() ghi giá trị placeholder này vào cột TAM_THOI (KHÔNG phải TRACKING_ID nữa —
+//     đổi 12/09/2026 lần 14, theo yêu cầu người dùng, để TRACKING_ID luôn chỉ là rỗng hoặc mã thật)
+//     NGAY sau khi tạo đơn thành công, TRƯỚC KHI thử lấy tem — vì tem có thể chưa generate xong ngay
+//     (xem layTemIn), nếu không ghi gì ở bước này mà lấy tem thất bại thì lượt sau sẽ tưởng nhầm là
+//     chưa tạo đơn.
 //   - Cân nặng: TRONG_LUONG (kg/áo, cột thật trong Sheet) x SO_LUONG; đơn chưa có TRONG_LUONG (trống/
 //     không hợp lệ) thì tạm dùng ước lượng 0.05kg/áo như cũ (bổ sung 01/09/2026, xem tinhCanNangKg).
 //   - Khai báo hải quan: dùng 1 mức giá/mã HS cố định cho MỌI đơn (đọc từ .env), không phân biệt

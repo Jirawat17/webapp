@@ -22,10 +22,6 @@ const NHAN_CANH_BAO = { VANG: 'Cảnh báo Vàng · 3 ngày ít tiến triển',
 // (bổ sung 26/08/2026) Đơn "Đang chạy máy" nhưng không tra được người vận hành (vd sửa thẳng trên
 // Sheet, log bị thiếu) — vẫn cho xem (an toàn hơn) nhưng cảnh báo TO, RÕ thay vì chỉ ghi "Không xác định".
 const NHAN_NGUOI_VAN_HANH_KHONG_RO = 'ĐƠN SỬA TRONG GGSHEET, KHÔNG RÕ TÀI KHOẢN SẢN XUẤT NÀO ĐANG CHẠY';
-// Phải khớp ĐÚNG hằng số MA_DANG_CHO_TEM trong services/gkeService.js — giá trị tạm ghi vào
-// TRACKING_ID ngay sau khi tạo vận đơn GKE thành công, trước khi lấy được tem in.
-const MA_DANG_CHO_TEM_TRACKING = 'DANG_CHO_GKE_TAO_TEM';
-
 const DANH_SACH_TINH_TRANG = [
   'Chưa in mã', 'Đã in mã', 'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đang chạy máy', 'Đã sản xuất', 'LỖI SẢN XUẤT CẦN LÀM LẠI',
   'ĐÃ DÁN TEM', 'DELIVERED_Đã giao đến khách', 'CANCELLED_Đã hủy', 'REFUNDED_Hoàn đơn',
@@ -233,12 +229,12 @@ function renderKhuVucThaoTac(don) {
         <p style="margin:0;font-size:0.8rem;color:var(--color-text-faint)">Chuyển đơn này sang "Đang vẽ file" và ghi nhận người được chỉ định (ghi chú "Admin chỉ định").</p>
       </div>`;
 
-    // Mua tracking GKE THỦ CÔNG (bổ sung 09/09/2026) — chỉ hiện khi đơn CHƯA có tracking thật (trống
-    // hẳn, hoặc đang kẹt ở placeholder "chờ tem" — MA_DANG_CHO_TEM_TRACKING bên dưới phải khớp đúng
-    // gkeService.MA_DANG_CHO_TEM). Không cần AUTO_TRACKING="YES", không cần đợi x phút hay đúng
-    // TRANG_THAI_XUONG như quét QR — bấm là mua ngay cho đơn ĐANG XEM. Dùng chung API
-    // /tracking/mua-thu-cong với nút tương tự ở tracking.html (trang danh sách đơn AUTO_TRACKING).
-    if (!don.TRACKING_ID || don.TRACKING_ID === MA_DANG_CHO_TEM_TRACKING) {
+    // Mua tracking GKE THỦ CÔNG (bổ sung 09/09/2026) — chỉ hiện khi đơn CHƯA có tracking thật. Không
+    // cần AUTO_TRACKING="YES", không cần đợi x phút hay đúng TRANG_THAI_XUONG như quét QR — bấm là mua
+    // ngay cho đơn ĐANG XEM. Dùng chung API /tracking/mua-thu-cong với nút tương tự ở tracking.html
+    // (trang danh sách đơn AUTO_TRACKING). Từ 12/09/2026 lần 14, TRACKING_ID không còn khi nào mang giá
+    // trị placeholder "chờ tem" nữa (chuyển sang cột TAM_THOI) nên chỉ cần kiểm tra rỗng/không rỗng.
+    if (!don.TRACKING_ID) {
       html += `
       <div class="upload-box">
         <label>${icon('package', { size: 18 })} Mua tracking GKE thủ công</label>
@@ -254,7 +250,7 @@ function renderKhuVucThaoTac(don) {
   // chắc). "IN LABEL" (chỉ in, không mua) CHỈ hiện khi đơn ĐÃ có tracking thật — đơn chưa có thì chỉ
   // hiện nút gộp (tránh bấm nhầm vào nút không chạy được, đã xác nhận với người dùng).
   if (user.vaiTro !== 'nguoi_lay_phoi') {
-    const daCoTrackingThat = don.TRACKING_ID && don.TRACKING_ID !== MA_DANG_CHO_TEM_TRACKING;
+    const daCoTrackingThat = !!don.TRACKING_ID;
     html += `
       <div class="upload-box">
         <label>${icon('printer', { size: 18 })} In label vận chuyển (GKE)</label>

@@ -58,9 +58,10 @@
 // BẮT BUỘC ĐÃ CÓ TRACKING TRƯỚC (09/09/2026 lần 5, theo yêu cầu người dùng — ĐẢO NGƯỢC lại phần "có
 // thể không có mã tracking" ở lần 4 phía trên): dù việc chụp ảnh không TỰ gọi GKE, đơn vẫn BẮT BUỘC
 // phải đã có TRACKING_ID thật (mua qua Mua Tracking/MUA TRACKING và IN LABEL trước đó) thì mới được
-// chuyển sang "ĐÃ DÁN TEM" — kiểm tra ở services/orderService.js (MA_DANG_CHO_TEM_GKE,
-// TRANG_THAI_NGUON_HOP_LE_CHO_DAN_TEM), áp dụng cho MỌI người gọi kể cả admin, không có ngoại lệ. Đơn
-// đang ở placeholder "chờ tem" (chưa lấy được tem thật) KHÔNG tính là đã có tracking.
+// chuyển sang "ĐÃ DÁN TEM" — kiểm tra ở services/orderService.js (TRANG_THAI_NGUON_HOP_LE_CHO_DAN_TEM),
+// áp dụng cho MỌI người gọi kể cả admin, không có ngoại lệ. Đơn đang chờ tem (cột TAM_THOI đang mang
+// giá trị gkeService.MA_DANG_CHO_TEM, xem services/trackingAutoService.js) KHÔNG tính là đã có tracking
+// — TRACKING_ID lúc đó vẫn rỗng.
 // "ĐÃ DÁN TEM" giờ đạt được qua ĐÚNG 2 đường: (1) "Chụp ảnh ĐÃ DÁN TEM" (routes/photos.js, mốc
 // da_dan_tem — điều kiện đơn phải đang đúng "Đã sản xuất" VÀ đã có tracking thật); (2) admin sửa tay
 // (CŨNG bắt buộc đơn đang đúng "Đã sản xuất" VÀ đã có tracking thật, không có ngoại lệ nào — xem

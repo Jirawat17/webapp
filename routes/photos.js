@@ -41,14 +41,14 @@ const MOC_TU_DONG_CHUYEN_TRANG_THAI = {
   da_dan_tem: { yeuCau: 'Đã sản xuất', chuyenSang: 'ĐÃ DÁN TEM' },
 };
 
-// PHẢI khớp ĐÚNG hằng số MA_DANG_CHO_TEM trong services/gkeService.js (đã tự khai báo lại tương tự ở
-// services/orderService.js và public/order.html — xem ghi chú tại đó). Bổ sung 09/09/2026 lần 5, theo
-// yêu cầu người dùng: đơn CHƯA có thông tin Tracking thật thì không được chuyển sang "ĐÃ DÁN TEM" — dù
-// orderService.update() (gọi ở /upload bên dưới) đã tự chặn việc GHI rồi, kiểm tra sớm ở CẢ /kiem-tra
-// lẫn /upload để không lãng phí 1 lần chụp ảnh/tải ảnh lên cho đơn chắc chắn sẽ bị từ chối.
-const MA_DANG_CHO_TEM_GKE = 'DANG_CHO_GKE_TAO_TEM';
+// Bổ sung 09/09/2026 lần 5, theo yêu cầu người dùng: đơn CHƯA có thông tin Tracking thật thì không
+// được chuyển sang "ĐÃ DÁN TEM" — dù orderService.update() (gọi ở /upload bên dưới) đã tự chặn việc
+// GHI rồi, kiểm tra sớm ở CẢ /kiem-tra lẫn /upload để không lãng phí 1 lần chụp ảnh/tải ảnh lên cho đơn
+// chắc chắn sẽ bị từ chối. Từ 12/09/2026 lần 14, TRACKING_ID không còn khi nào mang giá trị placeholder
+// "chờ tem" nữa (chuyển hẳn sang cột TAM_THOI, xem services/trackingAutoService.js) nên chỉ cần kiểm
+// tra rỗng/không rỗng.
 function thieuTrackingThat(row) {
-  return !row.TRACKING_ID || row.TRACKING_ID === MA_DANG_CHO_TEM_GKE;
+  return !row.TRACKING_ID;
 }
 
 // Kiểm tra ĐỦ ĐIỀU KIỆN chụp ảnh cho 1 đơn — KHÔNG cần file ảnh. Dùng NGAY SAU khi quét QR sống để
