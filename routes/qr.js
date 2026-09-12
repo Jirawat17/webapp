@@ -180,12 +180,16 @@ router.post('/kich-ban/:scenarioId/kiem-tra', async (req, res) => {
   if (!duocPhepDungKichBan(scenario, user)) return res.status(403).json({ error: 'Vai trò của bạn không được dùng kịch bản này' });
 
   if (!row) {
-    ghiKhongCho(ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_KIEM_TRA_KHONG_TIM_THAY', sttKey, chiTiet: { scenario: scenario.label } }));
+    const lyDo = 'Không tìm thấy đơn hàng với mã này trong Sheet';
+    // Ghi cả `lyDo` vào chiTiet (bổ sung 12/09/2026, theo yêu cầu người dùng) — để
+    // services/logService.js#layHoatDongCuaToi() có sẵn câu lý do dựng sẵn khi hiện lại ở tab "Lịch
+    // sử" (public/hoat-dong.html), không phải suy luận/dựng lại câu chữ ở 1 nơi khác.
+    ghiKhongCho(ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_KIEM_TRA_KHONG_TIM_THAY', sttKey, chiTiet: { scenario: scenario.label, lyDo } }));
     ghiKhongCho(ghiNhatKyQuetHangLoat({
       nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey,
-      trangThaiCu: '', trangThaiMoi: '', ketQua: 'KIEM_TRA_KHONG_TIM_THAY', ghiChu: 'Không tìm thấy mã trong Sheet',
+      trangThaiCu: '', trangThaiMoi: '', ketQua: 'KIEM_TRA_KHONG_TIM_THAY', ghiChu: lyDo,
     }));
-    return res.json({ nhom: 'KHONG_TIM_THAY', sttKey, lyDo: 'Không tìm thấy đơn hàng với mã này trong Sheet' });
+    return res.json({ nhom: 'KHONG_TIM_THAY', sttKey, lyDo });
   }
 
   const tieuDe = orderService.tieuDeSanPham(row);
@@ -194,7 +198,7 @@ router.post('/kich-ban/:scenarioId/kiem-tra', async (req, res) => {
 
   if (donDaKetThuc(row)) {
     const lyDo = `Đơn ${sttKey} lỗi do đơn đã kết thúc ở trạng thái "${row.TRANG_THAI_XUONG}", không thể dùng kịch bản quét nào nữa`;
-    ghiKhongCho(ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_KIEM_TRA_CHAN_DON_KET_THUC', sttKey, chiTiet: { scenario: scenario.label, tinhTrang: row.TRANG_THAI_XUONG } }));
+    ghiKhongCho(ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_KIEM_TRA_CHAN_DON_KET_THUC', sttKey, chiTiet: { scenario: scenario.label, tinhTrang: row.TRANG_THAI_XUONG, lyDo } }));
     ghiKhongCho(ghiNhatKyQuetHangLoat({
       nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey,
       trangThaiCu: row.TRANG_THAI_XUONG, trangThaiMoi: '', ketQua: 'LOI_DON_DA_KET_THUC', ghiChu: lyDo,
@@ -221,7 +225,7 @@ router.post('/kich-ban/:scenarioId/kiem-tra', async (req, res) => {
     }
     ghiKhongCho(ghiLog({
       nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_KIEM_TRA_SAI_TRANG_THAI',
-      sttKey, chiTiet: { scenario: scenario.label, cot: scenario.column, trangThaiHienTai: giaTriHienTai, trangThaiCanCo: scenario.requireStatus },
+      sttKey, chiTiet: { scenario: scenario.label, cot: scenario.column, trangThaiHienTai: giaTriHienTai, trangThaiCanCo: scenario.requireStatus, lyDo },
     }));
     ghiKhongCho(ghiNhatKyQuetHangLoat({
       nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey,

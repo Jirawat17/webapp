@@ -90,7 +90,7 @@ async function layLichSuChuyenSangTrangThai(trangThaiDich) {
 
 // ============================================================
 // "HOẠT ĐỘNG CỦA TÔI" — trang tự đối soát cuối ngày/tuần cho từng người dùng (đặc biệt hữu ích
-// cho san_xuat/nguoi_lay_phoi). Gồm 3 nhóm, đã thống nhất với người dùng phạm vi tính từng nhóm:
+// cho san_xuat/nguoi_lay_phoi). Gồm 4 nhóm, đã thống nhất với người dùng phạm vi tính từng nhóm:
 //   - "quét": CHỈ tính lượt quét QR THÀNH CÔNG (đã thật sự đổi trạng thái) — không tính lượt quét
 //     lỗi/sai trạng thái (QUET_LOI, QUET_SAI_TRANG_THAI...) hay lượt "kiểm tra" trước khi xác nhận
 //     (QUET_KIEM_TRA_*), vì đó chỉa là dò/xem trước, chưa ghi gì vào đơn.
@@ -98,11 +98,18 @@ async function layLichSuChuyenSangTrangThai(trangThaiDich) {
 //     TRANG_THAI_VE_FILE) đổi giá trị — quét QR (đơn lẻ + hàng loạt), sửa hàng loạt ở trang Đơn
 //     hàng, và sửa tay từng đơn ở trang Chi tiết đơn.
 //   - "uploadAnh": mọi lần UPLOAD_ANH (routes/photos.js).
+//   - "quetBiTuChoi" (bổ sung 12/09/2026, theo yêu cầu người dùng — trước đây các lượt quét "Sai
+//     trạng thái"/"Không tìm thấy" hoàn toàn KHÔNG xuất hiện ở tab Lịch sử, dù đã được ghi log đầy đủ,
+//     khiến người dùng không đối soát lại được ai đã quét nhầm đơn nào): các lượt "kiểm tra" (quét
+//     kịch bản, TRƯỚC bước xác nhận hàng loạt) bị từ chối vì sai trạng thái hoặc không tìm thấy đơn —
+//     KHÔNG tính vào "quét" (không đổi gì thật cả) nhưng vẫn cần hiện ra để người dùng biết mình vừa
+//     quét nhầm/quét hỏng đơn nào.
 // LƯU Ý: nhánh CAP_NHAT_DON (sửa tay) chỉ có sẵn giá trị MỚI trong ChiTiet (là nguyên `updates` gửi
 // lên), KHÔNG có giá trị CŨ trước khi sửa (log không lưu lại state trước đó) — khác với quét QR/sửa
 // hàng loạt vốn có sẵn cả {tu, sang}. Vì vậy mục "sửa tay" trong kết quả trả về chỉ hiện "sang", để
 // trống "tu" — nơi gọi (routes/hoatDong.js) tự hiển thị phù hợp, không suy đoán giá trị cũ.
 const HANH_DONG_QUET_THANH_CONG = ['QUET_KICH_BAN', 'QUET_KICH_BAN_HANG_LOAT'];
+const HANH_DONG_QUET_BI_TU_CHOI = ['QUET_KIEM_TRA_SAI_TRANG_THAI', 'QUET_KIEM_TRA_CHAN_DON_KET_THUC', 'QUET_KIEM_TRA_KHONG_TIM_THAY'];
 const COT_TRANG_THAI_CUA_DON = ['TRANG_THAI_XUONG', 'TRANG_THAI_PHOI', 'TRANG_THAI_VE_FILE'];
 
 function trongKhoangThoiGian(isoThoiGian, tuNgay, denNgay) {
@@ -120,6 +127,7 @@ async function layHoatDongCuaToi({ nguoiDung, tuNgay, denNgay }) {
   const quet = [];
   const doiTrangThai = [];
   const uploadAnh = [];
+  const quetBiTuChoi = [];
   // Bổ sung 08/09/2026 (xem docs/superpowers/specs/2026-09-08-chi-tieu-hoat-dong-theo-vai-tro-design.md)
   // — dùng để tính chỉ tiêu "tổng số lượng phôi đã lấy" cho nguoi_lay_phoi ở routes/hoatDong.js. Log
   // này (services/taiSanService.js truKhoTheoDon) đã ghi sẵn ĐÚNG số lượng phôi trừ kho theo từng đơn
@@ -135,6 +143,14 @@ async function layHoatDongCuaToi({ nguoiDung, tuNgay, denNgay }) {
       const cot = chiTiet.cot || 'TRANG_THAI_XUONG';
       quet.push({ sttKey: r.STT_Key, thoiGian: r.ThoiGian, kichBan: chiTiet.scenario || '', cot, tu: chiTiet.tu || '', sang: chiTiet.sang || '' });
       doiTrangThai.push({ sttKey: r.STT_Key, thoiGian: r.ThoiGian, nguon: 'Quét QR', cot, tu: chiTiet.tu || '', sang: chiTiet.sang || '' });
+      continue;
+    }
+    if (HANH_DONG_QUET_BI_TU_CHOI.includes(r.HanhDong)) {
+      quetBiTuChoi.push({
+        sttKey: r.STT_Key, thoiGian: r.ThoiGian, kichBan: chiTiet.scenario || '',
+        nhom: r.HanhDong === 'QUET_KIEM_TRA_KHONG_TIM_THAY' ? 'KHONG_TIM_THAY' : 'SAI_TRANG_THAI',
+        lyDo: chiTiet.lyDo || '',
+      });
       continue;
     }
     if (r.HanhDong === 'CHUYEN_TRANG_THAI_HANG_LOAT') {
@@ -165,13 +181,15 @@ async function layHoatDongCuaToi({ nguoiDung, tuNgay, denNgay }) {
   doiTrangThai.sort(moiNhatTruoc);
   uploadAnh.sort(moiNhatTruoc);
   truKhoPhoi.sort(moiNhatTruoc);
+  quetBiTuChoi.sort(moiNhatTruoc);
 
   return {
     tongSoQuet: quet.length,
     tongSoDoiTrangThai: doiTrangThai.length,
     tongSoUpload: uploadAnh.length,
+    tongSoQuetBiTuChoi: quetBiTuChoi.length,
     tongSoLuongPhoiDaLay: truKhoPhoi.reduce((tong, x) => tong + x.soLuong, 0),
-    quet, doiTrangThai, uploadAnh, truKhoPhoi,
+    quet, doiTrangThai, uploadAnh, truKhoPhoi, quetBiTuChoi,
   };
 }
 

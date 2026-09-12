@@ -59,6 +59,12 @@
   </div>
 
   <div>
+    <h3>Lượt quét bị từ chối</h3>
+    <p style="color:var(--color-text-muted);margin:-8px 0 12px">Quét kịch bản nhưng đơn sai trạng thái hoặc không tìm thấy — chưa đổi gì, chỉ để đối soát lại đã quét nhầm đơn nào.</p>
+    <div id="ds-quet-bi-tu-choi" class="timeline"></div>
+  </div>
+
+  <div>
     <h3>Đổi trạng thái đơn</h3>
     <div id="ds-doi-trang-thai" class="timeline"></div>
   </div>
@@ -193,6 +199,7 @@ async function taiHoatDong() {
 
   renderChiTieuVaiTro(data.chiTieu, data.nguoiXem ? data.nguoiXem.vaiTro : user.vaiTro);
   renderDsQuet(data.quet);
+  renderDsQuetBiTuChoi(data.quetBiTuChoi);
   renderDsDoiTrangThai(data.doiTrangThai);
   renderDsUploadAnh(data.uploadAnh);
 }
@@ -235,6 +242,25 @@ function renderDsQuet(list) {
         <div style="font-size:0.85rem;color:var(--color-text-muted);margin-top:2px">
           ${escapeHtml(x.kichBan || NHAN_COT_TRANG_THAI[x.cot] || x.cot)}${x.tu ? `: ${escapeHtml(x.tu)} → ${escapeHtml(x.sang)}` : (x.sang ? ` → ${escapeHtml(x.sang)}` : '')}
         </div>
+      </div>
+      <div class="timeline-time">${tsDep(x.thoiGian)}</div>
+    </div>`).join('');
+}
+
+// "Lượt quét bị từ chối" — bổ sung 12/09/2026, theo yêu cầu người dùng: các lượt quét kịch bản KHÔNG
+// đổi được gì (sai trạng thái hoặc không tìm thấy đơn) trước đây hoàn toàn không xuất hiện ở tab này,
+// dù đã ghi log đầy đủ (xem HANH_DONG_QUET_BI_TU_CHOI trong services/logService.js) — người dùng
+// không có cách nào đối soát lại đã quét nhầm đơn nào. `x.lyDo` do server dựng sẵn (routes/qr.js), đã
+// tự chứa mã đơn nên không cần lặp lại <strong>{sttKey}</strong> riêng như 3 khối còn lại.
+function renderDsQuetBiTuChoi(list) {
+  const el = document.getElementById('ds-quet-bi-tu-choi');
+  if (list.length === 0) { el.innerHTML = dongRong('Chưa có lượt quét nào bị từ chối trong khoảng này.'); return; }
+  el.innerHTML = list.map(x => `
+    <div class="timeline-item">
+      <div class="timeline-info">
+        <span style="font-size:1.1rem">${x.nhom === 'KHONG_TIM_THAY' ? '❌' : '⚠️'}</span>
+        ${x.lyDo ? escapeHtml(x.lyDo) : `<a href="/order.html?stt=${encodeURIComponent(x.sttKey)}">${escapeHtml(x.sttKey)}</a>`}
+        ${x.kichBan ? `<div style="font-size:0.85rem;color:var(--color-text-muted);margin-top:2px">Kịch bản: ${escapeHtml(x.kichBan)}</div>` : ''}
       </div>
       <div class="timeline-time">${tsDep(x.thoiGian)}</div>
     </div>`).join('');
