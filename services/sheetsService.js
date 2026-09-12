@@ -64,8 +64,15 @@ async function getSheetsClient() {
 // người dùng thật đang chờ phản hồi (không phải job nền), mỗi bước quá dài sẽ trông như trang bị treo.
 // Ghi log mỗi lần thử lại ra console server — để lần sau có gặp lại thì thấy ngay đang retry (mấy lần,
 // đợi bao lâu) thay vì đoán mò, cùng tinh thần "ghi log chi tiết" đã áp dụng cho tích hợp GKE.
+//
+// NÂNG TIẾP LẦN 2, CÙNG NGÀY (theo yêu cầu người dùng): 7 lần -> 15 lần. DO_TRE_TOI_DA_MS (trần
+// 8s/bước) giữ nguyên — chỉ riêng việc tăng SỐ LẦN không kéo dài từng bước chờ, chỉ kéo dài tổng cộng
+// dồn (11 trong 15 bước đã chạm trần 8s, xem công thức bên dưới) — tổng thời gian chờ tối đa trước khi
+// báo lỗi tăng từ ~40 giây lên KHOẢNG 1 phút 35 GIÂY ĐẾN GẦN 1 phút 50 GIÂY (tuỳ jitter ngẫu nhiên mỗi
+// bước), đủ vượt qua gần như mọi tình huống dồn quota theo phút với chi phí là người dùng có thể phải
+// chờ lâu hơn hẳn trước khi thấy thông báo lỗi trong tình huống quota vẫn KHÔNG hồi phục kịp.
 // ============================================================
-const SO_LAN_THU_LAI_TOI_DA = 7;
+const SO_LAN_THU_LAI_TOI_DA = 15;
 const DO_TRE_GOC_MS = 500;
 const DO_TRE_TOI_DA_MS = 8000; // trần mỗi bước chờ — "maximum_backoff", hạ xuống phù hợp cho request web đồng bộ (Google gợi ý 32-64s vốn nhắm tới job nền)
 
