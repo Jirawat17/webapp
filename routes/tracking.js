@@ -50,8 +50,8 @@ router.get('/cau-hinh-gke', async (req, res) => {
 });
 
 router.post('/cau-hinh-gke', async (req, res) => {
-  await luuCauHinhGke(req.body || {});
-  res.json({ ok: true });
+  const { khoaBiBoQua } = await luuCauHinhGke(req.body || {});
+  res.json({ ok: true, khoaBiBoQua });
 });
 
 router.get('/logs', (req, res) => {

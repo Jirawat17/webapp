@@ -201,10 +201,21 @@ async function luuCauHinhGke() {
   nut.disabled = true;
   nut.textContent = 'Đang lưu...';
   try {
-    await apiFetch('/tracking/cau-hinh-gke', { method: 'POST', body: JSON.stringify(giaTri) });
+    const ketQua = await apiFetch('/tracking/cau-hinh-gke', { method: 'POST', body: JSON.stringify(giaTri) });
+    const khoaBiBoQua = ketQua.khoaBiBoQua || [];
     thongBao.style.display = 'block';
-    thongBao.style.color = '#16a34a';
-    thongBao.textContent = 'Đã lưu cấu hình GKE.';
+    if (khoaBiBoQua.length) {
+      const nhanCacTruong = khoaBiBoQua.map(khoa => {
+        const truong = TRUONG_CAU_HINH_GKE.find(([k]) => k === khoa);
+        const nhan = truong && document.querySelector(`label[for="${truong[1]}"]`);
+        return nhan ? nhan.textContent : khoa;
+      });
+      thongBao.style.color = 'var(--color-primary)';
+      thongBao.textContent = `Đã lưu các trường còn lại, nhưng KHÔNG lưu được: ${nhanCacTruong.join(', ')} — tab CauHinhTracking trong Google Sheet còn thiếu cột tương ứng, hãy thêm cột rồi lưu lại.`;
+    } else {
+      thongBao.style.color = '#16a34a';
+      thongBao.textContent = 'Đã lưu cấu hình GKE.';
+    }
   } catch (e) {
     thongBao.style.display = 'block';
     thongBao.style.color = 'var(--color-primary)';

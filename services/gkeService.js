@@ -62,31 +62,46 @@ async function layCauHinhGke() {
   };
 }
 
+// [khoá trong giaTri, tên cột Sheet] — PHẢI khớp đúng danh sách trường mà layCauHinhGke() đọc ở trên
+// và mảng TRUONG_CAU_HINH_GKE trong public/tracking.html.
+const CAC_TRUONG_CAU_HINH_GKE = [
+  ['username', 'GkeUsername'], ['password', 'GkePassword'], ['serviceCode', 'GkeServiceCode'],
+  ['shipperName', 'GkeShipperName'], ['shipperPhone', 'GkeShipperPhone'],
+  ['shipperAddress', 'GkeShipperAddress'], ['shipperCity', 'GkeShipperCity'],
+  ['shipperProvince', 'GkeShipperProvince'], ['shipperPostcode', 'GkeShipperPostcode'],
+  ['customsItemName', 'GkeCustomsItemName'], ['customsHsCode', 'GkeCustomsHsCode'],
+  ['customsDeclaredPrice', 'GkeCustomsDeclaredPrice'], ['customsCurrency', 'GkeCustomsCurrency'],
+  ['canNangMoiAoKg', 'CanNangMoiAoKg'],
+];
+
 // Ghi cấu hình GKE — CÙNG khuôn với luuCauHinh() (tracking bật/tắt) trong trackingAutoService.js: tự
 // thêm dòng đầu tiên nếu tab mới chỉ có header, các lần sau ghi đè đúng dòng đó.
+//
+// Chỉ ghi những cột THẬT SỰ có trong tab (updateCells ném lỗi nếu gặp cột lạ) — cho phép tab
+// CauHinhTracking chỉ có 1 phần cột GKE (vd người dùng thêm dần), không bắt buộc đủ 1 lần. NHƯNG cột
+// nào bị thiếu thì trả về trong khoaBiBoQua để routes/tracking.js + tracking.html báo rõ cho người
+// dùng biết trường nào KHÔNG được lưu — trước đây bỏ qua âm thầm, route vẫn trả ok:true nên giao diện
+// báo "Đã lưu" dù thực tế trường đó chưa từng được ghi (bổ sung 12/09/2026, theo yêu cầu người dùng
+// phát hiện sau khi đổi Mã dịch vụ (Service code) mà lưu không có tác dụng — nghi do thiếu đúng cột
+// GkeServiceCode trong tab, người dùng cần tự kiểm tra/bổ sung cột).
 async function luuCauHinhGke(giaTri) {
   const { headers, rows } = await readTab(TAB_CAU_HINH).catch(() => {
     throw new Error(`Chưa tìm thấy tab '${TAB_CAU_HINH}' trong Google Sheet — hãy tạo tab này trước (xem docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md).`);
   });
-  const ghi = {
-    GkeUsername: giaTri.username || '', GkePassword: giaTri.password || '',
-    GkeServiceCode: giaTri.serviceCode || '',
-    GkeShipperName: giaTri.shipperName || '', GkeShipperPhone: giaTri.shipperPhone || '',
-    GkeShipperAddress: giaTri.shipperAddress || '', GkeShipperCity: giaTri.shipperCity || '',
-    GkeShipperProvince: giaTri.shipperProvince || '', GkeShipperPostcode: giaTri.shipperPostcode || '',
-    GkeCustomsItemName: giaTri.customsItemName || '', GkeCustomsHsCode: giaTri.customsHsCode || '',
-    GkeCustomsDeclaredPrice: giaTri.customsDeclaredPrice || '', GkeCustomsCurrency: giaTri.customsCurrency || '',
-    CanNangMoiAoKg: giaTri.canNangMoiAoKg || '',
-  };
-  // Chỉ ghi những cột THẬT SỰ có trong tab (updateCells ném lỗi nếu gặp cột lạ) — cho phép tab
-  // CauHinhTracking chỉ có 1 phần cột GKE (vd người dùng thêm dần), không bắt buộc đủ 1 lần.
-  const ghiHopLe = Object.fromEntries(Object.entries(ghi).filter(([k]) => headers.includes(k)));
+
+  const ghiHopLe = {};
+  const khoaBiBoQua = [];
+  for (const [khoa, tenCot] of CAC_TRUONG_CAU_HINH_GKE) {
+    if (!headers.includes(tenCot)) { khoaBiBoQua.push(khoa); continue; }
+    ghiHopLe[tenCot] = giaTri[khoa] || '';
+  }
 
   if (rows[0]) {
     await updateCells(TAB_CAU_HINH, headers, rows[0]._row, ghiHopLe);
   } else {
     await appendRow(TAB_CAU_HINH, headers, ghiHopLe);
   }
+  return { khoaBiBoQua };
 }
 
 const BASE_URL = 'https://order.gkelogistics.com/openapi/customer';
@@ -271,14 +286,20 @@ function thongTinNguoiGui(cauHinh) {
   };
 }
 
+// Số điện thoại giả dùng khi đơn KHÔNG có SDT — GKE bắt buộc phải có số điện thoại người nhận mới tạo
+// được vận đơn. CHỈ dùng cho đúng lượt gọi GKE này (không ghi ngược lại cột SDT của đơn trong Sheet) —
+// theo lựa chọn của người dùng 12/09/2026, để đơn vẫn hiện SDT trống ở mọi nơi khác (danh sách, chi
+// tiết, báo cáo), tránh nhầm số giả này là số thật của khách.
+const SDT_MAC_DINH_KHI_THIEU = '0000000000';
+
 function thongTinNguoiNhan(donHang) {
-  const thieu = ['TEN', 'SDT', 'DIA_CHI_TEN_TP', 'MA_ZIPCODE'].filter(k => !donHang[k]);
+  const thieu = ['TEN', 'DIA_CHI_TEN_TP', 'MA_ZIPCODE'].filter(k => !donHang[k]);
   if (thieu.length) {
     throw new Error(`[chuẩn bị dữ liệu] Đơn ${donHang.STT_Key} thiếu cột ${thieu.join(', ')} — không đủ thông tin người nhận cho GKE`);
   }
   return {
     full_name: donHang.TEN || '',
-    phone: donHang.SDT || '',
+    phone: donHang.SDT || SDT_MAC_DINH_KHI_THIEU,
     country: maQuocGia(donHang.DIA_CHI_NUOC),
     postcode: donHang.MA_ZIPCODE || '',
     province: donHang.DIA_CHI_BANG || '',
