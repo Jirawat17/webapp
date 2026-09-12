@@ -47,14 +47,27 @@ async function getSheetsClient() {
 // ============================================================
 // THỬ LẠI KHI GOOGLE TRẢ LỖI TẠM THỜI — 429 (vượt quota/rate-limit) hoặc 500/503 (lỗi tạm thời phía
 // Google) đều là lỗi CÓ THỂ TỰ KHỎI nếu chờ 1 chút rồi gọi lại (đúng khuyến nghị chính thức của Google
-// cho các API này: exponential backoff + jitter). KHÔNG thử lại lỗi khác (400 sai tham số, 404 không
-// tìm thấy sheet...) vì gọi lại không giúp ích, chỉ làm chậm phản hồi vô ích.
+// cho các API này: exponential backoff + jitter, xem
+// https://developers.google.com/workspace/sheets/api/limits). KHÔNG thử lại lỗi khác (400 sai tham số,
+// 404 không tìm thấy sheet...) vì gọi lại không giúp ích, chỉ làm chậm phản hồi vô ích.
 // Trước đây KHÔNG có lớp này — bất kỳ lượt vượt quota nào (dù chỉ thoáng qua vài giây do nhiều người
 // dùng cùng lúc) đều rơi thẳng ra người dùng dưới dạng lỗi thô của Google (vd "Không tải được danh
-// sách: Quota exceeded for quota metric..."), thay vì tự phục hồi.
+// sách: Quota exceeded for quota metric...").
+//
+// NÂNG NGƯỠNG 13/09/2026 (theo yêu cầu người dùng — đã THỰC SỰ gặp lỗi "tạm quá tải" ngoài đời, không
+// phải phòng ngừa lý thuyết): cấu hình cũ (4 lần, gốc 500ms, KHÔNG có trần mỗi bước) chỉ chờ tối đa
+// ~8 giây cộng dồn trước khi bỏ cuộc — ngắn hơn nhiều so với 1 chu kỳ quota (Google tính theo phút).
+// Nâng lên 7 lần thử, thêm hẳn DO_TRE_TOI_DA_MS (trần mỗi bước, đúng khái niệm "maximum_backoff" của
+// Google) và jitter tới 1000ms (đúng "random_number_milliseconds ≤ 1,000" trong tài liệu) — cộng dồn
+// tối đa gần 40 giây trước khi bỏ cuộc, đủ vượt qua phần lớn tình huống dồn quota theo phút. CỐ Ý không
+// copy nguyên mẫu 32-64 GIÂY CHO MỖI BƯỚC của Google — các API này chạy TRONG 1 request web đồng bộ có
+// người dùng thật đang chờ phản hồi (không phải job nền), mỗi bước quá dài sẽ trông như trang bị treo.
+// Ghi log mỗi lần thử lại ra console server — để lần sau có gặp lại thì thấy ngay đang retry (mấy lần,
+// đợi bao lâu) thay vì đoán mò, cùng tinh thần "ghi log chi tiết" đã áp dụng cho tích hợp GKE.
 // ============================================================
-const SO_LAN_THU_LAI_TOI_DA = 4;
+const SO_LAN_THU_LAI_TOI_DA = 7;
 const DO_TRE_GOC_MS = 500;
+const DO_TRE_TOI_DA_MS = 8000; // trần mỗi bước chờ — "maximum_backoff", hạ xuống phù hợp cho request web đồng bộ (Google gợi ý 32-64s vốn nhắm tới job nền)
 
 function maLoiHttp(err) {
   return (err && (err.code || (err.response && err.response.status))) || null;
@@ -68,15 +81,21 @@ function loiTamThoiCoTheThuLai(err) {
 async function goiApiCoThuLai(goiApi) {
   for (let lan = 0; ; lan++) {
     try {
-      return await goiApi();
+      const ketQua = await goiApi();
+      if (lan > 0) console.log(`[SheetsAPI] Thành công sau ${lan} lần thử lại.`);
+      return ketQua;
     } catch (err) {
       if (!loiTamThoiCoTheThuLai(err) || lan >= SO_LAN_THU_LAI_TOI_DA) {
         if (maLoiHttp(err) === 429) {
+          console.error(`[SheetsAPI] Vẫn vượt quota sau ${lan} lần thử lại — bỏ cuộc, báo lỗi cho người dùng.`);
           throw new Error('Google Sheets đang tạm quá tải do có nhiều người thao tác cùng lúc — vui lòng thử lại sau ít phút.');
         }
         throw err;
       }
-      const doTreMs = DO_TRE_GOC_MS * 2 ** lan + Math.random() * 300; // jitter tránh nhiều request cùng retry đồng loạt
+      // min(gốc × 2^lần, trần) + jitter ngẫu nhiên ≤ 1000ms — đúng công thức "exponential backoff +
+      // jitter" của Google, chỉ khác trần tuyệt đối (xem giải thích ở khối comment phía trên).
+      const doTreMs = Math.min(DO_TRE_GOC_MS * 2 ** lan, DO_TRE_TOI_DA_MS) + Math.random() * 1000;
+      console.warn(`[SheetsAPI] Lỗi ${maLoiHttp(err)} — thử lại lần ${lan + 1}/${SO_LAN_THU_LAI_TOI_DA} sau ${Math.round(doTreMs)}ms...`);
       await new Promise(r => setTimeout(r, doTreMs));
     }
   }
