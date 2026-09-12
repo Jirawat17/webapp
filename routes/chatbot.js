@@ -179,8 +179,11 @@ async function thucThiTool(tenHam, thamSo, ctx) {
     case 'tra_cuu_don_hang': {
       // Xem 1 đơn theo đúng mã — giống hệt trang chi tiết đơn (order.html), KHÔNG giới hạn theo vai
       // trò (chủ ý: ai có đúng mã đơn cũng xem được chi tiết đơn đó, đúng quy ước hiện có của app).
+      // VẪN chặn theo Xưởng (bổ sung 13/09/2026) — công cụ này bỏ qua ctx.duLieuTheoQuyen (đã lọc
+      // theo vai trò + Xưởng) để tự đọc thẳng theo mã, nên phải tự kiểm tra lại ở đây, không thì lộ
+      // đơn xưởng khác qua chatbot dù mọi nơi khác đã chặn.
       const { row } = await orderService.getByKey(thamSo.maDon || '');
-      if (!row) return { loi: `Không tìm thấy đơn có mã "${thamSo.maDon}"` };
+      if (!row || !orderService.coQuyenTheoXuong(ctx.user, row)) return { loi: `Không tìm thấy đơn có mã "${thamSo.maDon}"` };
       const [daGanTen] = await orderService.ganTenKhachHang([row]);
       return lamGonDon(daGanTen);
     }
@@ -211,7 +214,11 @@ async function thucThiTool(tenHam, thamSo, ctx) {
     }
 
     case 'tra_cuu_lich_su_don': {
-      // Giống order.html — không giới hạn theo vai trò, cùng lý do như tra_cuu_don_hang ở trên.
+      // Giống order.html — không giới hạn theo vai trò, cùng lý do như tra_cuu_don_hang ở trên. VẪN
+      // chặn theo Xưởng (bổ sung 13/09/2026) — cùng lý do tra_cuu_don_hang, tự đọc thẳng theo mã nên
+      // không đi qua ctx.duLieuTheoQuyen.
+      const { row } = await orderService.getByKey(thamSo.maDon || '');
+      if (!row || !orderService.coQuyenTheoXuong(ctx.user, row)) return { loi: `Không tìm thấy đơn có mã "${thamSo.maDon}"` };
       return await layLichSuTheoDon(thamSo.maDon || '');
     }
 
@@ -248,7 +255,8 @@ router.post('/hoi', async (req, res) => {
 
   const { rows } = await orderService.getAll();
   // Đơn hàng lấy được ở đây đã tự lọc đúng theo vai trò (san_xuat chỉ thấy đơn từ "ĐÃ SẴN SÀNG
-  // CHẠY MÁY" trở đi — xem services/orderService.js, filterForRole).
+  // CHẠY MÁY" trở đi) LẪN theo Xưởng (bổ sung 13/09/2026 — admin xem hết, vai trò khác chỉ đơn cùng
+  // Xưởng) — xem services/orderService.js, filterForRole.
   const duLieuTheoQuyen = await orderService.ganTenKhachHang(orderService.filterForRole(rows, user));
 
   // Thống kê nhanh tính sẵn (không tốn vòng gọi công cụ nào) — đủ trả lời các câu hỏi tổng quan ngay,

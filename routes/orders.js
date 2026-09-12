@@ -223,6 +223,10 @@ router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
         loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
         continue;
       }
+      if (!orderService.coQuyenTheoXuong(user, row)) {
+        loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
+        continue;
+      }
 
       const trangThaiCu = row[cot];
       const ketQuaUpdate = await orderService.update(sttKey, {
@@ -363,6 +367,57 @@ router.post('/chi-dinh-nguoi-ve-file', async (req, res) => {
   res.json({ ok: true, thanhCong, loi });
 });
 
+// Admin GÁN XƯỞNG (HANOI/BACNINH...) cho 1 lô đơn đã chọn — bổ sung 13/09/2026, theo yêu cầu người
+// dùng (phân loại đơn theo xưởng vật lý, mỗi xưởng chỉ thành viên cùng Xưởng mới xem/thao tác được —
+// xem services/orderService.js#locTheoXuong/coQuyenTheoXuong). CHỈ admin — cùng khuôn
+// /chi-dinh-nguoi-chay-may/-ve-file (chọn hàng loạt ở trang Đơn hàng), KHÔNG có điều khiển riêng ở
+// trang chi tiết 1 đơn (đã xác nhận với người dùng). Không kiểm tra coQuyenTheoXuong ở đây — admin
+// luôn được xem/gán MỌI đơn bất kể Xưởng hiện tại.
+router.post('/gan-xuong', async (req, res) => {
+  const user = req.session.user;
+  if (user.vaiTro !== 'admin') {
+    return res.status(403).json({ error: 'Chỉ admin mới được gán Xưởng cho đơn' });
+  }
+
+  const { sttKeys, xuong } = req.body;
+  if (!Array.isArray(sttKeys) || sttKeys.length === 0) {
+    return res.status(400).json({ error: 'Danh sách đơn trống' });
+  }
+  // xuong = '' hợp lệ (gỡ gán, đưa đơn về "chưa có xưởng") — chỉ chặn giá trị SAI, không chặn rỗng.
+  if (xuong && !orderService.DANH_SACH_XUONG.includes(xuong)) {
+    return res.status(400).json({ error: `Xưởng không hợp lệ: "${xuong}" — chỉ chấp nhận: ${orderService.DANH_SACH_XUONG.join(', ')}` });
+  }
+
+  const thanhCong = [];
+  const loi = [];
+
+  for (const sttKey of sttKeys) {
+    try {
+      const { headers, row } = await orderService.getByKey(sttKey, { fresh: true });
+      if (!row) {
+        loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
+        continue;
+      }
+
+      await orderService.update(sttKey, {
+        XUONG: xuong || '',
+        NguoiCapNhatCuoi: user.ten,
+        ThoiGianCapNhatCuoi: new Date().toISOString(),
+      }, user, { donDaDoc: { headers, row } });
+
+      thanhCong.push(sttKey);
+      ghiLog({
+        nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'GAN_XUONG',
+        sttKey, chiTiet: { tuXuong: row.XUONG || '', sangXuong: xuong || '' },
+      }).catch(err => console.error('[Orders] Lỗi ghi log nền:', err.message));
+    } catch (err) {
+      loi.push({ sttKey, lyDo: err.message });
+    }
+  }
+
+  res.json({ ok: true, thanhCong, loi });
+});
+
 // Những kịch bản (trong CauHinhKichBan) có thể áp dụng cho trạng thái hiện tại của đơn —
 // dùng để hiện nút "Chuyển sang..." trên trang chi tiết mà không cần quét QR
 // So khớp đúng CỘT mà từng kịch bản thao tác (Cot trong CauHinhKichBan — TRANG_THAI_XUONG hoặc
@@ -383,6 +438,12 @@ router.get('/:sttKey', async (req, res) => {
   if (!row) return res.status(404).json({ error: 'Không tìm thấy đơn hàng' });
 
   const user = req.session.user;
+  // Chặn xem đơn KHÁC Xưởng — coi như không tồn tại, cùng cách san_xuat KHÁC người vận hành bị ẩn bên
+  // dưới (không lộ thông tin đơn thuộc xưởng khác, kể cả việc xác nhận đơn đó CÓ tồn tại).
+  if (!orderService.coQuyenTheoXuong(user, row)) {
+    return res.status(404).json({ error: 'Không tìm thấy đơn hàng' });
+  }
+
   const [lichSu, [donDaLamGiau], kichBanKeTiep] = await Promise.all([
     layLichSuTheoDon(req.params.sttKey),
     lamGiauDon([row]),
@@ -413,8 +474,10 @@ const TRUONG_DUOC_SUA = {
   nguoi_lay_phoi: [],
 };
 
-// Không bao giờ cho phép sửa qua các cột này — khóa chính, field nội bộ, hoặc trường chỉ tính toán để hiển thị
-const TRUONG_CAM_SUA = ['STT_Key', '_row', 'NguoiCapNhatCuoi', 'ThoiGianCapNhatCuoi', 'TenKhachHang', 'TieuDeSanPham', 'ViTriTheu', 'CanhBao'];
+// Không bao giờ cho phép sửa qua các cột này — khóa chính, field nội bộ, hoặc trường chỉ tính toán để hiển thị.
+// XUONG (bổ sung 13/09/2026) cũng bị cấm ở ĐÂY — bắt buộc gán qua đúng 1 đường POST /gan-xuong
+// (admin-only, hàng loạt ở trang Đơn hàng), không cho lách qua form sửa 1 đơn (kể cả admin/ve_file).
+const TRUONG_CAM_SUA = ['STT_Key', '_row', 'NguoiCapNhatCuoi', 'ThoiGianCapNhatCuoi', 'TenKhachHang', 'TieuDeSanPham', 'ViTriTheu', 'CanhBao', 'XUONG'];
 
 router.put('/:sttKey', async (req, res) => {
   const user = req.session.user;
@@ -439,6 +502,10 @@ router.put('/:sttKey', async (req, res) => {
   // chỉ ghi mỗi giá trị mới (xem docs/superpowers/specs/2026-09-07-mo-rong-log-hoat-dong-design.md).
   const { headers, row } = await orderService.getByKey(req.params.sttKey, { fresh: true });
   if (!row) return res.status(404).json({ error: 'Không tìm thấy đơn hàng: ' + req.params.sttKey });
+  // Chặn sửa đơn KHÁC Xưởng (bổ sung 13/09/2026) — coi như không tồn tại, cùng cách GET /:sttKey ở trên.
+  if (!orderService.coQuyenTheoXuong(user, row)) {
+    return res.status(404).json({ error: 'Không tìm thấy đơn hàng: ' + req.params.sttKey });
+  }
 
   let updated;
   try {
@@ -608,6 +675,17 @@ router.post('/quet-hang-loat/bat-dau', async (req, res) => {
   if (!headers.includes('HASH_ANH_MAU') || !headers.includes('NHOM_HANG_LOAT')) {
     _congViecHangLoat.delete(jobId); // bỏ chỗ đã đặt — không có job thật nào chạy, tránh job "ma" kẹt ở trạng thái dang_chay mãi
     return res.status(400).json({ error: 'Sheet chưa có đủ 2 cột HASH_ANH_MAU/NHOM_HANG_LOAT — cần thêm vào Don_Hang_ALL trước khi dùng tính năng "Đơn hàng loạt"' });
+  }
+  // Loại khỏi lô những mã KHÔNG thuộc Xưởng của người gọi (bổ sung 13/09/2026) — phòng request bị chỉnh
+  // tay gửi thẳng sttKeys ngoài Xưởng (giao diện Đơn hàng đã tự lọc theo Xưởng nên bình thường không
+  // xảy ra). admin không bị lọc gì.
+  for (const sttKey of [...sttKeySet]) {
+    const don = rows.find(r => r.STT_Key === sttKey);
+    if (!don || !orderService.coQuyenTheoXuong(user, don)) sttKeySet.delete(sttKey);
+  }
+  if (sttKeySet.size === 0) {
+    _congViecHangLoat.delete(jobId);
+    return res.status(400).json({ error: 'Không còn đơn nào hợp lệ trong lô đã chọn (có thể không thuộc Xưởng của bạn).' });
   }
 
   const donThieuHash = rows.filter(d => sttKeySet.has(d.STT_Key) && d.DUONG_DAN_URL && !d.HASH_ANH_MAU);

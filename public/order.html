@@ -93,6 +93,7 @@ function renderBangThongTin(don, viTri) {
     <tr><td>Địa chỉ giao hàng</td><td>${escapeHtml(dongDiaChi(don))}</td></tr>
     <tr><td>Mã IOSS</td><td>${escapeHtml(don.MA_IOSS || '')}</td></tr>
     <tr><td>Ghi chú</td><td>${escapeHtml(don.GHI_CHU || '')}</td></tr>
+    <tr><td>Xưởng</td><td>${escapeHtml(don.XUONG || '(chưa gán)')}</td></tr>
     <tr><td>Cập nhật lần cuối</td><td>${escapeHtml(don.NguoiCapNhatCuoi || '')}${don.ThoiGianCapNhatCuoi ? ' · ' + tsDep(don.ThoiGianCapNhatCuoi) : ''}</td></tr>`;
 }
 

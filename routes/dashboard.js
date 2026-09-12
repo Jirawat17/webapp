@@ -7,7 +7,10 @@ const { requireLogin } = require('../middleware/auth');
 router.use(requireLogin);
 
 router.get('/thong-ke', async (req, res) => {
-  const { rows: tatCaDon } = await orderService.getAll();
+  const { rows: tatCaDonMoiXuong } = await orderService.getAll();
+  // Lọc theo Xưởng (bổ sung 13/09/2026) — admin xem thống kê toàn bộ, vai trò khác chỉ thấy đơn cùng
+  // Xưởng với mình (xem services/orderService.js#locTheoXuong).
+  const tatCaDon = orderService.locTheoXuong(tatCaDonMoiXuong, req.session.user);
 
   // Lọc theo khoảng NGAY_LEN_DON nếu FE gửi kèm tuNgay/denNgay (nút Hôm nay/Tuần này/Tháng
   // này/Tuỳ chọn ở dashboard.html) — không truyền gì thì giữ nguyên hành vi cũ: thống kê toàn bộ.

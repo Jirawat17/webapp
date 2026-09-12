@@ -61,13 +61,15 @@ function thieuTrackingThat(row) {
 // (trừ phần lưu file), giữ 2 nơi nhất quán.
 router.post('/kiem-tra', async (req, res) => {
   const { sttKey, moc } = req.body;
+  const user = req.session.user;
   if (!sttKey) return res.status(400).json({ error: 'Thiếu mã đơn hàng' });
 
   const cotAnh = COT_ANH_THEO_MOC[moc];
   if (!cotAnh) return res.status(400).json({ error: 'Mốc ảnh không hợp lệ: ' + moc });
 
   const { headers, row } = await orderService.getByKey(sttKey, { fresh: true });
-  if (!row) return res.status(404).json({ error: 'Không tìm thấy đơn hàng: ' + sttKey });
+  // Đơn khác Xưởng coi như không tồn tại (bổ sung 13/09/2026).
+  if (!row || !orderService.coQuyenTheoXuong(user, row)) return res.status(404).json({ error: 'Không tìm thấy đơn hàng: ' + sttKey });
   if (!headers.includes(cotAnh)) {
     return res.status(400).json({ error: `Sheet chưa có cột '${cotAnh}' — cần thêm cột này vào Don_Hang_ALL trước khi dùng mốc ảnh "${moc}"` });
   }
@@ -101,7 +103,8 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
   if (!cotAnh) return res.status(400).json({ error: 'Mốc ảnh không hợp lệ: ' + moc });
 
   const { headers, row } = await orderService.getByKey(sttKey, { fresh: true }); // fresh: mốc da_san_xuat kiểm tra TRANG_THAI_XUONG ngay dưới đây, không được dùng bản cache cũ
-  if (!row) return res.status(404).json({ error: 'Không tìm thấy đơn hàng: ' + sttKey });
+  // Đơn khác Xưởng coi như không tồn tại (bổ sung 13/09/2026).
+  if (!row || !orderService.coQuyenTheoXuong(user, row)) return res.status(404).json({ error: 'Không tìm thấy đơn hàng: ' + sttKey });
   if (!headers.includes(cotAnh)) {
     return res.status(400).json({ error: `Sheet chưa có cột '${cotAnh}' — cần thêm cột này vào Don_Hang_ALL trước khi dùng mốc ảnh "${moc}"` });
   }

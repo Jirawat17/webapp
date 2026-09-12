@@ -67,7 +67,7 @@ router.post('/dang-nhap', async (req, res) => {
     _lanSaiMatKhau.delete(ten);
   }
 
-  req.session.user = { ten: user.Ten, vaiTro: user.VaiTro, team: user.Team || '' };
+  req.session.user = { ten: user.Ten, vaiTro: user.VaiTro, team: user.Team || '', xuong: user.Xuong || '' };
   await ghiLog({ nguoiDung: user.Ten, vaiTro: user.VaiTro, hanhDong: 'DANG_NHAP' });
   res.json(req.session.user);
 });

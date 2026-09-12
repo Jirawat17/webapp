@@ -39,6 +39,9 @@ function kiemTraGiaTriHopLe(updates) {
   if ('TRANG_THAI_VE_FILE' in updates && !TRANG_THAI_VE_FILE_VALUES.includes(updates.TRANG_THAI_VE_FILE)) {
     throw new Error(`Giá trị TRANG_THAI_VE_FILE không hợp lệ: "${updates.TRANG_THAI_VE_FILE}"`);
   }
+  if ('XUONG' in updates && updates.XUONG && !DANH_SACH_XUONG.includes(updates.XUONG)) {
+    throw new Error(`Giá trị XUONG không hợp lệ: "${updates.XUONG}" — chỉ chấp nhận: ${DANH_SACH_XUONG.join(', ')}`);
+  }
 }
 
 // Kiểm tra tính HỢP LÝ giữa 3 cột VỚI NHAU — không chỉ đúng giá trị từng cột riêng lẻ mà còn phải
@@ -288,7 +291,9 @@ function danhSachViTriTheu(don) {
 // CHÍNH SÁCH PHÂN QUYỀN (cập nhật 24/08/2026, theo Prompt_Ver_24.docx — HUỶ chính sách "mọi vai trò
 // như Admin" trước đó): hệ thống giờ có 4 vai trò (admin, nguoi_lay_phoi, ve_file, san_xuat —
 // quan_ly bị xoá hẳn, dong_goi gộp vào nguoi_lay_phoi).
-//   - admin, ve_file: xem TOÀN BỘ đơn, không lọc gì.
+//   - admin: xem TOÀN BỘ đơn, không lọc gì.
+//   - ve_file: xem mọi đơn (không lọc theo trạng thái) NHƯNG vẫn bị lọc theo Xưởng như mọi vai trò
+//     khác (xem locTheoXuong bên dưới) — bổ sung 13/09/2026.
 //   - san_xuat: CHỈ thấy đơn đã tới "ĐÃ SẴN SÀNG CHẠY MÁY" trở đi (kể cả trạng thái lỗi
 //     "LỖI SẢN XUẤT CẦN LÀM LẠI"), không thấy đơn còn ở "Chưa in mã"/"Đã in mã". Đơn đã
 //     CANCELLED/REFUNDED không nằm trong THU_TU_TINH_TRANG (nhánh rẽ) nên tự động bị loại — chỉ
@@ -297,15 +302,40 @@ function danhSachViTriTheu(don) {
 //     "Quét mã QR" ở giao diện (xem public/js/api.js renderNav), không có trang danh sách đơn để
 //     vào. Không cần lọc riêng ở đây.
 function filterForRole(rows, user) {
+  let list = rows;
   if (user.vaiTro === 'san_xuat') {
     const idxSanSang = chiSoTinhTrang('ĐÃ SẴN SÀNG CHẠY MÁY');
-    return rows.filter(r => {
+    list = list.filter(r => {
       if (r.TRANG_THAI_XUONG === 'LỖI SẢN XUẤT CẦN LÀM LẠI') return true;
       const idx = chiSoTinhTrang(r.TRANG_THAI_XUONG);
       return idx !== null && idx >= idxSanSang;
     });
   }
-  return rows; // admin, ve_file — xem tất cả
+  return locTheoXuong(list, user);
 }
 
-module.exports = { TAB, KEY_COL, getAll, getByKey, update, filterForRole, ganTenKhachHang, tieuDeSanPham, danhSachViTriTheu };
+// Phân loại đơn theo Xưởng (HANOI/BACNINH...) — bổ sung 13/09/2026, theo yêu cầu người dùng (cột
+// XUONG tự thêm vào Don_Hang_ALL, cột Xuong tự thêm vào NguoiDung). admin luôn xem/thao tác được MỌI
+// đơn bất kể Xưởng. Vai trò khác: CHỈ xem/thao tác được đơn CÙNG Xưởng với mình — thiếu Xưởng ở 1
+// trong 2 bên (đơn chưa được admin gán XUONG, HOẶC người dùng chưa được gán Xuong) coi như KHÔNG có
+// quyền (người dùng xác nhận: "chưa gán = ẩn với người thường", ưu tiên an toàn dữ liệu hơn tiện lợi
+// trong giai đoạn mới triển khai chưa gán hết). Áp dụng CẢ cho việc XEM (danh sách/báo cáo/chatbot/
+// dashboard — locTheoXuong) LẪN thao tác trên 1 đơn cụ thể (quét QR/chụp ảnh/sửa đơn — coQuyenTheoXuong,
+// xem routes/orders.js, routes/qr.js, routes/photos.js, routes/tracking.js).
+const DANH_SACH_XUONG = ['HANOI', 'BACNINH'];
+
+function locTheoXuong(rows, user) {
+  if (user.vaiTro === 'admin') return rows;
+  if (!user.xuong) return [];
+  return rows.filter(r => r.XUONG === user.xuong);
+}
+
+function coQuyenTheoXuong(user, row) {
+  if (user.vaiTro === 'admin') return true;
+  return !!user.xuong && !!row.XUONG && user.xuong === row.XUONG;
+}
+
+module.exports = {
+  TAB, KEY_COL, getAll, getByKey, update, filterForRole, ganTenKhachHang, tieuDeSanPham, danhSachViTriTheu,
+  DANH_SACH_XUONG, locTheoXuong, coQuyenTheoXuong,
+};

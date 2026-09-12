@@ -337,9 +337,14 @@ async function chayQuetTuDongMuaTracking() {
   return { daQuet: true, soDonDaMua, tongSoDuDieuKien: donDuDieuKien.length };
 }
 
-// Danh sách MỌI đơn AUTO_TRACKING="YES" kèm trạng thái — dùng cho trang public/tracking.html.
-async function layDanhSachDonAutoTracking() {
-  const [{ rows }, cauHinh] = await Promise.all([orderService.getAll(), layCauHinh()]);
+// Danh sách MỌI đơn AUTO_TRACKING="YES" kèm trạng thái — dùng cho trang public/tracking.html. Lọc
+// theo Xưởng của `user` (bổ sung 13/09/2026, theo yêu cầu người dùng — admin xem hết, vai trò khác
+// chỉ thấy đơn cùng Xưởng, xem orderService.js#locTheoXuong) — hàm này CHỈ dùng cho route GET
+// /tracking/danh-sach (không dùng bởi job tự động chayQuetTuDongMuaTracking(), vốn phải xử lý MỌI
+// xưởng), nên lọc thẳng ở đây an toàn, không ảnh hưởng job nền.
+async function layDanhSachDonAutoTracking(user) {
+  const [{ rows: tatCaDon }, cauHinh] = await Promise.all([orderService.getAll(), layCauHinh()]);
+  const rows = orderService.locTheoXuong(tatCaDon, user);
   const bayGio = Date.now();
   const nguongMs = cauHinh.soPhutCho * 60 * 1000;
 

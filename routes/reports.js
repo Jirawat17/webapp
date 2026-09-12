@@ -80,9 +80,11 @@ function xacDinhMau(query) {
   return 'chi_tiet';
 }
 
-async function layDonDaLoc(query) {
+async function layDonDaLoc(query, user) {
   const { rows } = await orderService.getAll();
-  return locDon(rows, query);
+  // Lọc theo Xưởng (bổ sung 13/09/2026) — admin xuất báo cáo/in ấn được toàn bộ, vai trò khác chỉ với
+  // đơn cùng Xưởng (xem services/orderService.js#locTheoXuong).
+  return locDon(orderService.locTheoXuong(rows, user), query);
 }
 
 function dongThongTinLoc(query, kieu) {
@@ -118,7 +120,7 @@ router.get('/khach-hang', async (req, res) => {
 router.get('/trang-thai-theo-loc', async (req, res) => {
   const { tuNgay, denNgay, khachHang } = req.query;
   const { rows } = await orderService.getAll();
-  const list = locDon(rows, { tuNgay, denNgay, khachHang });
+  const list = locDon(orderService.locTheoXuong(rows, req.session.user), { tuNgay, denNgay, khachHang });
 
   const dem = {};
   list.forEach(r => {
@@ -175,9 +177,10 @@ function soTuanTrongNam(d) {
 // thực hiện lần "Đã sản xuất" gần nhất của đơn đó — cho biết vấn đề chất lượng là ở khâu sản xuất nào.
 router.get('/thong-ke-loi', async (req, res) => {
   const { tuNgay, denNgay } = req.query;
+  const user = req.session.user;
 
   const lanLoi = await layLichSuChuyenSangTrangThai(TRANG_THAI_LOI);
-  const locTheoNgay = lanLoi.filter(l => {
+  const locTheoNgayTruocXuong = lanLoi.filter(l => {
     const d = new Date(l.thoiGian);
     if (isNaN(d)) return false;
     if (tuNgay && d < new Date(tuNgay + 'T00:00:00')) return false;
@@ -188,6 +191,13 @@ router.get('/thong-ke-loi', async (req, res) => {
   const { rows: donHang } = await orderService.getAll();
   const banDoDon = {};
   donHang.forEach(r => { banDoDon[r.STT_Key] = r; });
+  // Lọc theo Xưởng (bổ sung 13/09/2026) — bỏ các lượt lỗi thuộc đơn KHÔNG cùng Xưởng với người xem
+  // (kể cả đơn không còn tìm thấy trong Sheet, coi như không rõ quyền = ẩn với người thường). Phải lọc
+  // SAU khi có banDoDon (tra cứu order theo sttKey) vì log lịch sử không tự có sẵn XUONG.
+  const locTheoNgay = locTheoNgayTruocXuong.filter(l => {
+    const don = banDoDon[l.sttKey];
+    return don ? orderService.coQuyenTheoXuong(user, don) : user.vaiTro === 'admin';
+  });
 
   const { rows: nhanVien } = await readTabCached('NguoiDung', 30000);
   const banDoTeam = {};
@@ -230,7 +240,7 @@ router.get('/thong-ke-hoan-don', async (req, res) => {
   const { tuNgay, denNgay } = req.query;
   const { rows } = await orderService.getAll();
   const dsDonHoan = await orderService.ganTenKhachHang(
-    rows.filter(r => r.TRANG_THAI_XUONG === 'REFUNDED_Hoàn đơn')
+    orderService.locTheoXuong(rows, req.session.user).filter(r => r.TRANG_THAI_XUONG === 'REFUNDED_Hoàn đơn')
   );
 
   const locTheoNgay = dsDonHoan.filter(r => {
@@ -340,11 +350,12 @@ async function layThoiGianChayMayTheoDon() {
 
 router.get('/thoi-gian-chay-may', async (req, res) => {
   const { tuNgay, denNgay } = req.query;
+  const user = req.session.user;
 
   // Lọc theo NGÀY BẮT ĐẦU chạy máy (không phải ngày lên đơn) — đúng ý nghĩa "trong khoảng thời gian
   // này xưởng chạy máy như thế nào".
   const tatCaLanChay = await layThoiGianChayMayTheoDon();
-  const lanChay = tatCaLanChay.filter(l => {
+  const lanChayTruocXuong = tatCaLanChay.filter(l => {
     const d = new Date(l.batDau);
     if (isNaN(d)) return false;
     if (tuNgay && d < new Date(tuNgay + 'T00:00:00')) return false;
@@ -355,6 +366,12 @@ router.get('/thoi-gian-chay-may', async (req, res) => {
   const { rows: donHang } = await orderService.getAll();
   const banDoDon = {};
   donHang.forEach(r => { banDoDon[r.STT_Key] = r; });
+  // Lọc theo Xưởng (bổ sung 13/09/2026) — cùng cách /thong-ke-loi ở trên (log không tự có XUONG, phải
+  // tra qua banDoDon).
+  const lanChay = lanChayTruocXuong.filter(l => {
+    const don = banDoDon[l.sttKey];
+    return don ? orderService.coQuyenTheoXuong(user, don) : user.vaiTro === 'admin';
+  });
   const banDoTenKH = await layBanDoTenKhachHang();
 
   const theoNguoiVanHanh = {}, theoLoai = {}, theoTuan = {};
@@ -926,7 +943,7 @@ function xayDungBaoCaoDangBang(list, query, tenNguoiXuat) {
 }
 
 router.get('/xem-truoc', async (req, res) => {
-  const list = await layDonDaLoc(req.query);
+  const list = await layDonDaLoc(req.query, req.session.user);
 
   if (xacDinhMau(req.query) === 'don_can_in') {
     const dongNguoiXuat = dongNguoiXuatChuoi(req.session.user.ten);
@@ -994,7 +1011,7 @@ function veSheetExcel(wb, bang) {
 }
 
 router.get('/excel', async (req, res) => {
-  const list = await layDonDaLoc(req.query);
+  const list = await layDonDaLoc(req.query, req.session.user);
 
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 
@@ -1062,7 +1079,7 @@ function veBangPdf(doc, bang, canTrangMoi) {
 }
 
 router.get('/pdf', async (req, res) => {
-  const list = await layDonDaLoc(req.query);
+  const list = await layDonDaLoc(req.query, req.session.user);
 
   res.setHeader('Content-Type', 'application/pdf');
 
@@ -1123,7 +1140,7 @@ router.post('/don-can-in/bat-dau', async (req, res) => {
   donDepJobCu();
 
   const dinhDang = req.body.dinhDang === 'excel' ? 'excel' : 'pdf';
-  const list = await layDonDaLoc(req.body);
+  const list = await layDonDaLoc(req.body, req.session.user);
 
   const jobId = crypto.randomUUID();
   const job = {

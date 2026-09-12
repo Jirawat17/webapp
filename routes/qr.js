@@ -52,7 +52,9 @@ router.get('/tra-cuu/:sttKey', async (req, res) => {
     layLichSuTheoDon(sttKey),
   ]);
 
-  if (!row) {
+  // Đơn khác Xưởng coi như không tồn tại (bổ sung 13/09/2026) — cùng thông báo/hanhDong với "không
+  // tìm thấy" thật, không lộ việc mã này CÓ tồn tại ở xưởng khác.
+  if (!row || !orderService.coQuyenTheoXuong(user, row)) {
     ghiKhongCho(ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_TRA_CUU_LOI', sttKey, chiTiet: 'Không tìm thấy đơn' }));
     return res.status(404).json({ error: 'Không tìm thấy đơn hàng với mã: ' + sttKey });
   }
@@ -82,7 +84,9 @@ router.post('/kich-ban/:scenarioId/quet', async (req, res) => {
 
   // Đọc THẬT (bỏ qua cache) vì đây là bước quyết định có ghi hay không — phải chắc chắn mới nhất
   const { headers, row } = await orderService.getByKey(sttKey, { fresh: true });
-  if (!row) {
+  // Đơn khác Xưởng coi như không tồn tại (bổ sung 13/09/2026) — cùng thông báo/hanhDong với "không
+  // tìm thấy" thật.
+  if (!row || !orderService.coQuyenTheoXuong(user, row)) {
     ghiKhongCho(ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_LOI', sttKey, chiTiet: { scenario: scenario.label, loi: 'Không tìm thấy đơn' } }));
     return res.status(404).json({ error: 'Không tìm thấy đơn hàng với mã: ' + sttKey });
   }
@@ -179,7 +183,9 @@ router.post('/kich-ban/:scenarioId/kiem-tra', async (req, res) => {
   if (!scenario) return res.status(404).json({ error: 'Không tìm thấy kịch bản' });
   if (!duocPhepDungKichBan(scenario, user)) return res.status(403).json({ error: 'Vai trò của bạn không được dùng kịch bản này' });
 
-  if (!row) {
+  // Đơn khác Xưởng coi như không tồn tại (bổ sung 13/09/2026) — dùng lại NGUYÊN nhóm/thông báo
+  // KHONG_TIM_THAY, không lộ việc mã này CÓ tồn tại ở xưởng khác.
+  if (!row || !orderService.coQuyenTheoXuong(user, row)) {
     const lyDo = 'Không tìm thấy đơn hàng với mã này trong Sheet';
     // Ghi cả `lyDo` vào chiTiet (bổ sung 12/09/2026, theo yêu cầu người dùng) — để
     // services/logService.js#layHoatDongCuaToi() có sẵn câu lý do dựng sẵn khi hiện lại ở tab "Lịch
@@ -263,7 +269,9 @@ router.post('/kich-ban/:scenarioId/xac-nhan-hang-loat', async (req, res) => {
       const { headers, row } = await orderService.getByKey(sttKey, { fresh: true }); // BẮT BUỘC đọc thật ở đây
       const giaTriHienTai = row ? row[scenario.column] : null;
 
-      if (!row) {
+      // Đơn khác Xưởng coi như không tồn tại (bổ sung 13/09/2026) — cùng thông báo với "không tìm
+      // thấy" thật.
+      if (!row || !orderService.coQuyenTheoXuong(user, row)) {
         loi.push({ sttKey, lyDo: 'Không còn tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
         ghiKhongCho(ghiNhatKyQuetHangLoat({ nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey, trangThaiCu: '', trangThaiMoi: '', ketQua: 'LOI_XAC_NHAN', ghiChu: 'Không tìm thấy khi xác nhận' }));
         continue;

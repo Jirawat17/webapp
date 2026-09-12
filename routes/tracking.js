@@ -5,6 +5,7 @@ const {
   inLabelChoDon, muaTrackingVaInLabelChoDon,
 } = require('../services/trackingAutoService');
 const { layCauHinhGke, luuCauHinhGke, gopCacTemPdf } = require('../services/gkeService');
+const orderService = require('../services/orderService');
 const { requireLogin } = require('../middleware/auth');
 
 router.use(requireLogin);
@@ -38,7 +39,7 @@ router.post('/cau-hinh', async (req, res) => {
 });
 
 router.get('/danh-sach', async (req, res) => {
-  res.json(await layDanhSachDonAutoTracking());
+  res.json(await layDanhSachDonAutoTracking(req.session.user));
 });
 
 // Cấu hình GKE (tài khoản API, thông tin người gửi, khai báo hải quan, cân nặng mặc định) — thêm
@@ -83,6 +84,13 @@ router.post('/mua-thu-cong', async (req, res) => {
 
   for (const sttKey of sttKeys) {
     try {
+      // Chặn mua tracking cho đơn khác Xưởng (bổ sung 13/09/2026) — đọc qua cache, đủ dùng vì chỉ để
+      // kiểm tra quyền, muaTrackingChoDon() bên dưới tự đọc thật riêng trước khi ghi.
+      const { row } = await orderService.getByKey(sttKey);
+      if (!row || !orderService.coQuyenTheoXuong(user, row)) {
+        loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng' });
+        continue;
+      }
       const ketQua = await muaTrackingChoDon(sttKey, cauHinhGke, user);
       if (!ketQua) { loi.push({ sttKey, lyDo: 'Đơn này đã có mã tracking thật rồi — không mua lại.' }); continue; }
       thanhCong.push(sttKey);
@@ -114,6 +122,12 @@ async function xuLyInLabelHangLoat(req, res, hamXuLy) {
 
   for (const sttKey of sttKeys) {
     try {
+      // Chặn in label cho đơn khác Xưởng (bổ sung 13/09/2026) — cùng lý do với /mua-thu-cong ở trên.
+      const { row } = await orderService.getByKey(sttKey);
+      if (!row || !orderService.coQuyenTheoXuong(user, row)) {
+        loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng' });
+        continue;
+      }
       const ketQua = await hamXuLy(sttKey, cauHinhGke, user);
       thanhCong.push(sttKey);
       if (ketQua && ketQua.label_base64) cacLabelBase64.push(ketQua.label_base64);

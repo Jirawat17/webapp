@@ -145,6 +145,13 @@
     </select>
     <button id="nut-ap-dung-chi-dinh-ve-file" class="btn-hanh-dong" onclick="apDungChiDinhNguoiVeFile()">Áp dụng</button>
   </span>
+  <span id="khoi-gan-xuong" style="display:none">
+    <span class="thanh-hanh-dong-cach"></span>
+    <select id="xuong-dich">
+      <option value="">Gán Xưởng...</option>
+    </select>
+    <button id="nut-ap-dung-gan-xuong" class="btn-hanh-dong" onclick="apDungGanXuong()">Áp dụng</button>
+  </span>
   <span id="khoi-mua-tracking-thu-cong" style="display:none">
     <span class="thanh-hanh-dong-cach"></span>
     <button id="nut-mua-tracking-thu-cong" class="btn-hanh-dong" onclick="apDungMuaTrackingThuCong()">Mua tracking</button>
@@ -178,11 +185,17 @@ const DANH_SACH_TRANG_THAI_DAY_DU = [
   'DELIVERED_Đã giao đến khách', 'CANCELLED_Đã hủy', 'REFUNDED_Hoàn đơn',
 ];
 
+// Xưởng vật lý (HANOI/BACNINH — bổ sung 13/09/2026, theo yêu cầu người dùng) — PHẢI khớp ĐÚNG
+// DANH_SACH_XUONG trong services/orderService.js.
+const DANH_SACH_XUONG = ['HANOI', 'BACNINH'];
+
 let danhSachHienTai = [];
 let donDaChonSet = new Set();
+let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSachDon() cần biết vaiTro để
+          // quyết định có hiện badge Xưởng hay không (chỉ admin cần thấy, xem bên dưới)
 
 (async () => {
-  const user = await requireLoginOrRedirect();
+  user = await requireLoginOrRedirect();
   if (!user) return;
   renderNav(user, 'orders');
 
@@ -253,6 +266,13 @@ let donDaChonSet = new Set();
     // tiếp của flex container nữa.
     document.getElementById('khoi-chi-dinh-nguoi-chay-may').style.display = 'contents';
     document.getElementById('khoi-chi-dinh-nguoi-ve-file').style.display = 'contents';
+    // "Gán Xưởng" (bổ sung 13/09/2026, theo yêu cầu người dùng) — CHỈ admin, cùng khuôn 2 khối "Chỉ
+    // định" ở trên. Danh sách Xưởng cố định (không cần gọi API) — xem
+    // services/orderService.js#DANH_SACH_XUONG.
+    document.getElementById('khoi-gan-xuong').style.display = 'contents';
+    document.getElementById('xuong-dich').innerHTML = '<option value="">Gán Xưởng...</option>' +
+      DANH_SACH_XUONG.map(x => `<option value="${x}">${x}</option>`).join('') +
+      '<option value="__GO_GAN__">(Gỡ gán Xưởng)</option>';
     // Nút "Mua tracking" thủ công hàng loạt (bổ sung 09/09/2026, theo yêu cầu người dùng) — không cần
     // đổ danh sách gì thêm (khác 2 khối trên cần danh sách nhân viên), chỉ cần hiện đúng cho admin.
     document.getElementById('khoi-mua-tracking-thu-cong').style.display = 'contents';
@@ -429,6 +449,8 @@ function renderDanhSachDon() {
             <span class="badge badge-canh-bao ${o.CanhBao.toLowerCase()}">
               ${icon('alert')} ${NHAN_CANH_BAO[o.CanhBao] || o.CanhBao}
             </span>` : ''}
+          ${user.vaiTro === 'admin' ? `
+            <span class="badge trang-thai-info">${icon('package', {size:14})} Xưởng: <strong>${escapeHtml(o.XUONG || '(chưa gán)')}</strong></span>` : ''}
         </div>
       </div>
     </div>`;
@@ -589,6 +611,53 @@ async function apDungChiDinhNguoiChayMay() {
   if (ketQua.daHuy) thongBao += `\n\nĐã HỦY giữa chừng — các đơn còn lại vẫn đang được chọn, bấm lại nếu muốn tiếp tục.`;
   if (ketQua.loi.length > 0) {
     thongBao += `\n\nKhông chỉ định được ${ketQua.loi.length} đơn:\n` +
+      ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
+  }
+  alert(thongBao);
+
+  nutApDung.disabled = false;
+  nutApDung.textContent = 'Áp dụng';
+  if (ketQua.daHuy) ketQua.thanhCong.forEach(sttKey => donDaChonSet.delete(sttKey));
+  else donDaChonSet.clear();
+  await taiDon();
+}
+
+// Admin GÁN XƯỞNG (HANOI/BACNINH...) cho toàn bộ đơn đang chọn — bổ sung 13/09/2026, theo yêu cầu
+// người dùng (phân loại đơn theo xưởng vật lý, mỗi xưởng chỉ thành viên cùng Xưởng mới xem/thao tác
+// được — xem services/orderService.js#locTheoXuong/coQuyenTheoXuong, routes/orders.js POST
+// /gan-xuong). "(Gỡ gán Xưởng)" gửi chuỗi rỗng — đưa đơn về "chưa có xưởng" (ẩn với người thường,
+// theo đúng lựa chọn của người dùng).
+async function apDungGanXuong() {
+  const luaChon = document.getElementById('xuong-dich').value;
+  if (!luaChon) { alert('Hãy chọn Xưởng muốn gán (hoặc "Gỡ gán Xưởng")'); return; }
+  const xuong = luaChon === '__GO_GAN__' ? '' : luaChon;
+
+  const soLuong = donDaChonSet.size;
+  const moTaXuong = xuong || '(gỡ gán, đưa về chưa có xưởng)';
+  if (!confirm(`Gán Xưởng "${moTaXuong}" cho ${soLuong} đơn đã chọn?`)) return;
+
+  const nutApDung = document.getElementById('nut-ap-dung-gan-xuong');
+  nutApDung.disabled = true;
+  nutApDung.textContent = 'Đang xử lý...';
+
+  let daHuy = false;
+  const danhSach = Array.from(donDaChonSet);
+  const thanhTienDo = taoThanhTienDo(nutApDung, { onHuy: () => { daHuy = true; } });
+  thanhTienDo.capNhat(0, danhSach.length);
+
+  const ketQua = await chayHangLoatCoTienDo(
+    danhSach,
+    sttKey => apiFetch('/orders/gan-xuong', {
+      method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], xuong }),
+    }),
+    { onTienDo: (hienTai, tong) => thanhTienDo.capNhat(hienTai, tong), kiemTraHuy: () => daHuy }
+  );
+  thanhTienDo.xoa();
+
+  let thongBao = `Đã gán Xưởng "${moTaXuong}" cho ${ketQua.thanhCong.length}/${soLuong} đơn.`;
+  if (ketQua.daHuy) thongBao += `\n\nĐã HỦY giữa chừng — các đơn còn lại vẫn đang được chọn, bấm lại nếu muốn tiếp tục.`;
+  if (ketQua.loi.length > 0) {
+    thongBao += `\n\nKhông gán được ${ketQua.loi.length} đơn:\n` +
       ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
   }
   alert(thongBao);
