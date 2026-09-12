@@ -59,6 +59,9 @@ function kiemTraGiaTriHopLe(updates) {
   if ('XUONG' in updates && updates.XUONG && !DANH_SACH_XUONG.includes(updates.XUONG)) {
     throw new Error(`Giá trị XUONG không hợp lệ: "${updates.XUONG}" — chỉ chấp nhận: ${DANH_SACH_XUONG.join(', ')}`);
   }
+  if ('DON_UU_TIEN' in updates && !['TRUE', 'FALSE'].includes(updates.DON_UU_TIEN)) {
+    throw new Error(`Giá trị DON_UU_TIEN không hợp lệ: "${updates.DON_UU_TIEN}" — chỉ chấp nhận TRUE hoặc FALSE.`);
+  }
 }
 
 // Kiểm tra tính HỢP LÝ giữa 3 cột VỚI NHAU — không chỉ đúng giá trị từng cột riêng lẻ mà còn phải
@@ -352,7 +355,16 @@ function coQuyenTheoXuong(user, row) {
   return !!user.xuong && !!row.XUONG && user.xuong === row.XUONG;
 }
 
+// "Đơn ưu tiên" (bổ sung 13/09/2026, theo yêu cầu người dùng — cột DON_UU_TIEN người dùng tự thêm vào
+// Don_Hang_ALL). CHỈ admin/ve_file được đánh dấu — xem routes/orders.js POST /danh-dau-uu-tien (route
+// ghi DUY NHẤT) và TRUONG_CAM_SUA (chặn sửa qua PUT /:sttKey, cùng cách XUONG bị chặn — 1 trường chỉ có
+// đúng 1 đường ghi). Giá trị lưu 'TRUE'/'FALSE' (đúng quy ước KichHoat/BatTuDongMuaTracking đang dùng
+// trong app), so khớp không phân biệt hoa/thường để an toàn nếu có ai sửa tay trong Sheet.
+function laUuTien(row) {
+  return String(row.DON_UU_TIEN || '').toUpperCase() === 'TRUE';
+}
+
 module.exports = {
   TAB, KEY_COL, getAll, getByKey, getManyByKeys, update, filterForRole, ganTenKhachHang, tieuDeSanPham, danhSachViTriTheu,
-  DANH_SACH_XUONG, locTheoXuong, coQuyenTheoXuong,
+  DANH_SACH_XUONG, locTheoXuong, coQuyenTheoXuong, laUuTien,
 };

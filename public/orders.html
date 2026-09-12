@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=79">
-<script src="/js/theme.js?v=79"></script>
+<link rel="stylesheet" href="/css/style.css?v=80">
+<script src="/js/theme.js?v=80"></script>
 </head>
 <body>
 <div id="nav"></div>
@@ -152,6 +152,11 @@
     </select>
     <button id="nut-ap-dung-gan-xuong" class="btn-hanh-dong" onclick="apDungGanXuong()">Áp dụng</button>
   </span>
+  <span id="khoi-uu-tien" style="display:none">
+    <span class="thanh-hanh-dong-cach"></span>
+    <button id="btn-danh-dau-uu-tien" class="btn-hanh-dong phu nhanh-phoi-ve-file trang-thai-tich-cuc" onclick="apDungDanhDauUuTien(true, this)"></button>
+    <button id="btn-bo-uu-tien" class="btn-hanh-dong phu nhanh-phoi-ve-file trang-thai-tieu-cuc" onclick="apDungDanhDauUuTien(false, this)"></button>
+  </span>
   <span id="khoi-mua-tracking-thu-cong" style="display:none">
     <span class="thanh-hanh-dong-cach"></span>
     <button id="nut-mua-tracking-thu-cong" class="btn-hanh-dong" onclick="apDungMuaTrackingThuCong()">Mua tracking</button>
@@ -164,8 +169,8 @@
   <button class="btn-hanh-dong phu" onclick="boChonTatCaDon()">Bỏ chọn</button>
 </div>
 
-<script src="/js/icons.js?v=79"></script>
-<script src="/js/api.js?v=79"></script>
+<script src="/js/icons.js?v=80"></script>
+<script src="/js/api.js?v=80"></script>
 <script>
 const NHAN_CANH_BAO = { VANG: 'Vàng · 3 ngày', CAM: 'Cam · 5 ngày', DO: 'Đỏ · 7 ngày' };
 
@@ -288,6 +293,16 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
       document.getElementById('nguoi-ve-file-dich').innerHTML = '<option value="">Chỉ định người vẽ file...</option>' +
         dsVeFile.map(u => `<option value="${escapeHtml(u.Ten)}">${escapeHtml(u.Ten)}</option>`).join('');
     } catch (e) { /* không tải được danh sách nhân viên — ô chọn giữ nguyên rỗng, không chặn tải trang */ }
+  }
+
+  // "Đơn ưu tiên" (bổ sung 13/09/2026, theo yêu cầu người dùng) — RỘNG HƠN khối "Gán Xưởng" ở trên
+  // (admin-only): ở đây CẢ admin LẪN ve_file đều được đánh dấu (xem routes/orders.js POST
+  // /danh-dau-uu-tien). 2 nút riêng (không phải 1 <select>+Áp dụng) vì chỉ có đúng 2 lựa chọn (bật/tắt),
+  // cùng khuôn 2 nút "Đã lấy phôi"/"Chưa lấy phôi" ở trên.
+  if (user.vaiTro === 'admin' || user.vaiTro === 've_file') {
+    document.getElementById('khoi-uu-tien').style.display = 'contents';
+    document.getElementById('btn-danh-dau-uu-tien').innerHTML = icon('star', { size: 16 }) + ' Đánh dấu Ưu tiên';
+    document.getElementById('btn-bo-uu-tien').innerHTML = icon('undo', { size: 16 }) + ' Bỏ Ưu tiên';
   }
 
   // "IN LABEL"/"MUA TRACKING và IN LABEL" (bổ sung 09/09/2026 lần 2, theo yêu cầu người dùng) — mở
@@ -431,14 +446,22 @@ function renderDanhSachDon() {
              aria-label="Chọn đơn ${escapeHtml(o.STT_Key)}"
              onclick="event.stopPropagation()"
              onchange="toggleChonDon('${escapeHtml(o.STT_Key)}', this.checked)">
+      ${(user.vaiTro === 'admin' || user.vaiTro === 've_file') ? `
+        <button type="button" class="btn-uu-tien-nhanh ${o.DonUuTien ? 'bat' : ''}"
+                title="${o.DonUuTien ? 'Bỏ ưu tiên' : 'Đánh dấu ưu tiên'}"
+                aria-label="${o.DonUuTien ? 'Bỏ ưu tiên' : 'Đánh dấu ưu tiên'}"
+                onclick="event.stopPropagation(); toggleUuTienNhanh('${escapeHtml(o.STT_Key)}', ${o.DonUuTien ? 'true' : 'false'}, this)">
+          ${icon('star', { size: 16 })}
+        </button>` : ''}
       ${o.MOCKUP || o.DUONG_DAN_URL
         ? `<img src="${escapeHtml(o.MOCKUP || o.DUONG_DAN_URL)}" alt="" loading="lazy" onerror="this.remove()">`
         : ''}
       <div class="thong-tin">
-        <strong class="tieu-de-the">${escapeHtml(o.TieuDeSanPham || o.STT_Key)}</strong>
+        <strong class="tieu-de-the ${o.DonUuTien ? 'uu-tien' : ''}">${escapeHtml(o.TieuDeSanPham || o.STT_Key)}</strong>
         <div class="meta">${escapeHtml(o.TenKhachHang || '')} · SL: <strong>${escapeHtml(o.SO_LUONG || '')}</strong></div>
         <div class="meta">Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgayNgan(o.NGAY_LEN_DON) : '—')}</div>
         <div class="badge-row">
+          ${o.DonUuTien ? `<span class="badge trang-thai-danger">${icon('star', {size:14})} Ưu tiên</span>` : ''}
           <span class="badge ${lopTrangThai(o.TRANG_THAI_XUONG)}">${escapeHtml(o.TRANG_THAI_XUONG || '')}</span>
           ${o.TRANG_THAI_XUONG === 'Đang chạy máy' ? `
             <span class="badge trang-thai-info">${icon('users', {size:14})} Đang vận hành: <strong>${escapeHtml(o.NguoiVanHanh || NHAN_NGUOI_VAN_HANH_KHONG_RO)}</strong></span>` : ''}
@@ -666,6 +689,66 @@ async function apDungGanXuong() {
   nutApDung.textContent = 'Áp dụng';
   if (ketQua.daHuy) ketQua.thanhCong.forEach(sttKey => donDaChonSet.delete(sttKey));
   else donDaChonSet.clear();
+  await taiDon();
+}
+
+// Admin/ve_file ĐÁNH DẤU hoặc BỎ "Đơn ưu tiên" cho toàn bộ đơn đang chọn (khối chọn hàng loạt) — bổ
+// sung 13/09/2026, theo yêu cầu người dùng, cùng khuôn apDungGanXuong() ở trên (xem routes/orders.js
+// POST /danh-dau-uu-tien). Dùng CHUNG hàm này cho cả nút "Đánh dấu Ưu tiên" (uuTien=true) và "Bỏ Ưu
+// tiên" (uuTien=false).
+async function apDungDanhDauUuTien(uuTien, nut) {
+  const soLuong = donDaChonSet.size;
+  if (soLuong === 0) { alert('Hãy chọn ít nhất 1 đơn.'); return; }
+  const hanhDong = uuTien ? 'Đánh dấu ƯU TIÊN' : 'Bỏ đánh dấu ưu tiên';
+  if (!confirm(`${hanhDong} cho ${soLuong} đơn đã chọn?`)) return;
+
+  document.querySelectorAll('.nhanh-phoi-ve-file, #nut-ap-dung').forEach(b => b.disabled = true);
+  const nhanGoc = nut.innerHTML;
+
+  let daHuy = false;
+  const danhSach = Array.from(donDaChonSet);
+  const thanhTienDo = taoThanhTienDo(nut, { onHuy: () => { daHuy = true; } });
+  thanhTienDo.capNhat(0, danhSach.length);
+
+  const ketQua = await chayHangLoatCoTienDo(
+    danhSach,
+    sttKey => apiFetch('/orders/danh-dau-uu-tien', {
+      method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], uuTien }),
+    }),
+    { onTienDo: (hienTai, tong) => thanhTienDo.capNhat(hienTai, tong), kiemTraHuy: () => daHuy }
+  );
+  thanhTienDo.xoa();
+
+  let thongBao = `${hanhDong}: ${ketQua.thanhCong.length}/${soLuong} đơn thành công.`;
+  if (ketQua.daHuy) thongBao += `\n\nĐã HỦY giữa chừng — các đơn còn lại vẫn đang được chọn, bấm lại nếu muốn tiếp tục.`;
+  if (ketQua.loi.length > 0) {
+    thongBao += `\n\nKhông xử lý được ${ketQua.loi.length} đơn:\n` +
+      ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
+  }
+  alert(thongBao);
+
+  document.querySelectorAll('.nhanh-phoi-ve-file, #nut-ap-dung').forEach(b => b.disabled = false);
+  nut.innerHTML = nhanGoc;
+  if (ketQua.daHuy) ketQua.thanhCong.forEach(sttKey => donDaChonSet.delete(sttKey));
+  else donDaChonSet.clear();
+  await taiDon();
+}
+
+// Bật/tắt NHANH "Đơn ưu tiên" cho ĐÚNG 1 đơn — nút ngôi sao trên từng thẻ (renderDanhSachDon()), không
+// cần chọn (tick) đơn trước như khối hàng loạt ở trên. Gọi CHUNG route POST /orders/danh-dau-uu-tien
+// (chỉ khác: sttKeys có đúng 1 phần tử), không confirm() — bấm là làm ngay, đúng tinh thần "nút nhanh".
+async function toggleUuTienNhanh(sttKey, dangUuTien, nut) {
+  nut.disabled = true;
+  try {
+    const ketQua = await apiFetch('/orders/danh-dau-uu-tien', {
+      method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], uuTien: !dangUuTien }),
+    });
+    if (ketQua.loi && ketQua.loi.length > 0) { alert('Lỗi: ' + ketQua.loi[0].lyDo); nut.disabled = false; return; }
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
+    nut.disabled = false;
+    return;
+  }
   await taiDon();
 }
 

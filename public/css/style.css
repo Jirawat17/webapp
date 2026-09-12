@@ -421,6 +421,41 @@ select.chon-trang-thai-tieu-cuc { border-color: var(--color-warning-text); color
 }
 .badge-canh-bao .icon { width: 14px; height: 14px; }
 
+/* "Đơn ưu tiên" (bổ sung 13/09/2026, theo yêu cầu người dùng) — viền đỏ nhấp nháy quanh TÊN đơn (không
+   phải quanh cả thẻ), dùng LẠI đúng hiệu ứng nhipCanhBao/nhipCanhBaoToi đã có ở mức cảnh báo Đỏ
+   (badge-canh-bao.do) — cùng 1 ngôn ngữ hình ảnh "khẩn cấp" trong app. display:inline-block + max-width
+   100% để viền ôm sát đúng phần chữ (không kéo dài hết chiều rộng thẻ như block mặc định) mà vẫn giữ
+   được overflow/ellipsis khi tên đơn quá dài. Dùng cho cả .tieu-de-the (thẻ ở danh sách) lẫn <h2> (trang
+   chi tiết đơn) — xem public/orders.html, my-orders*.html, order.html.
+*/
+.uu-tien {
+  display: inline-block; max-width: 100%; box-sizing: border-box;
+  padding: 1px 8px; border-radius: 20px;
+  border: 2px solid var(--color-danger-text);
+  animation: nhipCanhBao 1.8s ease-in-out infinite;
+}
+[data-theme="dark"] .uu-tien { animation: nhipCanhBaoToi 1.8s ease-in-out infinite; }
+/* .order-card .tieu-de-the (2 lớp, xem phía trên) có độ đặc trưng CAO HƠN .uu-tien đứng riêng (1 lớp)
+   nên display:block của nó thắng, khiến viền kéo dài hết bề ngang thẻ thay vì ôm sát tên — ghi đè lại
+   ĐÚNG display cho riêng trường hợp này (không đụng gì khác, .uu-tien đứng riêng ở nơi khác như <h2>
+   trang chi tiết đơn không bị ảnh hưởng). */
+.order-card .tieu-de-the.uu-tien { display: inline-block; }
+
+/* Nút bật/tắt nhanh "Đơn ưu tiên" trên từng thẻ đơn (public/orders.html) — chỉ admin/ve_file thấy được
+   (server-side gate, xem renderDanhSachDon()). Đặt cạnh checkbox chọn đơn, cùng kích thước 22px cho
+   thẳng hàng. Xám nhạt khi CHƯA ưu tiên, đỏ đậm + nền mờ khi ĐÃ ưu tiên (.bat) — không chỉ dựa vào việc
+   tô đầy ngôi sao (kém tương phản ở size nhỏ) mà còn đổi cả màu viền/nền cho rõ 2 trạng thái. */
+.btn-uu-tien-nhanh {
+  display: flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; flex-shrink: 0; margin-top: 2px; padding: 0;
+  border: none; border-radius: 50%; background: transparent; color: var(--color-text-faint);
+  cursor: pointer; transition: background 0.15s, color 0.15s;
+}
+.btn-uu-tien-nhanh:hover { background: var(--color-danger-bg); color: var(--color-danger-text); }
+.btn-uu-tien-nhanh .icon { width: 16px; height: 16px; }
+.btn-uu-tien-nhanh.bat { color: var(--color-danger-text); }
+.btn-uu-tien-nhanh.bat .icon { fill: currentColor; }
+
 /* Skeleton loading — thay cho chữ "Đang tải..." */
 .skeleton-list { display: grid; grid-template-columns: 1fr; gap: var(--space-3); }
 @media (min-width: 640px)  { .skeleton-list { grid-template-columns: repeat(2, 1fr); } }
@@ -999,6 +1034,7 @@ body, .app-header, .order-card, .btn-hanh-dong, .badge, .mau-swatch, .tab-links 
   .login-wrap .logo-mark { animation: none; }
   .btn-ten::after, .tong-so-the::after { display: none; }
   .badge-canh-bao.do, [data-theme="dark"] .badge-canh-bao.do { animation: none; }
+  .uu-tien, [data-theme="dark"] .uu-tien { animation: none; }
   .skeleton-card { animation: none; }
   :is(.order-list, .chart-grid, .kich-ban-picker, .bang-chon-mau) > * { animation: none; opacity: 1; }
   .gon-song { display: none; }

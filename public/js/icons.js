@@ -54,6 +54,8 @@ const ICONS = {
   navActivity: '<circle cx="12" cy="12" r="8.5"/><polyline points="12 7.5 12 12 15.5 14"/>',
   // Mũi tên xuống — báo trạng thái đóng/mở cho khối <details> (vd quy trình xử lý đơn ở trang Đăng nhập).
   chevronDown: '<polyline points="6 9 12 15 18 9"/>',
+  // Ngôi sao — dùng cho "Đơn ưu tiên" (nút bật/tắt nhanh trên thẻ + badge, xem style.css .uu-tien).
+  star: '<polygon points="12 3 14.7 9.6 21.8 10.1 16.3 14.6 18.1 21.5 12 17.6 5.9 21.5 7.7 14.6 2.2 10.1 9.3 9.6 12 3"/>',
 };
 
 function icon(name, opts) {

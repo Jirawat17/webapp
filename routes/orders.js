@@ -49,6 +49,7 @@ async function lamGiauDon(rows) {
     CanhBao: alertService.tinhMucCanhBao(r),
     NguoiVanHanh: r.TRANG_THAI_XUONG === TRANG_THAI_DANG_CHAY_MAY ? (r.NGUOI_CHAY_MAY || null) : null,
     NguoiVeFile: r.TRANG_THAI_VE_FILE === 'Đang vẽ file' ? (r.NGUOI_VE_FILE || null) : null,
+    DonUuTien: orderService.laUuTien(r),
   }));
 }
 
@@ -77,41 +78,61 @@ function soSanhNgayTang(a, b) {
 // như "không cảnh báo", xếp cuối cùng.
 const MUC_CANH_BAO_THU_TU = { DO: 3, CAM: 2, VANG: 1 };
 
+// So sánh theo "Đơn ưu tiên" (DonUuTien, gắn ở lamGiauDon()) — đơn ưu tiên luôn lên TRƯỚC đơn thường,
+// bất kể đang sắp theo kiểu nào (bổ sung 13/09/2026, theo yêu cầu người dùng). Dùng làm tiêu chí ĐẦU
+// TIÊN, đứng trước mọi kiểu sắp xếp khác — xem sapXepDon() bên dưới.
+function soSanhUuTienTruoc(a, b) {
+  return (b.DonUuTien ? 1 : 0) - (a.DonUuTien ? 1 : 0);
+}
+
 // Sắp xếp danh sách đơn theo lựa chọn của người dùng (nút "Sắp xếp" ở trang Đơn hàng) — mặc định
-// (không truyền hoặc giá trị lạ) giữ đúng hành vi cũ: cũ nhất lên đầu theo NGAY_LEN_DON.
+// (không truyền hoặc giá trị lạ) giữ đúng hành vi cũ: cũ nhất lên đầu theo NGAY_LEN_DON. Đơn "Đơn ưu
+// tiên" luôn được gắn lên đầu TRƯỚC, kiểu sắp xếp đang chọn chỉ quyết định thứ tự BÊN TRONG từng nhóm
+// (ưu tiên riêng, thường riêng) — xem soSanhUuTienTruoc() ở trên.
 function sapXepDon(list, kieu) {
   const daSap = [...list];
+  let soSanh;
   switch (kieu) {
     case 'ngay_cu_nhat':
-      return daSap.sort(soSanhNgayTang);
+      soSanh = soSanhNgayTang;
+      break;
     case 'canh_bao':
-      return daSap.sort((a, b) => {
+      soSanh = (a, b) => {
         const chenhLech = (MUC_CANH_BAO_THU_TU[b.CanhBao] || 0) - (MUC_CANH_BAO_THU_TU[a.CanhBao] || 0);
         return chenhLech !== 0 ? chenhLech : soSanhNgayTang(a, b);
-      });
+      };
+      break;
     case 'so_luong':
-      return daSap.sort((a, b) => {
+      soSanh = (a, b) => {
         const chenhLech = (Number(b.SO_LUONG) || 0) - (Number(a.SO_LUONG) || 0);
         return chenhLech !== 0 ? chenhLech : soSanhNgayTang(a, b);
-      });
+      };
+      break;
     case 'khach_hang':
-      return daSap.sort((a, b) => {
+      soSanh = (a, b) => {
         const chenhLech = String(a.TenKhachHang || '').localeCompare(String(b.TenKhachHang || ''), 'vi');
         return chenhLech !== 0 ? chenhLech : soSanhNgayTang(a, b);
-      });
+      };
+      break;
     case 'ma_don':
-      return daSap.sort((a, b) => {
+      soSanh = (a, b) => {
         const chenhLech = String(a.STT_Key || '').localeCompare(String(b.STT_Key || ''), 'vi');
         return chenhLech !== 0 ? chenhLech : soSanhNgayTang(a, b);
-      });
+      };
+      break;
     case 'ma_don_desc':
-      return daSap.sort((a, b) => {
+      soSanh = (a, b) => {
         const chenhLech = String(b.STT_Key || '').localeCompare(String(a.STT_Key || ''), 'vi');
         return chenhLech !== 0 ? chenhLech : soSanhNgayTang(a, b);
-      });
+      };
+      break;
     default:
-      return daSap.sort((a, b) => -soSanhNgayTang(a, b));
+      soSanh = (a, b) => -soSanhNgayTang(a, b);
   }
+  return daSap.sort((a, b) => {
+    const chenhLechUuTien = soSanhUuTienTruoc(a, b);
+    return chenhLechUuTien !== 0 ? chenhLechUuTien : soSanh(a, b);
+  });
 }
 
 // Danh sách đơn hàng — tự lọc theo vai trò, có thể lọc thêm qua query string
@@ -431,6 +452,65 @@ router.post('/gan-xuong', async (req, res) => {
   res.json({ ok: true, thanhCong, loi });
 });
 
+// Admin/ve_file ĐÁNH DẤU hoặc BỎ ĐÁNH DẤU "Đơn ưu tiên" cho 1 lô đơn — bổ sung 13/09/2026, theo yêu
+// cầu người dùng (đơn ưu tiên hiện lên đầu danh sách + có viền đỏ nổi bật quanh tên, xem sapXepDon() ở
+// trên và public/orders.html). Dùng CHUNG route này cho CẢ 2 nơi bấm: nút bật/tắt nhanh trên từng thẻ
+// (gọi với đúng 1 phần tử trong sttKeys) VÀ khối chọn hàng loạt ở thanh hành động — cùng khuôn gọi tuần
+// tự từng đơn qua chayHangLoatCoTienDo() như apDungGanXuong(). RỘNG HƠN /gan-xuong (admin-only): ở đây
+// CẢ admin LẪN ve_file đều được phép (đã xác nhận với người dùng — "Đơn ưu tiên" là việc phân loại độ
+// khẩn cấp công việc, không phải phân chia xưởng vật lý như XUONG).
+router.post('/danh-dau-uu-tien', async (req, res) => {
+  const user = req.session.user;
+  if (user.vaiTro !== 'admin' && user.vaiTro !== 've_file') {
+    return res.status(403).json({ error: 'Chỉ admin/người vẽ file mới được đánh dấu Đơn ưu tiên' });
+  }
+
+  const { sttKeys, uuTien } = req.body;
+  if (!Array.isArray(sttKeys) || sttKeys.length === 0) {
+    return res.status(400).json({ error: 'Danh sách đơn trống' });
+  }
+  if (typeof uuTien !== 'boolean') {
+    return res.status(400).json({ error: 'Thiếu giá trị uuTien (true/false)' });
+  }
+  const giaTriMoi = uuTien ? 'TRUE' : 'FALSE';
+
+  const thanhCong = [];
+  const loi = [];
+
+  // Đọc TOÀN BỘ sheet ĐÚNG 1 LẦN cho cả lô (xem orderService.js#getManyByKeys).
+  const { headers, banDoTheoKey } = await orderService.getManyByKeys(sttKeys, { fresh: true });
+
+  for (const sttKey of sttKeys) {
+    try {
+      const row = banDoTheoKey.get(sttKey);
+      if (!row) {
+        loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
+        continue;
+      }
+      if (!orderService.coQuyenTheoXuong(user, row)) {
+        loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
+        continue;
+      }
+
+      await orderService.update(sttKey, {
+        DON_UU_TIEN: giaTriMoi,
+        NguoiCapNhatCuoi: user.ten,
+        ThoiGianCapNhatCuoi: new Date().toISOString(),
+      }, user, { donDaDoc: { headers, row } });
+
+      thanhCong.push(sttKey);
+      ghiLog({
+        nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'DANH_DAU_UU_TIEN',
+        sttKey, chiTiet: { uuTien },
+      }).catch(err => console.error('[Orders] Lỗi ghi log nền:', err.message));
+    } catch (err) {
+      loi.push({ sttKey, lyDo: err.message });
+    }
+  }
+
+  res.json({ ok: true, thanhCong, loi });
+});
+
 // Những kịch bản (trong CauHinhKichBan) có thể áp dụng cho trạng thái hiện tại của đơn —
 // dùng để hiện nút "Chuyển sang..." trên trang chi tiết mà không cần quét QR
 // So khớp đúng CỘT mà từng kịch bản thao tác (Cot trong CauHinhKichBan — TRANG_THAI_XUONG hoặc
@@ -490,7 +570,9 @@ const TRUONG_DUOC_SUA = {
 // Không bao giờ cho phép sửa qua các cột này — khóa chính, field nội bộ, hoặc trường chỉ tính toán để hiển thị.
 // XUONG (bổ sung 13/09/2026) cũng bị cấm ở ĐÂY — bắt buộc gán qua đúng 1 đường POST /gan-xuong
 // (admin-only, hàng loạt ở trang Đơn hàng), không cho lách qua form sửa 1 đơn (kể cả admin/ve_file).
-const TRUONG_CAM_SUA = ['STT_Key', '_row', 'NguoiCapNhatCuoi', 'ThoiGianCapNhatCuoi', 'TenKhachHang', 'TieuDeSanPham', 'ViTriTheu', 'CanhBao', 'XUONG'];
+// DON_UU_TIEN (bổ sung 13/09/2026) cùng lý do — bắt buộc qua POST /danh-dau-uu-tien (admin/ve_file,
+// nút bật/tắt nhanh trên thẻ hoặc chọn hàng loạt), không cho lách qua form sửa 1 đơn.
+const TRUONG_CAM_SUA = ['STT_Key', '_row', 'NguoiCapNhatCuoi', 'ThoiGianCapNhatCuoi', 'TenKhachHang', 'TieuDeSanPham', 'ViTriTheu', 'CanhBao', 'XUONG', 'DON_UU_TIEN'];
 
 router.put('/:sttKey', async (req, res) => {
   const user = req.session.user;
