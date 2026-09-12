@@ -250,7 +250,11 @@ router.post('/kich-ban/:scenarioId/kiem-tra', async (req, res) => {
 
 // Xác nhận cập nhật hàng loạt — chỉ gọi cho các mã đã kiểm tra OK ở bước quét.
 // QUAN TRỌNG: đọc THẬT (fresh, bỏ qua cache) trước khi quyết định ghi — đây là bước chống ghi đè
-// khi dữ liệu đã đổi giữa lúc quét (kiem-tra, dùng cache cho nhanh) và lúc xác nhận thật sự.
+// khi dữ liệu đã đổi giữa lúc quét (kiem-tra, dùng cache cho nhanh) và lúc xác nhận thật sự. Từ
+// 13/09/2026, đọc thật ĐÚNG 1 LẦN cho CẢ LÔ (getManyByKeys) thay vì mỗi mã tự đọc riêng — vẫn fresh
+// hơn hẳn so với lúc quét (mục đích chống ghi đè chính vẫn giữ nguyên), chỉ không còn tuyệt đối mới
+// nhất cho từng mã riêng lẻ trong cùng 1 lô (đánh đổi đã xác nhận với người dùng, xem
+// orderService.js#getManyByKeys — lý do là giảm số lượt đọc toàn bộ sheet, tránh vượt quota).
 // Mã nào không còn hợp lệ trả về trong "loi", KHÔNG âm thầm bỏ qua.
 router.post('/kich-ban/:scenarioId/xac-nhan-hang-loat', async (req, res) => {
   const { sttKeys } = req.body;
@@ -264,9 +268,15 @@ router.post('/kich-ban/:scenarioId/xac-nhan-hang-loat', async (req, res) => {
   const thanhCong = [];
   const loi = [];
 
+  // Đọc TOÀN BỘ sheet ĐÚNG 1 LẦN cho cả lô xác nhận (bổ sung 13/09/2026, xem
+  // orderService.js#getManyByKeys) — thay vì mỗi mã tự đọc thật riêng (N mã = N lượt đọc toàn bộ
+  // sheet). Vẫn fresh hơn HẲN so với lúc quét (kiem-tra dùng cache) — đúng mục đích chống ghi đè ban
+  // đầu của bước này, chỉ không còn tuyệt đối mới nhất cho TỪNG mã riêng lẻ trong cùng 1 lô.
+  const { headers, banDoTheoKey } = await orderService.getManyByKeys(sttKeys, { fresh: true });
+
   for (const sttKey of sttKeys) {
     try {
-      const { headers, row } = await orderService.getByKey(sttKey, { fresh: true }); // BẮT BUỘC đọc thật ở đây
+      const row = banDoTheoKey.get(sttKey);
       const giaTriHienTai = row ? row[scenario.column] : null;
 
       // Đơn khác Xưởng coi như không tồn tại (bổ sung 13/09/2026) — cùng thông báo với "không tìm

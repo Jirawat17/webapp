@@ -22,6 +22,23 @@ async function getByKey(sttKey, opts) {
   return { headers, row };
 }
 
+// Đọc TOÀN BỘ sheet ĐÚNG 1 LẦN rồi tra theo danh sách sttKeys — dùng cho các thao tác HÀNG LOẠT
+// (chuyển trạng thái, chỉ định người chạy máy/vẽ file, gán Xưởng, xác nhận quét hàng loạt, mua
+// tracking/in label hàng loạt...). Trước đây mỗi đơn trong lô tự gọi getByKey(sttKey, {fresh:true})
+// RIÊNG trong vòng lặp — chọn N đơn để thao tác hàng loạt là N lượt đọc TOÀN BỘ sheet (bất kể sheet có
+// bao nhiêu dòng), dù mỗi lượt chỉ cần đúng 1 dòng trong đó — đây chính là nguyên nhân gây vượt quota
+// Google Sheets API khi thao tác hàng loạt nhiều đơn cùng lúc (bổ sung 13/09/2026, theo yêu cầu người
+// dùng sau khi thực tế gặp lỗi "tạm quá tải", xem thêm services/sheetsService.js#goiApiCoThuLai).
+// ĐÁNH ĐỔI đã xác nhận với người dùng: dữ liệu của TỪNG đơn trong lô "cũ" tối đa bằng thời gian xử lý
+// CẢ LÔ (thường vài giây, tuỳ số đơn) thay vì luôn tuyệt đối mới nhất ngay trước khi ghi từng đơn —
+// chấp nhận được với quy mô đội hiện tại (rủi ro: nếu đúng lúc đang xử lý lô mà có người KHÁC sửa
+// đúng 1 đơn nằm trong lô đó ở nơi khác, đơn đó dùng dữ liệu "cũ" vài giây thay vì mới nhất).
+async function getManyByKeys(sttKeys, opts) {
+  const { headers, rows } = await getAll(opts);
+  const banDoTheoKey = new Map(rows.map(r => [r[KEY_COL], r]));
+  return { headers, banDoTheoKey };
+}
+
 const idxSanSang = chiSoTinhTrang('ĐÃ SẴN SÀNG CHẠY MÁY');
 
 // Kiểm tra GIÁ TRỊ hợp lệ cho từng cột riêng lẻ (đúng 1 trong các giá trị định nghĩa sẵn) — chặn
@@ -336,6 +353,6 @@ function coQuyenTheoXuong(user, row) {
 }
 
 module.exports = {
-  TAB, KEY_COL, getAll, getByKey, update, filterForRole, ganTenKhachHang, tieuDeSanPham, danhSachViTriTheu,
+  TAB, KEY_COL, getAll, getByKey, getManyByKeys, update, filterForRole, ganTenKhachHang, tieuDeSanPham, danhSachViTriTheu,
   DANH_SACH_XUONG, locTheoXuong, coQuyenTheoXuong,
 };

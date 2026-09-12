@@ -216,9 +216,13 @@ router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
   const thanhCong = [];
   const loi = [];
 
+  // Đọc TOÀN BỘ sheet ĐÚNG 1 LẦN cho cả lô (bổ sung 13/09/2026, xem orderService.js#getManyByKeys) —
+  // trước đây mỗi đơn trong lô tự đọc thật riêng, N đơn = N lượt đọc toàn bộ sheet.
+  const { headers, banDoTheoKey } = await orderService.getManyByKeys(sttKeys, { fresh: true });
+
   for (const sttKey of sttKeys) {
     try {
-      const { headers, row } = await orderService.getByKey(sttKey, { fresh: true });
+      const row = banDoTheoKey.get(sttKey);
       if (!row) {
         loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
         continue;
@@ -233,7 +237,7 @@ router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
         [cot]: trangThaiMoi,
         NguoiCapNhatCuoi: user.ten,
         ThoiGianCapNhatCuoi: new Date().toISOString(),
-      }, user, { donDaDoc: { headers, row } }); // đã đọc thật ở trên, khỏi đọc lại lần nữa (xem orderService.update)
+      }, user, { donDaDoc: { headers, row } }); // đã đọc thật ở trên (cả lô), khỏi đọc lại lần nữa (xem orderService.update)
 
       thanhCong.push(sttKey);
       ghiLog({
@@ -280,9 +284,12 @@ router.post('/chi-dinh-nguoi-chay-may', async (req, res) => {
   const thanhCong = [];
   const loi = [];
 
+  // Đọc TOÀN BỘ sheet ĐÚNG 1 LẦN cho cả lô (bổ sung 13/09/2026, xem orderService.js#getManyByKeys).
+  const { headers, banDoTheoKey } = await orderService.getManyByKeys(sttKeys, { fresh: true });
+
   for (const sttKey of sttKeys) {
     try {
-      const { headers, row } = await orderService.getByKey(sttKey, { fresh: true });
+      const row = banDoTheoKey.get(sttKey);
       if (!row) {
         loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
         continue;
@@ -338,9 +345,12 @@ router.post('/chi-dinh-nguoi-ve-file', async (req, res) => {
   const thanhCong = [];
   const loi = [];
 
+  // Đọc TOÀN BỘ sheet ĐÚNG 1 LẦN cho cả lô (bổ sung 13/09/2026, xem orderService.js#getManyByKeys).
+  const { headers, banDoTheoKey } = await orderService.getManyByKeys(sttKeys, { fresh: true });
+
   for (const sttKey of sttKeys) {
     try {
-      const { headers, row } = await orderService.getByKey(sttKey, { fresh: true });
+      const row = banDoTheoKey.get(sttKey);
       if (!row) {
         loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
         continue;
@@ -391,9 +401,12 @@ router.post('/gan-xuong', async (req, res) => {
   const thanhCong = [];
   const loi = [];
 
+  // Đọc TOÀN BỘ sheet ĐÚNG 1 LẦN cho cả lô (bổ sung 13/09/2026, xem orderService.js#getManyByKeys).
+  const { headers, banDoTheoKey } = await orderService.getManyByKeys(sttKeys, { fresh: true });
+
   for (const sttKey of sttKeys) {
     try {
-      const { headers, row } = await orderService.getByKey(sttKey, { fresh: true });
+      const row = banDoTheoKey.get(sttKey);
       if (!row) {
         loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
         continue;
