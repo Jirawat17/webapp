@@ -14,6 +14,19 @@ const { requireLogin } = require('../middleware/auth');
 
 router.use(requireLogin);
 
+// nguoi_lay_phoi không có mục "Đơn hàng" trong menu (renderNav trong public/js/api.js) và không có
+// trang nào của họ (scan.html/tai-san.html/hoat-dong.html) gọi tới API nào trong file này — chặn hẳn cả
+// router ở đây, không chỉ dựa vào việc ẩn menu phía client (bổ sung 12/09/2026, theo yêu cầu người dùng
+// sau khi phát hiện GET / và GET /:sttKey trước đó không lọc theo vai trò này, để lộ toàn bộ danh sách/
+// chi tiết đơn hàng dù menu bị ẩn). Cùng khuôn router.use(khongPhaiNguoiLayPhoi) trong routes/tracking.js.
+function khongPhaiNguoiLayPhoi(req, res, next) {
+  if (req.session.user.vaiTro === 'nguoi_lay_phoi') {
+    return res.status(403).json({ error: 'Vai trò này không được xem/sửa đơn hàng qua trang Đơn hàng — chỉ thao tác qua Quét QR.' });
+  }
+  next();
+}
+router.use(khongPhaiNguoiLayPhoi);
+
 const TRANG_THAI_DANG_CHAY_MAY = 'Đang chạy máy';
 
 // Gắn thêm các trường tính toán (không phải cột thật trong Sheet) để hiển thị — dùng chung cho list/detail
@@ -180,16 +193,13 @@ const GIA_TRI_HOP_LE_THEO_COT = {
 // "Đã vẽ file"/"Chưa vẽ file" ở trang Đơn hàng dùng chung route này, chỉ khác tham số 'cot').
 // Mở cho MỌI vai trò có quyền vào trang Đơn hàng (admin/ve_file toàn bộ, san_xuat theo phạm vi đã
 // lọc — đã xác nhận với người dùng là san_xuat cũng được dùng dù không phụ trách phôi/vẽ file).
-// nguoi_lay_phoi KHÔNG được set tay bất kỳ đơn nào (chỉ được thao tác qua quét QR đúng kịch bản của
-// mình) — chặn cứng ở đây, không chỉ dựa vào việc ẩn menu phía client.
+// nguoi_lay_phoi đã bị chặn từ đầu file (router.use(khongPhaiNguoiLayPhoi)) — không cần kiểm tra lại
+// riêng ở đây nữa (bỏ đoạn kiểm tra trùng lặp 12/09/2026 lần 2).
 router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
   const { sttKeys, trangThaiMoi } = req.body;
   const cot = req.body.cot || 'TRANG_THAI_XUONG';
   const user = req.session.user;
 
-  if (user.vaiTro === 'nguoi_lay_phoi') {
-    return res.status(403).json({ error: 'Vai trò này không được phép sửa trạng thái đơn hàng bằng tay' });
-  }
   if (!Array.isArray(sttKeys) || sttKeys.length === 0) {
     return res.status(400).json({ error: 'Danh sách đơn trống' });
   }

@@ -131,9 +131,12 @@ document.getElementById('btn-quay-lai-ten').onclick = () => {
 async function dangNhap(ten, matKhau) {
   try {
     const user = await apiFetch('/auth/dang-nhap', { method: 'POST', body: JSON.stringify({ ten, matKhau }) });
-    // san_xuat vào thẳng "Đơn của tôi" (bổ sung 08/09/2026, theo yêu cầu người dùng — đây là màn
-    // hình họ cần dùng ngay, xem thêm renderNav() trong js/api.js).
-    window.location.href = user.vaiTro === 'san_xuat' ? '/my-orders.html' : '/orders.html';
+    // Dùng chung trangChuTheoVaiTro() (js/api.js) với renderNav() — trước đây tự lặp lại logic riêng ở
+    // đây (chỉ san_xuat -> /my-orders.html, còn lại kể cả nguoi_lay_phoi đều về /orders.html) nên bị
+    // lệch: nguoi_lay_phoi không có mục "Đơn hàng" trong menu (renderNav) nhưng vẫn bị đưa thẳng tới đó
+    // sau khi đăng nhập (sửa 12/09/2026, xem
+    // docs/superpowers/specs/2026-09-12-chan-nguoi-lay-phoi-xem-don-hang-design.md).
+    window.location.href = trangChuTheoVaiTro(user.vaiTro);
   } catch (e) { alert(e.message); }
 }
 

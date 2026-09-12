@@ -52,6 +52,17 @@ function dangXuat() {
 // Icon menu dùng bộ 'nav*' riêng trong icons.js (navOrders, navScan...) — bọc trong
 // <span class="nav-icon-tile"> để Chế độ Tối vẽ thêm khối bo góc phát sáng quanh icon (xem style.css);
 // Chế độ Sáng không style .nav-icon-tile nên nhìn như trước, không đổi gì.
+// Trang "chính" theo vai trò — dùng cho CẢ 2 nơi: nút bấm brand/logo trong renderNav() bên dưới (quay
+// về trang chính khi đang ở nơi khác) LẪN chuyển hướng ngay sau khi đăng nhập (index.html) — gộp vào
+// đúng 1 hàm dùng chung (bổ sung 12/09/2026, trước đó index.html tự lặp lại logic này riêng, có lúc
+// quên nhánh nguoi_lay_phoi/san_xuat khiến 2 nơi lệch nhau — xem
+// docs/superpowers/specs/2026-09-12-chan-nguoi-lay-phoi-xem-don-hang-design.md).
+function trangChuTheoVaiTro(vaiTro) {
+  if (vaiTro === 'nguoi_lay_phoi') return '/scan.html';
+  if (vaiTro === 'san_xuat') return '/my-orders.html';
+  return '/orders.html';
+}
+
 function renderNav(user, active) {
   let links;
   if (user.vaiTro === 'nguoi_lay_phoi') {
@@ -133,7 +144,7 @@ function renderNav(user, active) {
   const nav = document.getElementById('nav');
   if (!nav) return;
 
-  const trangChu = user.vaiTro === 'nguoi_lay_phoi' ? '/scan.html' : (user.vaiTro === 'san_xuat' ? '/my-orders.html' : '/orders.html');
+  const trangChu = trangChuTheoVaiTro(user.vaiTro);
   // Tên/vai trò + nút đăng xuất — 2 BẢN có chủ đích (bổ sung 09/09/2026, theo yêu cầu người dùng, tham
   // khảo layout 1 hàng của GKE Logistics): 1 bản trong .app-header (CHỈ hiện trên điện thoại — layout
   // di động giữ NGUYÊN, menu vẫn là icon dính đáy màn hình, không đụng), 1 bản trong .tab-links-user
