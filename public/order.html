@@ -68,6 +68,34 @@ function dongDiaChi(don) {
   return phan.length ? phan.join(', ') : '(chưa có địa chỉ)';
 }
 
+// nguoi_san_xuat (bổ sung 12/09/2026, theo yêu cầu người dùng): chỉ hiện ĐÚNG 3 trường (Số lượng,
+// Ngày lên đơn, Ghi chú — bôi đậm) thay vì đủ 14 trường như trước — hạn chế thông tin khách hàng/địa
+// chỉ/tracking/IOSS... không cần thiết cho việc chạy máy, dễ gây nhiễu hoặc bỏ sót thông tin quan
+// trọng. admin/ve_file vẫn thấy đủ như cũ.
+function renderBangThongTin(don, viTri) {
+  if (user.vaiTro === 'san_xuat') {
+    return `
+      <tr><td>Số lượng</td><td>${escapeHtml(don.SO_LUONG || '')} ${don.SO_LUONG_AO_TREN_DON ? `(áo trên đơn: ${escapeHtml(don.SO_LUONG_AO_TREN_DON)})` : ''}</td></tr>
+      <tr><td>Ngày lên đơn</td><td>${don.NGAY_LEN_DON ? dinhDangNgay(don.NGAY_LEN_DON) : ''}</td></tr>
+      <tr><td>Ghi chú</td><td><strong>${escapeHtml(don.GHI_CHU || '')}</strong></td></tr>`;
+  }
+  return `
+    <tr><td>Mã đơn</td><td>${escapeHtml(don.STT_Key)}</td></tr>
+    <tr><td>Mã đơn (sàn TMĐT)</td><td>${escapeHtml(don.MA_DON_HANG_ORDERID || '')}</td></tr>
+    <tr><td>Khách hàng</td><td>${escapeHtml(don.TenKhachHang || '')} <span style="color:var(--color-text-faint)">(${escapeHtml(don.MA_KHACH_HANG || '')})</span></td></tr>
+    <tr><td>Loại / Kích thước / Màu</td><td>${escapeHtml(don.LOAI || '')} · ${escapeHtml(don.KICH_THUOC || '')} · ${escapeHtml(don.MAU_SAC || '')}</td></tr>
+    <tr><td>Vị trí thêu</td><td>${viTri}</td></tr>
+    <tr><td>Số lượng</td><td>${escapeHtml(don.SO_LUONG || '')} ${don.SO_LUONG_AO_TREN_DON ? `(áo trên đơn: ${escapeHtml(don.SO_LUONG_AO_TREN_DON)})` : ''}</td></tr>
+    <tr><td>Ngày lên đơn</td><td>${don.NGAY_LEN_DON ? dinhDangNgay(don.NGAY_LEN_DON) : ''}</td></tr>
+    <tr><td>Hãng vận chuyển</td><td>${escapeHtml(don.HANG_VAN_CHUYEN || '')}</td></tr>
+    <tr><td>Mã tracking</td><td>${escapeHtml(don.TRACKING_ID || '')}</td></tr>
+    <tr><td>Người nhận</td><td>${escapeHtml(don.TEN || '')} ${don.SDT ? '· ' + escapeHtml(don.SDT) : ''}</td></tr>
+    <tr><td>Địa chỉ giao hàng</td><td>${escapeHtml(dongDiaChi(don))}</td></tr>
+    <tr><td>Mã IOSS</td><td>${escapeHtml(don.MA_IOSS || '')}</td></tr>
+    <tr><td>Ghi chú</td><td>${escapeHtml(don.GHI_CHU || '')}</td></tr>
+    <tr><td>Cập nhật lần cuối</td><td>${escapeHtml(don.NguoiCapNhatCuoi || '')}${don.ThoiGianCapNhatCuoi ? ' · ' + tsDep(don.ThoiGianCapNhatCuoi) : ''}</td></tr>`;
+}
+
 async function taiChiTiet() {
   let don;
   try {
@@ -99,7 +127,7 @@ async function taiChiTiet() {
         </span>` : ''}
     </div>
 
-    <div class="chi-tiet-layout">
+    <div class="${user.vaiTro === 'san_xuat' ? '' : 'chi-tiet-layout'}">
       <div>
         ${anh ? `<img class="anh-mau" src="${escapeHtml(anh)}" alt="Ảnh mẫu/mockup" loading="lazy" onerror="this.remove()">` : ''}
         ${(user.vaiTro !== 'nguoi_lay_phoi' && (don.DUONG_DAN_URL || don.MOCKUP)) || don.Anh_File_Theu_URL || don.Anh_Da_San_Xuat_URL || don.Anh_Dong_Goi_URL ? `
@@ -112,24 +140,12 @@ async function taiChiTiet() {
           ${don.Anh_Dong_Goi_URL ? `<a href="${escapeHtml(don.Anh_Dong_Goi_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh đóng gói</a>` : ''}
         </div>` : ''}
         <table class="info-table">
-          <tr><td>Mã đơn</td><td>${escapeHtml(don.STT_Key)}</td></tr>
-          <tr><td>Mã đơn (sàn TMĐT)</td><td>${escapeHtml(don.MA_DON_HANG_ORDERID || '')}</td></tr>
-          <tr><td>Khách hàng</td><td>${escapeHtml(don.TenKhachHang || '')} <span style="color:var(--color-text-faint)">(${escapeHtml(don.MA_KHACH_HANG || '')})</span></td></tr>
-          <tr><td>Loại / Kích thước / Màu</td><td>${escapeHtml(don.LOAI || '')} · ${escapeHtml(don.KICH_THUOC || '')} · ${escapeHtml(don.MAU_SAC || '')}</td></tr>
-          <tr><td>Vị trí thêu</td><td>${viTri}</td></tr>
-          <tr><td>Số lượng</td><td>${escapeHtml(don.SO_LUONG || '')} ${don.SO_LUONG_AO_TREN_DON ? `(áo trên đơn: ${escapeHtml(don.SO_LUONG_AO_TREN_DON)})` : ''}</td></tr>
-          <tr><td>Ngày lên đơn</td><td>${don.NGAY_LEN_DON ? dinhDangNgay(don.NGAY_LEN_DON) : ''}</td></tr>
-          <tr><td>Hãng vận chuyển</td><td>${escapeHtml(don.HANG_VAN_CHUYEN || '')}</td></tr>
-          <tr><td>Mã tracking</td><td>${escapeHtml(don.TRACKING_ID || '')}</td></tr>
-          <tr><td>Người nhận</td><td>${escapeHtml(don.TEN || '')} ${don.SDT ? '· ' + escapeHtml(don.SDT) : ''}</td></tr>
-          <tr><td>Địa chỉ giao hàng</td><td>${escapeHtml(dongDiaChi(don))}</td></tr>
-          <tr><td>Mã IOSS</td><td>${escapeHtml(don.MA_IOSS || '')}</td></tr>
-          <tr><td>Ghi chú</td><td>${escapeHtml(don.GHI_CHU || '')}</td></tr>
-          <tr><td>Cập nhật lần cuối</td><td>${escapeHtml(don.NguoiCapNhatCuoi || '')}${don.ThoiGianCapNhatCuoi ? ' · ' + tsDep(don.ThoiGianCapNhatCuoi) : ''}</td></tr>
+          ${renderBangThongTin(don, viTri)}
         </table>
         <div id="khu-vuc-thao-tac"></div>
       </div>
 
+      ${user.vaiTro === 'san_xuat' ? '' : `
       <div>
         <h3>Lịch sử thay đổi</h3>
         <div class="timeline">
@@ -142,7 +158,7 @@ async function taiChiTiet() {
               <div class="timeline-time">${tsDep(l.ThoiGian)}</div>
             </div>`).join('') || '<p>Chưa có lịch sử.</p>'}
         </div>
-      </div>
+      </div>`}
     </div>
   `;
   renderKhuVucThaoTac(don);
@@ -160,23 +176,31 @@ function renderKhuVucThaoTac(don) {
   const el = document.getElementById('khu-vuc-thao-tac');
   let html = '';
 
-  // Nút chuyển giai đoạn — đọc từ chính tab CauHinhKichBan (dùng chung logic với quét QR),
-  // không hardcode nút theo vai trò vì Sheet không định nghĩa vai trò cho từng kịch bản.
-  if (don.kichBanKeTiep && don.kichBanKeTiep.length > 0) {
-    html += don.kichBanKeTiep.map(kb => `
-      <button class="btn-hanh-dong" onclick="chuyenGiaiDoan('${kb.id}', this)">
-        ${icon('arrowRight')} Chuyển sang: ${escapeHtml(kb.label)}
-      </button>`).join('');
-  } else {
-    html += '<p>Không có kịch bản nào áp dụng được cho trạng thái hiện tại (kiểm tra tab CauHinhKichBan).</p>';
-  }
+  // nguoi_san_xuat (bổ sung 12/09/2026, theo yêu cầu người dùng — hạn chế thông tin/thao tác không
+  // cần thiết dễ gây nhiễu khi chỉ tập trung chạy máy): ẩn nút chuyển giai đoạn theo kịch bản + ô ghi
+  // chú xưởng — GIỮ NGUYÊN khối "Sửa trạng thái thủ công" bên dưới (không nằm trong nhánh này) vì đó
+  // là cách DUY NHẤT hiện nay để tự đánh dấu "LỖI SẢN XUẤT CẦN LÀM LẠI" rồi set lại sau khi làm lại
+  // xong (quét QR không có kịch bản nào cho việc này — theo yêu cầu cũ "lỗi thì set tay, làm lại cũng
+  // set tay"). admin/ve_file vẫn thấy đủ như cũ.
+  if (user.vaiTro !== 'san_xuat') {
+    // Nút chuyển giai đoạn — đọc từ chính tab CauHinhKichBan (dùng chung logic với quét QR),
+    // không hardcode nút theo vai trò vì Sheet không định nghĩa vai trò cho từng kịch bản.
+    if (don.kichBanKeTiep && don.kichBanKeTiep.length > 0) {
+      html += don.kichBanKeTiep.map(kb => `
+        <button class="btn-hanh-dong" onclick="chuyenGiaiDoan('${kb.id}', this)">
+          ${icon('arrowRight')} Chuyển sang: ${escapeHtml(kb.label)}
+        </button>`).join('');
+    } else {
+      html += '<p>Không có kịch bản nào áp dụng được cho trạng thái hiện tại (kiểm tra tab CauHinhKichBan).</p>';
+    }
 
-  html += `
-    <div class="upload-box">
-      <label for="ghi-chu-moi">Ghi chú xưởng</label>
-      <textarea id="ghi-chu-moi" rows="3" style="padding:10px;border-radius:8px;border:1px solid var(--color-border);font:inherit">${escapeHtml(don.GHI_CHU || '')}</textarea>
-      <button class="btn-hanh-dong phu" onclick="luuGhiChu()">${icon('check')} Lưu ghi chú</button>
-    </div>`;
+    html += `
+      <div class="upload-box">
+        <label for="ghi-chu-moi">Ghi chú xưởng</label>
+        <textarea id="ghi-chu-moi" rows="3" style="padding:10px;border-radius:8px;border:1px solid var(--color-border);font:inherit">${escapeHtml(don.GHI_CHU || '')}</textarea>
+        <button class="btn-hanh-dong phu" onclick="luuGhiChu()">${icon('check')} Lưu ghi chú</button>
+      </div>`;
+  }
 
   // Sửa trạng thái THỦ CÔNG — bắt buộc phải có vì "LỖI SẢN XUẤT CẦN LÀM LẠI" và việc làm lại sau đó
   // KHÔNG đi qua kịch bản quét QR (theo Prompt_Ver_24.docx: "lỗi thì set tay, làm lại cũng set tay").
@@ -245,11 +269,13 @@ function renderKhuVucThaoTac(don) {
   }
 
   // "IN LABEL"/"MUA TRACKING và IN LABEL" (bổ sung 09/09/2026 lần 2, theo yêu cầu người dùng) — mở
-  // RỘNG hơn khối "Mua tracking GKE thủ công" ở trên (chỉ admin): cả admin/ve_file/san_xuat, CHỈ chặn
+  // RỘNG hơn khối "Mua tracking GKE thủ công" ở trên (chỉ admin): admin/ve_file, CHỈ chặn
   // nguoi_lay_phoi (nguoi_lay_phoi thực ra không vào được trang này qua menu — chặn thêm ở đây cho
   // chắc). "IN LABEL" (chỉ in, không mua) CHỈ hiện khi đơn ĐÃ có tracking thật — đơn chưa có thì chỉ
-  // hiện nút gộp (tránh bấm nhầm vào nút không chạy được, đã xác nhận với người dùng).
-  if (user.vaiTro !== 'nguoi_lay_phoi') {
+  // hiện nút gộp (tránh bấm nhầm vào nút không chạy được, đã xác nhận với người dùng). Bỏ san_xuat
+  // khỏi khối này 12/09/2026 (theo yêu cầu người dùng, gộp cùng lúc ẩn khu vực thao tác không cần
+  // thiết cho vai trò này) — trước đó san_xuat cũng thấy được.
+  if (user.vaiTro !== 'nguoi_lay_phoi' && user.vaiTro !== 'san_xuat') {
     const daCoTrackingThat = !!don.TRACKING_ID;
     html += `
       <div class="upload-box">
