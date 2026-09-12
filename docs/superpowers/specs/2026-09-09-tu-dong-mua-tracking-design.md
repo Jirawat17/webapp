@@ -706,3 +706,78 @@ trước, tải ảnh sau) thay vì diễn đạt "2 việc tách biệt" như t
   không bị chặn nhầm. Tổng 14 nhóm test, toàn bộ pass, không hồi quy các nhóm cũ.
 - `node --check` `data/pipelineTinhTrang.js`, `services/orderService.js`, `services/trackingAutoService.js`,
   `routes/photos.js`, `public/js/api.js` + script inline trích từ `scan.html`/`order.html`.
+
+## 14. Cột `TAM_THOI` thay thế placeholder "chờ tem" trong `TRACKING_ID` (12/09/2026 lần 14)
+
+Theo yêu cầu người dùng: "do quá trình chờ GKE cấp tem sẽ cần 1 chút thời gian nên trạng thái tạm thời
+trước khi có tem (mã tracking) thì hãy lưu tạm thông tin tại cột TAM_THOI trong Sheet Don_Hang_ALL (ví
+dụ DANG_CHO_GKE_TAO_TEM)".
+
+### 14.1. Vấn đề
+
+Từ mục 2/6/13, placeholder `gkeService.MA_DANG_CHO_TEM` ('DANG_CHO_GKE_TAO_TEM') được ghi TẠM vào chính
+cột `TRACKING_ID` ngay sau khi tạo vận đơn GKE thành công, trước khi lấy được tem thật — nghĩa là
+`TRACKING_ID` có 3 trạng thái ẩn (rỗng / placeholder / mã thật) thay vì chỉ 2 (rỗng / mã thật). 11 chỗ ở
+5 file (`services/trackingAutoService.js` ×7, `services/orderService.js`, `routes/photos.js`,
+`public/order.html` ×2) đều phải tự so `TRACKING_ID !== MA_DANG_CHO_TEM` mới biết "có tracking thật hay
+chưa" — dễ sót nếu thêm chỗ đọc mới sau này, và khiến cột `TRACKING_ID` (tên gợi ý là mã vận đơn) đôi khi
+lại không phải mã vận đơn thật.
+
+### 14.2. Thiết kế xác nhận cùng người dùng
+
+- `TRACKING_ID` từ nay LUÔN chỉ ở 1 trong 2 trạng thái: rỗng (chưa có tracking) hoặc mã vận đơn THẬT —
+  không bao giờ còn mang giá trị placeholder.
+- Cột `TAM_THOI` (người dùng tự thêm vào `Don_Hang_ALL`, giống cách đã thêm `IN_LABEL`/`THOI_GIAN_IN_MA`
+  trước đây) thay thế HOÀN TOÀN vai trò đánh dấu "đang chờ": ghi `gkeService.MA_DANG_CHO_TEM` ngay sau
+  khi tạo vận đơn GKE thành công, tự xoá về rỗng ngay khi lấy được tem thật (cùng 1 lượt `update()`).
+
+### 14.3. `services/trackingAutoService.js` — nơi DUY NHẤT ghi `TAM_THOI`
+
+`muaTrackingChoDon()`:
+- Kiểm tra `headers.includes('TAM_THOI')` NGAY sau khi xác nhận đơn chưa có tracking thật — TRƯỚC KHI
+  gọi `gkeService.taoDonGke()`. Thiếu cột thì throw rõ ràng, dừng hẳn ở đây. Đặt SỚM nhất có thể (không
+  đợi tới lúc ghi mới phát hiện thiếu cột) vì đây là mắt xích AN TOÀN: nếu gọi `taoDonGke()` (tạo vận đơn
+  THẬT, không thể huỷ) xong mới phát hiện không ghi được `TAM_THOI`, hệ thống mất dấu "đã tạo đơn" — lượt
+  sau có thể vô tình gọi `taoDonGke()` lần 2 cho cùng 1 đơn (dù GKE có tự chặn trùng theo
+  `customer_order_num`, trả lại đúng đơn cũ thay vì tạo mới thật — xem `goiApi()` code 301 — vẫn nên chặn
+  từ đầu cho chắc, không dựa hoàn toàn vào an toàn phía đối tác).
+- `chuaTungTaoDon`/`dangChoTuLanTruoc` đổi từ đọc `TRACKING_ID` sang đọc `TAM_THOI`.
+- Ghi `TAM_THOI: MA_DANG_CHO_TEM` (không phải `TRACKING_ID` như trước) ngay sau `taoDonGke()` thành công.
+- Khi có tem thật: ghi `TRACKING_ID` thật + `TAM_THOI: ''` trong CÙNG 1 lượt `update()` cuối cùng.
+
+4 chỗ đọc còn lại trong cùng file (`inLabelChoDon()`, `muaTrackingVaInLabelChoDon()`,
+`chayQuetTuDongMuaTracking()` lọc đơn đủ điều kiện, `layDanhSachDonAutoTracking()` tính trạng thái hiển
+thị) đơn giản hoá theo: "có tracking thật" giờ chỉ cần `!!TRACKING_ID` (không cần loại trừ placeholder
+nữa vì cột này không bao giờ còn mang giá trị đó); trạng thái hiển thị `DANG_CHO_TEM` đổi điều kiện sang
+`!TRACKING_ID && TAM_THOI === MA_DANG_CHO_TEM`.
+
+### 14.4. Dọn theo — bỏ hằng số/so sánh placeholder không còn cần thiết
+
+Vì `TRACKING_ID` không bao giờ còn là placeholder, 3 nơi từng tự khai báo lại hằng số
+`MA_DANG_CHO_TEM_GKE`/`MA_DANG_CHO_TEM_TRACKING` (mục 13.1/13.2) để loại trừ nó khỏi "có tracking thật"
+không còn lý do tồn tại — bỏ hằng số, rút gọn điều kiện về đúng "khác rỗng":
+
+- `services/orderService.js#kiemTraCongAnhBatBuoc()` — bỏ `MA_DANG_CHO_TEM_GKE`, điều kiện còn
+  `!trackingSauKhiGhi`.
+- `routes/photos.js#thieuTrackingThat()` — bỏ hằng số, còn `!row.TRACKING_ID`.
+- `public/order.html` — bỏ `MA_DANG_CHO_TEM_TRACKING`, 2 chỗ dùng rút gọn tương tự.
+
+### 14.5. Đã kiểm tra
+
+- Cập nhật bộ test `orderService.js` (mục 11.5/12.6/13.4) — sửa mock `DON_DANG_CHO_TEM`: `TRACKING_ID`
+  rỗng + thêm `TAM_THOI: 'DANG_CHO_GKE_TAO_TEM'` (trước đây đặt sai placeholder vào chính `TRACKING_ID`,
+  không còn đúng thực tế mới); xác nhận `orderService.js` chặn đơn này vì `TRACKING_ID` rỗng, không cần
+  biết gì về `TAM_THOI`. Toàn bộ 14 nhóm test cũ vẫn pass.
+- Test mới riêng cho `services/trackingAutoService.js` (module thật, mock `orderService`/`gkeService`/
+  `sheetsService`/`logService`) — 10 nhóm/29 kịch bản: đơn đã có tracking thật bị bỏ qua; đơn chưa từng
+  mua thì tạo đơn + ghi `TAM_THOI` + xoá khi xong; đơn đang chờ tem từ lần trước KHÔNG bị gọi lại
+  `taoDonGke()` (kiểm chứng trực tiếp cơ chế chống tạo trùng vận đơn thật — kịch bản quan trọng nhất);
+  thiếu cột `TAM_THOI` thì throw sớm và KHÔNG gọi `taoDonGke()`; `inLabelChoDon()`/
+  `muaTrackingVaInLabelChoDon()` phân nhánh đúng theo có/chưa có tracking thật; bộ lọc quét tự động giữ
+  đúng đơn đang chờ tem trong danh sách chờ xử lý lại; trạng thái hiển thị `DA_MUA`/`DANG_CHO_TEM` đúng.
+  Toàn bộ 29 kịch bản pass.
+- `node --check` `data/pipelineTinhTrang.js`, `services/orderService.js`,
+  `services/trackingAutoService.js`, `services/gkeService.js`, `routes/photos.js` + script inline trích
+  từ `order.html`.
+- Không có Sheet thật trong sandbox — KHÔNG xác nhận được cột `TAM_THOI` đã thực sự tồn tại trong
+  `Don_Hang_ALL`; người dùng xác nhận đã/sẽ tự thêm trước khi dùng.
