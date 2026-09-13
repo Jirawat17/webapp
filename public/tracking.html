@@ -53,7 +53,10 @@
 /* Ô quét nhanh "IN LABEL" (bổ sung 13/09/2026, theo yêu cầu người dùng) — to, nổi bật, đặt ĐẦU trang vì
    là thao tác dùng thường xuyên nhất tại trạm đóng gói (máy quét mã vạch dạng bàn phím: gõ ký tự + Enter
    tự động). Viền dùng --color-primary cho khác hẳn các ô input thường khác trên trang, dễ nhận ra ngay. */
-.tk-o-quet-nhanh { margin-bottom: var(--space-5); max-width: 1280px; }
+/* Bỏ giới hạn max-width cố định (bổ sung 13/09/2026 lần 3, theo yêu cầu người dùng — 1280px vẫn không
+   đủ chỗ hiện hết placeholder ở cỡ chữ 5.6rem hiện tại) — dùng 100% chiều rộng còn lại của .page (tối
+   đa 1800px, xem style.css), rộng nhất có thể thay vì đoán 1 số cố định khác vẫn có thể lại không đủ. */
+.tk-o-quet-nhanh { margin-bottom: var(--space-5); max-width: 100%; }
 .tk-o-quet-nhanh label { display: block; font-weight: 700; margin-bottom: 6px; }
 .tk-o-quet-nhanh input {
   /* Tăng gấp 2 LẦN NỮA (bổ sung 13/09/2026 lần 2, theo yêu cầu người dùng — dễ nhìn hơn nữa) so với lần
@@ -63,6 +66,12 @@
   border: 8px solid var(--color-primary); font-family: inherit; color: #1e3a8a;
 }
 .tk-o-quet-nhanh input:disabled { opacity: 0.6; }
+/* Chữ placeholder (chỉ hiện khi ô còn trống) đo thực tế KHÔNG đủ chỗ hiện hết ở cỡ chữ 5.6rem của ô,
+   trừ khi màn rất rộng (>=1900px) — nới max-width ở trên vẫn không đủ trên màn hình laptop phổ biến
+   (~1440px). Placeholder chỉ là gợi ý (đã có <label> phía trên giải thích rõ mục đích ô), không cần to
+   bằng chữ THẬT gõ/quét vào — giảm riêng cỡ chữ placeholder để LUÔN hiện đủ câu, không đụng cỡ chữ nhập
+   thật (vẫn giữ nguyên 5.6rem theo đúng yêu cầu trước đó). */
+.tk-o-quet-nhanh input::placeholder { font-size: 2.8rem; }
 /* Banner báo kết quả — KHÔNG dùng alert() vì sẽ chặn thao tác quét tiếp theo (phải bấm OK mới quét được
    mã kế), ngược tinh thần "quét liên tục không dừng" mà tính năng này hướng tới. Tự ẩn sau vài giây. */
 .tk-quet-thong-bao { margin-top: 8px; padding: 10px 14px; border-radius: var(--radius-sm); font-weight: 600; }
