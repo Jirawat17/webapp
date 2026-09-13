@@ -324,7 +324,12 @@ body.trang-dang-nhap {
   #panel-loc .inline-form #btn-xoa-loc { flex: 0 0 auto; white-space: nowrap; }
 }
 
-.order-list { display: grid; grid-template-columns: 1fr; gap: var(--space-3); }
+/* Khoảng cách GIỮA các thẻ đơn giảm riêng (12px -> 8px, bổ sung 13/09/2026, theo yêu cầu người dùng —
+   "khoảng trống giữa các đơn vẫn còn lớn") — dùng số cố định thay vì --space-3 (biến này còn dùng ở 39
+   chỗ khác trong file, đổi biến gốc sẽ ảnh hưởng cả những nơi không liên quan tới thẻ đơn). KHÔNG đụng
+   padding/gap NỘI BỘ trong .order-card (khoảng cách checkbox/ảnh/chữ) — đây chỉ là khoảng cách giữa
+   CÁC thẻ với nhau. */
+.order-list { display: grid; grid-template-columns: 1fr; gap: 8px; }
 @media (min-width: 640px)  { .order-list { grid-template-columns: repeat(2, 1fr); } }
 @media (min-width: 1024px) { .order-list { grid-template-columns: repeat(3, 1fr); } }
 @media (min-width: 1400px) { .order-list { grid-template-columns: repeat(4, 1fr); } }
@@ -345,11 +350,11 @@ body.trang-dang-nhap {
    bên trong đã tự có margin-top riêng, giữ đúng độ lệch 2px cũ dù đứng riêng hay trong cột này). */
 .order-card .cot-chon-the { display: flex; flex-direction: column; align-items: center; gap: 6px; flex-shrink: 0; }
 /* Bọc 1-2 ảnh đại diện trong 1 khung CỐ ĐỊNH (bổ sung 13/09/2026 — đơn có link THƯ MỤC Drive chứa nhiều
-   ảnh hiện tối đa 2 ảnh, xem urlAnhHienThiList() trong api.js; kích thước tăng dần 72px -> 96px -> 120px
-   cùng ngày, theo yêu cầu người dùng — ảnh dễ nhìn hơn, đổi cùng lúc với giảm thêm cỡ chữ bên cạnh).
-   Mỗi ảnh dùng flex:1 để tự chia đều bề rộng khung — 1 ảnh thì chiếm trọn, 2 ảnh thì chia đôi, không
-   cần biết trước là 1 hay 2 ảnh mới tính được kích thước. */
-.order-card .nhom-anh-dai-dien { display: flex; gap: 3px; width: 120px; height: 120px; flex-shrink: 0; }
+   ảnh hiện tối đa 2 ảnh, xem urlAnhHienThiList() trong api.js; kích thước tăng dần 72->96->120->132px
+   cùng ngày, theo yêu cầu người dùng — ảnh dễ nhìn hơn). Mỗi ảnh dùng flex:1 để tự chia đều bề rộng
+   khung — 1 ảnh thì chiếm trọn, 2 ảnh thì chia đôi, không cần biết trước là 1 hay 2 ảnh mới tính được
+   kích thước. */
+.order-card .nhom-anh-dai-dien { display: flex; gap: 3px; width: 132px; height: 132px; flex-shrink: 0; }
 .order-card .nhom-anh-dai-dien img { flex: 1; min-width: 0; height: 100%; object-fit: cover; border-radius: var(--radius-sm); background: var(--color-bg); transition: transform 0.25s ease; }
 .order-card:hover .nhom-anh-dai-dien img { transform: scale(1.06); }
 .order-card .thong-tin { min-width: 0; flex: 1; }
