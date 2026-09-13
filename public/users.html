@@ -82,7 +82,7 @@ document.getElementById('form-them').onsubmit = async (e) => {
 async function taiDanhSach() {
   const list = await apiFetch('/users');
   document.getElementById('bang-nv').innerHTML = `
-    <tr><th>Tên</th><th>Vai trò</th><th>Team</th><th>Xưởng</th><th>Trạng thái</th><th>Mật khẩu</th><th></th><th></th></tr>
+    <tr><th>Tên</th><th>Vai trò</th><th>Team</th><th>Xưởng</th><th>Trạng thái</th><th>Mật khẩu</th><th>Đăng nhập</th><th></th><th></th><th></th></tr>
     ${list.map(u => `
       <tr>
         <td>${escapeHtml(u.Ten)}</td>
@@ -96,9 +96,13 @@ async function taiDanhSach() {
         </td>
         <td>${String(u.KichHoat).toUpperCase() === 'TRUE' ? 'Đang hoạt động' : 'Đã khoá'}</td>
         <td>${u.MatKhau ? escapeHtml(u.MatKhau) : '(chưa đặt)'}</td>
+        <td>${String(u.HienThiDangNhap).toUpperCase() === 'FALSE' ? 'Đã ẩn' : 'Hiện công khai'}</td>
         <td><button class="btn-hanh-dong phu" onclick="datMatKhau('${encodeURIComponent(u.Ten)}')">Đặt mật khẩu</button></td>
         <td><button class="btn-hanh-dong phu" onclick="doiKichHoat('${encodeURIComponent(u.Ten)}','${u.KichHoat}')">
           ${String(u.KichHoat).toUpperCase() === 'TRUE' ? 'Khoá' : 'Mở lại'}
+        </button></td>
+        <td><button class="btn-hanh-dong phu" onclick="doiHienThi('${encodeURIComponent(u.Ten)}','${u.HienThiDangNhap}')">
+          ${String(u.HienThiDangNhap).toUpperCase() === 'FALSE' ? 'Hiện lại' : 'Ẩn khỏi đăng nhập'}
         </button></td>
       </tr>`).join('')}`;
 }
@@ -114,6 +118,17 @@ async function doiKichHoat(tenMaHoa, kichHoatHienTai) {
   const moi = String(kichHoatHienTai).toUpperCase() === 'TRUE' ? 'FALSE' : 'TRUE';
   await apiFetch('/users/' + tenMaHoa, { method: 'PUT', body: JSON.stringify({ KichHoat: moi }) });
   await taiDanhSach();
+}
+
+// Ẩn/hiện khỏi danh sách nút bấm công khai ở màn hình đăng nhập (bổ sung 13/09/2026 — xem
+// docs/superpowers/specs/2026-09-13-an-tai-khoan-dang-nhap-design.md). KHÔNG ảnh hưởng khả năng đăng
+// nhập — tài khoản bị ẩn vẫn vào được bình thường qua trang đăng nhập riêng (gõ tay tên).
+async function doiHienThi(tenMaHoa, hienThiHienTai) {
+  const moi = String(hienThiHienTai).toUpperCase() === 'FALSE' ? 'TRUE' : 'FALSE';
+  try {
+    await apiFetch('/users/' + tenMaHoa, { method: 'PUT', body: JSON.stringify({ HienThiDangNhap: moi }) });
+    await taiDanhSach();
+  } catch (err) { alert(err.message); }
 }
 
 // Đặt/đặt lại mật khẩu — dùng prompt() thay vì mở form riêng, đủ dùng cho thao tác admin ít khi làm.

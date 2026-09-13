@@ -37,9 +37,13 @@ function ghiNhanSaiMatKhau(ten) {
 // ngay khi admin thêm/sửa nhân viên) thay vì luôn gọi Google mỗi lần ai đó mở màn hình đăng nhập.
 // coMatKhau (KHÔNG bao giờ trả giá trị mật khẩu thật) — để client biết có cần hiện ô nhập PIN hay
 // không TRƯỚC khi thử đăng nhập (tài khoản cũ chưa đặt mật khẩu vẫn đăng nhập bằng tên như trước).
+// HienThiDangNhap='FALSE' (bổ sung 13/09/2026, theo yêu cầu người dùng — xem
+// docs/superpowers/specs/2026-09-13-an-tai-khoan-dang-nhap-design.md) — tài khoản bị ẨN khỏi danh sách
+// CÔNG KHAI này, nhưng vẫn đăng nhập bình thường qua POST /dang-nhap (không đổi gì bên dưới) — chỉ khác
+// là chủ tài khoản phải tự gõ đúng tên qua trang đăng nhập riêng thay vì bấm nút ở đây.
 router.get('/danh-sach', async (req, res) => {
   const { rows } = await readTabCached(TAB, 30000);
-  const active = rows.filter(r => String(r.KichHoat).toUpperCase() === 'TRUE');
+  const active = rows.filter(r => String(r.KichHoat).toUpperCase() === 'TRUE' && String(r.HienThiDangNhap).toUpperCase() !== 'FALSE');
   res.json(active.map(r => ({ ten: r.Ten, vaiTro: r.VaiTro, coMatKhau: !!r.MatKhau })));
 });
 

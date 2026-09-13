@@ -47,7 +47,7 @@ router.post('/', async (req, res) => {
   res.json({ ok: true });
 });
 
-// Đổi vai trò / team / xưởng / khoá-mở tài khoản / đặt (lại) mật khẩu
+// Đổi vai trò / team / xưởng / khoá-mở tài khoản / đặt (lại) mật khẩu / ẩn-hiện khỏi màn hình đăng nhập
 router.put('/:ten', async (req, res) => {
   const { headers, rows } = await readTab(TAB);
   const user = rows.find(r => r.Ten === req.params.ten);
@@ -59,9 +59,15 @@ router.put('/:ten', async (req, res) => {
   if (req.body.Xuong && !DANH_SACH_XUONG.includes(req.body.Xuong)) {
     return res.status(400).json({ error: `Xưởng không hợp lệ: "${req.body.Xuong}" — chỉ chấp nhận: ${DANH_SACH_XUONG.join(', ')}` });
   }
+  // HienThiDangNhap (bổ sung 13/09/2026 — xem docs/superpowers/specs/2026-09-13-an-tai-khoan-dang-nhap-design.md)
+  // là cột MỚI, người dùng phải tự thêm tay vào Sheet — báo lỗi rõ ràng thay vì để updateCells() ném lỗi
+  // chung chung "Không tìm thấy cột", giống guard MatKhau đã có ở POST / phía trên.
+  if (req.body.HienThiDangNhap !== undefined && !headers.includes('HienThiDangNhap')) {
+    return res.status(400).json({ error: 'Sheet chưa có cột HienThiDangNhap — cần thêm vào tab NguoiDung trước khi dùng tính năng ẩn tài khoản' });
+  }
 
   const updates = {};
-  ['VaiTro', 'Team', 'Xuong', 'KichHoat', 'MatKhau'].forEach(f => {
+  ['VaiTro', 'Team', 'Xuong', 'KichHoat', 'MatKhau', 'HienThiDangNhap'].forEach(f => {
     if (req.body[f] !== undefined) updates[f] = f === 'MatKhau' ? String(req.body[f]) : req.body[f];
   });
 

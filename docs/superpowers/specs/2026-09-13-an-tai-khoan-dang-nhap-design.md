@@ -42,4 +42,18 @@ mức bảo mật hiện tại của app (mật khẩu PIN 4 số, lưu thô tro
 
 ## 3. Đã kiểm tra
 
-_(cập nhật sau khi code xong)_
+- Viết test mới (`test-an-tai-khoan-dang-nhap.js`, 13 test, gọi thẳng `routes/auth.js`/`routes/users.js`
+  thật qua HTTP, mock `sheetsService`): `GET /danh-sach` lọc đúng (ẩn tài khoản `HienThiDangNhap=FALSE`,
+  giữ nguyên tài khoản để trống/`TRUE`, không đụng logic `KichHoat` sẵn có); `POST /dang-nhap` vẫn đăng
+  nhập được cả 2 tài khoản ẨN (1 không mật khẩu, 1 có mật khẩu — đúng/sai mật khẩu đều đúng kỳ vọng);
+  `PUT /:ten` đổi được `HienThiDangNhap` khi Sheet đã có cột, báo lỗi 400 rõ ràng khi Sheet CHƯA có cột
+  (và KHÔNG chặn nhầm việc đổi field khác như `KichHoat` khi thiếu cột này).
+- Chạy lại toàn bộ ~30 file test scratchpad — 25 pass, 5 fail sẵn có từ trước (không liên quan, đã xác
+  nhận qua session trước).
+- Kiểm trực tiếp trên trình duyệt qua mock server: trang `users.html` hiện đúng cột "Đăng nhập" +
+  nút Ẩn/Hiện, bấm đổi trạng thái đúng; `index.html` (công khai) KHÔNG còn hiện tài khoản đã ẩn, không
+  còn dấu vết/liên kết nào tới trang riêng; `dang-nhap-phu.html` đăng nhập thành công vào tài khoản ẩn
+  (cả trường hợp đúng tên+không mật khẩu, và đúng tên+đúng mật khẩu), báo lỗi rõ ràng khi sai mật khẩu.
+- Chưa kiểm được với Google Sheet thật (sandbox không có quyền) — người dùng cần tự thêm cột
+  `HienThiDangNhap` vào tab `NguoiDung` trước khi dùng; để trống cho tài khoản hiện có sẽ không ảnh
+  hưởng gì (vẫn hiện như cũ).

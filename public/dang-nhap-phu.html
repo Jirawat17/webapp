@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Đăng nhập — Xưởng Thêu</title>
+<link rel="stylesheet" href="/css/style.css?v=86">
+<script src="/js/theme.js?v=86"></script>
+</head>
+<body class="trang-dang-nhap">
+<div class="login-wrap">
+  <img class="welcome-banner" src="/images/Welcome.jpg" alt="" aria-hidden="true">
+  <div class="logo-mark" aria-hidden="true" id="logo-mark"></div>
+  <h1>Xưởng Thêu</h1>
+  <form id="form-dang-nhap" style="margin-top:16px;display:flex;flex-direction:column;align-items:center;gap:12px">
+    <div style="width:100%;max-width:260px;text-align:left">
+      <label for="o-ten" style="display:block;font-size:0.8rem;color:var(--color-text-muted);font-weight:700;margin-bottom:4px">Tên đăng nhập</label>
+      <input id="o-ten" required autocomplete="off" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--color-border);font-family:inherit;font-size:1rem">
+    </div>
+    <div style="width:100%;max-width:260px;text-align:left">
+      <label for="o-mat-khau" style="display:block;font-size:0.8rem;color:var(--color-text-muted);font-weight:700;margin-bottom:4px">Mật khẩu (bỏ trống nếu tài khoản không có)</label>
+      <input type="password" id="o-mat-khau" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" style="font-size:1.4rem;text-align:center;letter-spacing:0.3em;width:100%;padding:12px;border-radius:8px;border:1px solid var(--color-border)">
+    </div>
+    <button type="submit" class="btn-ten">Đăng nhập</button>
+  </form>
+</div>
+<script src="/js/icons.js?v=86"></script>
+<script src="/js/api.js?v=86"></script>
+<script>
+document.getElementById('logo-mark').innerHTML = icon('logo', { size: 56 });
+
+document.getElementById('form-dang-nhap').onsubmit = async (e) => {
+  e.preventDefault();
+  const ten = document.getElementById('o-ten').value.trim();
+  const matKhau = document.getElementById('o-mat-khau').value;
+  try {
+    const user = await apiFetch('/auth/dang-nhap', { method: 'POST', body: JSON.stringify({ ten, matKhau }) });
+    window.location.href = trangChuTheoVaiTro(user.vaiTro);
+  } catch (err) { alert(err.message); }
+};
+</script>
+</body>
+</html>
