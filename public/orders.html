@@ -72,6 +72,28 @@
           <option value="DO">Đỏ · 7 ngày</option>
         </select>
       </div>
+      <!-- Lọc theo Xưởng + Đơn ưu tiên (bổ sung 13/09/2026, theo yêu cầu người dùng) — CHỈ admin thấy
+           (style="display:none" mặc định, JS hiện lại nếu admin — xem IIFE đăng nhập bên dưới): vai trò
+           khác đã bị giới hạn CHỈ thấy đúng 1 Xưởng của mình (server-side, orderService.js#locTheoXuong)
+           nên lọc theo Xưởng không có ý nghĩa với họ; lọc theo Ưu tiên cũng thu hẹp phạm vi admin dùng
+           theo yêu cầu, không mở rộng cho vai trò khác. -->
+      <div class="truong" id="truong-loc-xuong" style="display:none">
+        <label for="loc-xuong">Xưởng</label>
+        <select id="loc-xuong">
+          <option value="">Tất cả Xưởng</option>
+          <option value="HANOI">HANOI</option>
+          <option value="BACNINH">BACNINH</option>
+          <option value="__CHUA_GAN__">(chưa gán)</option>
+        </select>
+      </div>
+      <div class="truong" id="truong-loc-uu-tien" style="display:none">
+        <label for="loc-uu-tien">Ưu tiên</label>
+        <select id="loc-uu-tien">
+          <option value="">Tất cả đơn</option>
+          <option value="1">Đơn ưu tiên</option>
+          <option value="0">Đơn thường</option>
+        </select>
+      </div>
       <label class="chon-tat-ca-hang truong-hang-loat" for="loc-hang-loat">
         <input type="checkbox" id="loc-hang-loat">
         Chỉ đơn hàng loạt
@@ -208,6 +230,8 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   document.getElementById('loc-phoi').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-ve-file').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-canh-bao').onchange = () => { boChonTatCaDon(); taiDon(); };
+  document.getElementById('loc-xuong').onchange = () => { boChonTatCaDon(); taiDon(); };
+  document.getElementById('loc-uu-tien').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-hang-loat').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-loai').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-kich-thuoc').onchange = () => { boChonTatCaDon(); taiDon(); };
@@ -265,6 +289,13 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   // Đổ danh sách san_xuat đang hoạt động từ /users (route này vốn đã chỉ mở cho admin — requireRole
   // trong routes/users.js — nên không lộ danh sách nhân viên cho vai trò khác qua đường này).
   if (user.vaiTro === 'admin') {
+    // Lọc theo Xưởng/Ưu tiên (bổ sung 13/09/2026, theo yêu cầu người dùng) — CHỈ admin cần, xem chú
+    // thích tại <div id="truong-loc-xuong">/#truong-loc-uu-tien"> phía trên. display:flex khớp đúng
+    // display mặc định của .truong (xem .inline-form .truong trong style.css), không phải 'contents'
+    // như các khối dưới đây (2 khối này KHÔNG nằm trong 1 flex container cần "xuyên qua" wrapper).
+    document.getElementById('truong-loc-xuong').style.display = 'flex';
+    document.getElementById('truong-loc-uu-tien').style.display = 'flex';
+
     // display:contents (không phải '') — khối bọc này chỉ để gom nhóm cho dễ ẩn/hiện bằng JS, KHÔNG
     // được tính là 1 phần tử flex riêng của .thanh-hanh-dong-hang-loat, nếu không .thanh-hanh-dong-cach
     // (align-self:stretch) và <select> (flex:1) bên trong sẽ mất tác dụng vì không còn là con trực
@@ -339,7 +370,7 @@ function batTatPanel(idPanelMuonMo) {
   }
 }
 
-const CAC_O_LOC = ['loc-trang-thai', 'loc-phoi', 'loc-ve-file', 'loc-canh-bao', 'loc-loai', 'loc-kich-thuoc', 'loc-hang-van-chuyen', 'loc-mau-sac', 'loc-kh', 'loc-tu-ngay', 'loc-den-ngay'];
+const CAC_O_LOC = ['loc-trang-thai', 'loc-phoi', 'loc-ve-file', 'loc-canh-bao', 'loc-xuong', 'loc-uu-tien', 'loc-loai', 'loc-kich-thuoc', 'loc-hang-van-chuyen', 'loc-mau-sac', 'loc-kh', 'loc-tu-ngay', 'loc-den-ngay'];
 
 function xoaTatCaLoc() {
   CAC_O_LOC.forEach(id => { document.getElementById(id).value = ''; });
@@ -383,6 +414,8 @@ async function taiDon() {
   const trangThaiPhoi = document.getElementById('loc-phoi').value;
   const trangThaiVeFile = document.getElementById('loc-ve-file').value;
   const canhBao = document.getElementById('loc-canh-bao').value;
+  const xuong = document.getElementById('loc-xuong').value;
+  const uuTien = document.getElementById('loc-uu-tien').value;
   const hangLoat = document.getElementById('loc-hang-loat').checked;
   const loai = document.getElementById('loc-loai').value;
   const kichThuoc = document.getElementById('loc-kich-thuoc').value;
@@ -398,6 +431,8 @@ async function taiDon() {
   if (trangThaiPhoi) qs.set('trangThaiPhoi', trangThaiPhoi);
   if (trangThaiVeFile) qs.set('trangThaiVeFile', trangThaiVeFile);
   if (canhBao) qs.set('canhBao', canhBao);
+  if (xuong) qs.set('xuong', xuong);
+  if (uuTien) qs.set('uuTien', uuTien);
   if (hangLoat) qs.set('hangLoat', '1');
   if (loai) qs.set('loai', loai);
   if (kichThuoc) qs.set('kichThuoc', kichThuoc);
@@ -418,7 +453,7 @@ async function taiDon() {
 
   danhSachHienTai = list;
 
-  const coLocNaoDangChon = trangThai || trangThaiPhoi || trangThaiVeFile || canhBao || loai || kichThuoc || mauSac || hangVanChuyen || kh || tuNgay || denNgay;
+  const coLocNaoDangChon = trangThai || trangThaiPhoi || trangThaiVeFile || canhBao || xuong || uuTien || loai || kichThuoc || mauSac || hangVanChuyen || kh || tuNgay || denNgay;
   if (!coLocNaoDangChon) capNhatCacBoLocDong(list);
   capNhatNhanNutLoc();
 

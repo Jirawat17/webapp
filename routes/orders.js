@@ -147,7 +147,7 @@ router.get('/', async (req, res) => {
 
   const {
     trangThai, trangThaiPhoi, trangThaiVeFile, kh, tuNgay, denNgay,
-    loai, kichThuoc, mauSac, hangVanChuyen, canhBao, sapXep, hangLoat, nguoiVanHanh,
+    loai, kichThuoc, mauSac, hangVanChuyen, canhBao, xuong, uuTien, sapXep, hangLoat, nguoiVanHanh,
     canVeFile, nguoiVeFile,
   } = req.query;
   if (trangThai) list = list.filter(r => khopGiaTriLoc(r.TRANG_THAI_XUONG, trangThai));
@@ -172,6 +172,16 @@ router.get('/', async (req, res) => {
   if (mauSac) list = list.filter(r => r.MAU_SAC === mauSac);
   if (hangVanChuyen) list = list.filter(r => r.HANG_VAN_CHUYEN === hangVanChuyen);
   if (canhBao) list = list.filter(r => r.CanhBao === canhBao);
+  // Lọc theo Xưởng/Ưu tiên (bổ sung 13/09/2026, theo yêu cầu người dùng — chỉ hiện ô lọc này ở giao
+  // diện cho admin, xem public/orders.html) — KHÔNG cần chặn riêng ở đây cho vai trò khác: san_xuat/
+  // ve_file đã bị filterForRole/locTheoXuong lọc CÒN ĐÚNG 1 Xưởng của họ từ dòng 141 (TRƯỚC bộ lọc
+  // này), nên dù lỡ tự truyền xuong=X qua URL cũng chỉ có thể thu hẹp thêm (hoặc về rỗng), không lộ
+  // thêm dữ liệu nào ngoài phạm vi đã được phép xem. DON_UU_TIEN vốn đã hiển thị công khai cho mọi vai
+  // trò (viền đỏ + badge, xem lamGiauDon()) nên lọc theo nó cũng không lộ thông tin gì mới.
+  // '__CHUA_GAN__' — lọc riêng đơn CHƯA được gán Xưởng (không phải 1 giá trị Xưởng thật).
+  if (xuong) list = list.filter(r => (xuong === '__CHUA_GAN__' ? !r.XUONG : r.XUONG === xuong));
+  // uuTien: '1' = chỉ đơn ưu tiên, '0' = chỉ đơn thường (DonUuTien là field TÍNH TOÁN, gắn ở lamGiauDon()).
+  if (uuTien === '1' || uuTien === '0') list = list.filter(r => r.DonUuTien === (uuTien === '1'));
   if (hangLoat) list = list.filter(r => !!r.NHOM_HANG_LOAT);
   if (kh) {
     const tuKhoa = kh.toLowerCase();
