@@ -284,27 +284,30 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
     btnInMaPhoiDon.style.display = 'none';
   }
 
-  // "QUÉT TÌM ĐƠN HÀNG LOẠT" — hiện lại 13/09/2026 theo yêu cầu người dùng, chỉ admin/ve_file (ghi
-  // HASH_ANH_MAU/NHOM_HANG_LOAT vào Sheet) — khớp đúng chặn quyền tương ứng ở backend
-  // POST /quet-hang-loat/bat-dau (thêm cùng lúc, trước đó route này chưa chặn theo vai trò).
+  // "Quét tìm DHL" (nhãn rút gọn 13/09/2026, theo yêu cầu người dùng — tăng diện tích hiển thị toolbar;
+  // trước đó "QUÉT TÌM ĐƠN HÀNG LOẠT") — hiện lại 13/09/2026, chỉ admin/ve_file (ghi HASH_ANH_MAU/
+  // NHOM_HANG_LOAT vào Sheet) — khớp đúng chặn quyền tương ứng ở backend POST /quet-hang-loat/bat-dau
+  // (thêm cùng lúc, trước đó route này chưa chặn theo vai trò).
   const btnQuetHangLoat = document.getElementById('btn-quet-hang-loat');
   if (user.vaiTro === 'admin' || user.vaiTro === 've_file') {
     btnQuetHangLoat.style.display = '';
-    btnQuetHangLoat.innerHTML = icon('scan') + ' QUÉT TÌM ĐƠN HÀNG LOẠT';
+    btnQuetHangLoat.innerHTML = icon('scan') + ' Quét tìm DHL';
   }
 
+  // "Quét lại DHL" (nhãn rút gọn 13/09/2026, theo yêu cầu người dùng; trước đó "QUÉT LẠI ĐƠN ĐANG CHỌN").
   const btnQuetLaiHangLoat = document.getElementById('btn-quet-lai-hang-loat');
   if (user.vaiTro === 'admin' || user.vaiTro === 've_file') {
     btnQuetLaiHangLoat.style.display = '';
-    btnQuetLaiHangLoat.innerHTML = icon('scan') + ' QUÉT LẠI ĐƠN ĐANG CHỌN';
+    btnQuetLaiHangLoat.innerHTML = icon('scan') + ' Quét lại DHL';
   }
 
-  // "THÊM VÀO ĐƠN HÀNG LOẠT" (bổ sung 13/09/2026, theo yêu cầu người dùng) — cùng phạm vi quyền với
-  // nút quét ở trên (khớp backend POST /don-hang-loat/:ma/them-don, /don-hang-loat).
+  // "Thêm vào DHL" (nhãn rút gọn 13/09/2026, theo yêu cầu người dùng; trước đó "THÊM VÀO ĐƠN HÀNG
+  // LOẠT") — cùng phạm vi quyền với nút quét ở trên (khớp backend POST /don-hang-loat/:ma/them-don,
+  // /don-hang-loat).
   const btnThemHangLoat = document.getElementById('btn-them-hang-loat');
   if (user.vaiTro === 'admin' || user.vaiTro === 've_file') {
     btnThemHangLoat.style.display = '';
-    btnThemHangLoat.innerHTML = icon('package') + ' THÊM VÀO ĐƠN HÀNG LOẠT';
+    btnThemHangLoat.innerHTML = icon('package') + ' Thêm vào DHL';
   }
 
   // Tìm theo tên Đơn hàng loạt ĐÃ XÁC NHẬN (bổ sung 13/09/2026, theo yêu cầu người dùng) — chỉ admin/
