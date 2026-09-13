@@ -53,12 +53,14 @@
 /* Ô quét nhanh "IN LABEL" (bổ sung 13/09/2026, theo yêu cầu người dùng) — to, nổi bật, đặt ĐẦU trang vì
    là thao tác dùng thường xuyên nhất tại trạm đóng gói (máy quét mã vạch dạng bàn phím: gõ ký tự + Enter
    tự động). Viền dùng --color-primary cho khác hẳn các ô input thường khác trên trang, dễ nhận ra ngay. */
-.tk-o-quet-nhanh { margin-bottom: var(--space-5); max-width: 640px; }
+.tk-o-quet-nhanh { margin-bottom: var(--space-5); max-width: 1280px; }
 .tk-o-quet-nhanh label { display: block; font-weight: 700; margin-bottom: 6px; }
 .tk-o-quet-nhanh input {
-  /* Tăng gấp 2 (bổ sung 13/09/2026, theo yêu cầu người dùng) so với bản gốc (1.4rem/14px 16px/2px). */
-  width: 100%; font-size: 2.8rem; padding: 28px 32px; border-radius: var(--radius-md);
-  border: 4px solid var(--color-primary); font-family: inherit;
+  /* Tăng gấp 2 LẦN NỮA (bổ sung 13/09/2026 lần 2, theo yêu cầu người dùng — dễ nhìn hơn nữa) so với lần
+     tăng gấp 2 đầu (2.8rem/28px 32px/4px/640px) — tổng cộng gấp 4 so với bản gốc (1.4rem/14px 16px/2px/
+     480px). color chữ nhập cố định xanh đậm (#1e3a8a), khác hẳn màu chữ mặc định của trang. */
+  width: 100%; font-size: 5.6rem; padding: 56px 64px; border-radius: var(--radius-md);
+  border: 8px solid var(--color-primary); font-family: inherit; color: #1e3a8a;
 }
 .tk-o-quet-nhanh input:disabled { opacity: 0.6; }
 /* Banner báo kết quả — KHÔNG dùng alert() vì sẽ chặn thao tác quét tiếp theo (phải bấm OK mới quét được
@@ -72,7 +74,6 @@
 <div id="nav"></div>
 <div class="page">
   <h2>Tracking</h2>
-  <p style="color:var(--color-text-muted);margin:-8px 0 20px">Tự động mua tracking GKE cho đơn đánh dấu <code>AUTO_TRACKING = "YES"</code>, sau khi đủ thời gian chờ kể từ lúc đơn chuyển "Đã in mã".</p>
 
   <div class="tk-o-quet-nhanh">
     <label for="o-quet-in-label">Quét/nhập mã đơn để in label ngay</label>
@@ -107,6 +108,9 @@
     </span>
   </div>
   <p id="thong-bao-luu" style="display:none;margin-top:8px"></p>
+  <!-- Chuyển xuống đây (bổ sung 13/09/2026, theo yêu cầu người dùng) — trước đó nằm ngay dưới <h2>, đứng
+       TRƯỚC cả ô quét/Cấu hình. Nội dung không đổi, chỉ đổi vị trí. -->
+  <p style="color:var(--color-text-muted);margin:8px 0 0">Tự động mua tracking GKE cho đơn đánh dấu <code>AUTO_TRACKING = "YES"</code>, sau khi đủ thời gian chờ kể từ lúc đơn chuyển "Đã in mã".</p>
 
   <!-- Ẩn mặc định sau 1 nút bấm (bổ sung 13/09/2026, theo yêu cầu người dùng — thông tin cấu hình GKE
        không cần nhìn thấy ngay, ẩn đi để tăng diện tích hiển thị các phần khác). Nội dung bên trong
