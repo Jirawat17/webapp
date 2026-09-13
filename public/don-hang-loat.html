@@ -12,6 +12,18 @@
 <div class="page">
   <h2>Đơn hàng loạt</h2>
 
+  <!-- Lọc theo Xưởng (bổ sung 13/09/2026, theo yêu cầu người dùng) — CHỈ admin cần (thấy nhóm của mọi
+       Xưởng trộn lẫn); ve_file vốn đã chỉ thấy đúng 1 Xưởng của mình (server-side locTheoXuong), lọc
+       thêm không có ý nghĩa — ẩn mặc định, JS hiện lại nếu admin. -->
+  <div class="truong" id="truong-loc-xuong-dhl" style="display:none; max-width:220px; margin-bottom:var(--space-4)">
+    <label for="loc-xuong-dhl">Xưởng</label>
+    <select id="loc-xuong-dhl">
+      <option value="">Tất cả Xưởng</option>
+      <option value="HANOI">HANOI</option>
+      <option value="BACNINH">BACNINH</option>
+    </select>
+  </div>
+
   <div class="khoi-cau-hinh-nguong">
     <label for="input-nguong">Ngưỡng so khớp ảnh (0–32, càng thấp càng chặt)</label>
     <div class="dong-cau-hinh-nguong">
@@ -47,8 +59,39 @@ let vaiTroHienTai = '';
   document.getElementById('btn-luu-nguong').onclick = luuNguong;
   document.getElementById('btn-tao-nhom-moi').onclick = taoNhomMoi;
 
+  if (user.vaiTro === 'admin') {
+    document.getElementById('truong-loc-xuong-dhl').style.display = 'flex';
+    document.getElementById('loc-xuong-dhl').onchange = () => Promise.all([taiDanhSachGoiY(), taiDanhSachXacNhan()]);
+  }
+
   await Promise.all([taiNguong(), taiDanhSachGoiY(), taiDanhSachXacNhan()]);
 })();
+
+// Xưởng đang chọn để lọc (chỉ admin dùng — xem khối reveal ở trên) — '' = Tất cả.
+function xuongDangLoc() {
+  const el = document.getElementById('loc-xuong-dhl');
+  return el ? el.value : '';
+}
+
+// Dự đoán mã DHLXX kế tiếp để gợi ý sẵn tên nhóm mới — CÙNG công thức với sinhMaMoi() ở
+// services/donHangLoatService.js (số lớn nhất hiện có + 1, đệm 2 chữ số). LUÔN đọc KHÔNG kèm ?xuong=
+// (cần đúng số lớn nhất TOÀN BỘ hệ thống — mã DHLXX là mã chung, không phải riêng theo Xưởng — dù
+// trang đang lọc theo Xưởng nào). CHỈ mang tính GỢI Ý — mã THẬT vẫn do backend tự sinh lúc tạo; nếu 2
+// người cùng tạo nhóm gần như đồng thời, gợi ý có thể lệch 1 số so với mã thật được cấp — không sao vì
+// đây là prompt() có SẴN giá trị để sửa, không phải tự động đặt tên không cho chỉnh.
+async function duDoanMaTiepTheo() {
+  try {
+    const { nhoms } = await apiFetch('/don-hang-loat');
+    let soLonNhat = 0;
+    for (const nhom of nhoms) {
+      const khop = /^DHL(\d+)/.exec(nhom.maDonHangLoat || '');
+      if (khop) soLonNhat = Math.max(soLonNhat, Number(khop[1]));
+    }
+    return 'DHL' + String(soLonNhat + 1).padStart(2, '0');
+  } catch (e) {
+    return 'DHLXX'; // không đoán được (vd lỗi mạng) — vẫn cho gõ tay bình thường
+  }
+}
 
 async function taiNguong() {
   const { nguong } = await apiFetch('/don-hang-loat/nguong');
@@ -87,13 +130,17 @@ async function taiDanhSachGoiY() {
   el.innerHTML = skeletonList(2);
   let data;
   try {
-    data = await apiFetch('/don-hang-loat/goi-y');
+    const qs = xuongDangLoc() ? '?xuong=' + encodeURIComponent(xuongDangLoc()) : '';
+    data = await apiFetch('/don-hang-loat/goi-y' + qs);
   } catch (e) {
     el.innerHTML = `<p>Không tải được danh sách gợi ý: ${escapeHtml(e.message)}</p>`;
     return;
   }
   if (data.nhoms.length === 0) {
-    el.innerHTML = `<div class="trang-thai-rong">${icon('package')}<p>Chưa có nhóm gợi ý nào — cần bấm "QUÉT TÌM ĐƠN HÀNG LOẠT" ở trang Đơn hàng trước (tính năng này chỉ đọc, không tự quét).</p></div>`;
+    const thongBao = xuongDangLoc()
+      ? `Không có nhóm gợi ý nào thuộc Xưởng ${escapeHtml(xuongDangLoc())}.`
+      : 'Chưa có nhóm gợi ý nào — cần bấm "QUÉT TÌM ĐƠN HÀNG LOẠT" ở trang Đơn hàng trước (tính năng này chỉ đọc, không tự quét).';
+    el.innerHTML = `<div class="trang-thai-rong">${icon('package')}<p>${thongBao}</p></div>`;
     return;
   }
   el.innerHTML = data.nhoms.map(nhom => `
@@ -112,7 +159,14 @@ async function taiDanhSachGoiY() {
 // tự do (đặc biệt tenNhom, gõ tay qua prompt()), có thể chứa dấu nháy đơn/kép phá vỡ cú pháp nếu nội
 // suy trực tiếp. dataset tự giải mã HTML entity đúng chuẩn, escapeHtml() lúc ghi là đủ an toàn.
 async function xacNhanGoiY(maNhom, sttKeys) {
-  const tenNhom = prompt(`Đặt tên cho Đơn hàng loạt từ nhóm gợi ý "${maNhom}" (${sttKeys.length} đơn):`);
+  // maNhom (mã nhóm gợi ý) LUÔN = STT_Key nhỏ nhất trong nhóm (quy ước NHOM_HANG_LOAT có sẵn, xem
+  // docs/superpowers/specs/2026-09-06-don-hang-loat-design.md mục 2) — dùng thẳng làm "mã đơn đầu
+  // tiên" trong tên gợi ý, không cần tính lại.
+  const maDuDoan = await duDoanMaTiepTheo();
+  const tenNhom = prompt(
+    `Đặt tên cho Đơn hàng loạt từ nhóm gợi ý "${maNhom}" (${sttKeys.length} đơn):`,
+    `${maDuDoan}_${maNhom}_`
+  );
   if (tenNhom === null) return;
   if (!tenNhom.trim()) { alert('Cần đặt tên cho Đơn hàng loạt.'); return; }
   try {
@@ -132,13 +186,15 @@ async function taiDanhSachXacNhan() {
   el.innerHTML = skeletonList(2);
   let data;
   try {
-    data = await apiFetch('/don-hang-loat');
+    const qs = xuongDangLoc() ? '?xuong=' + encodeURIComponent(xuongDangLoc()) : '';
+    data = await apiFetch('/don-hang-loat' + qs);
   } catch (e) {
     el.innerHTML = `<p>Không tải được danh sách: ${escapeHtml(e.message)}</p>`;
     return;
   }
   if (data.nhoms.length === 0) {
-    el.innerHTML = `<div class="trang-thai-rong">${icon('package')}<p>Chưa có Đơn hàng loạt nào được xác nhận.</p></div>`;
+    const thongBao = xuongDangLoc() ? `Không có Đơn hàng loạt nào thuộc Xưởng ${escapeHtml(xuongDangLoc())}.` : 'Chưa có Đơn hàng loạt nào được xác nhận.';
+    el.innerHTML = `<div class="trang-thai-rong">${icon('package')}<p>${thongBao}</p></div>`;
     return;
   }
   el.innerHTML = data.nhoms.map(nhom => `
@@ -210,12 +266,16 @@ async function xoaCaNhom(maDonHangLoat) {
 }
 
 async function taoNhomMoi() {
-  const tenNhom = prompt('Tên cho Đơn hàng loạt mới:');
-  if (tenNhom === null) return;
-  if (!tenNhom.trim()) { alert('Cần đặt tên cho Đơn hàng loạt.'); return; }
+  // Hỏi mã đơn đầu tiên TRƯỚC tên (đảo thứ tự so với bản đầu) — cần mã này để gợi ý sẵn tên nhóm
+  // theo mẫu DHLXX_<mã đơn đầu>_ (bổ sung 13/09/2026, theo yêu cầu người dùng).
   const sttKey = prompt('Mã đơn đầu tiên trong nhóm:');
   if (sttKey === null) return;
   if (!sttKey.trim()) { alert('Cần ít nhất 1 mã đơn.'); return; }
+
+  const maDuDoan = await duDoanMaTiepTheo();
+  const tenNhom = prompt('Tên cho Đơn hàng loạt mới:', `${maDuDoan}_${sttKey.trim()}_`);
+  if (tenNhom === null) return;
+  if (!tenNhom.trim()) { alert('Cần đặt tên cho Đơn hàng loạt.'); return; }
   try {
     const kq = await apiFetch('/don-hang-loat', { method: 'POST', body: JSON.stringify({ sttKeys: [sttKey.trim()], tenNhom }) });
     alert(`Đã tạo ${kq.maDonHangLoat} — "${tenNhom}".`);

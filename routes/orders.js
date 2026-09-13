@@ -149,7 +149,7 @@ router.get('/', async (req, res) => {
   const {
     trangThai, trangThaiPhoi, trangThaiVeFile, kh, tuNgay, denNgay,
     loai, kichThuoc, mauSac, hangVanChuyen, canhBao, xuong, uuTien, sapXep, hangLoat, nguoiVanHanh,
-    canVeFile, nguoiVeFile, donHangLoat,
+    canVeFile, nguoiVeFile, timDonHangLoat,
   } = req.query;
   if (trangThai) list = list.filter(r => khopGiaTriLoc(r.TRANG_THAI_XUONG, trangThai));
   if (trangThaiPhoi) list = list.filter(r => khopGiaTriLoc(r.TRANG_THAI_PHOI, trangThaiPhoi));
@@ -184,12 +184,14 @@ router.get('/', async (req, res) => {
   // uuTien: '1' = chỉ đơn ưu tiên, '0' = chỉ đơn thường (DonUuTien là field TÍNH TOÁN, gắn ở lamGiauDon()).
   if (uuTien === '1' || uuTien === '0') list = list.filter(r => r.DonUuTien === (uuTien === '1'));
   if (hangLoat) list = list.filter(r => !!r.NHOM_HANG_LOAT);
-  // Lọc theo "Đơn hàng loạt" ĐÃ XÁC NHẬN (khác hangLoat= ở trên — đó là nhóm TỰ ĐỘNG đề xuất, xem
-  // services/donHangLoatService.js). CHỈ đọc tab DonHangLoat khi thực sự có query này — tránh tốn
-  // thêm 1 lượt gọi Sheets API cho MỌI lần tải danh sách đơn bình thường (route này gọi rất thường
-  // xuyên, khác hẳn GET /api/don-hang-loat vốn chỉ gọi khi mở trang/panel lọc riêng).
-  if (donHangLoat) {
-    const sttKeyTrongNhom = await donHangLoatService.layDanhSachSttKeyTheoNhom(donHangLoat);
+  // Tìm theo TÊN "Đơn hàng loạt" ĐÃ XÁC NHẬN (khác hangLoat= ở trên — đó là nhóm TỰ ĐỘNG đề xuất, xem
+  // services/donHangLoatService.js) — đổi từ lọc đúng 1 mã sang tìm khớp chuỗi con trong tên
+  // (13/09/2026, theo yêu cầu người dùng, vì tên sắp dài hơn theo mẫu DHLXX_<mã đơn đầu>_<mô tả>).
+  // CHỈ đọc tab DonHangLoat khi thực sự có query này — tránh tốn thêm 1 lượt gọi Sheets API cho MỌI
+  // lần tải danh sách đơn bình thường (route này gọi rất thường xuyên, khác hẳn GET /api/don-hang-loat
+  // vốn chỉ gọi khi mở trang/panel lọc riêng).
+  if (timDonHangLoat) {
+    const sttKeyTrongNhom = await donHangLoatService.layDanhSachSttKeyTheoTenNhom(timDonHangLoat);
     list = list.filter(r => sttKeyTrongNhom.has(r.STT_Key));
   }
   if (kh) {
@@ -748,7 +750,7 @@ router.post('/quet-hang-loat/bat-dau', async (req, res) => {
   if (user.vaiTro !== 'admin' && user.vaiTro !== 've_file') {
     return res.status(403).json({ error: 'Chỉ admin/người vẽ file mới được quét đơn hàng loạt' });
   }
-  const { sttKeys } = req.body;
+  const { sttKeys, buocLai } = req.body;
   if (!Array.isArray(sttKeys) || sttKeys.length === 0 || sttKeys.some(k => typeof k !== 'string')) {
     return res.status(400).json({ error: 'Thiếu danh sách đơn đang chọn (sttKeys) — hãy chọn ít nhất 1 đơn trước khi quét.' });
   }
@@ -804,7 +806,10 @@ router.post('/quet-hang-loat/bat-dau', async (req, res) => {
     return res.status(400).json({ error: 'Không còn đơn nào hợp lệ trong lô đã chọn (có thể không thuộc Xưởng của bạn).' });
   }
 
-  const donThieuHash = rows.filter(d => sttKeySet.has(d.STT_Key) && d.DUONG_DAN_URL && !d.HASH_ANH_MAU);
+  // buocLai=true (nút "QUÉT LẠI ĐƠN ĐANG CHỌN", bổ sung 13/09/2026, theo yêu cầu người dùng — sau khi
+  // đổi ngưỡng muốn tính lại hash cho ĐÚNG các đơn đang chọn, không chỉ đơn còn thiếu hash) — bỏ điều
+  // kiện "!d.HASH_ANH_MAU", tính lại hash cho MỌI đơn có ảnh trong lô đang chọn, ghi đè hash cũ.
+  const donThieuHash = rows.filter(d => sttKeySet.has(d.STT_Key) && d.DUONG_DAN_URL && (buocLai || !d.HASH_ANH_MAU));
   job.tongSo = donThieuHash.length;
   const nguong = await donHangLoatService.layNguong(); // chụp 1 lần, dùng suốt job — xem ghi chú ở tinhLaiNhomHangLoat
 

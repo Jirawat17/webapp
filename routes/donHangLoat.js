@@ -18,7 +18,12 @@ router.use(requireRole('ve_file'));
 router.get('/goi-y', async (req, res) => {
   const user = req.session.user;
   const { rows } = await orderService.getAll();
-  const daLoc = orderService.locTheoXuong(rows, user);
+  let daLoc = orderService.locTheoXuong(rows, user);
+  // Lọc thêm theo Xưởng do NGƯỜI DÙNG tự chọn (bổ sung 13/09/2026, theo yêu cầu người dùng) — KHÁC
+  // locTheoXuong ở trên (đó là giới hạn quyền cứng theo vai trò). Chỉ admin mới thấy được nhiều Xưởng
+  // trộn lẫn nên mới cần bộ lọc này; vai trò khác dù có tự truyền ?xuong= cũng chỉ thu hẹp thêm trong
+  // đúng phạm vi đã bị locTheoXuong giới hạn từ trước, không lộ thêm gì.
+  if (req.query.xuong) daLoc = daLoc.filter(r => r.XUONG === req.query.xuong);
 
   const theoNhom = new Map();
   for (const r of daLoc) {
@@ -52,7 +57,12 @@ router.put('/nguong', async (req, res) => {
 });
 
 router.get('/', async (req, res) => {
-  res.json({ nhoms: await donHangLoatService.layDanhSachNhom(req.session.user) });
+  let nhoms = await donHangLoatService.layDanhSachNhom(req.session.user);
+  // Lọc theo Xưởng người dùng tự chọn — cùng lý do/nguyên tắc với GET /goi-y ở trên (ẩn HẲN cả nhóm
+  // nếu có dù chỉ 1 đơn ngoài Xưởng đang lọc, khớp nguyên tắc "mọi đơn phải cùng Xưởng" của chính
+  // layDanhSachNhom()).
+  if (req.query.xuong) nhoms = nhoms.filter(n => n.donHang.every(d => d.XUONG === req.query.xuong));
+  res.json({ nhoms });
 });
 
 router.post('/', async (req, res) => {

@@ -311,6 +311,14 @@ body.trang-dang-nhap {
 .panel-dieu-khien .inline-form { margin-bottom: var(--space-2); }
 .panel-dieu-khien .inline-form:last-child { margin-bottom: 0; }
 
+/* Thu gọn panel Lọc (bổ sung 13/09/2026, theo yêu cầu người dùng — nhiều ô lọc, muốn gọn lại để vừa
+   trong 1 màn hình, không cần cuộn) — CHỈ áp dụng #panel-loc, KHÔNG đụng #panel-sap-xep hay .inline-
+   form dùng ở nơi khác (vd trang Nhân viên) vẫn giữ nguyên kích thước chạm mặc định (--tap-min). */
+#panel-loc .inline-form { gap: 6px var(--space-2); }
+#panel-loc .inline-form .truong { gap: 2px; }
+#panel-loc .inline-form label { font-size: 0.72rem; }
+#panel-loc .inline-form input, #panel-loc .inline-form select { padding: 6px 8px; min-height: 34px; font-size: 0.85rem; }
+
 /* Trên màn hình đủ rộng, gộp toàn bộ các ô Lọc (kể cả nút Xoá bộ lọc) vào đúng 1 hàng để
    tiết kiệm diện tích dọc — thu nhỏ chiều rộng từng ô vì tổng 12 ô không có chỗ nếu để rộng
    tự nhiên. Dưới ngưỡng này giữ nguyên hành vi xuống dòng (flex-wrap mặc định của .inline-form). */

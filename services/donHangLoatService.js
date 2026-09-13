@@ -63,15 +63,24 @@ function sinhMaMoi(rows) {
   return 'DHL' + String(soLonNhat + 1).padStart(2, '0');
 }
 
-// Bản NHẸ, chỉ trả về tập STT_Key thuộc 1 mã nhóm — dùng cho bộ lọc "Đơn hàng loạt" ở Danh sách đơn
-// hàng (routes/orders.js GET /), không cần join thông tin hiển thị như layDanhSachNhom(). KHÔNG tự
-// lọc theo Xưởng ở đây — nơi gọi (GET /orders) đã tự lọc `list` theo Xưởng người xem TRƯỚC khi áp
-// dụng bộ lọc này (đúng nguyên tắc đang dùng cho xuong=/uuTien= ngay phía trên), nên dù lỡ truyền mã
-// nhóm ngoài Xưởng cũng chỉ khiến kết quả rỗng, không lộ thêm dữ liệu.
-async function layDanhSachSttKeyTheoNhom(maDonHangLoat) {
+// Bản NHẸ, tìm theo TỪ KHOÁ trong TÊN nhóm (không phân biệt hoa/thường, khớp chuỗi con — KHÔNG cần
+// đúng nguyên tên) — dùng cho ô lọc "Đơn hàng loạt" ở Danh sách đơn hàng (routes/orders.js GET /,
+// đổi từ lọc đúng mã sang tìm theo tên 13/09/2026, theo yêu cầu người dùng vì tên sắp tới sẽ dài hơn
+// theo mẫu DHLXX_<mã đơn đầu>_<mô tả>). Gộp STT_Key của MỌI nhóm có tên khớp từ khoá, không chỉ 1
+// nhóm — vd gõ "áo thun" khớp cả 2 nhóm khác nhau cùng có "áo thun" trong tên. KHÔNG tự lọc theo
+// Xưởng ở đây — nơi gọi (GET /orders) đã tự lọc `list` theo Xưởng người xem TRƯỚC khi áp dụng bộ lọc
+// này (đúng nguyên tắc đang dùng cho xuong=/uuTien= ngay phía trên), nên dù khớp phải nhóm có đơn
+// ngoài Xưởng cũng chỉ khiến kết quả bị thu hẹp thêm, không lộ thêm dữ liệu.
+async function layDanhSachSttKeyTheoTenNhom(tuKhoa) {
+  const tuKhoaChuanHoa = String(tuKhoa || '').trim().toLowerCase();
+  if (!tuKhoaChuanHoa) return new Set();
   try {
     const { rows } = await readTabCached(TAB, 5000);
-    return new Set(rows.filter(r => r.MaDonHangLoat === maDonHangLoat && dongDangHoatDong(r)).map(r => r.STT_Key));
+    return new Set(
+      rows
+        .filter(r => dongDangHoatDong(r) && String(r.TenNhom || '').toLowerCase().includes(tuKhoaChuanHoa))
+        .map(r => r.STT_Key)
+    );
   } catch (e) {
     console.error('[DonHangLoat] Không đọc được tab DonHangLoat (có thể chưa tạo):', e.message);
     return new Set();
@@ -261,6 +270,6 @@ async function xoaNhom(maDonHangLoat, user) {
 }
 
 module.exports = {
-  layNguong, datNguong, layDanhSachNhom, layDanhSachSttKeyTheoNhom,
+  layNguong, datNguong, layDanhSachNhom, layDanhSachSttKeyTheoTenNhom,
   xacNhanNhomMoi, themDonVaoNhom, xoaDonKhoiNhom, doiTenNhom, xoaNhom,
 };
