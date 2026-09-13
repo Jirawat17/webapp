@@ -779,6 +779,9 @@ router.post('/quet-hang-loat/bat-dau', async (req, res) => {
   // Chỉ quét/gộp nhóm trong phạm vi đơn đang được chọn (tick) trên trang — xem
   // docs/superpowers/specs/2026-09-06-quet-hang-loat-theo-lua-chon-design.md.
   const user = req.session.user;
+  if (user.vaiTro !== 'admin' && user.vaiTro !== 've_file') {
+    return res.status(403).json({ error: 'Chỉ admin/người vẽ file mới được quét đơn hàng loạt' });
+  }
   const { sttKeys } = req.body;
   if (!Array.isArray(sttKeys) || sttKeys.length === 0 || sttKeys.some(k => typeof k !== 'string')) {
     return res.status(400).json({ error: 'Thiếu danh sách đơn đang chọn (sttKeys) — hãy chọn ít nhất 1 đơn trước khi quét.' });

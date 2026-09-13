@@ -18,11 +18,14 @@
     <div class="thanh-cong-cu-danh-sach">
       <button type="button" class="btn-hanh-dong phu" id="btn-mo-loc" onclick="batTatPanel('panel-loc')"></button>
       <button type="button" class="btn-hanh-dong phu" id="btn-mo-sap-xep" onclick="batTatPanel('panel-sap-xep')"></button>
-      <!-- 3 nút dưới đây TẠM ẨN theo yêu cầu người dùng 07/09/2026 — CHỈ ẩn (style="display:none"),
+      <!-- 2 nút dưới đây TẠM ẨN theo yêu cầu người dùng 07/09/2026 — CHỈ ẩn (style="display:none"),
            KHÔNG xoá code/JS liên quan — bỏ thuộc tính style này để hiện lại khi cần. -->
       <button type="button" class="btn-hanh-dong phu" id="btn-in-phoi-ao" onclick="inPhoiDangChon(this)" style="display:none"></button>
       <button type="button" class="btn-hanh-dong phu" id="btn-in-don-dang-chon" onclick="inDonDangChon(this)" style="display:none"></button>
       <button type="button" class="btn-hanh-dong phu" id="btn-in-ma-phoi-don" onclick="inMaPhoiDonDangChon(this)"></button>
+      <!-- btn-quet-hang-loat: hiện lại 13/09/2026 theo yêu cầu người dùng (để thử đánh giá độ chính
+           xác gộp nhóm) — style="display:none" gốc bỏ đi, chuyển sang ẩn/hiện theo vai trò bằng JS
+           (cùng khuôn mẫu btn-in-hai-quan/btn-rasoat-hang-loat) vì đây là hành động ghi vào Sheet. -->
       <button type="button" class="btn-hanh-dong phu" id="btn-quet-hang-loat" onclick="quetDonHangLoat(this)" style="display:none"></button>
       <button type="button" class="btn-hanh-dong phu" id="btn-rasoat-hang-loat" onclick="location.href='/rasoat-hang-loat.html'" style="display:none"></button>
       <button type="button" class="btn-hanh-dong phu" id="btn-in-hai-quan" onclick="inHaiQuanDangChon(this)" style="display:none"></button>
@@ -265,7 +268,14 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
     btnInMaPhoiDon.style.display = 'none';
   }
 
-  document.getElementById('btn-quet-hang-loat').innerHTML = icon('scan') + ' QUÉT TÌM ĐƠN HÀNG LOẠT';
+  // "QUÉT TÌM ĐƠN HÀNG LOẠT" — hiện lại 13/09/2026 theo yêu cầu người dùng, chỉ admin/ve_file (ghi
+  // HASH_ANH_MAU/NHOM_HANG_LOAT vào Sheet) — khớp đúng chặn quyền tương ứng ở backend
+  // POST /quet-hang-loat/bat-dau (thêm cùng lúc, trước đó route này chưa chặn theo vai trò).
+  const btnQuetHangLoat = document.getElementById('btn-quet-hang-loat');
+  if (user.vaiTro === 'admin' || user.vaiTro === 've_file') {
+    btnQuetHangLoat.style.display = '';
+    btnQuetHangLoat.innerHTML = icon('scan') + ' QUÉT TÌM ĐƠN HÀNG LOẠT';
+  }
 
   // "IN KÊ KHAI HẢI QUAN ĐƠN ĐANG CHỌN" (bổ sung 08/09/2026) — chỉ admin/ve_file, cùng phạm vi với
   // nút gộp phía trên.
