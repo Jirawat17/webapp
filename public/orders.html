@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=84">
-<script src="/js/theme.js?v=84"></script>
+<link rel="stylesheet" href="/css/style.css?v=85">
+<script src="/js/theme.js?v=85"></script>
 </head>
 <body>
 <div id="nav"></div>
@@ -24,6 +24,7 @@
       <button type="button" class="btn-hanh-dong phu" id="btn-in-don-dang-chon" onclick="inDonDangChon(this)" style="display:none"></button>
       <button type="button" class="btn-hanh-dong phu" id="btn-in-ma-phoi-don" onclick="inMaPhoiDonDangChon(this)"></button>
       <button type="button" class="btn-hanh-dong phu" id="btn-quet-hang-loat" onclick="quetDonHangLoat(this)" style="display:none"></button>
+      <button type="button" class="btn-hanh-dong phu" id="btn-rasoat-hang-loat" onclick="location.href='/rasoat-hang-loat.html'" style="display:none"></button>
       <button type="button" class="btn-hanh-dong phu" id="btn-in-hai-quan" onclick="inHaiQuanDangChon(this)" style="display:none"></button>
     </div>
   </div>
@@ -191,8 +192,8 @@
   <button class="btn-hanh-dong phu" onclick="boChonTatCaDon()">Bỏ chọn</button>
 </div>
 
-<script src="/js/icons.js?v=84"></script>
-<script src="/js/api.js?v=84"></script>
+<script src="/js/icons.js?v=85"></script>
+<script src="/js/api.js?v=85"></script>
 <script>
 const NHAN_CANH_BAO = { VANG: 'Vàng · 3 ngày', CAM: 'Cam · 5 ngày', DO: 'Đỏ · 7 ngày' };
 
@@ -272,6 +273,17 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   if (user.vaiTro === 'admin' || user.vaiTro === 've_file') {
     btnInHaiQuan.style.display = '';
     btnInHaiQuan.innerHTML = icon('printer') + ' IN KÊ KHAI HẢI QUAN ĐƠN ĐANG CHỌN';
+  }
+
+  // "RÀ SOÁT ĐƠN HÀNG LOẠT" (bổ sung 13/09/2026, theo yêu cầu người dùng) — mở trang chỉ đọc
+  // public/rasoat-hang-loat.html để xem lại ảnh PNG thật của các nhóm đã gộp, đánh giá độ chính xác
+  // thuật toán trước khi dùng làm nền cho tính năng lớn hơn. CHỈ admin/ve_file, khớp đúng quyền truy
+  // cập của trang đích (chặn lại lần nữa ở đó nếu lỡ vào thẳng URL). KHÔNG đụng btn-quet-hang-loat
+  // đang ẩn — giữ nguyên quyết định "TẠM ẨN" trước đó của người dùng (07/09/2026).
+  const btnRaSoatHangLoat = document.getElementById('btn-rasoat-hang-loat');
+  if (user.vaiTro === 'admin' || user.vaiTro === 've_file') {
+    btnRaSoatHangLoat.style.display = '';
+    btnRaSoatHangLoat.innerHTML = icon('package') + ' RÀ SOÁT ĐƠN HÀNG LOẠT';
   }
 
   // Nút "Đã..." (positive) dùng icon check, nút "Chưa..." (negative, đưa trạng thái quay lại) dùng

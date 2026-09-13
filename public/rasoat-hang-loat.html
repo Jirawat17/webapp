@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rà soát Đơn hàng loạt — Xưởng Thêu</title>
+<link rel="stylesheet" href="/css/style.css?v=85">
+<script src="/js/theme.js?v=85"></script>
+</head>
+<body>
+<div id="nav"></div>
+<div class="page">
+  <h2>Rà soát Đơn hàng loạt</h2>
+  <p class="meta">Xem lại các nhóm đơn đã được hệ thống tự nhận diện là cùng thiết kế (so khớp ảnh PNG) — chỉ đọc, dùng để đánh giá độ chính xác trước khi tin dùng cho việc gợi ý tự động.</p>
+  <div id="danh-sach-nhom"></div>
+</div>
+
+<script src="/js/icons.js?v=85"></script>
+<script src="/js/api.js?v=85"></script>
+<script>
+(async () => {
+  const user = await requireLoginOrRedirect();
+  if (!user) return;
+  renderNav(user, 'orders');
+  if (user.vaiTro !== 'admin' && user.vaiTro !== 've_file') {
+    document.querySelector('.page').innerHTML = '<p>Bạn không có quyền truy cập trang này.</p>';
+    return;
+  }
+  await taiDanhSachNhom();
+})();
+
+async function taiDanhSachNhom() {
+  const el = document.getElementById('danh-sach-nhom');
+  el.innerHTML = skeletonList(3);
+
+  let data;
+  try {
+    data = await apiFetch('/orders/rasoat-hang-loat');
+  } catch (e) {
+    el.innerHTML = `<p>Không tải được danh sách: ${escapeHtml(e.message)}</p>`;
+    return;
+  }
+
+  if (data.nhoms.length === 0) {
+    el.innerHTML = `<div class="trang-thai-rong">${icon('package')}<p>Chưa có nhóm đơn hàng loạt nào — cần bấm "QUÉT TÌM ĐƠN HÀNG LOẠT" ở trang Đơn hàng trước (tính năng này chỉ đọc, không tự quét).</p></div>`;
+    return;
+  }
+
+  el.innerHTML = data.nhoms.map(nhom => `
+    <div class="khoi-nhom-hang-loat">
+      <h3>Nhóm ${escapeHtml(nhom.maNhom)} <span class="meta">(${nhom.donHang.length} đơn)</span></h3>
+      <div class="luoi-anh-nhom">
+        ${nhom.donHang.map(don => `
+          <a class="the-anh-nhom" href="/order.html?stt=${encodeURIComponent(don.STT_Key)}" target="_blank" rel="noopener">
+            ${don.DUONG_DAN_URL
+              ? `<img src="${escapeHtml(urlAnhHienThiList(don.DUONG_DAN_URL)[0] || '')}" alt="" loading="lazy" onerror="this.remove()">`
+              : `<div class="khong-co-anh">${icon('package')}</div>`}
+            <span class="ten-don">${escapeHtml(don.TieuDeSanPham || don.STT_Key)}</span>
+          </a>`).join('')}
+      </div>
+    </div>`).join('');
+}
+</script>
+</body>
+</html>
