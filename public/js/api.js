@@ -15,6 +15,20 @@ function escapeHtml(str) {
   }[ch]));
 }
 
+// Ảnh CŨ (trước khi có MinIO) lưu thẳng link Drive/Gemini/HTTP thường trong Sheet — trình duyệt KHÔNG
+// tải được link xem trước Drive hay trang chia sẻ Gemini làm <img src> trực tiếp (trả về trang HTML,
+// không phải file ảnh thật), nên phải đi qua proxy server tự nhận diện + tải hộ đúng nguồn (xem
+// routes/photos.js#GET /anh-ngoai, bổ sung 13/09/2026, theo yêu cầu người dùng). Ảnh MỚI (MinIO, dạng
+// /api/photos/file/...) đã tự tải trực tiếp được — CHỈ vòng qua proxy khi KHÔNG PHẢI URL nội bộ đó,
+// tránh tốn 1 lượt qua server vô ích với ảnh vốn đã tải thẳng được. Dùng CHUNG cho mọi nơi hiển thị
+// ảnh đại diện đơn (orders.html, order.html, my-orders.html, my-orders-ve-file.html).
+function urlAnhHienThi(rawUrl) {
+  if (!rawUrl) return '';
+  const duongDan = String(rawUrl).replace(/^https?:\/\/[^/]+/, ''); // bỏ host nếu URL là dạng tuyệt đối cùng gốc, cùng quy ước storageService.js#proxyUrlToObjectKey
+  if (duongDan.startsWith('/api/photos/file/')) return rawUrl;
+  return '/api/photos/anh-ngoai?url=' + encodeURIComponent(rawUrl);
+}
+
 async function apiFetch(url, options = {}) {
   const res = await fetch(API + url, {
     credentials: 'include',

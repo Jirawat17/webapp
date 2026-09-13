@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn của tôi — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=80">
-<script src="/js/theme.js?v=80"></script>
+<link rel="stylesheet" href="/css/style.css?v=81">
+<script src="/js/theme.js?v=81"></script>
 </head>
 <body>
 <div id="nav"></div>
@@ -196,8 +196,8 @@
   <div id="danh-sach-san-sang" class="order-list"></div>
 </div>
 
-<script src="/js/icons.js?v=80"></script>
-<script src="/js/api.js?v=80"></script>
+<script src="/js/icons.js?v=81"></script>
+<script src="/js/api.js?v=81"></script>
 <script>
 const NHAN_CANH_BAO = { VANG: 'Vàng · 3 ngày', CAM: 'Cam · 5 ngày', DO: 'Đỏ · 7 ngày' };
 const NHAN_NGUOI_VAN_HANH_KHONG_RO = 'ĐƠN SỬA TRONG GGSHEET, KHÔNG RÕ TÀI KHOẢN SẢN XUẤT NÀO ĐANG CHẠY';
@@ -396,7 +396,7 @@ function renderDanhSachSanSang() {
              onclick="event.stopPropagation()"
              onchange="toggleChonDonSanSang('${escapeHtml(o.STT_Key)}', this.checked)">
       ${o.DUONG_DAN_URL || o.MOCKUP
-        ? `<img src="${escapeHtml(o.DUONG_DAN_URL || o.MOCKUP)}" alt="" loading="lazy" onerror="this.remove()">`
+        ? `<img src="${escapeHtml(urlAnhHienThi(o.DUONG_DAN_URL || o.MOCKUP))}" alt="" loading="lazy" onerror="this.remove()">`
         : ''}
       <div class="thong-tin">
         <strong class="tieu-de-the ${o.DonUuTien ? 'uu-tien' : ''}">${escapeHtml(o.TieuDeSanPham || o.STT_Key)}</strong>
@@ -619,7 +619,7 @@ async function taiDon() {
   el.innerHTML = list.map(o => `
     <div class="order-card" onclick="location.href='/order.html?stt=${encodeURIComponent(o.STT_Key)}'">
       ${o.DUONG_DAN_URL || o.MOCKUP
-        ? `<img src="${escapeHtml(o.DUONG_DAN_URL || o.MOCKUP)}" alt="" loading="lazy" onerror="this.remove()">`
+        ? `<img src="${escapeHtml(urlAnhHienThi(o.DUONG_DAN_URL || o.MOCKUP))}" alt="" loading="lazy" onerror="this.remove()">`
         : ''}
       <div class="thong-tin">
         <strong class="tieu-de-the ${o.DonUuTien ? 'uu-tien' : ''}">${escapeHtml(o.TieuDeSanPham || o.STT_Key)}</strong>

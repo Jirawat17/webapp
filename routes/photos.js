@@ -5,6 +5,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 
 
 const orderService = require('../services/orderService');
 const storageService = require('../services/storageService');
+const { taiAnh } = require('../services/anhNguonService');
 const { ghiLog } = require('../services/logService');
 const { requireLogin } = require('../middleware/auth');
 
@@ -188,6 +189,87 @@ router.get('/file/*', async (req, res) => {
   res.setHeader('Content-Type', result.ContentType || 'application/octet-stream');
   if (result.ContentLength) res.setHeader('Content-Length', result.ContentLength);
   result.Body.pipe(res);
+});
+
+// ============================================================
+// PROXY ẢNH NGOÀI (Drive/Gemini/link công khai khác) — bổ sung 13/09/2026, theo yêu cầu người dùng.
+// Ảnh CŨ (trước khi có MinIO) lưu thẳng link Drive/Gemini/HTTP thường trong Sheet — trình duyệt KHÔNG
+// tải được link xem trước Drive (trả về trang HTML, không phải file ảnh) hay link chia sẻ Gemini (cần
+// trình duyệt ảo render) làm <img src> trực tiếp, nên các đơn này không hiện được ảnh đại diện dù link
+// vẫn "sống" bình thường. Dùng LẠI ĐÚNG services/anhNguonService.js#taiAnh() đã có sẵn cho tính năng
+// IN ĐƠN (PDF) — xử lý được Drive/Gemini/MinIO/HTTP thường trong CÙNG 1 hàm, không viết lại logic nhận
+// diện nguồn ảnh ở đây. KHÔNG ghi lại URL đã resolve vào Sheet (theo yêu cầu người dùng — Sheet là dữ
+// liệu gốc, không sửa qua đường này) — chỉ cache TRONG BỘ NHỚ TIẾN TRÌNH để đỡ gọi lại Drive API/dựng
+// lại trang Gemini mỗi lần có người xem lại ĐÚNG 1 ảnh đó (tránh lặp lại vấn đề tốn quota như từng gặp
+// với Google Sheets API).
+// ============================================================
+const _cacheAnhNgoai = new Map(); // url -> { buffer, contentType, luuLucNao } — Map giữ thứ tự chèn, dùng làm LRU (xem layTuCacheAnhNgoai/luuVaoCacheAnhNgoai)
+const THOI_GIAN_GIU_CACHE_ANH_NGOAI_MS = 6 * 60 * 60 * 1000; // 6 giờ — ảnh cũ hiếm khi đổi nội dung, đủ dài để giảm tải Drive/Gemini
+const SO_ANH_TOI_DA_TRONG_CACHE = 100; // giới hạn bộ nhớ — loại ảnh LÂU KHÔNG AI XEM LẠI nhất khi vượt ngưỡng
+
+function layTuCacheAnhNgoai(url) {
+  const daCache = _cacheAnhNgoai.get(url);
+  if (!daCache) return null;
+  if (Date.now() - daCache.luuLucNao > THOI_GIAN_GIU_CACHE_ANH_NGOAI_MS) {
+    _cacheAnhNgoai.delete(url);
+    return null;
+  }
+  // Xoá rồi set lại — đưa key này lên CUỐI thứ tự chèn của Map, đúng ngữ nghĩa "vừa dùng gần nhất" cho LRU.
+  _cacheAnhNgoai.delete(url);
+  _cacheAnhNgoai.set(url, daCache);
+  return daCache;
+}
+
+function luuVaoCacheAnhNgoai(url, buffer, contentType) {
+  _cacheAnhNgoai.delete(url);
+  _cacheAnhNgoai.set(url, { buffer, contentType, luuLucNao: Date.now() });
+  while (_cacheAnhNgoai.size > SO_ANH_TOI_DA_TRONG_CACHE) {
+    _cacheAnhNgoai.delete(_cacheAnhNgoai.keys().next().value); // key đầu tiên = lâu không được dùng lại nhất
+  }
+}
+
+// Nhận diện Content-Type qua magic bytes — cùng kỹ thuật routes/reports.js#nhanDangDinhDangAnh() dùng
+// cho PDF, viết riêng 1 bản ở đây (khác định dạng trả về: Content-Type thật thay vì mã ngắn 'png'/'jpeg')
+// để không phải export/import chéo giữa 2 route học không liên quan tới nhau.
+function nhanDangContentTypeAnh(buffer) {
+  if (buffer && buffer.length >= 4 && buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) return 'image/png';
+  if (buffer && buffer.length >= 2 && buffer[0] === 0xff && buffer[1] === 0xd8) return 'image/jpeg';
+  return 'application/octet-stream';
+}
+
+router.get('/anh-ngoai', async (req, res) => {
+  const url = req.query.url;
+  if (!url || !/^https?:\/\//i.test(String(url))) {
+    return res.status(400).json({ error: 'Thiếu hoặc sai định dạng tham số url' });
+  }
+
+  const daCache = layTuCacheAnhNgoai(url);
+  if (daCache) {
+    res.setHeader('Content-Type', daCache.contentType);
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    return res.end(daCache.buffer);
+  }
+
+  let buffer;
+  try {
+    buffer = await taiAnh(url);
+  } catch (err) {
+    console.error('[Ảnh ngoài] Lỗi tải ảnh:', url, '-', err.message);
+    buffer = null;
+  }
+  if (!buffer) {
+    return res.status(502).json({ error: 'Không tải được ảnh từ nguồn gốc' });
+  }
+
+  const contentType = nhanDangContentTypeAnh(buffer);
+  luuVaoCacheAnhNgoai(url, buffer, contentType);
+
+  res.setHeader('Content-Type', contentType);
+  // private (không cache ở proxy/CDN trung gian, ảnh có thể riêng tư) + max-age 1 giờ ở TRÌNH DUYỆT —
+  // giảm thêm request lặp lại tới CHÍNH server này (ngoài cache trong bộ nhớ tiến trình ở trên) khi
+  // cùng 1 người dùng xem lại danh sách đơn nhiều lần trong phiên làm việc.
+  res.setHeader('Cache-Control', 'private, max-age=3600');
+  res.end(buffer);
 });
 
 module.exports = router;
