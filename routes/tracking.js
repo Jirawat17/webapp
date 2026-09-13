@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const {
   layCauHinh, luuCauHinh, layDanhSachDonAutoTracking, layLogTracking, muaTrackingChoDon,
-  inLabelChoDon, muaTrackingVaInLabelChoDon,
+  inLabelChoDon, muaTrackingVaInLabelChoDon, capNhatTrangThaiTrackingChoDon,
 } = require('../services/trackingAutoService');
 const { layCauHinhGke, luuCauHinhGke, gopCacTemPdf } = require('../services/gkeService');
 const orderService = require('../services/orderService');
@@ -147,5 +147,51 @@ router.post('/in-label', (req, res) => xuLyInLabelHangLoat(req, res, inLabelChoD
 // "MUA TRACKING và IN LABEL" — 1 nút làm cả 2 việc, tự bỏ qua bước mua nếu đơn đã có tracking rồi (xem
 // services/trackingAutoService.js#muaTrackingVaInLabelChoDon).
 router.post('/mua-va-in-label', (req, res) => xuLyInLabelHangLoat(req, res, muaTrackingVaInLabelChoDon));
+
+// Tra cứu/cập nhật trạng thái tracking THẬT thủ công (bổ sung 14/09/2026, theo yêu cầu người dùng — xem
+// docs/superpowers/specs/2026-09-14-cap-nhat-trang-thai-tracking-design.md) — tương đương thủ công của
+// lịch tự động mỗi 4 tiếng (services/trackingJob.js), CÙNG khuôn /mua-thu-cong: nhận sttKeys (mảng,
+// dùng ô quét ở tracking.html luôn gửi đúng 1 phần tử), chặn khác Xưởng, lỗi 1 đơn rơi vào loi[] không
+// dừng cả lượt. Trả THÊM trangThai/thoiGian/diaDiem cho mỗi đơn thành công (khác /mua-thu-cong chỉ cần
+// biết có mua được hay không) — để giao diện hiện NGAY kết quả tra được, đúng yêu cầu "hiển thị kết quả
+// luôn trong menu Tracking".
+router.post('/cap-nhat-trang-thai-thu-cong', async (req, res) => {
+  const { sttKeys } = req.body;
+  const user = req.session.user;
+  if (!Array.isArray(sttKeys) || sttKeys.length === 0) {
+    return res.status(400).json({ error: 'Danh sách đơn trống' });
+  }
+
+  const cauHinhGke = await layCauHinhGke();
+  const thanhCong = [];
+  const loi = [];
+
+  for (const sttKey of sttKeys) {
+    try {
+      const { row } = await orderService.getByKey(sttKey);
+      if (!row || !orderService.coQuyenTheoXuong(user, row)) {
+        loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng' });
+        continue;
+      }
+      if (!row.TRACKING_ID) {
+        loi.push({ sttKey, lyDo: 'Đơn chưa có mã tracking thật — chưa có gì để tra cứu.' });
+        continue;
+      }
+      const ketQua = await capNhatTrangThaiTrackingChoDon(sttKey, cauHinhGke);
+      if (!ketQua.ok) { loi.push({ sttKey, lyDo: ketQua.lyDo }); continue; }
+      thanhCong.push({
+        sttKey,
+        trangThai: ketQua.suKien.track_name || ketQua.suKien.track_name_en || '',
+        thoiGian: ketQua.suKien.actual_time || '',
+        diaDiem: ketQua.suKien.location || '',
+      });
+    } catch (err) {
+      console.error(`[TrackingThuCong] Lỗi tra cứu trạng thái tracking cho ${sttKey}:`, err.stack || err.message);
+      loi.push({ sttKey, lyDo: err.message });
+    }
+  }
+
+  res.json({ ok: true, thanhCong, loi });
+});
 
 module.exports = router;

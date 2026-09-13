@@ -347,18 +347,27 @@ async function chayQuetTuDongMuaTracking() {
 // ============================================================
 
 // Cập nhật cho ĐÚNG 1 đơn — bỏ qua sớm (không gọi GKE) nếu Sheet chưa có CẢ 2 cột đích, và nếu GKE
-// chưa có sự kiện tracking nào (mảng rỗng, label vừa tạo) thì cũng bỏ qua, thử lại ở lượt quét sau —
-// không phải lỗi thật nên KHÔNG log lỗi cho 2 trường hợp này.
+// chưa có sự kiện tracking nào (mảng rỗng, label vừa tạo) thì cũng bỏ qua, thử lại ở lượt quét sau.
+// Trả {ok:false, lyDo} cho 3 trường hợp "không có gì để làm" này (KHÔNG throw — không phải lỗi thật,
+// tự thử lại được ở lượt sau) — vẫn THROW bình thường cho lỗi GKE/ghi Sheet thật (giữ đúng khuôn
+// muaTrackingChoDon() ở trên: throw cho lỗi thật, trả sentinel cho trường hợp "bỏ qua có chủ đích").
+// Trả {ok:true, suKien} khi ghi thành công — `lyDo` (bổ sung 14/09/2026, theo yêu cầu người dùng, cho
+// nút "Tracking thủ công" ở routes/tracking.js hiện rõ LÝ DO thay vì chỉ biết chung chung "không có gì
+// mới") dùng ĐƯỢC cho cả job tự động (chỉ cần `.ok`, bỏ qua `.lyDo`) lẫn route thủ công (cần cả 2).
 async function capNhatTrangThaiTrackingChoDon(sttKey, cauHinhGke) {
   const { headers, row } = await orderService.getByKey(sttKey, { fresh: true });
-  if (!row) return null;
+  if (!row) return { ok: false, lyDo: 'Không tìm thấy đơn: ' + sttKey };
 
   const coCotTrangThai = headers.includes('TRANG_THAI_TRACKING');
   const coCotThoiGian = headers.includes('THOI_GIAN_CAP_NHAT_TRACKING');
-  if (!coCotTrangThai && !coCotThoiGian) return null;
+  if (!coCotTrangThai && !coCotThoiGian) {
+    return { ok: false, lyDo: 'Sheet chưa có cột TRANG_THAI_TRACKING hoặc THOI_GIAN_CAP_NHAT_TRACKING — cần thêm ít nhất 1 trong 2 cột vào tab Don_Hang_ALL trước.' };
+  }
 
   const lichSu = await gkeService.layLichSuTrackingGke(sttKey, cauHinhGke, []);
-  if (lichSu.length === 0) return null;
+  if (lichSu.length === 0) {
+    return { ok: false, lyDo: 'GKE chưa có sự kiện tracking nào cho đơn này (có thể vừa tạo nhãn, chưa được đơn vị vận chuyển quét nhận).' };
+  }
 
   const suKienMoiNhat = lichSu[lichSu.length - 1];
   const capNhat = {
@@ -366,7 +375,7 @@ async function capNhatTrangThaiTrackingChoDon(sttKey, cauHinhGke) {
     ...(coCotThoiGian ? { THOI_GIAN_CAP_NHAT_TRACKING: dinhDangNgayGioNgan(new Date()) } : {}),
   };
   await orderService.update(sttKey, capNhat, NGUOI_HE_THONG, { donDaDoc: { headers, row } });
-  return suKienMoiNhat;
+  return { ok: true, suKien: suKienMoiNhat };
 }
 
 // 1 lượt quét — gọi từ services/trackingJob.js (cron mỗi vài giờ, thấp hơn hẳn lịch mua tracking vì
@@ -382,7 +391,7 @@ async function chayQuetCapNhatTrangThaiTracking() {
   for (const don of donCoTracking) {
     try {
       const ketQua = await capNhatTrangThaiTrackingChoDon(don.STT_Key, cauHinhGke);
-      if (ketQua) soDaCapNhat++;
+      if (ketQua.ok) soDaCapNhat++;
     } catch (err) {
       console.error(`[TrackingTuDong] Lỗi tra cứu trạng thái tracking cho ${don.STT_Key}:`, err.message);
     }

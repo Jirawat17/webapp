@@ -78,6 +78,19 @@
 .tk-quet-thong-bao { margin-top: 8px; padding: 10px 14px; border-radius: var(--radius-sm); font-weight: 600; }
 .tk-quet-thong-bao.ok { background: var(--color-success-bg); color: var(--color-success-text); }
 .tk-quet-thong-bao.loi { background: var(--color-danger-bg); color: var(--color-danger-text); }
+
+/* Ô "Tracking thủ công" (bổ sung 14/09/2026, theo yêu cầu người dùng) — CÙNG khuôn ô quét IN LABEL ở
+   trên (label + input + banner kết quả tự ẩn), nhưng cỡ vừa phải (không phóng to 4 lần như ô IN LABEL —
+   đó là thao tác lặp lại liên tục ở trạm đóng gói, còn đây là tra cứu 1 đơn khi cần, không cần thấy từ
+   xa). Dùng chung .tk-quet-thong-bao cho banner kết quả (đổi tên id để không đụng banner ô kia).
+   Không autofocus (khác ô IN LABEL) — ô IN LABEL vẫn là thao tác dùng thường xuyên nhất trên trang này. */
+.tk-o-tracking-thu-cong { margin-bottom: var(--space-5); max-width: 640px; }
+.tk-o-tracking-thu-cong label { display: block; font-weight: 700; margin-bottom: 6px; }
+.tk-o-tracking-thu-cong input {
+  width: 100%; font-size: 1.1rem; padding: 12px 14px; border-radius: var(--radius-md);
+  border: 2px solid var(--color-border); font-family: inherit;
+}
+.tk-o-tracking-thu-cong input:disabled { opacity: 0.6; }
 </style>
 </head>
 <body>
@@ -89,6 +102,12 @@
     <label for="o-quet-in-label">Quét/nhập mã đơn để in label ngay</label>
     <input id="o-quet-in-label" autocomplete="off" placeholder="Quét mã hoặc nhập mã đơn rồi nhấn phím cách hoặc ENTER để bắt đầu in label">
     <div id="tk-quet-thong-bao" class="tk-quet-thong-bao" style="display:none"></div>
+  </div>
+
+  <div class="tk-o-tracking-thu-cong">
+    <label for="o-tracking-thu-cong">Tracking thủ công — nhập mã đơn rồi nhấn Enter để tra cứu &amp; cập nhật trạng thái thật ngay</label>
+    <input id="o-tracking-thu-cong" autocomplete="off" placeholder="Nhập mã đơn rồi nhấn Enter...">
+    <div id="tk-tracking-thu-cong-thong-bao" class="tk-quet-thong-bao" style="display:none"></div>
   </div>
 
   <!-- Gộp công tắc bật/tắt + ô giờ/phút + nút Lưu vào CHUNG 1 hàng .cong-tac-hang (bổ sung 09/09/2026
@@ -280,6 +299,52 @@ function hienThongBaoQuet(loai, noiDung) {
   el.style.display = 'block';
   el.textContent = noiDung;
   quetThongBaoTimer = setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+// Ô "Tracking thủ công" (bổ sung 14/09/2026, theo yêu cầu người dùng — xem
+// docs/superpowers/specs/2026-09-14-cap-nhat-trang-thai-tracking-design.md) — tương đương thủ công của
+// lịch tự động mỗi 4 tiếng (services/trackingJob.js), cho ĐÚNG 1 đơn. Nhập mã đơn + Enter -> gọi
+// POST /tracking/cap-nhat-trang-thai-thu-cong (tự cập nhật Sheet), hiện NGAY trạng thái/thời gian/địa
+// điểm tra được — đúng yêu cầu "hiển thị kết quả luôn trong menu Tracking". Khác ô IN LABEL ở trên:
+// đây là tra cứu CÓ CHỦ ĐÍCH từng đơn 1 (không phải thao tác lặp liên tục bằng máy quét mã vạch) nên
+// KHÔNG nhận thêm phím Space, và banner kết quả KHÔNG tự ẩn (người dùng cần đọc kỹ nội dung tra được,
+// không phải chỉ biết thành công/thất bại như ô IN LABEL).
+let dangXuLyTrackingThuCong = false;
+
+document.getElementById('o-tracking-thu-cong').addEventListener('keydown', async (e) => {
+  if (e.key !== 'Enter') return;
+  const oTracking = e.target;
+  const sttKey = oTracking.value.trim();
+  if (!sttKey || dangXuLyTrackingThuCong) return;
+
+  dangXuLyTrackingThuCong = true;
+  oTracking.disabled = true;
+
+  try {
+    const ketQua = await apiFetch('/tracking/cap-nhat-trang-thai-thu-cong', { method: 'POST', body: JSON.stringify({ sttKeys: [sttKey] }) });
+    if (ketQua.loi && ketQua.loi.length > 0) {
+      hienThongBaoTrackingThuCong('loi', `${sttKey}: ${ketQua.loi[0].lyDo}`);
+    } else {
+      const kq = ketQua.thanhCong[0];
+      const chiTietPhu = [kq.thoiGian, kq.diaDiem].filter(Boolean).join(' · ');
+      hienThongBaoTrackingThuCong('ok', `${kq.sttKey}: ${kq.trangThai}${chiTietPhu ? ' (' + chiTietPhu + ')' : ''}`);
+      await taiDanhSach();
+    }
+  } catch (err) {
+    hienThongBaoTrackingThuCong('loi', `${sttKey}: ${err.message}`);
+  } finally {
+    oTracking.value = '';
+    oTracking.disabled = false;
+    oTracking.focus();
+    dangXuLyTrackingThuCong = false;
+  }
+});
+
+function hienThongBaoTrackingThuCong(loai, noiDung) {
+  const el = document.getElementById('tk-tracking-thu-cong-thong-bao');
+  el.className = 'tk-quet-thong-bao ' + loai;
+  el.style.display = 'block';
+  el.textContent = noiDung;
 }
 
 // Ánh xạ field cấu hình GKE (khớp đúng tên trả về từ services/gkeService.js#layCauHinhGke) sang id
