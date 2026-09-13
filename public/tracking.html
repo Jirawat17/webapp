@@ -53,11 +53,12 @@
 /* Ô quét nhanh "IN LABEL" (bổ sung 13/09/2026, theo yêu cầu người dùng) — to, nổi bật, đặt ĐẦU trang vì
    là thao tác dùng thường xuyên nhất tại trạm đóng gói (máy quét mã vạch dạng bàn phím: gõ ký tự + Enter
    tự động). Viền dùng --color-primary cho khác hẳn các ô input thường khác trên trang, dễ nhận ra ngay. */
-.tk-o-quet-nhanh { margin-bottom: var(--space-5); max-width: 480px; }
+.tk-o-quet-nhanh { margin-bottom: var(--space-5); max-width: 640px; }
 .tk-o-quet-nhanh label { display: block; font-weight: 700; margin-bottom: 6px; }
 .tk-o-quet-nhanh input {
-  width: 100%; font-size: 1.4rem; padding: 14px 16px; border-radius: var(--radius-md);
-  border: 2px solid var(--color-primary); font-family: inherit;
+  /* Tăng gấp 2 (bổ sung 13/09/2026, theo yêu cầu người dùng) so với bản gốc (1.4rem/14px 16px/2px). */
+  width: 100%; font-size: 2.8rem; padding: 28px 32px; border-radius: var(--radius-md);
+  border: 4px solid var(--color-primary); font-family: inherit;
 }
 .tk-o-quet-nhanh input:disabled { opacity: 0.6; }
 /* Banner báo kết quả — KHÔNG dùng alert() vì sẽ chặn thao tác quét tiếp theo (phải bấm OK mới quét được
@@ -107,7 +108,12 @@
   </div>
   <p id="thong-bao-luu" style="display:none;margin-top:8px"></p>
 
-  <h3 style="margin-top:var(--space-5)">Cấu hình GKE</h3>
+  <!-- Ẩn mặc định sau 1 nút bấm (bổ sung 13/09/2026, theo yêu cầu người dùng — thông tin cấu hình GKE
+       không cần nhìn thấy ngay, ẩn đi để tăng diện tích hiển thị các phần khác). Nội dung bên trong
+       (tiêu đề/mô tả/form) giữ NGUYÊN, chỉ thêm khối bọc ẩn/hiện qua toggleCauHinhGke(). -->
+  <button type="button" class="btn-hanh-dong phu" id="btn-mo-cau-hinh-gke" style="margin-top:var(--space-5)" onclick="toggleCauHinhGke()">Cấu hình GKE ▾</button>
+  <div id="khoi-cau-hinh-gke" style="display:none">
+  <h3 style="margin-top:var(--space-3)">Cấu hình GKE</h3>
   <p style="color:var(--color-text-muted);margin:-8px 0 16px">Toàn bộ thông tin dưới đây trước kia nằm cứng trong code (.env) — nay chuyển lên đây để tự chỉnh khi cần, không phải sửa code/deploy lại.</p>
   <div class="bao-cao-form tk-cau-hinh-gke">
     <div class="tk-luoi-2">
@@ -130,6 +136,7 @@
 
     <button type="button" class="btn-hanh-dong" id="btn-luu-cau-hinh-gke" style="justify-self:start">Lưu cấu hình GKE</button>
     <p id="thong-bao-gke" style="display:none"></p>
+  </div>
   </div>
 
   <h3 style="margin-top:var(--space-5)">Danh sách đơn AUTO_TRACKING</h3>
@@ -231,6 +238,14 @@ document.getElementById('o-quet-in-label').addEventListener('keydown', async (e)
   await taiDanhSach();
   await taiLogs();
 });
+
+// Ẩn/hiện khối "Cấu hình GKE" sau 1 nút bấm (bổ sung 13/09/2026, theo yêu cầu người dùng).
+function toggleCauHinhGke() {
+  const khoi = document.getElementById('khoi-cau-hinh-gke');
+  const dangMo = khoi.style.display !== 'none';
+  khoi.style.display = dangMo ? 'none' : 'block';
+  document.getElementById('btn-mo-cau-hinh-gke').textContent = dangMo ? 'Cấu hình GKE ▾' : 'Cấu hình GKE ▴';
+}
 
 function resetOQuetInLabel(oQuet) {
   oQuet.value = '';
