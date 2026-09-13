@@ -66,12 +66,13 @@
   border: 8px solid var(--color-primary); font-family: inherit; color: #1e3a8a;
 }
 .tk-o-quet-nhanh input:disabled { opacity: 0.6; }
-/* Chữ placeholder (chỉ hiện khi ô còn trống) đo thực tế KHÔNG đủ chỗ hiện hết ở cỡ chữ 5.6rem của ô,
-   trừ khi màn rất rộng (>=1900px) — nới max-width ở trên vẫn không đủ trên màn hình laptop phổ biến
-   (~1440px). Placeholder chỉ là gợi ý (đã có <label> phía trên giải thích rõ mục đích ô), không cần to
-   bằng chữ THẬT gõ/quét vào — giảm riêng cỡ chữ placeholder để LUÔN hiện đủ câu, không đụng cỡ chữ nhập
-   thật (vẫn giữ nguyên 5.6rem theo đúng yêu cầu trước đó). */
-.tk-o-quet-nhanh input::placeholder { font-size: 2.8rem; }
+/* Chữ placeholder (chỉ hiện khi ô còn trống) đo thực tế KHÔNG đủ chỗ hiện hết ở cỡ chữ 5.6rem của ô.
+   Placeholder chỉ là gợi ý (đã có <label> phía trên giải thích rõ mục đích ô), không cần to bằng chữ
+   THẬT gõ/quét vào — giảm riêng cỡ chữ placeholder để LUÔN hiện đủ câu, không đụng cỡ chữ nhập thật (vẫn
+   giữ nguyên 5.6rem theo đúng yêu cầu trước đó). Câu placeholder dài hơn hẳn sau khi đổi lại nội dung
+   (13/09/2026 lần 2, theo yêu cầu người dùng — nhắc rõ cả phím Space) nên phải giảm tiếp xuống 1.3rem
+   (đã đo bằng canvas.measureText() ở 1024px — mức hẹp nhất còn kiểm — vẫn dư ~59px). */
+.tk-o-quet-nhanh input::placeholder { font-size: 1.3rem; }
 /* Banner báo kết quả — KHÔNG dùng alert() vì sẽ chặn thao tác quét tiếp theo (phải bấm OK mới quét được
    mã kế), ngược tinh thần "quét liên tục không dừng" mà tính năng này hướng tới. Tự ẩn sau vài giây. */
 .tk-quet-thong-bao { margin-top: 8px; padding: 10px 14px; border-radius: var(--radius-sm); font-weight: 600; }
@@ -86,7 +87,7 @@
 
   <div class="tk-o-quet-nhanh">
     <label for="o-quet-in-label">Quét/nhập mã đơn để in label ngay</label>
-    <input id="o-quet-in-label" autocomplete="off" placeholder="Quét hoặc gõ mã đơn rồi nhấn Enter...">
+    <input id="o-quet-in-label" autocomplete="off" placeholder="Quét mã hoặc nhập mã đơn rồi nhấn phím cách hoặc ENTER để bắt đầu in label">
     <div id="tk-quet-thong-bao" class="tk-quet-thong-bao" style="display:none"></div>
   </div>
 
