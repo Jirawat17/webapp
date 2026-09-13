@@ -67,8 +67,8 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { maDonHangLoat, canhBao } = await donHangLoatService.xacNhanNhomMoi(req.body, req.session.user);
-    res.json({ ok: true, maDonHangLoat, canhBao });
+    const maDonHangLoat = await donHangLoatService.xacNhanNhomMoi(req.body, req.session.user);
+    res.json({ ok: true, maDonHangLoat });
   } catch (e) {
     res.status(400).json({ error: e.message });
   }

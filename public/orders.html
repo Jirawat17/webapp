@@ -1202,16 +1202,6 @@ async function quetDonHangLoat(nut, { buocLai = false } = {}) {
 // đang tick vào 1 Đơn hàng loạt có sẵn hoặc tạo mới, không cần qua trang public/don-hang-loat.html gõ
 // tay từng mã. CHỈ 1 lượt gọi API (POST .../them-don nhận cả mảng sttKeys, xem
 // services/donHangLoatService.js) dù chọn bao nhiêu đơn — không cần thanh tiến độ.
-// Ghép thông báo cảnh báo "đơn đã thuộc nhóm khác" — CẢNH BÁO, KHÔNG chặn ghi (đơn vẫn được thêm
-// bình thường), chỉ báo lại để tự kiểm tra nếu là nhầm lẫn (bổ sung 13/09/2026, theo yêu cầu người
-// dùng). Bản sao của cùng hàm ở public/don-hang-loat.html — 2 trang riêng biệt, không có module JS
-// dùng chung ngoài api.js nên trùng lặp đoạn nhỏ này thay vì thêm phụ thuộc chéo giữa 2 trang.
-function ghepCanhBaoTrungLap(canhBao) {
-  if (!canhBao || canhBao.length === 0) return '';
-  return '\n\nCẢNH BÁO — các đơn sau ĐÃ thuộc 1 Đơn hàng loạt KHÁC (vẫn được thêm, tự kiểm tra lại nếu là nhầm lẫn):\n' +
-    canhBao.map(c => `- ${c.sttKey}: đang ở ${c.maNhomKhac} — "${c.tenNhomKhac}"`).join('\n');
-}
-
 async function themVaoDonHangLoat() {
   if (donDaChonSet.size === 0) { alert('Hãy chọn ít nhất 1 đơn muốn thêm.'); return; }
   const sttKeys = Array.from(donDaChonSet);
@@ -1237,7 +1227,7 @@ async function themVaoDonHangLoat() {
       if (tenNhom === null) return;
       if (!tenNhom.trim()) { alert('Cần đặt tên cho Đơn hàng loạt.'); return; }
       const kq = await apiFetch('/don-hang-loat', { method: 'POST', body: JSON.stringify({ sttKeys, tenNhom }) });
-      alert(`Đã tạo ${kq.maDonHangLoat} — "${tenNhom}" (${sttKeys.length} đơn).${ghepCanhBaoTrungLap(kq.canhBao)}`);
+      alert(`Đã tạo ${kq.maDonHangLoat} — "${tenNhom}" (${sttKeys.length} đơn).`);
     } else {
       const maDonHangLoat = nhap.trim();
       if (!data.nhoms.some(n => n.maDonHangLoat === maDonHangLoat)) {
@@ -1251,7 +1241,6 @@ async function themVaoDonHangLoat() {
       if (ketQua.loi.length > 0) {
         thongBao += `\n\nKhông thêm được ${ketQua.loi.length} đơn:\n` + ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
       }
-      thongBao += ghepCanhBaoTrungLap(ketQua.canhBao);
       alert(thongBao);
     }
   } catch (e) {

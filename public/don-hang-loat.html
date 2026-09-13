@@ -155,15 +155,6 @@ async function taiDanhSachGoiY() {
     </div>`).join('');
 }
 
-// Ghép thông báo cảnh báo "đơn đã thuộc nhóm khác" (bổ sung 13/09/2026, theo yêu cầu người dùng) —
-// KHÔNG chặn ghi (đơn vẫn được thêm bình thường), chỉ báo lại để tự kiểm tra nếu là nhầm lẫn. Dùng
-// chung cho cả 3 chỗ có thể tạo cảnh báo này: xác nhận nhóm mới, tạo nhóm tay, thêm đơn vào nhóm có sẵn.
-function ghepCanhBaoTrungLap(canhBao) {
-  if (!canhBao || canhBao.length === 0) return '';
-  return '\n\nCẢNH BÁO — các đơn sau ĐÃ thuộc 1 Đơn hàng loạt KHÁC (vẫn được thêm, tự kiểm tra lại nếu là nhầm lẫn):\n' +
-    canhBao.map(c => `- ${c.sttKey}: đang ở ${c.maNhomKhac} — "${c.tenNhomKhac}"`).join('\n');
-}
-
 // data-* + dataset (KHÔNG nội suy chuỗi thẳng vào onclick="...('...')") — tên nhóm/mã đơn là dữ liệu
 // tự do (đặc biệt tenNhom, gõ tay qua prompt()), có thể chứa dấu nháy đơn/kép phá vỡ cú pháp nếu nội
 // suy trực tiếp. dataset tự giải mã HTML entity đúng chuẩn, escapeHtml() lúc ghi là đủ an toàn.
@@ -180,7 +171,7 @@ async function xacNhanGoiY(maNhom, sttKeys) {
   if (!tenNhom.trim()) { alert('Cần đặt tên cho Đơn hàng loạt.'); return; }
   try {
     const kq = await apiFetch('/don-hang-loat', { method: 'POST', body: JSON.stringify({ sttKeys, tenNhom }) });
-    alert(`Đã tạo ${kq.maDonHangLoat} — "${tenNhom}" (${sttKeys.length} đơn).${ghepCanhBaoTrungLap(kq.canhBao)}`);
+    alert(`Đã tạo ${kq.maDonHangLoat} — "${tenNhom}" (${sttKeys.length} đơn).`);
     await taiDanhSachXacNhan();
   } catch (e) {
     alert('Lỗi: ' + e.message);
@@ -236,7 +227,6 @@ async function themDon(maDonHangLoat) {
   try {
     const ketQua = await apiFetch(`/don-hang-loat/${encodeURIComponent(maDonHangLoat)}/them-don`, { method: 'POST', body: JSON.stringify({ sttKeys: [sttKey] }) });
     if (ketQua.loi.length > 0) alert('Không thêm được: ' + ketQua.loi[0].lyDo);
-    if (ketQua.canhBao.length > 0) alert('Đã thêm.' + ghepCanhBaoTrungLap(ketQua.canhBao));
     await taiDanhSachXacNhan();
   } catch (e) {
     alert('Lỗi: ' + e.message);
@@ -288,7 +278,7 @@ async function taoNhomMoi() {
   if (!tenNhom.trim()) { alert('Cần đặt tên cho Đơn hàng loạt.'); return; }
   try {
     const kq = await apiFetch('/don-hang-loat', { method: 'POST', body: JSON.stringify({ sttKeys: [sttKey.trim()], tenNhom }) });
-    alert(`Đã tạo ${kq.maDonHangLoat} — "${tenNhom}".${ghepCanhBaoTrungLap(kq.canhBao)}`);
+    alert(`Đã tạo ${kq.maDonHangLoat} — "${tenNhom}".`);
     await taiDanhSachXacNhan();
   } catch (e) {
     alert('Lỗi: ' + e.message);

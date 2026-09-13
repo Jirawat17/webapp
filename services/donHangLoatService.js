@@ -143,17 +143,12 @@ async function layDonDaKiemTraQuyen(sttKeys, user) {
   });
 }
 
-// Cảnh báo (KHÔNG chặn — bổ sung 13/09/2026, theo yêu cầu người dùng) khi 1 đơn ĐÃ là thành viên đang
-// hoạt động của 1 nhóm KHÁC (maNhomLoaiTru) — về lý thuyết 1 đơn chỉ nên thuộc đúng 1 thiết kế/lô,
-// nhưng vẫn cho phép ghi đè có chủ đích (có thể người dùng có lý do thật), chỉ báo lại để tự xử nếu là
-// nhầm lẫn. Dùng chung `rows` đã đọc sẵn ở nơi gọi (xacNhanNhomMoi/themDonVaoNhom) — không đọc thêm.
-function timCanhBaoTrungLap(sttKeys, maNhomLoaiTru, rows) {
-  const canhBao = [];
-  for (const sttKey of sttKeys) {
-    const dongKhac = rows.find(r => r.STT_Key === sttKey && r.MaDonHangLoat !== maNhomLoaiTru && dongDangHoatDong(r));
-    if (dongKhac) canhBao.push({ sttKey, maNhomKhac: dongKhac.MaDonHangLoat, tenNhomKhac: dongKhac.TenNhom });
-  }
-  return canhBao;
+// Tìm nhóm KHÁC (nếu có) đang giữ 1 đơn làm thành viên ĐANG HOẠT ĐỘNG — dùng để CHẶN HẲN 1 đơn thuộc
+// nhiều Đơn hàng loạt cùng lúc (bổ sung 13/09/2026, theo yêu cầu người dùng — ban đầu chỉ cảnh báo,
+// nay đổi thành CHẶN vì 1 lô đại diện cho đúng 1 thiết kế thêu cụ thể, 1 đơn không nên thuộc 2 lô).
+// Dùng chung `rows` đã đọc sẵn ở nơi gọi (xacNhanNhomMoi/themDonVaoNhom) — không đọc thêm.
+function timNhomKhacDangGiu(sttKey, maNhomLoaiTru, rows) {
+  return rows.find(r => r.STT_Key === sttKey && r.MaDonHangLoat !== maNhomLoaiTru && dongDangHoatDong(r)) || null;
 }
 
 async function docTabGhi() {
@@ -185,11 +180,22 @@ async function xacNhanNhomMoi({ sttKeys, tenNhom }, user) {
 
   const { headers, rows } = await docTabGhi();
   const maMoi = sinhMaMoi(rows);
+
+  // CHẶN nếu có bất kỳ đơn nào đã thuộc 1 nhóm KHÁC — maMoi CHƯA tồn tại trong rows (vừa sinh mới)
+  // nên bất kỳ đơn nào có mặt trong rows đều CHẮC CHẮN đang thuộc 1 nhóm KHÁC, không cần loại trừ gì
+  // thêm. Chặn CẢ LÔ (không tạo 1 phần) — khớp đúng cách hàm này đã chặn cả lô khi khác Xưởng ở trên.
+  const dangONhomKhac = sttKeyDuyNhat
+    .map(sttKey => ({ sttKey, nhomKhac: timNhomKhacDangGiu(sttKey, maMoi, rows) }))
+    .filter(x => x.nhomKhac);
+  if (dangONhomKhac.length > 0) {
+    throw new Error(
+      'Không thể tạo — các đơn sau đã thuộc 1 Đơn hàng loạt khác (1 đơn chỉ được thuộc đúng 1 lô): ' +
+      dangONhomKhac.map(x => `${x.sttKey} (đang ở ${x.nhomKhac.MaDonHangLoat} — "${x.nhomKhac.TenNhom}")`).join('; ')
+    );
+  }
+
   const ngay = thoiGianVNISOString();
   const tenDaCat = tenNhom.trim();
-  // maMoi CHƯA tồn tại trong rows (vừa sinh mới) nên bất kỳ đơn nào có mặt trong rows đều CHẮC CHẮN
-  // đang thuộc 1 nhóm KHÁC — không cần loại trừ gì thêm.
-  const canhBao = timCanhBaoTrungLap(sttKeyDuyNhat, maMoi, rows);
 
   await appendRows(TAB, headers, donList.map(don => ({
     MaDonHangLoat: maMoi, TenNhom: tenDaCat, STT_Key: don.STT_Key,
@@ -200,7 +206,7 @@ async function xacNhanNhomMoi({ sttKeys, tenNhom }, user) {
     nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'XAC_NHAN_HANG_LOAT',
     chiTiet: { maDonHangLoat: maMoi, tenNhom: tenDaCat, sttKeys: sttKeyDuyNhat },
   });
-  return { maDonHangLoat: maMoi, canhBao };
+  return maMoi;
 }
 
 // Lấy các dòng ĐANG HOẠT ĐỘNG của đúng 1 mã nhóm — dùng chung cho thêm/xoá đơn, đổi tên, xoá nhóm.
@@ -232,7 +238,6 @@ async function themDonVaoNhom(maDonHangLoat, sttKeys, user) {
 
   const thanhCong = [];
   const loi = [];
-  const canhBao = [];
   const donCanGhi = [];
   for (const sttKey of sttKeyDuyNhat) {
     if (sttKeyDaCoSan.has(sttKey)) { loi.push({ sttKey, lyDo: 'Đã có trong nhóm này' }); continue; }
@@ -240,8 +245,11 @@ async function themDonVaoNhom(maDonHangLoat, sttKeys, user) {
     if (!don) { loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng' }); continue; }
     if (!orderService.coQuyenTheoXuong(user, don)) { loi.push({ sttKey, lyDo: 'Không có quyền (khác Xưởng của bạn)' }); continue; }
     if (don.XUONG !== xuongNhom) { loi.push({ sttKey, lyDo: `Khác Xưởng với nhóm hiện có (${xuongNhom || 'chưa gán'})` }); continue; }
-    const [canhBaoDon] = timCanhBaoTrungLap([sttKey], maDonHangLoat, rows);
-    if (canhBaoDon) canhBao.push(canhBaoDon);
+    // CHẶN — 1 đơn chỉ được thuộc đúng 1 Đơn hàng loạt (bổ sung 13/09/2026, theo yêu cầu người dùng).
+    // Chỉ loại BỎ đúng đơn này khỏi lượt thêm (đẩy vào loi), KHÔNG chặn cả lô — khớp cách hàm này đã
+    // xử lý 3 lý do lỗi khác ở trên (mỗi đơn tự đứng lỗi riêng, phần còn lại vẫn được thêm).
+    const nhomKhac = timNhomKhacDangGiu(sttKey, maDonHangLoat, rows);
+    if (nhomKhac) { loi.push({ sttKey, lyDo: `Đã thuộc Đơn hàng loạt khác (${nhomKhac.MaDonHangLoat} — "${nhomKhac.TenNhom}")` }); continue; }
     donCanGhi.push(don);
     thanhCong.push(sttKey);
   }
@@ -255,7 +263,7 @@ async function themDonVaoNhom(maDonHangLoat, sttKeys, user) {
     await ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'THEM_DON_HANG_LOAT', chiTiet: { maDonHangLoat, sttKeys: thanhCong } });
   }
 
-  return { thanhCong, loi, canhBao };
+  return { thanhCong, loi };
 }
 
 async function xoaDonKhoiNhom(maDonHangLoat, sttKey, user) {
