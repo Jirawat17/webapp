@@ -49,7 +49,14 @@ function apDungMauChuDao(id) {
 // hệ điều hành (theo đúng lựa chọn khi làm tính năng này).
 // ============================================================
 function dangCheDoToi() {
-  try { return localStorage.getItem('cheDoToi') === '1'; } catch (e) { return false; }
+  // Mặc định Chế độ Tối khi máy/trình duyệt CHƯA từng bật/tắt thủ công (đổi 13/09/2026, theo yêu cầu
+  // người dùng — trước đó mặc định Sáng). Ai đã từng bấm chọn Sáng ('0') hay Tối ('1') ở trang Cài đặt
+  // thì vẫn giữ đúng lựa chọn đó, chỉ máy CHƯA từng đụng tới (localStorage rỗng, trả về null) mới áp
+  // mặc định mới này.
+  try {
+    const daLuu = localStorage.getItem('cheDoToi');
+    return daLuu === null ? true : daLuu === '1';
+  } catch (e) { return true; }
 }
 
 function luuCheDoToi(bat) {

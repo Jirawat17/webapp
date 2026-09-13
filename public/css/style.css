@@ -450,6 +450,13 @@ body.trang-dang-nhap {
 }
 .thanh-hanh-dong-hang-loat .btn-hanh-dong { padding: 10px 18px; min-height: 40px; font-size: 0.9rem; }
 #so-luong-da-chon { font-size: 3em; line-height: 1; } /* tăng thêm 200% (gấp 3) so với cỡ chữ gốc để dễ nhìn */
+/* Nhãn "Đã chọn X đơn" nằm trực tiếp trên nền var(--color-text) (xem .thanh-hanh-dong-hang-loat) — nền
+   này ĐẢO theo theme (gần đen ở Sáng, trắng ở Tối) trong khi màu chữ container lại cố định trắng, nên
+   ở Chế độ Tối nhãn này thành chữ trắng trên nền trắng, hoàn toàn vô hình (phát hiện 13/09/2026, theo
+   ảnh chụp thực tế của người dùng). Đổi hẳn sang màu đỏ CỐ ĐỊNH — không dùng token --color-danger-text
+   vì token đó tính cho nền trang bình thường, không hợp với nền đảo màu kiểu này; #dc2626 đủ tương
+   phản ở CẢ 2 thái cực nền (gần đen lẫn trắng). */
+.nhan-so-luong-da-chon { color: #dc2626; }
 .thanh-hanh-dong-cach { width: 1px; align-self: stretch; background: var(--color-border); margin: 0 4px; }
 .nhanh-phoi-ve-file { font-size: 0.85rem !important; padding: 8px 14px !important; }
 
