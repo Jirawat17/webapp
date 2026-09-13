@@ -190,6 +190,25 @@ async function appendRow(tabName, headers, rowObject) {
   xoaCacheBang(tabName); // dòng vừa thêm phải xuất hiện ngay ở lần đọc kế tiếp, kể cả đọc qua cache
 }
 
+// Thêm NHIỀU dòng cùng lúc, gộp thành ĐÚNG 1 lượt gọi Sheets API — dùng khi 1 thao tác của người
+// dùng cần ghi nhiều dòng cùng lúc (vd xác nhận 1 "Đơn hàng loạt" gồm nhiều đơn), tránh lặp lại đúng
+// nguyên nhân đã gây vượt quota mà getManyByKeys/gopYeuCauTrung đang giải quyết ở phía ĐỌC — đây là
+// bản tương ứng phía GHI.
+async function appendRows(tabName, headers, rowObjects) {
+  if (rowObjects.length === 0) return;
+  const sheets = await getSheetsClient();
+  const values = rowObjects.map(rowObject => headers.map(h => (rowObject[h] !== undefined ? rowObject[h] : '')));
+
+  await goiApiCoThuLai(() => sheets.spreadsheets.values.append({
+    spreadsheetId: SHEET_ID,
+    range: tabName,
+    valueInputOption: 'USER_ENTERED',
+    requestBody: { values },
+  }));
+
+  xoaCacheBang(tabName);
+}
+
 // Cập nhật một số ô của 1 dòng đã biết số dòng thật — chỉ ghi đúng cột cần đổi, không đụng cột khác
 async function updateCells(tabName, headers, rowNumber, updates) {
   const sheets = await getSheetsClient();
@@ -215,4 +234,33 @@ async function updateCells(tabName, headers, rowNumber, updates) {
   xoaCacheBang(tabName); // đảm bảo lần đọc kế tiếp (kể cả qua cache) thấy đúng giá trị vừa ghi
 }
 
-module.exports = { readTab, readTabCached, getHeadersCached, appendRow, updateCells, colToLetter, xoaCacheBang };
+// Bản tương ứng của updateCells nhưng cho NHIỀU dòng cùng lúc, gộp thành ĐÚNG 1 lượt gọi Sheets API —
+// dùng khi 1 thao tác người dùng ảnh hưởng nhiều dòng cùng lúc (vd đổi tên/xoá cả 1 "Đơn hàng loạt"
+// gồm nhiều đơn) thay vì gọi updateCells lặp lại cho từng dòng.
+async function updateCellsManyRows(tabName, headers, danhSachCapNhat) {
+  const sheets = await getSheetsClient();
+
+  const data = [];
+  for (const { rowNumber, updates } of danhSachCapNhat) {
+    for (const colName of Object.keys(updates)) {
+      const idx = headers.indexOf(colName);
+      if (idx === -1) {
+        throw new Error(`Không tìm thấy cột '${colName}' trong tab '${tabName}'`);
+      }
+      data.push({ range: `${tabName}!${colToLetter(idx)}${rowNumber}`, values: [[updates[colName]]] });
+    }
+  }
+  if (data.length === 0) return;
+
+  await goiApiCoThuLai(() => sheets.spreadsheets.values.batchUpdate({
+    spreadsheetId: SHEET_ID,
+    requestBody: { valueInputOption: 'USER_ENTERED', data },
+  }));
+
+  xoaCacheBang(tabName);
+}
+
+module.exports = {
+  readTab, readTabCached, getHeadersCached, appendRow, appendRows, updateCells, updateCellsManyRows,
+  colToLetter, xoaCacheBang,
+};

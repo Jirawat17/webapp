@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const orderService = require('../services/orderService');
+const donHangLoatService = require('../services/donHangLoatService');
 const alertService = require('../services/alertService');
 const scenarioService = require('../services/scenarioService');
 const { parseNgay } = require('../services/dateUtils');
@@ -148,7 +149,7 @@ router.get('/', async (req, res) => {
   const {
     trangThai, trangThaiPhoi, trangThaiVeFile, kh, tuNgay, denNgay,
     loai, kichThuoc, mauSac, hangVanChuyen, canhBao, xuong, uuTien, sapXep, hangLoat, nguoiVanHanh,
-    canVeFile, nguoiVeFile,
+    canVeFile, nguoiVeFile, donHangLoat,
   } = req.query;
   if (trangThai) list = list.filter(r => khopGiaTriLoc(r.TRANG_THAI_XUONG, trangThai));
   if (trangThaiPhoi) list = list.filter(r => khopGiaTriLoc(r.TRANG_THAI_PHOI, trangThaiPhoi));
@@ -183,6 +184,14 @@ router.get('/', async (req, res) => {
   // uuTien: '1' = chỉ đơn ưu tiên, '0' = chỉ đơn thường (DonUuTien là field TÍNH TOÁN, gắn ở lamGiauDon()).
   if (uuTien === '1' || uuTien === '0') list = list.filter(r => r.DonUuTien === (uuTien === '1'));
   if (hangLoat) list = list.filter(r => !!r.NHOM_HANG_LOAT);
+  // Lọc theo "Đơn hàng loạt" ĐÃ XÁC NHẬN (khác hangLoat= ở trên — đó là nhóm TỰ ĐỘNG đề xuất, xem
+  // services/donHangLoatService.js). CHỈ đọc tab DonHangLoat khi thực sự có query này — tránh tốn
+  // thêm 1 lượt gọi Sheets API cho MỌI lần tải danh sách đơn bình thường (route này gọi rất thường
+  // xuyên, khác hẳn GET /api/don-hang-loat vốn chỉ gọi khi mở trang/panel lọc riêng).
+  if (donHangLoat) {
+    const sttKeyTrongNhom = await donHangLoatService.layDanhSachSttKeyTheoNhom(donHangLoat);
+    list = list.filter(r => sttKeyTrongNhom.has(r.STT_Key));
+  }
   if (kh) {
     const tuKhoa = kh.toLowerCase();
     list = list.filter(r =>
@@ -536,48 +545,6 @@ async function layKichBanKeTiep(row, user) {
   );
 }
 
-// Trang "RÀ SOÁT ĐƠN HÀNG LOẠT" (public/rasoat-hang-loat.html, bổ sung 13/09/2026, theo yêu cầu người
-// dùng) — CHỈ ĐỌC, liệt kê MỌI nhóm đang có NHOM_HANG_LOAT (dữ liệu đã tính sẵn từ lần quét gần nhất,
-// KHÔNG tự quét lại ở đây) để admin/ve_file tự xem ảnh PNG thật và đánh giá độ chính xác thuật toán
-// gộp nhóm hiện có trước khi quyết định có dùng làm nền cho tính năng lớn hơn (đơn hàng loạt DHLXX,
-// chọn tay + xác nhận) hay cần chỉnh/thay trước — xem
-// docs/superpowers/specs/2026-09-13-rasoat-hang-loat-review-design.md. CHỈ admin/ve_file (khớp phạm vi
-// vai trò dự kiến cho tính năng lớn hơn) — san_xuat/nguoi_lay_phoi không cần công cụ chẩn đoán này.
-// PHẢI đứng TRƯỚC router.get('/:sttKey') ngay bên dưới — Express khớp route theo ĐÚNG thứ tự đăng ký,
-// '/:sttKey' (1 đoạn đường dẫn, khớp MỌI chuỗi không có dấu '/') sẽ "nuốt mất" '/rasoat-hang-loat' nếu
-// đứng sau nó, coi "rasoat-hang-loat" như 1 mã đơn (rồi báo lỗi "Không tìm thấy đơn hàng" — đúng lỗi
-// thật đã xảy ra trước khi sửa vị trí này, không phải trùng hợp).
-router.get('/rasoat-hang-loat', async (req, res) => {
-  const user = req.session.user;
-  if (user.vaiTro !== 'admin' && user.vaiTro !== 've_file') {
-    return res.status(403).json({ error: 'Chỉ admin/người vẽ file mới được rà soát đơn hàng loạt' });
-  }
-
-  const { rows } = await orderService.getAll();
-  // Lọc theo Xưởng TRƯỚC khi gom nhóm (không phải sau) — ve_file chỉ thấy đúng phần nhóm gồm đơn thuộc
-  // Xưởng mình, không lộ việc có đơn Xưởng khác cùng nhóm (đúng nguyên tắc "coi như không tồn tại" đã
-  // áp dụng ở mọi nơi khác — xem services/orderService.js#locTheoXuong).
-  const daLoc = orderService.locTheoXuong(rows, user);
-
-  const theoNhom = new Map(); // maNhom -> [đơn...]
-  for (const r of daLoc) {
-    if (!r.NHOM_HANG_LOAT) continue;
-    if (!theoNhom.has(r.NHOM_HANG_LOAT)) theoNhom.set(r.NHOM_HANG_LOAT, []);
-    theoNhom.get(r.NHOM_HANG_LOAT).push({
-      STT_Key: r.STT_Key,
-      TieuDeSanPham: orderService.tieuDeSanPham(r),
-      DUONG_DAN_URL: r.DUONG_DAN_URL || '',
-    });
-  }
-
-  // Nhóm to xem trước — dễ đánh giá những trường hợp "gộp nhầm nhiều đơn" nổi bật nhất trước tiên.
-  const nhoms = [...theoNhom.entries()]
-    .map(([maNhom, donHang]) => ({ maNhom, donHang }))
-    .sort((a, b) => b.donHang.length - a.donHang.length);
-
-  res.json({ nhoms });
-});
-
 router.get('/:sttKey', async (req, res) => {
   const { row } = await orderService.getByKey(req.params.sttKey);
   if (!row) return res.status(404).json({ error: 'Không tìm thấy đơn hàng' });
@@ -689,11 +656,6 @@ router.put('/:sttKey', async (req, res) => {
 // docs/superpowers/specs/2026-09-06-quet-hang-loat-theo-lua-chon-design.md (giới hạn theo lựa chọn).
 // ============================================================
 
-// ≤ 8/64 bit khác nhau coi là cùng thiết kế — mốc KHỞI ĐIỂM, CHƯA được xác nhận bằng dữ liệu thật
-// (chỉ kiểm thử bằng ảnh giả lập lúc thiết kế tính năng, xem services/perceptualHashService.js và
-// spec mục 3). BẮT BUỘC xem lại kết quả nhóm thực tế sau lần quét đầu và chỉnh lại nếu nhóm sai/thiếu.
-const NGUONG_HAMMING = 8;
-
 const _congViecHangLoat = new Map(); // jobId -> { tongSo, daXong, trangThai, daHuy, loi, ketQua, capNhatLucNao }
 const THOI_GIAN_GIU_JOB_HANG_LOAT_MS = 15 * 60 * 1000;
 
@@ -705,7 +667,8 @@ function donDepJobHangLoatCu() {
 }
 
 // Union-Find (Disjoint Set Union) đơn giản — dùng để gom các đơn có hash gần nhau (khoảng cách
-// Hamming ≤ NGUONG_HAMMING) thành từng nhóm liên thông, thay vì chỉ so khớp CHÍNH XÁC từng cặp.
+// Hamming ≤ ngưỡng, xem services/donHangLoatService.js#layNguong) thành từng nhóm liên thông, thay
+// vì chỉ so khớp CHÍNH XÁC từng cặp.
 function taoDSU(n) {
   const cha = Array.from({ length: n }, (_, i) => i);
   function tim(x) { return cha[x] === x ? x : (cha[x] = tim(cha[x])); }
@@ -718,7 +681,10 @@ function taoDSU(n) {
 // ngoài `sttKeySet` — dù đã có HASH_ANH_MAU — hoàn toàn không được đọc để so khớp, không bị đụng tới.
 // 1 đơn cũ đã có hash từ trước NẰM TRONG sttKeySet vẫn cần được xét lại vì 1 đơn MỚI vừa hash xong
 // trong cùng lô có thể khớp với nó. Chỉ ghi lại Sheet những đơn có mã nhóm THAY ĐỔI so với hiện tại.
-async function tinhLaiNhomHangLoat(sttKeySet) {
+// `nguong` đọc 1 LẦN DUY NHẤT ở đầu route (POST /quet-hang-loat/bat-dau) trước khi job chạy nền, giữ
+// nguyên suốt cả job — không đọc lại giữa chừng dù ai đó đổi ngưỡng lúc job đang chạy (nhất quán với
+// cách sttKeySet/rows cũng chỉ chụp 1 lần, xem services/donHangLoatService.js#layNguong để đổi).
+async function tinhLaiNhomHangLoat(sttKeySet, nguong) {
   // Đọc lại CẢ headers lẫn rows ở đây (không nhận headers truyền vào từ lúc job bắt đầu) — bước gộp
   // nhóm này có thể chạy sau khi vòng lặp tính hash phía trên đã kéo dài, cấu trúc cột trong Sheet có
   // thể đã đổi trong lúc đó; ghi bằng headers cũ có thể ghi nhầm cột (xem quy ước tương tự ở
@@ -729,7 +695,7 @@ async function tinhLaiNhomHangLoat(sttKeySet) {
   const dsu = taoDSU(coHash.length);
   for (let i = 0; i < coHash.length; i++) {
     for (let j = i + 1; j < coHash.length; j++) {
-      if (khoangCachHamming(coHash[i].HASH_ANH_MAU, coHash[j].HASH_ANH_MAU) <= NGUONG_HAMMING) {
+      if (khoangCachHamming(coHash[i].HASH_ANH_MAU, coHash[j].HASH_ANH_MAU) <= nguong) {
         dsu.hop(i, j);
       }
     }
@@ -840,6 +806,7 @@ router.post('/quet-hang-loat/bat-dau', async (req, res) => {
 
   const donThieuHash = rows.filter(d => sttKeySet.has(d.STT_Key) && d.DUONG_DAN_URL && !d.HASH_ANH_MAU);
   job.tongSo = donThieuHash.length;
+  const nguong = await donHangLoatService.layNguong(); // chụp 1 lần, dùng suốt job — xem ghi chú ở tinhLaiNhomHangLoat
 
   res.json({ jobId, tongSo: donThieuHash.length });
 
@@ -872,7 +839,7 @@ router.post('/quet-hang-loat/bat-dau', async (req, res) => {
       // Luôn tính lại nhóm SAU vòng lặp trên, kể cả khi bị hủy giữa chừng — tận dụng các hash đã tính
       // được thay vì bỏ phí, và cũng để bắt các thay đổi khác (đơn bị xoá ảnh mẫu chẳng hạn — xem
       // services/orderService.js) kể cả khi không có đơn nào mới cần tính hash ở vòng lặp trên.
-      const { soNhomTimThay, soDonTrongNhom } = await tinhLaiNhomHangLoat(sttKeySet);
+      const { soNhomTimThay, soDonTrongNhom } = await tinhLaiNhomHangLoat(sttKeySet, nguong);
 
       job.ketQua = { soDaQuet: job.daXong, soTinhDuocHash, soNhomTimThay, soDonTrongNhom };
       job.trangThai = job.daHuy ? 'huy' : 'xong';

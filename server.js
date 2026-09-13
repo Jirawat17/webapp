@@ -26,6 +26,7 @@ app.use((req, res, next) => {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/orders', require('./routes/orders'));
+app.use('/api/don-hang-loat', require('./routes/donHangLoat'));
 app.use('/api/qr', require('./routes/qr'));
 app.use('/api/photos', require('./routes/photos'));
 app.use('/api/dashboard', require('./routes/dashboard'));
