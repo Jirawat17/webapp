@@ -396,6 +396,12 @@ body.trang-dang-nhap {
 .the-anh-nhom .khong-co-anh { display: flex; align-items: center; justify-content: center; color: var(--color-text-faint); }
 .the-anh-nhom:hover img, .the-anh-nhom:hover .khong-co-anh { border-color: var(--color-primary); }
 .the-anh-nhom .ten-don { font-size: 0.8rem; color: var(--color-text-muted); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+/* Nhãn "Mockup" (bổ sung 13/09/2026, theo yêu cầu người dùng) — đơn KHÔNG có ảnh PNG hiện tạm ảnh
+   Mockup để so sánh, cần gán nhãn rõ để không nhầm với ảnh PNG thật khi xem lẫn lộn trong cùng lưới. */
+.the-anh-nhom .nhan-mockup {
+  font-size: 0.68rem; font-weight: 700; color: var(--color-warning-text); background: var(--color-warning-bg);
+  padding: 1px 8px; border-radius: var(--radius-full);
+}
 
 /* public/don-hang-loat.html — quản lý Đơn hàng loạt (bổ sung 13/09/2026, theo yêu cầu người dùng) */
 .khoi-cau-hinh-nguong {

@@ -115,6 +115,10 @@ async function layDanhSachNhom(user) {
       STT_Key: don.STT_Key,
       TieuDeSanPham: orderService.tieuDeSanPham(don),
       DUONG_DAN_URL: don.DUONG_DAN_URL || '',
+      // MOCKUP — kèm theo để trang hiển thị (public/don-hang-loat.html) có thể hiện tạm ảnh Mockup
+      // (gán nhãn rõ) cho đơn KHÔNG có PNG, đúng ảnh THẬT đã dùng để tính hash khi quét (bổ sung
+      // 13/09/2026, theo yêu cầu người dùng — xem routes/orders.js#anhSoSanhCuaDon).
+      MOCKUP: don.MOCKUP || '',
       XUONG: don.XUONG || '',
     });
   }

@@ -33,6 +33,9 @@ router.get('/goi-y', async (req, res) => {
       STT_Key: r.STT_Key,
       TieuDeSanPham: orderService.tieuDeSanPham(r),
       DUONG_DAN_URL: r.DUONG_DAN_URL || '',
+      // MOCKUP — đơn không có PNG thì quét dùng ảnh này để tính hash (xem routes/orders.js#
+      // anhSoSanhCuaDon), kèm theo để trang hiển thị đúng ảnh đã dùng thay vì báo "không có ảnh".
+      MOCKUP: r.MOCKUP || '',
     });
   }
 

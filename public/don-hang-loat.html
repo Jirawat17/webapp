@@ -108,13 +108,20 @@ async function luuNguong() {
   }
 }
 
+// Ảnh hiển thị ƯU TIÊN PNG (don.DUONG_DAN_URL); đơn KHÔNG có PNG thì hiện tạm ảnh Mockup kèm nhãn rõ
+// "Mockup" (bổ sung 13/09/2026, theo yêu cầu người dùng) — ĐÚNG ảnh THẬT đã dùng để tính hash lúc
+// quét khi thiếu PNG (xem routes/orders.js#anhSoSanhCuaDon), giúp vẫn đánh giá được độ chính xác của
+// những đơn này thay vì luôn thấy ô trống.
 function theAnhDon(don, nutPhu) {
+  const dungMockup = !don.DUONG_DAN_URL && don.MOCKUP;
+  const anhHienThi = don.DUONG_DAN_URL || don.MOCKUP;
   return `
     <div class="the-anh-nhom">
       <a href="/order.html?stt=${encodeURIComponent(don.STT_Key)}" target="_blank" rel="noopener">
-        ${don.DUONG_DAN_URL
-          ? `<img src="${escapeHtml(urlAnhHienThiList(don.DUONG_DAN_URL)[0] || '')}" alt="" loading="lazy" onerror="this.remove()">`
+        ${anhHienThi
+          ? `<img src="${escapeHtml(urlAnhHienThiList(anhHienThi)[0] || '')}" alt="" loading="lazy" onerror="this.remove()">`
           : `<div class="khong-co-anh">${icon('package')}</div>`}
+        ${dungMockup ? `<span class="nhan-mockup">Mockup</span>` : ''}
         <span class="ten-don">${escapeHtml(don.TieuDeSanPham || don.STT_Key)}</span>
       </a>
       ${nutPhu || ''}

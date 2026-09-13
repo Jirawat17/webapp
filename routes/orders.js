@@ -668,6 +668,13 @@ function donDepJobHangLoatCu() {
   }
 }
 
+// Ảnh dùng để tính hash so khớp "Đơn hàng loạt" — ƯU TIÊN ảnh mẫu PNG (DUONG_DAN_URL, đúng đối tượng
+// cần so khớp "cùng thiết kế thêu"), CHỈ dùng ảnh Mockup khi đơn KHÔNG có PNG (bổ sung 13/09/2026,
+// theo yêu cầu người dùng — trước đó đơn thiếu PNG bị bỏ qua hoàn toàn, không tính được hash).
+function anhSoSanhCuaDon(don) {
+  return don.DUONG_DAN_URL || don.MOCKUP || '';
+}
+
 // Union-Find (Disjoint Set Union) đơn giản — dùng để gom các đơn có hash gần nhau (khoảng cách
 // Hamming ≤ ngưỡng, xem services/donHangLoatService.js#layNguong) thành từng nhóm liên thông, thay
 // vì chỉ so khớp CHÍNH XÁC từng cặp.
@@ -809,7 +816,8 @@ router.post('/quet-hang-loat/bat-dau', async (req, res) => {
   // buocLai=true (nút "QUÉT LẠI ĐƠN ĐANG CHỌN", bổ sung 13/09/2026, theo yêu cầu người dùng — sau khi
   // đổi ngưỡng muốn tính lại hash cho ĐÚNG các đơn đang chọn, không chỉ đơn còn thiếu hash) — bỏ điều
   // kiện "!d.HASH_ANH_MAU", tính lại hash cho MỌI đơn có ảnh trong lô đang chọn, ghi đè hash cũ.
-  const donThieuHash = rows.filter(d => sttKeySet.has(d.STT_Key) && d.DUONG_DAN_URL && (buocLai || !d.HASH_ANH_MAU));
+  // anhSoSanhCuaDon(d) — có ảnh PNG hoặc (nếu thiếu PNG) ảnh Mockup đều tính được, xem ghi chú hàm đó.
+  const donThieuHash = rows.filter(d => sttKeySet.has(d.STT_Key) && anhSoSanhCuaDon(d) && (buocLai || !d.HASH_ANH_MAU));
   job.tongSo = donThieuHash.length;
   const nguong = await donHangLoatService.layNguong(); // chụp 1 lần, dùng suốt job — xem ghi chú ở tinhLaiNhomHangLoat
 
@@ -822,7 +830,7 @@ router.post('/quet-hang-loat/bat-dau', async (req, res) => {
       for (const don of donThieuHash) {
         if (job.daHuy) break;
 
-        const dsMau = await taiDsAnh(don.DUONG_DAN_URL);
+        const dsMau = await taiDsAnh(anhSoSanhCuaDon(don));
         const hash = dsMau[0] ? await tinhHashAnh(dsMau[0]) : null;
         if (hash) {
           // Đọc lại headers ngay trước khi ghi (không dùng `headers` chụp từ đầu job) — vòng lặp này
