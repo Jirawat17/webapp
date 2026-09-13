@@ -143,6 +143,19 @@ async function layDonDaKiemTraQuyen(sttKeys, user) {
   });
 }
 
+// Cảnh báo (KHÔNG chặn — bổ sung 13/09/2026, theo yêu cầu người dùng) khi 1 đơn ĐÃ là thành viên đang
+// hoạt động của 1 nhóm KHÁC (maNhomLoaiTru) — về lý thuyết 1 đơn chỉ nên thuộc đúng 1 thiết kế/lô,
+// nhưng vẫn cho phép ghi đè có chủ đích (có thể người dùng có lý do thật), chỉ báo lại để tự xử nếu là
+// nhầm lẫn. Dùng chung `rows` đã đọc sẵn ở nơi gọi (xacNhanNhomMoi/themDonVaoNhom) — không đọc thêm.
+function timCanhBaoTrungLap(sttKeys, maNhomLoaiTru, rows) {
+  const canhBao = [];
+  for (const sttKey of sttKeys) {
+    const dongKhac = rows.find(r => r.STT_Key === sttKey && r.MaDonHangLoat !== maNhomLoaiTru && dongDangHoatDong(r));
+    if (dongKhac) canhBao.push({ sttKey, maNhomKhac: dongKhac.MaDonHangLoat, tenNhomKhac: dongKhac.TenNhom });
+  }
+  return canhBao;
+}
+
 async function docTabGhi() {
   return readTab(TAB).catch(() => {
     throw new Error(
@@ -174,6 +187,9 @@ async function xacNhanNhomMoi({ sttKeys, tenNhom }, user) {
   const maMoi = sinhMaMoi(rows);
   const ngay = thoiGianVNISOString();
   const tenDaCat = tenNhom.trim();
+  // maMoi CHƯA tồn tại trong rows (vừa sinh mới) nên bất kỳ đơn nào có mặt trong rows đều CHẮC CHẮN
+  // đang thuộc 1 nhóm KHÁC — không cần loại trừ gì thêm.
+  const canhBao = timCanhBaoTrungLap(sttKeyDuyNhat, maMoi, rows);
 
   await appendRows(TAB, headers, donList.map(don => ({
     MaDonHangLoat: maMoi, TenNhom: tenDaCat, STT_Key: don.STT_Key,
@@ -184,7 +200,7 @@ async function xacNhanNhomMoi({ sttKeys, tenNhom }, user) {
     nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'XAC_NHAN_HANG_LOAT',
     chiTiet: { maDonHangLoat: maMoi, tenNhom: tenDaCat, sttKeys: sttKeyDuyNhat },
   });
-  return maMoi;
+  return { maDonHangLoat: maMoi, canhBao };
 }
 
 // Lấy các dòng ĐANG HOẠT ĐỘNG của đúng 1 mã nhóm — dùng chung cho thêm/xoá đơn, đổi tên, xoá nhóm.
@@ -216,6 +232,7 @@ async function themDonVaoNhom(maDonHangLoat, sttKeys, user) {
 
   const thanhCong = [];
   const loi = [];
+  const canhBao = [];
   const donCanGhi = [];
   for (const sttKey of sttKeyDuyNhat) {
     if (sttKeyDaCoSan.has(sttKey)) { loi.push({ sttKey, lyDo: 'Đã có trong nhóm này' }); continue; }
@@ -223,6 +240,8 @@ async function themDonVaoNhom(maDonHangLoat, sttKeys, user) {
     if (!don) { loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng' }); continue; }
     if (!orderService.coQuyenTheoXuong(user, don)) { loi.push({ sttKey, lyDo: 'Không có quyền (khác Xưởng của bạn)' }); continue; }
     if (don.XUONG !== xuongNhom) { loi.push({ sttKey, lyDo: `Khác Xưởng với nhóm hiện có (${xuongNhom || 'chưa gán'})` }); continue; }
+    const [canhBaoDon] = timCanhBaoTrungLap([sttKey], maDonHangLoat, rows);
+    if (canhBaoDon) canhBao.push(canhBaoDon);
     donCanGhi.push(don);
     thanhCong.push(sttKey);
   }
@@ -236,7 +255,7 @@ async function themDonVaoNhom(maDonHangLoat, sttKeys, user) {
     await ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'THEM_DON_HANG_LOAT', chiTiet: { maDonHangLoat, sttKeys: thanhCong } });
   }
 
-  return { thanhCong, loi };
+  return { thanhCong, loi, canhBao };
 }
 
 async function xoaDonKhoiNhom(maDonHangLoat, sttKey, user) {
