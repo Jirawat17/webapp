@@ -368,7 +368,12 @@ body.trang-dang-nhap {
    khung — 1 ảnh thì chiếm trọn, 2 ảnh thì chia đôi, không cần biết trước là 1 hay 2 ảnh mới tính được
    kích thước. */
 .order-card .nhom-anh-dai-dien { display: flex; gap: 3px; width: 132px; height: 132px; flex-shrink: 0; }
-.order-card .nhom-anh-dai-dien img { flex: 1; min-width: 0; height: 100%; object-fit: cover; border-radius: var(--radius-sm); background: var(--color-bg); transition: transform 0.25s ease; }
+/* background CỐ ĐỊNH sáng (không dùng var(--color-bg)) — nền này chỉ lộ ra khi ảnh PNG có nền TRONG
+   SUỐT (nhiều mẫu thêu chỉ có chữ/hoạ tiết, không tô nền). Ở Chế độ Tối, var(--color-bg) đổi thành xám
+   tối, khiến ảnh có hoạ tiết tối màu (VD chữ nâu đỏ đậm) chìm vào nền, khó nhìn (phát hiện 13/09/2026,
+   theo ảnh chụp thực tế người dùng). Hardcode #f8f8f9 (đúng giá trị --color-bg cũ ở Chế độ Sáng) để nền
+   LUÔN sáng, giữ đúng độ tương phản cho ảnh dù trang đang ở theme nào. */
+.order-card .nhom-anh-dai-dien img { flex: 1; min-width: 0; height: 100%; object-fit: cover; border-radius: var(--radius-sm); background: #f8f8f9; transition: transform 0.25s ease; }
 .order-card:hover .nhom-anh-dai-dien img { transform: scale(1.06); }
 .order-card .thong-tin { min-width: 0; flex: 1; }
 /* Cỡ chữ tiêu đề/meta GIẢM DẦN (16px->14px->13px, 0.85rem->0.78rem->0.72rem, bổ sung 13/09/2026, theo
@@ -389,11 +394,16 @@ body.trang-dang-nhap {
    — link chỉ còn phần ảnh/tên, dùng display:contents để KHÔNG phá layout cột của .the-anh-nhom (chính
    nó vẫn không chiếm chỗ riêng, chỉ các con bên trong mới tham gia flex column). */
 .the-anh-nhom > a { display: contents; color: inherit; text-decoration: none; }
+/* background/color CỐ ĐỊNH sáng — cùng lý do .nhom-anh-dai-dien ở trang Danh sách đơn hàng (xem comment
+   ở đó): ảnh PNG nền trong suốt sẽ lộ nền xám tối ở Chế độ Tối nếu dùng var(--color-bg), khiến hoạ tiết
+   tối màu khó nhìn. .khong-co-anh (khi đơn không có ảnh nào) cũng đổi màu icon sang giá trị CỐ ĐỊNH
+   tương ứng (thay vì var(--color-text-faint), vốn đổi thành màu SÁNG ở Chế độ Tối để hợp nền tối —
+   không còn hợp nữa vì nền đã cố định sáng). */
 .the-anh-nhom img, .the-anh-nhom .khong-co-anh {
   width: 160px; height: 160px; object-fit: cover; border-radius: var(--radius-md);
-  background: var(--color-bg); border: 2px solid var(--color-border); transition: border-color 0.15s;
+  background: #f8f8f9; border: 2px solid var(--color-border); transition: border-color 0.15s;
 }
-.the-anh-nhom .khong-co-anh { display: flex; align-items: center; justify-content: center; color: var(--color-text-faint); }
+.the-anh-nhom .khong-co-anh { display: flex; align-items: center; justify-content: center; color: #a1a1aa; }
 .the-anh-nhom:hover img, .the-anh-nhom:hover .khong-co-anh { border-color: var(--color-primary); }
 .the-anh-nhom .ten-don { font-size: 0.8rem; color: var(--color-text-muted); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 /* Nhãn "Mockup" (bổ sung 13/09/2026, theo yêu cầu người dùng) — đơn KHÔNG có ảnh PNG hiện tạm ảnh
@@ -578,7 +588,10 @@ select.chon-trang-thai-tieu-cuc { border-color: var(--color-warning-text); color
 .chi-tiet-layout { display: grid; grid-template-columns: 1fr; gap: var(--space-5); }
 @media (min-width: 900px) { .chi-tiet-layout { grid-template-columns: 1.1fr 0.9fr; align-items: start; } }
 
-.anh-mau { width: 100%; max-height: 320px; object-fit: cover; border-radius: var(--radius-md); margin-bottom: var(--space-3); background: var(--color-border); }
+/* background CỐ ĐỊNH sáng — cùng lý do .nhom-anh-dai-dien/.the-anh-nhom (xem comment ở đó): ảnh PNG nền
+   trong suốt sẽ lộ nền xám tối hơn ở Chế độ Tối nếu dùng var(--color-border), khiến hoạ tiết tối màu
+   khó nhìn. Hardcode #e4e4e7 (đúng giá trị --color-border cũ ở Chế độ Sáng). */
+.anh-mau { width: 100%; max-height: 320px; object-fit: cover; border-radius: var(--radius-md); margin-bottom: var(--space-3); background: #e4e4e7; }
 /* Bọc 1-2 ảnh đại diện cạnh nhau (bổ sung 13/09/2026, cùng lý do .nhom-anh-dai-dien ở trang danh sách
    — đơn có link THƯ MỤC Drive chứa nhiều ảnh). flex:1 mỗi ảnh tự chia đều bề rộng: 1 ảnh chiếm trọn
    hàng (hệt trước đây, không đổi), 2 ảnh chia đôi. */
