@@ -337,6 +337,60 @@ async function chayQuetTuDongMuaTracking() {
   return { daQuet: true, soDonDaMua, tongSoDuDieuKien: donDuDieuKien.length };
 }
 
+// ============================================================
+// CẬP NHẬT TRẠNG THÁI TRACKING THẬT (bổ sung 14/09/2026, theo yêu cầu người dùng — xem
+// docs/superpowers/specs/2026-09-14-cap-nhat-trang-thai-tracking-design.md). HOÀN TOÀN TÁCH BIỆT khỏi
+// việc mua tracking ở trên — chỉ ĐỌC trạng thái vận chuyển thật từ GKE (đơn ĐÃ có TRACKING_ID rồi) và
+// ghi vào 2 cột MỚI, người dùng tự thêm vào Sheet: TRANG_THAI_TRACKING (mô tả mới nhất, tiếng Việt) +
+// THOI_GIAN_CAP_NHAT_TRACKING (mốc tra cứu thành công gần nhất). KHÔNG đụng TRANG_THAI_XUONG hay bất kỳ
+// cột pipeline nào khác — đã xác nhận rõ với người dùng, đây thuần là cột thông tin để xem.
+// ============================================================
+
+// Cập nhật cho ĐÚNG 1 đơn — bỏ qua sớm (không gọi GKE) nếu Sheet chưa có CẢ 2 cột đích, và nếu GKE
+// chưa có sự kiện tracking nào (mảng rỗng, label vừa tạo) thì cũng bỏ qua, thử lại ở lượt quét sau —
+// không phải lỗi thật nên KHÔNG log lỗi cho 2 trường hợp này.
+async function capNhatTrangThaiTrackingChoDon(sttKey, cauHinhGke) {
+  const { headers, row } = await orderService.getByKey(sttKey, { fresh: true });
+  if (!row) return null;
+
+  const coCotTrangThai = headers.includes('TRANG_THAI_TRACKING');
+  const coCotThoiGian = headers.includes('THOI_GIAN_CAP_NHAT_TRACKING');
+  if (!coCotTrangThai && !coCotThoiGian) return null;
+
+  const lichSu = await gkeService.layLichSuTrackingGke(sttKey, cauHinhGke, []);
+  if (lichSu.length === 0) return null;
+
+  const suKienMoiNhat = lichSu[lichSu.length - 1];
+  const capNhat = {
+    ...(coCotTrangThai ? { TRANG_THAI_TRACKING: suKienMoiNhat.track_name || suKienMoiNhat.track_name_en || '' } : {}),
+    ...(coCotThoiGian ? { THOI_GIAN_CAP_NHAT_TRACKING: dinhDangNgayGioNgan(new Date()) } : {}),
+  };
+  await orderService.update(sttKey, capNhat, NGUOI_HE_THONG, { donDaDoc: { headers, row } });
+  return suKienMoiNhat;
+}
+
+// 1 lượt quét — gọi từ services/trackingJob.js (cron mỗi vài giờ, thấp hơn hẳn lịch mua tracking vì
+// trạng thái vận chuyển đổi chậm hơn nhiều). Quét MỌI đơn đã có TRACKING_ID — chưa lọc bớt đơn đã ở
+// trạng thái cuối (giao xong/trả xong) vì cần thêm cột lưu mã trạng thái gốc mới suy được đáng tin cậy
+// (xem mục 4 trong file thiết kế) — để bản sau nếu số lượng đơn/giới hạn gọi GKE thật sự thành vấn đề.
+// Lỗi ở 1 đơn chỉ log console, KHÔNG dừng cả lượt — đơn đó tự thử lại ở lượt sau.
+async function chayQuetCapNhatTrangThaiTracking() {
+  const [{ rows }, cauHinhGke] = await Promise.all([orderService.getAll(), gkeService.layCauHinhGke()]);
+  const donCoTracking = rows.filter(r => r.TRACKING_ID);
+
+  let soDaCapNhat = 0;
+  for (const don of donCoTracking) {
+    try {
+      const ketQua = await capNhatTrangThaiTrackingChoDon(don.STT_Key, cauHinhGke);
+      if (ketQua) soDaCapNhat++;
+    } catch (err) {
+      console.error(`[TrackingTuDong] Lỗi tra cứu trạng thái tracking cho ${don.STT_Key}:`, err.message);
+    }
+  }
+
+  return { daQuet: true, soDaCapNhat, tongSoCoTracking: donCoTracking.length };
+}
+
 // Danh sách MỌI đơn AUTO_TRACKING="YES" kèm trạng thái — dùng cho trang public/tracking.html. Lọc
 // theo Xưởng của `user` (bổ sung 13/09/2026, theo yêu cầu người dùng — admin xem hết, vai trò khác
 // chỉ thấy đơn cùng Xưởng, xem orderService.js#locTheoXuong) — hàm này CHỈ dùng cho route GET
@@ -378,4 +432,5 @@ async function layDanhSachDonAutoTracking(user) {
 module.exports = {
   layCauHinh, luuCauHinh, chayQuetTuDongMuaTracking, layDanhSachDonAutoTracking, layLogTracking,
   muaTrackingChoDon, inLabelChoDon, muaTrackingVaInLabelChoDon,
+  capNhatTrangThaiTrackingChoDon, chayQuetCapNhatTrangThaiTracking,
 };

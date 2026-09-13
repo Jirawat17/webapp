@@ -204,11 +204,13 @@ async function layToken(cauHinh, { boQuaCache = false } = {}, nhatKy) {
 // Gọi 1 endpoint POST của GKE, tự đính token — nếu bị từ chối do token hỏng (401, hoặc code khác
 // 200 kèm chữ "token"/"unauthorized" trong detail) thì làm mới token 1 lần rồi thử lại đúng 1 lần,
 // không lặp vô hạn. `buoc` = tên bước để log/báo lỗi rõ ràng theo đúng giai đoạn (đăng nhập/tạo đơn/in tem).
-async function goiApi(buoc, path, body, cauHinh, { daThuLai = false } = {}, nhatKy) {
+// `extraHeaders` (bổ sung 14/09/2026, mặc định rỗng — không đổi hành vi 2 chỗ gọi cũ) — cho phép truyền
+// thêm header tuỳ endpoint, VD Accept-Language: vi cho query/track/ (xem layLichSuTrackingGke).
+async function goiApi(buoc, path, body, cauHinh, { daThuLai = false, extraHeaders = {} } = {}, nhatKy) {
   const token = await layToken(cauHinh, {}, nhatKy);
   const { res, data } = await fetchJson(buoc, `${BASE_URL}${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...extraHeaders },
     body: JSON.stringify(body),
   }, nhatKy);
 
@@ -226,7 +228,7 @@ async function goiApi(buoc, path, body, cauHinh, { daThuLai = false } = {}, nhat
     if (loiTokenHong && !daThuLai) {
       ghi(nhatKy, `[GKE] [${buoc}] Token có vẻ đã hỏng — làm mới token và thử lại 1 lần`);
       await layToken(cauHinh, { boQuaCache: true }, nhatKy);
-      return goiApi(buoc, path, body, cauHinh, { daThuLai: true }, nhatKy);
+      return goiApi(buoc, path, body, cauHinh, { daThuLai: true, extraHeaders }, nhatKy);
     }
     ghiLoi(nhatKy, `[GKE] [${buoc}] GKE từ chối:`, JSON.stringify(data));
     throw new Error(`[${buoc}] ${data.detail || `Lỗi GKE (mã ${data.code ?? res.status})`}`);
@@ -394,6 +396,20 @@ async function layTemIn(donHang, cauHinh, { laLanDauSauKhiTao = false } = {}, nh
   }
 }
 
+// Tra cứu LỊCH SỬ trạng thái tracking thật (bổ sung 14/09/2026, theo yêu cầu người dùng — xem
+// docs/superpowers/specs/2026-09-14-cap-nhat-trang-thai-tracking-design.md) — dùng num_type=1 + STT_Key
+// giống hệt layTemIn() ở trên. Accept-Language: vi để GKE tự trả track_name bằng tiếng Việt, không cần
+// tự xây bảng dịch. Trả về NGUYÊN VĂN mảng sự kiện (cũ -> mới dần theo tài liệu API) — nơi gọi tự lấy
+// phần tử CUỐI làm trạng thái hiện tại; mảng RỖNG (đơn label mới tạo, chưa có sự kiện nào) không phải
+// lỗi, KHÔNG throw.
+async function layLichSuTrackingGke(sttKey, cauHinh, nhatKy) {
+  const data = await goiApi(
+    'tra cứu tracking', '/query/track/', { num_type: 1, num: sttKey }, cauHinh,
+    { extraHeaders: { 'Accept-Language': 'vi' } }, nhatKy
+  );
+  return Array.isArray(data) ? data : [];
+}
+
 // CÁCH TÌM LỖI khi tab "Quét mã QR Tracking" báo lỗi:
 //   1. Mở terminal đang chạy `npm start`/`node server.js` (hoặc `docker logs -f xuong-theu-webapp`
 //      nếu chạy Docker) — mọi bước đều in dòng bắt đầu "[GKE]", kèm đúng tên bước (đăng nhập / tạo
@@ -423,4 +439,4 @@ async function gopCacTemPdf(danhSachBase64) {
   return Buffer.from(bytesGop).toString('base64');
 }
 
-module.exports = { taoDonGke, layTemIn, maQuocGia, MA_DANG_CHO_TEM, layCauHinhGke, luuCauHinhGke, gopCacTemPdf };
+module.exports = { taoDonGke, layTemIn, layLichSuTrackingGke, maQuocGia, MA_DANG_CHO_TEM, layCauHinhGke, luuCauHinhGke, gopCacTemPdf };

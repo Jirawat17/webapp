@@ -64,4 +64,20 @@ endpoint đã dùng sẵn `/order/create/`/`/label/print/` trong `services/gkeSe
 
 ## 5. Đã kiểm tra
 
-_(cập nhật sau khi code xong)_
+- Test mới (`test-cap-nhat-trang-thai-tracking.js`, 19 test, mock `global.fetch` + `sheetsService` —
+  KHÔNG gọi GKE/Sheet thật):
+  - `layLichSuTrackingGke()`: gọi đúng `query/track/`, đúng body `{num_type:1, num:STT_Key}`, đúng
+    header `Accept-Language: vi`, vẫn giữ đúng Bearer token; mảng `data` rỗng trả về `[]`, không throw.
+  - `capNhatTrangThaiTrackingChoDon()`: ghi đúng CẢ 2 cột khi Sheet có đủ, lấy đúng SỰ KIỆN CUỐI (không
+    phải đầu) làm trạng thái hiện tại, không đụng `TRANG_THAI_XUONG`; bỏ qua sớm KHÔNG gọi GKE khi Sheet
+    thiếu CẢ 2 cột đích; chỉ ghi đúng 1 cột khi Sheet chỉ có 1 trong 2 (guard riêng từng cột); bỏ qua
+    không lỗi khi GKE chưa có sự kiện nào (mảng rỗng).
+  - `chayQuetCapNhatTrangThaiTracking()`: chỉ gọi GKE cho đơn CÓ `TRACKING_ID` (loại đúng đơn chưa có);
+    lỗi ở 1 đơn (GKE từ chối) không dừng cả lượt, các đơn còn lại vẫn được xử lý bình thường; đếm đúng
+    `tongSoCoTracking`/`soDaCapNhat`.
+- Chạy lại toàn bộ ~30 file test scratchpad — 25 pass, 5 fail sẵn có từ trước (đã xác nhận qua nhiều lần
+  trong phiên làm việc này bằng `git stash`, không liên quan tới các file vừa sửa).
+- `node --check` cho cả 3 file sửa (`gkeService.js`, `trackingAutoService.js`, `trackingJob.js`) — OK.
+- CHƯA kiểm được với GKE/Google Sheet thật (sandbox không có quyền/tài khoản GKE thật) — người dùng cần
+  tự thêm 2 cột `TRANG_THAI_TRACKING`, `THOI_GIAN_CAP_NHAT_TRACKING` vào tab `Don_Hang_ALL` trước khi
+  tính năng có tác dụng; thiếu CẢ 2 cột thì job tự bỏ qua hoàn toàn (không lỗi, không gọi GKE thừa).
