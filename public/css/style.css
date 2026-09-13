@@ -350,7 +350,12 @@ body.trang-dang-nhap {
 }
 .order-card:hover { border-color: var(--color-primary); box-shadow: 0 4px 20px rgba(190,18,60,0.10); transform: translateY(-2px); }
 .order-card.da-chon { border-color: var(--color-primary); background: var(--color-primary-light); }
-.order-checkbox { width: 22px; height: 22px; flex-shrink: 0; margin-top: 2px; cursor: pointer; accent-color: var(--color-primary); }
+/* Tăng kích thước 22px -> var(--tap-min) (bổ sung 13/09/2026, theo yêu cầu người dùng — dễ bấm chọn
+   đơn hơn, nhất là trên màn cảm ứng) — dùng đúng biến "kích thước chạm thoải mái" app đã định nghĩa
+   sẵn, thay vì chọn 1 số tuỳ ý. Lớp .order-checkbox dùng chung ở public/orders.html, my-orders.html,
+   my-orders-ve-file.html — cùng 1 hành động "chọn đơn" nên tăng đồng bộ cả 3, không có lý do để khác
+   kích thước giữa các trang. */
+.order-checkbox { width: var(--tap-min); height: var(--tap-min); flex-shrink: 0; margin-top: 2px; cursor: pointer; accent-color: var(--color-primary); }
 /* Cột dọc chứa checkbox chọn đơn + nút ưu tiên nhanh (bổ sung 13/09/2026, theo yêu cầu người dùng —
    kéo icon sao xuống DƯỚI checkbox, cùng 1 cột thay vì nằm ngang hàng như trước). Chỉ orders.html có
    nút ưu tiên (admin/ve_file) nên cột này có thể chỉ chứa đúng 1 checkbox ở các trang khác (my-orders*)
