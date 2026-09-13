@@ -480,8 +480,16 @@ body.trang-dang-nhap {
    trên nền gần đen này. Luôn chiếm trọn 1 dòng riêng (flex-basis 100%) cho dễ đọc thay vì chen giữa các nút. */
 .thanh-hanh-dong-hang-loat .thanh-tien-do { flex: 1 1 100%; color: rgba(255,255,255,0.85); }
 .thanh-hanh-dong-hang-loat .thanh-tien-do-track { background: rgba(255,255,255,0.25); }
-.thanh-hanh-dong-hang-loat .btn-huy-tien-do { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3); color: white; }
-.thanh-hanh-dong-hang-loat .btn-huy-tien-do:hover { border-color: #fca5a5; color: #fca5a5; }
+/* Khung số đếm "X/Y" + nút "Hủy" đổi riêng sang nền sáng/chữ đỏ (theo yêu cầu người dùng 13/09/2026 —
+   thích khung này nổi bật kiểu "cảnh báo" thay vì hoà vào nền tối chung của thanh). Dùng đúng cặp màu
+   --color-danger-bg/--color-danger-text đã có sẵn cho badge cảnh báo — nhưng HARDCODE giá trị ở Chế độ
+   Sáng (#fee2e2/#991b1b) thay vì dùng token, vì thanh này luôn nền tối cố định bất kể theme (xem
+   .thanh-hanh-dong-hang-loat) nên cần đúng 1 cặp sáng/đỏ cố định, không đổi theo theme. */
+.thanh-hanh-dong-hang-loat .thanh-tien-do-nhan {
+  background: #fee2e2; color: #991b1b; padding: 4px 14px; border-radius: var(--radius-sm);
+}
+.thanh-hanh-dong-hang-loat .btn-huy-tien-do { background: #fee2e2; border-color: #991b1b; color: #991b1b; }
+.thanh-hanh-dong-hang-loat .btn-huy-tien-do:hover { background: #991b1b; border-color: #991b1b; color: white; }
 
 /* Phân biệt nút/ô chọn trạng thái "Đã..." (positive, việc đã xong) với "Chưa..." (negative, còn
    thiếu việc) — tô màu khớp đúng ý nghĩa với badge trạng thái đang dùng (MAU_TRANG_THAI trong
