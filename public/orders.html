@@ -91,8 +91,8 @@
         <label for="loc-xuong">Xưởng</label>
         <select id="loc-xuong">
           <option value="">Tất cả Xưởng</option>
-          <option value="HANOI">HANOI</option>
-          <option value="BACNINH">BACNINH</option>
+          <option value="HN">HN</option>
+          <option value="BN">BN</option>
           <option value="__CHUA_GAN__">(chưa gán)</option>
         </select>
       </div>
@@ -232,9 +232,9 @@ const DANH_SACH_TRANG_THAI_DAY_DU = [
   'DELIVERED_Đã giao đến khách', 'CANCELLED_Đã hủy', 'REFUNDED_Hoàn đơn',
 ];
 
-// Xưởng vật lý (HANOI/BACNINH — bổ sung 13/09/2026, theo yêu cầu người dùng) — PHẢI khớp ĐÚNG
-// DANH_SACH_XUONG trong services/orderService.js.
-const DANH_SACH_XUONG = ['HANOI', 'BACNINH'];
+// Xưởng vật lý (HN/BN — bổ sung 13/09/2026, theo yêu cầu người dùng, đổi tên từ HANOI/BACNINH cùng
+// ngày) — PHẢI khớp ĐÚNG DANH_SACH_XUONG trong services/orderService.js.
+const DANH_SACH_XUONG = ['HN', 'BN'];
 
 let danhSachHienTai = [];
 let donDaChonSet = new Set();
@@ -737,7 +737,7 @@ async function apDungChiDinhNguoiChayMay() {
   await taiDon();
 }
 
-// Admin GÁN XƯỞNG (HANOI/BACNINH...) cho toàn bộ đơn đang chọn — bổ sung 13/09/2026, theo yêu cầu
+// Admin GÁN XƯỞNG (HN/BN...) cho toàn bộ đơn đang chọn — bổ sung 13/09/2026, theo yêu cầu
 // người dùng (phân loại đơn theo xưởng vật lý, mỗi xưởng chỉ thành viên cùng Xưởng mới xem/thao tác
 // được — xem services/orderService.js#locTheoXuong/coQuyenTheoXuong, routes/orders.js POST
 // /gan-xuong). "(Gỡ gán Xưởng)" gửi chuỗi rỗng — đưa đơn về "chưa có xưởng" (ẩn với người thường,

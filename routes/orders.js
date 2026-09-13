@@ -419,7 +419,7 @@ router.post('/chi-dinh-nguoi-ve-file', async (req, res) => {
   res.json({ ok: true, thanhCong, loi });
 });
 
-// Admin GÁN XƯỞNG (HANOI/BACNINH...) cho 1 lô đơn đã chọn — bổ sung 13/09/2026, theo yêu cầu người
+// Admin GÁN XƯỞNG (HN/BN...) cho 1 lô đơn đã chọn — bổ sung 13/09/2026, theo yêu cầu người
 // dùng (phân loại đơn theo xưởng vật lý, mỗi xưởng chỉ thành viên cùng Xưởng mới xem/thao tác được —
 // xem services/orderService.js#locTheoXuong/coQuyenTheoXuong). CHỈ admin — cùng khuôn
 // /chi-dinh-nguoi-chay-may/-ve-file (chọn hàng loạt ở trang Đơn hàng), KHÔNG có điều khiển riêng ở

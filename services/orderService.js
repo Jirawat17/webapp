@@ -334,7 +334,7 @@ function filterForRole(rows, user) {
   return locTheoXuong(list, user);
 }
 
-// Phân loại đơn theo Xưởng (HANOI/BACNINH...) — bổ sung 13/09/2026, theo yêu cầu người dùng (cột
+// Phân loại đơn theo Xưởng (HN/BN...) — bổ sung 13/09/2026, theo yêu cầu người dùng (cột
 // XUONG tự thêm vào Don_Hang_ALL, cột Xuong tự thêm vào NguoiDung). admin luôn xem/thao tác được MỌI
 // đơn bất kể Xưởng. Vai trò khác: CHỈ xem/thao tác được đơn CÙNG Xưởng với mình — thiếu Xưởng ở 1
 // trong 2 bên (đơn chưa được admin gán XUONG, HOẶC người dùng chưa được gán Xuong) coi như KHÔNG có
@@ -342,7 +342,12 @@ function filterForRole(rows, user) {
 // trong giai đoạn mới triển khai chưa gán hết). Áp dụng CẢ cho việc XEM (danh sách/báo cáo/chatbot/
 // dashboard — locTheoXuong) LẪN thao tác trên 1 đơn cụ thể (quét QR/chụp ảnh/sửa đơn — coQuyenTheoXuong,
 // xem routes/orders.js, routes/qr.js, routes/photos.js, routes/tracking.js).
-const DANH_SACH_XUONG = ['HANOI', 'BACNINH'];
+// Đổi tên 13/09/2026, theo yêu cầu người dùng: HANOI/BACNINH -> HN/BN. CHỈ đổi danh sách hợp lệ ở
+// code — dữ liệu CŨ đã có sẵn trong Sheet (cột XUONG ở Don_Hang_ALL, cột Xuong ở NguoiDung) vẫn còn
+// giá trị "HANOI"/"BACNINH" cũ cho tới khi tự sửa tay trong Sheet; so khớp ở locTheoXuong là CHÍNH
+// XÁC CHUỖI nên đơn/người dùng còn mang giá trị cũ sẽ bị coi như "khác Xưởng" (không thấy nhau) với
+// mọi người đã được gán "HN"/"BN" mới, cho tới khi migrate xong dữ liệu cũ.
+const DANH_SACH_XUONG = ['HN', 'BN'];
 
 function locTheoXuong(rows, user) {
   if (user.vaiTro === 'admin') return rows;

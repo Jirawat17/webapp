@@ -27,7 +27,7 @@ router.post('/', async (req, res) => {
   // năng này) mới được tạm thời chưa có (xem routes/auth.js).
   if (!matKhauHopLe(matKhau)) return res.status(400).json({ error: 'Mật khẩu phải là 1-4 chữ số' });
   // Xưởng (bổ sung 13/09/2026, theo yêu cầu người dùng — phân loại đơn/nhân viên theo xưởng vật lý
-  // HANOI/BACNINH) — không bắt buộc phải chọn ngay lúc tạo tài khoản (admin có thể gán sau), nhưng
+  // HN/BN) — không bắt buộc phải chọn ngay lúc tạo tài khoản (admin có thể gán sau), nhưng
   // nếu CÓ chọn thì phải đúng 1 trong danh sách hợp lệ, tránh gõ nhầm khiến nhân viên đó không thấy
   // đơn nào (xem services/orderService.js#locTheoXuong — thiếu/sai Xuong coi như không có quyền xem).
   if (xuong && !DANH_SACH_XUONG.includes(xuong)) {
