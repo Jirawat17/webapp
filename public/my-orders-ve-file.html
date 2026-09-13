@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn của tôi (Vẽ file) — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=81">
-<script src="/js/theme.js?v=81"></script>
+<link rel="stylesheet" href="/css/style.css?v=82">
+<script src="/js/theme.js?v=82"></script>
 </head>
 <body>
 <div id="nav"></div>
@@ -223,8 +223,8 @@
   <div id="danh-sach-can-ve" class="order-list"></div>
 </div>
 
-<script src="/js/icons.js?v=81"></script>
-<script src="/js/api.js?v=81"></script>
+<script src="/js/icons.js?v=82"></script>
+<script src="/js/api.js?v=82"></script>
 <script>
 const NHAN_CANH_BAO = { VANG: 'Vàng · 3 ngày', CAM: 'Cam · 5 ngày', DO: 'Đỏ · 7 ngày' };
 
@@ -449,8 +449,7 @@ function renderDanhSachCanVe() {
         : ''}
       <div class="thong-tin">
         <strong class="tieu-de-the ${o.DonUuTien ? 'uu-tien' : ''}">${escapeHtml(o.TieuDeSanPham || o.STT_Key)}</strong>
-        <div class="meta">${escapeHtml(o.TenKhachHang || '')} · SL: <strong>${escapeHtml(o.SO_LUONG || '')}</strong></div>
-        <div class="meta">Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgayNgan(o.NGAY_LEN_DON) : '—')}</div>
+        <div class="meta">${escapeHtml(o.TenKhachHang || '')} · Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgayNgan(o.NGAY_LEN_DON) : '—')} · SL: <strong>${escapeHtml(o.SO_LUONG || '')}</strong></div>
         <div class="badge-row">
           ${o.DonUuTien ? `<span class="badge trang-thai-danger">${icon('star', {size:14})} Ưu tiên</span>` : ''}
           <span class="badge ${lopTrangThai(o.TRANG_THAI_XUONG)}">${escapeHtml(o.TRANG_THAI_XUONG || '')}</span>
@@ -666,8 +665,7 @@ function renderDanhSachToiVe() {
         : ''}
       <div class="thong-tin">
         <strong class="tieu-de-the ${o.DonUuTien ? 'uu-tien' : ''}">${escapeHtml(o.TieuDeSanPham || o.STT_Key)}</strong>
-        <div class="meta">${escapeHtml(o.TenKhachHang || '')} · SL: <strong>${escapeHtml(o.SO_LUONG || '')}</strong></div>
-        <div class="meta">Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgayNgan(o.NGAY_LEN_DON) : '—')}</div>
+        <div class="meta">${escapeHtml(o.TenKhachHang || '')} · Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgayNgan(o.NGAY_LEN_DON) : '—')} · SL: <strong>${escapeHtml(o.SO_LUONG || '')}</strong></div>
         <div class="badge-row">
           ${o.DonUuTien ? `<span class="badge trang-thai-danger">${icon('star', {size:14})} Ưu tiên</span>` : ''}
           <span class="badge ${lopTrangThai(o.TRANG_THAI_XUONG)}">${escapeHtml(o.TRANG_THAI_XUONG || '')}</span>

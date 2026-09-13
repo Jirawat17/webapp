@@ -338,16 +338,25 @@ body.trang-dang-nhap {
 .order-card:hover { border-color: var(--color-primary); box-shadow: 0 4px 20px rgba(190,18,60,0.10); transform: translateY(-2px); }
 .order-card.da-chon { border-color: var(--color-primary); background: var(--color-primary-light); }
 .order-checkbox { width: 22px; height: 22px; flex-shrink: 0; margin-top: 2px; cursor: pointer; accent-color: var(--color-primary); }
-/* Bọc 1-2 ảnh đại diện trong 1 khung CỐ ĐỊNH 72x72 (bổ sung 13/09/2026, theo yêu cầu người dùng — đơn
-   có link THƯ MỤC Drive chứa nhiều ảnh hiện tối đa 2 ảnh, xem urlAnhHienThiList() trong api.js). Mỗi
-   ảnh dùng flex:1 để tự chia đều bề rộng khung — 1 ảnh thì chiếm trọn 72px (giữ nguyên hệt trước đây),
-   2 ảnh thì mỗi ảnh còn ~34px, không cần biết trước là 1 hay 2 ảnh mới tính được kích thước. */
-.order-card .nhom-anh-dai-dien { display: flex; gap: 3px; width: 72px; height: 72px; flex-shrink: 0; }
+/* Cột dọc chứa checkbox chọn đơn + nút ưu tiên nhanh (bổ sung 13/09/2026, theo yêu cầu người dùng —
+   kéo icon sao xuống DƯỚI checkbox, cùng 1 cột thay vì nằm ngang hàng như trước). Chỉ orders.html có
+   nút ưu tiên (admin/ve_file) nên cột này có thể chỉ chứa đúng 1 checkbox ở các trang khác (my-orders*)
+   — vẫn đúng layout, không cần class riêng cho từng trường hợp. KHÔNG đặt margin-top ở đây (checkbox
+   bên trong đã tự có margin-top riêng, giữ đúng độ lệch 2px cũ dù đứng riêng hay trong cột này). */
+.order-card .cot-chon-the { display: flex; flex-direction: column; align-items: center; gap: 6px; flex-shrink: 0; }
+/* Bọc 1-2 ảnh đại diện trong 1 khung CỐ ĐỊNH (bổ sung 13/09/2026 — đơn có link THƯ MỤC Drive chứa nhiều
+   ảnh hiện tối đa 2 ảnh, xem urlAnhHienThiList() trong api.js; kích thước tăng từ 72px lên 96px cùng
+   ngày, theo yêu cầu người dùng — ảnh dễ nhìn hơn, đổi cùng lúc với giảm cỡ chữ bên cạnh). Mỗi ảnh dùng
+   flex:1 để tự chia đều bề rộng khung — 1 ảnh thì chiếm trọn, 2 ảnh thì chia đôi, không cần biết trước
+   là 1 hay 2 ảnh mới tính được kích thước. */
+.order-card .nhom-anh-dai-dien { display: flex; gap: 3px; width: 96px; height: 96px; flex-shrink: 0; }
 .order-card .nhom-anh-dai-dien img { flex: 1; min-width: 0; height: 100%; object-fit: cover; border-radius: var(--radius-sm); background: var(--color-bg); transition: transform 0.25s ease; }
 .order-card:hover .nhom-anh-dai-dien img { transform: scale(1.06); }
 .order-card .thong-tin { min-width: 0; flex: 1; }
-.order-card .tieu-de-the { display: block; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.order-card .meta { font-size: 0.85rem; color: var(--color-text-muted); margin: 2px 0; }
+/* Cỡ chữ tiêu đề/meta GIẢM (16px->14px, 0.85rem->0.78rem, bổ sung 13/09/2026, theo yêu cầu người dùng)
+   — nhường thêm không gian cho ảnh đại diện lớn hơn ở trên, "dễ nhìn ảnh hơn". */
+.order-card .tieu-de-the { display: block; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.order-card .meta { font-size: 0.78rem; color: var(--color-text-muted); margin: 2px 0; }
 .order-card .badge-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 
 /* "Chọn tất cả đơn đang hiển thị" + thanh hành động chuyển trạng thái hàng loạt */

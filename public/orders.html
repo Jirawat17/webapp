@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=81">
-<script src="/js/theme.js?v=81"></script>
+<link rel="stylesheet" href="/css/style.css?v=82">
+<script src="/js/theme.js?v=82"></script>
 </head>
 <body>
 <div id="nav"></div>
@@ -191,8 +191,8 @@
   <button class="btn-hanh-dong phu" onclick="boChonTatCaDon()">Bỏ chọn</button>
 </div>
 
-<script src="/js/icons.js?v=81"></script>
-<script src="/js/api.js?v=81"></script>
+<script src="/js/icons.js?v=82"></script>
+<script src="/js/api.js?v=82"></script>
 <script>
 const NHAN_CANH_BAO = { VANG: 'Vàng · 3 ngày', CAM: 'Cam · 5 ngày', DO: 'Đỏ · 7 ngày' };
 
@@ -477,24 +477,25 @@ function renderDanhSachDon() {
     return `
     <div class="order-card ${daChon ? 'da-chon' : ''}" data-stt="${escapeHtml(o.STT_Key)}"
          onclick="moChiTietDon(event, '${encodeURIComponent(o.STT_Key)}')">
-      <input type="checkbox" class="order-checkbox" ${daChon ? 'checked' : ''}
-             aria-label="Chọn đơn ${escapeHtml(o.STT_Key)}"
-             onclick="event.stopPropagation()"
-             onchange="toggleChonDon('${escapeHtml(o.STT_Key)}', this.checked)">
-      ${(user.vaiTro === 'admin' || user.vaiTro === 've_file') ? `
-        <button type="button" class="btn-uu-tien-nhanh ${o.DonUuTien ? 'bat' : ''}"
-                title="${o.DonUuTien ? 'Bỏ ưu tiên' : 'Đánh dấu ưu tiên'}"
-                aria-label="${o.DonUuTien ? 'Bỏ ưu tiên' : 'Đánh dấu ưu tiên'}"
-                onclick="event.stopPropagation(); toggleUuTienNhanh('${escapeHtml(o.STT_Key)}', ${o.DonUuTien ? 'true' : 'false'}, this)">
-          ${icon('star', { size: 16 })}
-        </button>` : ''}
+      <div class="cot-chon-the">
+        <input type="checkbox" class="order-checkbox" ${daChon ? 'checked' : ''}
+               aria-label="Chọn đơn ${escapeHtml(o.STT_Key)}"
+               onclick="event.stopPropagation()"
+               onchange="toggleChonDon('${escapeHtml(o.STT_Key)}', this.checked)">
+        ${(user.vaiTro === 'admin' || user.vaiTro === 've_file') ? `
+          <button type="button" class="btn-uu-tien-nhanh ${o.DonUuTien ? 'bat' : ''}"
+                  title="${o.DonUuTien ? 'Bỏ ưu tiên' : 'Đánh dấu ưu tiên'}"
+                  aria-label="${o.DonUuTien ? 'Bỏ ưu tiên' : 'Đánh dấu ưu tiên'}"
+                  onclick="event.stopPropagation(); toggleUuTienNhanh('${escapeHtml(o.STT_Key)}', ${o.DonUuTien ? 'true' : 'false'}, this)">
+            ${icon('star', { size: 16 })}
+          </button>` : ''}
+      </div>
       ${o.DUONG_DAN_URL || o.MOCKUP
         ? `<div class="nhom-anh-dai-dien">${urlAnhHienThiList(o.DUONG_DAN_URL || o.MOCKUP).map(src => `<img src="${escapeHtml(src)}" alt="" loading="lazy" onerror="this.remove()">`).join('')}</div>`
         : ''}
       <div class="thong-tin">
         <strong class="tieu-de-the ${o.DonUuTien ? 'uu-tien' : ''}">${escapeHtml(o.TieuDeSanPham || o.STT_Key)}</strong>
-        <div class="meta">${escapeHtml(o.TenKhachHang || '')} · SL: <strong>${escapeHtml(o.SO_LUONG || '')}</strong></div>
-        <div class="meta">Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgayNgan(o.NGAY_LEN_DON) : '—')}</div>
+        <div class="meta">${escapeHtml(o.TenKhachHang || '')} · Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgayNgan(o.NGAY_LEN_DON) : '—')} · SL: <strong>${escapeHtml(o.SO_LUONG || '')}</strong></div>
         <div class="badge-row">
           ${o.DonUuTien ? `<span class="badge trang-thai-danger">${icon('star', {size:14})} Ưu tiên</span>` : ''}
           <span class="badge ${lopTrangThai(o.TRANG_THAI_XUONG)}">${escapeHtml(o.TRANG_THAI_XUONG || '')}</span>
