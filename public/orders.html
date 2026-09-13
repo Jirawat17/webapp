@@ -488,8 +488,8 @@ function renderDanhSachDon() {
                 onclick="event.stopPropagation(); toggleUuTienNhanh('${escapeHtml(o.STT_Key)}', ${o.DonUuTien ? 'true' : 'false'}, this)">
           ${icon('star', { size: 16 })}
         </button>` : ''}
-      ${o.MOCKUP || o.DUONG_DAN_URL
-        ? `<img src="${escapeHtml(o.MOCKUP || o.DUONG_DAN_URL)}" alt="" loading="lazy" onerror="this.remove()">`
+      ${o.DUONG_DAN_URL || o.MOCKUP
+        ? `<img src="${escapeHtml(o.DUONG_DAN_URL || o.MOCKUP)}" alt="" loading="lazy" onerror="this.remove()">`
         : ''}
       <div class="thong-tin">
         <strong class="tieu-de-the ${o.DonUuTien ? 'uu-tien' : ''}">${escapeHtml(o.TieuDeSanPham || o.STT_Key)}</strong>

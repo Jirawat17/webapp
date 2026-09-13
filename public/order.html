@@ -106,7 +106,7 @@ async function taiChiTiet() {
     return;
   }
 
-  const anh = don.MOCKUP || don.DUONG_DAN_URL;
+  const anh = don.DUONG_DAN_URL || don.MOCKUP;
   const viTri = (don.ViTriTheu || []).map(escapeHtml).join(' · ') || '—';
 
   document.getElementById('don-hang').innerHTML = `

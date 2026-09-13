@@ -444,8 +444,8 @@ function renderDanhSachCanVe() {
              aria-label="Chọn đơn ${escapeHtml(o.STT_Key)}"
              onclick="event.stopPropagation()"
              onchange="toggleChonDonCanVe('${escapeHtml(o.STT_Key)}', this.checked)">
-      ${o.MOCKUP || o.DUONG_DAN_URL
-        ? `<img src="${escapeHtml(o.MOCKUP || o.DUONG_DAN_URL)}" alt="" loading="lazy" onerror="this.remove()">`
+      ${o.DUONG_DAN_URL || o.MOCKUP
+        ? `<img src="${escapeHtml(o.DUONG_DAN_URL || o.MOCKUP)}" alt="" loading="lazy" onerror="this.remove()">`
         : ''}
       <div class="thong-tin">
         <strong class="tieu-de-the ${o.DonUuTien ? 'uu-tien' : ''}">${escapeHtml(o.TieuDeSanPham || o.STT_Key)}</strong>
@@ -661,8 +661,8 @@ function renderDanhSachToiVe() {
              aria-label="Chọn đơn ${escapeHtml(o.STT_Key)}"
              onclick="event.stopPropagation()"
              onchange="toggleChonDonToiVe('${escapeHtml(o.STT_Key)}', this.checked)">
-      ${o.MOCKUP || o.DUONG_DAN_URL
-        ? `<img src="${escapeHtml(o.MOCKUP || o.DUONG_DAN_URL)}" alt="" loading="lazy" onerror="this.remove()">`
+      ${o.DUONG_DAN_URL || o.MOCKUP
+        ? `<img src="${escapeHtml(o.DUONG_DAN_URL || o.MOCKUP)}" alt="" loading="lazy" onerror="this.remove()">`
         : ''}
       <div class="thong-tin">
         <strong class="tieu-de-the ${o.DonUuTien ? 'uu-tien' : ''}">${escapeHtml(o.TieuDeSanPham || o.STT_Key)}</strong>
