@@ -208,14 +208,19 @@ const KHOA_LAN_XEM_CUOI = 'trackingLanXemCuoi';
 
 // Ô quét nhanh "IN LABEL" (bổ sung 13/09/2026, theo yêu cầu người dùng — xem
 // docs/superpowers/specs/2026-09-13-o-quet-in-label-tracking-design.md). Gõ/quét mã đơn (STT_Key) +
-// Enter -> gọi thẳng API IN LABEL có sẵn (KHÔNG tự mua tracking nếu chưa có — chỉ báo lỗi, tránh phát
-// sinh chi phí thật ngoài ý muốn nếu quét nhầm mã). KHÔNG confirm() trước khi in, KHÔNG alert() khi báo
-// kết quả — cả 2 đều chặn thao tác quét tiếp theo, ngược tinh thần "quét liên tục không dừng".
+// Enter (hoặc phím Space, bổ sung 13/09/2026 lần 2 — 1 số máy quét mã vạch gửi Space thay vì Enter làm
+// ký tự kết thúc) -> gọi thẳng API IN LABEL có sẵn (KHÔNG tự mua tracking nếu chưa có — chỉ báo lỗi,
+// tránh phát sinh chi phí thật ngoài ý muốn nếu quét nhầm mã). KHÔNG confirm() trước khi in, KHÔNG
+// alert() khi báo kết quả — cả 2 đều chặn thao tác quét tiếp theo, ngược tinh thần "quét liên tục không
+// dừng".
 let dangXuLyQuetInLabel = false;
 let quetThongBaoTimer = null;
 
 document.getElementById('o-quet-in-label').addEventListener('keydown', async (e) => {
-  if (e.key !== 'Enter') return;
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  // Space mặc định gõ dấu cách vào ô — chặn lại vì đang dùng làm phím bắt đầu in (giống Enter, vốn
+  // không gõ ký tự nào vào input 1 dòng); STT_Key thật không bao giờ chứa khoảng trắng.
+  e.preventDefault();
   const oQuet = e.target;
   const sttKey = oQuet.value.trim();
   if (!sttKey || dangXuLyQuetInLabel) return;
