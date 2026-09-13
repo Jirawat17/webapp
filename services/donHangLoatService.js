@@ -185,26 +185,49 @@ async function layDongCuaNhom(maDonHangLoat, headers, rows) {
   return dong;
 }
 
-async function themDonVaoNhom(maDonHangLoat, sttKey, user) {
+// Thêm 1 HOẶC NHIỀU đơn vào nhóm cùng lúc (bổ sung 13/09/2026, theo yêu cầu người dùng — nút "THÊM VÀO
+// ĐƠN HÀNG LOẠT" ở public/orders.html cho phép chọn nhiều đơn 1 lượt qua tick sẵn có, thay vì gõ tay
+// từng mã ở public/don-hang-loat.html). GHI ĐÚNG 1 LẦN (appendRows) bất kể thêm bao nhiêu đơn — tránh
+// lặp lại vấn đề quota Sheets API đã sửa ở services/orderService.js#getManyByKeys. KHÔNG dừng cả lô vì
+// 1 vài đơn lỗi (đã có sẵn/không tồn tại/khác Xưởng) — trả {thanhCong, loi} như mọi thao tác hàng loạt
+// khác trong app (xem routes/orders.js POST /danh-dau-uu-tien), phần hợp lệ vẫn được ghi.
+async function themDonVaoNhom(maDonHangLoat, sttKeys, user) {
+  const dsSttKeys = Array.isArray(sttKeys) ? sttKeys : [sttKeys]; // tương thích gọi với 1 chuỗi đơn lẻ
+  if (dsSttKeys.length === 0 || dsSttKeys.some(k => typeof k !== 'string' || !k)) {
+    throw new Error('Cần ít nhất 1 mã đơn hợp lệ.');
+  }
+  const sttKeyDuyNhat = [...new Set(dsSttKeys)];
+
   const { headers, rows } = await docTabGhi();
-  const dongHienCo = await layDongCuaNhom(maDonHangLoat, headers, rows);
+  const dongHienCo = await layDongCuaNhom(maDonHangLoat, headers, rows); // throws nếu nhóm không tồn tại
+  const sttKeyDaCoSan = new Set(dongHienCo.map(r => r.STT_Key));
 
-  if (dongHienCo.some(r => r.STT_Key === sttKey)) {
-    throw new Error(`Đơn ${sttKey} đã có trong nhóm này.`);
-  }
-  const [don] = await layDonDaKiemTraQuyen([sttKey], user);
-
-  const { banDoTheoKey } = await orderService.getManyByKeys(dongHienCo.map(r => r.STT_Key));
+  const { banDoTheoKey } = await orderService.getManyByKeys([...new Set([...sttKeyDuyNhat, ...sttKeyDaCoSan])]);
   const xuongNhom = (banDoTheoKey.get(dongHienCo[0].STT_Key) || {}).XUONG;
-  if (don.XUONG !== xuongNhom) {
-    throw new Error(`Đơn ${sttKey} khác Xưởng với các đơn hiện có trong nhóm (${xuongNhom || 'chưa gán'}).`);
+
+  const thanhCong = [];
+  const loi = [];
+  const donCanGhi = [];
+  for (const sttKey of sttKeyDuyNhat) {
+    if (sttKeyDaCoSan.has(sttKey)) { loi.push({ sttKey, lyDo: 'Đã có trong nhóm này' }); continue; }
+    const don = banDoTheoKey.get(sttKey);
+    if (!don) { loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng' }); continue; }
+    if (!orderService.coQuyenTheoXuong(user, don)) { loi.push({ sttKey, lyDo: 'Không có quyền (khác Xưởng của bạn)' }); continue; }
+    if (don.XUONG !== xuongNhom) { loi.push({ sttKey, lyDo: `Khác Xưởng với nhóm hiện có (${xuongNhom || 'chưa gán'})` }); continue; }
+    donCanGhi.push(don);
+    thanhCong.push(sttKey);
   }
 
-  await appendRow(TAB, headers, {
-    MaDonHangLoat: maDonHangLoat, TenNhom: dongHienCo[0].TenNhom, STT_Key: sttKey,
-    NgayXacNhan: thoiGianVNISOString(), NguoiXacNhan: user.ten, DaXoa: 'FALSE',
-  });
-  await ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'THEM_DON_HANG_LOAT', sttKey, chiTiet: { maDonHangLoat } });
+  if (donCanGhi.length > 0) {
+    const ngay = thoiGianVNISOString();
+    await appendRows(TAB, headers, donCanGhi.map(don => ({
+      MaDonHangLoat: maDonHangLoat, TenNhom: dongHienCo[0].TenNhom, STT_Key: don.STT_Key,
+      NgayXacNhan: ngay, NguoiXacNhan: user.ten, DaXoa: 'FALSE',
+    })));
+    await ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'THEM_DON_HANG_LOAT', chiTiet: { maDonHangLoat, sttKeys: thanhCong } });
+  }
+
+  return { thanhCong, loi };
 }
 
 async function xoaDonKhoiNhom(maDonHangLoat, sttKey, user) {

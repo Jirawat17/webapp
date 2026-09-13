@@ -27,6 +27,9 @@
            xác gộp nhóm) — style="display:none" gốc bỏ đi, chuyển sang ẩn/hiện theo vai trò bằng JS
            (cùng khuôn mẫu btn-in-hai-quan/btn-rasoat-hang-loat) vì đây là hành động ghi vào Sheet. -->
       <button type="button" class="btn-hanh-dong phu" id="btn-quet-hang-loat" onclick="quetDonHangLoat(this)" style="display:none"></button>
+      <!-- btn-them-hang-loat (bổ sung 13/09/2026, theo yêu cầu người dùng) — thêm thẳng các đơn đang
+           tick vào 1 Đơn hàng loạt có sẵn/mới, thay vì phải gõ tay từng mã ở public/don-hang-loat.html. -->
+      <button type="button" class="btn-hanh-dong phu" id="btn-them-hang-loat" onclick="themVaoDonHangLoat()" style="display:none"></button>
       <button type="button" class="btn-hanh-dong phu" id="btn-in-hai-quan" onclick="inHaiQuanDangChon(this)" style="display:none"></button>
     </div>
   </div>
@@ -282,6 +285,14 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   if (user.vaiTro === 'admin' || user.vaiTro === 've_file') {
     btnQuetHangLoat.style.display = '';
     btnQuetHangLoat.innerHTML = icon('scan') + ' QUÉT TÌM ĐƠN HÀNG LOẠT';
+  }
+
+  // "THÊM VÀO ĐƠN HÀNG LOẠT" (bổ sung 13/09/2026, theo yêu cầu người dùng) — cùng phạm vi quyền với
+  // nút quét ở trên (khớp backend POST /don-hang-loat/:ma/them-don, /don-hang-loat).
+  const btnThemHangLoat = document.getElementById('btn-them-hang-loat');
+  if (user.vaiTro === 'admin' || user.vaiTro === 've_file') {
+    btnThemHangLoat.style.display = '';
+    btnThemHangLoat.innerHTML = icon('package') + ' THÊM VÀO ĐƠN HÀNG LOẠT';
   }
 
   // Lọc theo Đơn hàng loạt ĐÃ XÁC NHẬN (bổ sung 13/09/2026, theo yêu cầu người dùng) — chỉ admin/
@@ -1165,6 +1176,60 @@ async function quetDonHangLoat(nut) {
     nut.innerHTML = nhanGoc;
   }
 
+  await taiDon();
+}
+
+// Nút "THÊM VÀO ĐƠN HÀNG LOẠT" (bổ sung 13/09/2026, theo yêu cầu người dùng) — thêm thẳng các đơn
+// đang tick vào 1 Đơn hàng loạt có sẵn hoặc tạo mới, không cần qua trang public/don-hang-loat.html gõ
+// tay từng mã. CHỈ 1 lượt gọi API (POST .../them-don nhận cả mảng sttKeys, xem
+// services/donHangLoatService.js) dù chọn bao nhiêu đơn — không cần thanh tiến độ.
+async function themVaoDonHangLoat() {
+  if (donDaChonSet.size === 0) { alert('Hãy chọn ít nhất 1 đơn muốn thêm.'); return; }
+  const sttKeys = Array.from(donDaChonSet);
+
+  let data;
+  try {
+    data = await apiFetch('/don-hang-loat');
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
+    return;
+  }
+
+  const danhSachHienCo = data.nhoms.map(n => `${n.maDonHangLoat} — ${n.tenNhom} (${n.donHang.length} đơn)`).join('\n');
+  const goiY = data.nhoms.length > 0
+    ? `\n\nCác lô hiện có:\n${danhSachHienCo}\n\nGõ đúng mã lô để thêm vào lô có sẵn, hoặc để TRỐNG rồi OK để tạo lô MỚI:`
+    : '\n\nChưa có lô nào — để TRỐNG rồi OK để tạo lô MỚI:';
+  const nhap = prompt(`Thêm ${sttKeys.length} đơn đang chọn vào Đơn hàng loạt nào?${goiY}`);
+  if (nhap === null) return;
+
+  try {
+    if (nhap.trim() === '') {
+      const tenNhom = prompt('Tên cho Đơn hàng loạt mới:');
+      if (tenNhom === null) return;
+      if (!tenNhom.trim()) { alert('Cần đặt tên cho Đơn hàng loạt.'); return; }
+      const kq = await apiFetch('/don-hang-loat', { method: 'POST', body: JSON.stringify({ sttKeys, tenNhom }) });
+      alert(`Đã tạo ${kq.maDonHangLoat} — "${tenNhom}" (${sttKeys.length} đơn).`);
+    } else {
+      const maDonHangLoat = nhap.trim();
+      if (!data.nhoms.some(n => n.maDonHangLoat === maDonHangLoat)) {
+        alert(`Không tìm thấy lô "${maDonHangLoat}" — kiểm tra lại đúng mã.`);
+        return;
+      }
+      const ketQua = await apiFetch(`/don-hang-loat/${encodeURIComponent(maDonHangLoat)}/them-don`, {
+        method: 'POST', body: JSON.stringify({ sttKeys }),
+      });
+      let thongBao = `Đã thêm ${ketQua.thanhCong.length}/${sttKeys.length} đơn vào ${maDonHangLoat}.`;
+      if (ketQua.loi.length > 0) {
+        thongBao += `\n\nKhông thêm được ${ketQua.loi.length} đơn:\n` + ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
+      }
+      alert(thongBao);
+    }
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
+    return;
+  }
+
+  donDaChonSet.clear();
   await taiDon();
 }
 

@@ -66,8 +66,9 @@ router.post('/', async (req, res) => {
 
 router.post('/:maDonHangLoat/them-don', async (req, res) => {
   try {
-    await donHangLoatService.themDonVaoNhom(req.params.maDonHangLoat, req.body.sttKey, req.session.user);
-    res.json({ ok: true });
+    // sttKeys — mảng, cho phép thêm 1 hoặc nhiều đơn cùng lúc (xem services/donHangLoatService.js).
+    const ketQua = await donHangLoatService.themDonVaoNhom(req.params.maDonHangLoat, req.body.sttKeys, req.session.user);
+    res.json(ketQua);
   } catch (e) {
     res.status(400).json({ error: e.message });
   }
