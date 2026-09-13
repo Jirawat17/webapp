@@ -34,9 +34,10 @@ liên tục cho nhiều đơn, không cần vào Danh sách đơn hàng chọn t
      `alert()` — sẽ chặn thao tác quét tiếp theo, ngược với tinh thần "quét liên tục không dừng").
   4. Lỗi (đơn không tồn tại, chưa có tracking...): hiện banner màu đỏ với đúng `lyDo` trả về từ API, tự
      ẩn sau vài giây (cũng KHÔNG dùng `alert()`, cùng lý do).
-  5. Dù thành công hay lỗi: xoá trắng + focus lại ô input ngay, sẵn sàng cho lượt quét kế tiếp; đồng thời
-     tải lại bảng "Danh sách đơn AUTO_TRACKING" + Logs bên dưới nếu đơn vừa in nằm trong đó (dùng lại
-     `taiDanhSach()`/`taiLogs()` có sẵn).
+  5. Dù thành công hay lỗi: xoá trắng + focus lại ô input NGAY (bổ sung/làm rõ 13/09/2026, theo yêu cầu
+     người dùng) — KHÔNG chờ `taiDanhSach()`/`taiLogs()` (2 lượt gọi mạng, chạy SAU khi đã reset ô) xong
+     mới cho quét tiếp, và không phụ thuộc việc hộp thoại in của trình duyệt có chặn luồng script hay
+     không (tuỳ trình duyệt/thiết bị) — ô luôn sẵn sàng ngay lập tức cho lệnh in kế tiếp.
 - **Không đổi** `routes/tracking.js` — tái dùng nguyên vẹn endpoint đã có.
 
 ## 3. Đã kiểm tra
@@ -53,3 +54,7 @@ liên tục cho nhiều đơn, không cần vào Danh sách đơn hàng chọn t
 - Ghi chú: công cụ giả lập phím bấm trong sandbox trình duyệt không gửi đúng sự kiện `keydown` như bàn
   phím/máy quét thật — đã xác minh logic bằng cách tự phát sự kiện `KeyboardEvent('keydown', {key:
   'Enter'})` trực tiếp, đúng cơ chế mà `index.html` (ô mật khẩu PIN) cũng đang dùng và đã chạy ổn định.
+- Kiểm riêng phần "reset ngay, không chờ tải lại bảng/log": cố ý delay 1.5s ở mock 2 API
+  `danh-sach`/`logs`, quét mã thành công rồi đo lại trạng thái ô input chỉ sau 400ms — đã trống, đã bật
+  lại, đã focus (tức là reset xong SỚM HƠN NHIỀU so với lúc 2 API chạy nền mới xong); xác nhận thêm 2 API
+  đó vẫn được gọi và hoàn tất bình thường sau đó (không bị bỏ sót).

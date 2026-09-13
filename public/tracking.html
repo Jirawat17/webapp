@@ -203,28 +203,41 @@ document.getElementById('o-quet-in-label').addEventListener('keydown', async (e)
   dangXuLyQuetInLabel = true;
   oQuet.disabled = true;
 
+  let ketQua;
   try {
-    const ketQua = await apiFetch('/tracking/in-label', { method: 'POST', body: JSON.stringify({ sttKeys: [sttKey] }) });
-    if (ketQua.loi && ketQua.loi.length > 0) {
-      hienThongBaoQuet('loi', `${sttKey}: ${ketQua.loi[0].lyDo}`);
-    } else {
-      hienThongBaoQuet('ok', `Đã in label cho đơn ${sttKey}.`);
-      if (ketQua.labelBase64) {
-        const goiIn = moHopThoaiInPdf(ketQua.labelBase64);
-        if (goiIn) goiIn();
-      }
-      await taiDanhSach();
-      await taiLogs();
-    }
+    ketQua = await apiFetch('/tracking/in-label', { method: 'POST', body: JSON.stringify({ sttKeys: [sttKey] }) });
   } catch (err) {
     hienThongBaoQuet('loi', `${sttKey}: ${err.message}`);
-  } finally {
-    oQuet.value = '';
-    oQuet.disabled = false;
-    oQuet.focus();
-    dangXuLyQuetInLabel = false;
+    resetOQuetInLabel(oQuet);
+    return;
   }
+
+  if (ketQua.loi && ketQua.loi.length > 0) {
+    hienThongBaoQuet('loi', `${sttKey}: ${ketQua.loi[0].lyDo}`);
+    resetOQuetInLabel(oQuet);
+    return;
+  }
+
+  hienThongBaoQuet('ok', `Đã in label cho đơn ${sttKey}.`);
+  if (ketQua.labelBase64) {
+    const goiIn = moHopThoaiInPdf(ketQua.labelBase64);
+    if (goiIn) goiIn();
+  }
+  // Xoá + focus lại NGAY sau khi đã gọi lệnh in — bổ sung 13/09/2026, theo yêu cầu người dùng: KHÔNG chờ
+  // taiDanhSach()/taiLogs() (2 lượt gọi mạng phía dưới) xong mới cho quét tiếp, và không phụ thuộc việc
+  // hộp thoại in của trình duyệt có chặn luồng script hay không (tuỳ trình duyệt) — ô luôn sẵn sàng ngay
+  // lập tức cho lệnh in kế tiếp, việc tải lại bảng/log chạy nền phía sau không ảnh hưởng.
+  resetOQuetInLabel(oQuet);
+  await taiDanhSach();
+  await taiLogs();
 });
+
+function resetOQuetInLabel(oQuet) {
+  oQuet.value = '';
+  oQuet.disabled = false;
+  oQuet.focus();
+  dangXuLyQuetInLabel = false;
+}
 
 function hienThongBaoQuet(loai, noiDung) {
   clearTimeout(quetThongBaoTimer);
