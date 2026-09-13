@@ -536,6 +536,48 @@ async function layKichBanKeTiep(row, user) {
   );
 }
 
+// Trang "RÀ SOÁT ĐƠN HÀNG LOẠT" (public/rasoat-hang-loat.html, bổ sung 13/09/2026, theo yêu cầu người
+// dùng) — CHỈ ĐỌC, liệt kê MỌI nhóm đang có NHOM_HANG_LOAT (dữ liệu đã tính sẵn từ lần quét gần nhất,
+// KHÔNG tự quét lại ở đây) để admin/ve_file tự xem ảnh PNG thật và đánh giá độ chính xác thuật toán
+// gộp nhóm hiện có trước khi quyết định có dùng làm nền cho tính năng lớn hơn (đơn hàng loạt DHLXX,
+// chọn tay + xác nhận) hay cần chỉnh/thay trước — xem
+// docs/superpowers/specs/2026-09-13-rasoat-hang-loat-review-design.md. CHỈ admin/ve_file (khớp phạm vi
+// vai trò dự kiến cho tính năng lớn hơn) — san_xuat/nguoi_lay_phoi không cần công cụ chẩn đoán này.
+// PHẢI đứng TRƯỚC router.get('/:sttKey') ngay bên dưới — Express khớp route theo ĐÚNG thứ tự đăng ký,
+// '/:sttKey' (1 đoạn đường dẫn, khớp MỌI chuỗi không có dấu '/') sẽ "nuốt mất" '/rasoat-hang-loat' nếu
+// đứng sau nó, coi "rasoat-hang-loat" như 1 mã đơn (rồi báo lỗi "Không tìm thấy đơn hàng" — đúng lỗi
+// thật đã xảy ra trước khi sửa vị trí này, không phải trùng hợp).
+router.get('/rasoat-hang-loat', async (req, res) => {
+  const user = req.session.user;
+  if (user.vaiTro !== 'admin' && user.vaiTro !== 've_file') {
+    return res.status(403).json({ error: 'Chỉ admin/người vẽ file mới được rà soát đơn hàng loạt' });
+  }
+
+  const { rows } = await orderService.getAll();
+  // Lọc theo Xưởng TRƯỚC khi gom nhóm (không phải sau) — ve_file chỉ thấy đúng phần nhóm gồm đơn thuộc
+  // Xưởng mình, không lộ việc có đơn Xưởng khác cùng nhóm (đúng nguyên tắc "coi như không tồn tại" đã
+  // áp dụng ở mọi nơi khác — xem services/orderService.js#locTheoXuong).
+  const daLoc = orderService.locTheoXuong(rows, user);
+
+  const theoNhom = new Map(); // maNhom -> [đơn...]
+  for (const r of daLoc) {
+    if (!r.NHOM_HANG_LOAT) continue;
+    if (!theoNhom.has(r.NHOM_HANG_LOAT)) theoNhom.set(r.NHOM_HANG_LOAT, []);
+    theoNhom.get(r.NHOM_HANG_LOAT).push({
+      STT_Key: r.STT_Key,
+      TieuDeSanPham: orderService.tieuDeSanPham(r),
+      DUONG_DAN_URL: r.DUONG_DAN_URL || '',
+    });
+  }
+
+  // Nhóm to xem trước — dễ đánh giá những trường hợp "gộp nhầm nhiều đơn" nổi bật nhất trước tiên.
+  const nhoms = [...theoNhom.entries()]
+    .map(([maNhom, donHang]) => ({ maNhom, donHang }))
+    .sort((a, b) => b.donHang.length - a.donHang.length);
+
+  res.json({ nhoms });
+});
+
 router.get('/:sttKey', async (req, res) => {
   const { row } = await orderService.getByKey(req.params.sttKey);
   if (!row) return res.status(404).json({ error: 'Không tìm thấy đơn hàng' });
@@ -863,44 +905,6 @@ router.post('/quet-hang-loat/huy/:jobId', (req, res) => {
   const job = _congViecHangLoat.get(req.params.jobId);
   if (job && job.trangThai === 'dang_chay') job.daHuy = true;
   res.json({ ok: true });
-});
-
-// Trang "RÀ SOÁT ĐƠN HÀNG LOẠT" (public/rasoat-hang-loat.html, bổ sung 13/09/2026, theo yêu cầu người
-// dùng) — CHỈ ĐỌC, liệt kê MỌI nhóm đang có NHOM_HANG_LOAT (dữ liệu đã tính sẵn từ lần quét gần nhất,
-// KHÔNG tự quét lại ở đây) để admin/ve_file tự xem ảnh PNG thật và đánh giá độ chính xác thuật toán
-// gộp nhóm hiện có trước khi quyết định có dùng làm nền cho tính năng lớn hơn (đơn hàng loạt DHLXX,
-// chọn tay + xác nhận) hay cần chỉnh/thay trước — xem
-// docs/superpowers/specs/2026-09-13-rasoat-hang-loat-review-design.md. CHỈ admin/ve_file (khớp phạm vi
-// vai trò dự kiến cho tính năng lớn hơn) — san_xuat/nguoi_lay_phoi không cần công cụ chẩn đoán này.
-router.get('/rasoat-hang-loat', async (req, res) => {
-  const user = req.session.user;
-  if (user.vaiTro !== 'admin' && user.vaiTro !== 've_file') {
-    return res.status(403).json({ error: 'Chỉ admin/người vẽ file mới được rà soát đơn hàng loạt' });
-  }
-
-  const { rows } = await orderService.getAll();
-  // Lọc theo Xưởng TRƯỚC khi gom nhóm (không phải sau) — ve_file chỉ thấy đúng phần nhóm gồm đơn thuộc
-  // Xưởng mình, không lộ việc có đơn Xưởng khác cùng nhóm (đúng nguyên tắc "coi như không tồn tại" đã
-  // áp dụng ở mọi nơi khác — xem services/orderService.js#locTheoXuong).
-  const daLoc = orderService.locTheoXuong(rows, user);
-
-  const theoNhom = new Map(); // maNhom -> [đơn...]
-  for (const r of daLoc) {
-    if (!r.NHOM_HANG_LOAT) continue;
-    if (!theoNhom.has(r.NHOM_HANG_LOAT)) theoNhom.set(r.NHOM_HANG_LOAT, []);
-    theoNhom.get(r.NHOM_HANG_LOAT).push({
-      STT_Key: r.STT_Key,
-      TieuDeSanPham: orderService.tieuDeSanPham(r),
-      DUONG_DAN_URL: r.DUONG_DAN_URL || '',
-    });
-  }
-
-  // Nhóm to xem trước — dễ đánh giá những trường hợp "gộp nhầm nhiều đơn" nổi bật nhất trước tiên.
-  const nhoms = [...theoNhom.entries()]
-    .map(([maNhom, donHang]) => ({ maNhom, donHang }))
-    .sort((a, b) => b.donHang.length - a.donHang.length);
-
-  res.json({ nhoms });
 });
 
 module.exports = router;
