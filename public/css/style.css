@@ -450,15 +450,12 @@ body.trang-dang-nhap {
 
 .thanh-hanh-dong-hang-loat {
   position: fixed; left: 0; right: 0; bottom: calc(64px + env(safe-area-inset-bottom));
-  /* Nền CỐ ĐỊNH tối (không dùng var(--color-text)) — thanh này LUÔN phải tối + chữ trắng, bất kể theme
-     trang đang Sáng hay Tối (thiết kế gốc). Trước đây dùng var(--color-text) làm nền vì ở Chế độ Sáng
-     nó tình cờ gần đen, NHƯNG ở Chế độ Tối --color-text đổi thành trắng (để làm màu CHỮ đọc được trên
-     nền trang tối) khiến nền thanh này cũng hoá trắng theo — chữ trắng + track/nhãn trắng-mờ của các
-     phần tử con (.thanh-tien-do, .thanh-tien-do-track...) đều biến mất trên nền trắng đó (lỗi phát hiện
-     13/09/2026 qua 2 ảnh chụp thực tế người dùng gửi — 1 ở nhãn "Đã chọn X đơn", 1 ở thanh tiến độ "Mua
-     tracking"). Hardcode #18181b (đúng giá trị --color-text cũ ở Chế độ Sáng) để nền LUÔN tối, không
-     còn phụ thuộc theme — sửa tận gốc, không phải vá riêng từng phần tử con bị ảnh hưởng. */
-  background: #18181b; color: white; padding: 12px 16px; z-index: 25;
+  /* Nền CỐ ĐỊNH sáng (đổi từ tối sang sáng 13/09/2026, theo yêu cầu người dùng — xem lịch sử phía dưới
+     nếu cần đối chiếu) — LUÔN sáng + chữ tối, bất kể theme trang đang Sáng hay Tối, cùng triết lý "cố
+     định, không phụ thuộc theme" như trước (trước đó bar này cố định TỐI, đổi vì lý do tương tự — nền
+     var(--color-text)/(--color-bg) đổi theo theme làm vài phần tử con bị chìm màu). Hardcode #ffffff
+     (khớp --color-surface ở Chế độ Sáng) làm nền, #18181b (khớp --color-text cũ ở Chế độ Sáng) làm chữ. */
+  background: #ffffff; color: #18181b; padding: 12px 16px; z-index: 25;
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap; box-shadow: 0 -4px 16px rgba(0,0,0,0.18);
 }
 @media (min-width: 768px) { .thanh-hanh-dong-hang-loat { bottom: 0; } }
@@ -468,22 +465,23 @@ body.trang-dang-nhap {
 }
 .thanh-hanh-dong-hang-loat .btn-hanh-dong { padding: 10px 18px; min-height: 40px; font-size: 0.9rem; }
 #so-luong-da-chon { font-size: 3em; line-height: 1; } /* tăng thêm 200% (gấp 3) so với cỡ chữ gốc để dễ nhìn */
-/* Tô đỏ nhãn "Đã chọn X đơn" cho nổi bật hẳn so với chữ trắng còn lại của thanh (theo yêu cầu người
-   dùng 13/09/2026) — không dùng token --color-danger-text vì token đó tính cho nền trang bình thường,
-   không hợp màu nền cố định tối riêng của .thanh-hanh-dong-hang-loat (xem comment ở đó). */
+/* Tô đỏ nhãn "Đã chọn X đơn" cho nổi bật hẳn so với chữ (nay là tối màu) còn lại của thanh (theo yêu
+   cầu người dùng 13/09/2026) — không dùng token --color-danger-text vì token đó tính cho nền trang bình
+   thường, không hợp màu nền cố định riêng của .thanh-hanh-dong-hang-loat (xem comment ở đó). */
 .nhan-so-luong-da-chon { color: #dc2626; }
 .thanh-hanh-dong-cach { width: 1px; align-self: stretch; background: var(--color-border); margin: 0 4px; }
 .nhanh-phoi-ve-file { font-size: 0.85rem !important; padding: 8px 14px !important; }
 
-/* .thanh-tien-do chèn vào thanh hành động hàng loạt (nền tối, chữ trắng — xem .thanh-hanh-dong-hang-loat
-   ở trên) cần đổi màu riêng vì màu mặc định (--color-text-muted) dành cho nền sáng, không đủ tương phản
-   trên nền gần đen này. Luôn chiếm trọn 1 dòng riêng (flex-basis 100%) cho dễ đọc thay vì chen giữa các nút. */
-.thanh-hanh-dong-hang-loat .thanh-tien-do { flex: 1 1 100%; color: rgba(255,255,255,0.85); }
-.thanh-hanh-dong-hang-loat .thanh-tien-do-track { background: rgba(255,255,255,0.25); }
+/* .thanh-tien-do chèn vào thanh hành động hàng loạt (nền CỐ ĐỊNH sáng — xem .thanh-hanh-dong-hang-loat
+   ở trên) cần đổi màu riêng thay vì dùng --color-text-muted (đổi theo theme trang, không hợp nền cố
+   định sáng riêng của thanh này). Luôn chiếm trọn 1 dòng riêng (flex-basis 100%) cho dễ đọc thay vì chen
+   giữa các nút. */
+.thanh-hanh-dong-hang-loat .thanh-tien-do { flex: 1 1 100%; color: #52525b; }
+.thanh-hanh-dong-hang-loat .thanh-tien-do-track { background: #e4e4e7; }
 /* Khung số đếm "X/Y" + nút "Hủy" đổi riêng sang nền sáng/chữ đỏ (theo yêu cầu người dùng 13/09/2026 —
-   thích khung này nổi bật kiểu "cảnh báo" thay vì hoà vào nền tối chung của thanh). Dùng đúng cặp màu
+   thích khung này nổi bật kiểu "cảnh báo" so với phần còn lại của thanh). Dùng đúng cặp màu
    --color-danger-bg/--color-danger-text đã có sẵn cho badge cảnh báo — nhưng HARDCODE giá trị ở Chế độ
-   Sáng (#fee2e2/#991b1b) thay vì dùng token, vì thanh này luôn nền tối cố định bất kể theme (xem
+   Sáng (#fee2e2/#991b1b) thay vì dùng token, vì thanh này luôn nền cố định bất kể theme (xem
    .thanh-hanh-dong-hang-loat) nên cần đúng 1 cặp sáng/đỏ cố định, không đổi theo theme. */
 .thanh-hanh-dong-hang-loat .thanh-tien-do-nhan {
   background: #fee2e2; color: #991b1b; padding: 4px 14px; border-radius: var(--radius-sm);
