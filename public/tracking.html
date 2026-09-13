@@ -49,6 +49,22 @@
 .tk-logs .dong { white-space: pre-wrap; word-break: break-word; border-bottom: 1px solid var(--color-bg); padding: 2px 0; }
 .tk-logs .dong:last-child { border-bottom: none; }
 .tk-logs .luc { color: var(--color-text-muted); margin-right: 6px; }
+
+/* Ô quét nhanh "IN LABEL" (bổ sung 13/09/2026, theo yêu cầu người dùng) — to, nổi bật, đặt ĐẦU trang vì
+   là thao tác dùng thường xuyên nhất tại trạm đóng gói (máy quét mã vạch dạng bàn phím: gõ ký tự + Enter
+   tự động). Viền dùng --color-primary cho khác hẳn các ô input thường khác trên trang, dễ nhận ra ngay. */
+.tk-o-quet-nhanh { margin-bottom: var(--space-5); max-width: 480px; }
+.tk-o-quet-nhanh label { display: block; font-weight: 700; margin-bottom: 6px; }
+.tk-o-quet-nhanh input {
+  width: 100%; font-size: 1.4rem; padding: 14px 16px; border-radius: var(--radius-md);
+  border: 2px solid var(--color-primary); font-family: inherit;
+}
+.tk-o-quet-nhanh input:disabled { opacity: 0.6; }
+/* Banner báo kết quả — KHÔNG dùng alert() vì sẽ chặn thao tác quét tiếp theo (phải bấm OK mới quét được
+   mã kế), ngược tinh thần "quét liên tục không dừng" mà tính năng này hướng tới. Tự ẩn sau vài giây. */
+.tk-quet-thong-bao { margin-top: 8px; padding: 10px 14px; border-radius: var(--radius-sm); font-weight: 600; }
+.tk-quet-thong-bao.ok { background: var(--color-success-bg); color: var(--color-success-text); }
+.tk-quet-thong-bao.loi { background: var(--color-danger-bg); color: var(--color-danger-text); }
 </style>
 </head>
 <body>
@@ -56,6 +72,12 @@
 <div class="page">
   <h2>Tracking</h2>
   <p style="color:var(--color-text-muted);margin:-8px 0 20px">Tự động mua tracking GKE cho đơn đánh dấu <code>AUTO_TRACKING = "YES"</code>, sau khi đủ thời gian chờ kể từ lúc đơn chuyển "Đã in mã".</p>
+
+  <div class="tk-o-quet-nhanh">
+    <label for="o-quet-in-label">Quét/nhập mã đơn để in label ngay</label>
+    <input id="o-quet-in-label" autocomplete="off" placeholder="Quét hoặc gõ mã đơn rồi nhấn Enter...">
+    <div id="tk-quet-thong-bao" class="tk-quet-thong-bao" style="display:none"></div>
+  </div>
 
   <!-- Gộp công tắc bật/tắt + ô giờ/phút + nút Lưu vào CHUNG 1 hàng .cong-tac-hang (bổ sung 09/09/2026
        lần 6, theo yêu cầu người dùng "giảm số dòng") — trước đó là 4 khối riêng (hàng công tắc, hàng
@@ -146,6 +168,8 @@ const KHOA_LAN_XEM_CUOI = 'trackingLanXemCuoi';
   if (!user) return;
   renderNav(user, 'tracking');
 
+  document.getElementById('o-quet-in-label').focus();
+
   await taiCauHinh();
   document.getElementById('btn-luu-cau-hinh').onclick = luuCauHinh;
   document.getElementById('btn-dong-popup').onclick = () => {
@@ -161,6 +185,55 @@ const KHOA_LAN_XEM_CUOI = 'trackingLanXemCuoi';
   // Cùng chu kỳ với Bảng điều khiển ("hiển thị động" — tự tải lại, không cần bấm gì thêm).
   setInterval(taiLogs, 60000);
 })();
+
+// Ô quét nhanh "IN LABEL" (bổ sung 13/09/2026, theo yêu cầu người dùng — xem
+// docs/superpowers/specs/2026-09-13-o-quet-in-label-tracking-design.md). Gõ/quét mã đơn (STT_Key) +
+// Enter -> gọi thẳng API IN LABEL có sẵn (KHÔNG tự mua tracking nếu chưa có — chỉ báo lỗi, tránh phát
+// sinh chi phí thật ngoài ý muốn nếu quét nhầm mã). KHÔNG confirm() trước khi in, KHÔNG alert() khi báo
+// kết quả — cả 2 đều chặn thao tác quét tiếp theo, ngược tinh thần "quét liên tục không dừng".
+let dangXuLyQuetInLabel = false;
+let quetThongBaoTimer = null;
+
+document.getElementById('o-quet-in-label').addEventListener('keydown', async (e) => {
+  if (e.key !== 'Enter') return;
+  const oQuet = e.target;
+  const sttKey = oQuet.value.trim();
+  if (!sttKey || dangXuLyQuetInLabel) return;
+
+  dangXuLyQuetInLabel = true;
+  oQuet.disabled = true;
+
+  try {
+    const ketQua = await apiFetch('/tracking/in-label', { method: 'POST', body: JSON.stringify({ sttKeys: [sttKey] }) });
+    if (ketQua.loi && ketQua.loi.length > 0) {
+      hienThongBaoQuet('loi', `${sttKey}: ${ketQua.loi[0].lyDo}`);
+    } else {
+      hienThongBaoQuet('ok', `Đã in label cho đơn ${sttKey}.`);
+      if (ketQua.labelBase64) {
+        const goiIn = moHopThoaiInPdf(ketQua.labelBase64);
+        if (goiIn) goiIn();
+      }
+      await taiDanhSach();
+      await taiLogs();
+    }
+  } catch (err) {
+    hienThongBaoQuet('loi', `${sttKey}: ${err.message}`);
+  } finally {
+    oQuet.value = '';
+    oQuet.disabled = false;
+    oQuet.focus();
+    dangXuLyQuetInLabel = false;
+  }
+});
+
+function hienThongBaoQuet(loai, noiDung) {
+  clearTimeout(quetThongBaoTimer);
+  const el = document.getElementById('tk-quet-thong-bao');
+  el.className = 'tk-quet-thong-bao ' + loai;
+  el.style.display = 'block';
+  el.textContent = noiDung;
+  quetThongBaoTimer = setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
 
 // Ánh xạ field cấu hình GKE (khớp đúng tên trả về từ services/gkeService.js#layCauHinhGke) sang id
 // input trên trang — dùng chung cho cả tải và lưu để không lặp danh sách 2 lần.
