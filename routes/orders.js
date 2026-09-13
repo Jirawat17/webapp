@@ -827,6 +827,13 @@ router.post('/quet-hang-loat/bat-dau', async (req, res) => {
   (async () => {
     try {
       let soTinhDuocHash = 0;
+      // Đơn KHÔNG tính được hash (bổ sung 13/09/2026, theo yêu cầu người dùng — trước đây thông báo
+      // cuối chỉ đếm số lượng, không nói rõ đơn nào/vì sao) — 2 nguyên nhân phân biệt được ngay tại
+      // đây, không cần sửa services/anhNguonService.js (vốn CỐ Ý nuốt lỗi chi tiết, chỉ log console,
+      // dùng chung cho cả in PDF ở routes/reports.js — đổi cấu trúc trả về sẽ ảnh hưởng chỗ đó):
+      //   1. taiDsAnh() trả mảng RỖNG — không tải được ảnh (link chết/hết quyền truy cập/quá thời gian).
+      //   2. Có ảnh nhưng tinhHashAnh() trả null — sharp không đọc được (ảnh lỗi/định dạng lạ).
+      const donLoiHash = [];
       for (const don of donThieuHash) {
         if (job.daHuy) break;
 
@@ -843,6 +850,13 @@ router.post('/quet-hang-loat/bat-dau', async (req, res) => {
           const { headers: headersHienTai } = await orderService.getAll();
           await updateCells(orderService.TAB, headersHienTai, don._row, { HASH_ANH_MAU: hash });
           soTinhDuocHash++;
+        } else {
+          donLoiHash.push({
+            sttKey: don.STT_Key,
+            lyDo: dsMau.length === 0
+              ? 'Không tải được ảnh (link lỗi, hết quyền truy cập, hoặc quá thời gian chờ)'
+              : 'Tải được ảnh nhưng không tính được hash (có thể ảnh lỗi hoặc định dạng không đọc được)',
+          });
         }
 
         job.daXong++;
@@ -854,7 +868,7 @@ router.post('/quet-hang-loat/bat-dau', async (req, res) => {
       // services/orderService.js) kể cả khi không có đơn nào mới cần tính hash ở vòng lặp trên.
       const { soNhomTimThay, soDonTrongNhom } = await tinhLaiNhomHangLoat(sttKeySet, nguong);
 
-      job.ketQua = { soDaQuet: job.daXong, soTinhDuocHash, soNhomTimThay, soDonTrongNhom };
+      job.ketQua = { soDaQuet: job.daXong, soTinhDuocHash, soNhomTimThay, soDonTrongNhom, donLoiHash };
       job.trangThai = job.daHuy ? 'huy' : 'xong';
       // Hoạt động chạy nền, không phải 1 lần bấm-1 kết quả tức thời như các hành động khác — ghi log
       // SAU KHI job xong (thành công hoặc bị dừng giữa chừng) vì lúc đó mới có đủ số liệu kết quả.

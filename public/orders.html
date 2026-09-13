@@ -1183,10 +1183,16 @@ async function quetDonHangLoat(nut, { buocLai = false } = {}) {
 
     const kq = tienDo.ketQua;
     const tienToDaDung = tienDo.trangThai === 'huy' ? 'Đã dừng giữa chừng. ' : '';
-    alert(
+    let thongBao =
       `${tienToDaDung}Đã quét ${kq.soDaQuet}/${tongSo} đơn, tính được hash cho ${kq.soTinhDuocHash} đơn.\n` +
-      `Tìm thấy ${kq.soNhomTimThay} nhóm hàng loạt (tổng cộng ${kq.soDonTrongNhom} đơn thuộc 1 nhóm nào đó).`
-    );
+      `Tìm thấy ${kq.soNhomTimThay} nhóm hàng loạt (tổng cộng ${kq.soDonTrongNhom} đơn thuộc 1 nhóm nào đó).`;
+    // donLoiHash (bổ sung 13/09/2026, theo yêu cầu người dùng) — nêu rõ TỪNG đơn không tính được hash
+    // + lý do, thay vì chỉ đếm số lượng chênh lệch như trước.
+    if (kq.donLoiHash && kq.donLoiHash.length > 0) {
+      thongBao += `\n\nKhông tính được hash cho ${kq.donLoiHash.length} đơn:\n` +
+        kq.donLoiHash.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
+    }
+    alert(thongBao);
   } catch (e) {
     alert('Lỗi: ' + e.message);
   } finally {
