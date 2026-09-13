@@ -106,7 +106,7 @@ async function taiChiTiet() {
     return;
   }
 
-  const anh = urlAnhHienThi(don.DUONG_DAN_URL || don.MOCKUP);
+  const dsAnh = urlAnhHienThiList(don.DUONG_DAN_URL || don.MOCKUP);
   const viTri = (don.ViTriTheu || []).map(escapeHtml).join(' · ') || '—';
 
   document.getElementById('don-hang').innerHTML = `
@@ -131,7 +131,7 @@ async function taiChiTiet() {
 
     <div class="${user.vaiTro === 'san_xuat' ? '' : 'chi-tiet-layout'}">
       <div>
-        ${anh ? `<img class="anh-mau" src="${escapeHtml(anh)}" alt="Ảnh mẫu/mockup" loading="lazy" onerror="this.remove()">` : ''}
+        ${dsAnh.length ? `<div class="nhom-anh-mau">${dsAnh.map(src => `<img class="anh-mau" src="${escapeHtml(src)}" alt="Ảnh mẫu/mockup" loading="lazy" onerror="this.remove()">`).join('')}</div>` : ''}
         ${(user.vaiTro !== 'nguoi_lay_phoi' && (don.DUONG_DAN_URL || don.MOCKUP)) || don.Anh_File_Theu_URL || don.Anh_Da_San_Xuat_URL || don.Anh_Dong_Goi_URL ? `
         <div class="danh-sach-link-anh">
           ${user.vaiTro !== 'nguoi_lay_phoi' && don.DUONG_DAN_URL ? `<a href="${escapeHtml(don.DUONG_DAN_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh PNG</a>` : ''}

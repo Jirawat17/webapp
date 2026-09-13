@@ -77,8 +77,14 @@ async function taiAnhTuLinkDrive(url) {
  *   - mảng Buffer (có thể rỗng nếu thư mục không có ảnh nào / lỗi liệt kê) nếu ĐÚNG là link thư mục
  * Sắp theo TÊN FILE (orderBy: 'name') để thứ tự ổn định, dễ đoán giữa các lần in. Giới hạn 50 ảnh/thư
  * mục — đủ dùng thực tế, tránh 1 thư mục quá nhiều ảnh làm chậm/nặng file in không cần thiết.
+ *
+ * `tuyChon.gioiHan` (bổ sung 13/09/2026, theo yêu cầu người dùng — hiển thị TỐI ĐA 2 ảnh đại diện cho 1
+ * đơn, xem routes/photos.js#GET /anh-ngoai): cắt danh sách file CÒN TRƯỚC KHI TẢI, không phải sau — nơi
+ * gọi chỉ cần 2 ảnh đầu thì KHÔNG tải hết cả thư mục (có thể tới 50 ảnh) rồi bỏ phần thừa, tránh lãng
+ * phí lượt gọi Drive API + băng thông không cần thiết. Không truyền = giữ nguyên hành vi cũ (tải hết,
+ * dùng cho tính năng IN ĐƠN/quét hàng loạt vốn cần đủ ảnh để chọn/so khớp).
  */
-async function layDsAnhTrongThuMucDrive(url) {
+async function layDsAnhTrongThuMucDrive(url, { gioiHan } = {}) {
   const folderId = layFolderIdTuLinkDrive(url);
   if (!folderId) return null;
 
@@ -91,7 +97,8 @@ async function layDsAnhTrongThuMucDrive(url) {
       pageSize: 50,
     });
 
-    const files = res.data.files || [];
+    let files = res.data.files || [];
+    if (gioiHan) files = files.slice(0, gioiHan);
     const buffers = await Promise.all(files.map(f => taiFileDriveTheoId(f.id)));
     return buffers.filter(Boolean);
   } catch (err) {

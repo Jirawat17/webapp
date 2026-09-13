@@ -20,13 +20,22 @@ function escapeHtml(str) {
 // không phải file ảnh thật), nên phải đi qua proxy server tự nhận diện + tải hộ đúng nguồn (xem
 // routes/photos.js#GET /anh-ngoai, bổ sung 13/09/2026, theo yêu cầu người dùng). Ảnh MỚI (MinIO, dạng
 // /api/photos/file/...) đã tự tải trực tiếp được — CHỈ vòng qua proxy khi KHÔNG PHẢI URL nội bộ đó,
-// tránh tốn 1 lượt qua server vô ích với ảnh vốn đã tải thẳng được. Dùng CHUNG cho mọi nơi hiển thị
-// ảnh đại diện đơn (orders.html, order.html, my-orders.html, my-orders-ve-file.html).
-function urlAnhHienThi(rawUrl) {
-  if (!rawUrl) return '';
+// tránh tốn 1 lượt qua server vô ích với ảnh vốn đã tải thẳng được.
+//
+// Trả về DANH SÁCH (0-2 phần tử) URL <img src> cần dựng cho 1 ảnh đại diện — không phải 1 chuỗi đơn
+// (đổi cùng ngày, theo yêu cầu người dùng: 1 số đơn dán link cả THƯ MỤC Drive chứa NHIỀU ảnh, vd đơn
+// 9U115/9U121.2 — cần hiện tối đa 2 ảnh thay vì 1). Ảnh MinIO LUÔN đúng 1 (không có khái niệm "nhiều
+// ảnh" cho MinIO) — trả mảng 1 phần tử. Ảnh khác LUÔN thử đủ 2 vị trí (?index=0/&index=1) qua proxy —
+// vị trí không có ảnh thật (vd url chỉ có 1 ảnh, hoặc link thư mục chỉ có đúng 1 ảnh bên trong) sẽ tự
+// 404 rồi tự "biến mất" nhờ onerror="this.remove()" ở nơi gọi, KHÔNG cần hỏi server trước "có bao
+// nhiêu ảnh" mới quyết định vẽ mấy thẻ <img> — đơn giản hoá client. Dùng CHUNG cho mọi nơi hiển thị ảnh
+// đại diện đơn (orders.html, order.html, my-orders.html, my-orders-ve-file.html).
+function urlAnhHienThiList(rawUrl) {
+  if (!rawUrl) return [];
   const duongDan = String(rawUrl).replace(/^https?:\/\/[^/]+/, ''); // bỏ host nếu URL là dạng tuyệt đối cùng gốc, cùng quy ước storageService.js#proxyUrlToObjectKey
-  if (duongDan.startsWith('/api/photos/file/')) return rawUrl;
-  return '/api/photos/anh-ngoai?url=' + encodeURIComponent(rawUrl);
+  if (duongDan.startsWith('/api/photos/file/')) return [rawUrl];
+  const goc = '/api/photos/anh-ngoai?url=' + encodeURIComponent(rawUrl);
+  return [goc + '&index=0', goc + '&index=1'];
 }
 
 async function apiFetch(url, options = {}) {

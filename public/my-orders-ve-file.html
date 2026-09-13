@@ -445,7 +445,7 @@ function renderDanhSachCanVe() {
              onclick="event.stopPropagation()"
              onchange="toggleChonDonCanVe('${escapeHtml(o.STT_Key)}', this.checked)">
       ${o.DUONG_DAN_URL || o.MOCKUP
-        ? `<img src="${escapeHtml(urlAnhHienThi(o.DUONG_DAN_URL || o.MOCKUP))}" alt="" loading="lazy" onerror="this.remove()">`
+        ? `<div class="nhom-anh-dai-dien">${urlAnhHienThiList(o.DUONG_DAN_URL || o.MOCKUP).map(src => `<img src="${escapeHtml(src)}" alt="" loading="lazy" onerror="this.remove()">`).join('')}</div>`
         : ''}
       <div class="thong-tin">
         <strong class="tieu-de-the ${o.DonUuTien ? 'uu-tien' : ''}">${escapeHtml(o.TieuDeSanPham || o.STT_Key)}</strong>
@@ -662,7 +662,7 @@ function renderDanhSachToiVe() {
              onclick="event.stopPropagation()"
              onchange="toggleChonDonToiVe('${escapeHtml(o.STT_Key)}', this.checked)">
       ${o.DUONG_DAN_URL || o.MOCKUP
-        ? `<img src="${escapeHtml(urlAnhHienThi(o.DUONG_DAN_URL || o.MOCKUP))}" alt="" loading="lazy" onerror="this.remove()">`
+        ? `<div class="nhom-anh-dai-dien">${urlAnhHienThiList(o.DUONG_DAN_URL || o.MOCKUP).map(src => `<img src="${escapeHtml(src)}" alt="" loading="lazy" onerror="this.remove()">`).join('')}</div>`
         : ''}
       <div class="thong-tin">
         <strong class="tieu-de-the ${o.DonUuTien ? 'uu-tien' : ''}">${escapeHtml(o.TieuDeSanPham || o.STT_Key)}</strong>

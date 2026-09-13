@@ -338,8 +338,13 @@ body.trang-dang-nhap {
 .order-card:hover { border-color: var(--color-primary); box-shadow: 0 4px 20px rgba(190,18,60,0.10); transform: translateY(-2px); }
 .order-card.da-chon { border-color: var(--color-primary); background: var(--color-primary-light); }
 .order-checkbox { width: 22px; height: 22px; flex-shrink: 0; margin-top: 2px; cursor: pointer; accent-color: var(--color-primary); }
-.order-card img { width: 72px; height: 72px; object-fit: cover; border-radius: var(--radius-sm); background: var(--color-bg); flex-shrink: 0; transition: transform 0.25s ease; }
-.order-card:hover img { transform: scale(1.06); }
+/* Bọc 1-2 ảnh đại diện trong 1 khung CỐ ĐỊNH 72x72 (bổ sung 13/09/2026, theo yêu cầu người dùng — đơn
+   có link THƯ MỤC Drive chứa nhiều ảnh hiện tối đa 2 ảnh, xem urlAnhHienThiList() trong api.js). Mỗi
+   ảnh dùng flex:1 để tự chia đều bề rộng khung — 1 ảnh thì chiếm trọn 72px (giữ nguyên hệt trước đây),
+   2 ảnh thì mỗi ảnh còn ~34px, không cần biết trước là 1 hay 2 ảnh mới tính được kích thước. */
+.order-card .nhom-anh-dai-dien { display: flex; gap: 3px; width: 72px; height: 72px; flex-shrink: 0; }
+.order-card .nhom-anh-dai-dien img { flex: 1; min-width: 0; height: 100%; object-fit: cover; border-radius: var(--radius-sm); background: var(--color-bg); transition: transform 0.25s ease; }
+.order-card:hover .nhom-anh-dai-dien img { transform: scale(1.06); }
 .order-card .thong-tin { min-width: 0; flex: 1; }
 .order-card .tieu-de-the { display: block; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .order-card .meta { font-size: 0.85rem; color: var(--color-text-muted); margin: 2px 0; }
@@ -488,6 +493,11 @@ select.chon-trang-thai-tieu-cuc { border-color: var(--color-warning-text); color
 @media (min-width: 900px) { .chi-tiet-layout { grid-template-columns: 1.1fr 0.9fr; align-items: start; } }
 
 .anh-mau { width: 100%; max-height: 320px; object-fit: cover; border-radius: var(--radius-md); margin-bottom: var(--space-3); background: var(--color-border); }
+/* Bọc 1-2 ảnh đại diện cạnh nhau (bổ sung 13/09/2026, cùng lý do .nhom-anh-dai-dien ở trang danh sách
+   — đơn có link THƯ MỤC Drive chứa nhiều ảnh). flex:1 mỗi ảnh tự chia đều bề rộng: 1 ảnh chiếm trọn
+   hàng (hệt trước đây, không đổi), 2 ảnh chia đôi. */
+.nhom-anh-mau { display: flex; gap: var(--space-2); margin-bottom: var(--space-3); }
+.nhom-anh-mau .anh-mau { flex: 1; min-width: 0; width: auto; margin-bottom: 0; }
 
 /* Gộp tối đa 5 link ảnh (PNG/Mockup/file thêu/đã sản xuất/đóng gói) vào 1 hàng gọn, tự xuống dòng
    khi hết chỗ — thay cho cách cũ mỗi link 1 dòng riêng, chiếm nhiều chiều cao hơn cần thiết. */

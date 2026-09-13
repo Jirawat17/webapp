@@ -73,8 +73,10 @@ async function taiAnh(url) {
 // Lấy TẤT CẢ ảnh của 1 URL — thường chỉ có 1 ảnh (link file/MinIO/HTTP thường), NHƯNG nếu url là link
 // THƯ MỤC Drive thì lấy hết mọi ảnh bên trong (bổ sung 04/09/2026, theo yêu cầu người dùng). Luôn trả
 // về MẢNG (có thể rỗng), để nơi gọi xử lý đồng nhất dù 1 hay nhiều ảnh.
-async function taiDsAnh(url) {
-  const dsThuMuc = await layDsAnhTrongThuMucDrive(url);
+// `tuyChon.gioiHan` (bổ sung 13/09/2026) — xem giải thích ở driveService.js#layDsAnhTrongThuMucDrive;
+// không ảnh hưởng nhánh link file/MinIO/HTTP thường (luôn tối đa 1 ảnh, gioiHan >= 1 nên vô hại).
+async function taiDsAnh(url, tuyChon = {}) {
+  const dsThuMuc = await layDsAnhTrongThuMucDrive(url, tuyChon);
   if (dsThuMuc !== null) return dsThuMuc; // đúng là link thư mục (kể cả khi rỗng) — không thử nguồn khác nữa
 
   const mot = await taiAnh(url);

@@ -78,3 +78,51 @@ qua proxy).
   `driveService.js` thực sự tải được bytes ảnh thật từ Drive API. Logic gọi `taiAnh()` đã được tái sử
   dụng NGUYÊN VẸN từ tính năng IN ĐƠN đang chạy production, chỉ mock ở lớp test — rủi ro thấp nhưng cần
   người dùng tự xác nhận trên môi trường thật sau khi triển khai.
+
+## 5. Cập nhật cùng ngày — hiển thị TỐI ĐA 2 ảnh/đơn (link THƯ MỤC Drive)
+
+Sau khi `9SON78,1` (link file đơn lẻ) hiện đúng, người dùng phát hiện thêm 2 đơn (`9U115`, `9U121.2`)
+vẫn KHÔNG hiện ảnh — 2 đơn này dán link **THƯ MỤC** Drive (`drive.google.com/drive/folders/{id}`),
+không phải link file đơn lẻ (`/file/d/{id}/view`) như `9SON78,1`. `taiAnh()` (hàm lấy ĐÚNG 1 ảnh, dùng ở
+mục 2) không nhận diện được link thư mục — chỉ `taiDsAnh()` (đã có sẵn, lấy TẤT CẢ ảnh trong thư mục,
+dùng cho tính năng "hàng loạt") mới xử lý đúng. Nhân dịp này, người dùng yêu cầu thêm: đơn có NHIỀU hơn
+1 ảnh trong thư mục thì hiển thị **TỐI ĐA 2 ảnh** làm ảnh đại diện (nhiều hơn 2 vẫn chỉ lấy 2 ảnh đầu).
+
+**Thiết kế lại route** — đổi từ "trả 1 ảnh" sang "trả 1 ảnh theo `index` (0 hoặc 1) trong danh sách tối
+đa 2 ảnh của 1 url":
+
+- `services/driveService.js#layDsAnhTrongThuMucDrive(url, { gioiHan })` — thêm tuỳ chọn `gioiHan`, CẮT
+  danh sách file CÒN TRƯỚC KHI TẢI (không phải sau) — nơi chỉ cần 2 ảnh đầu thì KHÔNG tải thừa cả thư
+  mục (có thể tới 50 ảnh) rồi bỏ phần dư, tránh lãng phí lượt gọi Drive API + băng thông. Không truyền
+  = giữ nguyên hành vi cũ (tải hết), các nơi gọi cũ (`routes/reports.js` IN ĐƠN, `routes/orders.js` quét
+  hàng loạt) không đổi gì.
+- `services/anhNguonService.js#taiDsAnh(url, { gioiHan })` — chỉ thêm việc truyền `gioiHan` xuống hàm
+  trên, tương thích ngược hoàn toàn.
+- `routes/photos.js GET /anh-ngoai?url=...&index=0|1` — gọi `taiDsAnh(url, {gioiHan:2})`, cache **CẢ
+  MẢNG** (tối đa 2 ảnh) theo `url` (không phải theo từng `index` riêng) — 2 lượt gọi `index=0`/`index=1`
+  của CÙNG 1 đơn dùng chung ĐÚNG 1 lượt tải thật. Thêm **gộp yêu cầu trùng lúc** (`_dangTaiAnhNgoai`,
+  cùng kỹ thuật `gopYeuCauTrung()` đã có ở `sheetsService.js`) — vì `index=0` và `index=1` của CÙNG 1
+  đơn LUÔN được trình duyệt gọi gần như đồng thời (2 thẻ `<img>` cùng lúc), nếu không gộp sẽ tải trùng
+  y hệt vấn đề "cache stampede" đã gặp với Google Sheets. `index` không tồn tại (vd đơn chỉ có 1 ảnh
+  thật) -> 404, để `<img onerror="this.remove()">` tự ẩn thẻ đó — client KHÔNG cần hỏi trước "có bao
+  nhiêu ảnh".
+- `public/js/api.js#urlAnhHienThi()` -> đổi tên **`urlAnhHienThiList()`**, trả về MẢNG (0-2 phần tử)
+  thay vì 1 chuỗi: ảnh MinIO luôn mảng 1 phần tử (giữ nguyên, không có khái niệm nhiều ảnh); ảnh khác
+  LUÔN trả 2 phần tử (`...&index=0`, `...&index=1`) — client không phân biệt trước "url này có phải
+  thư mục không", cứ thử đủ 2 vị trí, vị trí thừa tự biến mất nếu không có ảnh thật.
+- CSS: `.order-card .nhom-anh-dai-dien` (danh sách đơn) và `.nhom-anh-mau` (chi tiết đơn) — khung bọc
+  1-2 `<img>`, mỗi ảnh `flex:1` tự chia đều bề rộng khung. 1 ảnh thì chiếm trọn (hệt bố cục cũ, KHÔNG
+  đổi gì với đơn chỉ có 1 ảnh), 2 ảnh thì chia đôi — không cần biết trước là 1 hay 2 ảnh mới tính được
+  kích thước, code JS/CSS dùng chung 1 khuôn cho cả 2 trường hợp.
+
+**Kiểm thử bổ sung**: `layDsAnhTrongThuMucDrive` với `gioiHan` (không đổi hành vi cũ khi không truyền;
+có `gioiHan` thì đúng số lượt tải file thật giảm theo, không tải thừa; thư mục ít hơn giới hạn vẫn đúng;
+link file đơn lẻ vẫn trả `null` dù có `gioiHan`); route `/anh-ngoai` với `index` (mặc định 0; thư mục 2
+ảnh trả đúng từng ảnh theo `index`; chỉ 1 ảnh thật thì `index=1` trả 404 không crash; lỗi nguồn hoàn
+toàn trả 404 không crash; **2 yêu cầu đồng thời `index=0`/`index=1` cho CÙNG url chỉ gọi `taiDsAnh()`
+ĐÚNG 1 LẦN** — kịch bản quan trọng nhất, xác nhận gộp yêu cầu hoạt động đúng); cache TTL/LRU theo `url`
+(không đổi so với thiết kế cũ, chỉ đổi đơn vị cache từ "1 ảnh" sang "mảng ảnh"). `urlAnhHienThiList()`
+(trích nguyên văn) cho cả 2 trường hợp MinIO/khác. Trình duyệt thật xác nhận: đơn link thư mục ra ĐÚNG
+2 thẻ `<img>` với `src` đúng định dạng `?index=0`/`&index=1`; đơn MinIO vẫn ĐÚNG 1 thẻ như cũ; layout
+CSS đúng — khung 72×72 (danh sách)/full-width (chi tiết) chia đều khi có 2 ảnh, giữ nguyên kích thước
+khi chỉ có 1 ảnh (không có đơn nào bị đổi bố cục ngoài ý muốn).
