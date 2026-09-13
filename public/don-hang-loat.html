@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Đơn hàng loạt — Xưởng Thêu</title>
+<link rel="stylesheet" href="/css/style.css?v=86">
+<script src="/js/theme.js?v=86"></script>
+</head>
+<body>
+<div id="nav"></div>
+<div class="page">
+  <h2>Đơn hàng loạt</h2>
+
+  <div class="khoi-cau-hinh-nguong">
+    <label for="input-nguong">Ngưỡng so khớp ảnh (0–32, càng thấp càng chặt)</label>
+    <div class="dong-cau-hinh-nguong">
+      <input type="number" id="input-nguong" min="0" max="32" step="1">
+      <button type="button" class="btn-hanh-dong phu" id="btn-luu-nguong">Lưu ngưỡng</button>
+    </div>
+  </div>
+
+  <h3>Nhóm hệ thống đề xuất</h3>
+  <p class="meta">Đề xuất tự động (so khớp ảnh PNG) — chưa phải Đơn hàng loạt chính thức. Xác nhận nhóm nào đúng để đưa vào danh sách chính thức bên dưới.</p>
+  <div id="danh-sach-goi-y"></div>
+
+  <h3>Đơn hàng loạt đã xác nhận</h3>
+  <button type="button" class="btn-hanh-dong phu" id="btn-tao-nhom-moi">+ Tạo nhóm mới</button>
+  <div id="danh-sach-xac-nhan"></div>
+</div>
+
+<script src="/js/icons.js?v=86"></script>
+<script src="/js/api.js?v=86"></script>
+<script>
+let vaiTroHienTai = '';
+
+(async () => {
+  const user = await requireLoginOrRedirect();
+  if (!user) return;
+  renderNav(user, 'don-hang-loat');
+  if (user.vaiTro !== 'admin' && user.vaiTro !== 've_file') {
+    document.querySelector('.page').innerHTML = '<p>Bạn không có quyền truy cập trang này.</p>';
+    return;
+  }
+  vaiTroHienTai = user.vaiTro;
+
+  document.getElementById('btn-luu-nguong').onclick = luuNguong;
+  document.getElementById('btn-tao-nhom-moi').onclick = taoNhomMoi;
+
+  await Promise.all([taiNguong(), taiDanhSachGoiY(), taiDanhSachXacNhan()]);
+})();
+
+async function taiNguong() {
+  const { nguong } = await apiFetch('/don-hang-loat/nguong');
+  document.getElementById('input-nguong').value = nguong;
+}
+
+async function luuNguong() {
+  const nguong = Number(document.getElementById('input-nguong').value);
+  try {
+    await apiFetch('/don-hang-loat/nguong', { method: 'PUT', body: JSON.stringify({ nguong }) });
+    alert('Đã lưu ngưỡng mới — áp dụng từ lượt "QUÉT TÌM ĐƠN HÀNG LOẠT" kế tiếp.');
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
+  }
+}
+
+function theAnhDon(don, nutPhu) {
+  return `
+    <div class="the-anh-nhom">
+      <a href="/order.html?stt=${encodeURIComponent(don.STT_Key)}" target="_blank" rel="noopener">
+        ${don.DUONG_DAN_URL
+          ? `<img src="${escapeHtml(urlAnhHienThiList(don.DUONG_DAN_URL)[0] || '')}" alt="" loading="lazy" onerror="this.remove()">`
+          : `<div class="khong-co-anh">${icon('package')}</div>`}
+        <span class="ten-don">${escapeHtml(don.TieuDeSanPham || don.STT_Key)}</span>
+      </a>
+      ${nutPhu || ''}
+    </div>`;
+}
+
+// ============================================================
+// Nhóm hệ thống đề xuất (chỉ đọc + nút xác nhận) — dữ liệu NHOM_HANG_LOAT tự động, KHÔNG tự quét lại
+// ở đây (bấm "QUÉT TÌM ĐƠN HÀNG LOẠT" ở trang Đơn hàng trước).
+// ============================================================
+async function taiDanhSachGoiY() {
+  const el = document.getElementById('danh-sach-goi-y');
+  el.innerHTML = skeletonList(2);
+  let data;
+  try {
+    data = await apiFetch('/don-hang-loat/goi-y');
+  } catch (e) {
+    el.innerHTML = `<p>Không tải được danh sách gợi ý: ${escapeHtml(e.message)}</p>`;
+    return;
+  }
+  if (data.nhoms.length === 0) {
+    el.innerHTML = `<div class="trang-thai-rong">${icon('package')}<p>Chưa có nhóm gợi ý nào — cần bấm "QUÉT TÌM ĐƠN HÀNG LOẠT" ở trang Đơn hàng trước (tính năng này chỉ đọc, không tự quét).</p></div>`;
+    return;
+  }
+  el.innerHTML = data.nhoms.map(nhom => `
+    <div class="khoi-nhom-hang-loat">
+      <div class="dong-tieu-de-nhom">
+        <h4>Nhóm ${escapeHtml(nhom.maNhom)} <span class="meta">(${nhom.donHang.length} đơn)</span></h4>
+        <button type="button" class="btn-hanh-dong phu"
+          data-ma-nhom="${escapeHtml(nhom.maNhom)}" data-stt-keys="${escapeHtml(JSON.stringify(nhom.donHang.map(d => d.STT_Key)))}"
+          onclick="xacNhanGoiY(this.dataset.maNhom, JSON.parse(this.dataset.sttKeys))">Xác nhận thành Đơn hàng loạt</button>
+      </div>
+      <div class="luoi-anh-nhom">${nhom.donHang.map(don => theAnhDon(don)).join('')}</div>
+    </div>`).join('');
+}
+
+// data-* + dataset (KHÔNG nội suy chuỗi thẳng vào onclick="...('...')") — tên nhóm/mã đơn là dữ liệu
+// tự do (đặc biệt tenNhom, gõ tay qua prompt()), có thể chứa dấu nháy đơn/kép phá vỡ cú pháp nếu nội
+// suy trực tiếp. dataset tự giải mã HTML entity đúng chuẩn, escapeHtml() lúc ghi là đủ an toàn.
+async function xacNhanGoiY(maNhom, sttKeys) {
+  const tenNhom = prompt(`Đặt tên cho Đơn hàng loạt từ nhóm gợi ý "${maNhom}" (${sttKeys.length} đơn):`);
+  if (tenNhom === null) return;
+  if (!tenNhom.trim()) { alert('Cần đặt tên cho Đơn hàng loạt.'); return; }
+  try {
+    const kq = await apiFetch('/don-hang-loat', { method: 'POST', body: JSON.stringify({ sttKeys, tenNhom }) });
+    alert(`Đã tạo ${kq.maDonHangLoat} — "${tenNhom}" (${sttKeys.length} đơn).`);
+    await taiDanhSachXacNhan();
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
+  }
+}
+
+// ============================================================
+// Đơn hàng loạt ĐÃ XÁC NHẬN — thêm/xoá đơn, đổi tên, xoá cả nhóm.
+// ============================================================
+async function taiDanhSachXacNhan() {
+  const el = document.getElementById('danh-sach-xac-nhan');
+  el.innerHTML = skeletonList(2);
+  let data;
+  try {
+    data = await apiFetch('/don-hang-loat');
+  } catch (e) {
+    el.innerHTML = `<p>Không tải được danh sách: ${escapeHtml(e.message)}</p>`;
+    return;
+  }
+  if (data.nhoms.length === 0) {
+    el.innerHTML = `<div class="trang-thai-rong">${icon('package')}<p>Chưa có Đơn hàng loạt nào được xác nhận.</p></div>`;
+    return;
+  }
+  el.innerHTML = data.nhoms.map(nhom => `
+    <div class="khoi-nhom-hang-loat">
+      <div class="dong-tieu-de-nhom">
+        <h4>${escapeHtml(nhom.maDonHangLoat)} — ${escapeHtml(nhom.tenNhom)} <span class="meta">(${nhom.donHang.length} đơn)</span></h4>
+        <button type="button" class="btn-hanh-dong phu"
+          data-ma-nhom="${escapeHtml(nhom.maDonHangLoat)}" data-ten-nhom="${escapeHtml(nhom.tenNhom)}"
+          onclick="doiTenNhom(this.dataset.maNhom, this.dataset.tenNhom)">Sửa tên</button>
+        <button type="button" class="btn-hanh-dong phu nguy-hiem"
+          data-ma-nhom="${escapeHtml(nhom.maDonHangLoat)}"
+          onclick="xoaCaNhom(this.dataset.maNhom)">Xoá cả nhóm</button>
+      </div>
+      <div class="luoi-anh-nhom">
+        ${nhom.donHang.map(don => theAnhDon(don, `<button type="button" class="btn-hanh-dong phu nguy-hiem"
+          data-ma-nhom="${escapeHtml(nhom.maDonHangLoat)}" data-stt-key="${escapeHtml(don.STT_Key)}"
+          onclick="xoaDonKhoiNhom(this.dataset.maNhom, this.dataset.sttKey)">Xoá khỏi nhóm</button>`)).join('')}
+      </div>
+      <div class="dong-them-don">
+        <input type="text" placeholder="Nhập mã đơn muốn thêm..." data-input-them-don="${escapeHtml(nhom.maDonHangLoat)}">
+        <button type="button" class="btn-hanh-dong phu" data-ma-nhom="${escapeHtml(nhom.maDonHangLoat)}" onclick="themDon(this.dataset.maNhom)">Thêm đơn</button>
+      </div>
+    </div>`).join('');
+}
+
+async function themDon(maDonHangLoat) {
+  const input = document.querySelector(`[data-input-them-don="${CSS.escape(maDonHangLoat)}"]`);
+  const sttKey = input.value.trim();
+  if (!sttKey) { alert('Nhập mã đơn muốn thêm.'); return; }
+  try {
+    await apiFetch(`/don-hang-loat/${encodeURIComponent(maDonHangLoat)}/them-don`, { method: 'POST', body: JSON.stringify({ sttKey }) });
+    await taiDanhSachXacNhan();
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
+  }
+}
+
+async function xoaDonKhoiNhom(maDonHangLoat, sttKey) {
+  if (!confirm(`Xoá đơn ${sttKey} khỏi nhóm ${maDonHangLoat}?`)) return;
+  try {
+    await apiFetch(`/don-hang-loat/${encodeURIComponent(maDonHangLoat)}/don/${encodeURIComponent(sttKey)}`, { method: 'DELETE' });
+    await taiDanhSachXacNhan();
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
+  }
+}
+
+async function doiTenNhom(maDonHangLoat, tenCu) {
+  const tenMoi = prompt('Tên mới:', tenCu);
+  if (tenMoi === null) return;
+  if (!tenMoi.trim()) { alert('Tên nhóm không được để trống.'); return; }
+  try {
+    await apiFetch(`/don-hang-loat/${encodeURIComponent(maDonHangLoat)}/ten`, { method: 'PUT', body: JSON.stringify({ tenNhom: tenMoi }) });
+    await taiDanhSachXacNhan();
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
+  }
+}
+
+async function xoaCaNhom(maDonHangLoat) {
+  if (!confirm(`Xoá TOÀN BỘ nhóm ${maDonHangLoat}? Không thể hoàn tác.`)) return;
+  try {
+    await apiFetch(`/don-hang-loat/${encodeURIComponent(maDonHangLoat)}`, { method: 'DELETE' });
+    await taiDanhSachXacNhan();
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
+  }
+}
+
+async function taoNhomMoi() {
+  const tenNhom = prompt('Tên cho Đơn hàng loạt mới:');
+  if (tenNhom === null) return;
+  if (!tenNhom.trim()) { alert('Cần đặt tên cho Đơn hàng loạt.'); return; }
+  const sttKey = prompt('Mã đơn đầu tiên trong nhóm:');
+  if (sttKey === null) return;
+  if (!sttKey.trim()) { alert('Cần ít nhất 1 mã đơn.'); return; }
+  try {
+    const kq = await apiFetch('/don-hang-loat', { method: 'POST', body: JSON.stringify({ sttKeys: [sttKey.trim()], tenNhom }) });
+    alert(`Đã tạo ${kq.maDonHangLoat} — "${tenNhom}".`);
+    await taiDanhSachXacNhan();
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
+  }
+}
+</script>
+</body>
+</html>

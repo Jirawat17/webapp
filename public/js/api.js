@@ -136,16 +136,20 @@ function renderNav(user, active) {
       links.splice(0, 0, { href: '/bang-dieu-khien.html', label: 'BĐK', icon: 'navChart', key: 'bang-dieu-khien' });
       links.splice(2, 0, { href: '/my-orders.html', label: 'Chạy máy', icon: 'navMyOrders', key: 'my-orders' });
       links.splice(3, 0, { href: '/my-orders-ve-file.html', label: 'Vẽ file', icon: 'navMyOrders', key: 'my-orders-ve-file' });
+      // "Đơn hàng loạt" (bổ sung 13/09/2026, theo yêu cầu người dùng — LUÔN hiện, khác nút toolbar ẩn/
+      // hiện theo vai trò trước đây ở orders.html) — đặt cạnh nhóm "Đơn hàng/Chạy máy/Vẽ file", TRƯỚC
+      // Quét QR. Mảng lúc này: [BĐK, Đơn hàng, Chạy máy, Vẽ file, Quét QR, TK, SL Phôi, Trợ lý, Báo cáo]
+      // (index 0-8) — chèn tại index 4 là đúng ngay sau "Vẽ file", trước "Quét QR".
+      links.splice(4, 0, { href: '/don-hang-loat.html', label: 'Đơn hàng loạt', icon: 'navOrders', key: 'don-hang-loat' });
       // "Tracking" (bổ sung 09/09/2026, xem
       // docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md) — quản lý bật/tắt + cấu hình
       // tự động mua tracking GKE, có thể phát sinh chi phí thật. Ban đầu CHỈ admin; mở thêm cho
       // ve_file/san_xuat từ 09/09/2026 lần 2 (theo yêu cầu người dùng, để dùng 2 nút "IN LABEL"/"MUA
       // TRACKING và IN LABEL") — người dùng đã cân nhắc và CHỌN mở toàn bộ trang, không chỉ riêng 2 nút
       // đó (xem routes/tracking.js). nguoi_lay_phoi vẫn KHÔNG có mục này (nhánh riêng ở trên, không đi
-      // qua đây). Đặt GIỮA "Quét QR" và "TK" (bổ sung 09/09/2026 lần 2, theo yêu cầu người dùng) — ngay
-      // tại đây index 5 đúng vị trí "TK" (2 splice phía trên đã đẩy TK từ index 2 lên 5: BĐK/Chạy máy/Vẽ
-      // file chèn vào trước nó), nên chèn TRƯỚC index 5 là chèn đúng giữa Quét QR (4) và TK (5 sau khi đẩy).
-      links.splice(5, 0, { href: '/tracking.html', label: 'Tracking', icon: 'navTracking', key: 'tracking' });
+      // qua đây). Đặt GIỮA "Quét QR" và "TK" — sau khi chèn "Đơn hàng loạt" ở trên, Quét QR đã đẩy từ
+      // index 4 lên 5, TK từ 5 lên 6, nên chèn TRƯỚC index 6 (đã tăng từ 5, đổi theo, xem 13/09/2026).
+      links.splice(6, 0, { href: '/tracking.html', label: 'Tracking', icon: 'navTracking', key: 'tracking' });
       links.push({ href: '/users.html', label: 'Nhân viên', icon: 'navUsers', key: 'users' });
     }
     // "Đơn của tôi (Vẽ file)" (bổ sung 08/09/2026, theo yêu cầu người dùng — xem
@@ -154,11 +158,14 @@ function renderNav(user, active) {
     // trên) — ngoài phạm vi yêu cầu lần này.
     if (user.vaiTro === 've_file') {
       links.splice(1, 0, { href: '/my-orders-ve-file.html', label: 'Vẽ file', icon: 'navMyOrders', key: 'my-orders-ve-file' });
+      // "Đơn hàng loạt" (bổ sung 13/09/2026, theo yêu cầu người dùng — LUÔN hiện) — ngay sau "Vẽ file",
+      // trước "Quét QR", cùng vị trí tương đối với nhánh admin ở trên.
+      links.splice(2, 0, { href: '/don-hang-loat.html', label: 'Đơn hàng loạt', icon: 'navOrders', key: 'don-hang-loat' });
       // "Tracking" cho ve_file (bổ sung 09/09/2026 lần 2, cùng lý do với nhánh san_xuat ở trên) — chèn
-      // ngay sau "Quét QR". Mảng gốc (trước splice 'Vẽ file' ở dòng trên) là [Đơn hàng, Quét QR, TK,
-      // SL Phôi, Trợ lý, Báo cáo]; splice 'Vẽ file' vào index 1 đẩy Quét QR lên index 2 — chèn Tracking
-      // vào index 3 là đúng ngay sau Quét QR, trước TK.
-      links.splice(3, 0, { href: '/tracking.html', label: 'Tracking', icon: 'navTracking', key: 'tracking' });
+      // ngay sau "Quét QR". Mảng gốc (trước 2 splice 'Vẽ file'/'Đơn hàng loạt' ở trên) là [Đơn hàng,
+      // Quét QR, TK, SL Phôi, Trợ lý, Báo cáo]; 2 splice đó đẩy Quét QR từ index 1 lên index 3 — chèn
+      // Tracking vào index 4 là đúng ngay sau Quét QR, trước TK.
+      links.splice(4, 0, { href: '/tracking.html', label: 'Tracking', icon: 'navTracking', key: 'tracking' });
     }
     links.push({ href: '/hoat-dong.html', label: 'Lịch sử', icon: 'navActivity', key: 'hoat-dong' });
     links.push({ href: '/settings.html', label: 'Setting', icon: 'navSettings', key: 'settings' });

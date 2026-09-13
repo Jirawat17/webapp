@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=85">
-<script src="/js/theme.js?v=85"></script>
+<link rel="stylesheet" href="/css/style.css?v=86">
+<script src="/js/theme.js?v=86"></script>
 </head>
 <body>
 <div id="nav"></div>
@@ -27,7 +27,6 @@
            xác gộp nhóm) — style="display:none" gốc bỏ đi, chuyển sang ẩn/hiện theo vai trò bằng JS
            (cùng khuôn mẫu btn-in-hai-quan/btn-rasoat-hang-loat) vì đây là hành động ghi vào Sheet. -->
       <button type="button" class="btn-hanh-dong phu" id="btn-quet-hang-loat" onclick="quetDonHangLoat(this)" style="display:none"></button>
-      <button type="button" class="btn-hanh-dong phu" id="btn-rasoat-hang-loat" onclick="location.href='/rasoat-hang-loat.html'" style="display:none"></button>
       <button type="button" class="btn-hanh-dong phu" id="btn-in-hai-quan" onclick="inHaiQuanDangChon(this)" style="display:none"></button>
     </div>
   </div>
@@ -102,6 +101,13 @@
         <input type="checkbox" id="loc-hang-loat">
         Chỉ đơn hàng loạt
       </label>
+      <!-- Khác loc-hang-loat ở trên (nhóm TỰ ĐỘNG đề xuất) — đây là lọc theo Đơn hàng loạt ĐÃ XÁC
+           NHẬN (mã DHLXX, xem public/don-hang-loat.html). CHỈ admin/ve_file, cùng phạm vi với toàn bộ
+           tính năng "Đơn hàng loạt" — ẩn mặc định, hiện + đổ danh sách bằng JS bên dưới. -->
+      <div class="truong" id="truong-loc-don-hang-loat" style="display:none">
+        <label for="loc-don-hang-loat">Đơn hàng loạt</label>
+        <select id="loc-don-hang-loat"><option value="">Tất cả</option></select>
+      </div>
       <div class="truong">
         <label for="loc-loai">Loại</label>
         <select id="loc-loai"><option value="">Tất cả loại</option></select>
@@ -195,8 +201,8 @@
   <button class="btn-hanh-dong phu" onclick="boChonTatCaDon()">Bỏ chọn</button>
 </div>
 
-<script src="/js/icons.js?v=85"></script>
-<script src="/js/api.js?v=85"></script>
+<script src="/js/icons.js?v=86"></script>
+<script src="/js/api.js?v=86"></script>
 <script>
 const NHAN_CANH_BAO = { VANG: 'Vàng · 3 ngày', CAM: 'Cam · 5 ngày', DO: 'Đỏ · 7 ngày' };
 
@@ -237,6 +243,7 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   document.getElementById('loc-xuong').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-uu-tien').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-hang-loat').onchange = () => { boChonTatCaDon(); taiDon(); };
+  document.getElementById('loc-don-hang-loat').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-loai').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-kich-thuoc').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-mau-sac').onchange = () => { boChonTatCaDon(); taiDon(); };
@@ -277,23 +284,26 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
     btnQuetHangLoat.innerHTML = icon('scan') + ' QUÉT TÌM ĐƠN HÀNG LOẠT';
   }
 
+  // Lọc theo Đơn hàng loạt ĐÃ XÁC NHẬN (bổ sung 13/09/2026, theo yêu cầu người dùng) — chỉ admin/
+  // ve_file, đúng phạm vi trang public/don-hang-loat.html. Đổ danh sách nhóm ngay khi tải trang (số
+  // nhóm luôn nhỏ, gọi 1 lần không đáng kể — khác GET /orders vốn CHỈ đọc tab DonHangLoat khi có
+  // lọc, xem routes/orders.js) — lỗi tải (vd chưa tạo tab) chỉ ẩn ô lọc, không chặn cả trang.
+  if (user.vaiTro === 'admin' || user.vaiTro === 've_file') {
+    apiFetch('/don-hang-loat').then(({ nhoms }) => {
+      if (nhoms.length === 0) return;
+      const select = document.getElementById('loc-don-hang-loat');
+      select.innerHTML = '<option value="">Tất cả</option>' +
+        nhoms.map(n => `<option value="${escapeHtml(n.maDonHangLoat)}">${escapeHtml(n.maDonHangLoat)} — ${escapeHtml(n.tenNhom)}</option>`).join('');
+      document.getElementById('truong-loc-don-hang-loat').style.display = 'flex';
+    }).catch(() => {}); // im lặng bỏ qua — không có Đơn hàng loạt nào cũng là trạng thái bình thường
+  }
+
   // "IN KÊ KHAI HẢI QUAN ĐƠN ĐANG CHỌN" (bổ sung 08/09/2026) — chỉ admin/ve_file, cùng phạm vi với
   // nút gộp phía trên.
   const btnInHaiQuan = document.getElementById('btn-in-hai-quan');
   if (user.vaiTro === 'admin' || user.vaiTro === 've_file') {
     btnInHaiQuan.style.display = '';
     btnInHaiQuan.innerHTML = icon('printer') + ' IN KÊ KHAI HẢI QUAN ĐƠN ĐANG CHỌN';
-  }
-
-  // "RÀ SOÁT ĐƠN HÀNG LOẠT" (bổ sung 13/09/2026, theo yêu cầu người dùng) — mở trang chỉ đọc
-  // public/rasoat-hang-loat.html để xem lại ảnh PNG thật của các nhóm đã gộp, đánh giá độ chính xác
-  // thuật toán trước khi dùng làm nền cho tính năng lớn hơn. CHỈ admin/ve_file, khớp đúng quyền truy
-  // cập của trang đích (chặn lại lần nữa ở đó nếu lỡ vào thẳng URL). KHÔNG đụng btn-quet-hang-loat
-  // đang ẩn — giữ nguyên quyết định "TẠM ẨN" trước đó của người dùng (07/09/2026).
-  const btnRaSoatHangLoat = document.getElementById('btn-rasoat-hang-loat');
-  if (user.vaiTro === 'admin' || user.vaiTro === 've_file') {
-    btnRaSoatHangLoat.style.display = '';
-    btnRaSoatHangLoat.innerHTML = icon('package') + ' RÀ SOÁT ĐƠN HÀNG LOẠT';
   }
 
   // Nút "Đã..." (positive) dùng icon check, nút "Chưa..." (negative, đưa trạng thái quay lại) dùng
@@ -392,7 +402,7 @@ function batTatPanel(idPanelMuonMo) {
   }
 }
 
-const CAC_O_LOC = ['loc-trang-thai', 'loc-phoi', 'loc-ve-file', 'loc-canh-bao', 'loc-xuong', 'loc-uu-tien', 'loc-loai', 'loc-kich-thuoc', 'loc-hang-van-chuyen', 'loc-mau-sac', 'loc-kh', 'loc-tu-ngay', 'loc-den-ngay'];
+const CAC_O_LOC = ['loc-trang-thai', 'loc-phoi', 'loc-ve-file', 'loc-canh-bao', 'loc-xuong', 'loc-uu-tien', 'loc-don-hang-loat', 'loc-loai', 'loc-kich-thuoc', 'loc-hang-van-chuyen', 'loc-mau-sac', 'loc-kh', 'loc-tu-ngay', 'loc-den-ngay'];
 
 function xoaTatCaLoc() {
   CAC_O_LOC.forEach(id => { document.getElementById(id).value = ''; });
@@ -439,6 +449,7 @@ async function taiDon() {
   const xuong = document.getElementById('loc-xuong').value;
   const uuTien = document.getElementById('loc-uu-tien').value;
   const hangLoat = document.getElementById('loc-hang-loat').checked;
+  const donHangLoat = document.getElementById('loc-don-hang-loat').value;
   const loai = document.getElementById('loc-loai').value;
   const kichThuoc = document.getElementById('loc-kich-thuoc').value;
   const mauSac = document.getElementById('loc-mau-sac').value;
@@ -456,6 +467,7 @@ async function taiDon() {
   if (xuong) qs.set('xuong', xuong);
   if (uuTien) qs.set('uuTien', uuTien);
   if (hangLoat) qs.set('hangLoat', '1');
+  if (donHangLoat) qs.set('donHangLoat', donHangLoat);
   if (loai) qs.set('loai', loai);
   if (kichThuoc) qs.set('kichThuoc', kichThuoc);
   if (mauSac) qs.set('mauSac', mauSac);
