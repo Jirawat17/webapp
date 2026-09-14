@@ -59,11 +59,13 @@
 .tk-o-quet-nhanh { margin-bottom: var(--space-5); max-width: 100%; }
 .tk-o-quet-nhanh label { display: block; font-weight: 700; margin-bottom: 6px; }
 .tk-o-quet-nhanh input {
-  /* Tăng gấp 2 LẦN NỮA (bổ sung 13/09/2026 lần 2, theo yêu cầu người dùng — dễ nhìn hơn nữa) so với lần
-     tăng gấp 2 đầu (2.8rem/28px 32px/4px/640px) — tổng cộng gấp 4 so với bản gốc (1.4rem/14px 16px/2px/
-     480px). color chữ nhập cố định xanh đậm (#1e3a8a), khác hẳn màu chữ mặc định của trang. */
-  width: 100%; font-size: 5.6rem; padding: 56px 64px; border-radius: var(--radius-md);
-  border: 8px solid var(--color-primary); font-family: inherit; color: #1e3a8a;
+  /* Tăng thêm 30% (bổ sung 14/09/2026, theo yêu cầu người dùng) so với lần tăng gấp 2 LẦN NỮA trước đó
+     (5.6rem/56px 64px/8px) — tổng cộng 7.28rem/73px 83px/10px. color chữ nhập đổi từ xanh đậm (#1e3a8a)
+     sang đỏ (#dc2626, cùng tông với .nhan-so-luong-da-chon/--color-danger-text) — theo yêu cầu người
+     dùng, dễ nhận ra hơn xanh đậm. Đã đo lại placeholder bằng canvas.measureText() ở 1024px — vẫn dư
+     ~74px, không cần giảm thêm cỡ chữ placeholder. */
+  width: 100%; font-size: 7.28rem; padding: 73px 83px; border-radius: var(--radius-md);
+  border: 10px solid var(--color-primary); font-family: inherit; color: #dc2626;
 }
 .tk-o-quet-nhanh input:disabled { opacity: 0.6; }
 /* Chữ placeholder (chỉ hiện khi ô còn trống) đo thực tế KHÔNG đủ chỗ hiện hết ở cỡ chữ 5.6rem của ô.
