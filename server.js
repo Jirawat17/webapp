@@ -40,6 +40,7 @@ app.use('/api/hoat-dong', require('./routes/hoatDong'));
 // da_dan_tem). gkeService.js vẫn dùng nguyên cho Mua Tracking/IN LABEL (services/trackingAutoService.js,
 // routes/tracking.js) — chỉ riêng route quét-QR-để-tạo-vận-đơn là bị xoá.
 app.use('/api/tracking', require('./routes/tracking'));
+app.use('/api/trung-tam-hanh-dong', require('./routes/actionCenter'));
 
 app.use(express.static(path.join(__dirname, 'public')));
 

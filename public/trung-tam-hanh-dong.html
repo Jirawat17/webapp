@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trung tâm hành động — Xưởng Thêu</title>
+<link rel="stylesheet" href="/css/style.css?v=86">
+<script src="/js/theme.js?v=86"></script>
+<style>
+/* Trang chính mới sau đăng nhập cho admin (bổ sung 14/09/2026, xem
+   docs/superpowers/specs/2026-09-14-trung-tam-hanh-dong-design.md) — KHÔNG kèm chart/canvas nào (khác
+   hẳn bang-dieu-khien.html) để tải nhanh nhất có thể, theo đúng Chế độ Sáng/Tối bình thường của trang
+   (khác BĐK cố tình luôn tối kiểu HUD — trang này là danh sách việc cần làm hằng ngày, không phải màn
+   hình "trình chiếu" riêng). Màu sắc cảnh báo dùng LẠI nguyên .badge-canh-bao có sẵn trong style.css. */
+.ttha-lien-ket-bdk { font-size: 0.9rem; white-space: nowrap; }
+.ttha-khoi { margin-bottom: var(--space-5); }
+.ttha-khoi h3 { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.ttha-dem { font-size: 0.78rem; font-weight: 700; color: var(--color-text-muted); background: var(--color-bg); border-radius: 999px; padding: 2px 10px; }
+.ttha-rong { color: var(--color-text-muted); font-size: 0.9rem; padding: 10px 0; }
+.ttha-danh-sach { display: flex; flex-direction: column; gap: 8px; }
+.ttha-dong {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  padding: 10px 14px; border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-surface); text-decoration: none; color: inherit;
+}
+.ttha-dong:hover { border-color: var(--color-primary); }
+.ttha-dong .stt { font-weight: 700; }
+.ttha-dong .phu { font-size: 0.82rem; color: var(--color-text-muted); display: flex; align-items: center; gap: 6px; }
+</style>
+</head>
+<body>
+<div id="nav"></div>
+<div class="page">
+  <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
+    <h2>Trung tâm hành động</h2>
+    <a class="ttha-lien-ket-bdk" href="/bang-dieu-khien.html">Xem thống kê chi tiết (BĐK) →</a>
+  </div>
+  <p style="color:var(--color-text-muted); margin-top:0;">Danh sách việc cần xử lý ngay — bấm vào 1 dòng để mở đơn tương ứng.</p>
+
+  <div id="khu-noi-dung"></div>
+</div>
+
+<script src="/js/icons.js?v=86"></script>
+<script src="/js/api.js?v=86"></script>
+<script>
+// Trùng giá trị api.js#NHAN_CANH_BAO dùng ở orders.html/my-orders.html... (mỗi trang tự định nghĩa
+// riêng, đúng quy ước hiện có trong app — xem lý do ở bang-dieu-khien.html: gộp chung dễ đụng độ tên
+// biến khi 2 trang cùng nạp 1 script trong tương lai).
+const NHAN_CANH_BAO = { VANG: 'Vàng · 3 ngày', CAM: 'Cam · 5 ngày', DO: 'Đỏ · 7 ngày' };
+
+function dinhDangThoiGian(iso) {
+  const d = new Date(iso);
+  return isNaN(d) ? String(iso) : d.toLocaleString('vi-VN');
+}
+
+function dongDon(sttKey, phuHtml) {
+  return `<a class="ttha-dong" href="/order.html?stt=${encodeURIComponent(sttKey)}">
+    <span class="stt">${escapeHtml(sttKey)}</span>
+    ${phuHtml ? `<span class="phu">${phuHtml}</span>` : ''}
+  </a>`;
+}
+
+function khoiRong(chu) {
+  return `<div class="ttha-rong">${escapeHtml(chu)}</div>`;
+}
+
+function veKhoiCanhBao(canhBao) {
+  const tongSo = canhBao.DO.length + canhBao.CAM.length + canhBao.VANG.length;
+  if (tongSo === 0) return khoiRong('Không có đơn nào bị cảnh báo trễ hạn — tốt!');
+  const dong = [];
+  ['DO', 'CAM', 'VANG'].forEach(muc => {
+    canhBao[muc].forEach(d => {
+      dong.push(dongDon(d.sttKey,
+        `<span class="badge badge-canh-bao ${muc.toLowerCase()}">${icon('alert')} ${NHAN_CANH_BAO[muc]}</span>`
+        + ` ${escapeHtml(d.trangThai || '')} · ${d.soNgay} ngày`));
+    });
+  });
+  return `<div class="ttha-danh-sach">${dong.join('')}</div>`;
+}
+
+function veKhoiUuTien(ds) {
+  if (ds.length === 0) return khoiRong('Không có đơn ưu tiên nào đang chờ xử lý.');
+  return `<div class="ttha-danh-sach">${ds.map(d => dongDon(d.sttKey, escapeHtml(d.trangThai || ''))).join('')}</div>`;
+}
+
+function veKhoiHuy(ds) {
+  if (ds.length === 0) return khoiRong('Không có đơn nào mới bị huỷ trong 12 giờ gần đây.');
+  return `<div class="ttha-danh-sach">${ds.map(d =>
+    dongDon(d.sttKey, `Huỷ lúc ${dinhDangThoiGian(d.thoiGian)}${d.nguoiDung ? ' · bởi ' + escapeHtml(d.nguoiDung) : ''}`)
+  ).join('')}</div>`;
+}
+
+function veKhoiLoiTracking(ds) {
+  if (ds.length === 0) return khoiRong('Không có lỗi tự động mua tracking GKE nào trong 24 giờ gần đây.');
+  return `<div class="ttha-danh-sach">${ds.map(d =>
+    dongDon(d.sttKey, `${dinhDangThoiGian(d.thoiGian)}${d.chiTiet ? ' · ' + escapeHtml(d.chiTiet) : ''}`)
+  ).join('')}</div><p style="margin-top:8px"><a href="/tracking.html">Mở trang Tracking →</a></p>`;
+}
+
+async function taiTrungTamHanhDong() {
+  const khu = document.getElementById('khu-noi-dung');
+  khu.innerHTML = skeletonList(4);
+  const kq = await apiFetch('/trung-tam-hanh-dong/danh-sach');
+  khu.innerHTML = `
+    <div class="ttha-khoi">
+      <h3>Đơn cảnh báo trễ hạn <span class="ttha-dem">${kq.canhBao.DO.length + kq.canhBao.CAM.length + kq.canhBao.VANG.length}</span></h3>
+      ${veKhoiCanhBao(kq.canhBao)}
+    </div>
+    <div class="ttha-khoi">
+      <h3>Đơn ưu tiên chưa xử lý <span class="ttha-dem">${kq.uuTienChuaXuLy.length}</span></h3>
+      ${veKhoiUuTien(kq.uuTienChuaXuLy)}
+    </div>
+    <div class="ttha-khoi">
+      <h3>Đơn mới huỷ (12 giờ gần đây) <span class="ttha-dem">${kq.huyGanDay.length}</span></h3>
+      ${veKhoiHuy(kq.huyGanDay)}
+    </div>
+    <div class="ttha-khoi">
+      <h3>Lỗi tự động mua tracking GKE (24 giờ gần đây) <span class="ttha-dem">${kq.loiTrackingGke.length}</span></h3>
+      ${veKhoiLoiTracking(kq.loiTrackingGke)}
+    </div>
+  `;
+}
+
+(async () => {
+  try {
+    const user = await requireLoginOrRedirect();
+    if (!user) return;
+    renderNav(user, 'trung-tam-hanh-dong');
+    await taiTrungTamHanhDong();
+  } catch (e) {
+    // Bắt lỗi TOÀN TRANG, hiện rõ ngay trên trang (không chỉ Console) — cùng lý do đã áp dụng ở
+    // bang-dieu-khien.html: đây là trang đầu tiên admin thấy sau đăng nhập, lỗi ẩn ở đây rất khó debug
+    // từ xa qua Docker/VPS.
+    console.error('[TrungTamHanhDong] Lỗi khởi tạo trang:', e);
+    const trang = document.querySelector('.page');
+    if (trang) {
+      trang.insertAdjacentHTML('afterbegin',
+        `<div class="trang-thai-danger" style="padding:14px 18px;border-radius:8px;margin-bottom:18px;">Lỗi tải Trung tâm hành động: ${escapeHtml(e.message)} — mở Console trình duyệt (F12) để xem chi tiết.</div>`);
+    }
+  }
+})();
+</script>
+</body>
+</html>

@@ -89,4 +89,21 @@ nhấp nháy ở mức Đỏ) — không viết CSS màu sắc mới. Có link s
 
 ## 7. Đã kiểm tra
 
-(Điền sau khi code + test xong.)
+- `test-trung-tam-hanh-dong-service.js` (12 test, mock `logService`/`sheetsService`, dùng THẬT
+  `alertService`/`orderService.laUuTien` để kiểm cả tích hợp): Vàng/Cam/Đỏ tính đúng theo `NGAY_LEN_DON`
+  + `TRANG_THAI_XUONG`; đơn `CANCELLED_Đã hủy` dù rất lâu ngày KHÔNG bị tính cảnh báo (trạng thái kết
+  thúc); đơn ưu tiên chưa ship xuất hiện đúng, đã ship/không ưu tiên thì không; lọc đúng cửa sổ 12h cho
+  đơn mới huỷ và 24h + `KetQua='Lỗi'` cho lỗi tracking GKE; tab `LogsTracking` chưa tạo (readTabCached
+  throw) → `loiTrackingGke` trả rỗng, KHÔNG làm hỏng 3 mục còn lại.
+- `test-trung-tam-hanh-dong-route.js` (8 test): admin → 200 + đúng dữ liệu; vai trò khác (ve_file,
+  quan_ly) → 403, không lộ dữ liệu; service throw → 500, không sập server.
+- Kiểm trực tiếp trên trình duyệt qua mock server (đủ dữ liệu cả 4 mục): cả 4 khối hiện đúng, badge
+  `.badge-canh-bao` tái dùng đúng màu/hiệu ứng nhấp nháy mức Đỏ; link mỗi dòng đúng
+  `/order.html?stt=<mã>`; nav "Cần xử lý" hiện ĐÚNG vị trí đầu tiên (trước cả BĐK) cho admin.
+- Gọi trực tiếp `trangChuTheoVaiTro()` cho mọi vai trò trong console trình duyệt — CHỈ admin đổi sang
+  `/trung-tam-hanh-dong.html`, 5 vai trò còn lại (san_xuat, nguoi_lay_phoi, ve_file, dong_goi, quan_ly)
+  y nguyên như trước.
+- Chạy lại toàn bộ 34 file test scratchpad (gồm 2 file mới) — không phát sinh lỗi mới, chỉ còn đúng 5
+  lỗi sẵn có từ trước (`test-in-label.js`, `test-quet-bi-tu-choi.js`, `test-rasoat-hang-loat.js`,
+  `test-tam-thoi.js`, `test-tracking-auto.js`), đã xác nhận nhiều lần trong phiên làm việc này là không
+  liên quan.

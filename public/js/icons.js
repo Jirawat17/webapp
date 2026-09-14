@@ -44,6 +44,9 @@ const ICONS = {
   navAssets: '<path d="M12 3 4 7v10l8 4 8-4V7l-8-4z"/><path d="M4 7l8 4 8-4"/><line x1="12" y1="11" x2="12" y2="21"/>',
   // Ghim định vị — dùng riêng cho menu "Tracking" (bổ sung 09/09/2026, quản lý tự động mua tracking GKE).
   navTracking: '<path d="M12 21s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.3"/>',
+  // Trùng path icon `alert` gốc — dùng riêng cho menu "Cần xử lý" (bổ sung 14/09/2026, Trung tâm hành
+  // động), theo đúng quy ước các icon nav* khác đều là bản trùng tên của icon gốc tương ứng.
+  navAlert: '<path d="M12 3.2 2.5 20h19L12 3.2z"/><line x1="12" y1="9.5" x2="12" y2="13.5"/><circle cx="12" cy="16.6" r="0.9" fill="currentColor" stroke="none"/>',
   // Mũi tên quay lùi (undo/reset) — dùng cho các nút đưa trạng thái về lại "Chưa..." để phân biệt
   // rõ với nút "Đã..." (dùng icon 'check'), tránh bấm nhầm.
   undo: '<polyline points="3 4 3 9 8 9"/><path d="M4.7 15a8 8 0 1 0 1.9-8.6L3 9"/>',

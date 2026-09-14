@@ -83,6 +83,10 @@ function dangXuat() {
 function trangChuTheoVaiTro(vaiTro) {
   if (vaiTro === 'nguoi_lay_phoi') return '/scan.html';
   if (vaiTro === 'san_xuat') return '/my-orders.html';
+  // Trung tâm hành động (bổ sung 14/09/2026, xem
+  // docs/superpowers/specs/2026-09-14-trung-tam-hanh-dong-design.md) — CHỈ admin, thay cho orders.html
+  // mặc định bên dưới, để đăng nhập vào là thấy ngay danh sách việc cần xử lý.
+  if (vaiTro === 'admin') return '/trung-tam-hanh-dong.html';
   return '/orders.html';
 }
 
@@ -134,6 +138,10 @@ function renderNav(user, active) {
       // docs/superpowers/specs/2026-09-08-bang-dieu-khien-admin-design.md) — CHỈ admin, lên ĐẦU TIÊN
       // (khác "Thống kê" vẫn mở cho cả ve_file) vì là màn hình tổng quan nhanh, hợp lý để thấy ngay.
       links.splice(0, 0, { href: '/bang-dieu-khien.html', label: 'BĐK', icon: 'navChart', key: 'bang-dieu-khien' });
+      // "Trung tâm hành động" (bổ sung 14/09/2026, xem
+      // docs/superpowers/specs/2026-09-14-trung-tam-hanh-dong-design.md) — CHỈ admin, giờ là trang
+      // CHÍNH sau đăng nhập (xem trangChuTheoVaiTro ở trên) nên đứng TRƯỚC cả BĐK trong nav.
+      links.splice(0, 0, { href: '/trung-tam-hanh-dong.html', label: 'Cần xử lý', icon: 'navAlert', key: 'trung-tam-hanh-dong' });
       links.splice(2, 0, { href: '/my-orders.html', label: 'Chạy máy', icon: 'navMyOrders', key: 'my-orders' });
       links.splice(3, 0, { href: '/my-orders-ve-file.html', label: 'Vẽ file', icon: 'navMyOrders', key: 'my-orders-ve-file' });
       // "Đơn hàng loạt" (bổ sung 13/09/2026, theo yêu cầu người dùng — LUÔN hiện, khác nút toolbar ẩn/
