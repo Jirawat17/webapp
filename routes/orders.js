@@ -675,14 +675,33 @@ function anhSoSanhCuaDon(don) {
   return don.DUONG_DAN_URL || don.MOCKUP || '';
 }
 
-// Union-Find (Disjoint Set Union) đơn giản — dùng để gom các đơn có hash gần nhau (khoảng cách
-// Hamming ≤ ngưỡng, xem services/donHangLoatService.js#layNguong) thành từng nhóm liên thông, thay
-// vì chỉ so khớp CHÍNH XÁC từng cặp.
-function taoDSU(n) {
-  const cha = Array.from({ length: n }, (_, i) => i);
-  function tim(x) { return cha[x] === x ? x : (cha[x] = tim(cha[x])); }
-  function hop(a, b) { const ra = tim(a), rb = tim(b); if (ra !== rb) cha[ra] = rb; }
-  return { tim, hop };
+// Gộp nhóm kiểu "complete-linkage" (bổ sung 15/09/2026, THAY Union-Find/single-linkage cũ — xem
+// docs/superpowers/specs/2026-09-15-gop-nhom-complete-linkage-design.md) — 1 đơn CHỈ được thêm vào 1
+// nhóm đang xây nếu nó nằm trong ngưỡng Hamming với MỌI thành viên đã có trong nhóm đó, không chỉ 1
+// người. Union-Find cũ chỉ cần 1 CHUỖI liên kết bắc cầu (A gần B, B gần C) là gộp cả A-C dù A-C khác
+// hẳn nhau ("chaining") — xác nhận đúng nguyên nhân khiến nhiều cụm nhỏ ĐÚNG (nhiều thiết kế giống hệt
+// nhau) vẫn bị nối chuỗi qua vài cặp "gần đúng biên" thành 1 nhóm khổng lồ lẫn lộn, dù đã sửa cả 2 lỗi
+// hash trước đó (.trim(), tăng lưới 256 bit) — dữ liệu thật người dùng gửi cho thấy rõ nhiều cụm nhỏ
+// rành mạch bên trong 1 nhóm lớn bị gộp nhầm, không phải toàn bộ ngẫu nhiên giống nhau.
+// Tham lam theo thứ tự mảng — không tối ưu toàn cục (kết quả có thể phụ thuộc thứ tự duyệt) nhưng đủ
+// dùng cho gợi ý sơ bộ (người dùng luôn tự xác nhận lại trước khi đưa vào Đơn hàng loạt chính thức,
+// xem "Nhóm hệ thống đề xuất" ở don-hang-loat.html) — ưu tiên KHÔNG BAO GIỜ gộp nhầm hơn là gộp tối ưu.
+function gomNhomCompleteLinkage(coHash, nguong) {
+  const theoNhom = new Map(); // "index bắt đầu nhóm" -> [đơn...] — cùng hình dạng Map cũ để code dưới không cần đổi
+  const daXep = new Array(coHash.length).fill(false);
+  for (let i = 0; i < coHash.length; i++) {
+    if (daXep[i]) continue;
+    const idxTrongNhom = [i];
+    for (let j = i + 1; j < coHash.length; j++) {
+      if (daXep[j]) continue;
+      const ganHetThayVi = idxTrongNhom.every(k =>
+        khoangCachHamming(coHash[k].HASH_ANH_MAU, coHash[j].HASH_ANH_MAU) <= nguong);
+      if (ganHetThayVi) idxTrongNhom.push(j);
+    }
+    if (idxTrongNhom.length >= 2) idxTrongNhom.forEach(idx => { daXep[idx] = true; });
+    theoNhom.set(i, idxTrongNhom.map(idx => coHash[idx]));
+  }
+  return theoNhom;
 }
 
 // Tính lại NHOM_HANG_LOAT — CHỈ trong phạm vi đơn nằm trong `sttKeySet` (lô đơn người dùng đang chọn
@@ -700,22 +719,7 @@ async function tinhLaiNhomHangLoat(sttKeySet, nguong) {
   // services/orderService.js update() — luôn đọc thật ngay trước khi ghi).
   const { headers, rows: tatCaDon } = await orderService.getAll();
   const coHash = tatCaDon.filter(d => sttKeySet.has(d.STT_Key) && d.HASH_ANH_MAU);
-
-  const dsu = taoDSU(coHash.length);
-  for (let i = 0; i < coHash.length; i++) {
-    for (let j = i + 1; j < coHash.length; j++) {
-      if (khoangCachHamming(coHash[i].HASH_ANH_MAU, coHash[j].HASH_ANH_MAU) <= nguong) {
-        dsu.hop(i, j);
-      }
-    }
-  }
-
-  const theoNhom = new Map(); // root -> [đơn...]
-  coHash.forEach((don, i) => {
-    const root = dsu.tim(i);
-    if (!theoNhom.has(root)) theoNhom.set(root, []);
-    theoNhom.get(root).push(don);
-  });
+  const theoNhom = gomNhomCompleteLinkage(coHash, nguong);
 
   const maNhomTheoSttKey = new Map(); // STT_Key -> mã nhóm (chỉ chứa đơn thuộc component ≥ 2 đơn)
   let soNhomTimThay = 0;
