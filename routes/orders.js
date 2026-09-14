@@ -730,13 +730,37 @@ async function tinhLaiNhomHangLoat(sttKeySet, nguong) {
     dsDonTrongNhom.forEach(d => maNhomTheoSttKey.set(d.STT_Key, maNhom));
   }
 
+  // Mã nhóm CŨ -> TOÀN BỘ STT_Key đang mang mã đó, TRÊN CẢ SHEET (không chỉ trong lô) — bổ sung
+  // 15/09/2026, theo phản hồi thực tế: "Quét lại DHL" (buocLai) tính hash MỚI đúng (đã sửa 2 lần, xem
+  // docs/superpowers/specs/2026-09-1{4,5}-*.md) nhưng KHÔNG BAO GIỜ xoá được mã nhóm CŨ sai — nhánh
+  // "không khớp ai trong lô -> giữ nguyên mã cũ" phía dưới (viết ra để an toàn khi lô chỉ là 1 PHẦN của
+  // nhóm) vô tình làm nhóm sai từ thuật toán CŨ tồn tại VĨNH VIỄN dù thuật toán đã sửa đúng: mỗi lần
+  // quét lại, đơn đúng ra phải tách nhóm lại "không khớp ai trong lô" (ĐÚNG, vì thuật toán mới nhận ra
+  // nó khác hẳn) rồi bị giữ nguyên mã cũ (SAI). Chỉ AN TOÀN để XOÁ khi TOÀN BỘ thành viên nhóm cũ đó
+  // đều nằm trong lô đang quét lại lần này (đã được xét lại ĐẦY ĐỦ, không phải 1 phần) — còn nếu có ai
+  // ngoài lô chưa xét thì vẫn giữ nguyên như cũ, đúng tinh thần bảo vệ ban đầu.
+  const thanhVienNhomCu = new Map();
+  for (const don of tatCaDon) {
+    if (!don.NHOM_HANG_LOAT) continue;
+    if (!thanhVienNhomCu.has(don.NHOM_HANG_LOAT)) thanhVienNhomCu.set(don.NHOM_HANG_LOAT, []);
+    thanhVienNhomCu.get(don.NHOM_HANG_LOAT).push(don.STT_Key);
+  }
+
   let soDonTrongNhom = 0;
   for (const don of tatCaDon) {
     if (!sttKeySet.has(don.STT_Key)) continue; // ngoài lô đang chọn — không đọc/so/ghi
-    // Đơn KHÔNG khớp ai khác trong lô lần này (không có trong maNhomTheoSttKey) — giữ nguyên mã nhóm
-    // hiện tại (có thể nó vẫn thực sự trùng thiết kế với 1 đơn ngoài lô ta không kiểm tra lại lần
-    // này), TUYỆT ĐỐI không suy ra maNhomMoi = '' rồi xoá mất mã nhóm cũ.
     if (!maNhomTheoSttKey.has(don.STT_Key)) {
+      // Không khớp ai khác trong lô lần này VÀ có hash để so (mới thật sự được xét) — xoá mã nhóm cũ
+      // NẾU đã xét lại đủ toàn bộ nhóm đó (xem giải thích thanhVienNhomCu ở trên); ngược lại (còn ai
+      // ngoài lô chưa xét, hoặc đơn này chưa từng tính được hash) thì giữ nguyên mã nhóm hiện tại —
+      // TUYỆT ĐỐI không đoán khi chưa đủ bằng chứng.
+      if (don.NHOM_HANG_LOAT && don.HASH_ANH_MAU) {
+        const thanhVien = thanhVienNhomCu.get(don.NHOM_HANG_LOAT) || [];
+        if (thanhVien.every(stt => sttKeySet.has(stt))) {
+          await updateCells(orderService.TAB, headers, don._row, { NHOM_HANG_LOAT: '' });
+          continue;
+        }
+      }
       if (don.NHOM_HANG_LOAT) soDonTrongNhom++;
       continue;
     }
