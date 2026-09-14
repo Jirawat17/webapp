@@ -42,4 +42,13 @@ thường trong trường hợp hiếm này. Chấp nhận được, không cầ
 
 ## 5. Đã kiểm tra
 
-(Điền sau khi code + test xong.)
+- `test-bang-uu-tien-hang-loat-the-in.js`: sinh PDF THẬT qua `GET /api/reports/pdf?mau=don_can_in` (4
+  đơn: thường / chỉ ưu tiên / chỉ hàng loạt / cả 2 + Ghi chú dài) — status 200, đúng
+  `Content-Type: application/pdf`, không throw.
+- Xem trực quan cả 4 trang qua trình duyệt (PDF.js, render thật, không đoán): đơn thường layout
+  NGUYÊN như cũ, không có băng nào; đơn chỉ ưu tiên/chỉ hàng loạt hiện đúng 1 băng đen, chữ trắng đậm
+  căn giữa, không đè/tràn; đơn cả 2 xếp chồng đúng 2 băng, phần Ghi chú bên dưới bị cắt ngắn hơn bình
+  thường (do ít chỗ còn lại hơn) nhưng vẫn gọn gàng nhờ `ellipsis: true` có sẵn — đúng rủi ro đã lường
+  trước ở mục 4, chấp nhận được, không vỡ layout.
+- Chạy lại toàn bộ 35 file test scratchpad (gồm file mới) — không phát sinh lỗi mới, chỉ còn đúng 5 lỗi
+  sẵn có từ trước, đã xác nhận nhiều lần trong phiên làm việc này là không liên quan.

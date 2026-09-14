@@ -563,6 +563,24 @@ function veOTrongPdf(doc, x, y, kichThuoc, chuThich) {
   doc.fillColor('#000000');
 }
 
+// Băng chữ nổi bật (bổ sung 14/09/2026, theo yêu cầu người dùng — xem
+// docs/superpowers/specs/2026-09-14-bang-uu-tien-hang-loat-tren-the-in-design.md) — dùng cho "ĐƠN ƯU
+// TIÊN"/"ĐƠN HÀNG LOẠT" trên thẻ in. Nền đen full chiều ngang thẻ, chữ trắng đậm căn giữa — cùng kỹ
+// thuật hình chữ nhật PDFKit thuần vector đã dùng cho khung đen quanh QR (không raster, luôn nhanh).
+// Đo CHIỀU CAO THẬT của chữ qua doc.heightOfString() (cùng kỹ thuật đã dùng cho khối "ảnh dư" bên
+// dưới) thay vì đoán cố định — trả về tổng chiều cao đã dùng để hàm gọi cộng dồn y tiếp.
+const CO_CHU_BANG_NOI_BAT = 18;
+const DEM_BANG_NOI_BAT = 4; // khoảng đệm trên/dưới chữ trong băng
+function veBangDenNoiBat(doc, chu, x0, y, rongTrong) {
+  doc.font('NotoSans-Bold').fontSize(CO_CHU_BANG_NOI_BAT);
+  const caoChu = doc.heightOfString(chu, { width: rongTrong, align: 'center' });
+  const caoBang = caoChu + DEM_BANG_NOI_BAT * 2;
+  doc.rect(x0, y, rongTrong, caoBang).fill('#000000');
+  doc.fillColor('#ffffff').text(chu, x0, y + DEM_BANG_NOI_BAT, { width: rongTrong, align: 'center' });
+  doc.fillColor('#000000'); // .fill() đổi fillColor hiện tại của doc — phải trả lại màu chữ mặc định
+  return caoBang;
+}
+
 function veTheDonPdf(doc, don, anh, offsetY, caoThe) {
   const rong = mmToPt(KHO_GIAY_MM.rong);
   const leTrong = 5;
@@ -575,6 +593,12 @@ function veTheDonPdf(doc, don, anh, offsetY, caoThe) {
   y += 18;
   doc.font('NotoSans').fontSize(10).text(`${don.LOAI || ''} · ${don.KICH_THUOC || ''} · ${don.MAU_SAC || ''}`, x0, y, { width: rongTrong });
   y += 14;
+
+  // Băng "ĐƠN ƯU TIÊN"/"ĐƠN HÀNG LOẠT" (bổ sung 14/09/2026) — TRƯỚC khối ảnh, theo đúng vị trí đã chốt
+  // với người dùng. Đơn thường (không ưu tiên, không hàng loạt) thì KHÔNG vẽ gì thêm — layout giữ
+  // NGUYÊN như trước, không đổi hành vi. Đơn vừa ưu tiên vừa hàng loạt thì xếp CHỒNG 2 băng.
+  if (orderService.laUuTien(don)) y += veBangDenNoiBat(doc, 'ĐƠN ƯU TIÊN', x0, y, rongTrong) + 4;
+  if (don.NHOM_HANG_LOAT) y += veBangDenNoiBat(doc, 'ĐƠN HÀNG LOẠT', x0, y, rongTrong) + 4;
 
   // KHỐI ẢNH (ưu tiên): 2 ảnh to xếp cạnh nhau, chiếm hết chiều ngang thẻ — to gấp đôi bố cục cũ
   const khoangCachAnh = 4;
