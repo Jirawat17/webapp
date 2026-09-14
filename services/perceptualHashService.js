@@ -12,6 +12,23 @@ const sharp = require('sharp');
 // ảnh. Đổi sang 'nearest' (lấy đúng 1 pixel, không nội suy/làm mượt) giảm mức trôi này đáng kể — quan
 // trọng với ảnh nét thẳng/khối màu phẳng kiểu thiết kế thêu, nơi nội suy mượt phá vỡ đúng cạnh sắc mà
 // dHash dựa vào để so sánh. ĐỪNG đổi lại kernel mặc định mà không kiểm thử lại bằng ảnh giả lập trước.
+//
+// QUAN TRỌNG — .trim() TRƯỚC khi resize (bổ sung 14/09/2026, xem
+// docs/superpowers/specs/2026-09-14-sua-loi-so-khop-anh-hang-loat-design.md — root cause đã tự tái
+// hiện bằng ảnh giả lập trước khi sửa): file thiết kế PNG xuất từ phần mềm thêu thường là 1 vùng nội
+// dung NHỎ đặt giữa 1 canvas TRONG SUỐT rất lớn (để đặt linh hoạt lên nhiều loại sản phẩm). Resize
+// thẳng canvas gốc xuống lưới 9x8 khiến GẦN NHƯ TOÀN BỘ 72 điểm lấy mẫu rơi vào vùng nền trong suốt
+// (nền trong suốt bị premultiply về đen giống hệt nhau ở MỌI ảnh) — hash ra gần như CHỈ phản ánh hình
+// dạng/tỉ lệ canvas, KHÔNG phải nội dung thiết kế thật, khiến các thiết kế khác hẳn nhau (khác chữ,
+// khác hoạ tiết) bị chấm khoảng cách Hamming = 0 (đã tự kiểm chứng: 3 thiết kế hoàn toàn khác nhau đặt
+// trên canvas 800x800 đều ra ĐÚNG 1 hash). .trim() cắt bỏ viền đồng nhất/trong suốt quanh nội dung
+// trước khi resize — đưa vùng nội dung thật chiếm phần lớn 9x8 điểm lấy mẫu. An toàn cho ảnh KHÔNG có
+// viền để cắt (ảnh mockup JPEG đầy khung, ảnh nhiễu...) — sharp giữ nguyên kích thước gốc, không cắt
+// nhầm, đã tự kiểm thử cả trường hợp ảnh trong suốt hoàn toàn/ảnh 1 màu đồng nhất/ảnh nhiễu ngẫu nhiên.
+//
+// LƯU Ý VẬN HÀNH: đổi thuật toán này làm HASH_ANH_MAU đã tính trước đó trong Sheet KHÔNG còn khớp cách
+// tính mới — phải "Quét gợi ý Đơn hàng loạt" LẠI toàn bộ đơn liên quan thì nhóm đề xuất mới phản ánh
+// đúng thuật toán đã sửa (code không tự động tính lại hash cũ).
 const CHIEU_RONG_HASH = 9;
 const CHIEU_CAO_HASH = 8;
 const KERNEL_RESIZE = 'nearest';
@@ -27,6 +44,7 @@ async function tinhHashAnh(buffer) {
 
   try {
     const { data } = await sharp(buffer)
+      .trim()
       .resize(CHIEU_RONG_HASH, CHIEU_CAO_HASH, { fit: 'fill', kernel: KERNEL_RESIZE })
       .grayscale()
       .raw()
