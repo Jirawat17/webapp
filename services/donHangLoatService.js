@@ -9,9 +9,16 @@ const { thoiGianVNISOString } = require('./dateUtils');
 
 const TAB = 'DonHangLoat';
 const TAB_CAU_HINH = 'CaiDatHangLoat';
-const NGUONG_MAC_DINH = 8;
+// Ngưỡng tính theo SỐ BIT KHÁC NHAU tuyệt đối trên tổng 256 bit của hash hiện tại (bổ sung 15/09/2026,
+// xem services/perceptualHashService.js — lưới hash tăng từ 64 lên 256 bit để phân biệt tốt hơn các
+// thiết kế chữ ngắn khác nhau). NGUONG_TOI_DA/NGUONG_MAC_DINH nhân 4 theo đúng tỉ lệ so với lưới 64 bit
+// cũ (32→128, 8→32) để giữ NGUYÊN Ý NGHĨA tương đối (vẫn "tối đa 50% khác nhau", vẫn mức mặc định
+// ~12.5%) — ngưỡng CŨ đã lưu trong CaiDatHangLoat (vd '8' dưới thang 64 bit cũ) sẽ bị hiểu SAI theo
+// thang mới (8/256 = 3% thay vì 8/64 = 12.5%, tức chặt hơn hẳn dự định ban đầu) — cần người dùng tự
+// kiểm tra/đặt lại giá trị ngưỡng sau khi nâng cấp này nếu trước đó có đặt khác mặc định.
+const NGUONG_MAC_DINH = 32;
 const NGUONG_TOI_THIEU = 0;
-const NGUONG_TOI_DA = 32;
+const NGUONG_TOI_DA = 128;
 
 function dongDangHoatDong(r) {
   return String(r.DaXoa || '').toUpperCase() !== 'TRUE';
