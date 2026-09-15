@@ -722,15 +722,27 @@ async function tinhLaiNhomHangLoat(sttKeySet, nguong) {
   const theoNhom = gomNhomCompleteLinkage(coHash, nguong);
 
   const maNhomTheoSttKey = new Map(); // STT_Key -> mã nhóm (chỉ chứa đơn thuộc component ≥ 2 đơn)
+  // Mã nhóm cũ ĐÃ bị 1 cụm khác nhận trong CHÍNH lượt quét này rồi (bổ sung 15/09/2026 lần 3, theo
+  // phản hồi thực tế: sau khi đổi sang complete-linkage, 1 nhóm sai cũ (vd "9COM18" 107 đơn) tách ĐÚNG
+  // thành nhiều cụm nhỏ nội bộ (Bridesmaid riêng, Hocus Pocus riêng...) nhưng MỌI thành viên của TẤT
+  // CẢ các cụm đó vẫn đang mang chung ĐÚNG 1 mã nhóm cũ "9COM18" — logic "nhập vào mã cũ" bên dưới nhặt
+  // lại mã đó cho MỌI cụm, vô tình gán CHUNG 1 mã cho nhiều cụm thật sự khác nhau, khiến giao diện
+  // (nhóm theo đúng giá trị NHOM_HANG_LOAT) hiển thị lại y hệt 1 nhóm khổng lồ như cũ dù việc TÁCH nhóm
+  // ở tầng thuật toán đã đúng. Chỉ cụm ĐẦU TIÊN (theo thứ tự xử lý) có mã cũ đó mới được giữ lại; cụm
+  // nào tới sau thấy mã cũ đã bị nhận thì phải tự lấy mã MỚI (STT_Key nhỏ nhất trong cụm) thay vì tranh
+  // nhau 1 mã.
+  const maCuDaNhan = new Set();
   let soNhomTimThay = 0;
   for (const dsDonTrongNhom of theoNhom.values()) {
     if (dsDonTrongNhom.length < 2) continue; // component chỉ 1 đơn — giữ nguyên mã nhóm hiện có, xem bên dưới
     soNhomTimThay++;
-    // Nếu trong component đã có sẵn ≥1 mã nhóm cũ (đơn từng được gộp nhóm ở lần quét trước, có thể
-    // với đơn KHÔNG nằm trong lô đang chọn) — NHẬP vào nhóm cũ đó (mã nhỏ nhất nếu có nhiều mã khác
-    // nhau) thay vì tạo mã mới, để không "tách" đơn ra khỏi nhóm cũ nó vẫn đang thuộc về.
-    const cacMaCu = dsDonTrongNhom.map(d => d.NHOM_HANG_LOAT).filter(Boolean).sort((a, b) => a.localeCompare(b, 'vi'));
+    // Nếu trong component đã có sẵn ≥1 mã nhóm cũ CHƯA bị cụm nào khác trong lượt này nhận — NHẬP vào
+    // mã cũ đó (nhỏ nhất nếu có nhiều mã khác nhau) thay vì tạo mã mới, để không "tách" đơn ra khỏi
+    // nhóm cũ nó vẫn đang thuộc về. Hết mã cũ khả dụng (đã bị nhận hết, hoặc chưa từng có) thì tạo mã
+    // mới từ STT_Key nhỏ nhất trong cụm.
+    const cacMaCu = dsDonTrongNhom.map(d => d.NHOM_HANG_LOAT).filter(Boolean).filter(ma => !maCuDaNhan.has(ma)).sort((a, b) => a.localeCompare(b, 'vi'));
     const maNhom = cacMaCu[0] || dsDonTrongNhom.map(d => d.STT_Key).sort()[0];
+    maCuDaNhan.add(maNhom);
     dsDonTrongNhom.forEach(d => maNhomTheoSttKey.set(d.STT_Key, maNhom));
   }
 
