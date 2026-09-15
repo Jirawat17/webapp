@@ -103,20 +103,20 @@ function renderNav(user, active) {
   } else if (user.vaiTro === 'san_xuat') {
     // Nhánh riêng cho san_xuat (bổ sung 08/09/2026, theo yêu cầu người dùng) — trước đây dùng chung
     // nhánh else bên dưới với admin/ve_file, chỉ chèn thêm "Đơn của tôi". Giờ san_xuat CHỈ thấy đúng
-    // 5 menu (bớt Thống kê/SL Phôi/Trợ lý/Báo cáo — không phục vụ trực tiếp việc chạy máy hằng ngày),
+    // 4 menu (bớt Thống kê/SL Phôi/Trợ lý/Báo cáo — không phục vụ trực tiếp việc chạy máy hằng ngày),
     // và "Đơn của tôi" lên ĐẦU TIÊN (không còn đứng sau "Đơn hàng") vì đây là màn hình họ cần thấy
     // ngay khi vào — cũng là trang mặc định sau đăng nhập (xem trangChu bên dưới và index.html).
+    // Bỏ "Setting"/"Tracking" khỏi menu (bổ sung 15/09/2026, theo yêu cầu người dùng — CHỈ ẩn menu
+    // điều hướng, KHÔNG khoá route backend: settings.html chỉ có cài đặt giao diện, không có gì
+    // san_xuat cần; nút "IN LABEL"/"MUA TRACKING và IN LABEL" họ vẫn dùng hằng ngày nằm trên
+    // order.html, không đi qua trang Tracking nên không bị ảnh hưởng — xem
+    // docs/superpowers/specs/2026-09-15-thong-ke-khach-hang-va-an-menu-san-xuat-design.md).
     links = [
       { href: '/my-orders.html', label: 'Chạy máy', icon: 'navMyOrders', key: 'my-orders' },
       { href: '/orders.html', label: 'Đơn hàng', icon: 'navOrders', key: 'orders' },
       { href: '/scan.html', label: 'Quét QR', icon: 'navScan', key: 'scan' },
       { href: '/hoat-dong.html', label: 'Lịch sử', icon: 'navActivity', key: 'hoat-dong' },
-      { href: '/settings.html', label: 'Setting', icon: 'navSettings', key: 'settings' },
     ];
-    // "Tracking" cho san_xuat (bổ sung 09/09/2026 lần 2, theo yêu cầu người dùng — mở toàn bộ trang
-    // Tracking cho cả ve_file/san_xuat để dùng 2 nút "IN LABEL"/"MUA TRACKING và IN LABEL", xem
-    // routes/tracking.js) — chèn ngay sau "Quét QR" (index 2), cùng vị trí tương đối với admin.
-    links.splice(3, 0, { href: '/tracking.html', label: 'Tracking', icon: 'navTracking', key: 'tracking' });
   } else {
     links = [
       { href: '/orders.html', label: 'Đơn hàng', icon: 'navOrders', key: 'orders' },

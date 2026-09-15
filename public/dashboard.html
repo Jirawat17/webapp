@@ -38,9 +38,26 @@
   </div>
 
   <div id="tong-so" class="tong-so-the">Đang tải...</div>
+
+  <!-- Bảng theo khách hàng (bổ sung 15/09/2026, xem
+       docs/superpowers/specs/2026-09-15-thong-ke-khach-hang-va-an-menu-san-xuat-design.md) — tách
+       riêng full-width thay vì nằm trong .chart-grid (2 cột ở desktop), vì 8 cột dữ liệu quá chật
+       nếu chỉ chiếm nửa chiều rộng. -->
+  <div class="chart-card" style="margin-bottom:var(--space-4)">
+    <h3 style="margin-top:0">Theo khách hàng</h3>
+    <div class="bang-cuon-ngang">
+      <table class="bang-xem-truoc" id="bang-theo-khach-hang">
+        <thead><tr>
+          <th>Khách hàng</th><th>Tổng đơn</th><th>Đã DÁN TEM</th><th>Chưa DÁN TEM</th>
+          <th>Đã vẽ file</th><th>Đã chạy máy</th><th>Có file, chưa chạy máy</th><th>Chưa có file vẽ</th>
+        </tr></thead>
+        <tbody id="bang-theo-khach-hang-body"></tbody>
+      </table>
+    </div>
+  </div>
+
   <div class="chart-grid">
     <div class="chart-card"><canvas id="chart-trangthai"></canvas></div>
-    <div class="chart-card"><canvas id="chart-khachhang"></canvas></div>
     <div class="chart-card"><canvas id="chart-loai"></canvas></div>
     <div class="chart-card"><canvas id="chart-tuan"></canvas></div>
   </div>
@@ -136,9 +153,28 @@ async function taiThongKe() {
   document.getElementById('tong-so').textContent = `Tổng số đơn: ${stats.tongSoDon}`;
 
   veBieuDo('chart-trangthai', 'pie', 'Theo trạng thái', stats.theoTrangThai);
-  veBieuDo('chart-khachhang', 'bar', 'Theo khách hàng', stats.theoKhachHang);
   veBieuDo('chart-loai', 'bar', 'Theo loại sản phẩm', stats.theoLoaiSanPham);
   veBieuDo('chart-tuan', 'line', 'Đơn theo tuần (theo ngày lên đơn)', stats.theoTuan);
+  veBangTheoKhachHang(stats.theoKhachHangChiTiet);
+}
+
+function veBangTheoKhachHang(danhSach) {
+  const tbody = document.getElementById('bang-theo-khach-hang-body');
+  if (!danhSach || danhSach.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8">Không có dữ liệu.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = danhSach.map(n => `
+    <tr>
+      <td>${escapeHtml(n.khachHang)}</td>
+      <td>${n.tongDon}</td>
+      <td>${n.daDanTem}</td>
+      <td>${n.chuaDanTem}</td>
+      <td>${n.daVeFile}</td>
+      <td>${n.daChayMay}</td>
+      <td>${n.coFileChuaChayMay}</td>
+      <td>${n.chuaCoFileVe}</td>
+    </tr>`).join('');
 }
 
 // Bảng màu đủ tương phản, không chỉ dựa vào màu sắc để phân biệt (mỗi cột/lát đều có nhãn kèm theo)
