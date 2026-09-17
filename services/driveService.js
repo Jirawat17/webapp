@@ -40,17 +40,23 @@ function layFolderIdTuLinkDrive(url) {
   return m ? m[1] : null;
 }
 
+// googleapis (gaxios) mặc định KHÔNG có timeout nào — nếu Google tạm chậm/kết nối đứng giữa chừng,
+// promise treo VÔ THỜI HẠN thay vì throw (bổ sung 17/09/2026, xem
+// docs/superpowers/specs/2026-09-17-sua-loi-treo-quet-hang-loat-design.md — cùng dạng lỗi với MinIO ở
+// storageService.js#getObjectBuffer). Đồng bộ mức với timeout MinIO ở đó.
+const THOI_GIAN_CHO_TOI_DA_MS = 20000;
+
 /**
  * Đọc bytes của 1 file Drive theo ID đã biết sẵn (dùng chung cho cả link file lẫn từng ảnh liệt kê
  * được trong 1 thư mục).
  */
-async function taiFileDriveTheoId(fileId) {
+async function taiFileDriveTheoId(fileId, { timeoutMs = THOI_GIAN_CHO_TOI_DA_MS } = {}) {
   try {
     const drive = await getDriveReadClient();
 
     const res = await drive.files.get(
       { fileId, alt: 'media' },
-      { responseType: 'arraybuffer' }
+      { responseType: 'arraybuffer', timeout: timeoutMs }
     );
 
     return Buffer.from(res.data);
@@ -84,22 +90,25 @@ async function taiAnhTuLinkDrive(url) {
  * phí lượt gọi Drive API + băng thông không cần thiết. Không truyền = giữ nguyên hành vi cũ (tải hết,
  * dùng cho tính năng IN ĐƠN/quét hàng loạt vốn cần đủ ảnh để chọn/so khớp).
  */
-async function layDsAnhTrongThuMucDrive(url, { gioiHan } = {}) {
+async function layDsAnhTrongThuMucDrive(url, { gioiHan, timeoutMs = THOI_GIAN_CHO_TOI_DA_MS } = {}) {
   const folderId = layFolderIdTuLinkDrive(url);
   if (!folderId) return null;
 
   try {
     const drive = await getDriveReadClient();
-    const res = await drive.files.list({
-      q: `'${folderId}' in parents and mimeType contains 'image/' and trashed = false`,
-      fields: 'files(id, name)',
-      orderBy: 'name',
-      pageSize: 50,
-    });
+    const res = await drive.files.list(
+      {
+        q: `'${folderId}' in parents and mimeType contains 'image/' and trashed = false`,
+        fields: 'files(id, name)',
+        orderBy: 'name',
+        pageSize: 50,
+      },
+      { timeout: timeoutMs }
+    );
 
     let files = res.data.files || [];
     if (gioiHan) files = files.slice(0, gioiHan);
-    const buffers = await Promise.all(files.map(f => taiFileDriveTheoId(f.id)));
+    const buffers = await Promise.all(files.map(f => taiFileDriveTheoId(f.id, { timeoutMs })));
     return buffers.filter(Boolean);
   } catch (err) {
     console.error('[Drive] Không liệt kê được thư mục:', url, '-', err.message);
@@ -112,4 +121,5 @@ module.exports = {
   layFolderIdTuLinkDrive,
   taiAnhTuLinkDrive,
   layDsAnhTrongThuMucDrive,
+  taiFileDriveTheoId, // export thêm để test được trực tiếp phần xử lý timeout/lỗi — xem test-timeout-treo-tai-anh.js
 };

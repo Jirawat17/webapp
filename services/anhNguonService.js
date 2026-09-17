@@ -53,10 +53,7 @@ async function taiAnh(url) {
   const objectKey = storageService.proxyUrlToObjectKey(url);
   if (objectKey) {
     try {
-      const result = await storageService.getObjectStream(objectKey);
-      const chunks = [];
-      for await (const chunk of result.Body) chunks.push(chunk);
-      return Buffer.concat(chunks);
+      return await storageService.getObjectBuffer(objectKey);
     } catch (err) {
       console.error('[MinIO] Không tải được ảnh:', url, '-', err.message);
       return null;

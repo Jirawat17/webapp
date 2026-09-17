@@ -65,6 +65,37 @@ async function getObjectStream(objectKey) {
   return s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: objectKey }));
 }
 
+// S3Client mặc định KHÔNG có timeout nào áp dụng cho send() hay đọc body — nếu MinIO (tự host trên
+// NAS) chậm/đứng kết nối giữa chừng, promise treo VÔ THỜI HẠN, không throw, không resolve (bổ sung
+// 17/09/2026, xem docs/superpowers/specs/2026-09-17-sua-loi-treo-quet-hang-loat-design.md). Đồng bộ
+// mức với anhNguonService.js#taiUrlTho (15s cho URL thường) + chút biên cho ảnh thiết kế có thể nặng.
+const THOI_GIAN_CHO_TOI_DA_MS = 20000;
+
+/**
+ * Tải TOÀN BỘ nội dung 1 object MinIO thành Buffer, có giới hạn thời gian chờ — khác getObjectStream
+ * (trả thẳng stream để pipe() thẳng cho response HTTP ở routes/photos.js, KHÔNG đổi hàm đó để không
+ * ảnh hưởng luồng xem ảnh đang chạy tốt). Dùng cho chỗ cần Buffer đầy đủ trước khi xử lý tiếp (vd tính
+ * hash ảnh trong vòng lặp quét hàng loạt hàng trăm đơn) — 1 lần treo ở đây là kẹt cả lô. Dùng
+ * AbortController tự huỷ sau timeoutMs, bọc CẢ 2 giai đoạn (gửi yêu cầu + đọc xong body) trong cùng 1
+ * hạn chót — huỷ thật sự (đóng kết nối), không chỉ ngừng chờ.
+ */
+async function getObjectBuffer(objectKey, { timeoutMs = THOI_GIAN_CHO_TOI_DA_MS } = {}) {
+  requireConfig();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const result = await s3.send(
+      new GetObjectCommand({ Bucket: BUCKET, Key: objectKey }),
+      { abortSignal: controller.signal }
+    );
+    const chunks = [];
+    for await (const chunk of result.Body) chunks.push(chunk);
+    return Buffer.concat(chunks);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /**
  * URL tạm (presigned) để đọc ảnh riêng tư — mặc định hết hạn sau 3600s.
  */
@@ -115,6 +146,7 @@ module.exports = {
   taoObjectKeyDonHang,
   uploadImageBuffer,
   getObjectStream,
+  getObjectBuffer,
   taoPresignedUrl,
   deleteObject,
   listObjectKeys,
