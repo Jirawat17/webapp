@@ -10,7 +10,11 @@ const MUC_THU_TU = { VANG: 1, CAM: 2, DO: 3 };
 
 async function chayKiemTraCanhBao() {
   try {
-    const { headers, rows } = await orderService.getAll();
+    // {fresh:true} bắt buộc (bổ sung 17/09/2026, xem
+    // docs/superpowers/specs/2026-09-17-sua-loi-ghi-lech-dong-vstack-design.md) — Don_Hang_ALL ghép
+    // từ công thức QUERY/VSTACK sống, vị trí dòng (_row) dùng để ghi bên dưới cần chắc chắn mới nhất
+    // thay vì có thể dính cache tới 10 giây cũ.
+    const { headers, rows } = await orderService.getAll({ fresh: true });
     const banDoTenKH = await layBanDoTenKhachHang(); // 1 lần cho cả lượt quét, tránh gọi lặp lại mỗi đơn
     let soCanhBaoDaGui = 0;
 

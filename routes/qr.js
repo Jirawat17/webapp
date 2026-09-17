@@ -273,6 +273,10 @@ router.post('/kich-ban/:scenarioId/xac-nhan-hang-loat', async (req, res) => {
   // sheet). Vẫn fresh hơn HẲN so với lúc quét (kiem-tra dùng cache) — đúng mục đích chống ghi đè ban
   // đầu của bước này, chỉ không còn tuyệt đối mới nhất cho TỪNG mã riêng lẻ trong cùng 1 lô.
   const { headers, banDoTheoKey } = await orderService.getManyByKeys(sttKeys, { fresh: true });
+  // Tra lại số dòng vật lý MỚI NHẤT ngay TRƯỚC khi ghi cả lô (bổ sung 17/09/2026, xem
+  // docs/superpowers/specs/2026-09-17-sua-loi-ghi-lech-dong-vstack-design.md) — Don_Hang_ALL ghép từ
+  // công thức QUERY/VSTACK sống, banDoTheoKey ở trên có thể đã đọc từ 1 lúc trước.
+  const soDongMoiNhat = await orderService.layLaiSoDongMoiNhat(sttKeys);
 
   for (const sttKey of sttKeys) {
     try {
@@ -284,6 +288,11 @@ router.post('/kich-ban/:scenarioId/xac-nhan-hang-loat', async (req, res) => {
       if (!row || !orderService.coQuyenTheoXuong(user, row)) {
         loi.push({ sttKey, lyDo: 'Không còn tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
         ghiKhongCho(ghiNhatKyQuetHangLoat({ nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey, trangThaiCu: '', trangThaiMoi: '', ketQua: 'LOI_XAC_NHAN', ghiChu: 'Không tìm thấy khi xác nhận' }));
+        continue;
+      }
+      if (!soDongMoiNhat.has(sttKey)) {
+        loi.push({ sttKey, lyDo: 'Đơn vừa đổi vị trí trong Sheet lúc chuẩn bị ghi, vui lòng thử lại' });
+        ghiKhongCho(ghiNhatKyQuetHangLoat({ nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey, trangThaiCu: row.TRANG_THAI_XUONG, trangThaiMoi: '', ketQua: 'LOI_XAC_NHAN', ghiChu: 'Đơn đổi vị trí trong Sheet trước khi kịp ghi' }));
         continue;
       }
       if (donDaKetThuc(row)) {
@@ -301,7 +310,7 @@ router.post('/kich-ban/:scenarioId/xac-nhan-hang-loat', async (req, res) => {
         [scenario.column]: scenario.setStatus,
         NguoiCapNhatCuoi: user.ten,
         ThoiGianCapNhatCuoi: new Date().toISOString(),
-      }, user, { donDaDoc: { headers, row } }); // đã đọc thật ở trên, khỏi đọc lại lần nữa — mỗi mã quét trong lượt
+      }, user, { donDaDoc: { headers, row }, soDongMoiNhat: soDongMoiNhat.get(sttKey) }); // đã đọc thật ở trên, khỏi đọc lại lần nữa — mỗi mã quét trong lượt
       // xác nhận hàng loạt trước đây tốn 2 lượt đọc toàn bộ tab Don_Hang_ALL, nay chỉ còn 1
 
       thanhCong.push(sttKey);

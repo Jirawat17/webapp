@@ -22,6 +22,24 @@ async function getByKey(sttKey, opts) {
   return { headers, row };
 }
 
+// Tra lại số dòng vật lý MỚI NHẤT cho từng STT_Key — bổ sung 17/09/2026 sau khi xác nhận Don_Hang_ALL
+// KHÔNG phải sheet tĩnh: cột gốc (STT_Key, tên khách, link ảnh...) là công thức QUERY(VSTACK(...)) ghép
+// từ ~19 sheet con theo mã khách/lô, ORDER BY 1 cột ngày — vị trí dòng của 1 đơn có thể đổi bất cứ lúc
+// nào công thức tính lại, kể cả khi không ai đụng trực tiếp vào Don_Hang_ALL (chỉ cần 1 sheet con bất kỳ
+// đổi). Mọi thao tác GHI hàng loạt (đọc 1 lần rồi lặp ghi nhiều đơn) PHẢI gọi hàm này ĐÚNG 1 LẦN, ngay
+// TRƯỚC khi bắt đầu vòng lặp ghi (không phải trước bước đọc dữ liệu để quyết định nội dung ghi — bước
+// đó có thể đã diễn ra một lúc trước, xem docs/superpowers/specs/2026-09-17-sua-loi-ghi-lech-dong-vstack-design.md),
+// rồi dùng số dòng lấy được ở đây (không dùng row._row đã "nhớ" từ lượt đọc cũ) khi gọi update() —
+// truyền qua tuyChon.soDongMoiNhat. STT_Key nào không còn thấy (hiếm — vừa bị lọc khỏi công thức) đơn
+// giản là KHÔNG có mặt trong Map trả về, để nơi gọi tự quyết định báo lỗi cho đúng đơn đó thay vì đoán.
+async function layLaiSoDongMoiNhat(sttKeys) {
+  const canTra = new Set(sttKeys);
+  const { rows } = await getAll({ fresh: true });
+  const banDo = new Map();
+  rows.forEach(r => { if (canTra.has(r[KEY_COL])) banDo.set(r[KEY_COL], r._row); });
+  return banDo;
+}
+
 // Đọc TOÀN BỘ sheet ĐÚNG 1 LẦN rồi tra theo danh sách sttKeys — dùng cho các thao tác HÀNG LOẠT
 // (chuyển trạng thái, chỉ định người chạy máy/vẽ file, gán Xưởng, xác nhận quét hàng loạt, mua
 // tracking/in label hàng loạt...). Trước đây mỗi đơn trong lô tự gọi getByKey(sttKey, {fresh:true})
@@ -272,7 +290,15 @@ async function update(sttKey, updates, user, tuyChon = {}) {
 
   kiemTraTinhHopLy(row, updatesDaTinh); // kiểm tra SAU khi đã tính tự động, để không báo nhầm khi chính việc tự động hoá làm cho tổ hợp trở nên hợp lệ
 
-  await updateCells(TAB, headers, row._row, updatesDaTinh); // tự xoá cache của tab sau khi ghi (xem sheetsService)
+  // Số dòng THẬT SỰ dùng để ghi — mặc định lấy từ `row` (đúng hành vi cũ, an toàn cho gọi đơn lẻ vì
+  // đọc-rồi-ghi cách nhau cực ngắn, trong cùng 1 lần gọi hàm này). Khi gọi từ 1 THAO TÁC HÀNG LOẠT
+  // (đọc 1 lần rồi lặp ghi nhiều đơn, dùng donDaDoc từ lượt đọc đó — có thể cách lúc ghi vài giây tới
+  // vài phút), BẮT BUỘC truyền kèm tuyChon.soDongMoiNhat (tra lại ngay trước khi ghi, xem
+  // layLaiSoDongMoiNhat ở trên) — nếu không, số dòng "nhớ" từ trước có thể không còn đúng đơn này nữa
+  // (Don_Hang_ALL ghép từ công thức QUERY/VSTACK sống, xem
+  // docs/superpowers/specs/2026-09-17-sua-loi-ghi-lech-dong-vstack-design.md).
+  const soDongDeGhi = tuyChon.soDongMoiNhat !== undefined ? tuyChon.soDongMoiNhat : row._row;
+  await updateCells(TAB, headers, soDongDeGhi, updatesDaTinh); // tự xoá cache của tab sau khi ghi (xem sheetsService)
 
   // Trừ kho phôi (tab Ton_Kho_Phoi) khi đơn VỪA chuyển sang "Đã lấy phôi" — không hoàn kho khi chuyển
   // ngược lại (xem taiSanService.truKhoTheoDon). Chạy SAU khi ghi Sheet đơn hàng đã thành công; lỗi ở
@@ -370,6 +396,6 @@ function laUuTien(row) {
 }
 
 module.exports = {
-  TAB, KEY_COL, getAll, getByKey, getManyByKeys, update, filterForRole, ganTenKhachHang, tieuDeSanPham, danhSachViTriTheu,
+  TAB, KEY_COL, getAll, getByKey, getManyByKeys, layLaiSoDongMoiNhat, update, filterForRole, ganTenKhachHang, tieuDeSanPham, danhSachViTriTheu,
   DANH_SACH_XUONG, locTheoXuong, coQuyenTheoXuong, laUuTien,
 };

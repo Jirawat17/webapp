@@ -261,6 +261,11 @@ router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
   // Đọc TOÀN BỘ sheet ĐÚNG 1 LẦN cho cả lô (bổ sung 13/09/2026, xem orderService.js#getManyByKeys) —
   // trước đây mỗi đơn trong lô tự đọc thật riêng, N đơn = N lượt đọc toàn bộ sheet.
   const { headers, banDoTheoKey } = await orderService.getManyByKeys(sttKeys, { fresh: true });
+  // Tra lại số dòng vật lý MỚI NHẤT ngay TRƯỚC khi bắt đầu ghi cả lô (bổ sung 17/09/2026, xem
+  // docs/superpowers/specs/2026-09-17-sua-loi-ghi-lech-dong-vstack-design.md) — Don_Hang_ALL ghép từ
+  // công thức QUERY/VSTACK sống, `banDoTheoKey` ở trên có thể đã đọc từ 1 lúc trước nên vị trí dòng
+  // ("_row") của 1 đơn có thể đã đổi; KHÔNG dùng row._row cũ (trong donDaDoc) để ghi.
+  const soDongMoiNhat = await orderService.layLaiSoDongMoiNhat(sttKeys);
 
   for (const sttKey of sttKeys) {
     try {
@@ -273,13 +278,17 @@ router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
         loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
         continue;
       }
+      if (!soDongMoiNhat.has(sttKey)) {
+        loi.push({ sttKey, lyDo: 'Đơn vừa đổi vị trí trong Sheet lúc chuẩn bị ghi, vui lòng thử lại' });
+        continue;
+      }
 
       const trangThaiCu = row[cot];
       const ketQuaUpdate = await orderService.update(sttKey, {
         [cot]: trangThaiMoi,
         NguoiCapNhatCuoi: user.ten,
         ThoiGianCapNhatCuoi: new Date().toISOString(),
-      }, user, { donDaDoc: { headers, row } }); // đã đọc thật ở trên (cả lô), khỏi đọc lại lần nữa (xem orderService.update)
+      }, user, { donDaDoc: { headers, row }, soDongMoiNhat: soDongMoiNhat.get(sttKey) }); // đã đọc thật ở trên (cả lô), khỏi đọc lại lần nữa (xem orderService.update)
 
       thanhCong.push(sttKey);
       ghiLog({
@@ -328,12 +337,19 @@ router.post('/chi-dinh-nguoi-chay-may', async (req, res) => {
 
   // Đọc TOÀN BỘ sheet ĐÚNG 1 LẦN cho cả lô (bổ sung 13/09/2026, xem orderService.js#getManyByKeys).
   const { headers, banDoTheoKey } = await orderService.getManyByKeys(sttKeys, { fresh: true });
+  // Tra lại số dòng vật lý MỚI NHẤT ngay TRƯỚC khi ghi cả lô (bổ sung 17/09/2026, xem
+  // docs/superpowers/specs/2026-09-17-sua-loi-ghi-lech-dong-vstack-design.md).
+  const soDongMoiNhat = await orderService.layLaiSoDongMoiNhat(sttKeys);
 
   for (const sttKey of sttKeys) {
     try {
       const row = banDoTheoKey.get(sttKey);
       if (!row) {
         loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
+        continue;
+      }
+      if (!soDongMoiNhat.has(sttKey)) {
+        loi.push({ sttKey, lyDo: 'Đơn vừa đổi vị trí trong Sheet lúc chuẩn bị ghi, vui lòng thử lại' });
         continue;
       }
 
@@ -343,7 +359,7 @@ router.post('/chi-dinh-nguoi-chay-may', async (req, res) => {
         GHI_CHU_CHAY_MAY: 'Admin chỉ định',
         NguoiCapNhatCuoi: user.ten,
         ThoiGianCapNhatCuoi: new Date().toISOString(),
-      }, user, { donDaDoc: { headers, row } });
+      }, user, { donDaDoc: { headers, row }, soDongMoiNhat: soDongMoiNhat.get(sttKey) });
 
       thanhCong.push(sttKey);
       ghiLog({
@@ -389,12 +405,19 @@ router.post('/chi-dinh-nguoi-ve-file', async (req, res) => {
 
   // Đọc TOÀN BỘ sheet ĐÚNG 1 LẦN cho cả lô (bổ sung 13/09/2026, xem orderService.js#getManyByKeys).
   const { headers, banDoTheoKey } = await orderService.getManyByKeys(sttKeys, { fresh: true });
+  // Tra lại số dòng vật lý MỚI NHẤT ngay TRƯỚC khi ghi cả lô (bổ sung 17/09/2026, xem
+  // docs/superpowers/specs/2026-09-17-sua-loi-ghi-lech-dong-vstack-design.md).
+  const soDongMoiNhat = await orderService.layLaiSoDongMoiNhat(sttKeys);
 
   for (const sttKey of sttKeys) {
     try {
       const row = banDoTheoKey.get(sttKey);
       if (!row) {
         loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
+        continue;
+      }
+      if (!soDongMoiNhat.has(sttKey)) {
+        loi.push({ sttKey, lyDo: 'Đơn vừa đổi vị trí trong Sheet lúc chuẩn bị ghi, vui lòng thử lại' });
         continue;
       }
 
@@ -404,7 +427,7 @@ router.post('/chi-dinh-nguoi-ve-file', async (req, res) => {
         GHI_CHU_VE_FILE: 'Admin chỉ định',
         NguoiCapNhatCuoi: user.ten,
         ThoiGianCapNhatCuoi: new Date().toISOString(),
-      }, user, { donDaDoc: { headers, row } });
+      }, user, { donDaDoc: { headers, row }, soDongMoiNhat: soDongMoiNhat.get(sttKey) });
 
       thanhCong.push(sttKey);
       ghiLog({
@@ -445,6 +468,9 @@ router.post('/gan-xuong', async (req, res) => {
 
   // Đọc TOÀN BỘ sheet ĐÚNG 1 LẦN cho cả lô (bổ sung 13/09/2026, xem orderService.js#getManyByKeys).
   const { headers, banDoTheoKey } = await orderService.getManyByKeys(sttKeys, { fresh: true });
+  // Tra lại số dòng vật lý MỚI NHẤT ngay TRƯỚC khi ghi cả lô (bổ sung 17/09/2026, xem
+  // docs/superpowers/specs/2026-09-17-sua-loi-ghi-lech-dong-vstack-design.md).
+  const soDongMoiNhat = await orderService.layLaiSoDongMoiNhat(sttKeys);
 
   for (const sttKey of sttKeys) {
     try {
@@ -453,12 +479,16 @@ router.post('/gan-xuong', async (req, res) => {
         loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
         continue;
       }
+      if (!soDongMoiNhat.has(sttKey)) {
+        loi.push({ sttKey, lyDo: 'Đơn vừa đổi vị trí trong Sheet lúc chuẩn bị ghi, vui lòng thử lại' });
+        continue;
+      }
 
       await orderService.update(sttKey, {
         XUONG: xuong || '',
         NguoiCapNhatCuoi: user.ten,
         ThoiGianCapNhatCuoi: new Date().toISOString(),
-      }, user, { donDaDoc: { headers, row } });
+      }, user, { donDaDoc: { headers, row }, soDongMoiNhat: soDongMoiNhat.get(sttKey) });
 
       thanhCong.push(sttKey);
       ghiLog({
@@ -500,6 +530,9 @@ router.post('/danh-dau-uu-tien', async (req, res) => {
 
   // Đọc TOÀN BỘ sheet ĐÚNG 1 LẦN cho cả lô (xem orderService.js#getManyByKeys).
   const { headers, banDoTheoKey } = await orderService.getManyByKeys(sttKeys, { fresh: true });
+  // Tra lại số dòng vật lý MỚI NHẤT ngay TRƯỚC khi ghi cả lô (bổ sung 17/09/2026, xem
+  // docs/superpowers/specs/2026-09-17-sua-loi-ghi-lech-dong-vstack-design.md).
+  const soDongMoiNhat = await orderService.layLaiSoDongMoiNhat(sttKeys);
 
   for (const sttKey of sttKeys) {
     try {
@@ -512,12 +545,16 @@ router.post('/danh-dau-uu-tien', async (req, res) => {
         loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
         continue;
       }
+      if (!soDongMoiNhat.has(sttKey)) {
+        loi.push({ sttKey, lyDo: 'Đơn vừa đổi vị trí trong Sheet lúc chuẩn bị ghi, vui lòng thử lại' });
+        continue;
+      }
 
       await orderService.update(sttKey, {
         DON_UU_TIEN: giaTriMoi,
         NguoiCapNhatCuoi: user.ten,
         ThoiGianCapNhatCuoi: new Date().toISOString(),
-      }, user, { donDaDoc: { headers, row } });
+      }, user, { donDaDoc: { headers, row }, soDongMoiNhat: soDongMoiNhat.get(sttKey) });
 
       thanhCong.push(sttKey);
       ghiLog({
@@ -716,8 +753,11 @@ async function tinhLaiNhomHangLoat(sttKeySet, nguong) {
   // Đọc lại CẢ headers lẫn rows ở đây (không nhận headers truyền vào từ lúc job bắt đầu) — bước gộp
   // nhóm này có thể chạy sau khi vòng lặp tính hash phía trên đã kéo dài, cấu trúc cột trong Sheet có
   // thể đã đổi trong lúc đó; ghi bằng headers cũ có thể ghi nhầm cột (xem quy ước tương tự ở
-  // services/orderService.js update() — luôn đọc thật ngay trước khi ghi).
-  const { headers, rows: tatCaDon } = await orderService.getAll();
+  // services/orderService.js update() — luôn đọc thật ngay trước khi ghi). Bắt buộc {fresh:true}
+  // (bổ sung 17/09/2026, xem docs/superpowers/specs/2026-09-17-sua-loi-ghi-lech-dong-vstack-design.md)
+  // — bản không fresh có thể dính cache tới 10 giây cũ; Don_Hang_ALL ghép từ công thức QUERY/VSTACK
+  // sống nên vị trí dòng (_row) của 1 đơn cần chắc chắn mới nhất ngay trước khi dùng để ghi bên dưới.
+  const { headers, rows: tatCaDon } = await orderService.getAll({ fresh: true });
   const coHash = tatCaDon.filter(d => sttKeySet.has(d.STT_Key) && d.HASH_ANH_MAU);
   const theoNhom = gomNhomCompleteLinkage(coHash, nguong);
 
@@ -880,16 +920,23 @@ router.post('/quet-hang-loat/bat-dau', async (req, res) => {
         const dsMau = await taiDsAnh(anhSoSanhCuaDon(don));
         const hash = dsMau[0] ? await tinhHashAnh(dsMau[0]) : null;
         if (hash) {
-          // Đọc lại headers ngay trước khi ghi (không dùng `headers` chụp từ đầu job) — vòng lặp này
-          // có thể chạy nhiều phút cho lô lớn, cấu trúc cột trong Sheet có thể đổi giữa chừng (đặc
-          // biệt dễ xảy ra ở lần dùng đầu tiên — người dùng vừa tự thêm 2 cột HASH_ANH_MAU/
-          // NHOM_HANG_LOAT xong là bấm quét ngay). orderService.getAll() (không truyền fresh) dùng
-          // cache 10 giây (services/sheetsService.js readTabCached) nên gần như miễn phí, không phải
-          // 1 lượt gọi mạng mới cho mỗi đơn — cùng quy ước "đọc thật ngay trước khi ghi" đã áp dụng ở
-          // tinhLaiNhomHangLoat() bên dưới và services/orderService.js update().
-          const { headers: headersHienTai } = await orderService.getAll();
-          await updateCells(orderService.TAB, headersHienTai, don._row, { HASH_ANH_MAU: hash });
-          soTinhDuocHash++;
+          // Đọc lại headers VÀ số dòng ngay trước khi ghi (không dùng `headers`/`don._row` chụp từ đầu
+          // job) — vòng lặp này có thể chạy nhiều phút cho lô lớn. Don_Hang_ALL ghép từ công thức
+          // QUERY(VSTACK(...)) SỐNG (đã xác nhận với người dùng) — vị trí dòng của 1 đơn có thể đổi bất
+          // cứ lúc nào công thức tính lại, kể cả không ai đụng trực tiếp vào Don_Hang_ALL (bổ sung
+          // 17/09/2026, sau khi phát hiện 2 đơn khác hẳn nhau bị ghi trùng hash do đúng lỗi này — xem
+          // docs/superpowers/specs/2026-09-17-sua-loi-ghi-lech-dong-vstack-design.md). Trước đây CHỈ lấy
+          // lại `headers` từ lượt đọc này mà vẫn dùng `don._row` cũ — không đủ, phải lấy lại CẢ số dòng.
+          // orderService.getAll() (không truyền fresh) dùng cache 10 giây nên gần như miễn phí, không
+          // tốn thêm 1 lượt gọi mạng nào so với trước.
+          const { headers: headersHienTai, rows: rowsHienTai } = await orderService.getAll();
+          const donHienTai = rowsHienTai.find(r => r.STT_Key === don.STT_Key);
+          if (!donHienTai) {
+            donLoiHash.push({ sttKey: don.STT_Key, lyDo: 'Đơn không còn thấy trong Don_Hang_ALL lúc chuẩn bị ghi (có thể vừa bị xoá/lọc)' });
+          } else {
+            await updateCells(orderService.TAB, headersHienTai, donHienTai._row, { HASH_ANH_MAU: hash });
+            soTinhDuocHash++;
+          }
         } else {
           donLoiHash.push({
             sttKey: don.STT_Key,
