@@ -1,5 +1,4 @@
 const orderService = require('./orderService');
-const alertService = require('./alertService');
 const logService = require('./logService');
 const { readTabCached } = require('./sheetsService');
 const { TRANG_THAI_KET_THUC, TRANG_THAI_DA_SHIP } = require('../data/pipelineTinhTrang');
@@ -7,9 +6,14 @@ const { TRANG_THAI_KET_THUC, TRANG_THAI_DA_SHIP } = require('../data/pipelineTin
 // Trung tâm hành động (bổ sung 14/09/2026, xem
 // docs/superpowers/specs/2026-09-14-trung-tam-hanh-dong-design.md) — gom 4 loại "việc cần xử lý" cho
 // admin, tất cả tính trực tiếp từ dữ liệu/hàm ĐÃ CÓ (không thêm cột Sheet mới nào).
+//
+// CẬP NHẬT 18/09/2026, theo yêu cầu người dùng: đổi thứ tự hiển thị + đổi bộ 4 mục — bỏ hẳn "Đơn cảnh
+// báo trễ hạn" (mức DO/CAM/VÀNG, alertService), thay bằng "Đơn LỖI SẢN XUẤT CẦN LÀM LẠI"; nới 2 mốc
+// thời gian 12h/24h lên cùng 48h. Thứ tự hiển thị THẬT do public/trung-tam-hanh-dong.html quyết định
+// (thứ tự field trả về ở đây không ảnh hưởng) — sửa cả 2 nơi cho khớp.
 const TAB_LOGS_TRACKING = 'LogsTracking'; // trùng tên tab với trackingAutoService.js
-const GIO_TINH_HUY_GAN_DAY = 12;
-const GIO_TINH_LOI_TRACKING_GAN_DAY = 24;
+const GIO_TINH_HUY_GAN_DAY = 48;
+const GIO_TINH_LOI_TRACKING_GAN_DAY = 48;
 
 function trongVongGio(thoiGianStr, soGio) {
   const t = new Date(thoiGianStr);
@@ -24,16 +28,14 @@ async function layDonHuyGanDay() {
     .sort((a, b) => new Date(b.thoiGian) - new Date(a.thoiGian));
 }
 
-function layDonCanhBao(rows) {
-  const ketQua = { DO: [], CAM: [], VANG: [] };
-  for (const don of rows) {
-    const muc = alertService.tinhMucCanhBao(don);
-    if (muc) {
-      ketQua[muc].push({ sttKey: don.STT_Key, trangThai: don.TRANG_THAI_XUONG, soNgay: alertService.soNgayTu(don.NGAY_LEN_DON) });
-    }
-  }
-  Object.values(ketQua).forEach(ds => ds.sort((a, b) => b.soNgay - a.soNgay));
-  return ketQua;
+// Đơn "LỖI SẢN XUẤT CẦN LÀM LẠI" — cần ai đó chủ động lấy lại phôi/vẽ lại file trước khi đưa lại vào
+// dây chuyền (bổ sung 18/09/2026, theo yêu cầu người dùng, thay cho mục "Đơn cảnh báo trễ hạn" cũ).
+// Kèm trạng thái phôi/vẽ file hiện tại — hữu ích để biết đơn đã được reset lại chưa hay còn nguyên như
+// lúc lỗi.
+function layDonLoiSanXuat(rows) {
+  return rows
+    .filter(don => don.TRANG_THAI_XUONG === 'LỖI SẢN XUẤT CẦN LÀM LẠI')
+    .map(don => ({ sttKey: don.STT_Key, trangThaiPhoi: don.TRANG_THAI_PHOI, trangThaiVeFile: don.TRANG_THAI_VE_FILE }));
 }
 
 // "Chưa xử lý" = ưu tiên NHƯNG chưa xong việc (chưa ship/chưa ở trạng thái kết thúc) — cùng 2 mốc
@@ -66,7 +68,7 @@ async function layTrungTamHanhDong() {
   const [huyGanDay, loiTrackingGke] = await Promise.all([layDonHuyGanDay(), layLoiTrackingGanDay()]);
   return {
     huyGanDay,
-    canhBao: layDonCanhBao(rows),
+    loiSanXuat: layDonLoiSanXuat(rows),
     uuTienChuaXuLy: layDonUuTienChuaXuLy(rows),
     loiTrackingGke,
   };

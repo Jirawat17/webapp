@@ -149,7 +149,7 @@ router.get('/', async (req, res) => {
 
   const {
     trangThai, trangThaiPhoi, trangThaiVeFile, kh, tuNgay, denNgay,
-    loai, kichThuoc, mauSac, hangVanChuyen, canhBao, xuong, uuTien, sapXep, hangLoat, nguoiVanHanh,
+    loai, kichThuoc, mauSac, hangVanChuyen, quocGiaTracking, tinhTrang, canhBao, xuong, uuTien, sapXep, hangLoat, nguoiVanHanh,
     canVeFile, nguoiVeFile, timDonHangLoat,
   } = req.query;
   if (trangThai) list = list.filter(r => khopGiaTriLoc(r.TRANG_THAI_XUONG, trangThai));
@@ -173,6 +173,11 @@ router.get('/', async (req, res) => {
   if (kichThuoc) list = list.filter(r => r.KICH_THUOC === kichThuoc);
   if (mauSac) list = list.filter(r => r.MAU_SAC === mauSac);
   if (hangVanChuyen) list = list.filter(r => r.HANG_VAN_CHUYEN === hangVanChuyen);
+  // QUOC_GIA_TRACKING/TINH_TRANG (bổ sung 18/09/2026, theo yêu cầu người dùng) — cả 2 đều là cột RAW
+  // (đọc thẳng từ Sheet, xem services/orderService.js), cùng khuôn lọc CHÍNH XÁC CHUỖI với loai/
+  // kichThuoc/mauSac/hangVanChuyen ở trên.
+  if (quocGiaTracking) list = list.filter(r => r.QUOC_GIA_TRACKING === quocGiaTracking);
+  if (tinhTrang) list = list.filter(r => r.TINH_TRANG === tinhTrang);
   if (canhBao) list = list.filter(r => r.CanhBao === canhBao);
   // Lọc theo Xưởng/Ưu tiên (bổ sung 13/09/2026, theo yêu cầu người dùng — chỉ hiện ô lọc này ở giao
   // diện cho admin, xem public/orders.html) — KHÔNG cần chặn riêng ở đây cho vai trò khác: san_xuat/
@@ -199,7 +204,10 @@ router.get('/', async (req, res) => {
     const tuKhoa = kh.toLowerCase();
     list = list.filter(r =>
       (r.MA_KHACH_HANG || '').toLowerCase().includes(tuKhoa) ||
-      (r.STT_Key || '').toLowerCase().includes(tuKhoa)
+      (r.STT_Key || '').toLowerCase().includes(tuKhoa) ||
+      // Cho tìm theo mã Tracking (cột RAW TRACKING_ID2 — khác TRACKING_ID app tự ghi) — bổ sung
+      // 18/09/2026, theo yêu cầu người dùng.
+      (r.TRACKING_ID2 || '').toLowerCase().includes(tuKhoa)
     );
   }
   if (tuNgay || denNgay) {

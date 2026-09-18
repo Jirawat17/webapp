@@ -62,8 +62,8 @@
         </select>
       </div>
       <div class="truong truong-rong">
-        <label for="loc-kh">Tìm theo tên đơn / mã KH</label>
-        <input id="loc-kh" placeholder="STT_Key hoặc mã khách hàng">
+        <label for="loc-kh">Tìm theo tên đơn / mã KH / mã Tracking</label>
+        <input id="loc-kh" placeholder="STT_Key, mã khách hàng hoặc mã Tracking">
       </div>
       <div class="truong truong-ngay">
         <label for="loc-tu-ngay">Từ ngày</label>
@@ -133,6 +133,17 @@
       <div class="truong">
         <label for="loc-hang-van-chuyen">Hãng vận chuyển</label>
         <select id="loc-hang-van-chuyen"><option value="">Tất cả hãng vận chuyển</option></select>
+      </div>
+      <!-- Lọc theo QUOC_GIA_TRACKING/TINH_TRANG (bổ sung 18/09/2026, theo yêu cầu người dùng) — 2 cột
+           RAW (đọc từ Sheet, xem services/orderService.js), cùng khuôn với Loại/Màu sắc/Hãng vận
+           chuyển ở trên: đổ động theo giá trị THẬT đang có trong dữ liệu, không hardcode. -->
+      <div class="truong">
+        <label for="loc-quoc-gia-tracking">Quốc gia Tracking</label>
+        <select id="loc-quoc-gia-tracking"><option value="">Tất cả quốc gia</option></select>
+      </div>
+      <div class="truong">
+        <label for="loc-tinh-trang">Tình trạng</label>
+        <select id="loc-tinh-trang"><option value="">Tất cả tình trạng</option></select>
       </div>
       <button type="button" class="btn-hanh-dong phu" id="btn-xoa-loc" onclick="xoaTatCaLoc()">Xoá bộ lọc</button>
     </div>
@@ -257,6 +268,8 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   document.getElementById('loc-kich-thuoc').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-mau-sac').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-hang-van-chuyen').onchange = () => { boChonTatCaDon(); taiDon(); };
+  document.getElementById('loc-quoc-gia-tracking').onchange = () => { boChonTatCaDon(); taiDon(); };
+  document.getElementById('loc-tinh-trang').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-kh').oninput = debounce(() => { boChonTatCaDon(); taiDon(); }, 400);
   document.getElementById('loc-tu-ngay').onchange = () => {
     const denNgay = document.getElementById('loc-den-ngay');
@@ -427,7 +440,7 @@ function batTatPanel(idPanelMuonMo) {
   }
 }
 
-const CAC_O_LOC = ['loc-trang-thai', 'loc-phoi', 'loc-ve-file', 'loc-canh-bao', 'loc-xuong', 'loc-uu-tien', 'loc-don-hang-loat', 'loc-loai', 'loc-kich-thuoc', 'loc-hang-van-chuyen', 'loc-mau-sac', 'loc-kh', 'loc-tu-ngay', 'loc-den-ngay'];
+const CAC_O_LOC = ['loc-trang-thai', 'loc-phoi', 'loc-ve-file', 'loc-canh-bao', 'loc-xuong', 'loc-uu-tien', 'loc-don-hang-loat', 'loc-loai', 'loc-kich-thuoc', 'loc-hang-van-chuyen', 'loc-mau-sac', 'loc-quoc-gia-tracking', 'loc-tinh-trang', 'loc-kh', 'loc-tu-ngay', 'loc-den-ngay'];
 
 function xoaTatCaLoc() {
   CAC_O_LOC.forEach(id => { document.getElementById(id).value = ''; });
@@ -460,6 +473,8 @@ function capNhatCacBoLocDong(list) {
   domLaiOChon('loc-kich-thuoc', 'Tất cả kích thước', list.map(o => o.KICH_THUOC));
   domLaiOChon('loc-mau-sac', 'Tất cả màu sắc', list.map(o => o.MAU_SAC));
   domLaiOChon('loc-hang-van-chuyen', 'Tất cả hãng vận chuyển', list.map(o => o.HANG_VAN_CHUYEN));
+  domLaiOChon('loc-quoc-gia-tracking', 'Tất cả quốc gia', list.map(o => o.QUOC_GIA_TRACKING));
+  domLaiOChon('loc-tinh-trang', 'Tất cả tình trạng', list.map(o => o.TINH_TRANG));
 }
 
 async function taiDon() {
@@ -477,6 +492,8 @@ async function taiDon() {
   const kichThuoc = document.getElementById('loc-kich-thuoc').value;
   const mauSac = document.getElementById('loc-mau-sac').value;
   const hangVanChuyen = document.getElementById('loc-hang-van-chuyen').value;
+  const quocGiaTracking = document.getElementById('loc-quoc-gia-tracking').value;
+  const tinhTrang = document.getElementById('loc-tinh-trang').value;
   const kh = document.getElementById('loc-kh').value;
   const tuNgay = document.getElementById('loc-tu-ngay').value;
   const denNgay = document.getElementById('loc-den-ngay').value;
@@ -494,6 +511,8 @@ async function taiDon() {
   if (kichThuoc) qs.set('kichThuoc', kichThuoc);
   if (mauSac) qs.set('mauSac', mauSac);
   if (hangVanChuyen) qs.set('hangVanChuyen', hangVanChuyen);
+  if (quocGiaTracking) qs.set('quocGiaTracking', quocGiaTracking);
+  if (tinhTrang) qs.set('tinhTrang', tinhTrang);
   if (kh) qs.set('kh', kh);
   if (tuNgay) qs.set('tuNgay', tuNgay);
   if (denNgay) qs.set('denNgay', denNgay);
@@ -509,7 +528,7 @@ async function taiDon() {
 
   danhSachHienTai = list;
 
-  const coLocNaoDangChon = trangThai || trangThaiPhoi || trangThaiVeFile || canhBao || xuong || uuTien || loai || kichThuoc || mauSac || hangVanChuyen || kh || tuNgay || denNgay;
+  const coLocNaoDangChon = trangThai || trangThaiPhoi || trangThaiVeFile || canhBao || xuong || uuTien || loai || kichThuoc || mauSac || hangVanChuyen || quocGiaTracking || tinhTrang || kh || tuNgay || denNgay;
   if (!coLocNaoDangChon) capNhatCacBoLocDong(list);
   capNhatNhanNutLoc();
 

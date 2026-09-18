@@ -440,7 +440,14 @@ async function taiBangDieuKhien() {
       </div>`).join('');
 
   veBieuDoTron('chart-loai', thongKe.theoLoaiSanPham, PALETTE_NEON);
-  veBieuDoCot('chart-khach-hang', topN(thongKe.theoKhachHang, 8));
+  // theoKhachHang (đếm đơn giản) đã bị đổi thành theoKhachHangChiTiet (mảng chi tiết hơn) từ
+  // 15/09/2026 (xem docs/superpowers/specs/2026-09-15-thong-ke-khach-hang-va-an-menu-san-xuat-design.md)
+  // — chỗ này quên cập nhật theo, khiến topN() nhận undefined rồi vỡ ngay ở Object.entries() (bổ sung
+  // 18/09/2026, sửa lỗi "Cannot convert undefined or null to object" người dùng báo). Tự dựng lại đúng
+  // dạng {tên khách -> tổng đơn} từ mảng chi tiết, không đổi response phía server (theoKhachHangChiTiet
+  // còn dùng cho bảng thống kê theo khách hàng khác trên cùng trang).
+  const demTheoKhachHang = Object.fromEntries((thongKe.theoKhachHangChiTiet || []).map(k => [k.khachHang, k.tongDon]));
+  veBieuDoCot('chart-khach-hang', topN(demTheoKhachHang, 8));
   veBieuDoDuong('chart-tuan', thongKe.theoTuan);
 }
 
