@@ -1,14 +1,12 @@
-const { readTabCached, getHeadersCached, appendRow } = require('./sheetsService');
+const nhatKyDbService = require('./nhatKyDbService');
 const { thoiGianVNISOString } = require('./dateUtils');
 
-const TAB = 'LichSuHoatDong';
-
-// Ghi 1 dòng log — luôn ghi lại AI làm, vai trò gì, lúc nào, làm gì, trên đơn nào.
-// Dùng getHeadersCached (chỉ đọc dòng 1) thay vì đọc cả tab — tab nhật ký này ngày càng dài theo
-// thời gian sử dụng, đọc cả tab chỉ để lấy header sẽ ngày càng chậm dần nếu không tối ưu chỗ này.
+// Ghi 1 dòng log — luôn ghi lại AI làm, vai trò gì, lúc nào, làm gì, trên đơn nào. Chuyển sang SQLite
+// (bổ sung 19/09/2026, theo yêu cầu người dùng — xem
+// docs/superpowers/specs/2026-09-19-nhat-ky-sqlite-design.md, services/nhatKyDbService.js) — không
+// còn qua Google Sheets, không cần tối ưu đọc header riêng như trước nữa (SQLite ghi tại chỗ).
 async function ghiLog({ nguoiDung, vaiTro, hanhDong, sttKey = '', chiTiet = '' }) {
-  const headers = await getHeadersCached(TAB);
-  await appendRow(TAB, headers, {
+  nhatKyDbService.ghiLichSuHoatDong({
     ThoiGian: thoiGianVNISOString(),
     NguoiDung: nguoiDung,
     VaiTro: vaiTro,
@@ -19,20 +17,18 @@ async function ghiLog({ nguoiDung, vaiTro, hanhDong, sttKey = '', chiTiet = '' }
 }
 
 // Lấy lịch sử của 1 đơn hàng, sắp theo thời gian tăng dần (dùng cho timeline chi tiết đơn).
-// Cache ngắn (5s) — chỉ để tránh đọc lại ngay lập tức khi cùng lúc có nhiều yêu cầu, không ảnh hưởng độ mới.
 async function layLichSuTheoDon(sttKey) {
-  const { rows } = await readTabCached(TAB, 5000);
+  const rows = nhatKyDbService.layTatCaLichSuHoatDong();
   return rows
     .filter(r => r.STT_Key === sttKey)
     .sort((a, b) => new Date(a.ThoiGian) - new Date(b.ThoiGian));
 }
 
-// Ghi vào tab NhatKyQuetHangLoat có sẵn trong Sheet (đúng schema cũ: Thoi_Gian, Nguoi_Quet, Ten_Kich_Ban,
-// STT_Key, Trang_Thai_Cu, Trang_Thai_Moi, Ket_Qua, Ghi_Chu) — để tương thích các báo cáo/luồng cũ đã dựa vào tab này
+// Ghi vào bảng SQLite nhat_ky_quet_hang_loat (đúng schema cũ của tab Sheet: Thoi_Gian, Nguoi_Quet,
+// Ten_Kich_Ban, STT_Key, Trang_Thai_Cu, Trang_Thai_Moi, Ket_Qua, Ghi_Chu) — chuyển sang SQLite cùng đợt
+// với LichSuHoatDong/LogsTracking (bổ sung 19/09/2026).
 async function ghiNhatKyQuetHangLoat({ nguoiQuet, tenKichBan, sttKey, trangThaiCu, trangThaiMoi, ketQua, ghiChu = '' }) {
-  const TAB_QUET = 'NhatKyQuetHangLoat';
-  const headers = await getHeadersCached(TAB_QUET);
-  await appendRow(TAB_QUET, headers, {
+  nhatKyDbService.ghiNhatKyQuetHangLoat({
     Thoi_Gian: thoiGianVNISOString(),
     Nguoi_Quet: nguoiQuet,
     Ten_Kich_Ban: tenKichBan,
@@ -48,7 +44,7 @@ async function ghiNhatKyQuetHangLoat({ nguoiQuet, tenKichBan, sttKey, trangThaiC
 // dùng cho chatbot (tool tra_cuu_lich_su_gan_day, chỉ mở cho admin/quan_ly, xem routes/chatbot.js).
 // gioiHan chặn trần 50 để không dội quá nhiều dữ liệu vào 1 câu trả lời.
 async function layHoatDongGanDay({ nguoiDung, hanhDong, gioiHan = 20 } = {}) {
-  const { rows } = await readTabCached(TAB, 5000);
+  const rows = nhatKyDbService.layTatCaLichSuHoatDong();
   let list = rows;
   if (nguoiDung) list = list.filter(r => r.NguoiDung === nguoiDung);
   if (hanhDong) list = list.filter(r => r.HanhDong === hanhDong);
@@ -74,7 +70,7 @@ const HANH_DONG_CO_THE_DOI_TRANG_THAI = ['QUET_KICH_BAN', 'QUET_KICH_BAN_HANG_LO
 
 async function layLichSuChuyenSangTrangThai(trangThaiDich) {
   const dsTrangThaiDich = Array.isArray(trangThaiDich) ? trangThaiDich : [trangThaiDich];
-  const { rows } = await readTabCached(TAB, 5000);
+  const rows = nhatKyDbService.layTatCaLichSuHoatDong();
   const ketQua = [];
   for (const r of rows) {
     if (!HANH_DONG_CO_THE_DOI_TRANG_THAI.includes(r.HanhDong)) continue;
@@ -121,7 +117,7 @@ function trongKhoangThoiGian(isoThoiGian, tuNgay, denNgay) {
 }
 
 async function layHoatDongCuaToi({ nguoiDung, tuNgay, denNgay }) {
-  const { rows } = await readTabCached(TAB, 5000);
+  const rows = nhatKyDbService.layTatCaLichSuHoatDong();
   const cuaToi = rows.filter(r => r.NguoiDung === nguoiDung && trongKhoangThoiGian(r.ThoiGian, tuNgay, denNgay));
 
   const quet = [];

@@ -1,6 +1,6 @@
 const orderService = require('./orderService');
 const logService = require('./logService');
-const { readTabCached } = require('./sheetsService');
+const nhatKyDbService = require('./nhatKyDbService');
 const { TRANG_THAI_KET_THUC, TRANG_THAI_DA_SHIP } = require('../data/pipelineTinhTrang');
 
 // Trung tâm hành động (bổ sung 14/09/2026, xem
@@ -11,7 +11,6 @@ const { TRANG_THAI_KET_THUC, TRANG_THAI_DA_SHIP } = require('../data/pipelineTin
 // báo trễ hạn" (mức DO/CAM/VÀNG, alertService), thay bằng "Đơn LỖI SẢN XUẤT CẦN LÀM LẠI"; nới 2 mốc
 // thời gian 12h/24h lên cùng 48h. Thứ tự hiển thị THẬT do public/trung-tam-hanh-dong.html quyết định
 // (thứ tự field trả về ở đây không ảnh hưởng) — sửa cả 2 nơi cho khớp.
-const TAB_LOGS_TRACKING = 'LogsTracking'; // trùng tên tab với trackingAutoService.js
 const GIO_TINH_HUY_GAN_DAY = 48;
 const GIO_TINH_LOI_TRACKING_GAN_DAY = 48;
 
@@ -48,17 +47,17 @@ function layDonUuTienChuaXuLy(rows) {
     .map(don => ({ sttKey: don.STT_Key, trangThai: don.TRANG_THAI_XUONG }));
 }
 
-// Đọc tab LogsTracking (tự tạo tay, xem trackingAutoService.js) — bọc try/catch RIÊNG, lỗi đọc (tab
-// chưa tạo, mạng lỗi) trả mảng rỗng, KHÔNG throw, không làm hỏng 3 mục còn lại của trung tâm hành động.
+// Đọc bảng SQLite logs_tracking (bổ sung 19/09/2026, xem services/nhatKyDbService.js) — bọc try/catch
+// RIÊNG, lỗi đọc trả mảng rỗng, KHÔNG throw, không làm hỏng 3 mục còn lại của trung tâm hành động.
 async function layLoiTrackingGanDay() {
   try {
-    const { rows } = await readTabCached(TAB_LOGS_TRACKING, 15000);
+    const rows = nhatKyDbService.layTatCaLogsTracking();
     return rows
       .filter(r => r.KetQua === 'Lỗi' && trongVongGio(r.ThoiGian, GIO_TINH_LOI_TRACKING_GAN_DAY))
       .map(r => ({ sttKey: r.STT_Key, thoiGian: r.ThoiGian, chiTiet: r.ChiTiet || '' }))
       .sort((a, b) => new Date(b.thoiGian) - new Date(a.thoiGian));
   } catch (err) {
-    console.error('[TrungTamHanhDong] Lỗi đọc tab LogsTracking (có thể chưa tạo tab):', err.message);
+    console.error('[TrungTamHanhDong] Lỗi đọc log tracking:', err.message);
     return [];
   }
 }

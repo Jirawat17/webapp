@@ -7,8 +7,8 @@ const PDFDocument = require('pdfkit');
 const orderService = require('../services/orderService');
 const { layDanhSachKhachHang, layBanDoTenKhachHang } = require('../services/khachHangService');
 const { layLichSuChuyenSangTrangThai, tinhChiTieuCongViec, trongKhoangThoiGian } = require('../services/logService');
-const { readTabCached } = require('../services/sheetsService');
 const taiKhoanService = require('../services/taiKhoanService');
+const nhatKyDbService = require('../services/nhatKyDbService');
 const { laAdmin } = require('../middleware/auth');
 const { parseNgay, dinhDangNgay, dinhDangNgayGioVN, dinhDangNgayGioNgan } = require('../services/dateUtils');
 const { taoQRCodeBuffer, KICH_THUOC_QR_CHUAN_DPI_MM } = require('../services/qrService');
@@ -445,10 +445,8 @@ router.get('/hieu-suat-theo-nguoi', async (req, res) => {
 
   const { tuNgay, denNgay } = req.query;
 
-  const [{ rows: logRows }, { rows: donRows }] = await Promise.all([
-    readTabCached('LichSuHoatDong', 5000),
-    orderService.getAll(),
-  ]);
+  const { rows: donRows } = await orderService.getAll();
+  const logRows = nhatKyDbService.layTatCaLichSuHoatDong();
   const nhanVienRows = taiKhoanService.layTatCa();
 
   const slTheoStt = new Map(donRows.map(r => [r.STT_Key, Number(r.SO_LUONG) || 0]));
