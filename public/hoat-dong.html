@@ -95,7 +95,7 @@ const NHAN_MOC_ANH = { mau: 'Ảnh mẫu (PNG)', mockup: 'Ảnh Mockup', ve_file
   // lúc parse, hỏng cả trang — gặp thật ở bang-dieu-khien.html 08/09/2026).
   if (laAdmin(user.vaiTro)) {
     try {
-      const dsNhanVien = await apiFetch('/users');
+      const dsNhanVien = await apiFetch('/users/tom-tat');
       const dsChoChon = dsNhanVien.filter(u => String(u.KichHoat).toUpperCase() === 'TRUE' && u.Ten !== user.ten);
       document.getElementById('khoi-chon-nguoi').style.display = 'flex';
       const chon = document.getElementById('chon-nguoi-xem');

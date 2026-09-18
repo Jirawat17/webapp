@@ -2,11 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { readTab, readTabCached, appendRow, updateCells } = require('../services/sheetsService');
 const { DANH_SACH_XUONG } = require('../services/orderService');
-const { requireRole } = require('../middleware/auth');
+const { requireRole, requireExactRole } = require('../middleware/auth');
 
 const TAB = 'NguoiDung';
-
-router.use(requireRole('admin'));
 
 // Mật khẩu PIN 1-4 chữ số (xem docs/superpowers/specs/2026-09-07-mat-khau-dang-nhap-design.md) —
 // lưu trực tiếp KHÔNG mã hoá (đã xác nhận đánh đổi với người dùng: admin xem/nhắc lại được PIN cho
@@ -14,6 +12,26 @@ router.use(requireRole('admin'));
 function matKhauHopLe(mk) {
   return /^\d{1,4}$/.test(String(mk));
 }
+
+// Danh sách RÚT GỌN (Ten/VaiTro/KichHoat — KHÔNG có MatKhau/Team/Xuong) — dùng cho các trang KHÁC cần
+// liệt kê nhân viên để đổ vào ô chọn (chỉ định người chạy máy/vẽ file, xem hoạt động của người khác...
+// — xem public/orders.html, order.html, my-orders.html, my-orders-ve-file.html, hoat-dong.html), KHÔNG
+// phải trang Quản lý nhân viên (GET / dưới đây, giờ CHỈ superadmin — xem router.use bên dưới). Đặt
+// TRƯỚC router.use(requireExactRole('superadmin')) nên KHÔNG bị chặn bởi rào đó — vẫn mở cho
+// admin/superadmin qua requireRole() (bổ sung 18/09/2026, theo yêu cầu người dùng: superadmin CHỈ mới
+// xem/sửa được thông tin ĐẦY ĐỦ ở Quản lý nhân viên, nhưng KHÔNG được yêu cầu bớt quyền nào khác của
+// admin — vẫn cần đủ tên/vai trò để chỉ định người chạy máy/vẽ file như trước).
+router.get('/tom-tat', requireRole(), async (req, res) => {
+  const { rows } = await readTabCached(TAB, 30000);
+  res.json(rows.map(r => ({ Ten: r.Ten, VaiTro: r.VaiTro, KichHoat: r.KichHoat })));
+});
+
+// CHỈ superadmin — bổ sung 18/09/2026, theo yêu cầu người dùng (thu hẹp từ admin+superadmin xuống
+// CHỈ superadmin, khác MỌI nơi khác trong app vẫn coi admin/superadmin ngang quyền — xem laAdmin() ở
+// middleware/auth.js). Dùng requireExactRole() (KHÔNG dùng requireRole() — hàm đó tự cho admin qua,
+// đúng ngược với ý muốn ở đây) để admin KHÔNG còn xem/sửa được thông tin nhân viên (kể cả PIN đăng
+// nhập — cột MatKhau trả về thẳng ở GET / dưới đây) qua đường này nữa.
+router.use(requireExactRole('superadmin'));
 
 router.get('/', async (req, res) => {
   const { rows } = await readTabCached(TAB, 30000); // chỉ liệt kê để xem — POST/PUT bên dưới vẫn đọc thật vì ghi ngay sau đó

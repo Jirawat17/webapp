@@ -53,7 +53,7 @@ let dsVeFileDangHoatDong = []; // chỉ admin cần, nạp 1 lần lúc vào tra
   // đã có sẵn từ trước) — CHỈ admin. /users vốn đã chỉ mở cho admin (requireRole trong routes/users.js).
   if (laAdmin(user.vaiTro)) {
     try {
-      const dsNhanVien = await apiFetch('/users');
+      const dsNhanVien = await apiFetch('/users/tom-tat');
       dsSanXuatDangHoatDong = dsNhanVien.filter(u => u.VaiTro === 'san_xuat' && String(u.KichHoat).toUpperCase() === 'TRUE');
       dsVeFileDangHoatDong = dsNhanVien.filter(u => u.VaiTro === 've_file' && String(u.KichHoat).toUpperCase() === 'TRUE');
     } catch (e) { /* không tải được danh sách — ô chọn sẽ hiện rỗng, không chặn tải trang */ }

@@ -254,7 +254,7 @@ const CAC_O_LOC_TV = ['loc-trang-thai-tv', 'loc-phoi-tv', 'loc-kh-tv', 'loc-tu-n
   if (laAdmin(user.vaiTro)) {
     document.getElementById('khoi-chi-dinh-nguoi-ve-file').style.display = 'contents';
     try {
-      const dsNhanVien = await apiFetch('/users');
+      const dsNhanVien = await apiFetch('/users/tom-tat');
       const dsVeFile = dsNhanVien.filter(u => u.VaiTro === 've_file' && String(u.KichHoat).toUpperCase() === 'TRUE');
       document.getElementById('nguoi-ve-file-dich').innerHTML = '<option value="">Chỉ định người vẽ file...</option>' +
         dsVeFile.map(u => `<option value="${escapeHtml(u.Ten)}">${escapeHtml(u.Ten)}</option>`).join('');

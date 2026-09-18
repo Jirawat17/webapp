@@ -26,4 +26,18 @@ function requireRole(...roles) {
   };
 }
 
-module.exports = { requireLogin, requireRole, laAdmin, VAI_TRO_ADMIN };
+// Kiểm tra ĐÚNG vai trò được liệt kê — KHÁC requireRole() ở trên (KHÔNG tự cho admin/superadmin qua
+// hết). Dùng khi 1 route cần CHẶN CẢ admin, không chỉ mở rộng thêm quyền (bổ sung 18/09/2026, theo yêu
+// cầu người dùng — Quản lý nhân viên giờ CHỈ superadmin xem/sửa được, admin không còn quyền này nữa,
+// dù admin vẫn có mọi quyền khác qua laAdmin()/requireRole() như trước — xem routes/users.js).
+function requireExactRole(...roles) {
+  return (req, res, next) => {
+    if (!req.session.user) return res.status(401).json({ error: 'Chưa đăng nhập' });
+    if (!roles.includes(req.session.user.vaiTro)) {
+      return res.status(403).json({ error: 'Bạn không có quyền thực hiện thao tác này' });
+    }
+    next();
+  };
+}
+
+module.exports = { requireLogin, requireRole, requireExactRole, laAdmin, VAI_TRO_ADMIN };

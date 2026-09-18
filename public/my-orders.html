@@ -233,7 +233,7 @@ const CAC_O_LOC_DC = ['loc-kh', 'loc-tu-ngay', 'loc-den-ngay', 'loc-canh-bao', '
   if (laAdmin(user.vaiTro)) {
     document.getElementById('khoi-chi-dinh-nguoi-chay-may-san-sang').style.display = 'contents';
     try {
-      const dsNhanVien = await apiFetch('/users');
+      const dsNhanVien = await apiFetch('/users/tom-tat');
       const dsSanXuat = dsNhanVien.filter(u => u.VaiTro === 'san_xuat' && String(u.KichHoat).toUpperCase() === 'TRUE');
       document.getElementById('nguoi-chay-may-dich-san-sang').innerHTML = '<option value="">Chỉ định người chạy máy...</option>' +
         dsSanXuat.map(u => `<option value="${escapeHtml(u.Ten)}">${escapeHtml(u.Ten)}</option>`).join('');

@@ -54,7 +54,9 @@
   const user = await requireLoginOrRedirect();
   if (!user) return;
   renderNav(user, 'users');
-  if (!laAdmin(user.vaiTro)) {
+  // CHỈ superadmin (bổ sung 18/09/2026, theo yêu cầu người dùng — thu hẹp từ admin+superadmin, KHÁC
+  // mọi trang khác trong app vẫn coi admin/superadmin ngang quyền qua laAdmin()).
+  if (user.vaiTro !== 'superadmin') {
     document.querySelector('.page').innerHTML = '<p>Bạn không có quyền truy cập trang này.</p>';
     return;
   }
