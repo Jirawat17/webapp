@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { layHoatDongCuaToi, tinhChiTieuCongViec } = require('../services/logService');
 const orderService = require('../services/orderService');
-const { readTabCached } = require('../services/sheetsService');
+const taiKhoanService = require('../services/taiKhoanService');
 const { requireLogin, laAdmin } = require('../middleware/auth');
 
 router.use(requireLogin); // mọi vai trò đăng nhập đều xem được hoạt động của CHÍNH MÌNH
@@ -18,7 +18,7 @@ router.get('/cua-toi', async (req, res) => {
 
   let nguoiXem = { ten: nguoiGoi.ten, vaiTro: nguoiGoi.vaiTro };
   if (laAdmin(nguoiGoi.vaiTro) && nguoiDung) {
-    const { rows: dsNhanVien } = await readTabCached('NguoiDung', 30000);
+    const dsNhanVien = taiKhoanService.layTatCa();
     const nv = dsNhanVien.find(r => r.Ten === nguoiDung && String(r.KichHoat).toUpperCase() === 'TRUE');
     if (!nv) return res.status(400).json({ error: `"${nguoiDung}" không phải tài khoản đang hoạt động` });
     nguoiXem = { ten: nv.Ten, vaiTro: nv.VaiTro };

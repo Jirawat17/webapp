@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const orderService = require('../services/orderService');
+const taiKhoanService = require('../services/taiKhoanService');
 const trangThaiDbService = require('../services/trangThaiDbService');
 const donHangLoatService = require('../services/donHangLoatService');
 const alertService = require('../services/alertService');
@@ -9,7 +10,6 @@ const scenarioService = require('../services/scenarioService');
 const { parseNgay } = require('../services/dateUtils');
 const { DANH_SACH_TRANG_THAI_BAO_CAO, TRANG_THAI_PHOI_VALUES, TRANG_THAI_VE_FILE_VALUES, khopGiaTriLoc } = require('../data/pipelineTinhTrang');
 const { ghiLog, layLichSuTheoDon } = require('../services/logService');
-const { readTabCached } = require('../services/sheetsService');
 const { taiDsAnh } = require('../services/anhNguonService');
 const { tinhHashAnh, khoangCachHamming } = require('../services/perceptualHashService');
 const { requireLogin, laAdmin, laSuperAdmin } = require('../middleware/auth');
@@ -324,9 +324,10 @@ router.post('/chi-dinh-nguoi-chay-may', async (req, res) => {
     return res.status(400).json({ error: 'Thiếu người sản xuất được chỉ định' });
   }
 
-  // Kiểm tra tên được chỉ định đúng là 1 tài khoản san_xuat đang hoạt động — tránh gõ nhầm tên ghi
-  // thẳng vào Sheet mà không ai phát hiện ra (khác hẳn nguy cơ chọn nhầm trong 1 dropdown có sẵn).
-  const { rows: dsNhanVien } = await readTabCached('NguoiDung', 30000);
+  // Kiểm tra tên được chỉ định đúng là 1 tài khoản san_xuat đang hoạt động — tránh gõ nhầm tên (khác
+  // hẳn nguy cơ chọn nhầm trong 1 dropdown có sẵn). Đọc thẳng SQLite (bổ sung 18/09/2026, xem
+  // services/taiKhoanService.js) — không còn qua Google Sheets nữa.
+  const dsNhanVien = taiKhoanService.layTatCa();
   const hopLe = dsNhanVien.some(r => r.Ten === nguoiSanXuat && r.VaiTro === 'san_xuat' && String(r.KichHoat).toUpperCase() === 'TRUE');
   if (!hopLe) {
     return res.status(400).json({ error: `"${nguoiSanXuat}" không phải tài khoản sản xuất đang hoạt động` });
@@ -387,7 +388,7 @@ router.post('/chi-dinh-nguoi-ve-file', async (req, res) => {
     return res.status(400).json({ error: 'Thiếu người vẽ file được chỉ định' });
   }
 
-  const { rows: dsNhanVien } = await readTabCached('NguoiDung', 30000);
+  const dsNhanVien = taiKhoanService.layTatCa();
   const hopLe = dsNhanVien.some(r => r.Ten === nguoiVeFile && r.VaiTro === 've_file' && String(r.KichHoat).toUpperCase() === 'TRUE');
   if (!hopLe) {
     return res.status(400).json({ error: `"${nguoiVeFile}" không phải tài khoản vẽ file đang hoạt động` });

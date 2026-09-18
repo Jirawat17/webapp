@@ -1,11 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { readTabCached } = require('../services/sheetsService');
+const taiKhoanService = require('../services/taiKhoanService');
 const { ghiLog } = require('../services/logService');
 const { layDangHoatDong } = require('../services/presenceService');
 const { laAdmin } = require('../middleware/auth');
-
-const TAB = 'NguoiDung';
 
 // Chống dò PIN (mật khẩu chỉ 1-4 chữ số — tối đa 10.000 khả năng, web chạy trên domain public) —
 // đếm số lần sai LIÊN TIẾP theo từng tên, khoá thử đăng nhập tên đó 1 phút nếu sai đủ 10 lần. Lưu
@@ -34,8 +32,9 @@ function ghiNhanSaiMatKhau(ten) {
 }
 
 // Danh sách tên để hiển thị nút chọn ở màn hình đăng nhập — chỉ nhân viên đang kích hoạt
-// Danh sách nhân viên gần như không đổi trong ngày — đọc qua cache (routes/users.js tự xoá cache
-// ngay khi admin thêm/sửa nhân viên) thay vì luôn gọi Google mỗi lần ai đó mở màn hình đăng nhập.
+// Đọc thẳng SQLite (bổ sung 18/09/2026, theo yêu cầu người dùng — không còn qua Google Sheets nữa,
+// xem services/taiKhoanService.js) — không cần cache như trước (SQLite đọc tại chỗ, không tốn round-
+// trip mạng như gọi Google Sheets API).
 // coMatKhau (KHÔNG bao giờ trả giá trị mật khẩu thật) — để client biết có cần hiện ô nhập PIN hay
 // không TRƯỚC khi thử đăng nhập (tài khoản cũ chưa đặt mật khẩu vẫn đăng nhập bằng tên như trước).
 // HienThiDangNhap='FALSE' (bổ sung 13/09/2026, theo yêu cầu người dùng — xem
@@ -43,7 +42,7 @@ function ghiNhanSaiMatKhau(ten) {
 // CÔNG KHAI này, nhưng vẫn đăng nhập bình thường qua POST /dang-nhap (không đổi gì bên dưới) — chỉ khác
 // là chủ tài khoản phải tự gõ đúng tên qua trang đăng nhập riêng thay vì bấm nút ở đây.
 router.get('/danh-sach', async (req, res) => {
-  const { rows } = await readTabCached(TAB, 30000);
+  const rows = taiKhoanService.layTatCa();
   const active = rows.filter(r => String(r.KichHoat).toUpperCase() === 'TRUE' && String(r.HienThiDangNhap).toUpperCase() !== 'FALSE');
   res.json(active.map(r => ({ ten: r.Ten, vaiTro: r.VaiTro, coMatKhau: !!r.MatKhau })));
 });
@@ -57,8 +56,8 @@ router.post('/dang-nhap', async (req, res) => {
     return res.status(429).json({ error: `Tài khoản tạm khoá do nhập sai mật khẩu quá nhiều lần — thử lại sau ${giaySoConLai} giây.` });
   }
 
-  const { rows } = await readTabCached(TAB, 30000);
-  const user = rows.find(r => r.Ten === ten && String(r.KichHoat).toUpperCase() === 'TRUE');
+  const rowThat = taiKhoanService.layTheoTen(ten);
+  const user = (rowThat && String(rowThat.KichHoat).toUpperCase() === 'TRUE') ? rowThat : null;
   if (!user) return res.status(404).json({ error: 'Không tìm thấy nhân viên hoặc tài khoản đã bị khoá' });
 
   // Tài khoản CHƯA đặt mật khẩu (cột MatKhau rỗng) — vẫn đăng nhập bằng tên như trước, KHÔNG bắt
