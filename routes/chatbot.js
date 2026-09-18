@@ -5,7 +5,7 @@ const khachHangService = require('../services/khachHangService');
 const { ghiLog, layLichSuTheoDon, layHoatDongGanDay } = require('../services/logService');
 const { readTabCached } = require('../services/sheetsService');
 const { parseNgay } = require('../services/dateUtils');
-const { requireLogin } = require('../middleware/auth');
+const { requireLogin, laAdmin } = require('../middleware/auth');
 
 router.use(requireLogin);
 
@@ -226,7 +226,7 @@ async function thucThiTool(tenHam, thamSo, ctx) {
       // CHỈ admin — chính sách "mọi vai trò như Admin" đã bị huỷ (24/08/2026, Prompt_Ver_24.docx),
       // quay lại phân quyền theo vai trò. Không gửi định nghĩa công cụ này cho vai trò khác admin
       // (xem TOOLS_QUAN_LY phía dưới) — kiểm tra lại 1 lần nữa ở đây phòng model tự bịa tên công cụ.
-      if (ctx.user.vaiTro !== 'admin') return { loi: 'Không có quyền tra cứu danh sách nhân viên.' };
+      if (!laAdmin(ctx.user.vaiTro)) return { loi: 'Không có quyền tra cứu danh sách nhân viên.' };
       const { rows } = await readTabCached('NguoiDung', 30000);
       let list = rows.map(r => ({ ten: r.Ten, vaiTro: r.VaiTro, team: r.Team, kichHoat: r.KichHoat }));
       if (thamSo.vaiTro) list = list.filter(nv => nv.vaiTro === thamSo.vaiTro);
@@ -235,7 +235,7 @@ async function thucThiTool(tenHam, thamSo, ctx) {
 
     case 'tra_cuu_lich_su_gan_day': {
       // CHỈ admin — cùng lý do như tra_cuu_nhan_vien ở trên.
-      if (ctx.user.vaiTro !== 'admin') return { loi: 'Không có quyền tra cứu lịch sử hoạt động chung.' };
+      if (!laAdmin(ctx.user.vaiTro)) return { loi: 'Không có quyền tra cứu lịch sử hoạt động chung.' };
       return await layHoatDongGanDay(thamSo);
     }
 
@@ -264,7 +264,7 @@ router.post('/hoi', async (req, res) => {
   const thongKeNhanh = {};
   duLieuTheoQuyen.forEach(r => { const v = r.TRANG_THAI_XUONG || '(Trống)'; thongKeNhanh[v] = (thongKeNhanh[v] || 0) + 1; });
 
-  const tools = user.vaiTro === 'admin' ? [...TOOLS, ...TOOLS_QUAN_LY] : TOOLS;
+  const tools = laAdmin(user.vaiTro) ? [...TOOLS, ...TOOLS_QUAN_LY] : TOOLS;
 
   const systemPrompt =
     'Bạn là trợ lý của xưởng thêu HanhPhuc99, trả lời bằng tiếng Việt, ngắn gọn, chính xác.\n\n' +

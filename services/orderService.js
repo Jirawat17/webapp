@@ -4,6 +4,7 @@ const { layBanDoTenKhachHang } = require('./khachHangService');
 const taiSanService = require('./taiSanService');
 const { chiSoTinhTrang, TINH_TRANG_VALUES, TRANG_THAI_PHOI_VALUES, TRANG_THAI_VE_FILE_VALUES } = require('../data/pipelineTinhTrang');
 const { thoiGianVNISOString } = require('./dateUtils');
+const { laAdmin } = require('../middleware/auth');
 
 const TAB = 'Don_Hang_ALL';
 const KEY_COL = 'STT_Key';
@@ -199,7 +200,7 @@ function kiemTraCongAnhBatBuoc(rowHienTai, updates, user, quaAnh) {
   }
 
   if (quaAnh) return;
-  if (user && user.vaiTro === 'admin') return;
+  if (user && laAdmin(user.vaiTro)) return;
 
   if (TRANG_THAI_BAT_BUOC_CHUP_ANH.includes(updates.TRANG_THAI_XUONG)) {
     throw new Error(
@@ -364,13 +365,13 @@ function filterForRole(rows, user) {
 const DANH_SACH_XUONG = ['HN', 'BN'];
 
 function locTheoXuong(rows, user) {
-  if (user.vaiTro === 'admin') return rows;
+  if (laAdmin(user.vaiTro)) return rows;
   if (!user.xuong) return [];
   return rows.filter(r => r.XUONG === user.xuong);
 }
 
 function coQuyenTheoXuong(user, row) {
-  if (user.vaiTro === 'admin') return true;
+  if (laAdmin(user.vaiTro)) return true;
   return !!user.xuong && !!row.XUONG && user.xuong === row.XUONG;
 }
 

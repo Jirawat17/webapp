@@ -50,7 +50,7 @@ let vaiTroHienTai = '';
   const user = await requireLoginOrRedirect();
   if (!user) return;
   renderNav(user, 'don-hang-loat');
-  if (user.vaiTro !== 'admin' && user.vaiTro !== 've_file') {
+  if (!laAdmin(user.vaiTro) && user.vaiTro !== 've_file') {
     document.querySelector('.page').innerHTML = '<p>Bạn không có quyền truy cập trang này.</p>';
     return;
   }
@@ -59,7 +59,7 @@ let vaiTroHienTai = '';
   document.getElementById('btn-luu-nguong').onclick = luuNguong;
   document.getElementById('btn-tao-nhom-moi').onclick = taoNhomMoi;
 
-  if (user.vaiTro === 'admin') {
+  if (laAdmin(user.vaiTro)) {
     document.getElementById('truong-loc-xuong-dhl').style.display = 'flex';
     document.getElementById('loc-xuong-dhl').onchange = () => Promise.all([taiDanhSachGoiY(), taiDanhSachXacNhan()]);
   }

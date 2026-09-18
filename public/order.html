@@ -51,7 +51,7 @@ let dsVeFileDangHoatDong = []; // chỉ admin cần, nạp 1 lần lúc vào tra
   // "Chỉ định người chạy máy" (bổ sung 07/09/2026, xem docs/superpowers/specs/2026-09-07-nguoi-chay-may-design.md)
   // + "Chỉ định người vẽ file" (bổ sung 09/09/2026, cùng khuôn — route POST /orders/chi-dinh-nguoi-ve-file
   // đã có sẵn từ trước) — CHỈ admin. /users vốn đã chỉ mở cho admin (requireRole trong routes/users.js).
-  if (user.vaiTro === 'admin') {
+  if (laAdmin(user.vaiTro)) {
     try {
       const dsNhanVien = await apiFetch('/users');
       dsSanXuatDangHoatDong = dsNhanVien.filter(u => u.VaiTro === 'san_xuat' && String(u.KichHoat).toUpperCase() === 'TRUE');
@@ -234,7 +234,7 @@ function renderKhuVucThaoTac(don) {
   // nhiều đơn ở trang Đơn hàng (routes/orders.js POST /chi-dinh-nguoi-chay-may, dùng chung route).
   // Không giới hạn đơn phải đang ở "ĐÃ SẴN SÀNG CHẠY MÁY" — cùng triết lý "chọn tự do" như bên đó,
   // orderService.update()'s kiemTraTinhHopLy() vẫn chặn nếu phôi/vẽ file chưa xong.
-  if (user.vaiTro === 'admin') {
+  if (laAdmin(user.vaiTro)) {
     html += `
       <div class="upload-box">
         <label for="chi-dinh-nguoi-chay-may">${icon('users', { size: 18 })} Chỉ định người chạy máy</label>
@@ -293,7 +293,7 @@ function renderKhuVucThaoTac(don) {
   // Ảnh "File thêu" (bổ sung 26/08/2026) — ve_file upload sau khi vẽ file xong, để san_xuat xem
   // trước khi chọn chỉ thêu. Thuần lưu ảnh, KHÔNG đụng gì tới trạng thái (khác với "Chụp ảnh hoàn
   // thành" bên dưới).
-  if (user.vaiTro === 've_file' || user.vaiTro === 'admin') {
+  if (user.vaiTro === 've_file' || laAdmin(user.vaiTro)) {
     html += `
       <div class="upload-box">
         <label for="anh-ve-file">${icon('camera', { size: 18 })} Ảnh file thêu (sau khi vẽ file)</label>
@@ -303,7 +303,7 @@ function renderKhuVucThaoTac(don) {
       </div>`;
   }
 
-  if (user.vaiTro === 'admin') {
+  if (laAdmin(user.vaiTro)) {
     html += `
       <div class="upload-box">
         <label for="anh-da-san-xuat">${icon('camera', { size: 18 })} Ảnh đã sản xuất (ngay khi chạy máy xong)</label>

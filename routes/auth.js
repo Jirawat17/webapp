@@ -3,6 +3,7 @@ const router = express.Router();
 const { readTabCached } = require('../services/sheetsService');
 const { ghiLog } = require('../services/logService');
 const { layDangHoatDong } = require('../services/presenceService');
+const { laAdmin } = require('../middleware/auth');
 
 const TAB = 'NguoiDung';
 
@@ -88,7 +89,7 @@ router.get('/hien-tai', (req, res) => {
 // admin. Chỉ admin được xem (danh sách ai đang online cũng là thông tin nhạy cảm về nhân sự).
 router.get('/dang-hoat-dong', (req, res) => {
   if (!req.session.user) return res.status(401).json({ error: 'Chưa đăng nhập' });
-  if (req.session.user.vaiTro !== 'admin') {
+  if (!laAdmin(req.session.user.vaiTro)) {
     return res.status(403).json({ error: 'Chỉ admin mới được xem danh sách đang hoạt động' });
   }
   res.json(layDangHoatDong());

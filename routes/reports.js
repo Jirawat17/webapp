@@ -8,6 +8,7 @@ const orderService = require('../services/orderService');
 const { layDanhSachKhachHang, layBanDoTenKhachHang } = require('../services/khachHangService');
 const { layLichSuChuyenSangTrangThai, tinhChiTieuCongViec, trongKhoangThoiGian } = require('../services/logService');
 const { readTabCached } = require('../services/sheetsService');
+const { laAdmin } = require('../middleware/auth');
 const { parseNgay, dinhDangNgay, dinhDangNgayGioVN, dinhDangNgayGioNgan } = require('../services/dateUtils');
 const { taoQRCodeBuffer, KICH_THUOC_QR_CHUAN_DPI_MM } = require('../services/qrService');
 const { taiDsAnh } = require('../services/anhNguonService');
@@ -196,7 +197,7 @@ router.get('/thong-ke-loi', async (req, res) => {
   // SAU khi có banDoDon (tra cứu order theo sttKey) vì log lịch sử không tự có sẵn XUONG.
   const locTheoNgay = locTheoNgayTruocXuong.filter(l => {
     const don = banDoDon[l.sttKey];
-    return don ? orderService.coQuyenTheoXuong(user, don) : user.vaiTro === 'admin';
+    return don ? orderService.coQuyenTheoXuong(user, don) : laAdmin(user.vaiTro);
   });
 
   const { rows: nhanVien } = await readTabCached('NguoiDung', 30000);
@@ -370,7 +371,7 @@ router.get('/thoi-gian-chay-may', async (req, res) => {
   // tra qua banDoDon).
   const lanChay = lanChayTruocXuong.filter(l => {
     const don = banDoDon[l.sttKey];
-    return don ? orderService.coQuyenTheoXuong(user, don) : user.vaiTro === 'admin';
+    return don ? orderService.coQuyenTheoXuong(user, don) : laAdmin(user.vaiTro);
   });
   const banDoTenKH = await layBanDoTenKhachHang();
 
@@ -437,7 +438,7 @@ const HANH_DONG_QUET_THANH_CONG_HS = ['QUET_KICH_BAN', 'QUET_KICH_BAN_HANG_LOAT'
 const COT_TRANG_THAI_CUA_DON_HS = ['TRANG_THAI_XUONG', 'TRANG_THAI_PHOI', 'TRANG_THAI_VE_FILE'];
 
 router.get('/hieu-suat-theo-nguoi', async (req, res) => {
-  if (req.session.user.vaiTro !== 'admin') {
+  if (!laAdmin(req.session.user.vaiTro)) {
     return res.status(403).json({ error: 'Chỉ admin mới được xem báo cáo hiệu suất theo người' });
   }
 

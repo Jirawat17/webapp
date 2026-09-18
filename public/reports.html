@@ -132,7 +132,7 @@
   // "Hiệu suất theo người" — CHỈ admin (xem docs/superpowers/specs/2026-09-08-hieu-suat-theo-nguoi-design.md).
   // Ẩn hẳn khối này cho vai trò khác chỉ để gọn giao diện — an toàn thật sự nằm ở chặn 403 phía server
   // (routes/reports.js), không phải ở việc ẩn UI này.
-  if (user.vaiTro === 'admin') {
+  if (laAdmin(user.vaiTro)) {
     document.getElementById('khoi-hieu-suat').style.display = '';
     document.getElementById('btn-xem-hieu-suat').innerHTML = icon('chart') + ' Xem hiệu suất';
     const homNay30c = new Date(); homNay30c.setDate(homNay30c.getDate() - 30);

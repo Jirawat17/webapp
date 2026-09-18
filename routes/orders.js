@@ -12,7 +12,7 @@ const { ghiLog, layLichSuTheoDon } = require('../services/logService');
 const { readTabCached } = require('../services/sheetsService');
 const { taiDsAnh } = require('../services/anhNguonService');
 const { tinhHashAnh, khoangCachHamming } = require('../services/perceptualHashService');
-const { requireLogin } = require('../middleware/auth');
+const { requireLogin, laAdmin } = require('../middleware/auth');
 
 router.use(requireLogin);
 
@@ -312,7 +312,7 @@ router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
 // người khác được. Xem docs/superpowers/specs/2026-09-07-nguoi-chay-may-design.md.
 router.post('/chi-dinh-nguoi-chay-may', async (req, res) => {
   const user = req.session.user;
-  if (user.vaiTro !== 'admin') {
+  if (!laAdmin(user.vaiTro)) {
     return res.status(403).json({ error: 'Chỉ admin mới được chỉ định người chạy máy' });
   }
 
@@ -375,7 +375,7 @@ router.post('/chi-dinh-nguoi-chay-may', async (req, res) => {
 // orderService.update() lo hết, đúng y hệt cách san_xuat tự nhận "Đang chạy máy".
 router.post('/chi-dinh-nguoi-ve-file', async (req, res) => {
   const user = req.session.user;
-  if (user.vaiTro !== 'admin') {
+  if (!laAdmin(user.vaiTro)) {
     return res.status(403).json({ error: 'Chỉ admin mới được chỉ định người vẽ file' });
   }
 
@@ -436,7 +436,7 @@ router.post('/chi-dinh-nguoi-ve-file', async (req, res) => {
 // luôn được xem/gán MỌI đơn bất kể Xưởng hiện tại.
 router.post('/gan-xuong', async (req, res) => {
   const user = req.session.user;
-  if (user.vaiTro !== 'admin') {
+  if (!laAdmin(user.vaiTro)) {
     return res.status(403).json({ error: 'Chỉ admin mới được gán Xưởng cho đơn' });
   }
 
@@ -491,7 +491,7 @@ router.post('/gan-xuong', async (req, res) => {
 // khẩn cấp công việc, không phải phân chia xưởng vật lý như XUONG).
 router.post('/danh-dau-uu-tien', async (req, res) => {
   const user = req.session.user;
-  if (user.vaiTro !== 'admin' && user.vaiTro !== 've_file') {
+  if (!laAdmin(user.vaiTro) && user.vaiTro !== 've_file') {
     return res.status(403).json({ error: 'Chỉ admin/người vẽ file mới được đánh dấu Đơn ưu tiên' });
   }
 
@@ -552,7 +552,7 @@ async function layKichBanKeTiep(row, user) {
   const list = await scenarioService.layDanhSachKichBan();
   return list.filter(s =>
     (!s.requireStatus || s.requireStatus === row[s.column]) &&
-    (user.vaiTro === 'admin' || !s.allowedRoles || s.allowedRoles.includes(user.vaiTro))
+    (laAdmin(user.vaiTro) || !s.allowedRoles || s.allowedRoles.includes(user.vaiTro))
   );
 }
 
@@ -804,7 +804,7 @@ router.post('/quet-hang-loat/bat-dau', async (req, res) => {
   // Chỉ quét/gộp nhóm trong phạm vi đơn đang được chọn (tick) trên trang — xem
   // docs/superpowers/specs/2026-09-06-quet-hang-loat-theo-lua-chon-design.md.
   const user = req.session.user;
-  if (user.vaiTro !== 'admin' && user.vaiTro !== 've_file') {
+  if (!laAdmin(user.vaiTro) && user.vaiTro !== 've_file') {
     return res.status(403).json({ error: 'Chỉ admin/người vẽ file mới được quét đơn hàng loạt' });
   }
   const { sttKeys, buocLai } = req.body;

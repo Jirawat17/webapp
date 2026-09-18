@@ -251,7 +251,7 @@ const CAC_O_LOC_TV = ['loc-trang-thai-tv', 'loc-phoi-tv', 'loc-kh-tv', 'loc-tu-n
 
   // "Chỉ định người vẽ file" — CHỈ admin (xem docs/superpowers/specs/2026-09-08-don-cua-toi-ve-file-design.md).
   // display:contents (không phải '') vì khối này nằm trong .thanh-hanh-dong-hang-loat (flex container).
-  if (user.vaiTro === 'admin') {
+  if (laAdmin(user.vaiTro)) {
     document.getElementById('khoi-chi-dinh-nguoi-ve-file').style.display = 'contents';
     try {
       const dsNhanVien = await apiFetch('/users');
@@ -590,7 +590,7 @@ async function apDungChiDinhNguoiVeFile() {
 
 function xoaTatCaLocTv() {
   xoaCacOLoc(CAC_O_LOC_TV, '-tv');
-  if (user.vaiTro === 'admin') document.getElementById('loc-nguoi-ve-file').value = '';
+  if (laAdmin(user.vaiTro)) document.getElementById('loc-nguoi-ve-file').value = '';
   boChonTatCaDonToiVe();
   taiDonToiVe();
 }
@@ -599,12 +599,12 @@ async function taiDonToiVe() {
   const el = document.getElementById('danh-sach-toi-ve');
   el.innerHTML = skeletonList(2);
 
-  const laAdmin = user.vaiTro === 'admin';
+  const dangLaAdmin = laAdmin(user.vaiTro);
   // ve_file LUÔN tự lọc đúng tên mình (không cho đổi) — admin mặc định xem TẤT CẢ người vẽ file,
   // có thể tự thu hẹp qua ô "Người vẽ file". Khác hẳn cách san_xuat/"Đang chạy máy" bị CHẶN CỨNG ở
   // server (locDonDangChayMayTheoNguoiVanHanh) — ve_file KHÔNG có hạn chế đó (xem lý do trong spec),
   // nên phải tự gửi đúng tham số ở đây, không dựa vào server.
-  const nguoiVeFileDangLoc = laAdmin ? document.getElementById('loc-nguoi-ve-file').value : user.ten;
+  const nguoiVeFileDangLoc = dangLaAdmin ? document.getElementById('loc-nguoi-ve-file').value : user.ten;
 
   const o = docCacOLoc('-tv');
   const qs = new URLSearchParams({ trangThaiVeFile: 'Đang vẽ file' });
@@ -623,7 +623,7 @@ async function taiDonToiVe() {
   // Chỉ đổ lại danh sách người vẽ file trong ô lọc khi CHƯA lọc theo người nào — nếu đã lọc rồi mà
   // vẫn đổ lại theo đúng danh sách đã bị thu hẹp (chỉ còn 1 người) thì các tên khác sẽ biến mất khỏi
   // ô, không bấm lại được nữa.
-  if (laAdmin && !nguoiVeFileDangLoc) {
+  if (dangLaAdmin && !nguoiVeFileDangLoc) {
     const sel = document.getElementById('loc-nguoi-ve-file');
     const dangChon = sel.value;
     const cacTen = [...new Set(list.map(o => o.NguoiVeFile).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'vi'));
@@ -643,7 +643,7 @@ async function taiDonToiVe() {
 
 function renderDanhSachToiVe() {
   const el = document.getElementById('danh-sach-toi-ve');
-  const laAdmin = user.vaiTro === 'admin';
+  const dangLaAdmin = laAdmin(user.vaiTro);
 
   if (danhSachToiVe.length === 0) {
     el.innerHTML = `<div class="trang-thai-rong">${icon('package')}<p>${coLocNaoDangChonToiVe ? 'Không có đơn nào khớp bộ lọc.' : 'Bạn chưa nhận vẽ file đơn nào — mọi việc đã xong hoặc chưa bắt đầu.'}</p></div>`;
@@ -670,7 +670,7 @@ function renderDanhSachToiVe() {
           ${o.DonUuTien ? `<span class="badge trang-thai-danger">${icon('star', {size:14})} Ưu tiên</span>` : ''}
           <span class="badge ${lopTrangThai(o.TRANG_THAI_XUONG)}">${escapeHtml(o.TRANG_THAI_XUONG || '')}</span>
           <span class="badge ${lopTrangThai(o.TRANG_THAI_PHOI)}">${escapeHtml(o.TRANG_THAI_PHOI || '')}</span>
-          ${laAdmin && o.NguoiVeFile ? `
+          ${dangLaAdmin && o.NguoiVeFile ? `
             <span class="badge trang-thai-info">${icon('users', {size:14})} Đang vẽ: <strong>${escapeHtml(o.NguoiVeFile)}</strong></span>` : ''}
           ${o.CanhBao ? `
             <span class="badge badge-canh-bao ${o.CanhBao.toLowerCase()}">

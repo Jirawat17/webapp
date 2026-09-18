@@ -20,6 +20,7 @@
       <label for="vaitro-moi">Vai trò</label>
       <select id="vaitro-moi">
         <option value="admin">Admin</option>
+        <option value="superadmin">Superadmin</option>
         <option value="nguoi_lay_phoi">Người lấy phôi</option>
         <option value="ve_file">Vẽ file</option>
         <option value="san_xuat">Sản xuất</option>
@@ -53,7 +54,7 @@
   const user = await requireLoginOrRedirect();
   if (!user) return;
   renderNav(user, 'users');
-  if (user.vaiTro !== 'admin') {
+  if (!laAdmin(user.vaiTro)) {
     document.querySelector('.page').innerHTML = '<p>Bạn không có quyền truy cập trang này.</p>';
     return;
   }

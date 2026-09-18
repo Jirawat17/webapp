@@ -221,7 +221,7 @@ const CAC_O_LOC_DC = ['loc-kh', 'loc-tu-ngay', 'loc-den-ngay', 'loc-canh-bao', '
   // docs/superpowers/specs/2026-09-07-loc-nguoi-san-xuat-don-cua-toi-design.md). san_xuat vốn đã chỉ
   // thấy đơn của chính mình (lọc ở server, routes/orders.js locDonDangChayMayTheoNguoiVanHanh) nên
   // không cần bộ lọc này.
-  if (user.vaiTro === 'admin') {
+  if (laAdmin(user.vaiTro)) {
     document.getElementById('loc-nguoi-van-hanh-wrap').style.display = '';
     document.getElementById('loc-nguoi-van-hanh').onchange = () => taiDon();
   }
@@ -230,7 +230,7 @@ const CAC_O_LOC_DC = ['loc-kh', 'loc-tu-ngay', 'loc-den-ngay', 'loc-canh-bao', '
   // docs/superpowers/specs/2026-09-08-admin-chi-dinh-tai-san-sang-design.md). display:contents (không
   // phải '') vì khối này nằm trong .thanh-hanh-dong-hang-loat (flex container) — dùng '' sẽ làm mất
   // flex:1/align-self:stretch của các phần tử con (lỗi đã gặp ở orders.html trước đây).
-  if (user.vaiTro === 'admin') {
+  if (laAdmin(user.vaiTro)) {
     document.getElementById('khoi-chi-dinh-nguoi-chay-may-san-sang').style.display = 'contents';
     try {
       const dsNhanVien = await apiFetch('/users');
@@ -544,7 +544,7 @@ function ngayHomNayYYYYMMDD() {
 
 function xoaTatCaLoc() {
   xoaCacOLoc(CAC_O_LOC_DC, '');
-  if (user.vaiTro === 'admin') document.getElementById('loc-nguoi-van-hanh').value = '';
+  if (laAdmin(user.vaiTro)) document.getElementById('loc-nguoi-van-hanh').value = '';
   taiDon();
 }
 
@@ -558,8 +558,8 @@ async function taiDon() {
   const el = document.getElementById('danh-sach-don');
   el.innerHTML = skeletonList(4);
 
-  const laAdmin = user.vaiTro === 'admin';
-  const nguoiVanHanhDangLoc = laAdmin ? document.getElementById('loc-nguoi-van-hanh').value : '';
+  const dangLaAdmin = laAdmin(user.vaiTro);
+  const nguoiVanHanhDangLoc = dangLaAdmin ? document.getElementById('loc-nguoi-van-hanh').value : '';
   const kh = document.getElementById('loc-kh').value;
   const tuNgay = document.getElementById('loc-tu-ngay').value;
   const denNgay = document.getElementById('loc-den-ngay').value;

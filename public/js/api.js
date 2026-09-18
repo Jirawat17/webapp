@@ -2,6 +2,7 @@ const API = '/api';
 
 const NHAN_VAI_TRO = {
   admin: 'Admin',
+  superadmin: 'Superadmin',
   nguoi_lay_phoi: 'Người lấy phôi',
   ve_file: 'Vẽ file',
   san_xuat: 'Sản xuất',
@@ -80,13 +81,20 @@ function dangXuat() {
 // đúng 1 hàm dùng chung (bổ sung 12/09/2026, trước đó index.html tự lặp lại logic này riêng, có lúc
 // quên nhánh nguoi_lay_phoi/san_xuat khiến 2 nơi lệch nhau — xem
 // docs/superpowers/specs/2026-09-12-chan-nguoi-lay-phoi-xem-don-hang-design.md).
+// superadmin (bổ sung 18/09/2026, theo yêu cầu người dùng) — có MỌI quyền admin, kể cả ẨN/HIỆN menu.
+// Hàm này CHỈ quyết định giao diện hiện gì — không phải lớp bảo vệ thật (chặn thật luôn nằm ở server,
+// xem middleware/auth.js#laAdmin bản phía server, PHẢI sửa đồng bộ cả 2 nơi nếu đổi quy tắc này).
+function laAdmin(vaiTro) {
+  return vaiTro === 'admin' || vaiTro === 'superadmin';
+}
+
 function trangChuTheoVaiTro(vaiTro) {
   if (vaiTro === 'nguoi_lay_phoi') return '/scan.html';
   if (vaiTro === 'san_xuat') return '/my-orders.html';
   // Trung tâm hành động (bổ sung 14/09/2026, xem
   // docs/superpowers/specs/2026-09-14-trung-tam-hanh-dong-design.md) — CHỈ admin, thay cho orders.html
   // mặc định bên dưới, để đăng nhập vào là thấy ngay danh sách việc cần xử lý.
-  if (vaiTro === 'admin') return '/trung-tam-hanh-dong.html';
+  if (laAdmin(vaiTro)) return '/trung-tam-hanh-dong.html';
   return '/orders.html';
 }
 
@@ -133,7 +141,7 @@ function renderNav(user, active) {
     // (bổ sung 09/09/2026, theo yêu cầu người dùng — áp dụng cho MỌI vai trò dùng nhãn này, kể cả
     // san_xuat/ve_file ở các nhánh khác trong hàm, không chỉ riêng admin) — bỏ hẳn phần ghép tên
     // (+ escapeHtml(user.ten)) vì tên không còn xuất hiện trong nhãn nữa.
-    if (user.vaiTro === 'admin') {
+    if (laAdmin(user.vaiTro)) {
       // "Bảng điều khiển" (bổ sung 08/09/2026, xem
       // docs/superpowers/specs/2026-09-08-bang-dieu-khien-admin-design.md) — CHỈ admin, lên ĐẦU TIÊN
       // (khác "Thống kê" vẫn mở cho cả ve_file) vì là màn hình tổng quan nhanh, hợp lý để thấy ngay.

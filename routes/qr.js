@@ -5,7 +5,7 @@ const alertService = require('../services/alertService');
 const scenarioService = require('../services/scenarioService');
 const { layBanDoTenKhachHang } = require('../services/khachHangService');
 const { ghiLog, layLichSuTheoDon, ghiNhatKyQuetHangLoat } = require('../services/logService');
-const { requireLogin } = require('../middleware/auth');
+const { requireLogin, laAdmin } = require('../middleware/auth');
 
 router.use(requireLogin);
 
@@ -21,7 +21,7 @@ function ghiKhongCho(promise) {
 // được phép dùng mọi kịch bản bất kể Nguoi_Thuc_Hien ghi gì — admin là superuser, không cần liệt kê
 // riêng trong từng dòng Sheet.
 function duocPhepDungKichBan(scenario, user) {
-  return user.vaiTro === 'admin' || !scenario.allowedRoles || scenario.allowedRoles.includes(user.vaiTro);
+  return laAdmin(user.vaiTro) || !scenario.allowedRoles || scenario.allowedRoles.includes(user.vaiTro);
 }
 
 // "Van an toàn" chung (bổ sung 26/08/2026, theo Prompt_Ver_25.docx): trước đây mỗi kịch bản chỉ tự

@@ -291,7 +291,7 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   // đúng phạm vi người dùng đã xác nhận, ẩn hẳn với các vai trò khác (san_xuat, nguoi_lay_phoi) thay
   // vì chỉ dựa vào việc backend chặn đổi trạng thái (xem spec 2026-09-05).
   const btnInMaPhoiDon = document.getElementById('btn-in-ma-phoi-don');
-  if (user.vaiTro === 'admin' || user.vaiTro === 've_file') {
+  if (laAdmin(user.vaiTro) || user.vaiTro === 've_file') {
     btnInMaPhoiDon.innerHTML = icon('printer') + ' IN MÃ + IN DANH SÁCH PHÔI ĐƠN ĐANG CHỌN + IN ĐƠN ĐANG CHỌN';
   } else {
     btnInMaPhoiDon.style.display = 'none';
@@ -302,14 +302,14 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   // NHOM_HANG_LOAT vào Sheet) — khớp đúng chặn quyền tương ứng ở backend POST /quet-hang-loat/bat-dau
   // (thêm cùng lúc, trước đó route này chưa chặn theo vai trò).
   const btnQuetHangLoat = document.getElementById('btn-quet-hang-loat');
-  if (user.vaiTro === 'admin' || user.vaiTro === 've_file') {
+  if (laAdmin(user.vaiTro) || user.vaiTro === 've_file') {
     btnQuetHangLoat.style.display = '';
     btnQuetHangLoat.innerHTML = icon('scan') + ' Quét tìm DHL';
   }
 
   // "Quét lại DHL" (nhãn rút gọn 13/09/2026, theo yêu cầu người dùng; trước đó "QUÉT LẠI ĐƠN ĐANG CHỌN").
   const btnQuetLaiHangLoat = document.getElementById('btn-quet-lai-hang-loat');
-  if (user.vaiTro === 'admin' || user.vaiTro === 've_file') {
+  if (laAdmin(user.vaiTro) || user.vaiTro === 've_file') {
     btnQuetLaiHangLoat.style.display = '';
     btnQuetLaiHangLoat.innerHTML = icon('scan') + ' Quét lại DHL';
   }
@@ -318,7 +318,7 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   // LOẠT") — cùng phạm vi quyền với nút quét ở trên (khớp backend POST /don-hang-loat/:ma/them-don,
   // /don-hang-loat).
   const btnThemHangLoat = document.getElementById('btn-them-hang-loat');
-  if (user.vaiTro === 'admin' || user.vaiTro === 've_file') {
+  if (laAdmin(user.vaiTro) || user.vaiTro === 've_file') {
     btnThemHangLoat.style.display = '';
     btnThemHangLoat.innerHTML = icon('package') + ' Thêm vào DHL';
   }
@@ -327,7 +327,7 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   // ve_file, đúng phạm vi trang public/don-hang-loat.html. Đổ datalist gợi ý tên ngay khi tải trang
   // (số nhóm luôn nhỏ, gọi 1 lần không đáng kể — khác GET /orders vốn CHỈ đọc tab DonHangLoat khi có
   // lọc, xem routes/orders.js) — lỗi tải (vd chưa tạo tab) chỉ ẩn ô lọc, không chặn cả trang.
-  if (user.vaiTro === 'admin' || user.vaiTro === 've_file') {
+  if (laAdmin(user.vaiTro) || user.vaiTro === 've_file') {
     apiFetch('/don-hang-loat').then(({ nhoms }) => {
       if (nhoms.length === 0) return;
       document.getElementById('ds-ten-don-hang-loat').innerHTML =
@@ -339,7 +339,7 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   // "IN KÊ KHAI HẢI QUAN ĐƠN ĐANG CHỌN" (bổ sung 08/09/2026) — chỉ admin/ve_file, cùng phạm vi với
   // nút gộp phía trên.
   const btnInHaiQuan = document.getElementById('btn-in-hai-quan');
-  if (user.vaiTro === 'admin' || user.vaiTro === 've_file') {
+  if (laAdmin(user.vaiTro) || user.vaiTro === 've_file') {
     btnInHaiQuan.style.display = '';
     btnInHaiQuan.innerHTML = icon('printer') + ' IN KÊ KHAI HẢI QUAN ĐƠN ĐANG CHỌN';
   }
@@ -358,7 +358,7 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   // "Chỉ định người chạy máy" — CHỈ admin (xem docs/superpowers/specs/2026-09-07-nguoi-chay-may-design.md).
   // Đổ danh sách san_xuat đang hoạt động từ /users (route này vốn đã chỉ mở cho admin — requireRole
   // trong routes/users.js — nên không lộ danh sách nhân viên cho vai trò khác qua đường này).
-  if (user.vaiTro === 'admin') {
+  if (laAdmin(user.vaiTro)) {
     // Lọc theo Xưởng/Ưu tiên (bổ sung 13/09/2026, theo yêu cầu người dùng) — CHỈ admin cần, xem chú
     // thích tại <div id="truong-loc-xuong">/#truong-loc-uu-tien"> phía trên. display:flex khớp đúng
     // display mặc định của .truong (xem .inline-form .truong trong style.css), không phải 'contents'
@@ -400,7 +400,7 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   // (admin-only): ở đây CẢ admin LẪN ve_file đều được đánh dấu (xem routes/orders.js POST
   // /danh-dau-uu-tien). 2 nút riêng (không phải 1 <select>+Áp dụng) vì chỉ có đúng 2 lựa chọn (bật/tắt),
   // cùng khuôn 2 nút "Đã lấy phôi"/"Chưa lấy phôi" ở trên.
-  if (user.vaiTro === 'admin' || user.vaiTro === 've_file') {
+  if (laAdmin(user.vaiTro) || user.vaiTro === 've_file') {
     document.getElementById('khoi-uu-tien').style.display = 'contents';
     document.getElementById('btn-danh-dau-uu-tien').innerHTML = icon('star', { size: 16 }) + ' Đánh dấu Ưu tiên';
     document.getElementById('btn-bo-uu-tien').innerHTML = icon('undo', { size: 16 }) + ' Bỏ Ưu tiên';
@@ -557,7 +557,7 @@ function renderDanhSachDon() {
                aria-label="Chọn đơn ${escapeHtml(o.STT_Key)}"
                onclick="event.stopPropagation()"
                onchange="toggleChonDon('${escapeHtml(o.STT_Key)}', this.checked)">
-        ${(user.vaiTro === 'admin' || user.vaiTro === 've_file') ? `
+        ${(laAdmin(user.vaiTro) || user.vaiTro === 've_file') ? `
           <button type="button" class="btn-uu-tien-nhanh ${o.DonUuTien ? 'bat' : ''}"
                   title="${o.DonUuTien ? 'Bỏ ưu tiên' : 'Đánh dấu ưu tiên'}"
                   aria-label="${o.DonUuTien ? 'Bỏ ưu tiên' : 'Đánh dấu ưu tiên'}"
@@ -583,7 +583,7 @@ function renderDanhSachDon() {
             <span class="badge badge-canh-bao ${o.CanhBao.toLowerCase()}">
               ${icon('alert')} ${NHAN_CANH_BAO[o.CanhBao] || o.CanhBao}
             </span>` : ''}
-          ${user.vaiTro === 'admin' ? `
+          ${laAdmin(user.vaiTro) ? `
             <span class="badge trang-thai-info">${icon('package', {size:14})} Xưởng: <strong>${escapeHtml(o.XUONG || '(chưa gán)')}</strong></span>` : ''}
         </div>
       </div>

@@ -6,6 +6,7 @@ const { readTab, readTabCached, appendRow, appendRows, updateCells, updateCellsM
 const orderService = require('./orderService');
 const { ghiLog } = require('./logService');
 const { thoiGianVNISOString } = require('./dateUtils');
+const { laAdmin } = require('../middleware/auth');
 
 const TAB = 'DonHangLoat';
 const TAB_CAU_HINH = 'CaiDatHangLoat';
@@ -136,7 +137,7 @@ async function layDanhSachNhom(user) {
   // chỉ 1 đơn ngoài Xưởng (an toàn hơn hiện thiếu — tránh sửa/xoá nhầm 1 nhóm tưởng đủ mà thực ra bị
   // ẩn bớt đơn, xem mục 2.1 spec — về lý thuyết không nên xảy ra vì đã chặn khác Xưởng lúc tạo/thêm,
   // đây là phòng hờ dữ liệu bị đổi Xưởng sau đó qua routes/orders.js POST /gan-xuong).
-  if (user.vaiTro !== 'admin') {
+  if (!laAdmin(user.vaiTro)) {
     nhoms = user.xuong ? nhoms.filter(n => n.donHang.every(d => d.XUONG === user.xuong)) : [];
   }
   return nhoms.sort((a, b) => a.maDonHangLoat.localeCompare(b.maDonHangLoat));
