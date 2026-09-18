@@ -82,11 +82,12 @@
           <option value="DO">Đỏ · 7 ngày</option>
         </select>
       </div>
-      <!-- Lọc theo Xưởng + Đơn ưu tiên (bổ sung 13/09/2026, theo yêu cầu người dùng) — CHỈ admin thấy
-           (style="display:none" mặc định, JS hiện lại nếu admin — xem IIFE đăng nhập bên dưới): vai trò
-           khác đã bị giới hạn CHỈ thấy đúng 1 Xưởng của mình (server-side, orderService.js#locTheoXuong)
-           nên lọc theo Xưởng không có ý nghĩa với họ; lọc theo Ưu tiên cũng thu hẹp phạm vi admin dùng
-           theo yêu cầu, không mở rộng cho vai trò khác. -->
+      <!-- Lọc theo Xưởng (bổ sung 13/09/2026, thu hẹp từ admin xuống CHỈ superadmin 18/09/2026, theo
+           yêu cầu người dùng — admin không còn được thấy thông tin Xưởng của đơn hàng nữa, xem
+           orderService.js#anXuongVoiAdmin) — style="display:none" mặc định, JS hiện lại nếu superadmin
+           — xem IIFE đăng nhập bên dưới. Đơn ưu tiên vẫn CHỈ admin (không đổi, xem khối riêng bên dưới):
+           vai trò khác đã bị giới hạn CHỈ thấy đúng 1 Xưởng của mình (server-side,
+           orderService.js#locTheoXuong) nên lọc theo Xưởng không có ý nghĩa với họ. -->
       <div class="truong" id="truong-loc-xuong" style="display:none">
         <label for="loc-xuong">Xưởng</label>
         <select id="loc-xuong">
@@ -250,7 +251,8 @@ const DANH_SACH_XUONG = ['HN', 'BN'];
 let danhSachHienTai = [];
 let donDaChonSet = new Set();
 let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSachDon() cần biết vaiTro để
-          // quyết định có hiện badge Xưởng hay không (chỉ admin cần thấy, xem bên dưới)
+          // quyết định có hiện badge Xưởng hay không (CHỈ superadmin cần thấy — thu hẹp từ admin
+          // 18/09/2026, theo yêu cầu người dùng, xem bên dưới)
 
 (async () => {
   user = await requireLoginOrRedirect();
@@ -359,11 +361,9 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   // Đổ danh sách san_xuat đang hoạt động từ /users (route này vốn đã chỉ mở cho admin — requireRole
   // trong routes/users.js — nên không lộ danh sách nhân viên cho vai trò khác qua đường này).
   if (laAdmin(user.vaiTro)) {
-    // Lọc theo Xưởng/Ưu tiên (bổ sung 13/09/2026, theo yêu cầu người dùng) — CHỈ admin cần, xem chú
-    // thích tại <div id="truong-loc-xuong">/#truong-loc-uu-tien"> phía trên. display:flex khớp đúng
-    // display mặc định của .truong (xem .inline-form .truong trong style.css), không phải 'contents'
-    // như các khối dưới đây (2 khối này KHÔNG nằm trong 1 flex container cần "xuyên qua" wrapper).
-    document.getElementById('truong-loc-xuong').style.display = 'flex';
+    // Lọc theo Ưu tiên (bổ sung 13/09/2026, theo yêu cầu người dùng) — CHỈ admin cần, xem chú
+    // thích tại <div id="truong-loc-uu-tien"> phía trên. display:flex khớp đúng display mặc định của
+    // .truong (xem .inline-form .truong trong style.css).
     document.getElementById('truong-loc-uu-tien').style.display = 'flex';
 
     // display:contents (không phải '') — khối bọc này chỉ để gom nhóm cho dễ ẩn/hiện bằng JS, KHÔNG
@@ -372,13 +372,6 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
     // tiếp của flex container nữa.
     document.getElementById('khoi-chi-dinh-nguoi-chay-may').style.display = 'contents';
     document.getElementById('khoi-chi-dinh-nguoi-ve-file').style.display = 'contents';
-    // "Gán Xưởng" (bổ sung 13/09/2026, theo yêu cầu người dùng) — CHỈ admin, cùng khuôn 2 khối "Chỉ
-    // định" ở trên. Danh sách Xưởng cố định (không cần gọi API) — xem
-    // services/orderService.js#DANH_SACH_XUONG.
-    document.getElementById('khoi-gan-xuong').style.display = 'contents';
-    document.getElementById('xuong-dich').innerHTML = '<option value="">Gán Xưởng...</option>' +
-      DANH_SACH_XUONG.map(x => `<option value="${x}">${x}</option>`).join('') +
-      '<option value="__GO_GAN__">(Gỡ gán Xưởng)</option>';
     // Nút "Mua tracking" thủ công hàng loạt (bổ sung 09/09/2026, theo yêu cầu người dùng) — không cần
     // đổ danh sách gì thêm (khác 2 khối trên cần danh sách nhân viên), chỉ cần hiện đúng cho admin.
     document.getElementById('khoi-mua-tracking-thu-cong').style.display = 'contents';
@@ -394,6 +387,18 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
       document.getElementById('nguoi-ve-file-dich').innerHTML = '<option value="">Chỉ định người vẽ file...</option>' +
         dsVeFile.map(u => `<option value="${escapeHtml(u.Ten)}">${escapeHtml(u.Ten)}</option>`).join('');
     } catch (e) { /* không tải được danh sách nhân viên — ô chọn giữ nguyên rỗng, không chặn tải trang */ }
+  }
+
+  // Lọc theo Xưởng + "Gán Xưởng" (bổ sung 13/09/2026, thu hẹp từ admin xuống CHỈ superadmin
+  // 18/09/2026, theo yêu cầu người dùng — xem routes/orders.js POST /gan-xuong,
+  // orderService.js#anXuongVoiAdmin). Tách riêng khỏi khối laAdmin() ở trên vì đây là ĐIỂM DUY NHẤT
+  // trong toàn app admin/superadmin KHÔNG ngang quyền nhau.
+  if (laSuperAdmin(user.vaiTro)) {
+    document.getElementById('truong-loc-xuong').style.display = 'flex';
+    document.getElementById('khoi-gan-xuong').style.display = 'contents';
+    document.getElementById('xuong-dich').innerHTML = '<option value="">Gán Xưởng...</option>' +
+      DANH_SACH_XUONG.map(x => `<option value="${x}">${x}</option>`).join('') +
+      '<option value="__GO_GAN__">(Gỡ gán Xưởng)</option>';
   }
 
   // "Đơn ưu tiên" (bổ sung 13/09/2026, theo yêu cầu người dùng) — RỘNG HƠN khối "Gán Xưởng" ở trên
@@ -583,7 +588,7 @@ function renderDanhSachDon() {
             <span class="badge badge-canh-bao ${o.CanhBao.toLowerCase()}">
               ${icon('alert')} ${NHAN_CANH_BAO[o.CanhBao] || o.CanhBao}
             </span>` : ''}
-          ${laAdmin(user.vaiTro) ? `
+          ${laSuperAdmin(user.vaiTro) ? `
             <span class="badge trang-thai-info">${icon('package', {size:14})} Xưởng: <strong>${escapeHtml(o.XUONG || '(chưa gán)')}</strong></span>` : ''}
         </div>
       </div>
@@ -756,11 +761,11 @@ async function apDungChiDinhNguoiChayMay() {
   await taiDon();
 }
 
-// Admin GÁN XƯỞNG (HN/BN...) cho toàn bộ đơn đang chọn — bổ sung 13/09/2026, theo yêu cầu
-// người dùng (phân loại đơn theo xưởng vật lý, mỗi xưởng chỉ thành viên cùng Xưởng mới xem/thao tác
-// được — xem services/orderService.js#locTheoXuong/coQuyenTheoXuong, routes/orders.js POST
-// /gan-xuong). "(Gỡ gán Xưởng)" gửi chuỗi rỗng — đưa đơn về "chưa có xưởng" (ẩn với người thường,
-// theo đúng lựa chọn của người dùng).
+// Superadmin GÁN XƯỞNG (HN/BN...) cho toàn bộ đơn đang chọn — bổ sung 13/09/2026, thu hẹp từ admin
+// xuống CHỈ superadmin 18/09/2026 (theo yêu cầu người dùng, phân loại đơn theo xưởng vật lý, mỗi xưởng
+// chỉ thành viên cùng Xưởng mới xem/thao tác được — xem services/orderService.js#locTheoXuong/
+// coQuyenTheoXuong, routes/orders.js POST /gan-xuong). "(Gỡ gán Xưởng)" gửi chuỗi rỗng — đưa đơn về
+// "chưa có xưởng" (ẩn với người thường, theo đúng lựa chọn của người dùng).
 async function apDungGanXuong() {
   const luaChon = document.getElementById('xuong-dich').value;
   if (!luaChon) { alert('Hãy chọn Xưởng muốn gán (hoặc "Gỡ gán Xưởng")'); return; }

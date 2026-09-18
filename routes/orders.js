@@ -12,7 +12,7 @@ const { ghiLog, layLichSuTheoDon } = require('../services/logService');
 const { readTabCached } = require('../services/sheetsService');
 const { taiDsAnh } = require('../services/anhNguonService');
 const { tinhHashAnh, khoangCachHamming } = require('../services/perceptualHashService');
-const { requireLogin, laAdmin } = require('../middleware/auth');
+const { requireLogin, laAdmin, laSuperAdmin } = require('../middleware/auth');
 
 router.use(requireLogin);
 
@@ -222,7 +222,7 @@ router.get('/', async (req, res) => {
 
   list = sapXepDon(list, sapXep);
   list = locDonDangChayMayTheoNguoiVanHanh(list, req.session.user);
-  res.json(list);
+  res.json(orderService.anXuongNhieuDonVoiAdmin(list, req.session.user.vaiTro));
 });
 
 // Chuyển trạng thái HÀNG LOẠT cho nhiều đơn cùng lúc — chọn tự do bất kỳ trong 10 giá trị TRANG_THAI_XUONG,
@@ -428,16 +428,18 @@ router.post('/chi-dinh-nguoi-ve-file', async (req, res) => {
   res.json({ ok: true, thanhCong, loi });
 });
 
-// Admin GÁN XƯỞNG (HN/BN...) cho 1 lô đơn đã chọn — bổ sung 13/09/2026, theo yêu cầu người
+// GÁN XƯỞNG (HN/BN...) cho 1 lô đơn đã chọn — bổ sung 13/09/2026, theo yêu cầu người
 // dùng (phân loại đơn theo xưởng vật lý, mỗi xưởng chỉ thành viên cùng Xưởng mới xem/thao tác được —
-// xem services/orderService.js#locTheoXuong/coQuyenTheoXuong). CHỈ admin — cùng khuôn
+// xem services/orderService.js#locTheoXuong/coQuyenTheoXuong). CHỈ superadmin (thu hẹp từ admin+
+// superadmin xuống CHỈ superadmin — bổ sung 18/09/2026, theo yêu cầu người dùng: admin không còn được
+// thấy/thao tác thông tin Xưởng của đơn hàng nữa, xem orderService.js#anXuongVoiAdmin) — cùng khuôn
 // /chi-dinh-nguoi-chay-may/-ve-file (chọn hàng loạt ở trang Đơn hàng), KHÔNG có điều khiển riêng ở
-// trang chi tiết 1 đơn (đã xác nhận với người dùng). Không kiểm tra coQuyenTheoXuong ở đây — admin
-// luôn được xem/gán MỌI đơn bất kể Xưởng hiện tại.
+// trang chi tiết 1 đơn (đã xác nhận với người dùng). Không kiểm tra coQuyenTheoXuong ở đây — superadmin
+// luôn được xem/gán MỌI đơn bất kể Xưởng hiện tại (cùng quyền admin trước đây, qua laAdmin()).
 router.post('/gan-xuong', async (req, res) => {
   const user = req.session.user;
-  if (!laAdmin(user.vaiTro)) {
-    return res.status(403).json({ error: 'Chỉ admin mới được gán Xưởng cho đơn' });
+  if (!laSuperAdmin(user.vaiTro)) {
+    return res.status(403).json({ error: 'Chỉ superadmin mới được gán Xưởng cho đơn' });
   }
 
   const { sttKeys, xuong } = req.body;
@@ -580,7 +582,7 @@ router.get('/:sttKey', async (req, res) => {
     return res.status(404).json({ error: 'Không tìm thấy đơn hàng' });
   }
 
-  res.json({ ...donDaLamGiau, lichSu, kichBanKeTiep });
+  res.json(orderService.anXuongVoiAdmin({ ...donDaLamGiau, lichSu, kichBanKeTiep }, user.vaiTro));
 });
 
 // CHÍNH SÁCH PHÂN QUYỀN (cập nhật 26/08/2026 — nguoi_lay_phoi KHÔNG được set tay bất kỳ trường nào

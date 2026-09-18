@@ -12,9 +12,11 @@
 <div class="page">
   <h2>Đơn hàng loạt</h2>
 
-  <!-- Lọc theo Xưởng (bổ sung 13/09/2026, theo yêu cầu người dùng) — CHỈ admin cần (thấy nhóm của mọi
-       Xưởng trộn lẫn); ve_file vốn đã chỉ thấy đúng 1 Xưởng của mình (server-side locTheoXuong), lọc
-       thêm không có ý nghĩa — ẩn mặc định, JS hiện lại nếu admin. -->
+  <!-- Lọc theo Xưởng (bổ sung 13/09/2026, theo yêu cầu người dùng) — CHỈ superadmin thấy được (thu hẹp
+       từ admin xuống CHỈ superadmin, 18/09/2026, theo yêu cầu người dùng — admin không còn được thấy
+       thông tin Xưởng của đơn hàng nữa, xem routes/donHangLoat.js#anXuongNhomVoiAdmin); ve_file vốn đã
+       chỉ thấy đúng 1 Xưởng của mình (server-side locTheoXuong), lọc thêm không có ý nghĩa — ẩn mặc
+       định, JS hiện lại nếu superadmin. -->
   <div class="truong" id="truong-loc-xuong-dhl" style="display:none; max-width:220px; margin-bottom:var(--space-4)">
     <label for="loc-xuong-dhl">Xưởng</label>
     <select id="loc-xuong-dhl">
@@ -59,7 +61,7 @@ let vaiTroHienTai = '';
   document.getElementById('btn-luu-nguong').onclick = luuNguong;
   document.getElementById('btn-tao-nhom-moi').onclick = taoNhomMoi;
 
-  if (laAdmin(user.vaiTro)) {
+  if (laSuperAdmin(user.vaiTro)) {
     document.getElementById('truong-loc-xuong-dhl').style.display = 'flex';
     document.getElementById('loc-xuong-dhl').onchange = () => Promise.all([taiDanhSachGoiY(), taiDanhSachXacNhan()]);
   }

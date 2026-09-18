@@ -4,6 +4,14 @@ const orderService = require('../services/orderService');
 const donHangLoatService = require('../services/donHangLoatService');
 const { requireRole } = require('../middleware/auth');
 
+// ẨN XUONG của mỗi đơn trong "nhoms" với riêng vai trò admin (bổ sung 18/09/2026, theo yêu cầu người
+// dùng — xem services/orderService.js#anXuongVoiAdmin, cùng nguyên tắc). GET /goi-y KHÔNG cần gọi hàm
+// này — response của route đó vốn đã không có trường XUONG (xem donHang.push() ở dưới).
+function anXuongNhomVoiAdmin(nhoms, vaiTro) {
+  if (vaiTro !== 'admin') return nhoms;
+  return nhoms.map(n => ({ ...n, donHang: orderService.anXuongNhieuDonVoiAdmin(n.donHang, vaiTro) }));
+}
+
 // Toàn bộ tính năng "Đơn hàng loạt" (gợi ý + quản lý chính thức) CHỈ dành admin/ve_file — gộp 1 chỗ
 // duy nhất (khác routes/orders.js vốn có nhiều phạm vi quyền khác nhau trộn lẫn trong 1 file) vì MỌI
 // route bên dưới đều cần đúng 1 phạm vi quyền này, không có ngoại lệ. admin luôn được phép (xem
@@ -65,7 +73,7 @@ router.get('/', async (req, res) => {
   // nếu có dù chỉ 1 đơn ngoài Xưởng đang lọc, khớp nguyên tắc "mọi đơn phải cùng Xưởng" của chính
   // layDanhSachNhom()).
   if (req.query.xuong) nhoms = nhoms.filter(n => n.donHang.every(d => d.XUONG === req.query.xuong));
-  res.json({ nhoms });
+  res.json({ nhoms: anXuongNhomVoiAdmin(nhoms, req.session.user.vaiTro) });
 });
 
 router.post('/', async (req, res) => {

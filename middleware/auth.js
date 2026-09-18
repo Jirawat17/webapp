@@ -40,4 +40,12 @@ function requireExactRole(...roles) {
   };
 }
 
-module.exports = { requireLogin, requireRole, requireExactRole, laAdmin, VAI_TRO_ADMIN };
+// Phân biệt superadmin RIÊNG với admin (bổ sung 18/09/2026, theo yêu cầu người dùng) — dùng cho các
+// trường hợp CHỈ superadmin được phép, admin KHÔNG (khác laAdmin() ở trên vốn coi 2 vai trò này ngang
+// nhau ở MỌI nơi khác). Hiện dùng cho: thông tin Xưởng của đơn hàng (routes/orders.js, routes/
+// donHangLoat.js, public/orders.html, public/don-hang-loat.html).
+function laSuperAdmin(vaiTro) {
+  return vaiTro === 'superadmin';
+}
+
+module.exports = { requireLogin, requireRole, requireExactRole, laAdmin, laSuperAdmin, VAI_TRO_ADMIN };

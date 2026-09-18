@@ -88,6 +88,12 @@ function laAdmin(vaiTro) {
   return vaiTro === 'admin' || vaiTro === 'superadmin';
 }
 
+// Phân biệt superadmin RIÊNG với admin (bổ sung 18/09/2026, theo yêu cầu người dùng) — dùng cho thông
+// tin Xưởng của đơn hàng, nơi CHỈ superadmin được thấy/thao tác, admin KHÔNG (khác laAdmin() ở trên).
+function laSuperAdmin(vaiTro) {
+  return vaiTro === 'superadmin';
+}
+
 function trangChuTheoVaiTro(vaiTro) {
   if (vaiTro === 'nguoi_lay_phoi') return '/scan.html';
   if (vaiTro === 'san_xuat') return '/my-orders.html';

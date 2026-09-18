@@ -375,6 +375,23 @@ function coQuyenTheoXuong(user, row) {
   return !!user.xuong && !!row.XUONG && user.xuong === row.XUONG;
 }
 
+// ẨN thông tin Xưởng của ĐƠN HÀNG với riêng vai trò admin (bổ sung 18/09/2026, theo yêu cầu người
+// dùng) — CHỈ superadmin còn thấy được giá trị XUONG, KHÁC HẲN quyền THAO TÁC/XEM đơn theo Xưởng ở
+// locTheoXuong/coQuyenTheoXuong phía trên (KHÔNG đổi — admin vẫn xem/thao tác được MỌI đơn bất kể
+// Xưởng, chỉ không còn được trả về/hiển thị giá trị Xưởng của đơn đó nữa). Vai trò khác (ve_file/
+// san_xuat...) không đổi gì — họ vốn đã chỉ thấy đúng 1 Xưởng (của chính mình) nên trả lại không lộ
+// thêm thông tin gì mới. Trả về BẢN SAO (không mutate row gốc — row có thể là object đang được cache/
+// dùng lại ở nơi khác trong cùng request).
+function anXuongVoiAdmin(row, vaiTro) {
+  if (vaiTro !== 'admin') return row;
+  const { XUONG, ...conLai } = row;
+  return conLai;
+}
+function anXuongNhieuDonVoiAdmin(rows, vaiTro) {
+  if (vaiTro !== 'admin') return rows;
+  return rows.map(r => anXuongVoiAdmin(r, vaiTro));
+}
+
 // "Đơn ưu tiên" (bổ sung 13/09/2026, theo yêu cầu người dùng — cột DON_UU_TIEN người dùng tự thêm vào
 // Don_Hang_ALL). CHỈ admin/ve_file được đánh dấu — xem routes/orders.js POST /danh-dau-uu-tien (route
 // ghi DUY NHẤT) và TRUONG_CAM_SUA (chặn sửa qua PUT /:sttKey, cùng cách XUONG bị chặn — 1 trường chỉ có
@@ -386,5 +403,5 @@ function laUuTien(row) {
 
 module.exports = {
   TAB, KEY_COL, getAll, getByKey, getManyByKeys, update, filterForRole, ganTenKhachHang, tieuDeSanPham, danhSachViTriTheu,
-  DANH_SACH_XUONG, locTheoXuong, coQuyenTheoXuong, laUuTien,
+  DANH_SACH_XUONG, locTheoXuong, coQuyenTheoXuong, laUuTien, anXuongVoiAdmin, anXuongNhieuDonVoiAdmin,
 };
