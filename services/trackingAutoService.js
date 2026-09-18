@@ -4,12 +4,11 @@
 // docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md.
 const orderService = require('./orderService');
 const gkeService = require('./gkeService');
-const { readTab, readTabCached, updateCells, appendRow } = require('./sheetsService');
 const nhatKyDbService = require('./nhatKyDbService');
+const caiDatDbService = require('./caiDatDbService');
 const { ghiLog } = require('./logService');
 const { dinhDangNgayGioNgan } = require('./dateUtils');
 
-const TAB_CAU_HINH = 'CauHinhTracking';
 const SO_PHUT_MAC_DINH = 10;
 
 // "Người dùng" hệ thống — dùng khi ghi qua orderService.update()/ghiLog() từ job chạy nền, không có
@@ -69,39 +68,23 @@ async function ghiLogTrackingVaoDb({ sttKey, nguon, nguoiDung, vaiTro, ketQua, t
   }
 }
 
-// Đọc cấu hình bật/tắt + số phút chờ. Tab CauHinhTracking do người dùng tự tạo trước (2 cột
-// BatTuDongMuaTracking, SoPhutCho) — CHƯA tạo tab/chưa có dòng dữ liệu thì coi như TẮT (mặc định an
-// toàn), không chặn phần còn lại của app.
+// Đọc cấu hình bật/tắt + số phút chờ — bảng SQLite cau_hinh_tracking (bổ sung 19/09/2026, xem
+// services/caiDatDbService.js). Chưa từng lưu lần nào (chưa migrate/chưa ai lưu) thì coi như TẮT (mặc
+// định an toàn), không chặn phần còn lại của app.
 async function layCauHinh() {
-  try {
-    const { rows } = await readTabCached(TAB_CAU_HINH, 60000);
-    const dong = rows[0];
-    if (!dong) return { bat: false, soPhutCho: SO_PHUT_MAC_DINH, daCoDongDuLieu: false };
-    return {
-      bat: String(dong.BatTuDongMuaTracking).toUpperCase() === 'TRUE',
-      soPhutCho: Number(dong.SoPhutCho) > 0 ? Number(dong.SoPhutCho) : SO_PHUT_MAC_DINH,
-      daCoDongDuLieu: true,
-    };
-  } catch (e) {
-    console.error('[TrackingTuDong] Không đọc được cấu hình (có thể chưa tạo tab CauHinhTracking):', e.message);
-    return { bat: false, soPhutCho: SO_PHUT_MAC_DINH, daCoDongDuLieu: false };
-  }
+  const dong = caiDatDbService.layCauHinhTracking();
+  if (!dong) return { bat: false, soPhutCho: SO_PHUT_MAC_DINH, daCoDongDuLieu: false };
+  return {
+    bat: String(dong.BatTuDongMuaTracking).toUpperCase() === 'TRUE',
+    soPhutCho: Number(dong.SoPhutCho) > 0 ? Number(dong.SoPhutCho) : SO_PHUT_MAC_DINH,
+    daCoDongDuLieu: true,
+  };
 }
 
-// Ghi cấu hình — tự thêm dòng đầu tiên nếu tab mới chỉ có header (chưa từng lưu lần nào), các lần
-// sau ghi đè đúng dòng đó. Throw rõ ràng nếu tab CHƯA TỒN TẠI (kể cả header) — người dùng phải tự
-// tạo tab trước, không tự tạo tab hộ (sheetsService hiện chưa có hàm tạo tab mới).
+// Ghi cấu hình — UPSERT ghi 1 phần (chỉ BatTuDongMuaTracking/SoPhutCho, không đụng các cột Gke* mà
+// gkeService.js#luuCauHinhGke ghi riêng trên CÙNG dòng — xem caiDatDbService.js#datCauHinhTracking).
 async function luuCauHinh({ bat, soPhutCho }) {
-  const { headers, rows } = await readTab(TAB_CAU_HINH).catch(() => {
-    throw new Error(`Chưa tìm thấy tab '${TAB_CAU_HINH}' trong Google Sheet — hãy tạo tab này với 2 cột BatTuDongMuaTracking, SoPhutCho trước.`);
-  });
-  const giaTri = { BatTuDongMuaTracking: bat ? 'TRUE' : 'FALSE', SoPhutCho: soPhutCho };
-
-  if (rows[0]) {
-    await updateCells(TAB_CAU_HINH, headers, rows[0]._row, giaTri);
-  } else {
-    await appendRow(TAB_CAU_HINH, headers, giaTri);
-  }
+  caiDatDbService.datCauHinhTracking({ BatTuDongMuaTracking: bat ? 'TRUE' : 'FALSE', SoPhutCho: soPhutCho });
 }
 
 // Mua tracking cho 1 đơn — tạo vận đơn (nếu chưa từng) → ghi placeholder chống trùng → lấy tem → ghi

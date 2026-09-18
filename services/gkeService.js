@@ -32,10 +32,8 @@
 // Đọc/ghi CÙNG tab CauHinhTracking (gộp chung với cấu hình bật/tắt tự động mua tracking cho gọn, chỉ
 // 1 tab cần quản lý) — .env vẫn dùng làm GIÁ TRỊ NGẦM ĐỊNH nếu ô tương ứng trên Sheet còn trống, để
 // không phá vỡ cấu hình đang chạy khi mới nâng cấp lên bản có giao diện này.
-const { readTab, readTabCached, updateCells, appendRow } = require('./sheetsService');
+const caiDatDbService = require('./caiDatDbService');
 const { PDFDocument } = require('pdf-lib');
-
-const TAB_CAU_HINH = 'CauHinhTracking';
 
 function layGiaTri(dong, tenCot, bienEnv, macDinh = '') {
   if (dong && dong[tenCot]) return dong[tenCot];
@@ -44,8 +42,7 @@ function layGiaTri(dong, tenCot, bienEnv, macDinh = '') {
 }
 
 async function layCauHinhGke() {
-  const { rows } = await readTabCached(TAB_CAU_HINH, 60000);
-  const dong = rows[0];
+  const dong = caiDatDbService.layCauHinhTracking();
   return {
     username: layGiaTri(dong, 'GkeUsername', 'GKE_API_USERNAME'),
     password: layGiaTri(dong, 'GkePassword', 'GKE_API_PASSWORD'),
@@ -76,34 +73,20 @@ const CAC_TRUONG_CAU_HINH_GKE = [
   ['canNangMoiAoKg', 'CanNangMoiAoKg'],
 ];
 
-// Ghi cấu hình GKE — CÙNG khuôn với luuCauHinh() (tracking bật/tắt) trong trackingAutoService.js: tự
-// thêm dòng đầu tiên nếu tab mới chỉ có header, các lần sau ghi đè đúng dòng đó.
+// Ghi cấu hình GKE — bảng SQLite cau_hinh_tracking (bổ sung 19/09/2026, xem
+// services/caiDatDbService.js), UPSERT ghi 1 phần trên CÙNG dòng với luuCauHinh() (tracking bật/tắt)
+// trong trackingAutoService.js.
 //
-// Chỉ ghi những cột THẬT SỰ có trong tab (updateCells ném lỗi nếu gặp cột lạ) — cho phép tab
-// CauHinhTracking chỉ có 1 phần cột GKE (vd người dùng thêm dần), không bắt buộc đủ 1 lần. NHƯNG cột
-// nào bị thiếu thì trả về trong khoaBiBoQua để routes/tracking.js + tracking.html báo rõ cho người
-// dùng biết trường nào KHÔNG được lưu — trước đây bỏ qua âm thầm, route vẫn trả ok:true nên giao diện
-// báo "Đã lưu" dù thực tế trường đó chưa từng được ghi (bổ sung 12/09/2026, theo yêu cầu người dùng
-// phát hiện sau khi đổi Mã dịch vụ (Service code) mà lưu không có tác dụng — nghi do thiếu đúng cột
-// GkeServiceCode trong tab, người dùng cần tự kiểm tra/bổ sung cột).
+// khoaBiBoQua LUÔN rỗng từ nay — SQLite có schema CỐ ĐỊNH (đủ mọi cột ngay từ đầu), khác Sheets cũ nơi
+// người dùng có thể chỉ tạo 1 phần cột. Giữ nguyên field này trong kết quả trả về (routes/tracking.js
+// dòng 54 + tracking.html vẫn đọc field này) để không phải sửa gì ở 2 nơi đó.
 async function luuCauHinhGke(giaTri) {
-  const { headers, rows } = await readTab(TAB_CAU_HINH).catch(() => {
-    throw new Error(`Chưa tìm thấy tab '${TAB_CAU_HINH}' trong Google Sheet — hãy tạo tab này trước (xem docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md).`);
-  });
-
   const ghiHopLe = {};
-  const khoaBiBoQua = [];
   for (const [khoa, tenCot] of CAC_TRUONG_CAU_HINH_GKE) {
-    if (!headers.includes(tenCot)) { khoaBiBoQua.push(khoa); continue; }
     ghiHopLe[tenCot] = giaTri[khoa] || '';
   }
-
-  if (rows[0]) {
-    await updateCells(TAB_CAU_HINH, headers, rows[0]._row, ghiHopLe);
-  } else {
-    await appendRow(TAB_CAU_HINH, headers, ghiHopLe);
-  }
-  return { khoaBiBoQua };
+  caiDatDbService.datCauHinhTracking(ghiHopLe);
+  return { khoaBiBoQua: [] };
 }
 
 const BASE_URL = 'https://order.gkelogistics.com/openapi/customer';

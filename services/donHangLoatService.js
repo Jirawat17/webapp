@@ -4,12 +4,12 @@
 // docs/superpowers/specs/2026-09-13-quan-ly-don-hang-loat-design.md.
 const { readTab, readTabCached, appendRow, appendRows, updateCells, updateCellsManyRows } = require('./sheetsService');
 const orderService = require('./orderService');
+const caiDatDbService = require('./caiDatDbService');
 const { ghiLog } = require('./logService');
 const { thoiGianVNISOString } = require('./dateUtils');
 const { laAdmin } = require('../middleware/auth');
 
 const TAB = 'DonHangLoat';
-const TAB_CAU_HINH = 'CaiDatHangLoat';
 // Ngưỡng tính theo SỐ BIT KHÁC NHAU tuyệt đối trên tổng 256 bit của hash hiện tại (bổ sung 15/09/2026,
 // xem services/perceptualHashService.js — lưới hash tăng từ 64 lên 256 bit để phân biệt tốt hơn các
 // thiết kế chữ ngắn khác nhau). NGUONG_TOI_DA/NGUONG_MAC_DINH nhân 4 theo đúng tỉ lệ so với lưới 64 bit
@@ -25,39 +25,23 @@ function dongDangHoatDong(r) {
   return String(r.DaXoa || '').toUpperCase() !== 'TRUE';
 }
 
-// Đọc ngưỡng hiện tại — tab CaiDatHangLoat do người dùng tự tạo trước (1 cột NGUONG_HAMMING, đúng 1
-// dòng dữ liệu). Đúng khuôn mẫu đã chứng minh hoạt động tốt của
-// services/trackingAutoService.js#layCauHinh: CHƯA tạo tab/chưa có dòng nào → coi như dùng mặc định,
+// Đọc ngưỡng hiện tại — bảng SQLite cai_dat_hang_loat (bổ sung 19/09/2026, xem
+// services/caiDatDbService.js). Chưa từng đặt lần nào (chưa migrate/chưa ai lưu) → dùng mặc định,
 // KHÔNG chặn tính năng quét "Đơn hàng loạt" gợi ý (routes/orders.js).
 async function layNguong() {
-  try {
-    const { rows } = await readTabCached(TAB_CAU_HINH, 60000);
-    const dong = rows[0];
-    if (!dong || dong.NGUONG_HAMMING === '' || dong.NGUONG_HAMMING === undefined) return NGUONG_MAC_DINH;
-    const so = Number(dong.NGUONG_HAMMING);
-    return Number.isFinite(so) ? so : NGUONG_MAC_DINH;
-  } catch (e) {
-    console.error('[DonHangLoat] Không đọc được cấu hình ngưỡng (có thể chưa tạo tab CaiDatHangLoat):', e.message);
-    return NGUONG_MAC_DINH;
-  }
+  const dong = caiDatDbService.layCaiDatHangLoat();
+  if (!dong || dong.NGUONG_HAMMING === '' || dong.NGUONG_HAMMING === undefined) return NGUONG_MAC_DINH;
+  const so = Number(dong.NGUONG_HAMMING);
+  return Number.isFinite(so) ? so : NGUONG_MAC_DINH;
 }
 
-// Ghi ngưỡng mới — KHÁC layNguong(), ở đây báo lỗi rõ ràng nếu tab chưa tồn tại (người dùng đang chủ
-// động muốn lưu, không thể âm thầm bỏ qua như lúc đọc để phục vụ quét).
+// Ghi ngưỡng mới.
 async function datNguong(nguongMoi, user) {
   const so = Number(nguongMoi);
   if (!Number.isInteger(so) || so < NGUONG_TOI_THIEU || so > NGUONG_TOI_DA) {
     throw new Error(`Ngưỡng phải là số nguyên từ ${NGUONG_TOI_THIEU} đến ${NGUONG_TOI_DA}.`);
   }
-  const { headers, rows } = await readTab(TAB_CAU_HINH).catch(() => {
-    throw new Error(`Chưa tìm thấy tab '${TAB_CAU_HINH}' trong Google Sheet — hãy tạo tab này với 1 cột NGUONG_HAMMING trước.`);
-  });
-
-  if (rows[0]) {
-    await updateCells(TAB_CAU_HINH, headers, rows[0]._row, { NGUONG_HAMMING: so });
-  } else {
-    await appendRow(TAB_CAU_HINH, headers, { NGUONG_HAMMING: so });
-  }
+  caiDatDbService.datCaiDatHangLoat(so);
   await ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'DOI_NGUONG_HANG_LOAT', chiTiet: { nguong: so } });
 }
 
