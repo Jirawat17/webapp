@@ -1,15 +1,16 @@
 // "Đơn hàng loạt" (DHLXX) — dữ liệu CHÍNH THỨC do admin/ve_file chủ động xác nhận/quản lý, TÁCH BIỆT
 // hoàn toàn với NHOM_HANG_LOAT (gợi ý tự động theo ảnh, xem services/perceptualHashService.js) — quét
 // gợi ý lại bao nhiêu lần cũng không đụng tới dữ liệu ở đây. Xem đầy đủ thiết kế tại
-// docs/superpowers/specs/2026-09-13-quan-ly-don-hang-loat-design.md.
-const { readTab, readTabCached, appendRow, appendRows, updateCells, updateCellsManyRows } = require('./sheetsService');
+// docs/superpowers/specs/2026-09-13-quan-ly-don-hang-loat-design.md (thiết kế gốc, Sheets) và
+// docs/superpowers/specs/2026-09-19-don-hang-loat-sqlite-design.md (chuyển sang SQLite, 2 bảng
+// nhom/thanh_vien + xoá thật, bổ sung 19/09/2026).
 const orderService = require('./orderService');
 const caiDatDbService = require('./caiDatDbService');
+const donHangLoatDbService = require('./donHangLoatDbService');
 const { ghiLog } = require('./logService');
 const { thoiGianVNISOString } = require('./dateUtils');
 const { laAdmin } = require('../middleware/auth');
 
-const TAB = 'DonHangLoat';
 // Ngưỡng tính theo SỐ BIT KHÁC NHAU tuyệt đối trên tổng 256 bit của hash hiện tại (bổ sung 15/09/2026,
 // xem services/perceptualHashService.js — lưới hash tăng từ 64 lên 256 bit để phân biệt tốt hơn các
 // thiết kế chữ ngắn khác nhau). NGUONG_TOI_DA/NGUONG_MAC_DINH nhân 4 theo đúng tỉ lệ so với lưới 64 bit
@@ -20,10 +21,6 @@ const TAB = 'DonHangLoat';
 const NGUONG_MAC_DINH = 32;
 const NGUONG_TOI_THIEU = 0;
 const NGUONG_TOI_DA = 128;
-
-function dongDangHoatDong(r) {
-  return String(r.DaXoa || '').toUpperCase() !== 'TRUE';
-}
 
 // Đọc ngưỡng hiện tại — bảng SQLite cai_dat_hang_loat (bổ sung 19/09/2026, xem
 // services/caiDatDbService.js). Chưa từng đặt lần nào (chưa migrate/chưa ai lưu) → dùng mặc định,
@@ -45,16 +42,6 @@ async function datNguong(nguongMoi, user) {
   await ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'DOI_NGUONG_HANG_LOAT', chiTiet: { nguong: so } });
 }
 
-// Mã DHLXX tăng dần — quét CẢ dòng đã DaXoa để không bao giờ cấp trùng số cũ.
-function sinhMaMoi(rows) {
-  let soLonNhat = 0;
-  for (const r of rows) {
-    const khop = /^DHL(\d+)$/.exec(r.MaDonHangLoat || '');
-    if (khop) soLonNhat = Math.max(soLonNhat, Number(khop[1]));
-  }
-  return 'DHL' + String(soLonNhat + 1).padStart(2, '0');
-}
-
 // Bản NHẸ, tìm theo TỪ KHOÁ trong TÊN nhóm (không phân biệt hoa/thường, khớp chuỗi con — KHÔNG cần
 // đúng nguyên tên) — dùng cho ô lọc "Đơn hàng loạt" ở Danh sách đơn hàng (routes/orders.js GET /,
 // đổi từ lọc đúng mã sang tìm theo tên 13/09/2026, theo yêu cầu người dùng vì tên sắp tới sẽ dài hơn
@@ -66,38 +53,29 @@ function sinhMaMoi(rows) {
 async function layDanhSachSttKeyTheoTenNhom(tuKhoa) {
   const tuKhoaChuanHoa = String(tuKhoa || '').trim().toLowerCase();
   if (!tuKhoaChuanHoa) return new Set();
-  try {
-    const { rows } = await readTabCached(TAB, 5000);
-    return new Set(
-      rows
-        .filter(r => dongDangHoatDong(r) && String(r.TenNhom || '').toLowerCase().includes(tuKhoaChuanHoa))
-        .map(r => r.STT_Key)
-    );
-  } catch (e) {
-    console.error('[DonHangLoat] Không đọc được tab DonHangLoat (có thể chưa tạo):', e.message);
-    return new Set();
-  }
+  const maNhomKhop = new Set(
+    donHangLoatDbService.layTatCaNhom()
+      .filter(n => String(n.TenNhom || '').toLowerCase().includes(tuKhoaChuanHoa))
+      .map(n => n.MaDonHangLoat)
+  );
+  return new Set(
+    donHangLoatDbService.layTatCaThanhVienVoiTenNhom()
+      .filter(tv => maNhomKhop.has(tv.MaDonHangLoat))
+      .map(tv => tv.STT_Key)
+  );
 }
 
-// Liệt kê mọi "Đơn hàng loạt" đang hoạt động (bỏ dòng DaXoa=TRUE), kèm thông tin hiển thị của từng
-// đơn (join với Don_Hang_ALL — tab DonHangLoat KHÔNG tự lưu lại ảnh/tên sản phẩm, tránh 2 nguồn sự
-// thật lệch nhau khi đơn gốc đổi ảnh/tên).
+// Liệt kê mọi "Đơn hàng loạt", kèm thông tin hiển thị của từng đơn (join với Don_Hang_ALL — bảng
+// dhl_thanh_vien KHÔNG tự lưu lại ảnh/tên sản phẩm, tránh 2 nguồn sự thật lệch nhau khi đơn gốc đổi
+// ảnh/tên).
 async function layDanhSachNhom(user) {
-  let rows;
-  try {
-    ({ rows } = await readTabCached(TAB, 5000));
-  } catch (e) {
-    console.error('[DonHangLoat] Không đọc được tab DonHangLoat (có thể chưa tạo):', e.message);
-    return [];
-  }
+  const thanhVien = donHangLoatDbService.layTatCaThanhVienVoiTenNhom();
+  if (thanhVien.length === 0) return [];
 
-  const dangHoatDong = rows.filter(dongDangHoatDong);
-  if (dangHoatDong.length === 0) return [];
-
-  const { banDoTheoKey } = await orderService.getManyByKeys([...new Set(dangHoatDong.map(r => r.STT_Key))]);
+  const { banDoTheoKey } = await orderService.getManyByKeys([...new Set(thanhVien.map(r => r.STT_Key))]);
 
   const theoNhom = new Map();
-  for (const r of dangHoatDong) {
+  for (const r of thanhVien) {
     const don = banDoTheoKey.get(r.STT_Key);
     if (!don) continue; // đơn đã bị xoá khỏi Don_Hang_ALL — bỏ qua, không vỡ trang
     if (!theoNhom.has(r.MaDonHangLoat)) {
@@ -139,23 +117,6 @@ async function layDonDaKiemTraQuyen(sttKeys, user) {
   });
 }
 
-// Tìm nhóm KHÁC (nếu có) đang giữ 1 đơn làm thành viên ĐANG HOẠT ĐỘNG — dùng để CHẶN HẲN 1 đơn thuộc
-// nhiều Đơn hàng loạt cùng lúc (bổ sung 13/09/2026, theo yêu cầu người dùng — ban đầu chỉ cảnh báo,
-// nay đổi thành CHẶN vì 1 lô đại diện cho đúng 1 thiết kế thêu cụ thể, 1 đơn không nên thuộc 2 lô).
-// Dùng chung `rows` đã đọc sẵn ở nơi gọi (xacNhanNhomMoi/themDonVaoNhom) — không đọc thêm.
-function timNhomKhacDangGiu(sttKey, maNhomLoaiTru, rows) {
-  return rows.find(r => r.STT_Key === sttKey && r.MaDonHangLoat !== maNhomLoaiTru && dongDangHoatDong(r)) || null;
-}
-
-async function docTabGhi() {
-  return readTab(TAB).catch(() => {
-    throw new Error(
-      `Chưa tìm thấy tab '${TAB}' trong Google Sheet — hãy tạo tab này với các cột MaDonHangLoat, ` +
-      'TenNhom, STT_Key, NgayXacNhan, NguoiXacNhan, DaXoa trước.'
-    );
-  });
-}
-
 // Tạo "Đơn hàng loạt" mới từ 1 danh sách đơn cụ thể (dù đến từ việc "xác nhận" 1 nhóm gợi ý hay tự
 // tay chọn/nhập mã — như nhau ở đây, phía route/frontend tự quyết định lấy sttKeys từ đâu).
 async function xacNhanNhomMoi({ sttKeys, tenNhom }, user) {
@@ -174,14 +135,10 @@ async function xacNhanNhomMoi({ sttKeys, tenNhom }, user) {
     throw new Error('Mọi đơn trong 1 Đơn hàng loạt phải cùng Xưởng.');
   }
 
-  const { headers, rows } = await docTabGhi();
-  const maMoi = sinhMaMoi(rows);
-
-  // CHẶN nếu có bất kỳ đơn nào đã thuộc 1 nhóm KHÁC — maMoi CHƯA tồn tại trong rows (vừa sinh mới)
-  // nên bất kỳ đơn nào có mặt trong rows đều CHẮC CHẮN đang thuộc 1 nhóm KHÁC, không cần loại trừ gì
-  // thêm. Chặn CẢ LÔ (không tạo 1 phần) — khớp đúng cách hàm này đã chặn cả lô khi khác Xưởng ở trên.
+  // CHẶN nếu có bất kỳ đơn nào đã thuộc 1 nhóm KHÁC (1 đơn chỉ được thuộc đúng 1 lô — bổ sung
+  // 13/09/2026, theo yêu cầu người dùng). Chặn CẢ LÔ (không tạo 1 phần).
   const dangONhomKhac = sttKeyDuyNhat
-    .map(sttKey => ({ sttKey, nhomKhac: timNhomKhacDangGiu(sttKey, maMoi, rows) }))
+    .map(sttKey => ({ sttKey, nhomKhac: donHangLoatDbService.layNhomCuaDon(sttKey) }))
     .filter(x => x.nhomKhac);
   if (dangONhomKhac.length > 0) {
     throw new Error(
@@ -193,10 +150,9 @@ async function xacNhanNhomMoi({ sttKeys, tenNhom }, user) {
   const ngay = thoiGianVNISOString();
   const tenDaCat = tenNhom.trim();
 
-  await appendRows(TAB, headers, donList.map(don => ({
-    MaDonHangLoat: maMoi, TenNhom: tenDaCat, STT_Key: don.STT_Key,
-    NgayXacNhan: ngay, NguoiXacNhan: user.ten, DaXoa: 'FALSE',
-  })));
+  const maMoi = donHangLoatDbService.taoNhomMoi({
+    tenNhom: tenDaCat, ngayXacNhan: ngay, nguoiXacNhan: user.ten, sttKeys: sttKeyDuyNhat,
+  });
 
   await ghiLog({
     nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'XAC_NHAN_HANG_LOAT',
@@ -205,19 +161,11 @@ async function xacNhanNhomMoi({ sttKeys, tenNhom }, user) {
   return maMoi;
 }
 
-// Lấy các dòng ĐANG HOẠT ĐỘNG của đúng 1 mã nhóm — dùng chung cho thêm/xoá đơn, đổi tên, xoá nhóm.
-async function layDongCuaNhom(maDonHangLoat, headers, rows) {
-  const dong = rows.filter(r => r.MaDonHangLoat === maDonHangLoat && dongDangHoatDong(r));
-  if (dong.length === 0) throw new Error(`Không tìm thấy Đơn hàng loạt: ${maDonHangLoat}`);
-  return dong;
-}
-
 // Thêm 1 HOẶC NHIỀU đơn vào nhóm cùng lúc (bổ sung 13/09/2026, theo yêu cầu người dùng — nút "THÊM VÀO
 // ĐƠN HÀNG LOẠT" ở public/orders.html cho phép chọn nhiều đơn 1 lượt qua tick sẵn có, thay vì gõ tay
-// từng mã ở public/don-hang-loat.html). GHI ĐÚNG 1 LẦN (appendRows) bất kể thêm bao nhiêu đơn — tránh
-// lặp lại vấn đề quota Sheets API đã sửa ở services/orderService.js#getManyByKeys. KHÔNG dừng cả lô vì
-// 1 vài đơn lỗi (đã có sẵn/không tồn tại/khác Xưởng) — trả {thanhCong, loi} như mọi thao tác hàng loạt
-// khác trong app (xem routes/orders.js POST /danh-dau-uu-tien), phần hợp lệ vẫn được ghi.
+// từng mã ở public/don-hang-loat.html). KHÔNG dừng cả lô vì 1 vài đơn lỗi (đã có sẵn/không tồn tại/
+// khác Xưởng) — trả {thanhCong, loi} như mọi thao tác hàng loạt khác trong app (xem routes/orders.js
+// POST /danh-dau-uu-tien), phần hợp lệ vẫn được ghi.
 async function themDonVaoNhom(maDonHangLoat, sttKeys, user) {
   const dsSttKeys = Array.isArray(sttKeys) ? sttKeys : [sttKeys]; // tương thích gọi với 1 chuỗi đơn lẻ
   if (dsSttKeys.length === 0 || dsSttKeys.some(k => typeof k !== 'string' || !k)) {
@@ -225,12 +173,11 @@ async function themDonVaoNhom(maDonHangLoat, sttKeys, user) {
   }
   const sttKeyDuyNhat = [...new Set(dsSttKeys)];
 
-  const { headers, rows } = await docTabGhi();
-  const dongHienCo = await layDongCuaNhom(maDonHangLoat, headers, rows); // throws nếu nhóm không tồn tại
-  const sttKeyDaCoSan = new Set(dongHienCo.map(r => r.STT_Key));
+  if (!donHangLoatDbService.layNhom(maDonHangLoat)) throw new Error(`Không tìm thấy Đơn hàng loạt: ${maDonHangLoat}`);
+  const sttKeyDaCoSan = new Set(donHangLoatDbService.layThanhVienCuaNhom(maDonHangLoat));
 
   const { banDoTheoKey } = await orderService.getManyByKeys([...new Set([...sttKeyDuyNhat, ...sttKeyDaCoSan])]);
-  const xuongNhom = (banDoTheoKey.get(dongHienCo[0].STT_Key) || {}).XUONG;
+  const xuongNhom = (banDoTheoKey.get([...sttKeyDaCoSan][0]) || {}).XUONG;
 
   const thanhCong = [];
   const loi = [];
@@ -244,18 +191,17 @@ async function themDonVaoNhom(maDonHangLoat, sttKeys, user) {
     // CHẶN — 1 đơn chỉ được thuộc đúng 1 Đơn hàng loạt (bổ sung 13/09/2026, theo yêu cầu người dùng).
     // Chỉ loại BỎ đúng đơn này khỏi lượt thêm (đẩy vào loi), KHÔNG chặn cả lô — khớp cách hàm này đã
     // xử lý 3 lý do lỗi khác ở trên (mỗi đơn tự đứng lỗi riêng, phần còn lại vẫn được thêm).
-    const nhomKhac = timNhomKhacDangGiu(sttKey, maDonHangLoat, rows);
-    if (nhomKhac) { loi.push({ sttKey, lyDo: `Đã thuộc Đơn hàng loạt khác (${nhomKhac.MaDonHangLoat} — "${nhomKhac.TenNhom}")` }); continue; }
-    donCanGhi.push(don);
+    const nhomKhac = donHangLoatDbService.layNhomCuaDon(sttKey);
+    if (nhomKhac && nhomKhac.MaDonHangLoat !== maDonHangLoat) {
+      loi.push({ sttKey, lyDo: `Đã thuộc Đơn hàng loạt khác (${nhomKhac.MaDonHangLoat} — "${nhomKhac.TenNhom}")` });
+      continue;
+    }
+    donCanGhi.push(sttKey);
     thanhCong.push(sttKey);
   }
 
   if (donCanGhi.length > 0) {
-    const ngay = thoiGianVNISOString();
-    await appendRows(TAB, headers, donCanGhi.map(don => ({
-      MaDonHangLoat: maDonHangLoat, TenNhom: dongHienCo[0].TenNhom, STT_Key: don.STT_Key,
-      NgayXacNhan: ngay, NguoiXacNhan: user.ten, DaXoa: 'FALSE',
-    })));
+    donHangLoatDbService.themThanhVien(maDonHangLoat, donCanGhi);
     await ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'THEM_DON_HANG_LOAT', chiTiet: { maDonHangLoat, sttKeys: thanhCong } });
   }
 
@@ -263,12 +209,11 @@ async function themDonVaoNhom(maDonHangLoat, sttKeys, user) {
 }
 
 async function xoaDonKhoiNhom(maDonHangLoat, sttKey, user) {
-  const { headers, rows } = await docTabGhi();
-  const dongHienCo = await layDongCuaNhom(maDonHangLoat, headers, rows);
-  const dong = dongHienCo.find(r => r.STT_Key === sttKey);
-  if (!dong) throw new Error(`Đơn ${sttKey} không nằm trong nhóm ${maDonHangLoat}.`);
+  if (!donHangLoatDbService.layNhom(maDonHangLoat)) throw new Error(`Không tìm thấy Đơn hàng loạt: ${maDonHangLoat}`);
+  const dangTrongNhom = donHangLoatDbService.layThanhVienCuaNhom(maDonHangLoat).includes(sttKey);
+  if (!dangTrongNhom) throw new Error(`Đơn ${sttKey} không nằm trong nhóm ${maDonHangLoat}.`);
 
-  await updateCells(TAB, headers, dong._row, { DaXoa: 'TRUE' });
+  donHangLoatDbService.xoaThanhVien(maDonHangLoat, sttKey);
   await ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'XOA_DON_HANG_LOAT', sttKey, chiTiet: { maDonHangLoat } });
 }
 
@@ -276,19 +221,17 @@ async function doiTenNhom(maDonHangLoat, tenMoi, user) {
   if (!tenMoi || typeof tenMoi !== 'string' || !tenMoi.trim()) {
     throw new Error('Tên nhóm không được để trống.');
   }
-  const { headers, rows } = await docTabGhi();
-  const dongHienCo = await layDongCuaNhom(maDonHangLoat, headers, rows);
+  if (!donHangLoatDbService.layNhom(maDonHangLoat)) throw new Error(`Không tìm thấy Đơn hàng loạt: ${maDonHangLoat}`);
   const tenDaCat = tenMoi.trim();
 
-  await updateCellsManyRows(TAB, headers, dongHienCo.map(r => ({ rowNumber: r._row, updates: { TenNhom: tenDaCat } })));
+  donHangLoatDbService.doiTenNhom(maDonHangLoat, tenDaCat);
   await ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'DOI_TEN_HANG_LOAT', chiTiet: { maDonHangLoat, tenMoi: tenDaCat } });
 }
 
 async function xoaNhom(maDonHangLoat, user) {
-  const { headers, rows } = await docTabGhi();
-  const dongHienCo = await layDongCuaNhom(maDonHangLoat, headers, rows);
+  if (!donHangLoatDbService.layNhom(maDonHangLoat)) throw new Error(`Không tìm thấy Đơn hàng loạt: ${maDonHangLoat}`);
 
-  await updateCellsManyRows(TAB, headers, dongHienCo.map(r => ({ rowNumber: r._row, updates: { DaXoa: 'TRUE' } })));
+  donHangLoatDbService.xoaNhom(maDonHangLoat);
   await ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'XOA_NHOM_HANG_LOAT', chiTiet: { maDonHangLoat } });
 }
 
