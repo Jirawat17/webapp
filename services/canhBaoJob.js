@@ -1,20 +1,20 @@
 const cron = require('node-cron');
 const orderService = require('./orderService');
+const trangThaiDbService = require('./trangThaiDbService');
 const alertService = require('./alertService');
 const telegramService = require('./telegramService');
 const { layBanDoTenKhachHang } = require('./khachHangService');
-const { updateCells } = require('./sheetsService');
 
 // Thứ tự tăng dần — chỉ gửi Telegram khi mức MỚI cao hơn mức ĐÃ GỬI trước đó, tránh spam mỗi 30 phút
 const MUC_THU_TU = { VANG: 1, CAM: 2, DO: 3 };
 
 async function chayKiemTraCanhBao() {
   try {
-    // {fresh:true} bắt buộc (bổ sung 17/09/2026, xem
-    // docs/superpowers/specs/2026-09-17-sua-loi-ghi-lech-dong-vstack-design.md) — Don_Hang_ALL ghép
-    // từ công thức QUERY/VSTACK sống, vị trí dòng (_row) dùng để ghi bên dưới cần chắc chắn mới nhất
-    // thay vì có thể dính cache tới 10 giây cũ.
-    const { headers, rows } = await orderService.getAll({ fresh: true });
+    // {fresh:true} — cần dữ liệu HASH_ANH_MAU/trạng thái mới nhất (SQLite, không dính cache 10 giây
+    // của Sheets) để tính đúng mức cảnh báo. Ghi CanhBaoDaGui bên dưới đi qua trangThaiDbService theo
+    // STT_Key — không còn cần số dòng vật lý (xem
+    // docs/superpowers/specs/2026-09-18-chuyen-cot-app-ghi-sang-sqlite-design.md).
+    const { rows } = await orderService.getAll({ fresh: true });
     const banDoTenKH = await layBanDoTenKhachHang(); // 1 lần cho cả lượt quét, tránh gọi lặp lại mỗi đơn
     let soCanhBaoDaGui = 0;
 
@@ -25,11 +25,11 @@ async function chayKiemTraCanhBao() {
       if (mucMoi && MUC_THU_TU[mucMoi] > (MUC_THU_TU[mucDaGui] || 0)) {
         const tenKhachHang = banDoTenKH[don.MA_KHACH_HANG] || don.MA_KHACH_HANG || '';
         await telegramService.guiCanhBao(mucMoi, { ...don, TenKhachHang: tenKhachHang });
-        await updateCells(orderService.TAB, headers, don._row, { CanhBaoDaGui: mucMoi });
+        trangThaiDbService.ghiDe(don.STT_Key, { CanhBaoDaGui: mucMoi });
         soCanhBaoDaGui++;
       } else if (!mucMoi && mucDaGui) {
         // Đơn đã xong / bị huỷ → xoá cờ để nếu dòng này được tái sử dụng cho đơn khác thì không dính cờ cũ
-        await updateCells(orderService.TAB, headers, don._row, { CanhBaoDaGui: '' });
+        trangThaiDbService.ghiDe(don.STT_Key, { CanhBaoDaGui: '' });
       }
     }
 

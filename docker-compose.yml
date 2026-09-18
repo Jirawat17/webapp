@@ -18,3 +18,7 @@ services:
     volumes:
       # Key Service Account không nén vào image — mount lúc chạy
       - ./service-account.json:/app/service-account.json:ro
+      # DB SQLite (bổ sung 18/09/2026 — các cột app tự ghi của Don_Hang_ALL, xem
+      # services/trangThaiDbService.js). BẮT BUỘC mount ra ngoài container — không có volume này,
+      # dữ liệu sẽ mất mỗi lần rebuild/redeploy (image không tự giữ lại file ghi trong lúc chạy).
+      - ./data:/app/data

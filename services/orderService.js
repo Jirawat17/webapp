@@ -1,4 +1,5 @@
-const { readTab, readTabCached, updateCells } = require('./sheetsService');
+const { readTab, readTabCached } = require('./sheetsService');
+const trangThaiDbService = require('./trangThaiDbService');
 const { layBanDoTenKhachHang } = require('./khachHangService');
 const taiSanService = require('./taiSanService');
 const { chiSoTinhTrang, TINH_TRANG_VALUES, TRANG_THAI_PHOI_VALUES, TRANG_THAI_VE_FILE_VALUES } = require('../data/pipelineTinhTrang');
@@ -12,32 +13,27 @@ const KEY_COL = 'STT_Key';
 // KHÔNG ảnh hưởng các thao tác GHI (update() luôn tự đọc fresh riêng, xem bên dưới).
 // Truyền { fresh: true } để BẮT BUỘC đọc thật từ Google Sheets — LUÔN dùng trước khi ghi (update())
 // để không bao giờ ghi nhầm dòng nếu vừa có ai thêm/xoá dòng khác ở nơi khác.
+//
+// GỘP thêm các cột APP TỰ GHI từ SQLite (bổ sung 18/09/2026, xem
+// docs/superpowers/specs/2026-09-18-chuyen-cot-app-ghi-sang-sqlite-design.md — THAY cho việc các cột
+// này từng là cột tĩnh trong CHÍNH Don_Hang_ALL) theo STT_Key — KHÔNG theo số dòng vật lý, nên dữ liệu
+// không còn thể "lạc chủ" dù Don_Hang_ALL (công thức QUERY/VSTACK sống, xem layTatCa ở trangThaiDbService)
+// xáo trộn dòng bất cứ lúc nào. Đơn chưa từng có dòng trong SQLite (đơn mới) nhận toàn bộ giá trị rỗng —
+// đúng hành vi cũ khi các cột này còn là ô trống trong Sheet.
 async function getAll({ fresh = false } = {}) {
-  return fresh ? readTab(TAB) : readTabCached(TAB, 10000);
+  const { headers, rows } = fresh ? await readTab(TAB) : await readTabCached(TAB, 10000);
+  const banDoTrangThai = trangThaiDbService.layTatCa();
+  const rowsGop = rows.map(r => ({
+    ...r,
+    ...(banDoTrangThai.get(String(r[KEY_COL] || '').trim()) || trangThaiDbService.RONG_MAC_DINH),
+  }));
+  return { headers, rows: rowsGop };
 }
 
 async function getByKey(sttKey, opts) {
   const { headers, rows } = await getAll(opts);
   const row = rows.find(r => r[KEY_COL] === sttKey);
   return { headers, row };
-}
-
-// Tra lại số dòng vật lý MỚI NHẤT cho từng STT_Key — bổ sung 17/09/2026 sau khi xác nhận Don_Hang_ALL
-// KHÔNG phải sheet tĩnh: cột gốc (STT_Key, tên khách, link ảnh...) là công thức QUERY(VSTACK(...)) ghép
-// từ ~19 sheet con theo mã khách/lô, ORDER BY 1 cột ngày — vị trí dòng của 1 đơn có thể đổi bất cứ lúc
-// nào công thức tính lại, kể cả khi không ai đụng trực tiếp vào Don_Hang_ALL (chỉ cần 1 sheet con bất kỳ
-// đổi). Mọi thao tác GHI hàng loạt (đọc 1 lần rồi lặp ghi nhiều đơn) PHẢI gọi hàm này ĐÚNG 1 LẦN, ngay
-// TRƯỚC khi bắt đầu vòng lặp ghi (không phải trước bước đọc dữ liệu để quyết định nội dung ghi — bước
-// đó có thể đã diễn ra một lúc trước, xem docs/superpowers/specs/2026-09-17-sua-loi-ghi-lech-dong-vstack-design.md),
-// rồi dùng số dòng lấy được ở đây (không dùng row._row đã "nhớ" từ lượt đọc cũ) khi gọi update() —
-// truyền qua tuyChon.soDongMoiNhat. STT_Key nào không còn thấy (hiếm — vừa bị lọc khỏi công thức) đơn
-// giản là KHÔNG có mặt trong Map trả về, để nơi gọi tự quyết định báo lỗi cho đúng đơn đó thay vì đoán.
-async function layLaiSoDongMoiNhat(sttKeys) {
-  const canTra = new Set(sttKeys);
-  const { rows } = await getAll({ fresh: true });
-  const banDo = new Map();
-  rows.forEach(r => { if (canTra.has(r[KEY_COL])) banDo.set(r[KEY_COL], r._row); });
-  return banDo;
 }
 
 // Đọc TOÀN BỘ sheet ĐÚNG 1 LẦN rồi tra theo danh sách sttKeys — dùng cho các thao tác HÀNG LOẠT
@@ -219,7 +215,7 @@ async function update(sttKey, updates, user, tuyChon = {}) {
   // gọi nên vẫn giữ đúng nguyên tắc "đọc thật ngay trước khi ghi", chỉ gộp 2 lượt đọc thật liền nhau
   // thành 1 — quan trọng cho luồng quét QR hàng loạt (routes/qr.js xac-nhan-hang-loat), trước đây mỗi
   // mã quét tốn TỚI 2 lượt đọc toàn bộ tab Don_Hang_ALL (1 ở route, 1 ở đây) thay vì 1.
-  const { headers, row } = tuyChon.donDaDoc || await getByKey(sttKey, { fresh: true }); // luôn đọc thật trước khi ghi
+  const { row } = tuyChon.donDaDoc || await getByKey(sttKey, { fresh: true }); // luôn đọc thật trước khi ghi
   if (!row) throw new Error('Không tìm thấy đơn hàng: ' + sttKey);
 
   kiemTraGiaTriHopLe(updates);
@@ -228,18 +224,17 @@ async function update(sttKey, updates, user, tuyChon = {}) {
   const updatesSauInMa = tinhPhoiVeFileTuDongKhiInMa(row, updates);
   const updatesDaTinh = tinhTinhTrangTuDong(row, updatesSauInMa);
 
-  // Ảnh mẫu đổi thì hash cũ (nếu Sheet đã có cột) không còn đúng nữa — xoá để lượt "Quét tìm đơn hàng
-  // loạt" kế tiếp (routes/orders.js) tính lại, tránh nhóm hàng loạt sai lặng lẽ theo ảnh cũ đã không
-  // còn tồn tại. Guard theo headers.includes(...) — vô hại với Sheet chưa thêm 2 cột này (xem
-  // docs/superpowers/specs/2026-09-06-don-hang-loat-design.md mục 2).
+  // Ảnh mẫu đổi thì hash cũ không còn đúng nữa — xoá để lượt "Quét tìm đơn hàng loạt" kế tiếp
+  // (routes/orders.js) tính lại, tránh nhóm hàng loạt sai lặng lẽ theo ảnh cũ đã không còn tồn tại.
+  // HASH_ANH_MAU/NHOM_HANG_LOAT giờ ở SQLite (xem trangThaiDbService.js), LUÔN có sẵn trong schema —
+  // bỏ guard headers.includes(...) cũ (từng cần vì 2 cột này có thể chưa được thêm vào Sheet).
   if (
-    headers.includes('HASH_ANH_MAU') &&
     updatesDaTinh.DUONG_DAN_URL !== undefined &&
     updatesDaTinh.DUONG_DAN_URL !== row.DUONG_DAN_URL &&
     updatesDaTinh.HASH_ANH_MAU === undefined
   ) {
     updatesDaTinh.HASH_ANH_MAU = '';
-    if (headers.includes('NHOM_HANG_LOAT')) updatesDaTinh.NHOM_HANG_LOAT = '';
+    updatesDaTinh.NHOM_HANG_LOAT = '';
   }
 
   // Đơn VỪA chuyển sang "Đang chạy máy" (từ 1 trạng thái KHÁC) — ghi lại AI đang vận hành thẳng vào
@@ -252,13 +247,12 @@ async function update(sttKey, updates, user, tuyChon = {}) {
   // tự stamp NGUOI_CHAY_MAY = người đang thao tác, đồng thời xoá ghi chú cũ (nếu có, từ lượt chạy
   // trước) vì đây là 1 lượt gán MỚI, không phải tiếp nối lượt cũ.
   if (
-    headers.includes('NGUOI_CHAY_MAY') &&
     updatesDaTinh.TRANG_THAI_XUONG === 'Đang chạy máy' &&
     row.TRANG_THAI_XUONG !== 'Đang chạy máy' &&
     updatesDaTinh.NGUOI_CHAY_MAY === undefined
   ) {
     updatesDaTinh.NGUOI_CHAY_MAY = (user && user.ten) || '';
-    if (headers.includes('GHI_CHU_CHAY_MAY')) updatesDaTinh.GHI_CHU_CHAY_MAY = '';
+    updatesDaTinh.GHI_CHU_CHAY_MAY = '';
   }
 
   // Đơn VỪA chuyển sang "Đang vẽ file" (từ 1 giá trị KHÁC) — Y HỆT hook NGUOI_CHAY_MAY ở trên, áp
@@ -267,13 +261,12 @@ async function update(sttKey, updates, user, tuyChon = {}) {
   // sẵn NGUOI_VE_FILE (nhánh admin chỉ định người KHÁC vẽ, routes/orders.js POST
   // /chi-dinh-nguoi-ve-file) thì giữ nguyên, không ghi đè bằng người đang thao tác.
   if (
-    headers.includes('NGUOI_VE_FILE') &&
     updatesDaTinh.TRANG_THAI_VE_FILE === 'Đang vẽ file' &&
     row.TRANG_THAI_VE_FILE !== 'Đang vẽ file' &&
     updatesDaTinh.NGUOI_VE_FILE === undefined
   ) {
     updatesDaTinh.NGUOI_VE_FILE = (user && user.ten) || '';
-    if (headers.includes('GHI_CHU_VE_FILE')) updatesDaTinh.GHI_CHU_VE_FILE = '';
+    updatesDaTinh.GHI_CHU_VE_FILE = '';
   }
 
   // Đơn VỪA chuyển sang "Đã in mã" (từ 1 giá trị KHÁC) — ghi lại THỜI ĐIỂM này để job tự động mua
@@ -281,7 +274,6 @@ async function update(sttKey, updates, user, tuyChon = {}) {
   // ThoiGianCapNhatCuoi (bị ghi đè bởi MỌI lần sửa sau đó, không chỉ riêng lần chuyển "Đã in mã") —
   // bổ sung 09/09/2026, theo yêu cầu người dùng, cột THOI_GIAN_IN_MA người dùng đã tự thêm vào Sheet.
   if (
-    headers.includes('THOI_GIAN_IN_MA') &&
     updatesDaTinh.TRANG_THAI_XUONG === 'Đã in mã' &&
     row.TRANG_THAI_XUONG !== 'Đã in mã'
   ) {
@@ -290,15 +282,11 @@ async function update(sttKey, updates, user, tuyChon = {}) {
 
   kiemTraTinhHopLy(row, updatesDaTinh); // kiểm tra SAU khi đã tính tự động, để không báo nhầm khi chính việc tự động hoá làm cho tổ hợp trở nên hợp lệ
 
-  // Số dòng THẬT SỰ dùng để ghi — mặc định lấy từ `row` (đúng hành vi cũ, an toàn cho gọi đơn lẻ vì
-  // đọc-rồi-ghi cách nhau cực ngắn, trong cùng 1 lần gọi hàm này). Khi gọi từ 1 THAO TÁC HÀNG LOẠT
-  // (đọc 1 lần rồi lặp ghi nhiều đơn, dùng donDaDoc từ lượt đọc đó — có thể cách lúc ghi vài giây tới
-  // vài phút), BẮT BUỘC truyền kèm tuyChon.soDongMoiNhat (tra lại ngay trước khi ghi, xem
-  // layLaiSoDongMoiNhat ở trên) — nếu không, số dòng "nhớ" từ trước có thể không còn đúng đơn này nữa
-  // (Don_Hang_ALL ghép từ công thức QUERY/VSTACK sống, xem
-  // docs/superpowers/specs/2026-09-17-sua-loi-ghi-lech-dong-vstack-design.md).
-  const soDongDeGhi = tuyChon.soDongMoiNhat !== undefined ? tuyChon.soDongMoiNhat : row._row;
-  await updateCells(TAB, headers, soDongDeGhi, updatesDaTinh); // tự xoá cache của tab sau khi ghi (xem sheetsService)
+  // Ghi theo STT_Key (khoá), không phải số dòng vật lý — xem trangThaiDbService.js. Không còn khái
+  // niệm "đọc lại số dòng mới nhất trước khi ghi cả lô" nữa (bỏ hẳn layLaiSoDongMoiNhat/soDongMoiNhat,
+  // xem docs/superpowers/specs/2026-09-18-chuyen-cot-app-ghi-sang-sqlite-design.md) — SQLite ghi đúng
+  // đơn dù Don_Hang_ALL xáo trộn dòng bất cứ lúc nào trước/trong/sau khi hàm này chạy.
+  trangThaiDbService.ghiDe(sttKey, updatesDaTinh);
 
   // Trừ kho phôi (tab Ton_Kho_Phoi) khi đơn VỪA chuyển sang "Đã lấy phôi" — không hoàn kho khi chuyển
   // ngược lại (xem taiSanService.truKhoTheoDon). Chạy SAU khi ghi Sheet đơn hàng đã thành công; lỗi ở
@@ -396,6 +384,6 @@ function laUuTien(row) {
 }
 
 module.exports = {
-  TAB, KEY_COL, getAll, getByKey, getManyByKeys, layLaiSoDongMoiNhat, update, filterForRole, ganTenKhachHang, tieuDeSanPham, danhSachViTriTheu,
+  TAB, KEY_COL, getAll, getByKey, getManyByKeys, update, filterForRole, ganTenKhachHang, tieuDeSanPham, danhSachViTriTheu,
   DANH_SACH_XUONG, locTheoXuong, coQuyenTheoXuong, laUuTien,
 };

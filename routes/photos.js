@@ -11,12 +11,14 @@ const { requireLogin } = require('../middleware/auth');
 
 router.use(requireLogin);
 
-// Mỗi "mốc nghiệp vụ" ghi URL vào đúng cột tương ứng trong Sheet.
-// LƯU Ý: Sheet thật KHÔNG có cột Anh_File_Theu_URL/Anh_Da_San_Xuat_URL/Anh_Da_Dan_Tem_URL (khác với
-// bản thiết kế mẫu ban đầu) — muốn dùng các mốc "ve_file"/"da_san_xuat"/"da_dan_tem" cần tự thêm các
-// cột này vào Don_Hang_ALL trước.
+// Mỗi "mốc nghiệp vụ" ghi URL vào đúng cột tương ứng — cả 3 cột dưới đây giờ ở SQLite (schema tạo sẵn
+// lúc khởi động, xem services/trangThaiDbService.js), luôn có sẵn.
 // Mốc "dong_goi" (Ảnh đóng gói, Anh_Dong_Goi_URL) ĐÃ XOÁ 09/09/2026 lần 3 cùng lúc xoá trạng thái "Đã
 // đóng gói" (theo yêu cầu người dùng — xem data/pipelineTinhTrang.js).
+// Mốc "mau"/"mockup" (ghi DUONG_DAN_URL/MOCKUP) ĐÃ XOÁ 18/09/2026 — 2 cột này giờ thuộc vùng công thức
+// sống A:AM của Don_Hang_ALL (người dùng tự cấu trúc lại Sheet), app không còn ghi được vào đó nữa; từ
+// giờ 2 ảnh này CHỈ nhập tay ở sheet RAW lúc lên đơn, app chỉ đọc không ghi (theo yêu cầu người dùng,
+// xem docs/superpowers/specs/2026-09-18-chuyen-cot-app-ghi-sang-sqlite-design.md).
 // Mốc "da_dan_tem" (bổ sung 09/09/2026 lần 4, theo yêu cầu người dùng) — THAY THẾ chế độ "Quét mã QR
 // Tracking" cũ (gọi GKE thật, đã xoá — xem public/scan.html) bằng xác nhận thuần ảnh: "Đã sản xuất" ->
 // "ĐÃ DÁN TEM", KHÔNG gọi GKE, KHÔNG tạo mã tracking thật. Cơ chế GKE (Mua Tracking, IN LABEL, trang
@@ -24,8 +26,6 @@ router.use(requireLogin);
 const COT_ANH_THEO_MOC = {
   da_san_xuat: 'Anh_Da_San_Xuat_URL', // bổ sung 31/08/2026 — ảnh chụp ngay khi vừa chạy máy xong
   da_dan_tem: 'Anh_Da_Dan_Tem_URL', // bổ sung 09/09/2026 lần 4 — ảnh xác nhận đã dán tem lên kiện hàng
-  mau: 'DUONG_DAN_URL',
-  mockup: 'MOCKUP',
   ve_file: 'Anh_File_Theu_URL', // bổ sung 26/08/2026 — ảnh file thêu do ve_file upload sau khi vẽ file xong, để san_xuat xem trước khi chọn chỉ
 };
 
@@ -68,12 +68,9 @@ router.post('/kiem-tra', async (req, res) => {
   const cotAnh = COT_ANH_THEO_MOC[moc];
   if (!cotAnh) return res.status(400).json({ error: 'Mốc ảnh không hợp lệ: ' + moc });
 
-  const { headers, row } = await orderService.getByKey(sttKey, { fresh: true });
+  const { row } = await orderService.getByKey(sttKey, { fresh: true });
   // Đơn khác Xưởng coi như không tồn tại (bổ sung 13/09/2026).
   if (!row || !orderService.coQuyenTheoXuong(user, row)) return res.status(404).json({ error: 'Không tìm thấy đơn hàng: ' + sttKey });
-  if (!headers.includes(cotAnh)) {
-    return res.status(400).json({ error: `Sheet chưa có cột '${cotAnh}' — cần thêm cột này vào Don_Hang_ALL trước khi dùng mốc ảnh "${moc}"` });
-  }
 
   const chuyenTuDong = MOC_TU_DONG_CHUYEN_TRANG_THAI[moc];
   if (chuyenTuDong && row.TRANG_THAI_XUONG !== chuyenTuDong.yeuCau) {
@@ -106,9 +103,6 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
   const { headers, row } = await orderService.getByKey(sttKey, { fresh: true }); // fresh: mốc da_san_xuat kiểm tra TRANG_THAI_XUONG ngay dưới đây, không được dùng bản cache cũ
   // Đơn khác Xưởng coi như không tồn tại (bổ sung 13/09/2026).
   if (!row || !orderService.coQuyenTheoXuong(user, row)) return res.status(404).json({ error: 'Không tìm thấy đơn hàng: ' + sttKey });
-  if (!headers.includes(cotAnh)) {
-    return res.status(400).json({ error: `Sheet chưa có cột '${cotAnh}' — cần thêm cột này vào Don_Hang_ALL trước khi dùng mốc ảnh "${moc}"` });
-  }
 
   const chuyenTuDong = MOC_TU_DONG_CHUYEN_TRANG_THAI[moc];
   if (chuyenTuDong && row.TRANG_THAI_XUONG !== chuyenTuDong.yeuCau) {

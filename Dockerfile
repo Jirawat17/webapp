@@ -13,7 +13,14 @@ ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 # Cài dependencies trước để tận dụng layer cache khi chỉ sửa code
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+# better-sqlite3 (bổ sung 18/09/2026 — lưu các cột app tự ghi, tránh lệch dòng do Don_Hang_ALL ghép từ
+# công thức QUERY/VSTACK sống, xem services/trangThaiDbService.js) là native module — cần biên dịch
+# TRÊN Alpine (musl, khác glibc). Cài hẳn bộ công cụ build làm ".build-deps" tạm thời rồi gỡ ngay sau
+# npm ci — không phụ thuộc may rủi có sẵn bản dựng sẵn (prebuild) đúng musl/kiến trúc/phiên bản Node hay
+# không (đã từng gặp đúng kiểu sự cố native-binary này với sharp — xem services/perceptualHashService.js).
+RUN apk add --no-cache --virtual .build-deps python3 make g++ \
+  && npm ci --omit=dev \
+  && apk del .build-deps
 
 COPY . .
 
