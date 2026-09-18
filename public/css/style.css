@@ -884,7 +884,12 @@ select.chon-trang-thai-tieu-cuc { border-color: var(--color-warning-text); color
 /* ============================================================
    BÁO CÁO (xuất Excel/PDF)
    ============================================================ */
-.bao-cao-form { background: var(--color-surface); padding: var(--space-4); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); border: 1px solid var(--color-border); display: grid; gap: var(--space-3); max-width: 520px; }
+/* Đổi từ display:grid (mặc định 1 cột, mỗi ô/nút TỰ xuống dòng riêng) + max-width:520px sang cùng
+   khuôn .inline-form đang dùng ở nơi khác trong app (vd panel Lọc trang Đơn hàng) — bổ sung
+   18/09/2026, theo yêu cầu người dùng: gộp "Từ ngày"/"Đến ngày"/nút "Xem thống kê" vào CHUNG 1 hàng,
+   tận dụng hết chiều rộng thay vì bó hẹp 520px. align-items:flex-end để nút (không có label phía
+   trên) canh ĐÁY khớp với ô ngày (có label phía trên) — đúng cách .inline-form đã làm. */
+.bao-cao-form { background: var(--color-surface); padding: var(--space-4); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); border: 1px solid var(--color-border); display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-3); }
 .bao-cao-form .truong { display: flex; flex-direction: column; gap: 6px; }
 .bao-cao-form label { font-weight: 700; font-size: 0.9rem; }
 .bao-cao-form input, .bao-cao-form select {
