@@ -107,12 +107,12 @@ function trangChuTheoVaiTro(vaiTro) {
 function renderNav(user, active) {
   let links;
   if (user.vaiTro === 'nguoi_lay_phoi') {
+    // Bỏ "Lịch sử" (bổ sung 20/09/2026, theo yêu cầu người dùng) — quay lại đúng chính sách gốc
+    // "chỉ thấy Quét QR" + ngoại lệ SL Phôi, không còn ngoại lệ thứ 3 nữa. CHỈ ẩn menu điều hướng,
+    // KHÔNG khoá route backend (routes/hoatDong.js không có requireRole riêng).
     links = [
       { href: '/scan.html', label: 'Quét QR', icon: 'navScan', key: 'scan' },
       { href: '/tai-san.html', label: 'SL Phôi', icon: 'navAssets', key: 'tai-san' },
-      // Ngoại lệ thứ 3 cho nguoi_lay_phoi (sau Quét QR, SL Phôi) — xem lại hoạt động CHÍNH MÌNH
-      // không phải xem đơn hàng nói chung nên không phá chính sách "chỉ thấy Quét QR" ban đầu.
-      { href: '/hoat-dong.html', label: 'Lịch sử', icon: 'navActivity', key: 'hoat-dong' },
     ];
   } else if (user.vaiTro === 'san_xuat') {
     // Nhánh riêng cho san_xuat (bổ sung 08/09/2026, theo yêu cầu người dùng) — trước đây dùng chung
@@ -137,7 +137,6 @@ function renderNav(user, active) {
       { href: '/scan.html', label: 'Quét QR', icon: 'navScan', key: 'scan' },
       { href: '/dashboard.html', label: 'TK', icon: 'navChart', key: 'dashboard' },
       { href: '/tai-san.html', label: 'SL Phôi', icon: 'navAssets', key: 'tai-san' },
-      { href: '/chatbot.html', label: 'Trợ lý', icon: 'navSupport', key: 'chatbot' },
       { href: '/reports.html', label: 'Báo cáo', icon: 'navReports', key: 'reports' },
     ];
     // "Đơn của tôi" (bổ sung 31/08/2026) — CHỈ admin còn dùng nhánh này (san_xuat có nhánh riêng ở
@@ -181,6 +180,10 @@ function renderNav(user, active) {
     // CHỈ superadmin — KHÁC mọi nhánh khác trong hàm này (đều dùng laAdmin(), coi admin/superadmin
     // ngang quyền). admin không còn thấy menu này nữa, dù vẫn thấy mọi menu khác như trước.
     if (user.vaiTro === 'superadmin') {
+      // "Trợ lý" (bổ sung 20/09/2026, theo yêu cầu người dùng — thu hẹp từ admin+superadmin+ve_file
+      // xuống CHỈ superadmin) — chèn lại đúng vị trí cũ (trước "Báo cáo") thay vì nằm sẵn trong mảng
+      // gốc ở trên, để admin/ve_file không còn thấy menu này nữa.
+      links.splice(links.findIndex(l => l.key === 'reports'), 0, { href: '/chatbot.html', label: 'Trợ lý', icon: 'navSupport', key: 'chatbot' });
       links.push({ href: '/users.html', label: 'Nhân viên', icon: 'navUsers', key: 'users' });
     }
     // "Đơn của tôi (Vẽ file)" (bổ sung 08/09/2026, theo yêu cầu người dùng — xem
