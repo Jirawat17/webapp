@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kịch bản quét — Xưởng Thêu</title>
+<link rel="stylesheet" href="/css/style.css?v=90">
+<script src="/js/theme.js?v=90"></script>
+</head>
+<body>
+<div id="nav"></div>
+<div class="page">
+  <h2>Kịch bản quét QR</h2>
+  <p>Mỗi kịch bản là 1 lựa chọn hiện ra khi quét mã QR — quy định đơn cần đang ở trạng thái nào mới
+    quét được (để trống = không yêu cầu), và sẽ chuyển sang trạng thái nào sau khi quét.</p>
+
+  <form id="form-kich-ban" class="inline-form">
+    <div class="truong">
+      <label for="ten-kich-ban">Tên kịch bản</label>
+      <input id="ten-kich-ban" required placeholder="VD: Đã lấy phôi">
+    </div>
+    <div class="truong">
+      <label for="cot-kich-ban">Cột thao tác</label>
+      <select id="cot-kich-ban">
+        <option value="">Mặc định (Trạng thái chung)</option>
+        <option value="TRANG_THAI_XUONG">Trạng thái chung</option>
+        <option value="TRANG_THAI_PHOI">Phôi</option>
+        <option value="TRANG_THAI_VE_FILE">Vẽ file</option>
+      </select>
+    </div>
+    <div class="truong">
+      <label for="trang-thai-yeu-cau">Trạng thái yêu cầu (trước khi quét)</label>
+      <input id="trang-thai-yeu-cau" placeholder="Để trống = không yêu cầu">
+    </div>
+    <div class="truong">
+      <label for="trang-thai-sau">Trạng thái sau (bắt buộc)</label>
+      <input id="trang-thai-sau" required placeholder="VD: Đã lấy phôi">
+    </div>
+    <div class="truong">
+      <label for="nguoi-thuc-hien">Vai trò được dùng</label>
+      <input id="nguoi-thuc-hien" placeholder="VD: nguoi_lay_phoi, ve_file — để trống = mọi vai trò">
+    </div>
+    <button type="submit" class="btn-hanh-dong" id="nut-luu-kich-ban">Thêm kịch bản</button>
+    <button type="button" class="btn-hanh-dong phu" id="nut-huy-sua" style="display:none">Huỷ sửa</button>
+  </form>
+
+  <table id="bang-kich-ban" class="info-table"></table>
+</div>
+
+<script src="/js/icons.js?v=90"></script>
+<script src="/js/api.js?v=90"></script>
+<script>
+let dangSuaId = null;
+
+(async () => {
+  const user = await requireLoginOrRedirect();
+  if (!user) return;
+  renderNav(user, 'kich-ban');
+  if (!laAdmin(user.vaiTro)) {
+    document.querySelector('.page').innerHTML = '<p>Bạn không có quyền truy cập trang này.</p>';
+    return;
+  }
+  await taiDanhSach();
+})();
+
+document.getElementById('form-kich-ban').onsubmit = async (e) => {
+  e.preventDefault();
+  const body = {
+    tenKichBan: document.getElementById('ten-kich-ban').value.trim(),
+    cot: document.getElementById('cot-kich-ban').value,
+    trangThaiYeuCau: document.getElementById('trang-thai-yeu-cau').value.trim(),
+    trangThaiSau: document.getElementById('trang-thai-sau').value.trim(),
+    nguoiThucHien: document.getElementById('nguoi-thuc-hien').value.trim(),
+  };
+  try {
+    if (dangSuaId) {
+      await apiFetch('/kich-ban/' + dangSuaId, { method: 'PUT', body: JSON.stringify(body) });
+    } else {
+      await apiFetch('/kich-ban', { method: 'POST', body: JSON.stringify(body) });
+    }
+    huySua();
+    await taiDanhSach();
+  } catch (err) { alert(err.message); }
+};
+
+document.getElementById('nut-huy-sua').onclick = huySua;
+
+function huySua() {
+  dangSuaId = null;
+  document.getElementById('form-kich-ban').reset();
+  document.getElementById('nut-luu-kich-ban').textContent = 'Thêm kịch bản';
+  document.getElementById('nut-huy-sua').style.display = 'none';
+}
+
+const NHAN_COT = { TRANG_THAI_XUONG: 'Trạng thái chung', TRANG_THAI_PHOI: 'Phôi', TRANG_THAI_VE_FILE: 'Vẽ file' };
+
+async function taiDanhSach() {
+  const list = await apiFetch('/kich-ban');
+  document.getElementById('bang-kich-ban').innerHTML = `
+    <tr><th>Tên kịch bản</th><th>Cột</th><th>Trạng thái yêu cầu</th><th>Trạng thái sau</th><th>Vai trò</th><th></th><th></th></tr>
+    ${list.map(k => `
+      <tr>
+        <td>${escapeHtml(k.Ten_Kich_Ban)}</td>
+        <td>${escapeHtml(NHAN_COT[k.Cot] || NHAN_COT.TRANG_THAI_XUONG)}</td>
+        <td>${escapeHtml(k.Trang_Thai_Yeu_Cau || '(không yêu cầu)')}</td>
+        <td>${escapeHtml(k.Trang_Thai_Sau)}</td>
+        <td>${escapeHtml(k.Nguoi_Thuc_Hien || '(mọi vai trò)')}</td>
+        <td><button class="btn-hanh-dong phu" onclick="suaKichBan(${k.id})">Sửa</button></td>
+        <td><button class="btn-hanh-dong phu" onclick="xoaKichBan(${k.id}, '${encodeURIComponent(k.Ten_Kich_Ban)}')">Xoá</button></td>
+      </tr>`).join('')}`;
+}
+
+function suaKichBan(id) {
+  apiFetch('/kich-ban').then(list => {
+    const k = list.find(x => x.id === id);
+    if (!k) return;
+    dangSuaId = id;
+    document.getElementById('ten-kich-ban').value = k.Ten_Kich_Ban;
+    document.getElementById('cot-kich-ban').value = k.Cot || '';
+    document.getElementById('trang-thai-yeu-cau').value = k.Trang_Thai_Yeu_Cau || '';
+    document.getElementById('trang-thai-sau').value = k.Trang_Thai_Sau;
+    document.getElementById('nguoi-thuc-hien').value = k.Nguoi_Thuc_Hien || '';
+    document.getElementById('nut-luu-kich-ban').textContent = 'Cập nhật kịch bản';
+    document.getElementById('nut-huy-sua').style.display = '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+}
+
+async function xoaKichBan(id, tenMaHoa) {
+  if (!confirm(`Xoá hẳn kịch bản "${decodeURIComponent(tenMaHoa)}"? Không thể hoàn tác.`)) return;
+  try {
+    await apiFetch('/kich-ban/' + id, { method: 'DELETE' });
+    if (dangSuaId === id) huySua();
+    await taiDanhSach();
+  } catch (err) { alert(err.message); }
+}
+</script>
+</body>
+</html>

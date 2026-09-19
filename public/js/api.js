@@ -172,6 +172,10 @@ function renderNav(user, active) {
       // qua đây). Đặt GIỮA "Quét QR" và "TK" — sau khi chèn "Đơn hàng loạt" ở trên, Quét QR đã đẩy từ
       // index 4 lên 5, TK từ 5 lên 6, nên chèn TRƯỚC index 6 (đã tăng từ 5, đổi theo, xem 13/09/2026).
       links.splice(6, 0, { href: '/tracking.html', label: 'Tracking', icon: 'navTracking', key: 'tracking' });
+      // "Kịch bản quét" (bổ sung 19/09/2026, theo yêu cầu người dùng — trang quản lý mới thay cho sửa
+      // tay tab Sheet CauHinhKichBan cũ, xem routes/kichBan.js). CHỈ admin/superadmin — ảnh hưởng toàn
+      // bộ luồng quét QR hệ thống, không mở rộng cho ve_file như Tracking/Đơn hàng loạt.
+      links.push({ href: '/kich-ban.html', label: 'Kịch bản quét', icon: 'navScan', key: 'kich-ban' });
     }
     // "Nhân viên" (bổ sung 18/09/2026, theo yêu cầu người dùng) — thu hẹp từ admin+superadmin xuống
     // CHỈ superadmin — KHÁC mọi nhánh khác trong hàm này (đều dùng laAdmin(), coi admin/superadmin
