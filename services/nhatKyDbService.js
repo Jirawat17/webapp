@@ -56,6 +56,13 @@ function layTatCaLichSuHoatDong() {
   return cauLayTatCaLichSuHoatDong.all();
 }
 
+// Xoá SẠCH lịch sử của 1 đơn — dùng cho nút "Xoá dữ liệu đơn hàng" (CHỈ superadmin, bổ sung 20/09/2026,
+// xem services/xoaDuLieuDonService.js). Idempotent — không khớp dòng nào vẫn coi là thành công.
+const cauXoaLichSuHoatDongTheoDon = db.prepare(`DELETE FROM lich_su_hoat_dong WHERE STT_Key = ?`);
+function xoaLichSuHoatDongTheoDon(sttKey) {
+  cauXoaLichSuHoatDongTheoDon.run(sttKey);
+}
+
 // ---------- NhatKyQuetHangLoat — nhật ký quét QR (kịch bản), CHỈ GHI — không có nơi nào đọc lại ----------
 db.exec(`CREATE TABLE IF NOT EXISTS nhat_ky_quet_hang_loat (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -75,6 +82,12 @@ const cauGhiNhatKyQuetHangLoat = db.prepare(`
 `);
 function ghiNhatKyQuetHangLoat(dong) {
   cauGhiNhatKyQuetHangLoat.run(dong);
+}
+
+// Xoá SẠCH nhật ký quét hàng loạt của 1 đơn — cùng lý do/khuôn xoaLichSuHoatDongTheoDon ở trên.
+const cauXoaNhatKyQuetHangLoatTheoDon = db.prepare(`DELETE FROM nhat_ky_quet_hang_loat WHERE STT_Key = ?`);
+function xoaNhatKyQuetHangLoatTheoDon(sttKey) {
+  cauXoaNhatKyQuetHangLoatTheoDon.run(sttKey);
 }
 
 // ---------- LogsTracking — nhật ký chi tiết mua/kiểm tra tracking GKE ----------
@@ -104,8 +117,14 @@ function layTatCaLogsTracking() {
   return cauLayTatCaLogsTracking.all();
 }
 
+// Xoá SẠCH log tracking của 1 đơn — cùng lý do/khuôn xoaLichSuHoatDongTheoDon ở trên.
+const cauXoaLogsTrackingTheoDon = db.prepare(`DELETE FROM logs_tracking WHERE STT_Key = ?`);
+function xoaLogsTrackingTheoDon(sttKey) {
+  cauXoaLogsTrackingTheoDon.run(sttKey);
+}
+
 module.exports = {
-  ghiLichSuHoatDong, layTatCaLichSuHoatDong,
-  ghiNhatKyQuetHangLoat,
-  ghiLogsTracking, layTatCaLogsTracking,
+  ghiLichSuHoatDong, layTatCaLichSuHoatDong, xoaLichSuHoatDongTheoDon,
+  ghiNhatKyQuetHangLoat, xoaNhatKyQuetHangLoatTheoDon,
+  ghiLogsTracking, layTatCaLogsTracking, xoaLogsTrackingTheoDon,
 };

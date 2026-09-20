@@ -220,6 +220,10 @@
     <button id="nut-in-label" class="btn-hanh-dong phu" onclick="apDungInLabel()">IN LABEL</button>
     <button id="nut-mua-va-in-label" class="btn-hanh-dong" onclick="apDungMuaVaInLabel()">MUA TRACKING và IN LABEL</button>
   </span>
+  <span id="khoi-xoa-du-lieu-don" style="display:none">
+    <span class="thanh-hanh-dong-cach"></span>
+    <button id="nut-xoa-du-lieu-don" class="btn-hanh-dong phu nguy-hiem" onclick="apDungXoaDuLieuDon(this)">Xoá dữ liệu đơn</button>
+  </span>
   <button class="btn-hanh-dong phu" onclick="boChonTatCaDon()">Bỏ chọn</button>
 </div>
 
@@ -399,6 +403,12 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
     document.getElementById('xuong-dich').innerHTML = '<option value="">Gán Xưởng...</option>' +
       DANH_SACH_XUONG.map(x => `<option value="${x}">${x}</option>`).join('') +
       '<option value="__GO_GAN__">(Gỡ gán Xưởng)</option>';
+  }
+
+  // "Xoá dữ liệu đơn hàng" (bổ sung 20/09/2026, theo yêu cầu người dùng) — CHỈ superadmin, cùng khối
+  // hẹp nhất trong trang (như "Gán Xưởng" ở trên) vì là thao tác phá huỷ vĩnh viễn không thể hoàn tác.
+  if (laSuperAdmin(user.vaiTro)) {
+    document.getElementById('khoi-xoa-du-lieu-don').style.display = 'contents';
   }
 
   // "Đơn ưu tiên" (bổ sung 13/09/2026, theo yêu cầu người dùng) — RỘNG HƠN khối "Gán Xưởng" ở trên
@@ -839,6 +849,54 @@ async function apDungDanhDauUuTien(uuTien, nut) {
   if (ketQua.daHuy) thongBao += `\n\nĐã HỦY giữa chừng — các đơn còn lại vẫn đang được chọn, bấm lại nếu muốn tiếp tục.`;
   if (ketQua.loi.length > 0) {
     thongBao += `\n\nKhông xử lý được ${ketQua.loi.length} đơn:\n` +
+      ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
+  }
+  alert(thongBao);
+
+  document.querySelectorAll('.nhanh-phoi-ve-file, #nut-ap-dung').forEach(b => b.disabled = false);
+  nut.innerHTML = nhanGoc;
+  if (ketQua.daHuy) ketQua.thanhCong.forEach(sttKey => donDaChonSet.delete(sttKey));
+  else donDaChonSet.clear();
+  await taiDon();
+}
+
+// "Xoá dữ liệu đơn hàng" (bổ sung 20/09/2026, theo yêu cầu người dùng) — CHỈ superadmin, PHÁ HUỶ VĨNH
+// VIỄN không thể hoàn tác nên xác nhận MẠNH hơn hẳn mọi hành động hàng loạt khác trong trang: phải gõ
+// lại ĐÚNG số lượng đơn đang chọn (không phải confirm() thường, dễ bấm nhầm khi chọn nhiều đơn cùng lúc).
+// Xem routes/orders.js POST /xoa-du-lieu-hang-loat + services/xoaDuLieuDonService.js để biết chính xác
+// những gì bị xoá (KHÔNG xoá được dòng "gốc" trên Sheets — chỉ ẩn vĩnh viễn khỏi app).
+async function apDungXoaDuLieuDon(nut) {
+  const soLuong = donDaChonSet.size;
+  if (soLuong === 0) { alert('Hãy chọn ít nhất 1 đơn.'); return; }
+
+  const goNhap = prompt(
+    `XOÁ VĨNH VIỄN dữ liệu (trạng thái, lịch sử, tracking, ảnh đã tải lên, tư cách nhóm Đơn hàng loạt...) ` +
+    `của ${soLuong} đơn đã chọn.\n\nKHÔNG THỂ HOÀN TÁC. Gõ đúng số "${soLuong}" để xác nhận:`
+  );
+  if (goNhap === null) return;
+  if (goNhap.trim() !== String(soLuong)) { alert('Số nhập không khớp — đã huỷ, KHÔNG xoá gì cả.'); return; }
+
+  document.querySelectorAll('.nhanh-phoi-ve-file, #nut-ap-dung').forEach(b => b.disabled = true);
+  const nhanGoc = nut.innerHTML;
+
+  let daHuy = false;
+  const danhSach = Array.from(donDaChonSet);
+  const thanhTienDo = taoThanhTienDo(nut, { onHuy: () => { daHuy = true; } });
+  thanhTienDo.capNhat(0, danhSach.length);
+
+  const ketQua = await chayHangLoatCoTienDo(
+    danhSach,
+    sttKey => apiFetch('/orders/xoa-du-lieu-hang-loat', {
+      method: 'POST', body: JSON.stringify({ sttKeys: [sttKey] }),
+    }),
+    { onTienDo: (hienTai, tong) => thanhTienDo.capNhat(hienTai, tong), kiemTraHuy: () => daHuy }
+  );
+  thanhTienDo.xoa();
+
+  let thongBao = `Đã xoá dữ liệu ${ketQua.thanhCong.length}/${soLuong} đơn.`;
+  if (ketQua.daHuy) thongBao += `\n\nĐã HỦY giữa chừng — các đơn còn lại vẫn đang được chọn, bấm lại nếu muốn tiếp tục.`;
+  if (ketQua.loi.length > 0) {
+    thongBao += `\n\nKhông xoá được ${ketQua.loi.length} đơn:\n` +
       ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
   }
   alert(thongBao);

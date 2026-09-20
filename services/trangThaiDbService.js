@@ -34,6 +34,12 @@ const CAC_COT = [
   // không thuộc RAW/A:AM lẫn AN:BR người dùng mô tả. Xếp vào đây theo đúng tiêu chí "app tự ghi" đã
   // thống nhất — nếu không đúng ý người dùng, dễ dàng bỏ khỏi danh sách này sau.
   'CanhBaoDaGui',
+  // DA_XOA (bổ sung 20/09/2026, cho nút "Xoá dữ liệu đơn hàng" CHỈ superadmin — xem
+  // services/xoaDuLieuDonService.js): KHÔNG bao giờ tồn tại trong Sheets (cột thuần app-nội-bộ, khác mọi
+  // cột khác trong danh sách này vốn từng là cột tĩnh trong Don_Hang_ALL trước 18/09/2026) — dùng để ẨN
+  // VĨNH VIỄN 1 đơn khỏi mọi danh sách trong app (orderService.js#getAll lọc bỏ) vì KHÔNG có cách xoá
+  // thật dòng RAW gốc trên Sheets (xem services/xoaDuLieuDonService.js để biết lý do đầy đủ).
+  'DA_XOA',
 ];
 
 const DUONG_DAN_DB = process.env.SQLITE_DB_PATH || path.join(__dirname, '..', 'data', 'trang_thai_don.db');
@@ -47,6 +53,19 @@ db.exec(`CREATE TABLE IF NOT EXISTS trang_thai_don (
   stt_key TEXT PRIMARY KEY,
   ${CAC_COT.map(c => `${c} TEXT NOT NULL DEFAULT ''`).join(',\n  ')}
 )`);
+
+// Tự thêm cột MỚI vào bảng ĐÃ TỒN TẠI (bổ sung 20/09/2026, khi thêm cột DA_XOA) — CREATE TABLE IF NOT
+// EXISTS ở trên là NO-OP nếu bảng đã tồn tại (trường hợp DB thật trên VPS, đã tạo từ lần migrate
+// 18/09/2026), KHÔNG tự thêm cột mới cho bảng cũ. Thiếu bước này, thêm 1 cột vào CAC_COT mà chưa xoá +
+// tạo lại DB thật sẽ khiến MỌI câu SELECT/INSERT tham chiếu CAC_COT lỗi "no such column" ngay khi
+// deploy. Tự dò + ALTER TABLE cho từng cột còn thiếu — an toàn/idempotent, tự chạy lại vô hại nếu cột
+// đã có sẵn, và tự lo cho MỌI cột mới thêm sau này, không chỉ riêng DA_XOA.
+const cacCotHienCo = new Set(db.prepare(`PRAGMA table_info(trang_thai_don)`).all().map(c => c.name));
+for (const cot of CAC_COT) {
+  if (!cacCotHienCo.has(cot)) {
+    db.exec(`ALTER TABLE trang_thai_don ADD COLUMN ${cot} TEXT NOT NULL DEFAULT ''`);
+  }
+}
 
 // Object rỗng mặc định cho STT_Key chưa từng có dòng nào trong DB (đơn mới) — TRẢ VỀ DẠNG GIỐNG HỆT 1
 // dòng SQLite thật (mọi cột = '') để nơi gọi (orderService.js#getAll) gộp vào row Sheets mà không cần

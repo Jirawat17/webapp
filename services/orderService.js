@@ -24,10 +24,15 @@ const KEY_COL = 'STT_Key';
 async function getAll({ fresh = false } = {}) {
   const { headers, rows } = fresh ? await readTab(TAB) : await readTabCached(TAB, 10000);
   const banDoTrangThai = trangThaiDbService.layTatCa();
-  const rowsGop = rows.map(r => ({
-    ...r,
-    ...(banDoTrangThai.get(String(r[KEY_COL] || '').trim()) || trangThaiDbService.RONG_MAC_DINH),
-  }));
+  const rowsGop = rows
+    .map(r => ({
+      ...r,
+      ...(banDoTrangThai.get(String(r[KEY_COL] || '').trim()) || trangThaiDbService.RONG_MAC_DINH),
+    }))
+    // Lọc bỏ đơn đã bấm "Xoá dữ liệu đơn hàng" (CHỈ superadmin, bổ sung 20/09/2026 — xem
+    // services/xoaDuLieuDonService.js) — dòng RAW gốc trên Sheets vẫn còn (không xoá được, xem lý do
+    // trong file trên) nhưng với TOÀN BỘ app (danh sách, dashboard, báo cáo...) coi như đã biến mất.
+    .filter(r => r.DA_XOA !== 'TRUE');
   return { headers, rows: rowsGop };
 }
 

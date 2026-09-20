@@ -13,6 +13,7 @@ const { ghiLog, layLichSuTheoDon } = require('../services/logService');
 const { taiDsAnh } = require('../services/anhNguonService');
 const { tinhHashAnh, khoangCachHamming } = require('../services/perceptualHashService');
 const { requireLogin, laAdmin, laSuperAdmin } = require('../middleware/auth');
+const { xoaDuLieuDon } = require('../services/xoaDuLieuDonService');
 
 router.use(requireLogin);
 
@@ -539,6 +540,54 @@ router.post('/danh-dau-uu-tien', async (req, res) => {
     } catch (err) {
       loi.push({ sttKey, lyDo: err.message });
     }
+  }
+
+  res.json({ ok: true, thanhCong, loi });
+});
+
+// "Xoá dữ liệu đơn hàng" (bổ sung 20/09/2026, theo yêu cầu người dùng) — CHỈ superadmin (laSuperAdmin(),
+// KHÁC mọi bulk action khác trong file này vốn cho cả admin qua laAdmin()) vì đây là thao tác PHÁ HUỶ
+// VĨNH VIỄN, không thể hoàn tác — cùng khuôn chặt chẽ nhất đã dùng cho POST /gan-xuong ở trên. Xem
+// services/xoaDuLieuDonService.js để biết CHÍNH XÁC những gì bị xoá và lý do KHÔNG xoá được dòng "gốc"
+// trên Sheets (chỉ ẩn vĩnh viễn qua cờ DA_XOA).
+//
+// Ghi ĐÚNG 1 dòng log audit cho CẢ LÔ, STT_Key để TRỐNG (khác mọi route khác trong file này luôn ghi
+// log RIÊNG từng đơn) — log riêng từng đơn với STT_Key trùng đơn vừa xoá sẽ tự mâu thuẫn: chính dòng
+// log đó là "dữ liệu liên quan tới đơn" chưa kịp xoá. Ghi 1 dòng chung, liệt kê danh sách trong ChiTiet,
+// để dòng audit này sống sót vĩnh viễn trong Lịch sử hệ thống, không bị xoá bởi bất kỳ đơn nào trong đó.
+router.post('/xoa-du-lieu-hang-loat', async (req, res) => {
+  const user = req.session.user;
+  if (!laSuperAdmin(user.vaiTro)) {
+    return res.status(403).json({ error: 'Chỉ superadmin mới được xoá dữ liệu đơn hàng' });
+  }
+
+  const { sttKeys } = req.body;
+  if (!Array.isArray(sttKeys) || sttKeys.length === 0) {
+    return res.status(400).json({ error: 'Danh sách đơn trống' });
+  }
+
+  const { banDoTheoKey } = await orderService.getManyByKeys(sttKeys, { fresh: true });
+
+  const thanhCong = [];
+  const loi = [];
+  for (const sttKey of sttKeys) {
+    if (!banDoTheoKey.get(sttKey)) {
+      loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng (có thể đã bị xoá dữ liệu ở nơi khác)' });
+      continue;
+    }
+    try {
+      await xoaDuLieuDon(sttKey);
+      thanhCong.push(sttKey);
+    } catch (err) {
+      loi.push({ sttKey, lyDo: err.message });
+    }
+  }
+
+  if (thanhCong.length > 0) {
+    ghiLog({
+      nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'XOA_DU_LIEU_DON_HANG',
+      sttKey: '', chiTiet: { sttKeys: thanhCong, soLuong: thanhCong.length },
+    }).catch(err => console.error('[Orders] Lỗi ghi log nền:', err.message));
   }
 
   res.json({ ok: true, thanhCong, loi });
