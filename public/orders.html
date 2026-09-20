@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=93">
-<script src="/js/theme.js?v=93"></script>
+<link rel="stylesheet" href="/css/style.css?v=94">
+<script src="/js/theme.js?v=94"></script>
 </head>
 <body>
 <div id="nav"></div>
@@ -230,8 +230,8 @@
   <button class="btn-hanh-dong phu" onclick="boChonTatCaDon()">Bỏ chọn</button>
 </div>
 
-<script src="/js/icons.js?v=93"></script>
-<script src="/js/api.js?v=93"></script>
+<script src="/js/icons.js?v=94"></script>
+<script src="/js/api.js?v=94"></script>
 <script>
 const NHAN_CANH_BAO = { VANG: 'Vàng · 3 ngày', CAM: 'Cam · 5 ngày', DO: 'Đỏ · 7 ngày' };
 
@@ -1023,6 +1023,13 @@ async function apDungMuaTrackingThuCong() {
   if (ketQua.loi.length > 0) {
     thongBao += `\n\nKhông mua được ${ketQua.loi.length} đơn:\n` +
       ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
+  }
+  // Đẩy tracking sang Sheet khách hàng (bổ sung 21/09/2026, theo yêu cầu người dùng) — TÁCH RIÊNG khỏi
+  // "Không mua được" ở trên vì tracking THẬT đã mua thành công, chỉ bước đồng bộ ra Sheet khách hàng
+  // thất bại (thiếu quyền sửa Sheet, sai cấu hình...).
+  if (ketQua.loiDaySheetKh.length > 0) {
+    thongBao += `\n\nĐã mua tracking nhưng KHÔNG đẩy được sang Sheet khách hàng cho ${ketQua.loiDaySheetKh.length} đơn:\n` +
+      ketQua.loiDaySheetKh.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
   }
   alert(thongBao);
 

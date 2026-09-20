@@ -55,4 +55,4 @@ async function guiCanhBao(muc, don) {
   await guiTinNhan(CHAT_ID_THEO_MUC[muc], text);
 }
 
-module.exports = { guiCanhBao };
+module.exports = { guiCanhBao, guiTinNhan };

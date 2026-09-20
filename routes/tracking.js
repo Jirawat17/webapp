@@ -81,6 +81,12 @@ router.post('/mua-thu-cong', async (req, res) => {
   const cauHinhGke = await layCauHinhGke();
   const thanhCong = [];
   const loi = [];
+  // Đơn đã MUA TRACKING THẬT thành công nhưng KHÔNG đẩy được sang Sheet khách hàng (bổ sung
+  // 21/09/2026, theo yêu cầu người dùng) — TÁCH RIÊNG khỏi `loi` (vốn nghĩa là "không mua được tracking
+  // gì cả") để không gây hiểu nhầm, vì ở đây tracking đã mua thành công, chỉ bước đồng bộ ra ngoài thất
+  // bại. Rỗng cho đơn không cấu hình Sheet khách hàng (không phải lỗi, xem
+  // services/khachHangService.js#layThongTinSheetKhachHang) hoặc đẩy thành công.
+  const loiDaySheetKh = [];
 
   for (const sttKey of sttKeys) {
     try {
@@ -94,13 +100,16 @@ router.post('/mua-thu-cong', async (req, res) => {
       const ketQua = await muaTrackingChoDon(sttKey, cauHinhGke, user);
       if (!ketQua) { loi.push({ sttKey, lyDo: 'Đơn này đã có mã tracking thật rồi — không mua lại.' }); continue; }
       thanhCong.push(sttKey);
+      if (ketQua.dayCheKhachHang && !ketQua.dayCheKhachHang.ok) {
+        loiDaySheetKh.push({ sttKey, lyDo: ketQua.dayCheKhachHang.lyDo });
+      }
     } catch (err) {
       console.error(`[TrackingThuCong] Lỗi mua tracking cho ${sttKey}:`, err.stack || err.message);
       loi.push({ sttKey, lyDo: err.message });
     }
   }
 
-  res.json({ ok: true, thanhCong, loi });
+  res.json({ ok: true, thanhCong, loi, loiDaySheetKh });
 });
 
 // Chạy 1 hàm xử lý (inLabelChoDon hoặc muaTrackingVaInLabelChoDon) cho từng đơn trong sttKeys — lỗi ở

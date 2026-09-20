@@ -25,7 +25,7 @@ Web app quản lý đơn hàng xưởng thêu. Dữ liệu vẫn nằm trên Goo
 | Tab | Vai trò trong app |
 |---|---|
 | `Don_Hang_ALL` | Dữ liệu đơn hàng chính |
-| `Khach_Hang` | Tra mã khách hàng (`MA_KHACH_HANG`) ra tên hiển thị (`TEN_KHACH_HANG`) |
+| `Khach_Hang` | Tra mã khách hàng (`MA_KHACH_HANG`) ra tên hiển thị (`TEN_KHACH_HANG`). 2 cột tuỳ chọn `SHEET_ID_KHACH_HANG`/`TEN_TAB_KHACH_HANG` (bổ sung 21/09/2026, nhập tay) — có thì app tự đẩy TRACKING_ID2/HANG_VAN_CHUYEN2 sang đúng Sheet+tab riêng của khách đó sau khi mua tracking GKE, xem `services/customerSheetService.js` |
 | `NguoiDung` | Danh sách nhân viên dùng để đăng nhập (Ten, VaiTro, Team, KichHoat) |
 | `LichSuHoatDong` | App tự ghi — nhật ký mọi thao tác (đăng nhập, sửa đơn, quét QR, chatbot...) |
 | `CauHinhKichBan` | **Cấu hình kịch bản quét QR** — sửa/thêm kịch bản ở đây, không cần sửa code |

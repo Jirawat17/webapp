@@ -18,4 +18,17 @@ async function layBanDoTenKhachHang() {
   return map;
 }
 
-module.exports = { layDanhSachKhachHang, layBanDoTenKhachHang };
+// Thông tin Sheet RIÊNG của 1 khách hàng — dùng để đẩy tracking sang sau khi mua GKE (bổ sung
+// 21/09/2026, theo yêu cầu người dùng, xem services/customerSheetService.js). 2 cột MỚI người dùng tự
+// thêm tay vào tab Khach_Hang: SHEET_ID_KHACH_HANG (spreadsheet ID của khách) + TEN_TAB_KHACH_HANG (tên
+// tab đích — MỖI khách hàng có thể đặt tên tab khác nhau, không cố định). App CHỈ ĐỌC, không bao giờ
+// ghi vào tab Khach_Hang này. Khách hàng chưa điền đủ CẢ 2 cột -> trả về null, nơi gọi tự BỎ QUA việc
+// đẩy tracking cho khách đó (KHÔNG coi là lỗi — đa số khách hàng sẽ chưa cấu hình tính năng này).
+async function layThongTinSheetKhachHang(maKhachHang) {
+  const { rows } = await readTabCached(TAB, 60000);
+  const dong = rows.find(r => r.MA_KHACH_HANG === maKhachHang);
+  if (!dong || !dong.SHEET_ID_KHACH_HANG || !dong.TEN_TAB_KHACH_HANG) return null;
+  return { spreadsheetId: dong.SHEET_ID_KHACH_HANG, tenTab: dong.TEN_TAB_KHACH_HANG };
+}
+
+module.exports = { layDanhSachKhachHang, layBanDoTenKhachHang, layThongTinSheetKhachHang };

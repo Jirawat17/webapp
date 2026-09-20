@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Chi tiết đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=93">
-<script src="/js/theme.js?v=93"></script>
+<link rel="stylesheet" href="/css/style.css?v=94">
+<script src="/js/theme.js?v=94"></script>
 </head>
 <body>
 <div id="nav"></div>
@@ -13,8 +13,8 @@
   <div class="skeleton-list"><div class="skeleton-card" style="height:220px"></div></div>
 </div>
 
-<script src="/js/icons.js?v=93"></script>
-<script src="/js/api.js?v=93"></script>
+<script src="/js/icons.js?v=94"></script>
+<script src="/js/api.js?v=94"></script>
 <script>
 const sttKey = new URLSearchParams(location.search).get('stt');
 const NHAN_CANH_BAO = { VANG: 'Cảnh báo Vàng · 3 ngày ít tiến triển', CAM: 'Cảnh báo Cam · 5 ngày chưa vào sản xuất', DO: 'Cảnh báo Đỏ · 7 ngày chưa ship' };
@@ -448,6 +448,11 @@ async function muaTrackingThuCongChiTiet(btn) {
       btn.disabled = false;
       btn.innerHTML = nhanGoc;
     } else {
+      // Đẩy tracking sang Sheet khách hàng (bổ sung 21/09/2026, theo yêu cầu người dùng) — tracking
+      // THẬT đã mua thành công, chỉ báo riêng nếu bước đồng bộ ra Sheet khách hàng thất bại.
+      if (ketQua.loiDaySheetKh && ketQua.loiDaySheetKh.length > 0) {
+        alert('Đã mua tracking thành công, nhưng KHÔNG đẩy được sang Sheet khách hàng: ' + ketQua.loiDaySheetKh[0].lyDo);
+      }
       await taiChiTiet();
     }
   } catch (e) {

@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tracking — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=93">
-<script src="/js/theme.js?v=93"></script>
+<link rel="stylesheet" href="/css/style.css?v=94">
+<script src="/js/theme.js?v=94"></script>
 <style>
 /* Popup báo "vừa tự động mua tracking" — trang này tự chứa, chưa có class modal/popup dùng chung nào
    trong style.css để tái dùng (đã rà trước khi thêm). */
@@ -190,8 +190,8 @@
   </div>
 </div>
 
-<script src="/js/icons.js?v=93"></script>
-<script src="/js/api.js?v=93"></script>
+<script src="/js/icons.js?v=94"></script>
+<script src="/js/api.js?v=94"></script>
 <script>
 // Nhãn + class hiển thị cho từng trạng thái trả về từ services/trackingAutoService.js
 // (layDanhSachDonAutoTracking) — xem docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md.
@@ -533,6 +533,12 @@ async function muaThuCongTuBang(btn, sttKey) {
       btn.disabled = false;
       btn.innerHTML = nhanGoc;
       return;
+    }
+    // Đẩy tracking sang Sheet khách hàng (bổ sung 21/09/2026, theo yêu cầu người dùng) — tracking THẬT
+    // đã mua thành công (đã qua nhánh loi[] ở trên), chỉ báo riêng nếu bước đồng bộ ra Sheet khách hàng
+    // thất bại (xem routes/tracking.js).
+    if (ketQua.loiDaySheetKh && ketQua.loiDaySheetKh.length > 0) {
+      alert('Đã mua tracking thành công, nhưng KHÔNG đẩy được sang Sheet khách hàng: ' + ketQua.loiDaySheetKh[0].lyDo);
     }
     await taiDanhSach();
     await taiLogs();

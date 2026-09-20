@@ -447,6 +447,11 @@ async function nenAnhTruocKhiTaiLen(file) {
 async function chayHangLoatCoTienDo(danhSach, xuLyMotPhanTu, { onTienDo, kiemTraHuy } = {}) {
   const thanhCong = [];
   const loi = [];
+  // loiDaySheetKh (bổ sung 21/09/2026, theo yêu cầu người dùng) — POST /tracking/mua-thu-cong trả
+  // thêm mảng này (đơn mua tracking THÀNH CÔNG nhưng đẩy sang Sheet khách hàng thất bại, xem
+  // routes/tracking.js) — gộp CHUNG CHUNG như thanhCong/loi để dùng lại được, không ảnh hưởng các nơi
+  // gọi khác không có field này (mảng rỗng, vô hại).
+  const loiDaySheetKh = [];
   let daHuy = false;
 
   for (let i = 0; i < danhSach.length; i++) {
@@ -456,6 +461,7 @@ async function chayHangLoatCoTienDo(danhSach, xuLyMotPhanTu, { onTienDo, kiemTra
       const kq = await xuLyMotPhanTu(danhSach[i]);
       if (kq && Array.isArray(kq.thanhCong)) thanhCong.push(...kq.thanhCong);
       if (kq && Array.isArray(kq.loi)) loi.push(...kq.loi);
+      if (kq && Array.isArray(kq.loiDaySheetKh)) loiDaySheetKh.push(...kq.loiDaySheetKh);
     } catch (err) {
       loi.push({ sttKey: danhSach[i], lyDo: err.message });
     }
@@ -463,7 +469,7 @@ async function chayHangLoatCoTienDo(danhSach, xuLyMotPhanTu, { onTienDo, kiemTra
     if (onTienDo) onTienDo(i + 1, danhSach.length);
   }
 
-  return { thanhCong, loi, daHuy };
+  return { thanhCong, loi, loiDaySheetKh, daHuy };
 }
 
 // Bảng tra cứu CHÍNH XÁC (exact-match) — cập nhật 24/08/2026 theo hệ trạng thái mới (không còn tiền

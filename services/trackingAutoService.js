@@ -6,6 +6,9 @@ const orderService = require('./orderService');
 const gkeService = require('./gkeService');
 const nhatKyDbService = require('./nhatKyDbService');
 const caiDatDbService = require('./caiDatDbService');
+const khachHangService = require('./khachHangService');
+const customerSheetService = require('./customerSheetService');
+const telegramService = require('./telegramService');
 const { ghiLog } = require('./logService');
 const { dinhDangNgayGioNgan } = require('./dateUtils');
 
@@ -150,6 +153,39 @@ async function muaTrackingChoDon(sttKey, cauHinhGke, user = NGUOI_HE_THONG) {
       TAM_THOI: '', // đã có tracking thật — không còn "tạm" nữa
     }, user);
 
+    // Đẩy sang Sheet RIÊNG của khách hàng (bổ sung 21/09/2026, theo yêu cầu người dùng — xem
+    // services/customerSheetService.js) — BEST-EFFORT, KHÔNG được chặn/rollback việc mua tracking THẬT
+    // đã xảy ra dù bước này lỗi (tracking đã mua thật, không thể "huỷ" chỉ vì đẩy sang sheet ngoài thất
+    // bại). Bỏ qua hoàn toàn, không coi là lỗi, nếu khách hàng của đơn này chưa cấu hình Sheet ID + tên
+    // tab trong tab Khach_Hang — đa số khách hàng sẽ ở tình trạng này.
+    let dayCheKhachHang = null;
+    const thongTinSheetKh = row.MA_KHACH_HANG
+      ? await khachHangService.layThongTinSheetKhachHang(row.MA_KHACH_HANG).catch(() => null)
+      : null;
+    if (thongTinSheetKh) {
+      try {
+        await customerSheetService.dayTrackingSangSheetKhachHang({
+          ...thongTinSheetKh, sttKey,
+          trackingId: ketQuaTem.tracking_num, hangVanChuyen: ketQuaTem.delivery_carrier,
+        });
+        dayCheKhachHang = { ok: true };
+        nhatKy.push(`Đã đẩy tracking sang Sheet khách hàng (tab "${thongTinSheetKh.tenTab}").`);
+      } catch (err) {
+        dayCheKhachHang = { ok: false, lyDo: err.message };
+        nhatKy.push(`LỖI đẩy tracking sang Sheet khách hàng: ${err.message}`);
+        console.error(`[TrackingTuDong] Lỗi đẩy tracking sang Sheet khách hàng cho ${sttKey}:`, err.message);
+        // CHỈ luồng tự động (cron, không ai đứng canh màn hình) mới cần báo Telegram, CHỈ khi LỖI
+        // (tránh spam liên tục mỗi 2 phút nếu báo cả lúc thành công) — luồng thủ công đã có người bấm
+        // nút thấy ngay kết quả qua response trả về (xem routes/tracking.js POST /mua-thu-cong).
+        if (!laThuCong) {
+          telegramService.guiTinNhan(
+            process.env.TELEGRAM_CHATID_TRACKING_KH,
+            `⚠️ Đẩy tracking sang Sheet khách hàng THẤT BẠI (tự động)\nĐơn: ${sttKey}\nKhách hàng: ${row.MA_KHACH_HANG}\nLỗi: ${err.message}`
+          ).catch(() => {});
+        }
+      }
+    }
+
     ghiLogTracking(`${nhanNguon} ${sttKey}: đã mua tracking ${ketQuaTem.tracking_num} (${ketQuaTem.delivery_carrier})`);
     ghiLog({
       nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: laThuCong ? 'MUA_TRACKING_THU_CONG' : 'TU_DONG_MUA_TRACKING',
@@ -160,7 +196,7 @@ async function muaTrackingChoDon(sttKey, cauHinhGke, user = NGUOI_HE_THONG) {
       trackingId: ketQuaTem.tracking_num, hangVanChuyen: ketQuaTem.delivery_carrier, chiTiet: nhatKy.join('\n'),
     });
 
-    return ketQuaTem;
+    return { ...ketQuaTem, dayCheKhachHang };
   } catch (err) {
     ghiLogTracking(`${nhanNguon} ${sttKey}: LỖI — ${err.message}`);
     ghiLogTrackingVaoDb({
