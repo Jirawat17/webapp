@@ -654,7 +654,12 @@ const TRUONG_DUOC_SUA = {
 // (admin-only, hàng loạt ở trang Đơn hàng), không cho lách qua form sửa 1 đơn (kể cả admin/ve_file).
 // DON_UU_TIEN (bổ sung 13/09/2026) cùng lý do — bắt buộc qua POST /danh-dau-uu-tien (admin/ve_file,
 // nút bật/tắt nhanh trên thẻ hoặc chọn hàng loạt), không cho lách qua form sửa 1 đơn.
-const TRUONG_CAM_SUA = ['STT_Key', '_row', 'NguoiCapNhatCuoi', 'ThoiGianCapNhatCuoi', 'TenKhachHang', 'TieuDeSanPham', 'ViTriTheu', 'CanhBao', 'XUONG', 'DON_UU_TIEN'];
+// DA_XOA (bổ sung 20/09/2026, phát hiện qua rà soát bảo mật) — PHẢI cấm ở đây, cùng lý do XUONG/
+// DON_UU_TIEN: đây là cờ CHỈ superadmin được set (qua POST /xoa-du-lieu-hang-loat, xem
+// services/xoaDuLieuDonService.js) — thiếu nó ở đây, admin/ve_file (không có allowlist TRUONG_DUOC_SUA
+// riêng) có thể set thẳng DA_XOA=TRUE qua route sửa 1 đơn này, ẩn vĩnh viễn đơn khỏi app mà KHÔNG dọn
+// dẹp log/nhóm Đơn hàng loạt/ảnh MinIO và KHÔNG có log audit — lách hoàn toàn giới hạn "chỉ superadmin".
+const TRUONG_CAM_SUA = ['STT_Key', '_row', 'NguoiCapNhatCuoi', 'ThoiGianCapNhatCuoi', 'TenKhachHang', 'TieuDeSanPham', 'ViTriTheu', 'CanhBao', 'XUONG', 'DON_UU_TIEN', 'DA_XOA'];
 
 router.put('/:sttKey', async (req, res) => {
   const user = req.session.user;

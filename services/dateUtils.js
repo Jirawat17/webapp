@@ -90,4 +90,15 @@ function thoiGianVNISOString(d = new Date()) {
   return `${lay('year')}-${lay('month')}-${lay('day')}T${lay('hour')}:${lay('minute')}:${lay('second')}.${ms}+07:00`;
 }
 
-module.exports = { parseNgay, dinhDangNgay, dinhDangNgayGioVN, dinhDangNgayGioNgan, thoiGianVNISOString };
+// Biên giờ Việt Nam cho lọc theo khoảng ngày (bổ sung 20/09/2026, phát hiện qua rà soát bảo mật) —
+// new Date(`${ngay}T00:00:00`) (KHÔNG có hậu tố offset) bị JS hiểu theo GIỜ ĐỊA PHƯƠNG CỦA SERVER,
+// không phải giờ Việt Nam. Container chạy mặc định UTC (không set biến môi trường TZ) nên biên giới
+// lệch nguyên 7 tiếng khi so với các mốc thời gian ghi bởi thoiGianVNISOString() ở trên (LUÔN có hậu tố
+// +07:00, là 1 thời điểm tuyệt đối đúng) — hoạt động lúc 2h sáng giờ VN ngay đầu khoảng lọc bị hiểu là
+// "trước" biên bắt đầu (00:00 UTC = 07:00 sáng giờ VN) nên bị loại sai khỏi kết quả. Luôn gắn cứng
+// "+07:00" ở đây để ra ĐÚNG 1 thời điểm tuyệt đối theo giờ Việt Nam, không phụ thuộc múi giờ server.
+function bienGioiNgayVN(ngayStr, cuoiNgay = false) {
+  return new Date(`${ngayStr}T${cuoiNgay ? '23:59:59.999' : '00:00:00.000'}+07:00`);
+}
+
+module.exports = { parseNgay, dinhDangNgay, dinhDangNgayGioVN, dinhDangNgayGioNgan, thoiGianVNISOString, bienGioiNgayVN };

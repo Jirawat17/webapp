@@ -82,6 +82,11 @@ document.getElementById('form-them').onsubmit = async (e) => {
   } catch (err) { alert(err.message); }
 };
 
+// Dùng data-* + this.dataset (KHÔNG nội suy chuỗi thẳng vào onclick="...('...')", bổ sung 20/09/2026,
+// phát hiện qua rà soát bảo mật — xem cùng khuôn public/don-hang-loat.html) — Ten là tên nhân viên tự
+// do, encodeURIComponent() không escape dấu ' nên KHÔNG đủ an toàn khi nội suy vào JS string bên trong
+// thuộc tính onclick (tên chứa dấu nháy đơn phá cú pháp, tên cố ý chèn mã là XSS thật). dataset lấy
+// đúng chuỗi gốc đã escapeHtml() lúc ghi, không đi qua bước "biên dịch lại thành mã JS" nào nữa.
 async function taiDanhSach() {
   const list = await apiFetch('/users');
   document.getElementById('bang-nv').innerHTML = `
@@ -92,7 +97,7 @@ async function taiDanhSach() {
         <td>${escapeHtml(NHAN_VAI_TRO[u.VaiTro] || u.VaiTro)}</td>
         <td>${escapeHtml(u.Team || '')}</td>
         <td>
-          <select onchange="doiXuong('${encodeURIComponent(u.Ten)}', this.value)">
+          <select data-ten="${escapeHtml(u.Ten)}" onchange="doiXuong(this.dataset.ten, this.value)">
             <option value="" ${!u.Xuong ? 'selected' : ''}>(chưa gán)</option>
             ${DANH_SACH_XUONG.map(x => `<option value="${x}" ${u.Xuong === x ? 'selected' : ''}>${x}</option>`).join('')}
           </select>
@@ -100,48 +105,49 @@ async function taiDanhSach() {
         <td>${String(u.KichHoat).toUpperCase() === 'TRUE' ? 'Đang hoạt động' : 'Đã khoá'}</td>
         <td>${u.MatKhau ? escapeHtml(u.MatKhau) : '(chưa đặt)'}</td>
         <td>${String(u.HienThiDangNhap).toUpperCase() === 'FALSE' ? 'Đã ẩn' : 'Hiện công khai'}</td>
-        <td><button class="btn-hanh-dong phu" onclick="datMatKhau('${encodeURIComponent(u.Ten)}')">Đặt mật khẩu</button></td>
-        <td><button class="btn-hanh-dong phu" onclick="doiKichHoat('${encodeURIComponent(u.Ten)}','${u.KichHoat}')">
+        <td><button class="btn-hanh-dong phu" data-ten="${escapeHtml(u.Ten)}" onclick="datMatKhau(this.dataset.ten)">Đặt mật khẩu</button></td>
+        <td><button class="btn-hanh-dong phu" data-ten="${escapeHtml(u.Ten)}" data-kich-hoat="${escapeHtml(u.KichHoat)}" onclick="doiKichHoat(this.dataset.ten, this.dataset.kichHoat)">
           ${String(u.KichHoat).toUpperCase() === 'TRUE' ? 'Khoá' : 'Mở lại'}
         </button></td>
-        <td><button class="btn-hanh-dong phu" onclick="doiHienThi('${encodeURIComponent(u.Ten)}','${u.HienThiDangNhap}')">
+        <td><button class="btn-hanh-dong phu" data-ten="${escapeHtml(u.Ten)}" data-hien-thi="${escapeHtml(u.HienThiDangNhap)}" onclick="doiHienThi(this.dataset.ten, this.dataset.hienThi)">
           ${String(u.HienThiDangNhap).toUpperCase() === 'FALSE' ? 'Hiện lại' : 'Ẩn khỏi đăng nhập'}
         </button></td>
       </tr>`).join('')}`;
 }
 
-async function doiXuong(tenMaHoa, xuongMoi) {
+// ten đến từ this.dataset.ten (xem taiDanhSach() ở trên) — chuỗi GỐC chưa encode, tự encodeURIComponent
+// ở ĐÂY khi ghép vào URL (đây mới là đúng mục đích của hàm này — mã hoá cho URL, không phải cho JS).
+async function doiXuong(ten, xuongMoi) {
   try {
-    await apiFetch('/users/' + tenMaHoa, { method: 'PUT', body: JSON.stringify({ Xuong: xuongMoi }) });
+    await apiFetch('/users/' + encodeURIComponent(ten), { method: 'PUT', body: JSON.stringify({ Xuong: xuongMoi }) });
     await taiDanhSach();
   } catch (err) { alert(err.message); await taiDanhSach(); }
 }
 
-async function doiKichHoat(tenMaHoa, kichHoatHienTai) {
+async function doiKichHoat(ten, kichHoatHienTai) {
   const moi = String(kichHoatHienTai).toUpperCase() === 'TRUE' ? 'FALSE' : 'TRUE';
-  await apiFetch('/users/' + tenMaHoa, { method: 'PUT', body: JSON.stringify({ KichHoat: moi }) });
+  await apiFetch('/users/' + encodeURIComponent(ten), { method: 'PUT', body: JSON.stringify({ KichHoat: moi }) });
   await taiDanhSach();
 }
 
 // Ẩn/hiện khỏi danh sách nút bấm công khai ở màn hình đăng nhập (bổ sung 13/09/2026 — xem
 // docs/superpowers/specs/2026-09-13-an-tai-khoan-dang-nhap-design.md). KHÔNG ảnh hưởng khả năng đăng
 // nhập — tài khoản bị ẩn vẫn vào được bình thường qua trang đăng nhập riêng (gõ tay tên).
-async function doiHienThi(tenMaHoa, hienThiHienTai) {
+async function doiHienThi(ten, hienThiHienTai) {
   const moi = String(hienThiHienTai).toUpperCase() === 'FALSE' ? 'TRUE' : 'FALSE';
   try {
-    await apiFetch('/users/' + tenMaHoa, { method: 'PUT', body: JSON.stringify({ HienThiDangNhap: moi }) });
+    await apiFetch('/users/' + encodeURIComponent(ten), { method: 'PUT', body: JSON.stringify({ HienThiDangNhap: moi }) });
     await taiDanhSach();
   } catch (err) { alert(err.message); }
 }
 
 // Đặt/đặt lại mật khẩu — dùng prompt() thay vì mở form riêng, đủ dùng cho thao tác admin ít khi làm.
-async function datMatKhau(tenMaHoa) {
-  const ten = decodeURIComponent(tenMaHoa);
+async function datMatKhau(ten) {
   const moi = prompt(`Nhập mật khẩu mới (1-4 chữ số) cho "${ten}":`);
   if (moi === null) return; // bấm Huỷ
   if (!/^\d{1,4}$/.test(moi.trim())) { alert('Mật khẩu phải là 1-4 chữ số.'); return; }
   try {
-    await apiFetch('/users/' + tenMaHoa, { method: 'PUT', body: JSON.stringify({ MatKhau: moi.trim() }) });
+    await apiFetch('/users/' + encodeURIComponent(ten), { method: 'PUT', body: JSON.stringify({ MatKhau: moi.trim() }) });
     await taiDanhSach();
   } catch (err) { alert(err.message); }
 }

@@ -76,7 +76,9 @@ async function nhapKho({ loai, kichThuoc, mauSac, soLuong, nguoiNhap, vaiTro, gh
 // phôi, cần nhập thêm" hiển thị trên trang Quản lý tài sản. Nếu chưa từng có dòng tồn kho cho tổ hợp
 // này (chưa từng nhập kho loại đó) thì TỰ TẠO dòng mới bắt đầu từ 0 rồi trừ xuống âm luôn — không báo
 // lỗi chặn đơn (cũng đã xác nhận với người dùng).
-// KHÔNG hoàn kho khi đơn bị chuyển NGƯỢC lại "Chưa lấy phôi" — chỉ trừ 1 chiều, cố ý đơn giản hoá.
+// Chuyển NGƯỢC lại "Chưa lấy phôi" giờ ĐƯỢC hoàn kho — xem hoanKhoTheoDon() ngay dưới đây (sửa
+// 20/09/2026, phát hiện qua rà soát bảo mật: trước đây chỉ trừ 1 chiều, khiến chu trình "Đã lấy phôi ->
+// Chưa lấy phôi -> Đã lấy phôi" trừ kho 2 lần cho đúng 1 lượt lấy phôi thật).
 async function truKhoTheoDon(donHang, user) {
   const soLuong = Number(donHang.SO_LUONG);
   if (!soLuong || soLuong <= 0) return; // thiếu/sai dữ liệu số lượng trên đơn — bỏ qua, không chặn đơn
@@ -105,4 +107,33 @@ async function truKhoTheoDon(donHang, user) {
   }).catch(err => console.error('[TaiSan] Lỗi ghi log nền:', err.message));
 }
 
-module.exports = { layTonKho, layLichSuNhap, nhapKho, truKhoTheoDon };
+// HOÀN kho khi đơn bị chuyển NGƯỢC LẠI từ "Đã lấy phôi" sang trạng thái khác (bổ sung 20/09/2026, phát
+// hiện qua rà soát bảo mật) — đối xứng hoàn toàn với truKhoTheoDon() ở trên, cộng lại ĐÚNG SO_LUONG đã
+// trừ trước đó, khớp loại phôi theo LOAI+KICH_THUOC+MAU_SAC. Thiếu hàm này khiến chu trình "Đã lấy
+// phôi -> Chưa lấy phôi -> Đã lấy phôi" (sửa nhầm, bấm nhầm nút quick-toggle 2 lần...) trừ kho 2 LẦN
+// cho đúng 1 lượt lấy phôi thật ngoài đời — xem orderService.js#update() nơi gọi hàm này.
+async function hoanKhoTheoDon(donHang, user) {
+  const soLuong = Number(donHang.SO_LUONG);
+  if (!soLuong || soLuong <= 0) return; // thiếu/sai dữ liệu số lượng trên đơn — bỏ qua, không chặn đơn
+
+  const { headers, rows } = await readTabCached(TAB_TON_KHO, 5000);
+  const dong = rows.find(r => khopLoaiPhoi(r, donHang.LOAI, donHang.KICH_THUOC, donHang.MAU_SAC));
+
+  if (dong) {
+    const tonMoi = (Number(dong.TON_HIEN_TAI) || 0) + soLuong;
+    await updateCells(TAB_TON_KHO, headers, dong._row, { TON_HIEN_TAI: tonMoi });
+  } else {
+    await appendRow(TAB_TON_KHO, headers, {
+      LOAI: donHang.LOAI || '', KICH_THUOC: donHang.KICH_THUOC || '', MAU_SAC: donHang.MAU_SAC || '',
+      TON_HIEN_TAI: soLuong,
+    });
+  }
+
+  ghiLog({
+    nguoiDung: (user && user.ten) || 'Hệ thống', vaiTro: (user && user.vaiTro) || '-',
+    hanhDong: 'HOAN_KHO_PHOI_TU_DON', sttKey: donHang.STT_Key,
+    chiTiet: { loai: donHang.LOAI, kichThuoc: donHang.KICH_THUOC, mauSac: donHang.MAU_SAC, soLuong },
+  }).catch(err => console.error('[TaiSan] Lỗi ghi log nền:', err.message));
+}
+
+module.exports = { layTonKho, layLichSuNhap, nhapKho, truKhoTheoDon, hoanKhoTheoDon };

@@ -15,22 +15,25 @@ const storageService = require('./storageService');
 // trong app vĩnh viễn — dòng RAW gốc vẫn nằm im trên Sheets (ngoài tầm với) nhưng với app coi như đã
 // biến mất hoàn toàn.
 //
-// THỨ TỰ CÓ CHỦ ĐÍCH: đặt cờ DA_XOA SAU CÙNG, chỉ khi mọi bước xoá khác đã xong không lỗi. Nếu bước xoá
-// ảnh MinIO (phụ thuộc mạng, dễ lỗi nhất trong toàn bộ hàm) ném lỗi, đơn VẪN hiện trong danh sách (chưa
-// bị coi là đã xoá) để người dùng biết cần bấm xoá lại, thay vì biến mất khỏi app trong khi vẫn còn ảnh
-// rác trên MinIO không ai dọn. Mọi bước đều idempotent (DELETE khớp 0 dòng, xoá thành viên nhóm không
-// tồn tại, xoá object không tồn tại — đều coi là thành công, xem storageService.js#deleteObject) nên
-// gọi lại nhiều lần trên cùng 1 đơn (vd sau khi thử lại vì lỗi mạng) luôn an toàn.
+// THỨ TỰ CÓ CHỦ ĐÍCH (sửa lại 20/09/2026, phát hiện qua rà soát bảo mật — bản trước đặt bước MinIO
+// GIỮA lúc xoá nhóm/log và đặt cờ DA_XOA, nghĩa là nếu MinIO lỗi thì nhóm/log ĐÃ MẤT VĨNH VIỄN dù đơn
+// vẫn hiện bình thường như chưa xoá gì — SAI với đúng mục tiêu thiết kế ban đầu). Giờ bước DỄ LỖI NHẤT
+// (xoá ảnh MinIO, phụ thuộc mạng) chạy TRƯỚC TIÊN — nếu nó lỗi, hàm ném lỗi ngay, CHƯA đụng tới bất kỳ
+// dữ liệu SQLite nào (nhóm/log vẫn nguyên vẹn), nên đơn thật sự "chưa xoá gì cả" đúng như hiện trên UI.
+// Cờ DA_XOA vẫn đặt SAU CÙNG, chỉ khi mọi bước khác đã xong không lỗi. Mọi bước đều idempotent (DELETE
+// khớp 0 dòng, xoá thành viên nhóm không tồn tại, xoá object không tồn tại — đều coi là thành công, xem
+// storageService.js#deleteObject) nên gọi lại nhiều lần trên cùng 1 đơn (vd sau khi thử lại vì lỗi
+// mạng) luôn an toàn.
 async function xoaDuLieuDon(sttKey) {
+  const objectKeys = await storageService.listObjectKeys(`orders/${sttKey}/`);
+  for (const key of objectKeys) await storageService.deleteObject(key);
+
   const nhom = donHangLoatDbService.layNhomCuaDon(sttKey);
   if (nhom) donHangLoatDbService.xoaThanhVien(nhom.MaDonHangLoat, sttKey);
 
   nhatKyDbService.xoaLichSuHoatDongTheoDon(sttKey);
   nhatKyDbService.xoaNhatKyQuetHangLoatTheoDon(sttKey);
   nhatKyDbService.xoaLogsTrackingTheoDon(sttKey);
-
-  const objectKeys = await storageService.listObjectKeys(`orders/${sttKey}/`);
-  for (const key of objectKeys) await storageService.deleteObject(key);
 
   trangThaiDbService.ghiDe(sttKey, { ...trangThaiDbService.RONG_MAC_DINH, DA_XOA: 'TRUE' });
 }

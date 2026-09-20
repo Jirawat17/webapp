@@ -10,7 +10,7 @@ const { layLichSuChuyenSangTrangThai, tinhChiTieuCongViec, trongKhoangThoiGian }
 const taiKhoanService = require('../services/taiKhoanService');
 const nhatKyDbService = require('../services/nhatKyDbService');
 const { laAdmin } = require('../middleware/auth');
-const { parseNgay, dinhDangNgay, dinhDangNgayGioVN, dinhDangNgayGioNgan } = require('../services/dateUtils');
+const { parseNgay, dinhDangNgay, dinhDangNgayGioVN, dinhDangNgayGioNgan, bienGioiNgayVN } = require('../services/dateUtils');
 const { taoQRCodeBuffer, KICH_THUOC_QR_CHUAN_DPI_MM } = require('../services/qrService');
 const { taiDsAnh } = require('../services/anhNguonService');
 const { DANH_SACH_TRANG_THAI_BAO_CAO, GIA_TRI_LOC_TRONG, khopGiaTriLoc } = require('../data/pipelineTinhTrang');
@@ -182,11 +182,14 @@ router.get('/thong-ke-loi', async (req, res) => {
   const user = req.session.user;
 
   const lanLoi = await layLichSuChuyenSangTrangThai(TRANG_THAI_LOI);
+  // Dùng bienGioiNgayVN() thay vì new Date(ngay + 'T00:00:00') trần (bổ sung 20/09/2026, phát hiện qua
+  // rà soát bảo mật) — l.thoiGian LUÔN có hậu tố +07:00 (thời điểm tuyệt đối đúng), biên trần bị đọc
+  // theo giờ server (UTC) thay vì giờ VN, lệch nguyên 7 tiếng — xem services/dateUtils.js#bienGioiNgayVN.
   const locTheoNgayTruocXuong = lanLoi.filter(l => {
     const d = new Date(l.thoiGian);
     if (isNaN(d)) return false;
-    if (tuNgay && d < new Date(tuNgay + 'T00:00:00')) return false;
-    if (denNgay && d > new Date(denNgay + 'T23:59:59')) return false;
+    if (tuNgay && d < bienGioiNgayVN(tuNgay, false)) return false;
+    if (denNgay && d > bienGioiNgayVN(denNgay, true)) return false;
     return true;
   });
 
@@ -357,11 +360,12 @@ router.get('/thoi-gian-chay-may', async (req, res) => {
   // Lọc theo NGÀY BẮT ĐẦU chạy máy (không phải ngày lên đơn) — đúng ý nghĩa "trong khoảng thời gian
   // này xưởng chạy máy như thế nào".
   const tatCaLanChay = await layThoiGianChayMayTheoDon();
+  // bienGioiNgayVN() — cùng lý do đã sửa ở /thong-ke-loi phía trên (l.batDau cũng là ThoiGian +07:00).
   const lanChayTruocXuong = tatCaLanChay.filter(l => {
     const d = new Date(l.batDau);
     if (isNaN(d)) return false;
-    if (tuNgay && d < new Date(tuNgay + 'T00:00:00')) return false;
-    if (denNgay && d > new Date(denNgay + 'T23:59:59')) return false;
+    if (tuNgay && d < bienGioiNgayVN(tuNgay, false)) return false;
+    if (denNgay && d > bienGioiNgayVN(denNgay, true)) return false;
     return true;
   });
 

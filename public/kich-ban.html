@@ -94,6 +94,10 @@ function huySua() {
 
 const NHAN_COT = { TRANG_THAI_XUONG: 'Trạng thái chung', TRANG_THAI_PHOI: 'Phôi', TRANG_THAI_VE_FILE: 'Vẽ file' };
 
+// Ten_Kich_Ban dùng data-* + this.dataset (KHÔNG nội suy chuỗi thẳng vào onclick, bổ sung 20/09/2026,
+// phát hiện qua rà soát bảo mật — xem cùng khuôn public/don-hang-loat.html/users.html): tên kịch bản là
+// text tự do, encodeURIComponent() từng dùng ở đây KHÔNG escape dấu ' nên không an toàn khi nội suy vào
+// JS string trong thuộc tính onclick. k.id là khoá số của DB nên vẫn interpolate thẳng, an toàn.
 async function taiDanhSach() {
   const list = await apiFetch('/kich-ban');
   document.getElementById('bang-kich-ban').innerHTML = `
@@ -106,7 +110,7 @@ async function taiDanhSach() {
         <td>${escapeHtml(k.Trang_Thai_Sau)}</td>
         <td>${escapeHtml(k.Nguoi_Thuc_Hien || '(mọi vai trò)')}</td>
         <td><button class="btn-hanh-dong phu" onclick="suaKichBan(${k.id})">Sửa</button></td>
-        <td><button class="btn-hanh-dong phu" onclick="xoaKichBan(${k.id}, '${encodeURIComponent(k.Ten_Kich_Ban)}')">Xoá</button></td>
+        <td><button class="btn-hanh-dong phu" data-ten="${escapeHtml(k.Ten_Kich_Ban)}" onclick="xoaKichBan(${k.id}, this.dataset.ten)">Xoá</button></td>
       </tr>`).join('')}`;
 }
 
@@ -126,8 +130,8 @@ function suaKichBan(id) {
   });
 }
 
-async function xoaKichBan(id, tenMaHoa) {
-  if (!confirm(`Xoá hẳn kịch bản "${decodeURIComponent(tenMaHoa)}"? Không thể hoàn tác.`)) return;
+async function xoaKichBan(id, ten) {
+  if (!confirm(`Xoá hẳn kịch bản "${ten}"? Không thể hoàn tác.`)) return;
   try {
     await apiFetch('/kich-ban/' + id, { method: 'DELETE' });
     if (dangSuaId === id) huySua();

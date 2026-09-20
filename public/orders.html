@@ -876,8 +876,14 @@ async function apDungXoaDuLieuDon(nut) {
   if (goNhap === null) return;
   if (goNhap.trim() !== String(soLuong)) { alert('Số nhập không khớp — đã huỷ, KHÔNG xoá gì cả.'); return; }
 
+  // Tự khoá nút NÀY (bổ sung 20/09/2026, phát hiện qua rà soát bảo mật — trước đây nút này không nằm
+  // trong danh sách chọn ở dưới nên KHÔNG tự khoá, bấm 2 lần trong lúc đang chạy mở 2 lô xoá chồng
+  // nhau cho thao tác không thể hoàn tác) + hiện icon xoay + nhãn "Đang xoá..." như mọi nút hàng loạt
+  // khác trong trang (xem apDungNhanh() ở trên).
   document.querySelectorAll('.nhanh-phoi-ve-file, #nut-ap-dung').forEach(b => b.disabled = true);
+  nut.disabled = true;
   const nhanGoc = nut.innerHTML;
+  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Đang xoá...';
 
   let daHuy = false;
   const danhSach = Array.from(donDaChonSet);
@@ -902,6 +908,7 @@ async function apDungXoaDuLieuDon(nut) {
   alert(thongBao);
 
   document.querySelectorAll('.nhanh-phoi-ve-file, #nut-ap-dung').forEach(b => b.disabled = false);
+  nut.disabled = false;
   nut.innerHTML = nhanGoc;
   if (ketQua.daHuy) ketQua.thanhCong.forEach(sttKey => donDaChonSet.delete(sttKey));
   else donDaChonSet.clear();

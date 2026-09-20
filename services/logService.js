@@ -1,5 +1,5 @@
 const nhatKyDbService = require('./nhatKyDbService');
-const { thoiGianVNISOString } = require('./dateUtils');
+const { thoiGianVNISOString, bienGioiNgayVN } = require('./dateUtils');
 
 // Ghi 1 dòng log — luôn ghi lại AI làm, vai trò gì, lúc nào, làm gì, trên đơn nào. Chuyển sang SQLite
 // (bổ sung 19/09/2026, theo yêu cầu người dùng — xem
@@ -108,11 +108,15 @@ const HANH_DONG_QUET_THANH_CONG = ['QUET_KICH_BAN', 'QUET_KICH_BAN_HANG_LOAT'];
 const HANH_DONG_QUET_BI_TU_CHOI = ['QUET_KIEM_TRA_SAI_TRANG_THAI', 'QUET_KIEM_TRA_CHAN_DON_KET_THUC', 'QUET_KIEM_TRA_KHONG_TIM_THAY'];
 const COT_TRANG_THAI_CUA_DON = ['TRANG_THAI_XUONG', 'TRANG_THAI_PHOI', 'TRANG_THAI_VE_FILE'];
 
+// Dùng bienGioiNgayVN() thay vì new Date(`${ngay}T00:00:00`) trần (bổ sung 20/09/2026, phát hiện qua
+// rà soát bảo mật) — isoThoiGian LUÔN có hậu tố +07:00 (ghi bởi thoiGianVNISOString()), là 1 thời điểm
+// tuyệt đối đúng bất kể múi giờ server; nhưng biên tuNgay/denNgay trước đây không có offset nên bị đọc
+// theo giờ SERVER (UTC trên container không set TZ) thay vì giờ Việt Nam, lệch nguyên 7 tiếng.
 function trongKhoangThoiGian(isoThoiGian, tuNgay, denNgay) {
   const d = new Date(isoThoiGian);
   if (isNaN(d)) return false;
-  if (tuNgay && d < new Date(`${tuNgay}T00:00:00`)) return false;
-  if (denNgay && d > new Date(`${denNgay}T23:59:59`)) return false;
+  if (tuNgay && d < bienGioiNgayVN(tuNgay, false)) return false;
+  if (denNgay && d > bienGioiNgayVN(denNgay, true)) return false;
   return true;
 }
 

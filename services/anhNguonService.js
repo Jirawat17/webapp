@@ -1,8 +1,44 @@
 const http = require('http');
 const https = require('https');
+const dns = require('dns').promises;
+const net = require('net');
 const { taiAnhTuLinkDrive, layFileIdTuLinkDrive, layDsAnhTrongThuMucDrive } = require('./driveService');
 const { laLinkChiaSeGemini, taiAnhTuTrangGemini } = require('./trangWebService');
 const storageService = require('./storageService');
+
+// Chặn SSRF (bổ sung 20/09/2026, phát hiện qua rà soát bảo mật) — GET /api/photos/anh-ngoai (mọi vai
+// trò đã đăng nhập gọi được) cho phép người dùng đưa URL BẤT KỲ để server tự fetch hộ rồi trả nguyên
+// nội dung về, không có gì chặn URL đó trỏ vào mạng nội bộ/riêng tư (vd 127.0.0.1, dải nội bộ Docker,
+// 169.254.169.254 — địa chỉ metadata của nhiều nhà cung cấp cloud). Kiểm tra theo ĐỊA CHỈ IP ĐÃ PHÂN
+// GIẢI (không phải chuỗi hostname) để không bị qua mặt bằng cách viết IP dưới dạng khác (thập phân,
+// bát phân...) — dns.lookup() dùng resolver hệ thống nên tự chuẩn hoá các dạng đó về đúng địa chỉ thật.
+function laDiaChiNoiBo(diaChiIp) {
+  const ip = String(diaChiIp).replace(/^::ffff:/i, ''); // bỏ tiền tố IPv4-mapped-trong-IPv6
+  if (net.isIP(ip) === 4) {
+    const [a, b] = ip.split('.').map(Number);
+    if (a === 127 || a === 10 || a === 0) return true;
+    if (a === 169 && b === 254) return true; // link-local, gồm cả địa chỉ metadata cloud
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 192 && b === 168) return true;
+    return false;
+  }
+  if (net.isIP(ip) === 6) {
+    const iLower = ip.toLowerCase();
+    if (iLower === '::1') return true; // loopback
+    if (/^f[cd]/.test(iLower)) return true; // unique local fc00::/7
+    if (/^fe[89ab]/.test(iLower)) return true; // link-local fe80::/10
+    return false;
+  }
+  return true; // không parse được thành IP hợp lệ -> chặn an toàn thay vì cho qua
+}
+
+async function urlDuocPhepFetch(url) {
+  let hostname;
+  try { hostname = new URL(url).hostname; } catch (e) { return false; }
+  let diaChis;
+  try { diaChis = await dns.lookup(hostname, { all: true }); } catch (e) { return false; } // không phân giải được -> chặn
+  return diaChis.length > 0 && diaChis.every(d => !laDiaChiNoiBo(d.address));
+}
 
 // Tải ảnh trực tiếp qua HTTP(S) thường — dùng khi URL KHÔNG phải MinIO proxy VÀ KHÔNG nhận diện
 // được là link Google Drive (cập nhật 04/09/2026, theo yêu cầu người dùng, xác nhận qua dữ liệu thật
@@ -15,7 +51,13 @@ const storageService = require('./storageService');
 // gemini.google.com — header ~25KB, fetch() ném lỗi HeadersOverflowError ngay cả trước khi đọc được
 // nội dung). maxHeaderSize nâng lên ở đây tránh đúng lỗi này. Tự theo redirect (301/302/303/307/308)
 // vì http(s).get() KHÔNG tự làm như fetch() — tối đa 5 lần, đủ dùng thực tế, tránh lặp vô hạn.
-function taiUrlTho(url, soLanChuyenHuongConLai = 5) {
+async function taiUrlTho(url, soLanChuyenHuongConLai = 5) {
+  // Kiểm tra lại ở MỖI lần gọi — kể cả khi đệ quy theo redirect bên dưới — vì URL ban đầu hợp lệ
+  // (công khai) vẫn có thể redirect sang 1 địa chỉ nội bộ.
+  if (!(await urlDuocPhepFetch(url))) {
+    console.error('[Ảnh ngoài] Chặn tải — URL trỏ vào địa chỉ nội bộ/riêng tư:', url);
+    return null;
+  }
   return new Promise((resolve) => {
     const mod = String(url).startsWith('http://') ? http : https;
     const yeuCau = mod.get(url, {

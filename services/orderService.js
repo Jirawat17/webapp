@@ -214,15 +214,46 @@ function kiemTraCongAnhBatBuoc(rowHienTai, updates, user, quaAnh) {
   }
 }
 
+// Xếp hàng theo STT_Key (bổ sung 20/09/2026, phát hiện qua rà soát bảo mật) — 2 lượt gọi update() cho
+// CÙNG 1 đơn gần như đồng thời (vd 2 người quét song song "lấy phôi"/"vẽ file" — đúng tinh thần 2 việc
+// ĐỘC LẬP chạy song song mà data/pipelineTinhTrang.js mô tả) đều tự đọc "row" TRƯỚC khi lượt còn lại
+// kịp ghi xong, nên mỗi lượt tự tính tinhTinhTrangTuDong() dựa trên dữ liệu CŨ của trường bên kia — có
+// thể bỏ lỡ hẳn việc tự chuyển "ĐÃ SẴN SÀNG CHẠY MÁY" dù cả 2 việc thật ra đã xong cùng lúc. KHOÁ THEO
+// TỪNG ĐƠN (không khoá toàn cục — các đơn khác nhau vẫn chạy song song bình thường, không chậm đi) qua
+// nối chuỗi Promise: lượt gọi SAU luôn đợi lượt gọi TRƯỚC (cùng STT_Key) ghi xong rồi mới bắt đầu đọc
+// "row" của chính nó, nên luôn thấy đúng kết quả mới nhất của lượt trước.
+const _hangDoiTheoDon = new Map(); // sttKey -> Promise của lượt update() gần nhất đang xếp hàng
+function xepHangTheoDon(sttKey, congViec) {
+  const hangCho = (_hangDoiTheoDon.get(sttKey) || Promise.resolve()).catch(() => {}); // lượt trước lỗi cũng không chặn lượt sau
+  const luotNay = hangCho.then(congViec);
+  _hangDoiTheoDon.set(sttKey, luotNay);
+  luotNay.catch(() => {}).finally(() => {
+    // Chỉ tự dọn nếu vẫn là lượt MỚI NHẤT cho key này — nếu đã có lượt khác xếp hàng sau, để nguyên.
+    if (_hangDoiTheoDon.get(sttKey) === luotNay) _hangDoiTheoDon.delete(sttKey);
+  });
+  return luotNay;
+}
+
 async function update(sttKey, updates, user, tuyChon = {}) {
+  return xepHangTheoDon(sttKey, () => capNhatThat(sttKey, updates, user, tuyChon));
+}
+
+async function capNhatThat(sttKey, updates, user, tuyChon) {
   // tuyChon.donDaDoc cho phép truyền sẵn {headers, row} đã đọc fresh ngay trước đó (vd routes/qr.js
   // vừa getByKey({fresh:true}) để kiểm tra trạng thái trước khi quyết định có gọi update() hay
-  // không) — bỏ qua việc đọc lại y hệt lần nữa. Không có gì ghi xen giữa 2 bước đó trong cùng 1 lượt
-  // gọi nên vẫn giữ đúng nguyên tắc "đọc thật ngay trước khi ghi", chỉ gộp 2 lượt đọc thật liền nhau
-  // thành 1 — quan trọng cho luồng quét QR hàng loạt (routes/qr.js xac-nhan-hang-loat), trước đây mỗi
-  // mã quét tốn TỚI 2 lượt đọc toàn bộ tab Don_Hang_ALL (1 ở route, 1 ở đây) thay vì 1.
-  const { row } = tuyChon.donDaDoc || await getByKey(sttKey, { fresh: true }); // luôn đọc thật trước khi ghi
-  if (!row) throw new Error('Không tìm thấy đơn hàng: ' + sttKey);
+  // không) — bỏ qua việc đọc lại y hệt lần nữa (đỡ tốn quota Sheets, đặc biệt cho luồng quét QR hàng
+  // loạt, trước đây mỗi mã quét tốn TỚI 2 lượt đọc toàn bộ tab Don_Hang_ALL thay vì 1).
+  const { row: rowDaDoc } = tuyChon.donDaDoc || await getByKey(sttKey, { fresh: true }); // luôn đọc thật trước khi ghi
+  if (!rowDaDoc) throw new Error('Không tìm thấy đơn hàng: ' + sttKey);
+
+  // Đè lại đúng các cột trạng thái app-ghi (trangThaiDbService — KHÔNG phải cột từ Sheets) bằng bản
+  // MỚI NHẤT tại thời điểm ĐÃ VÀO ĐẾN LƯỢT (sau xepHangTheoDon() ở trên) — bổ sung 20/09/2026, cùng
+  // đợt sửa với lock ở trên. rowDaDoc (nếu qua donDaDoc) có thể đã được đọc TỪ TRƯỚC KHI xếp hàng —
+  // dữ liệu Sheets bên trong (tên khách, sản phẩm...) vẫn đáng tin (đó là lý do donDaDoc tồn tại — để
+  // đỡ đọc lại Sheets), nhưng các cột trạng thái cần MỚI NHẤT để tinhTinhTrangTuDong() bên dưới không
+  // bỏ lỡ auto-transition khi 2 lượt cập nhật (vd lấy phôi + vẽ file) cho CÙNG đơn xếp hàng sát nhau —
+  // đọc lại đây RẺ (SQLite tại chỗ, không tốn quota Sheets như getByKey({fresh:true})) nên luôn làm.
+  const row = { ...rowDaDoc, ...trangThaiDbService.layTheoKey(sttKey) };
 
   kiemTraGiaTriHopLe(updates);
   kiemTraCongAnhBatBuoc(row, updates, user, tuyChon.quaAnh);
@@ -303,6 +334,16 @@ async function update(sttKey, updates, user, tuyChon = {}) {
       await taiSanService.truKhoTheoDon(row, user);
     } catch (err) {
       console.error('[Orders] Lỗi trừ kho phôi:', err.message);
+    }
+  }
+  // Chuyển NGƯỢC lại khỏi "Đã lấy phôi" — HOÀN kho đối xứng (bổ sung 20/09/2026, phát hiện qua rà soát
+  // bảo mật, xem taiSanService.js#hoanKhoTheoDon) — thiếu bước này khiến "Đã lấy phôi -> Chưa lấy phôi
+  // -> Đã lấy phôi" trừ kho 2 lần cho đúng 1 lượt lấy phôi thật.
+  if (updatesDaTinh.TRANG_THAI_PHOI !== undefined && updatesDaTinh.TRANG_THAI_PHOI !== 'Đã lấy phôi' && row.TRANG_THAI_PHOI === 'Đã lấy phôi') {
+    try {
+      await taiSanService.hoanKhoTheoDon(row, user);
+    } catch (err) {
+      console.error('[Orders] Lỗi hoàn kho phôi:', err.message);
     }
   }
 

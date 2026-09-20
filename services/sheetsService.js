@@ -85,16 +85,24 @@ function loiTamThoiCoTheThuLai(err) {
   return ma === 429 || ma === 500 || ma === 503;
 }
 
-async function goiApiCoThuLai(goiApi) {
+// `choPhepThuLai: false` (bổ sung 20/09/2026, phát hiện qua rà soát bảo mật) — dùng cho các lệnh GHI
+// KHÔNG idempotent (append — xem appendRow/appendRows bên dưới). Retry mặc định phù hợp với đọc/
+// batchUpdate (ghi đè đúng ô, gọi lại nhiều lần vẫn ra cùng 1 kết quả) nhưng NGUY HIỂM với append: nếu
+// Google trả lỗi 500/503/429 cho client SAU KHI đã ghi thành công ở phía server (1 dạng lỗi mơ hồ có
+// thật của API phân tán), retry sẽ ghi thêm lần nữa — tạo dòng TRÙNG trong Sheet mà không gì phát hiện
+// được. Tắt retry cho append: gặp lỗi tạm thời thì báo lỗi ngay (người dùng/nơi gọi tự quyết định thử
+// lại thao tác từ đầu), thà chậm còn hơn ghi trùng dữ liệu không thể tự phát hiện.
+async function goiApiCoThuLai(goiApi, { choPhepThuLai = true } = {}) {
   for (let lan = 0; ; lan++) {
     try {
       const ketQua = await goiApi();
       if (lan > 0) console.log(`[SheetsAPI] Thành công sau ${lan} lần thử lại.`);
       return ketQua;
     } catch (err) {
-      if (!loiTamThoiCoTheThuLai(err) || lan >= SO_LAN_THU_LAI_TOI_DA) {
+      const conThuLaiDuoc = choPhepThuLai && loiTamThoiCoTheThuLai(err) && lan < SO_LAN_THU_LAI_TOI_DA;
+      if (!conThuLaiDuoc) {
         if (maLoiHttp(err) === 429) {
-          console.error(`[SheetsAPI] Vẫn vượt quota sau ${lan} lần thử lại — bỏ cuộc, báo lỗi cho người dùng.`);
+          console.error(`[SheetsAPI] Vẫn vượt quota${choPhepThuLai ? ` sau ${lan} lần thử lại` : ' (không thử lại — thao tác ghi không idempotent)'} — bỏ cuộc, báo lỗi cho người dùng.`);
           throw new Error('Google Sheets đang tạm quá tải do có nhiều người thao tác cùng lúc — vui lòng thử lại sau ít phút.');
         }
         throw err;
@@ -185,7 +193,7 @@ async function appendRow(tabName, headers, rowObject) {
     range: tabName,
     valueInputOption: 'USER_ENTERED',
     requestBody: { values },
-  }));
+  }), { choPhepThuLai: false }); // append không idempotent — xem chú thích ở goiApiCoThuLai()
 
   xoaCacheBang(tabName); // dòng vừa thêm phải xuất hiện ngay ở lần đọc kế tiếp, kể cả đọc qua cache
 }
@@ -204,7 +212,7 @@ async function appendRows(tabName, headers, rowObjects) {
     range: tabName,
     valueInputOption: 'USER_ENTERED',
     requestBody: { values },
-  }));
+  }), { choPhepThuLai: false }); // append không idempotent — xem chú thích ở goiApiCoThuLai()
 
   xoaCacheBang(tabName);
 }

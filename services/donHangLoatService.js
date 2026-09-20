@@ -208,10 +208,30 @@ async function themDonVaoNhom(maDonHangLoat, sttKeys, user) {
   return { thanhCong, loi };
 }
 
+// Kiểm tra người gọi có quyền thao tác với TOÀN BỘ nhóm hay không (bổ sung 20/09/2026, phát hiện qua
+// rà soát bảo mật) — CHẶN nếu bất kỳ đơn nào trong nhóm nằm ngoài Xưởng của người gọi. Trước đây
+// xoaDonKhoiNhom/doiTenNhom/xoaNhom chỉ kiểm tra nhóm có TỒN TẠI, không kiểm tra Xưởng — router mount
+// requireRole('ve_file') cho phép cả ve_file (vốn bị lọc theo Xưởng như mọi vai trò khác) gọi tới, nên
+// 1 ve_file ở Xưởng này có thể xoá/đổi tên/xoá thành viên nhóm thuộc Xưởng KHÁC nếu biết mã nhóm (mã
+// DHLXX không phải bí mật, xuất hiện công khai trong danh sách nhóm của Xưởng mình). admin/superadmin
+// luôn qua (coQuyenTheoXuong tự cho qua) — cùng triết lý "ẩn/chặn cả nhóm nếu có dù chỉ 1 đơn ngoài
+// Xưởng" đã dùng ở layDanhSachNhom() phía trên, áp dụng thêm cho thao tác GHI, không chỉ ĐỌC.
+async function kiemTraQuyenVoiNhom(maDonHangLoat, user) {
+  const sttKeys = donHangLoatDbService.layThanhVienCuaNhom(maDonHangLoat);
+  const { banDoTheoKey } = await orderService.getManyByKeys(sttKeys);
+  for (const sttKey of sttKeys) {
+    const don = banDoTheoKey.get(sttKey);
+    if (don && !orderService.coQuyenTheoXuong(user, don)) {
+      throw new Error(`Không có quyền với Đơn hàng loạt ${maDonHangLoat} (có đơn khác Xưởng của bạn).`);
+    }
+  }
+}
+
 async function xoaDonKhoiNhom(maDonHangLoat, sttKey, user) {
   if (!donHangLoatDbService.layNhom(maDonHangLoat)) throw new Error(`Không tìm thấy Đơn hàng loạt: ${maDonHangLoat}`);
   const dangTrongNhom = donHangLoatDbService.layThanhVienCuaNhom(maDonHangLoat).includes(sttKey);
   if (!dangTrongNhom) throw new Error(`Đơn ${sttKey} không nằm trong nhóm ${maDonHangLoat}.`);
+  await kiemTraQuyenVoiNhom(maDonHangLoat, user);
 
   donHangLoatDbService.xoaThanhVien(maDonHangLoat, sttKey);
   await ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'XOA_DON_HANG_LOAT', sttKey, chiTiet: { maDonHangLoat } });
@@ -222,6 +242,7 @@ async function doiTenNhom(maDonHangLoat, tenMoi, user) {
     throw new Error('Tên nhóm không được để trống.');
   }
   if (!donHangLoatDbService.layNhom(maDonHangLoat)) throw new Error(`Không tìm thấy Đơn hàng loạt: ${maDonHangLoat}`);
+  await kiemTraQuyenVoiNhom(maDonHangLoat, user);
   const tenDaCat = tenMoi.trim();
 
   donHangLoatDbService.doiTenNhom(maDonHangLoat, tenDaCat);
@@ -230,6 +251,7 @@ async function doiTenNhom(maDonHangLoat, tenMoi, user) {
 
 async function xoaNhom(maDonHangLoat, user) {
   if (!donHangLoatDbService.layNhom(maDonHangLoat)) throw new Error(`Không tìm thấy Đơn hàng loạt: ${maDonHangLoat}`);
+  await kiemTraQuyenVoiNhom(maDonHangLoat, user);
 
   donHangLoatDbService.xoaNhom(maDonHangLoat);
   await ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'XOA_NHOM_HANG_LOAT', chiTiet: { maDonHangLoat } });
