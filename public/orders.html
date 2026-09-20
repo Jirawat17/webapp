@@ -218,6 +218,9 @@
   <span id="khoi-in-label" style="display:none">
     <span class="thanh-hanh-dong-cach"></span>
     <button id="nut-in-label" class="btn-hanh-dong phu" onclick="apDungInLabel()">IN LABEL</button>
+  </span>
+  <span id="khoi-mua-va-in-label" style="display:none">
+    <span class="thanh-hanh-dong-cach"></span>
     <button id="nut-mua-va-in-label" class="btn-hanh-dong" onclick="apDungMuaVaInLabel()">MUA TRACKING và IN LABEL</button>
   </span>
   <span id="khoi-xoa-du-lieu-don" style="display:none">
@@ -376,9 +379,6 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
     // tiếp của flex container nữa.
     document.getElementById('khoi-chi-dinh-nguoi-chay-may').style.display = 'contents';
     document.getElementById('khoi-chi-dinh-nguoi-ve-file').style.display = 'contents';
-    // Nút "Mua tracking" thủ công hàng loạt (bổ sung 09/09/2026, theo yêu cầu người dùng) — không cần
-    // đổ danh sách gì thêm (khác 2 khối trên cần danh sách nhân viên), chỉ cần hiện đúng cho admin.
-    document.getElementById('khoi-mua-tracking-thu-cong').style.display = 'contents';
     try {
       const dsNhanVien = await apiFetch('/users/tom-tat');
       const dsSanXuat = dsNhanVien.filter(u => u.VaiTro === 'san_xuat' && String(u.KichHoat).toUpperCase() === 'TRUE');
@@ -421,12 +421,23 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
     document.getElementById('btn-bo-uu-tien').innerHTML = icon('undo', { size: 16 }) + ' Bỏ Ưu tiên';
   }
 
-  // "IN LABEL"/"MUA TRACKING và IN LABEL" (bổ sung 09/09/2026 lần 2, theo yêu cầu người dùng) — mở
-  // RỘNG hơn khối "Mua tracking" phía trên (chỉ admin): cả admin/ve_file/san_xuat, CHỈ chặn
-  // nguoi_lay_phoi (server routes/tracking.js#/in-label, /mua-va-in-label chặn lại y hệt nếu lỡ gọi
-  // trực tiếp API). nguoi_lay_phoi thực ra không có menu vào được trang này nên chỉ là phòng hờ.
+  // "Mua tracking" (đứng riêng) + "IN LABEL" (bổ sung 09/09/2026 lần 2, theo yêu cầu người dùng) — mọi
+  // vai trò TRỪ nguoi_lay_phoi (server routes/tracking.js#/mua-thu-cong, /in-label chặn lại y hệt nếu
+  // lỡ gọi trực tiếp API — nguoi_lay_phoi thực ra không có menu vào được trang này nên chỉ là phòng hờ).
+  // "Mua tracking" mở RỘNG từ CHỈ admin (bổ sung 09/09/2026 lần 1) sang thêm ve_file/san_xuat (bổ sung
+  // 21/09/2026, theo yêu cầu người dùng) — 2 vai trò này giờ mua tracking TÁCH RIÊNG khỏi in label bằng
+  // 2 nút riêng, thay vì chỉ có mỗi nút gộp "MUA TRACKING và IN LABEL" (nay thu hẹp lại CHỈ admin, xem
+  // khối ngay dưới).
   if (user.vaiTro !== 'nguoi_lay_phoi') {
+    document.getElementById('khoi-mua-tracking-thu-cong').style.display = 'contents';
     document.getElementById('khoi-in-label').style.display = 'contents';
+  }
+
+  // "MUA TRACKING và IN LABEL" (nút gộp) — thu hẹp từ [admin, ve_file, san_xuat] xuống CHỈ admin (bổ
+  // sung 21/09/2026, theo yêu cầu người dùng) — ve_file/san_xuat giờ dùng 2 nút riêng ở trên ("Mua
+  // tracking" + "IN LABEL") thay vì nút gộp này.
+  if (laAdmin(user.vaiTro)) {
+    document.getElementById('khoi-mua-va-in-label').style.display = 'contents';
   }
 
   taiDon();
