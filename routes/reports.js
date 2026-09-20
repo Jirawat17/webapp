@@ -596,13 +596,14 @@ function veTheDonPdf(doc, don, anh, offsetY, caoThe) {
   doc.font('NotoSans-Bold').fontSize(13).text(don.STT_Key || '', x0, y, { width: rongTrong });
   y += 18;
 
-  // "Người nhận" (bổ sung 20/09/2026, theo yêu cầu người dùng) — don.TEN là cột "Người nhận" đã có sẵn
-  // từ trước (dùng để tạo vận đơn GKE thật, xem services/gkeService.js#thongTinNguoiNhan; cùng dữ liệu
-  // đang hiển thị ở public/order.html dòng "Người nhận"), KHÁC don.TenKhachHang (khách hàng/đại lý đặt
-  // đơn) — chỉ chưa từng được vẽ lên thẻ in. Đặt NGAY DƯỚI mã đơn, trên cùng thẻ, theo đúng vị trí đã
-  // chốt với người dùng. Bỏ qua nếu trống (đơn chưa điền cột này) — không vẽ dòng nhãn trống vô nghĩa.
+  // Tên người nhận (bổ sung 20/09/2026, sửa 21/09/2026 bỏ nhãn "Người nhận: " theo yêu cầu người dùng
+  // — CHỈ trên PDF in, bản Excel vẫn giữ nhãn) — don.TEN là cột "Người nhận" đã có sẵn từ trước (dùng
+  // để tạo vận đơn GKE thật, xem services/gkeService.js#thongTinNguoiNhan; cùng dữ liệu đang hiển thị ở
+  // public/order.html dòng "Người nhận"), KHÁC don.TenKhachHang (khách hàng/đại lý đặt đơn) — chỉ chưa
+  // từng được vẽ lên thẻ in. Đặt NGAY DƯỚI mã đơn, trên cùng thẻ, theo đúng vị trí đã chốt với người
+  // dùng. Bỏ qua nếu trống (đơn chưa điền cột này) — không vẽ dòng trống vô nghĩa.
   if (don.TEN) {
-    doc.font('NotoSans').fontSize(10).text(`Người nhận: ${don.TEN}`, x0, y, { width: rongTrong });
+    doc.font('NotoSans').fontSize(10).text(don.TEN, x0, y, { width: rongTrong });
     y += 13;
   }
 
