@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Quét QR — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=92">
-<script src="/js/theme.js?v=92"></script>
+<link rel="stylesheet" href="/css/style.css?v=93">
+<script src="/js/theme.js?v=93"></script>
 <style>
 /* Tự ẩn header khi cuộn xuống, hiện lại khi cuộn lên — chỉ áp dụng riêng cho trang Quét QR
    (chỉ định nghĩa trong <style> của trang này, không đụng style.css dùng chung) để tăng vùng
@@ -73,8 +73,8 @@
 </div>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="/js/icons.js?v=92"></script>
-<script src="/js/api.js?v=92"></script>
+<script src="/js/icons.js?v=93"></script>
+<script src="/js/api.js?v=93"></script>
 <script>
 let user;
 // Mặc định mở vào "Quét kịch bản" (batch) khi vào trang — theo yêu cầu người dùng 05/09/2026, vì đây
@@ -802,8 +802,12 @@ async function xuLyChupAnh(file) {
   btn.disabled = true;
   btn.innerHTML = icon('spinner', { className: 'icon-spin', size: 24 }) + ' Đang tải ảnh lên...';
 
+  // Nén ảnh trước khi upload (bổ sung 21/09/2026, theo yêu cầu người dùng — xem api.js#nenAnhTruocKhiTaiLen)
+  // — ảnh camera gốc thường vài MB, nén trước giúp upload nhanh hơn hẳn trên mạng xưởng/di động yếu.
+  const fileDaNen = await nenAnhTruocKhiTaiLen(file);
+
   const form = new FormData();
-  form.append('photo', file);
+  form.append('photo', fileDaNen);
   form.append('sttKey', sttKey);
   form.append('moc', cauHinh.moc);
 

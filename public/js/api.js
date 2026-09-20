@@ -397,6 +397,47 @@ function taoThanhTienDo(sauPhanTu, { onHuy } = {}) {
   };
 }
 
+// Nén/resize ảnh NGAY TRÊN TRÌNH DUYỆT trước khi upload (bổ sung 21/09/2026, theo yêu cầu người dùng)
+// — dùng chung cho public/scan.html (chụp ảnh Đã sản xuất/Đã dán tem) VÀ public/order.html (nút tải
+// ảnh đơn lẻ, cùng gọi POST /api/photos/upload). Ảnh chụp thẳng từ camera điện thoại thường 3-10MB,
+// server KHÔNG tự nén gì trước khi lưu (xem services/storageService.js#uploadImageBuffer — lưu nguyên
+// buffer nhận được), nên bước tải lên chiếm phần lớn thời gian chờ trên mạng xưởng/di động không mạnh.
+// Vẽ lại ảnh nhỏ hơn qua canvas rồi encode lại JPEG chất lượng vừa đủ nhìn — đủ dùng để xác nhận/đối
+// chiếu, không phải ảnh in ấn nên không cần giữ nguyên độ phân giải camera gốc.
+// createImageBitmap({imageOrientation:'from-image'}) tự áp dụng ĐÚNG chiều xoay EXIF — ảnh chụp DỌC từ
+// điện thoại luôn có cờ xoay trong EXIF, vẽ thẳng qua thẻ <img>/canvas mà không xử lý sẽ ra ảnh bị xoay
+// sai hướng. Được hỗ trợ ổn định trên Chrome/Safari mobile hiện tại.
+// KHÔNG BAO GIỜ chặn luồng nếu nén lỗi (định dạng lạ, trình duyệt cũ, ảnh hỏng, canvas.toBlob thất
+// bại...) — luôn trả về ảnh GỐC trong mọi trường hợp lỗi, để 1 tối ưu tốc độ không biến thành 1 lỗi mới
+// chặn hẳn việc tải ảnh lên (quan trọng hơn tốc độ).
+const CANH_DAI_NHAT_TOI_DA_KHI_NEN_ANH = 1600; // px — đủ nét để xem/đối chiếu trên màn hình
+const CHAT_LUONG_JPEG_KHI_NEN_ANH = 0.8;
+const BO_QUA_NEN_NEU_DA_NHO_HON = 400 * 1024; // 400KB — ảnh đã nhỏ sẵn thì khỏi nén lại tốn công vô ích
+async function nenAnhTruocKhiTaiLen(file) {
+  if (!file || !file.type || !file.type.startsWith('image/') || file.size <= BO_QUA_NEN_NEU_DA_NHO_HON) return file;
+  try {
+    const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    const tyLe = Math.min(1, CANH_DAI_NHAT_TOI_DA_KHI_NEN_ANH / Math.max(bitmap.width, bitmap.height));
+    const rong = Math.round(bitmap.width * tyLe);
+    const cao = Math.round(bitmap.height * tyLe);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = rong;
+    canvas.height = cao;
+    canvas.getContext('2d').drawImage(bitmap, 0, 0, rong, cao);
+    bitmap.close();
+
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', CHAT_LUONG_JPEG_KHI_NEN_ANH));
+    if (!blob || blob.size >= file.size) return file; // nén không hiệu quả (hiếm) — giữ nguyên bản gốc
+
+    const tenFileMoi = String(file.name || 'anh').replace(/\.[^.]+$/, '') + '.jpg';
+    return new File([blob], tenFileMoi, { type: 'image/jpeg' });
+  } catch (e) {
+    console.error('[Nén ảnh] Lỗi khi nén, dùng ảnh gốc:', e.message);
+    return file;
+  }
+}
+
 // Chạy tuần tự xuLyMotPhanTu(phanTu) cho từng phần tử trong danhSach — DỪNG NGAY TRƯỚC phần tử kế
 // tiếp nếu kiemTraHuy() trả true (không huỷ phần tử đang xử lý dở, nó vẫn hoàn tất bình thường).
 // Gộp kết quả {thanhCong, loi} từ mỗi lần gọi — khớp đúng hình dạng mà 2 API trên đang trả về, nên
