@@ -595,6 +595,17 @@ function veTheDonPdf(doc, don, anh, offsetY, caoThe) {
   // Dòng tiêu đề — cỡ chữ lớn hơn để dễ nhìn khi dán lên áo
   doc.font('NotoSans-Bold').fontSize(13).text(don.STT_Key || '', x0, y, { width: rongTrong });
   y += 18;
+
+  // "Người nhận" (bổ sung 20/09/2026, theo yêu cầu người dùng) — don.TEN là cột "Người nhận" đã có sẵn
+  // từ trước (dùng để tạo vận đơn GKE thật, xem services/gkeService.js#thongTinNguoiNhan; cùng dữ liệu
+  // đang hiển thị ở public/order.html dòng "Người nhận"), KHÁC don.TenKhachHang (khách hàng/đại lý đặt
+  // đơn) — chỉ chưa từng được vẽ lên thẻ in. Đặt NGAY DƯỚI mã đơn, trên cùng thẻ, theo đúng vị trí đã
+  // chốt với người dùng. Bỏ qua nếu trống (đơn chưa điền cột này) — không vẽ dòng nhãn trống vô nghĩa.
+  if (don.TEN) {
+    doc.font('NotoSans').fontSize(10).text(`Người nhận: ${don.TEN}`, x0, y, { width: rongTrong });
+    y += 13;
+  }
+
   doc.font('NotoSans').fontSize(10).text(`${don.LOAI || ''} · ${don.KICH_THUOC || ''} · ${don.MAU_SAC || ''}`, x0, y, { width: rongTrong });
   y += 14;
 
@@ -747,6 +758,14 @@ async function veSheetDonCanInExcel(wb, list, dongThongTin, dongNguoiXuat, onTie
     sheet.getCell(hang, 1).value = `Mã đơn: ${don.STT_Key || ''}`;
     sheet.getCell(hang, 1).font = { bold: true, size: 12 };
     hang += 1;
+
+    // "Người nhận" (bổ sung 20/09/2026, theo yêu cầu người dùng) — đồng bộ với PDF cùng mẫu "Đơn cần
+    // in" (xem veTheDonPdf() ở trên) — cùng vị trí ngay dưới mã đơn, cùng bỏ qua nếu trống.
+    if (don.TEN) {
+      sheet.mergeCells(hang, 1, hang, 6);
+      sheet.getCell(hang, 1).value = `Người nhận: ${don.TEN}`;
+      hang += 1;
+    }
 
     sheet.mergeCells(hang, 1, hang, 6);
     sheet.getCell(hang, 1).value = `${don.LOAI || ''} · ${don.KICH_THUOC || ''} · ${don.MAU_SAC || ''} · Ngày lên đơn: ${dinhDangNgay(don.NGAY_LEN_DON)}`;
