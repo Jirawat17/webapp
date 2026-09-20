@@ -25,6 +25,13 @@ async function getAll({ fresh = false } = {}) {
   const { headers, rows } = fresh ? await readTab(TAB) : await readTabCached(TAB, 10000);
   const banDoTrangThai = trangThaiDbService.layTatCa();
   const rowsGop = rows
+    // Lọc bỏ dòng KHÔNG có STT_Key (bổ sung 21/09/2026, theo yêu cầu người dùng) — Don_Hang_ALL là công
+    // thức QUERY/VSTACK sống, có thể kéo theo cả dòng trống/dòng đệm từ các sheet RAW con (ảnh chụp
+    // thực tế: mọi cột đều rỗng — "Lên đơn: —", "SL:", "Xưởng (chưa gán)"). STT_Key là khoá DUY NHẤT
+    // mọi nơi trong app dùng để định danh 1 đơn (ghi trạng thái, quét QR, log, nhóm Đơn hàng loạt,
+    // tracking...) — dòng không có khoá này không thể thao tác được gì, coi như rác dữ liệu ở BẤT KỲ
+    // đâu đọc qua getAll(), không chỉ riêng trang Danh sách đơn hàng đang thấy lỗi.
+    .filter(r => String(r[KEY_COL] || '').trim() !== '')
     .map(r => ({
       ...r,
       ...(banDoTrangThai.get(String(r[KEY_COL] || '').trim()) || trangThaiDbService.RONG_MAC_DINH),
