@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
+const sharp = require('sharp');
 const orderService = require('../services/orderService');
 const storageService = require('../services/storageService');
 const { taiDsAnh } = require('../services/anhNguonService');
@@ -238,6 +239,28 @@ function nhanDangContentTypeAnh(buffer) {
   return 'application/octet-stream';
 }
 
+// Resize + nén ảnh GỐC thành bản HIỂN THỊ nhẹ hơn (bổ sung 21/09/2026, theo yêu cầu người dùng — ảnh
+// gốc từ link thư mục Drive/MinIO/URL thường tải nguyên bản (thường vài MB/ảnh) trong khi khung hiển
+// thị thực tế chỉ tối đa ~320px (.anh-mau) hoặc 132px (thẻ đơn), khiến điện thoại/iPad tải rất chậm ở
+// xưởng). CHỈ resize bản NẰM TRONG CACHE HIỂN THỊ này — taiDsAnh() gốc (dùng cho in PDF/so khớp ảnh
+// hàng loạt, xem routes/orders.js, routes/reports.js, scripts/rasoat-hang-loat.js) KHÔNG bị đụng, vẫn
+// đọc đúng ảnh gốc như cũ. Dùng sharp (đã là dependency sẵn có, đang chạy ổn định cho perceptualHashService.js
+// — không phải thư viện mới). Lỗi decode (buffer hỏng/không phải ảnh) thì dùng nguyên bản gốc, không
+// làm mất ảnh chỉ vì nén thất bại.
+const CANH_DAI_TOI_DA_ANH_HIEN_THI = 1000;
+const CHAT_LUONG_JPEG_HIEN_THI = 80;
+async function nenAnhHienThi(buffer) {
+  try {
+    return await sharp(buffer)
+      .resize(CANH_DAI_TOI_DA_ANH_HIEN_THI, CANH_DAI_TOI_DA_ANH_HIEN_THI, { fit: 'inside', withoutEnlargement: true })
+      .jpeg({ quality: CHAT_LUONG_JPEG_HIEN_THI })
+      .toBuffer();
+  } catch (err) {
+    console.error('[Ảnh ngoài] Không nén được ảnh, dùng bản gốc:', err.message);
+    return null;
+  }
+}
+
 // Tải (có cache + gộp yêu cầu trùng lúc) danh sách TỐI ĐA SO_ANH_TOI_DA_MOI_DON ảnh cho 1 url — dùng
 // chung cho mọi index của CÙNG url (chia sẻ đúng 1 lượt tải thật, xem _dangTaiAnhNgoai ở trên).
 async function layDanhSachAnhCoCache(url) {
@@ -255,8 +278,10 @@ async function layDanhSachAnhCoCache(url) {
       console.error('[Ảnh ngoài] Lỗi tải ảnh:', url, '-', err.message);
       buffers = [];
     }
-    const danhSachAnh = buffers.slice(0, SO_ANH_TOI_DA_MOI_DON)
-      .map(buffer => ({ buffer, contentType: nhanDangContentTypeAnh(buffer) }));
+    const danhSachAnh = await Promise.all(buffers.slice(0, SO_ANH_TOI_DA_MOI_DON).map(async buffer => {
+      const nen = await nenAnhHienThi(buffer);
+      return nen ? { buffer: nen, contentType: 'image/jpeg' } : { buffer, contentType: nhanDangContentTypeAnh(buffer) };
+    }));
     luuVaoCacheAnhNgoai(url, danhSachAnh);
     return danhSachAnh;
   })();
