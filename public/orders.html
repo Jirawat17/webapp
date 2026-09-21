@@ -575,8 +575,12 @@ function renderDanhSachDon() {
 
   el.innerHTML = danhSachHienTai.map(o => {
     const daChon = donDaChonSet.has(o.STT_Key);
+    // Tô màu nền thẻ theo Xưởng (bổ sung 21/09/2026 — xem style.css .order-card.xuong-bn/xuong-hn) —
+    // o.XUONG rỗng/undefined (vai trò admin bị ẩn giá trị này, xem orderService.js#anXuongVoiAdmin,
+    // hoặc đơn chưa gán Xưởng) thì không thêm class nào, giữ nguyên nền mặc định.
+    const lopXuong = o.XUONG === 'BN' ? 'xuong-bn' : o.XUONG === 'HN' ? 'xuong-hn' : '';
     return `
-    <div class="order-card ${daChon ? 'da-chon' : ''}" data-stt="${escapeHtml(o.STT_Key)}"
+    <div class="order-card ${daChon ? 'da-chon' : ''} ${lopXuong}" data-stt="${escapeHtml(o.STT_Key)}"
          onclick="moChiTietDon(event, '${encodeURIComponent(o.STT_Key)}')">
       <div class="cot-chon-the">
         <input type="checkbox" class="order-checkbox" ${daChon ? 'checked' : ''}

@@ -349,6 +349,17 @@ body.trang-dang-nhap {
   overflow: hidden;
 }
 .order-card:hover { border-color: var(--color-primary); box-shadow: 0 4px 20px rgba(190,18,60,0.10); transform: translateY(-2px); }
+/* Tô màu nền thẻ đơn theo Xưởng (bổ sung 21/09/2026, theo yêu cầu người dùng — "đổi màu nền đơn theo
+   Xưởng để dễ phân biệt", BN=xanh lá/HN=xanh dương, tô ĐẬM/nổi bật theo lựa chọn của người dùng) — CHỈ
+   ở Danh sách đơn hàng (orders.html#renderDanhSachDon), KHÔNG áp dụng nơi khác. Đặt TRƯỚC
+   .order-card.da-chon để trạng thái "đã chọn" (thao tác hàng loạt) vẫn ưu tiên hiển thị khi cả 2 cùng
+   áp dụng (đúng thứ tự nguồn CSS — 2 rule cùng độ đặc trưng 2 class, rule đứng SAU thắng). Vai trò
+   'admin' bị ẩn hẳn giá trị XUONG từ phía server (xem services/orderService.js#anXuongVoiAdmin) nên
+   card của họ tự động không nhận class này, không cần thêm điều kiện ẩn/hiện riêng ở đây.
+   KHÔNG dùng lại --color-primary-light (#e0f2fe, xanh dương rất nhạt) cho Xưởng HN — đó đúng là màu
+   nền của .da-chon (thẻ ĐÃ CHỌN) ngay dưới đây, trùng tông sẽ dễ nhầm "đơn đã chọn" với "đơn Xưởng HN". */
+.order-card.xuong-bn { background: #86efac; border-color: #22c55e; }
+.order-card.xuong-hn { background: #93c5fd; border-color: #3b82f6; }
 .order-card.da-chon { border-color: var(--color-primary); background: var(--color-primary-light); }
 /* Tăng kích thước 22px -> var(--tap-min) (bổ sung 13/09/2026, theo yêu cầu người dùng — dễ bấm chọn
    đơn hơn, nhất là trên màn cảm ứng) — dùng đúng biến "kích thước chạm thoải mái" app đã định nghĩa
@@ -1076,6 +1087,11 @@ select.chon-trang-thai-tieu-cuc { border-color: var(--color-warning-text); color
   box-shadow: var(--glow-border), 0 4px 24px color-mix(in srgb, var(--color-primary) 22%, transparent);
 }
 [data-theme="dark"] .order-card.da-chon { box-shadow: var(--glow-border); }
+/* Bản tối cho tô màu Xưởng ở trên — giảm độ sáng nền (chữ trong .order-card dùng --color-text TRẮNG ở
+   theme tối, giữ nguyên nền sáng như bản ngày sẽ mất hết tương phản) nhưng vẫn giữ rõ 2 tông xanh lá/
+   xanh dương khác biệt nhau. */
+[data-theme="dark"] .order-card.xuong-bn { background: #14532d; border-color: #22c55e; }
+[data-theme="dark"] .order-card.xuong-hn { background: #1e3a8a; border-color: #3b82f6; }
 [data-theme="dark"] .chart-card:hover { box-shadow: var(--glow-border), var(--glow-md); }
 [data-theme="dark"] .kich-ban-btn:hover { box-shadow: var(--glow-xs); }
 [data-theme="dark"] .kich-ban-btn.active { box-shadow: var(--glow-md); }
