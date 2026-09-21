@@ -4,7 +4,7 @@ const { layBanDoTenKhachHang } = require('./khachHangService');
 const taiSanService = require('./taiSanService');
 const { chiSoTinhTrang, TINH_TRANG_VALUES, TRANG_THAI_PHOI_VALUES, TRANG_THAI_VE_FILE_VALUES } = require('../data/pipelineTinhTrang');
 const { thoiGianVNISOString } = require('./dateUtils');
-const { laAdmin } = require('../middleware/auth');
+const { laAdmin, laSuperAdmin } = require('../middleware/auth');
 
 const TAB = 'Don_Hang_ALL';
 const KEY_COL = 'STT_Key';
@@ -403,13 +403,15 @@ function filterForRole(rows, user) {
 }
 
 // Phân loại đơn theo Xưởng (HN/BN...) — bổ sung 13/09/2026, theo yêu cầu người dùng (cột
-// XUONG tự thêm vào Don_Hang_ALL, cột Xuong tự thêm vào NguoiDung). admin luôn xem/thao tác được MỌI
-// đơn bất kể Xưởng. Vai trò khác: CHỈ xem/thao tác được đơn CÙNG Xưởng với mình — thiếu Xưởng ở 1
-// trong 2 bên (đơn chưa được admin gán XUONG, HOẶC người dùng chưa được gán Xuong) coi như KHÔNG có
-// quyền (người dùng xác nhận: "chưa gán = ẩn với người thường", ưu tiên an toàn dữ liệu hơn tiện lợi
-// trong giai đoạn mới triển khai chưa gán hết). Áp dụng CẢ cho việc XEM (danh sách/báo cáo/chatbot/
-// dashboard — locTheoXuong) LẪN thao tác trên 1 đơn cụ thể (quét QR/chụp ảnh/sửa đơn — coQuyenTheoXuong,
-// xem routes/orders.js, routes/qr.js, routes/photos.js, routes/tracking.js).
+// XUONG tự thêm vào Don_Hang_ALL, cột Xuong tự thêm vào NguoiDung). CHỈ superadmin luôn xem/thao tác
+// được MỌI đơn bất kể Xưởng (thu hẹp từ admin+superadmin xuống CHỈ superadmin, 21/09/2026, theo yêu
+// cầu người dùng — ĐỔI so với trước: admin GIỜ bị lọc theo Xưởng y hệt ve_file/san_xuat). Mọi vai trò
+// còn lại (kể cả admin): CHỈ xem/thao tác được đơn CÙNG Xưởng với mình — thiếu Xưởng ở 1 trong 2 bên
+// (đơn chưa được gán XUONG, HOẶC người dùng chưa được gán Xuong) coi như KHÔNG có quyền (người dùng xác
+// nhận: "chưa gán = ẩn với người thường", ưu tiên an toàn dữ liệu hơn tiện lợi trong giai đoạn mới
+// triển khai chưa gán hết). Áp dụng CẢ cho việc XEM (danh sách/báo cáo/chatbot/dashboard —
+// locTheoXuong) LẪN thao tác trên 1 đơn cụ thể (quét QR/chụp ảnh/sửa đơn — coQuyenTheoXuong, xem
+// routes/orders.js, routes/qr.js, routes/photos.js, routes/tracking.js).
 // Đổi tên 13/09/2026, theo yêu cầu người dùng: HANOI/BACNINH -> HN/BN. CHỈ đổi danh sách hợp lệ ở
 // code — dữ liệu CŨ đã có sẵn trong Sheet (cột XUONG ở Don_Hang_ALL, cột Xuong ở NguoiDung) vẫn còn
 // giá trị "HANOI"/"BACNINH" cũ cho tới khi tự sửa tay trong Sheet; so khớp ở locTheoXuong là CHÍNH
@@ -418,13 +420,13 @@ function filterForRole(rows, user) {
 const DANH_SACH_XUONG = ['HN', 'BN', 'ChuaGanXuong'];
 
 function locTheoXuong(rows, user) {
-  if (laAdmin(user.vaiTro)) return rows;
+  if (laSuperAdmin(user.vaiTro)) return rows;
   if (!user.xuong) return [];
   return rows.filter(r => r.XUONG === user.xuong);
 }
 
 function coQuyenTheoXuong(user, row) {
-  if (laAdmin(user.vaiTro)) return true;
+  if (laSuperAdmin(user.vaiTro)) return true;
   return !!user.xuong && !!row.XUONG && user.xuong === row.XUONG;
 }
 

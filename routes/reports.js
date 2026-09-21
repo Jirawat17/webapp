@@ -9,7 +9,7 @@ const { layDanhSachKhachHang, layBanDoTenKhachHang } = require('../services/khac
 const { layLichSuChuyenSangTrangThai, tinhChiTieuCongViec, trongKhoangThoiGian } = require('../services/logService');
 const taiKhoanService = require('../services/taiKhoanService');
 const nhatKyDbService = require('../services/nhatKyDbService');
-const { laAdmin } = require('../middleware/auth');
+const { laAdmin, laSuperAdmin } = require('../middleware/auth');
 const { parseNgay, dinhDangNgay, dinhDangNgayGioVN, dinhDangNgayGioNgan, bienGioiNgayVN } = require('../services/dateUtils');
 const { taoQRCodeBuffer, KICH_THUOC_QR_CHUAN_DPI_MM } = require('../services/qrService');
 const { taiDsAnh } = require('../services/anhNguonService');
@@ -201,7 +201,7 @@ router.get('/thong-ke-loi', async (req, res) => {
   // SAU khi có banDoDon (tra cứu order theo sttKey) vì log lịch sử không tự có sẵn XUONG.
   const locTheoNgay = locTheoNgayTruocXuong.filter(l => {
     const don = banDoDon[l.sttKey];
-    return don ? orderService.coQuyenTheoXuong(user, don) : laAdmin(user.vaiTro);
+    return don ? orderService.coQuyenTheoXuong(user, don) : laSuperAdmin(user.vaiTro);
   });
 
   const nhanVien = taiKhoanService.layTatCa();
@@ -376,7 +376,7 @@ router.get('/thoi-gian-chay-may', async (req, res) => {
   // tra qua banDoDon).
   const lanChay = lanChayTruocXuong.filter(l => {
     const don = banDoDon[l.sttKey];
-    return don ? orderService.coQuyenTheoXuong(user, don) : laAdmin(user.vaiTro);
+    return don ? orderService.coQuyenTheoXuong(user, don) : laSuperAdmin(user.vaiTro);
   });
   const banDoTenKH = await layBanDoTenKhachHang();
 
