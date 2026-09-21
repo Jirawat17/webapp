@@ -36,6 +36,7 @@
         <option value="">(chưa gán)</option>
         <option value="HN">HN</option>
         <option value="BN">BN</option>
+        <option value="ChuaGanXuong">ChuaGanXuong</option>
       </select>
     </div>
     <div class="truong">
@@ -66,7 +67,7 @@
 // Xưởng vật lý (HN/BN — bổ sung 13/09/2026, theo yêu cầu người dùng, đổi tên từ HANOI/BACNINH cùng
 // ngày) — PHẢI khớp ĐÚNG DANH_SACH_XUONG trong services/orderService.js (tự khai báo lại ở đây thay
 // vì import, cùng cách public/order.html đang tự khai báo lại DANH_SACH_TINH_TRANG).
-const DANH_SACH_XUONG = ['HN', 'BN'];
+const DANH_SACH_XUONG = ['HN', 'BN', 'ChuaGanXuong'];
 
 document.getElementById('form-them').onsubmit = async (e) => {
   e.preventDefault();

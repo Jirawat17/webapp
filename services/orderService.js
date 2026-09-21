@@ -415,7 +415,7 @@ function filterForRole(rows, user) {
 // giá trị "HANOI"/"BACNINH" cũ cho tới khi tự sửa tay trong Sheet; so khớp ở locTheoXuong là CHÍNH
 // XÁC CHUỖI nên đơn/người dùng còn mang giá trị cũ sẽ bị coi như "khác Xưởng" (không thấy nhau) với
 // mọi người đã được gán "HN"/"BN" mới, cho tới khi migrate xong dữ liệu cũ.
-const DANH_SACH_XUONG = ['HN', 'BN'];
+const DANH_SACH_XUONG = ['HN', 'BN', 'ChuaGanXuong'];
 
 function locTheoXuong(rows, user) {
   if (laAdmin(user.vaiTro)) return rows;
