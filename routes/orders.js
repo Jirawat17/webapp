@@ -5,6 +5,7 @@ const orderService = require('../services/orderService');
 const taiKhoanService = require('../services/taiKhoanService');
 const trangThaiDbService = require('../services/trangThaiDbService');
 const donHangLoatService = require('../services/donHangLoatService');
+const taiSanService = require('../services/taiSanService');
 const alertService = require('../services/alertService');
 const scenarioService = require('../services/scenarioService');
 const { parseNgay } = require('../services/dateUtils');
@@ -272,6 +273,12 @@ router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
   // trước đây mỗi đơn trong lô tự đọc thật riêng, N đơn = N lượt đọc toàn bộ sheet.
   const { headers, banDoTheoKey } = await orderService.getManyByKeys(sttKeys, { fresh: true });
 
+  // Gộp thay đổi kho phôi cho cả lô (bổ sung 22/09/2026, theo yêu cầu người dùng cải thiện hiệu năng) —
+  // CHỈ áp dụng khi cot=TRANG_THAI_PHOI (cột duy nhất kích hoạt trừ/hoàn kho, xem orderService.js#update).
+  // Mảng này được orderService.update() TỰ ĐIỀN (không tự đoán lại điều kiện ở đây, xem comment ở đó) —
+  // route chỉ cần flush ĐÚNG 1 LẦN sau vòng lặp thay vì N đơn tự ghi Sheets riêng lẻ.
+  const gomThayDoiKho = cot === 'TRANG_THAI_PHOI' ? [] : null;
+
   for (const sttKey of sttKeys) {
     try {
       const row = banDoTheoKey.get(sttKey);
@@ -289,7 +296,7 @@ router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
         [cot]: trangThaiMoi,
         NguoiCapNhatCuoi: user.ten,
         ThoiGianCapNhatCuoi: new Date().toISOString(),
-      }, user, { donDaDoc: { headers, row } }); // đã đọc thật ở trên (cả lô), khỏi đọc lại lần nữa (xem orderService.update)
+      }, user, { donDaDoc: { headers, row }, gomThayDoiKho }); // đã đọc thật ở trên (cả lô), khỏi đọc lại lần nữa (xem orderService.update)
 
       thanhCong.push(sttKey);
       ghiLog({
@@ -301,6 +308,14 @@ router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
       }).catch(err => console.error('[Orders] Lỗi ghi log nền:', err.message));
     } catch (err) {
       loi.push({ sttKey, lyDo: err.message });
+    }
+  }
+
+  if (gomThayDoiKho && gomThayDoiKho.length > 0) {
+    try {
+      await taiSanService.apDungThayDoiKhoHangLoat(gomThayDoiKho);
+    } catch (err) {
+      console.error('[Orders] Lỗi ghi gộp kho phôi hàng loạt:', err.message);
     }
   }
 
@@ -940,30 +955,42 @@ router.post('/quet-hang-loat/bat-dau', async (req, res) => {
       //   1. taiDsAnh() trả mảng RỖNG — không tải được ảnh (link chết/hết quyền truy cập/quá thời gian).
       //   2. Có ảnh nhưng tinhHashAnh() trả null — sharp không đọc được (ảnh lỗi/định dạng lạ).
       const donLoiHash = [];
-      for (const don of donThieuHash) {
+      // Xử lý theo LÔ NHỎ song song (bổ sung 22/09/2026, theo yêu cầu người dùng cải thiện hiệu năng) —
+      // trước đây tuần tự HOÀN TOÀN từng đơn 1 (mỗi đơn tải ảnh + tính hash, timeout tới 15-20s nếu
+      // link lỗi/chậm — xem anhNguonService.js/storageService.js/driveService.js), lô vài trăm đơn có
+      // thể mất hàng chục phút. SO_SONG_SONG_TINH_HASH giới hạn số đơn tải+tính hash ĐỒNG THỜI — nhanh
+      // hơn hẳn tuần tự nhưng không tạo hàng trăm request cùng lúc tới MinIO/Drive/Gemini (tránh làm
+      // nghẽn nguồn ảnh ngoài, nhất là link Drive vốn đã chậm hơn MinIO nội bộ).
+      const SO_SONG_SONG_TINH_HASH = 6;
+      for (let i = 0; i < donThieuHash.length; i += SO_SONG_SONG_TINH_HASH) {
         if (job.daHuy) break;
+        const lo = donThieuHash.slice(i, i + SO_SONG_SONG_TINH_HASH);
+        await Promise.all(lo.map(async don => {
+          const dsMau = await taiDsAnh(anhSoSanhCuaDon(don));
+          const hash = dsMau[0] ? await tinhHashAnh(dsMau[0]) : null;
+          if (hash) {
+            // Ghi theo STT_Key (SQLite, xem trangThaiDbService.js) — không còn cần đọc lại Sheet để tra
+            // số dòng vật lý trước khi ghi (bỏ hẳn cơ chế layLaiSoDongMoiNhat cũ, xem
+            // docs/superpowers/specs/2026-09-18-chuyen-cot-app-ghi-sang-sqlite-design.md): SQLite ghi
+            // đúng đơn dù Don_Hang_ALL xáo trộn dòng bất cứ lúc nào trong lúc vòng lặp này chạy (có thể
+            // kéo dài nhiều phút cho lô lớn).
+            trangThaiDbService.ghiDe(don.STT_Key, { HASH_ANH_MAU: hash });
+            soTinhDuocHash++;
+          } else {
+            donLoiHash.push({
+              sttKey: don.STT_Key,
+              lyDo: dsMau.length === 0
+                ? 'Không tải được ảnh (link lỗi, hết quyền truy cập, hoặc quá thời gian chờ)'
+                : 'Tải được ảnh nhưng không tính được hash (có thể ảnh lỗi hoặc định dạng không đọc được)',
+            });
+          }
 
-        const dsMau = await taiDsAnh(anhSoSanhCuaDon(don));
-        const hash = dsMau[0] ? await tinhHashAnh(dsMau[0]) : null;
-        if (hash) {
-          // Ghi theo STT_Key (SQLite, xem trangThaiDbService.js) — không còn cần đọc lại Sheet để tra
-          // số dòng vật lý trước khi ghi (bỏ hẳn cơ chế layLaiSoDongMoiNhat cũ, xem
-          // docs/superpowers/specs/2026-09-18-chuyen-cot-app-ghi-sang-sqlite-design.md): SQLite ghi
-          // đúng đơn dù Don_Hang_ALL xáo trộn dòng bất cứ lúc nào trong lúc vòng lặp này chạy (có thể
-          // kéo dài nhiều phút cho lô lớn).
-          trangThaiDbService.ghiDe(don.STT_Key, { HASH_ANH_MAU: hash });
-          soTinhDuocHash++;
-        } else {
-          donLoiHash.push({
-            sttKey: don.STT_Key,
-            lyDo: dsMau.length === 0
-              ? 'Không tải được ảnh (link lỗi, hết quyền truy cập, hoặc quá thời gian chờ)'
-              : 'Tải được ảnh nhưng không tính được hash (có thể ảnh lỗi hoặc định dạng không đọc được)',
-          });
-        }
-
-        job.daXong++;
-        job.capNhatLucNao = Date.now();
+          // job.daXong++/donLoiHash.push/soTinhDuocHash++ AN TOÀN dù chạy trong map() song song — JS
+          // đơn luồng, mỗi câu lệnh gán/++ chạy TRỌN VẸN không bị xen ngang bởi callback khác (không có
+          // race condition kiểu đa luồng thật, dù nhiều Promise cùng "chạy" đan xen qua await).
+          job.daXong++;
+          job.capNhatLucNao = Date.now();
+        }));
       }
 
       // Luôn tính lại nhóm SAU vòng lặp trên, kể cả khi bị hủy giữa chừng — tận dụng các hash đã tính

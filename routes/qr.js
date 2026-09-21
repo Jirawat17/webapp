@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const orderService = require('../services/orderService');
+const taiSanService = require('../services/taiSanService');
 const alertService = require('../services/alertService');
 const scenarioService = require('../services/scenarioService');
 const { layBanDoTenKhachHang } = require('../services/khachHangService');
@@ -274,6 +275,12 @@ router.post('/kich-ban/:scenarioId/xac-nhan-hang-loat', async (req, res) => {
   // đầu của bước này, chỉ không còn tuyệt đối mới nhất cho TỪNG mã riêng lẻ trong cùng 1 lô.
   const { headers, banDoTheoKey } = await orderService.getManyByKeys(sttKeys, { fresh: true });
 
+  // Gộp thay đổi kho phôi cho cả lô quét (bổ sung 22/09/2026, theo yêu cầu người dùng cải thiện hiệu
+  // năng — cùng cơ chế routes/orders.js POST /chuyen-trang-thai-hang-loat) — CHỈ áp dụng khi kịch bản
+  // đích chính là TRANG_THAI_PHOI (kịch bản "lấy phôi" quét QR hàng loạt, luồng dùng NHIỀU nhất hằng
+  // ngày của vai trò nguoi_lay_phoi). orderService.update() TỰ ĐIỀN mảng này, route chỉ flush 1 lần.
+  const gomThayDoiKho = scenario.column === 'TRANG_THAI_PHOI' ? [] : null;
+
   for (const sttKey of sttKeys) {
     try {
       const row = banDoTheoKey.get(sttKey);
@@ -301,7 +308,7 @@ router.post('/kich-ban/:scenarioId/xac-nhan-hang-loat', async (req, res) => {
         [scenario.column]: scenario.setStatus,
         NguoiCapNhatCuoi: user.ten,
         ThoiGianCapNhatCuoi: new Date().toISOString(),
-      }, user, { donDaDoc: { headers, row } }); // đã đọc thật ở trên, khỏi đọc lại lần nữa — mỗi mã quét trong lượt
+      }, user, { donDaDoc: { headers, row }, gomThayDoiKho }); // đã đọc thật ở trên, khỏi đọc lại lần nữa — mỗi mã quét trong lượt
       // xác nhận hàng loạt trước đây tốn 2 lượt đọc toàn bộ tab Don_Hang_ALL, nay chỉ còn 1
 
       thanhCong.push(sttKey);
@@ -315,6 +322,14 @@ router.post('/kich-ban/:scenarioId/xac-nhan-hang-loat', async (req, res) => {
       ghiKhongCho(ghiNhatKyQuetHangLoat({ nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey, trangThaiCu: giaTriHienTai, trangThaiMoi: scenario.setStatus, ketQua: 'THANH_CONG' }));
     } catch (err) {
       loi.push({ sttKey, lyDo: err.message });
+    }
+  }
+
+  if (gomThayDoiKho && gomThayDoiKho.length > 0) {
+    try {
+      await taiSanService.apDungThayDoiKhoHangLoat(gomThayDoiKho);
+    } catch (err) {
+      console.error('[QR] Lỗi ghi gộp kho phôi hàng loạt:', err.message);
     }
   }
 

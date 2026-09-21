@@ -336,21 +336,40 @@ async function capNhatThat(sttKey, updates, user, tuyChon) {
   // ngược lại (xem taiSanService.truKhoTheoDon). Chạy SAU khi ghi Sheet đơn hàng đã thành công; lỗi ở
   // đây (vd chưa tạo tab Ton_Kho_Phoi) chỉ log ra console, KHÔNG được làm hỏng việc cập nhật đơn hàng
   // — kho phôi chỉ mang tính theo dõi, không phải điều kiện chặn thao tác lấy phôi thực tế.
+  //
+  // `tuyChon.gomThayDoiKho` (mảng, bổ sung 22/09/2026, theo yêu cầu người dùng cải thiện hiệu năng) —
+  // cho thao tác HÀNG LOẠT (routes/orders.js POST /chuyen-trang-thai-hang-loat) GOM thay đổi kho lại
+  // thay vì ghi Sheets NGAY tại đây: N đơn CÙNG 1 tổ hợp phôi trong 1 lô sẽ chỉ cần đọc+ghi Sheets ĐÚNG
+  // 1 lần (xem taiSanService.js#apDungThayDoiKhoHangLoat), thay vì N lượt tuần tự — VÀ tránh luôn nguy
+  // cơ lệch số nếu N đơn cùng tổ hợp từng bị chạy song song (đọc cùng giá trị cũ, ghi đè lẫn nhau).
+  // Logic QUYẾT ĐỊNH có nên trừ/hoàn kho hay không GIỮ NGUYÊN Y HỆT ở đây (dựa trên updatesDaTinh/row đã
+  // tính đầy đủ auto-transition phía trên) — route gọi hàng loạt KHÔNG tự đoán lại điều kiện này, chỉ
+  // nhận kết quả đã gom rồi tự flush 1 lần sau vòng lặp, tránh 2 nơi có thể lệch nhau về sau.
+  const soLuongDon = Number(row.SO_LUONG);
+  const soLuongHopLe = soLuongDon > 0;
   if (updatesDaTinh.TRANG_THAI_PHOI === 'Đã lấy phôi' && row.TRANG_THAI_PHOI !== 'Đã lấy phôi') {
-    try {
-      await taiSanService.truKhoTheoDon(row, user);
-    } catch (err) {
-      console.error('[Orders] Lỗi trừ kho phôi:', err.message);
+    if (tuyChon.gomThayDoiKho) {
+      if (soLuongHopLe) tuyChon.gomThayDoiKho.push({ sttKey, loai: row.LOAI, kichThuoc: row.KICH_THUOC, mauSac: row.MAU_SAC, soLuong: -soLuongDon, user });
+    } else {
+      try {
+        await taiSanService.truKhoTheoDon(row, user);
+      } catch (err) {
+        console.error('[Orders] Lỗi trừ kho phôi:', err.message);
+      }
     }
   }
   // Chuyển NGƯỢC lại khỏi "Đã lấy phôi" — HOÀN kho đối xứng (bổ sung 20/09/2026, phát hiện qua rà soát
   // bảo mật, xem taiSanService.js#hoanKhoTheoDon) — thiếu bước này khiến "Đã lấy phôi -> Chưa lấy phôi
   // -> Đã lấy phôi" trừ kho 2 lần cho đúng 1 lượt lấy phôi thật.
   if (updatesDaTinh.TRANG_THAI_PHOI !== undefined && updatesDaTinh.TRANG_THAI_PHOI !== 'Đã lấy phôi' && row.TRANG_THAI_PHOI === 'Đã lấy phôi') {
-    try {
-      await taiSanService.hoanKhoTheoDon(row, user);
-    } catch (err) {
-      console.error('[Orders] Lỗi hoàn kho phôi:', err.message);
+    if (tuyChon.gomThayDoiKho) {
+      if (soLuongHopLe) tuyChon.gomThayDoiKho.push({ sttKey, loai: row.LOAI, kichThuoc: row.KICH_THUOC, mauSac: row.MAU_SAC, soLuong: soLuongDon, user });
+    } else {
+      try {
+        await taiSanService.hoanKhoTheoDon(row, user);
+      } catch (err) {
+        console.error('[Orders] Lỗi hoàn kho phôi:', err.message);
+      }
     }
   }
 

@@ -136,4 +136,53 @@ async function hoanKhoTheoDon(donHang, user) {
   }).catch(err => console.error('[TaiSan] Lỗi ghi log nền:', err.message));
 }
 
-module.exports = { layTonKho, layLichSuNhap, nhapKho, truKhoTheoDon, hoanKhoTheoDon };
+// Áp dụng NHIỀU thay đổi tồn kho CÙNG LÚC, gộp theo tổ hợp LOAI+KICH_THUOC+MAU_SAC TRƯỚC khi đọc/ghi
+// Sheets (bổ sung 22/09/2026, theo yêu cầu người dùng cải thiện hiệu năng) — dùng cho thao tác HÀNG
+// LOẠT (vd "Lấy phôi hàng loạt" qua routes/orders.js POST /chuyen-trang-thai-hang-loat, cot=
+// TRANG_THAI_PHOI): trước đây MỖI đơn trong lô tự gọi truKhoTheoDon/hoanKhoTheoDon riêng — N đơn CÙNG 1
+// tổ hợp phôi (rất phổ biến, các đơn cùng mẫu thường đi theo lô) = N lượt đọc+ghi Sheets tuần tự cho
+// ĐÚNG 1 dòng tồn kho, thậm chí có nguy cơ lệch số nếu chạy song song (đọc cùng giá trị cũ, ghi đè lẫn
+// nhau — đây là lý do KHÔNG thể sửa bằng cách đơn giản chạy song song vòng lặp cũ). Gộp theo tổ hợp rồi
+// CHỈ đọc 1 lần + ghi ĐÚNG 1 lần/tổ hợp (thường ít hơn hẳn N) giải quyết cả 2 vấn đề cùng lúc — tốc độ
+// VÀ đúng số liệu.
+// `danhSachThayDoi`: mảng { sttKey, loai, kichThuoc, mauSac, soLuong, user } — soLuong ÂM = trừ kho
+// (lấy phôi), DƯƠNG = hoàn kho. Người gọi (orderService.js#capNhatThat qua tuỳ chọn `gomThayDoiKho`) đã
+// tự lọc chỉ những đơn THẬT SỰ chuyển trạng thái (đúng logic tinhTinhTrangTuDong hiện có, không lặp lại
+// ở đây) và đã bỏ qua SO_LUONG không hợp lệ — hàm này chỉ lo phần gộp + ghi Sheets.
+async function apDungThayDoiKhoHangLoat(danhSachThayDoi) {
+  if (danhSachThayDoi.length === 0) return;
+
+  const gopTheoToHop = new Map(); // "loai|kichThuoc|mauSac" (đã chuẩn hoá) -> { loai, kichThuoc, mauSac, tongSoLuong }
+  for (const { loai, kichThuoc, mauSac, soLuong } of danhSachThayDoi) {
+    const khoa = `${chuan(loai)}|${chuan(kichThuoc)}|${chuan(mauSac)}`;
+    const hienCo = gopTheoToHop.get(khoa);
+    if (hienCo) hienCo.tongSoLuong += soLuong;
+    else gopTheoToHop.set(khoa, { loai, kichThuoc, mauSac, tongSoLuong: soLuong });
+  }
+
+  const { headers, rows } = await readTab(TAB_TON_KHO); // đọc thật ĐÚNG 1 LẦN cho cả lô, không phải N lần
+  for (const { loai, kichThuoc, mauSac, tongSoLuong } of gopTheoToHop.values()) {
+    if (!tongSoLuong) continue; // trừ+hoàn triệt tiêu lẫn nhau trong CÙNG lô (hiếm nhưng có thể) — không cần ghi gì
+    const dong = rows.find(r => khopLoaiPhoi(r, loai, kichThuoc, mauSac));
+    if (dong) {
+      const tonMoi = (Number(dong.TON_HIEN_TAI) || 0) + tongSoLuong;
+      await updateCells(TAB_TON_KHO, headers, dong._row, { TON_HIEN_TAI: tonMoi });
+    } else {
+      await appendRow(TAB_TON_KHO, headers, {
+        LOAI: loai || '', KICH_THUOC: kichThuoc || '', MAU_SAC: mauSac || '', TON_HIEN_TAI: tongSoLuong,
+      });
+    }
+  }
+
+  // Log CHI TIẾT TỪNG ĐƠN (không gộp) — giữ đúng khả năng tra "đơn nào gây thay đổi kho nào" như trước,
+  // chỉ gộp phần GHI SHEETS thật (tốn thời gian) ở trên, không gộp phần audit log (rẻ, chạy nền).
+  for (const { sttKey, loai, kichThuoc, mauSac, soLuong, user } of danhSachThayDoi) {
+    ghiLog({
+      nguoiDung: (user && user.ten) || 'Hệ thống', vaiTro: (user && user.vaiTro) || '-',
+      hanhDong: soLuong < 0 ? 'TRU_KHO_PHOI_TU_DON' : 'HOAN_KHO_PHOI_TU_DON', sttKey,
+      chiTiet: { loai, kichThuoc, mauSac, soLuong: Math.abs(soLuong) },
+    }).catch(err => console.error('[TaiSan] Lỗi ghi log nền:', err.message));
+  }
+}
+
+module.exports = { layTonKho, layLichSuNhap, nhapKho, truKhoTheoDon, hoanKhoTheoDon, apDungThayDoiKhoHangLoat };
