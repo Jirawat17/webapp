@@ -102,19 +102,40 @@ function layTatCa() {
   return ketQua;
 }
 
+// Cache prepared statement theo TỔ HỢP CỘT (bổ sung 22/09/2026, theo yêu cầu người dùng cải thiện hiệu
+// năng) — ghiDe() là hàm ghi TRUNG TÂM cho MỌI cập nhật trạng thái đơn (mỗi lượt quét QR, mỗi đơn trong
+// vòng lặp hàng loạt, job cảnh báo...), nhưng câu SQL phụ thuộc DANH SÁCH CỘT trong `updates` nên trước
+// đây phải biên dịch lại (db.prepare()) MỖI LẦN gọi. Số TỔ HỢP CỘT thực tế mà app dùng là CỐ ĐỊNH/nhỏ
+// (mỗi nơi gọi luôn truyền đúng 1 bộ cột quen thuộc) nên cache theo tổ hợp không phình bộ nhớ.
+// QUAN TRỌNG: `cot` PHẢI được SẮP XẾP trước khi dùng làm khoá cache VÀ trước khi build câu SQL/tham số
+// — nếu không, 2 lệnh gọi truyền CÙNG 1 bộ cột nhưng KHÁC thứ tự (thứ tự khoá trong object `updates`
+// không đảm bảo cố định) sẽ tra trúng CHUNG 1 prepared statement đã biên dịch theo thứ tự của lệnh gọi
+// ĐẦU TIÊN, trong khi tham số truyền vào lại theo thứ tự MỚI — ghi nhầm giá trị sang cột khác.
+const _cachePreparedGhiDe = new Map(); // "cot1,cot2,..." (đã sort) -> Statement đã prepare sẵn
+function layPreparedGhiDe(cotDaSort) {
+  const khoa = cotDaSort.join(',');
+  let stmt = _cachePreparedGhiDe.get(khoa);
+  if (!stmt) {
+    stmt = db.prepare(`
+      INSERT INTO trang_thai_don (stt_key, ${cotDaSort.join(', ')})
+      VALUES (?, ${cotDaSort.map(() => '?').join(', ')})
+      ON CONFLICT(stt_key) DO UPDATE SET ${cotDaSort.map(c => `${c} = excluded.${c}`).join(', ')}
+    `);
+    _cachePreparedGhiDe.set(khoa, stmt);
+  }
+  return stmt;
+}
+
 // Ghi đè MỘT PHẦN (chỉ các cột thực sự có trong `updates`, đúng ngữ nghĩa updateCells cũ) — UPSERT
 // theo stt_key, không quan tâm dòng đã tồn tại trong DB hay chưa (đơn mới tự động INSERT).
 function ghiDe(sttKey, updates) {
   const key = chuanHoaKey(sttKey);
-  const cot = Object.keys(updates).filter(c => CAC_COT.includes(c));
+  // .sort() — xem lý do bắt buộc ở comment layPreparedGhiDe() trên.
+  const cot = Object.keys(updates).filter(c => CAC_COT.includes(c)).sort();
   if (cot.length === 0) return; // updates chỉ đụng cột KHÔNG thuộc bảng này (vd cột RAW) — không có gì để ghi ở đây
 
   const giaTri = cot.map(c => (updates[c] === undefined || updates[c] === null) ? '' : String(updates[c]));
-  db.prepare(`
-    INSERT INTO trang_thai_don (stt_key, ${cot.join(', ')})
-    VALUES (?, ${cot.map(() => '?').join(', ')})
-    ON CONFLICT(stt_key) DO UPDATE SET ${cot.map(c => `${c} = excluded.${c}`).join(', ')}
-  `).run(key, ...giaTri);
+  layPreparedGhiDe(cot).run(key, ...giaTri);
 }
 
 module.exports = { CAC_COT, RONG_MAC_DINH, layTheoKey, layTatCa, ghiDe };

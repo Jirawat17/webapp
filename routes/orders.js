@@ -227,6 +227,30 @@ router.get('/', async (req, res) => {
   res.json(orderService.anXuongNhieuDonVoiAdmin(list, req.session.user.vaiTro));
 });
 
+// Số liệu đếm nhanh cho Bảng điều khiển (bổ sung 22/09/2026, theo yêu cầu người dùng cải thiện hiệu
+// năng) — trước đây public/bang-dieu-khien.html gọi GET / (TOÀN BỘ đơn, đủ mọi trường: ảnh, địa chỉ,
+// tracking...) mỗi 60 giây CHỈ để đếm cảnh báo Vàng/Cam/Đỏ + số đơn đang chạy máy/vẽ file theo từng
+// người — route riêng này tính sẵn 3 số liệu đó ở server, trả về gói tin NHỎ HƠN NHIỀU thay vì cả danh
+// sách đơn. Đi qua ĐÚNG cùng pipeline lọc/tính toán với GET / (filterForRole -> lamGiauDon ->
+// locDonDangChayMayTheoNguoiVanHanh) để không lệch số so với trước — CHỈ khác bước cuối (đếm thay vì
+// trả nguyên list), không tự lặp lại logic lọc/tính CanhBao/NguoiVanHanh/NguoiVeFile ở đây.
+router.get('/thong-ke-nhanh', async (req, res) => {
+  const { rows } = await orderService.getAll();
+  let list = orderService.filterForRole(rows, req.session.user);
+  list = await lamGiauDon(list);
+  list = locDonDangChayMayTheoNguoiVanHanh(list, req.session.user);
+
+  const demCanhBao = { VANG: 0, CAM: 0, DO: 0 };
+  const dangChayMay = {};
+  const dangVeFile = {};
+  for (const r of list) {
+    if (r.CanhBao && demCanhBao[r.CanhBao] !== undefined) demCanhBao[r.CanhBao]++;
+    if (r.NguoiVanHanh) dangChayMay[r.NguoiVanHanh] = (dangChayMay[r.NguoiVanHanh] || 0) + 1;
+    if (r.NguoiVeFile) dangVeFile[r.NguoiVeFile] = (dangVeFile[r.NguoiVeFile] || 0) + 1;
+  }
+  res.json({ demCanhBao, dangChayMay, dangVeFile });
+});
+
 // Chuyển trạng thái HÀNG LOẠT cho nhiều đơn cùng lúc — chọn tự do bất kỳ trong 10 giá trị TRANG_THAI_XUONG,
 // KHÔNG kiểm tra trạng thái hiện tại của từng đơn (khác với kịch bản quét QR — quyết định có chủ ý
 // của người dùng, vì đây là công cụ sửa nhanh/sửa lỗi, không phải luồng vận hành theo pipeline).
@@ -240,6 +264,22 @@ const GIA_TRI_HOP_LE_THEO_COT = {
   TRANG_THAI_PHOI: TRANG_THAI_PHOI_VALUES,
   TRANG_THAI_VE_FILE: TRANG_THAI_VE_FILE_VALUES,
 };
+
+// Chạy `congViec(item)` cho MỌI phần tử trong `items`, THEO LÔ NHỎ SONG SONG (bổ sung 22/09/2026, theo
+// yêu cầu người dùng cải thiện hiệu năng — trước đây các route "hàng loạt" dưới đây xử lý HOÀN TOÀN
+// tuần tự từng đơn) — dùng chung cho các route ghi ĐỘC LẬP theo từng STT_Key trong file này, an toàn
+// song song vì orderService.update() đã tự khoá theo từng đơn qua xepHangTheoDon() (2 đơn KHÁC nhau
+// không bao giờ tranh chấp). KHÔNG dùng cho route chạm TRANG_THAI_PHOI (nhiều đơn CÙNG tổ hợp phôi ghi
+// CHUNG 1 dòng tồn kho — xem gomThayDoiKho ở /chuyen-trang-thai-hang-loat, đã xử lý riêng bằng cách gộp
+// thay đổi kho trước khi ghi, không thể song song hoá đơn giản như các route còn lại). `congViec` tự lo
+// try/catch của chính nó (đẩy kết quả vào thanhCong/loi dùng chung ở nơi gọi) — hàm này chỉ lo chia lô.
+const SO_SONG_SONG_HANG_LOAT = 10;
+async function chayHangLoatSongSong(items, congViec) {
+  for (let i = 0; i < items.length; i += SO_SONG_SONG_HANG_LOAT) {
+    const lo = items.slice(i, i + SO_SONG_SONG_HANG_LOAT);
+    await Promise.all(lo.map(congViec));
+  }
+}
 
 // Chuyển hàng loạt — dùng CHUNG cho cả 3 cột trạng thái (TRANG_THAI_XUONG mặc định nếu không truyền
 // 'cot', hoặc TRANG_THAI_PHOI/TRANG_THAI_VE_FILE — 2 nút bấm nhanh "Đã lấy phôi"/"Chưa lấy phôi"/
@@ -279,16 +319,20 @@ router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
   // route chỉ cần flush ĐÚNG 1 LẦN sau vòng lặp thay vì N đơn tự ghi Sheets riêng lẻ.
   const gomThayDoiKho = cot === 'TRANG_THAI_PHOI' ? [] : null;
 
-  for (const sttKey of sttKeys) {
+  // An toàn song song hoá (bổ sung 22/09/2026, theo yêu cầu người dùng cải thiện hiệu năng): trước đây
+  // GIỮ tuần tự ở route này vì đơn CÙNG tổ hợp phôi ghi CHUNG 1 dòng tồn kho — giờ gomThayDoiKho ở trên
+  // đã tách hẳn việc GHI SHEETS THẬT ra khỏi vòng lặp (chỉ push mảng trong bộ nhớ, flush 1 lần ở cuối),
+  // nên phần còn lại trong vòng lặp (SQLite + kiểm tra quyền) không còn tranh chấp giữa các đơn nữa.
+  await chayHangLoatSongSong(sttKeys, async (sttKey) => {
     try {
       const row = banDoTheoKey.get(sttKey);
       if (!row) {
         loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
-        continue;
+        return;
       }
       if (!orderService.coQuyenTheoXuong(user, row)) {
         loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
-        continue;
+        return;
       }
 
       const trangThaiCu = row[cot];
@@ -309,7 +353,7 @@ router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
     } catch (err) {
       loi.push({ sttKey, lyDo: err.message });
     }
-  }
+  });
 
   if (gomThayDoiKho && gomThayDoiKho.length > 0) {
     try {
@@ -355,12 +399,12 @@ router.post('/chi-dinh-nguoi-chay-may', async (req, res) => {
   // Đọc TOÀN BỘ sheet ĐÚNG 1 LẦN cho cả lô (bổ sung 13/09/2026, xem orderService.js#getManyByKeys).
   const { headers, banDoTheoKey } = await orderService.getManyByKeys(sttKeys, { fresh: true });
 
-  for (const sttKey of sttKeys) {
+  await chayHangLoatSongSong(sttKeys, async (sttKey) => {
     try {
       const row = banDoTheoKey.get(sttKey);
       if (!row) {
         loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
-        continue;
+        return;
       }
 
       await orderService.update(sttKey, {
@@ -379,7 +423,7 @@ router.post('/chi-dinh-nguoi-chay-may', async (req, res) => {
     } catch (err) {
       loi.push({ sttKey, lyDo: err.message });
     }
-  }
+  });
 
   res.json({ ok: true, thanhCong, loi });
 });
@@ -416,12 +460,12 @@ router.post('/chi-dinh-nguoi-ve-file', async (req, res) => {
   // Đọc TOÀN BỘ sheet ĐÚNG 1 LẦN cho cả lô (bổ sung 13/09/2026, xem orderService.js#getManyByKeys).
   const { headers, banDoTheoKey } = await orderService.getManyByKeys(sttKeys, { fresh: true });
 
-  for (const sttKey of sttKeys) {
+  await chayHangLoatSongSong(sttKeys, async (sttKey) => {
     try {
       const row = banDoTheoKey.get(sttKey);
       if (!row) {
         loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
-        continue;
+        return;
       }
 
       await orderService.update(sttKey, {
@@ -440,7 +484,7 @@ router.post('/chi-dinh-nguoi-ve-file', async (req, res) => {
     } catch (err) {
       loi.push({ sttKey, lyDo: err.message });
     }
-  }
+  });
 
   res.json({ ok: true, thanhCong, loi });
 });
@@ -474,12 +518,12 @@ router.post('/gan-xuong', async (req, res) => {
   // Đọc TOÀN BỘ sheet ĐÚNG 1 LẦN cho cả lô (bổ sung 13/09/2026, xem orderService.js#getManyByKeys).
   const { headers, banDoTheoKey } = await orderService.getManyByKeys(sttKeys, { fresh: true });
 
-  for (const sttKey of sttKeys) {
+  await chayHangLoatSongSong(sttKeys, async (sttKey) => {
     try {
       const row = banDoTheoKey.get(sttKey);
       if (!row) {
         loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
-        continue;
+        return;
       }
 
       await orderService.update(sttKey, {
@@ -496,7 +540,7 @@ router.post('/gan-xuong', async (req, res) => {
     } catch (err) {
       loi.push({ sttKey, lyDo: err.message });
     }
-  }
+  });
 
   res.json({ ok: true, thanhCong, loi });
 });
@@ -529,16 +573,16 @@ router.post('/danh-dau-uu-tien', async (req, res) => {
   // Đọc TOÀN BỘ sheet ĐÚNG 1 LẦN cho cả lô (xem orderService.js#getManyByKeys).
   const { headers, banDoTheoKey } = await orderService.getManyByKeys(sttKeys, { fresh: true });
 
-  for (const sttKey of sttKeys) {
+  await chayHangLoatSongSong(sttKeys, async (sttKey) => {
     try {
       const row = banDoTheoKey.get(sttKey);
       if (!row) {
         loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
-        continue;
+        return;
       }
       if (!orderService.coQuyenTheoXuong(user, row)) {
         loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
-        continue;
+        return;
       }
 
       await orderService.update(sttKey, {
@@ -555,7 +599,7 @@ router.post('/danh-dau-uu-tien', async (req, res) => {
     } catch (err) {
       loi.push({ sttKey, lyDo: err.message });
     }
-  }
+  });
 
   res.json({ ok: true, thanhCong, loi });
 });

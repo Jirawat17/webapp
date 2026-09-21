@@ -357,16 +357,18 @@ async function taiBangDieuKhien() {
   }
   const qsStr = qs.toString();
 
-  // Ghép 3 API đã có sẵn (không route mới) + /orders để đếm cảnh báo hiện tại (KHÔNG theo kỳ — "đơn
-  // nào đang trễ hạn" là ảnh chụp NGAY LÚC XEM, không phải việc xảy ra trong quá khứ) — xem
-  // docs/superpowers/specs/2026-09-08-bang-dieu-khien-admin-design.md.
-  let thongKe, thongKeLoi, hieuSuat, dsDon, dangHoatDong;
+  // Ghép 3 API đã có sẵn (không route mới) + /orders/thong-ke-nhanh để đếm cảnh báo hiện tại (KHÔNG
+  // theo kỳ — "đơn nào đang trễ hạn" là ảnh chụp NGAY LÚC XEM, không phải việc xảy ra trong quá khứ) —
+  // xem docs/superpowers/specs/2026-09-08-bang-dieu-khien-admin-design.md. Đổi từ GET /orders (toàn bộ
+  // đơn, đủ mọi trường) sang route đếm sẵn ở server (bổ sung 22/09/2026, theo yêu cầu người dùng cải
+  // thiện hiệu năng — trang này tự tải lại mỗi 60s, gói tin nhỏ hơn hẳn).
+  let thongKe, thongKeLoi, hieuSuat, thongKeNhanh, dangHoatDong;
   try {
-    [thongKe, thongKeLoi, hieuSuat, dsDon, dangHoatDong] = await Promise.all([
+    [thongKe, thongKeLoi, hieuSuat, thongKeNhanh, dangHoatDong] = await Promise.all([
       apiFetch('/dashboard/thong-ke?' + qsStr),
       apiFetch('/reports/thong-ke-loi?' + qsStr),
       apiFetch('/reports/hieu-suat-theo-nguoi?' + qsStr),
-      apiFetch('/orders'),
+      apiFetch('/orders/thong-ke-nhanh'),
       apiFetch('/auth/dang-hoat-dong'), // ai đang online — luôn ảnh chụp NGAY LÚC XEM, không theo kỳ chọn
     ]);
   } catch (e) {
@@ -382,21 +384,18 @@ async function taiBangDieuKhien() {
 
   demSo(document.getElementById('kpi-tong-don'), thongKe.tongSoDon);
 
-  const demCanhBao = { VANG: 0, CAM: 0, DO: 0 };
-  dsDon.forEach(o => { if (o.CanhBao && demCanhBao[o.CanhBao] !== undefined) demCanhBao[o.CanhBao]++; });
+  // Server đã đếm sẵn (routes/orders.js GET /thong-ke-nhanh) — chỉ cần đọc lại, không tự đếm từ danh
+  // sách đơn đầy đủ nữa (bổ sung 22/09/2026, theo yêu cầu người dùng cải thiện hiệu năng).
+  const demCanhBao = thongKeNhanh.demCanhBao;
   demSo(document.getElementById('kpi-vang'), demCanhBao.VANG);
   demSo(document.getElementById('kpi-cam'), demCanhBao.CAM);
   demSo(document.getElementById('kpi-do'), demCanhBao.DO);
 
-  // Khối lượng ĐANG xử lý ngay lúc này (không phải đã xong trong kỳ) — đếm trực tiếp từ dsDon vừa
-  // tải, dùng lại NguoiVanHanh/NguoiVeFile mà routes/orders.js đã tính sẵn (chỉ khác rỗng khi đơn
-  // đang đúng ở trạng thái "Đang chạy máy"/"Đang vẽ file").
-  const demChayMay = new Map();
-  const demVeFile = new Map();
-  dsDon.forEach(o => {
-    if (o.NguoiVanHanh) demChayMay.set(o.NguoiVanHanh, (demChayMay.get(o.NguoiVanHanh) || 0) + 1);
-    if (o.NguoiVeFile) demVeFile.set(o.NguoiVeFile, (demVeFile.get(o.NguoiVeFile) || 0) + 1);
-  });
+  // Khối lượng ĐANG xử lý ngay lúc này (không phải đã xong trong kỳ) — server trả sẵn dạng object
+  // {ten: soLuong}, chuyển thành Map để giữ nguyên các hàm renderXepHangDangXuLy()/moTaVaiTroVaViec()
+  // bên dưới (vốn dùng .entries()/.get()) không phải sửa gì thêm.
+  const demChayMay = new Map(Object.entries(thongKeNhanh.dangChayMay));
+  const demVeFile = new Map(Object.entries(thongKeNhanh.dangVeFile));
 
   document.getElementById('bdk-dang-hoat-dong').innerHTML = dangHoatDong.length === 0
     ? '<p style="color:#8fb8d9">Không có ai hoạt động trong 5 phút gần đây.</p>'

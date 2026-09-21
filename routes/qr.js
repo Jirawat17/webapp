@@ -281,48 +281,56 @@ router.post('/kich-ban/:scenarioId/xac-nhan-hang-loat', async (req, res) => {
   // ngày của vai trò nguoi_lay_phoi). orderService.update() TỰ ĐIỀN mảng này, route chỉ flush 1 lần.
   const gomThayDoiKho = scenario.column === 'TRANG_THAI_PHOI' ? [] : null;
 
-  for (const sttKey of sttKeys) {
-    try {
-      const row = banDoTheoKey.get(sttKey);
-      const giaTriHienTai = row ? row[scenario.column] : null;
+  // Xử lý theo lô nhỏ song song thay vì hoàn toàn tuần tự (bổ sung 22/09/2026, theo yêu cầu người dùng
+  // cải thiện hiệu năng — cùng cơ chế routes/orders.js#chayHangLoatSongSong) — an toàn vì
+  // orderService.update() tự khoá theo từng đơn, và việc GHI KHO THẬT đã tách hẳn ra khỏi vòng lặp
+  // (gomThayDoiKho ở trên, flush 1 lần sau khi xong).
+  const SO_SONG_SONG_QUET_HANG_LOAT = 10;
+  for (let i = 0; i < sttKeys.length; i += SO_SONG_SONG_QUET_HANG_LOAT) {
+    const lo = sttKeys.slice(i, i + SO_SONG_SONG_QUET_HANG_LOAT);
+    await Promise.all(lo.map(async (sttKey) => {
+      try {
+        const row = banDoTheoKey.get(sttKey);
+        const giaTriHienTai = row ? row[scenario.column] : null;
 
-      // Đơn khác Xưởng coi như không tồn tại (bổ sung 13/09/2026) — cùng thông báo với "không tìm
-      // thấy" thật.
-      if (!row || !orderService.coQuyenTheoXuong(user, row)) {
-        loi.push({ sttKey, lyDo: 'Không còn tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
-        ghiKhongCho(ghiNhatKyQuetHangLoat({ nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey, trangThaiCu: '', trangThaiMoi: '', ketQua: 'LOI_XAC_NHAN', ghiChu: 'Không tìm thấy khi xác nhận' }));
-        continue;
-      }
-      if (donDaKetThuc(row)) {
-        loi.push({ sttKey, lyDo: `Đơn đã ở trạng thái kết thúc "${row.TRANG_THAI_XUONG}" — không thể xác nhận` });
-        ghiKhongCho(ghiNhatKyQuetHangLoat({ nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey, trangThaiCu: row.TRANG_THAI_XUONG, trangThaiMoi: '', ketQua: 'LOI_DON_DA_KET_THUC', ghiChu: 'Đơn đã ở trạng thái kết thúc, chuyển sang trạng thái này ở giữa lúc quét và lúc xác nhận' }));
-        continue;
-      }
-      if (scenario.requireStatus && giaTriHienTai !== scenario.requireStatus) {
-        loi.push({ sttKey, lyDo: `Trạng thái đã đổi thành '${giaTriHienTai}' trước khi kịp xác nhận` });
-        ghiKhongCho(ghiNhatKyQuetHangLoat({ nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey, trangThaiCu: giaTriHienTai, trangThaiMoi: '', ketQua: 'LOI_XAC_NHAN', ghiChu: 'Trạng thái đã đổi trước khi xác nhận' }));
-        continue;
-      }
+        // Đơn khác Xưởng coi như không tồn tại (bổ sung 13/09/2026) — cùng thông báo với "không tìm
+        // thấy" thật.
+        if (!row || !orderService.coQuyenTheoXuong(user, row)) {
+          loi.push({ sttKey, lyDo: 'Không còn tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
+          ghiKhongCho(ghiNhatKyQuetHangLoat({ nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey, trangThaiCu: '', trangThaiMoi: '', ketQua: 'LOI_XAC_NHAN', ghiChu: 'Không tìm thấy khi xác nhận' }));
+          return;
+        }
+        if (donDaKetThuc(row)) {
+          loi.push({ sttKey, lyDo: `Đơn đã ở trạng thái kết thúc "${row.TRANG_THAI_XUONG}" — không thể xác nhận` });
+          ghiKhongCho(ghiNhatKyQuetHangLoat({ nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey, trangThaiCu: row.TRANG_THAI_XUONG, trangThaiMoi: '', ketQua: 'LOI_DON_DA_KET_THUC', ghiChu: 'Đơn đã ở trạng thái kết thúc, chuyển sang trạng thái này ở giữa lúc quét và lúc xác nhận' }));
+          return;
+        }
+        if (scenario.requireStatus && giaTriHienTai !== scenario.requireStatus) {
+          loi.push({ sttKey, lyDo: `Trạng thái đã đổi thành '${giaTriHienTai}' trước khi kịp xác nhận` });
+          ghiKhongCho(ghiNhatKyQuetHangLoat({ nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey, trangThaiCu: giaTriHienTai, trangThaiMoi: '', ketQua: 'LOI_XAC_NHAN', ghiChu: 'Trạng thái đã đổi trước khi xác nhận' }));
+          return;
+        }
 
-      const ketQuaUpdate = await orderService.update(sttKey, {
-        [scenario.column]: scenario.setStatus,
-        NguoiCapNhatCuoi: user.ten,
-        ThoiGianCapNhatCuoi: new Date().toISOString(),
-      }, user, { donDaDoc: { headers, row }, gomThayDoiKho }); // đã đọc thật ở trên, khỏi đọc lại lần nữa — mỗi mã quét trong lượt
-      // xác nhận hàng loạt trước đây tốn 2 lượt đọc toàn bộ tab Don_Hang_ALL, nay chỉ còn 1
+        const ketQuaUpdate = await orderService.update(sttKey, {
+          [scenario.column]: scenario.setStatus,
+          NguoiCapNhatCuoi: user.ten,
+          ThoiGianCapNhatCuoi: new Date().toISOString(),
+        }, user, { donDaDoc: { headers, row }, gomThayDoiKho }); // đã đọc thật ở trên, khỏi đọc lại lần nữa — mỗi mã quét trong lượt
+        // xác nhận hàng loạt trước đây tốn 2 lượt đọc toàn bộ tab Don_Hang_ALL, nay chỉ còn 1
 
-      thanhCong.push(sttKey);
-      ghiKhongCho(ghiLog({
-        nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_KICH_BAN_HANG_LOAT',
-        sttKey, chiTiet: {
-          scenario: scenario.label, cot: scenario.column, tu: giaTriHienTai, sang: scenario.setStatus,
-          ...(ketQuaUpdate._daTuDongChuyenTinhTrang ? { tuDongChuyenTinhTrangSang: ketQuaUpdate._tinhTrangTuDongMoi } : {}),
-        },
-      }));
-      ghiKhongCho(ghiNhatKyQuetHangLoat({ nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey, trangThaiCu: giaTriHienTai, trangThaiMoi: scenario.setStatus, ketQua: 'THANH_CONG' }));
-    } catch (err) {
-      loi.push({ sttKey, lyDo: err.message });
-    }
+        thanhCong.push(sttKey);
+        ghiKhongCho(ghiLog({
+          nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_KICH_BAN_HANG_LOAT',
+          sttKey, chiTiet: {
+            scenario: scenario.label, cot: scenario.column, tu: giaTriHienTai, sang: scenario.setStatus,
+            ...(ketQuaUpdate._daTuDongChuyenTinhTrang ? { tuDongChuyenTinhTrangSang: ketQuaUpdate._tinhTrangTuDongMoi } : {}),
+          },
+        }));
+        ghiKhongCho(ghiNhatKyQuetHangLoat({ nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey, trangThaiCu: giaTriHienTai, trangThaiMoi: scenario.setStatus, ketQua: 'THANH_CONG' }));
+      } catch (err) {
+        loi.push({ sttKey, lyDo: err.message });
+      }
+    }));
   }
 
   if (gomThayDoiKho && gomThayDoiKho.length > 0) {

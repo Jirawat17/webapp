@@ -5,7 +5,20 @@
 const cron = require('node-cron');
 const { chayQuetTuDongMuaTracking, chayQuetTrangThaiNeuDenLuot } = require('./trackingAutoService');
 
+// Chặn 2 lượt chồng nhau (bổ sung 22/09/2026, theo yêu cầu người dùng cải thiện hiệu năng) — lịch chạy
+// mỗi 2 phút, mỗi đơn đủ điều kiện gọi GKE thật (tạo vận đơn/lấy tem, có thể mất vài giây/đơn, xem
+// services/gkeService.js). Nếu 1 lượt xử lý nhiều đơn cùng lúc kéo dài quá 2 phút, tick kế tiếp trước
+// đây sẽ chạy CHỒNG lên lượt đang xử lý — cùng 1 đơn "đủ điều kiện" có thể bị 2 lượt cùng cố mua
+// tracking, rủi ro tạo trùng vận đơn thật bên GKE (dù goiApi() đã tự nhận diện "đã tồn tại" code 301,
+// vẫn tốn 1 lượt gọi thừa + có khoảng hở trước khi kịp nhận diện). Bỏ qua tick này thay vì xếp hàng —
+// lượt sau (2 phút nữa) sẽ tự quét lại đúng đơn đó nếu vẫn còn đủ điều kiện.
+let dangChayKiemTraTracking = false;
 async function chayKiemTraTracking() {
+  if (dangChayKiemTraTracking) {
+    console.log('[TrackingTuDong] Bỏ qua lượt quét mua tracking này — lượt trước vẫn đang chạy.');
+    return;
+  }
+  dangChayKiemTraTracking = true;
   try {
     const ketQua = await chayQuetTuDongMuaTracking();
     if (ketQua.daQuet && ketQua.soDonDaMua > 0) {
@@ -13,6 +26,8 @@ async function chayKiemTraTracking() {
     }
   } catch (err) {
     console.error('[TrackingTuDong] Lỗi khi quét:', err.message);
+  } finally {
+    dangChayKiemTraTracking = false;
   }
 }
 
@@ -24,7 +39,15 @@ async function chayKiemTraTracking() {
 // quyết định có đến lượt hay chưa (bổ sung 21/09/2026, theo yêu cầu người dùng — cho chỉnh khoảng cách
 // này trực tiếp trên UI thay vì sửa code/deploy lại; xem trackingAutoService.js#layCauHinhQuetTrangThai
 // để biết vì sao KHÔNG đổi lịch cron trực tiếp theo cấu hình).
+// Cùng lý do chặn chồng lượt như chayKiemTraTracking() ở trên — tick mỗi 5 phút, 1 lượt "đến hạn" xử lý
+// nhiều đơn có thể kéo dài hơn 5 phút (dù đã song song hoá ở nơi khác, vẫn tuần tự gọi GKE ở đây).
+let dangChayCapNhatTrangThaiTracking = false;
 async function chayCapNhatTrangThaiTracking() {
+  if (dangChayCapNhatTrangThaiTracking) {
+    console.log('[TrackingTuDong] Bỏ qua tick này — lượt cập nhật trạng thái tracking trước vẫn đang chạy.');
+    return;
+  }
+  dangChayCapNhatTrangThaiTracking = true;
   try {
     const ketQua = await chayQuetTrangThaiNeuDenLuot();
     if (ketQua.daChayLuotNay) {
@@ -32,6 +55,8 @@ async function chayCapNhatTrangThaiTracking() {
     }
   } catch (err) {
     console.error('[TrackingTuDong] Lỗi khi cập nhật trạng thái tracking:', err.message);
+  } finally {
+    dangChayCapNhatTrangThaiTracking = false;
   }
 }
 
