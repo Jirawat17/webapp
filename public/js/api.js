@@ -26,17 +26,28 @@ function escapeHtml(str) {
 // Trả về DANH SÁCH (0-2 phần tử) URL <img src> cần dựng cho 1 ảnh đại diện — không phải 1 chuỗi đơn
 // (đổi cùng ngày, theo yêu cầu người dùng: 1 số đơn dán link cả THƯ MỤC Drive chứa NHIỀU ảnh, vd đơn
 // 9U115/9U121.2 — cần hiện tối đa 2 ảnh thay vì 1). Ảnh MinIO LUÔN đúng 1 (không có khái niệm "nhiều
-// ảnh" cho MinIO) — trả mảng 1 phần tử. Ảnh khác LUÔN thử đủ 2 vị trí (?index=0/&index=1) qua proxy —
-// vị trí không có ảnh thật (vd url chỉ có 1 ảnh, hoặc link thư mục chỉ có đúng 1 ảnh bên trong) sẽ tự
-// 404 rồi tự "biến mất" nhờ onerror="this.remove()" ở nơi gọi, KHÔNG cần hỏi server trước "có bao
-// nhiêu ảnh" mới quyết định vẽ mấy thẻ <img> — đơn giản hoá client. Dùng CHUNG cho mọi nơi hiển thị ảnh
-// đại diện đơn (orders.html, order.html, my-orders.html, my-orders-ve-file.html).
-function urlAnhHienThiList(rawUrl) {
+// ảnh" cho MinIO) — trả mảng 1 phần tử. Dùng CHUNG cho mọi nơi hiển thị ảnh đại diện đơn (orders.html,
+// order.html, my-orders.html, my-orders-ve-file.html, don-hang-loat.html).
+//
+// CHỈ link THƯ MỤC Drive (xem services/driveService.js#layFolderIdTuLinkDrive) mới có thể có ảnh thứ
+// 2 — link file đơn/URL thường/trang Gemini LUÔN đúng 1 ảnh (xem services/anhNguonService.js#taiAnh).
+// Trước đây LUÔN thử cả ?index=0 lẫn &index=1 cho MỌI nguồn (bổ sung 21/09/2026, theo yêu cầu người
+// dùng cải thiện tốc độ Danh sách đơn hàng — nhận diện được thư mục Drive rồi mới quyết định số ảnh
+// cần thử, tránh 1 request 404 vô ích cho phần lớn đơn chỉ dán link 1 ảnh).
+//
+// `chieuRong` (bổ sung cùng ngày) — cạnh dài tối đa server resize về trước khi trả (xem
+// routes/photos.js#CAC_CHIEU_RONG_HOP_LE, PHẢI khớp đúng 2 giá trị dưới đây). Mặc định dùng cỡ NHỎ
+// (khớp khung ảnh 132-160px CSS ở thẻ đơn/lưới, x2 cho màn Retina) — nơi gọi duy nhất cần ảnh to hơn
+// (trang Chi tiết đơn, khung .anh-mau tới 320px) tự truyền CHIEU_RONG_ANH_CHI_TIET.
+const CHIEU_RONG_ANH_THU_NHO = 320;
+const CHIEU_RONG_ANH_CHI_TIET = 1000;
+function urlAnhHienThiList(rawUrl, chieuRong = CHIEU_RONG_ANH_THU_NHO) {
   if (!rawUrl) return [];
   const duongDan = String(rawUrl).replace(/^https?:\/\/[^/]+/, ''); // bỏ host nếu URL là dạng tuyệt đối cùng gốc, cùng quy ước storageService.js#proxyUrlToObjectKey
   if (duongDan.startsWith('/api/photos/file/')) return [rawUrl];
-  const goc = '/api/photos/anh-ngoai?url=' + encodeURIComponent(rawUrl);
-  return [goc + '&index=0', goc + '&index=1'];
+  const goc = '/api/photos/anh-ngoai?url=' + encodeURIComponent(rawUrl) + '&w=' + chieuRong;
+  const laThuMucDrive = /\/folders\//.test(rawUrl);
+  return laThuMucDrive ? [goc + '&index=0', goc + '&index=1'] : [goc + '&index=0'];
 }
 
 async function apiFetch(url, options = {}) {

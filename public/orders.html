@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=95">
-<script src="/js/theme.js?v=95"></script>
+<link rel="stylesheet" href="/css/style.css?v=96">
+<script src="/js/theme.js?v=96"></script>
 </head>
 <body>
 <div id="nav"></div>
@@ -231,8 +231,8 @@
   <button class="btn-hanh-dong phu" onclick="boChonTatCaDon()">Bỏ chọn</button>
 </div>
 
-<script src="/js/icons.js?v=95"></script>
-<script src="/js/api.js?v=95"></script>
+<script src="/js/icons.js?v=96"></script>
+<script src="/js/api.js?v=96"></script>
 <script>
 const NHAN_CANH_BAO = { VANG: 'Vàng · 3 ngày', CAM: 'Cam · 5 ngày', DO: 'Đỏ · 7 ngày' };
 
@@ -258,6 +258,12 @@ const DANH_SACH_XUONG = ['HN', 'BN', 'ChuaGanXuong'];
 
 let danhSachHienTai = [];
 let donDaChonSet = new Set();
+// Giới hạn số THẺ render/tải ảnh cùng lúc (bổ sung 21/09/2026, theo yêu cầu người dùng cải thiện tốc độ
+// Danh sách đơn hàng trên điện thoại) — CHỈ ảnh hưởng phần HIỂN THỊ (DOM + ảnh), KHÔNG đụng
+// danhSachHienTai/donDaChonSet (vẫn giữ NGUYÊN toàn bộ danh sách khớp lọc) — "Chọn tất cả"/bulk action
+// vẫn áp dụng cho MỌI đơn khớp lọc như cũ, kể cả đơn chưa render ra màn hình (xem chonTatCa()).
+const SO_DON_MOI_LUOT = 60;
+let soDonDangHienThi = SO_DON_MOI_LUOT;
 let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSachDon() cần biết vaiTro để
           // quyết định có hiện badge Xưởng hay không (CHỈ superadmin cần thấy — thu hẹp từ admin
           // 18/09/2026, theo yêu cầu người dùng, xem bên dưới)
@@ -554,6 +560,7 @@ async function taiDon() {
   }
 
   danhSachHienTai = list;
+  soDonDangHienThi = SO_DON_MOI_LUOT; // lọc/tải lại danh sách -> luôn bắt đầu lại từ lượt đầu
 
   const coLocNaoDangChon = trangThai || trangThaiPhoi || trangThaiVeFile || canhBao || xuong || uuTien || loai || kichThuoc || mauSac || hangVanChuyen || quocGiaTracking || tinhTrang || kh || tuNgay || denNgay;
   if (!coLocNaoDangChon) capNhatCacBoLocDong(list);
@@ -574,7 +581,12 @@ function renderDanhSachDon() {
 
   if (danhSachHienTai.length === 0) { el.innerHTML = `<div class="trang-thai-rong">${icon('package')}<p>Không có đơn nào khớp bộ lọc.</p></div>`; capNhatThanhHanhDong(); return; }
 
-  el.innerHTML = danhSachHienTai.map(o => {
+  // CHỈ render soDonDangHienThi thẻ đầu — danhSachHienTai vẫn giữ NGUYÊN đầy đủ cho "Chọn tất cả"/bulk
+  // action (xem khai báo soDonDangHienThi ở trên).
+  const dsDeRender = danhSachHienTai.slice(0, soDonDangHienThi);
+  const conLai = danhSachHienTai.length - dsDeRender.length;
+
+  el.innerHTML = dsDeRender.map(o => {
     const daChon = donDaChonSet.has(o.STT_Key);
     // Tô màu nền thẻ theo Xưởng (bổ sung 21/09/2026 — xem style.css .order-card.xuong-bn/xuong-hn) —
     // o.XUONG rỗng/undefined (vai trò admin bị ẩn giá trị này, xem orderService.js#anXuongVoiAdmin,
@@ -621,10 +633,17 @@ function renderDanhSachDon() {
         </div>
       </div>
     </div>`;
-  }).join('');
+  }).join('') + (conLai > 0
+    ? `<button type="button" class="btn-hanh-dong phu" style="grid-column:1/-1" onclick="taiThemDon()">Xem thêm (còn ${conLai} đơn)</button>`
+    : '');
 
   capNhatCheckboxChonTatCa();
   capNhatThanhHanhDong();
+}
+
+function taiThemDon() {
+  soDonDangHienThi += SO_DON_MOI_LUOT;
+  renderDanhSachDon();
 }
 
 function moChiTietDon(e, sttKeyEncoded) {

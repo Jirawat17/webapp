@@ -204,27 +204,34 @@ router.get('/file/*', async (req, res) => {
 // tự ẩn thẻ <img> đó qua onerror="this.remove()", không cần server báo trước "có bao nhiêu ảnh".
 // ============================================================
 const SO_ANH_TOI_DA_MOI_DON = 2;
-const _cacheAnhNgoai = new Map(); // url -> { danhSachAnh: [{buffer,contentType}], luuLucNao } — Map giữ thứ tự chèn, dùng làm LRU
-const _dangTaiAnhNgoai = new Map(); // url -> Promise<danhSachAnh> — gộp các lượt gọi TRÙNG url đến CÙNG LÚC (2 thẻ <img> index=0/1 của cùng 1 đơn tải gần như đồng thời) thành ĐÚNG 1 lượt tải thật, tránh gọi 2 lần Drive API cho cùng 1 thư mục — cùng kỹ thuật gopYeuCauTrung() đã có ở services/sheetsService.js.
+const _cacheAnhNgoai = new Map(); // khoa (url+chieuRong) -> { danhSachAnh: [{buffer,contentType}], luuLucNao } — Map giữ thứ tự chèn, dùng làm LRU
+const _dangTaiAnhNgoai = new Map(); // khoa -> Promise<danhSachAnh> — gộp các lượt gọi TRÙNG khoá đến CÙNG LÚC (2 thẻ <img> index=0/1 của cùng 1 đơn tải gần như đồng thời) thành ĐÚNG 1 lượt tải thật, tránh gọi 2 lần Drive API cho cùng 1 thư mục — cùng kỹ thuật gopYeuCauTrung() đã có ở services/sheetsService.js.
 const THOI_GIAN_GIU_CACHE_ANH_NGOAI_MS = 6 * 60 * 60 * 1000; // 6 giờ — ảnh cũ hiếm khi đổi nội dung, đủ dài để giảm tải Drive/Gemini
-const SO_URL_TOI_DA_TRONG_CACHE = 100; // giới hạn bộ nhớ — loại URL LÂU KHÔNG AI XEM LẠI nhất khi vượt ngưỡng
+const SO_URL_TOI_DA_TRONG_CACHE = 100; // giới hạn bộ nhớ — loại khoá LÂU KHÔNG AI XEM LẠI nhất khi vượt ngưỡng
 
-function layTuCacheAnhNgoai(url) {
-  const daCache = _cacheAnhNgoai.get(url);
+// Khoá cache GỘP url + chiều rộng resize (bổ sung 21/09/2026, theo yêu cầu người dùng — cho hiển thị
+// nhiều cỡ khác nhau, xem CAC_CHIEU_RONG_HOP_LE bên dưới) — CÙNG 1 url ở 2 cỡ khác nhau PHẢI là 2 mục
+// cache riêng biệt (bytes đã resize khác nhau), không thể tiếp tục dùng thẳng url làm khoá như trước.
+function khoaCacheAnhNgoai(url, chieuRong) {
+  return chieuRong + '::' + url;
+}
+
+function layTuCacheAnhNgoai(khoa) {
+  const daCache = _cacheAnhNgoai.get(khoa);
   if (!daCache) return null;
   if (Date.now() - daCache.luuLucNao > THOI_GIAN_GIU_CACHE_ANH_NGOAI_MS) {
-    _cacheAnhNgoai.delete(url);
+    _cacheAnhNgoai.delete(khoa);
     return null;
   }
   // Xoá rồi set lại — đưa key này lên CUỐI thứ tự chèn của Map, đúng ngữ nghĩa "vừa dùng gần nhất" cho LRU.
-  _cacheAnhNgoai.delete(url);
-  _cacheAnhNgoai.set(url, daCache);
+  _cacheAnhNgoai.delete(khoa);
+  _cacheAnhNgoai.set(khoa, daCache);
   return daCache.danhSachAnh;
 }
 
-function luuVaoCacheAnhNgoai(url, danhSachAnh) {
-  _cacheAnhNgoai.delete(url);
-  _cacheAnhNgoai.set(url, { danhSachAnh, luuLucNao: Date.now() });
+function luuVaoCacheAnhNgoai(khoa, danhSachAnh) {
+  _cacheAnhNgoai.delete(khoa);
+  _cacheAnhNgoai.set(khoa, { danhSachAnh, luuLucNao: Date.now() });
   while (_cacheAnhNgoai.size > SO_URL_TOI_DA_TRONG_CACHE) {
     _cacheAnhNgoai.delete(_cacheAnhNgoai.keys().next().value); // key đầu tiên = lâu không được dùng lại nhất
   }
@@ -247,12 +254,24 @@ function nhanDangContentTypeAnh(buffer) {
 // đọc đúng ảnh gốc như cũ. Dùng sharp (đã là dependency sẵn có, đang chạy ổn định cho perceptualHashService.js
 // — không phải thư viện mới). Lỗi decode (buffer hỏng/không phải ảnh) thì dùng nguyên bản gốc, không
 // làm mất ảnh chỉ vì nén thất bại.
-const CANH_DAI_TOI_DA_ANH_HIEN_THI = 1000;
+//
+// 2 CỠ (bổ sung cùng ngày, theo yêu cầu người dùng cải thiện tốc độ Danh sách đơn hàng) — PHẢI khớp
+// ĐÚNG CHIEU_RONG_ANH_THU_NHO/CHIEU_RONG_ANH_CHI_TIET trong public/js/api.js#urlAnhHienThiList(): 320
+// (thẻ đơn/lưới nhỏ) và 1000 (trang Chi tiết đơn, giữ nguyên mức cũ). Whitelist CỨNG thay vì nhận `w`
+// tuỳ ý từ client — tránh bị lợi dụng tạo vô số mục cache khác nhau (mỗi giá trị `w` lạ là 1 khoá cache
+// mới, có thể làm phình bộ nhớ) và tránh sharp phải resize theo kích thước không kiểm soát được.
+const CAC_CHIEU_RONG_HOP_LE = [320, 1000];
+const CHIEU_RONG_MAC_DINH = 1000;
+function chuanHoaChieuRong(giaTriTho) {
+  const gt = Number(giaTriTho);
+  return CAC_CHIEU_RONG_HOP_LE.includes(gt) ? gt : CHIEU_RONG_MAC_DINH;
+}
+
 const CHAT_LUONG_JPEG_HIEN_THI = 80;
-async function nenAnhHienThi(buffer) {
+async function nenAnhHienThi(buffer, chieuRong) {
   try {
     return await sharp(buffer)
-      .resize(CANH_DAI_TOI_DA_ANH_HIEN_THI, CANH_DAI_TOI_DA_ANH_HIEN_THI, { fit: 'inside', withoutEnlargement: true })
+      .resize(chieuRong, chieuRong, { fit: 'inside', withoutEnlargement: true })
       .jpeg({ quality: CHAT_LUONG_JPEG_HIEN_THI })
       .toBuffer();
   } catch (err) {
@@ -262,12 +281,13 @@ async function nenAnhHienThi(buffer) {
 }
 
 // Tải (có cache + gộp yêu cầu trùng lúc) danh sách TỐI ĐA SO_ANH_TOI_DA_MOI_DON ảnh cho 1 url — dùng
-// chung cho mọi index của CÙNG url (chia sẻ đúng 1 lượt tải thật, xem _dangTaiAnhNgoai ở trên).
-async function layDanhSachAnhCoCache(url) {
-  const daCache = layTuCacheAnhNgoai(url);
+// chung cho mọi index của CÙNG url+chieuRong (chia sẻ đúng 1 lượt tải thật, xem _dangTaiAnhNgoai ở trên).
+async function layDanhSachAnhCoCache(url, chieuRong) {
+  const khoa = khoaCacheAnhNgoai(url, chieuRong);
+  const daCache = layTuCacheAnhNgoai(khoa);
   if (daCache) return daCache;
 
-  const dangTai = _dangTaiAnhNgoai.get(url);
+  const dangTai = _dangTaiAnhNgoai.get(khoa);
   if (dangTai) return dangTai;
 
   const promise = (async () => {
@@ -279,17 +299,17 @@ async function layDanhSachAnhCoCache(url) {
       buffers = [];
     }
     const danhSachAnh = await Promise.all(buffers.slice(0, SO_ANH_TOI_DA_MOI_DON).map(async buffer => {
-      const nen = await nenAnhHienThi(buffer);
+      const nen = await nenAnhHienThi(buffer, chieuRong);
       return nen ? { buffer: nen, contentType: 'image/jpeg' } : { buffer, contentType: nhanDangContentTypeAnh(buffer) };
     }));
-    luuVaoCacheAnhNgoai(url, danhSachAnh);
+    luuVaoCacheAnhNgoai(khoa, danhSachAnh);
     return danhSachAnh;
   })();
-  _dangTaiAnhNgoai.set(url, promise);
+  _dangTaiAnhNgoai.set(khoa, promise);
   try {
     return await promise;
   } finally {
-    _dangTaiAnhNgoai.delete(url);
+    _dangTaiAnhNgoai.delete(khoa);
   }
 }
 
@@ -299,8 +319,9 @@ router.get('/anh-ngoai', async (req, res) => {
     return res.status(400).json({ error: 'Thiếu hoặc sai định dạng tham số url' });
   }
   const index = req.query.index === '1' ? 1 : 0; // chỉ đúng 2 giá trị hợp lệ (SO_ANH_TOI_DA_MOI_DON=2) — giá trị khác coi như 0
+  const chieuRong = chuanHoaChieuRong(req.query.w);
 
-  const danhSachAnh = await layDanhSachAnhCoCache(url);
+  const danhSachAnh = await layDanhSachAnhCoCache(url, chieuRong);
   const anh = danhSachAnh[index];
   if (!anh) {
     return res.status(404).json({ error: 'Không có ảnh ở vị trí này' });
