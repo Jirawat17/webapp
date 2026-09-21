@@ -89,6 +89,8 @@ function renderBangThongTin(don, viTri) {
     <tr><td>Ngày lên đơn</td><td>${don.NGAY_LEN_DON ? dinhDangNgay(don.NGAY_LEN_DON) : ''}</td></tr>
     <tr><td>Hãng vận chuyển</td><td>${escapeHtml(don.HANG_VAN_CHUYEN || '')}</td></tr>
     <tr><td>Mã tracking</td><td>${escapeHtml(don.TRACKING_ID || '')}</td></tr>
+    ${don.TRACKING_ID && don.TRANG_THAI_TRACKING ? `
+    <tr><td>Trạng thái vận chuyển</td><td>${escapeHtml(don.TRANG_THAI_TRACKING)}${don.THOI_GIAN_CAP_NHAT_TRACKING ? ` <span style="color:var(--color-text-faint)">(cập nhật ${escapeHtml(don.THOI_GIAN_CAP_NHAT_TRACKING)})</span>` : ''}</td></tr>` : ''}
     <tr><td>Người nhận</td><td>${escapeHtml(don.TEN || '')} ${don.SDT ? '· ' + escapeHtml(don.SDT) : ''}</td></tr>
     <tr><td>Địa chỉ giao hàng</td><td>${escapeHtml(dongDiaChi(don))}</td></tr>
     <tr><td>Mã IOSS</td><td>${escapeHtml(don.MA_IOSS || '')}</td></tr>

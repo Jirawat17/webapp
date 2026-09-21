@@ -609,6 +609,8 @@ function renderDanhSachDon() {
             <span class="badge badge-canh-bao ${o.CanhBao.toLowerCase()}">
               ${icon('alert')} ${NHAN_CANH_BAO[o.CanhBao] || o.CanhBao}
             </span>` : ''}
+          ${o.TRACKING_ID && o.TRANG_THAI_TRACKING ? `
+            <span class="badge trang-thai-info" title="Cập nhật lúc ${escapeHtml(o.THOI_GIAN_CAP_NHAT_TRACKING || '')}">${icon('package', {size:14})} ${escapeHtml(o.TRANG_THAI_TRACKING)}</span>` : ''}
           ${laSuperAdmin(user.vaiTro) ? `
             <span class="badge trang-thai-info">${icon('package', {size:14})} Xưởng: <strong>${escapeHtml(o.XUONG || '(chưa gán)')}</strong></span>` : ''}
         </div>

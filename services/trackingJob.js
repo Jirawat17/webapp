@@ -18,12 +18,14 @@ async function chayKiemTraTracking() {
 
 // Cập nhật trạng thái tracking THẬT (bổ sung 14/09/2026, theo yêu cầu người dùng — xem
 // docs/superpowers/specs/2026-09-14-cap-nhat-trang-thai-tracking-design.md) — lịch RIÊNG, thưa hơn hẳn
-// (mỗi 4 tiếng thay vì 2 phút) vì trạng thái vận chuyển đổi chậm hơn nhiều so với việc cần mua tracking
-// đúng lúc; cũng tránh gọi GKE quá dày cho tính năng chỉ mang tính thông tin, không gấp.
+// (mỗi 2 tiếng, rút từ 4 tiếng ngày 21/09/2026 theo yêu cầu người dùng — thấy được cập nhật sớm hơn;
+// đơn đã giao xong tự động bị loại khỏi lượt quét, xem daGiaoThanhCongGke() trong trackingAutoService.js,
+// nên rút ngắn không làm tăng vô hạn số lượt gọi GKE) so với lịch mua tracking (2 phút) vì trạng thái
+// vận chuyển đổi chậm hơn nhiều so với việc cần mua tracking đúng lúc.
 async function chayCapNhatTrangThaiTracking() {
   try {
     const ketQua = await chayQuetCapNhatTrangThaiTracking();
-    console.log(`[TrackingTuDong] Đã cập nhật trạng thái tracking cho ${ketQua.soDaCapNhat}/${ketQua.tongSoCoTracking} đơn có tracking.`);
+    console.log(`[TrackingTuDong] Đã cập nhật trạng thái tracking cho ${ketQua.soDaCapNhat}/${ketQua.tongSoCoTracking} đơn có tracking (bỏ qua ${ketQua.soDaBoQuaDaXong} đơn đã giao xong).`);
   } catch (err) {
     console.error('[TrackingTuDong] Lỗi khi cập nhật trạng thái tracking:', err.message);
   }
@@ -32,8 +34,8 @@ async function chayCapNhatTrangThaiTracking() {
 function batDauLichTracking() {
   cron.schedule('*/2 * * * *', chayKiemTraTracking);
   console.log('[TrackingTuDong] Đã bật lịch quét tự động mua tracking (mỗi 2 phút).');
-  cron.schedule('0 */4 * * *', chayCapNhatTrangThaiTracking);
-  console.log('[TrackingTuDong] Đã bật lịch cập nhật trạng thái tracking thật (mỗi 4 tiếng).');
+  cron.schedule('0 */2 * * *', chayCapNhatTrangThaiTracking);
+  console.log('[TrackingTuDong] Đã bật lịch cập nhật trạng thái tracking thật (mỗi 2 tiếng).');
 }
 
 module.exports = { batDauLichTracking, chayKiemTraTracking, chayCapNhatTrangThaiTracking };

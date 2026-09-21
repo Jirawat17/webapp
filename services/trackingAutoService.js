@@ -349,28 +349,40 @@ async function chayQuetTuDongMuaTracking() {
 // CẬP NHẬT TRẠNG THÁI TRACKING THẬT (bổ sung 14/09/2026, theo yêu cầu người dùng — xem
 // docs/superpowers/specs/2026-09-14-cap-nhat-trang-thai-tracking-design.md). HOÀN TOÀN TÁCH BIỆT khỏi
 // việc mua tracking ở trên — chỉ ĐỌC trạng thái vận chuyển thật từ GKE (đơn ĐÃ có TRACKING_ID rồi) và
-// ghi vào 2 cột MỚI, người dùng tự thêm vào Sheet: TRANG_THAI_TRACKING (mô tả mới nhất, tiếng Việt) +
-// THOI_GIAN_CAP_NHAT_TRACKING (mốc tra cứu thành công gần nhất). KHÔNG đụng TRANG_THAI_XUONG hay bất kỳ
-// cột pipeline nào khác — đã xác nhận rõ với người dùng, đây thuần là cột thông tin để xem.
+// ghi vào SQLite (trangThaiDbService — TRANG_THAI_TRACKING/THOI_GIAN_CAP_NHAT_TRACKING/MA_NODE_TRACKING/
+// MA_TRANG_THAI_NODE_TRACKING, LUÔN có sẵn trong schema, xem trangThaiDbService.js). KHÔNG đụng
+// TRANG_THAI_XUONG hay bất kỳ cột pipeline nào khác — đã xác nhận rõ với người dùng, đây thuần là cột
+// thông tin để xem.
 // ============================================================
 
-// Cập nhật cho ĐÚNG 1 đơn — bỏ qua sớm (không gọi GKE) nếu Sheet chưa có CẢ 2 cột đích, và nếu GKE
-// chưa có sự kiện tracking nào (mảng rỗng, label vừa tạo) thì cũng bỏ qua, thử lại ở lượt quét sau.
-// Trả {ok:false, lyDo} cho 3 trường hợp "không có gì để làm" này (KHÔNG throw — không phải lỗi thật,
-// tự thử lại được ở lượt sau) — vẫn THROW bình thường cho lỗi GKE/ghi Sheet thật (giữ đúng khuôn
-// muaTrackingChoDon() ở trên: throw cho lỗi thật, trả sentinel cho trường hợp "bỏ qua có chủ đích").
+// GKE dùng "order_node"/"node_status" làm mã trạng thái NỘI BỘ, ổn định qua mọi hãng vận chuyển/quốc
+// gia — KHÁC "lm_track_code" (mã riêng của TỪNG hãng vận chuyển chặng cuối, đổi tuỳ hãng/nước, KHÔNG
+// dùng để nhận diện trạng thái cuối được). Xác nhận qua dữ liệu THẬT 21/09/2026 (đơn 9PQ10, giao thành
+// công tại Mỹ qua USPS): chuỗi order_node OL002 (Tạo đơn) -> OL006 (Nhận kho) -> OL007 (Cân/lưu kho) ->
+// OL012 (Vận chuyển đường trục) -> OL015 (Cất cánh) -> OL016 (Hạ cánh) -> OL020 (Trích xuất dặm cuối) ->
+// OL021 (Quá cảnh dặm cuối) -> OL022 (Giao hàng dặm cuối) là pipeline CHÍNH của GKE. order_node="OL022"
+// xuất hiện 2 lần: node_status="555" (đang "Out for Delivery", CHƯA xong) rồi node_status="000" (giao
+// xong thật) — PHẢI xét ĐÚNG CẶP (order_node, node_status), vì node_status="000" một mình KHÔNG có
+// nghĩa "xong" (nhiều bước đầu như OL002/OL006 cũng có node_status="000").
+// CHƯA có mẫu thật cho "Đơn bất thường"/trả hàng — hàm này CHỈ nhận diện được case giao thành công. Đơn
+// ở trạng thái khác (kể cả bất thường/trả hàng) cứ tiếp tục bị quét bình thường — an toàn, chỉ tốn thêm
+// vài lượt gọi GKE, không dừng nhầm/sai dữ liệu. Bổ sung mã cho case đó sau khi có 1 đơn mẫu thật.
+const NODE_TRACKING_DA_GIAO_XONG = 'OL022';
+const TRANG_THAI_NODE_TRACKING_DA_GIAO_XONG = '000';
+function daGiaoThanhCongGke(maNode, maTrangThaiNode) {
+  return maNode === NODE_TRACKING_DA_GIAO_XONG && maTrangThaiNode === TRANG_THAI_NODE_TRACKING_DA_GIAO_XONG;
+}
+
+// Cập nhật cho ĐÚNG 1 đơn — bỏ qua sớm (không gọi GKE) nếu GKE chưa có sự kiện tracking nào (mảng rỗng,
+// label vừa tạo), thử lại ở lượt quét sau. Trả {ok:false, lyDo} cho trường hợp "không có gì để làm" này
+// (KHÔNG throw — không phải lỗi thật) — vẫn THROW bình thường cho lỗi GKE/ghi Sheet thật (giữ đúng
+// khuôn muaTrackingChoDon() ở trên: throw cho lỗi thật, trả sentinel cho trường hợp "bỏ qua có chủ ý").
 // Trả {ok:true, suKien} khi ghi thành công — `lyDo` (bổ sung 14/09/2026, theo yêu cầu người dùng, cho
 // nút "Tracking thủ công" ở routes/tracking.js hiện rõ LÝ DO thay vì chỉ biết chung chung "không có gì
 // mới") dùng ĐƯỢC cho cả job tự động (chỉ cần `.ok`, bỏ qua `.lyDo`) lẫn route thủ công (cần cả 2).
 async function capNhatTrangThaiTrackingChoDon(sttKey, cauHinhGke) {
   const { headers, row } = await orderService.getByKey(sttKey, { fresh: true });
   if (!row) return { ok: false, lyDo: 'Không tìm thấy đơn: ' + sttKey };
-
-  const coCotTrangThai = headers.includes('TRANG_THAI_TRACKING');
-  const coCotThoiGian = headers.includes('THOI_GIAN_CAP_NHAT_TRACKING');
-  if (!coCotTrangThai && !coCotThoiGian) {
-    return { ok: false, lyDo: 'Sheet chưa có cột TRANG_THAI_TRACKING hoặc THOI_GIAN_CAP_NHAT_TRACKING — cần thêm ít nhất 1 trong 2 cột vào tab Don_Hang_ALL trước.' };
-  }
 
   const lichSu = await gkeService.layLichSuTrackingGke(sttKey, cauHinhGke, []);
   if (lichSu.length === 0) {
@@ -379,24 +391,26 @@ async function capNhatTrangThaiTrackingChoDon(sttKey, cauHinhGke) {
 
   const suKienMoiNhat = lichSu[lichSu.length - 1];
   const capNhat = {
-    ...(coCotTrangThai ? { TRANG_THAI_TRACKING: suKienMoiNhat.track_name || suKienMoiNhat.track_name_en || '' } : {}),
-    ...(coCotThoiGian ? { THOI_GIAN_CAP_NHAT_TRACKING: dinhDangNgayGioNgan(new Date()) } : {}),
+    TRANG_THAI_TRACKING: suKienMoiNhat.track_name || suKienMoiNhat.track_name_en || '',
+    THOI_GIAN_CAP_NHAT_TRACKING: dinhDangNgayGioNgan(new Date()),
+    MA_NODE_TRACKING: suKienMoiNhat.order_node || '',
+    MA_TRANG_THAI_NODE_TRACKING: suKienMoiNhat.node_status || '',
   };
   await orderService.update(sttKey, capNhat, NGUOI_HE_THONG, { donDaDoc: { headers, row } });
   return { ok: true, suKien: suKienMoiNhat };
 }
 
-// 1 lượt quét — gọi từ services/trackingJob.js (cron mỗi vài giờ, thấp hơn hẳn lịch mua tracking vì
-// trạng thái vận chuyển đổi chậm hơn nhiều). Quét MỌI đơn đã có TRACKING_ID — chưa lọc bớt đơn đã ở
-// trạng thái cuối (giao xong/trả xong) vì cần thêm cột lưu mã trạng thái gốc mới suy được đáng tin cậy
-// (xem mục 4 trong file thiết kế) — để bản sau nếu số lượng đơn/giới hạn gọi GKE thật sự thành vấn đề.
+// 1 lượt quét — gọi từ services/trackingJob.js (cron mỗi 2 tiếng, thấp hơn hẳn lịch mua tracking vì
+// trạng thái vận chuyển đổi chậm hơn nhiều). Quét mọi đơn có TRACKING_ID, TRỪ đơn đã xác nhận giao
+// thành công ở lượt quét trước (daGiaoThanhCongGke — xem comment trên) để đỡ tốn lượt gọi GKE vô ích.
 // Lỗi ở 1 đơn chỉ log console, KHÔNG dừng cả lượt — đơn đó tự thử lại ở lượt sau.
 async function chayQuetCapNhatTrangThaiTracking() {
   const [{ rows }, cauHinhGke] = await Promise.all([orderService.getAll(), gkeService.layCauHinhGke()]);
   const donCoTracking = rows.filter(r => r.TRACKING_ID);
+  const donCanQuet = donCoTracking.filter(r => !daGiaoThanhCongGke(r.MA_NODE_TRACKING, r.MA_TRANG_THAI_NODE_TRACKING));
 
   let soDaCapNhat = 0;
-  for (const don of donCoTracking) {
+  for (const don of donCanQuet) {
     try {
       const ketQua = await capNhatTrangThaiTrackingChoDon(don.STT_Key, cauHinhGke);
       if (ketQua.ok) soDaCapNhat++;
@@ -405,7 +419,10 @@ async function chayQuetCapNhatTrangThaiTracking() {
     }
   }
 
-  return { daQuet: true, soDaCapNhat, tongSoCoTracking: donCoTracking.length };
+  return {
+    daQuet: true, soDaCapNhat, tongSoCoTracking: donCoTracking.length,
+    soDaBoQuaDaXong: donCoTracking.length - donCanQuet.length,
+  };
 }
 
 // Danh sách MỌI đơn AUTO_TRACKING="YES" kèm trạng thái — dùng cho trang public/tracking.html. Lọc

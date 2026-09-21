@@ -27,7 +27,13 @@ const CAC_COT = [
   'Anh_File_Theu_URL', 'Anh_Da_San_Xuat_URL', 'TRONG_LUONG', 'TRANG_THAI_XUONG', 'Anh_Da_Dan_Tem_URL',
   'NGUOI_VE_FILE', 'GHI_CHU_VE_FILE', 'NGUOI_CHAY_MAY', 'GHI_CHU_CHAY_MAY', 'HASH_ANH_MAU', 'NHOM_HANG_LOAT',
   'AUTO_TRACKING', 'THOI_GIAN_IN_MA', 'IN_LABEL', 'THOI_GIAN_IN_LABEL', 'DON_UU_TIEN', 'TAM_THOI',
-  'HANG_VAN_CHUYEN', 'TRACKING_ID', 'TRANG_THAI_TRACKING', 'THOI_GIAN_CAP_NHAT_TRACKING', 'KHACH_HANG',
+  'HANG_VAN_CHUYEN', 'TRACKING_ID', 'TRANG_THAI_TRACKING', 'THOI_GIAN_CAP_NHAT_TRACKING',
+  // MA_NODE_TRACKING/MA_TRANG_THAI_NODE_TRACKING (bổ sung 21/09/2026, theo yêu cầu người dùng — xem
+  // services/trackingAutoService.js#daGiaoThanhCongGke): lưu song song mã "order_node"/"node_status"
+  // GỐC của GKE (không phải chuỗi mô tả tiếng Việt TRANG_THAI_TRACKING) — dùng để nhận diện đơn đã giao
+  // xong THẬT (tránh quét GKE dư), vì node_status="000" một mình KHÔNG có nghĩa "xong" (nhiều bước đầu
+  // của pipeline cũng có node_status="000") — phải xét đúng cặp với order_node.
+  'MA_NODE_TRACKING', 'MA_TRANG_THAI_NODE_TRACKING', 'KHACH_HANG',
   'XUONG', 'NguoiCapNhatCuoi', 'ThoiGianCapNhatCuoi',
   // CanhBaoDaGui: không nằm trong danh sách 31 cột người dùng liệt kê (có thể chỉ là sót khi liệt kê) —
   // nhưng rà code xác nhận đây CŨNG là cột app tự ghi (services/canhBaoJob.js, cờ chống spam Telegram),
