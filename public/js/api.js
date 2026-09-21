@@ -97,10 +97,9 @@ function laSuperAdmin(vaiTro) {
 function trangChuTheoVaiTro(vaiTro) {
   if (vaiTro === 'nguoi_lay_phoi') return '/scan.html';
   if (vaiTro === 'san_xuat') return '/my-orders.html';
-  // Trung tâm hành động (bổ sung 14/09/2026, xem
-  // docs/superpowers/specs/2026-09-14-trung-tam-hanh-dong-design.md) — CHỈ admin, thay cho orders.html
-  // mặc định bên dưới, để đăng nhập vào là thấy ngay danh sách việc cần xử lý.
-  if (laAdmin(vaiTro)) return '/trung-tam-hanh-dong.html';
+  // Đơn hàng là trang mặc định sau đăng nhập cho MỌI vai trò còn lại (bổ sung 21/09/2026, theo yêu cầu
+  // người dùng) — kể cả admin/superadmin, THAY cho Trung tâm hành động trước đó (vẫn còn ở menu, chỉ
+  // không phải trang vào đầu tiên nữa).
   return '/orders.html';
 }
 
