@@ -90,11 +90,17 @@ document.getElementById('form-them').onsubmit = async (e) => {
 async function taiDanhSach() {
   const list = await apiFetch('/users');
   document.getElementById('bang-nv').innerHTML = `
-    <tr><th>Tên</th><th>Vai trò</th><th>Team</th><th>Xưởng</th><th>Trạng thái</th><th>Mật khẩu</th><th>Đăng nhập</th><th></th><th></th><th></th></tr>
+    <tr><th>Tên</th><th>Vai trò</th><th>Team</th><th>Xưởng</th><th>Trạng thái</th><th>Mật khẩu</th><th>Đăng nhập</th><th></th><th></th><th></th><th></th><th></th></tr>
     ${list.map(u => `
       <tr>
-        <td>${escapeHtml(u.Ten)}</td>
-        <td>${escapeHtml(NHAN_VAI_TRO[u.VaiTro] || u.VaiTro)}</td>
+        <td>${escapeHtml(u.Ten)}
+          <button class="btn-hanh-dong phu" data-ten="${escapeHtml(u.Ten)}" onclick="doiTen(this.dataset.ten)">Đổi tên</button>
+        </td>
+        <td>
+          <select data-ten="${escapeHtml(u.Ten)}" onchange="doiVaiTro(this.dataset.ten, this.value)">
+            ${Object.keys(NHAN_VAI_TRO).map(vt => `<option value="${vt}" ${u.VaiTro === vt ? 'selected' : ''}>${NHAN_VAI_TRO[vt]}</option>`).join('')}
+          </select>
+        </td>
         <td>${escapeHtml(u.Team || '')}</td>
         <td>
           <select data-ten="${escapeHtml(u.Ten)}" onchange="doiXuong(this.dataset.ten, this.value)">
@@ -106,6 +112,7 @@ async function taiDanhSach() {
         <td>${u.MatKhau ? escapeHtml(u.MatKhau) : '(chưa đặt)'}</td>
         <td>${String(u.HienThiDangNhap).toUpperCase() === 'FALSE' ? 'Đã ẩn' : 'Hiện công khai'}</td>
         <td><button class="btn-hanh-dong phu" data-ten="${escapeHtml(u.Ten)}" onclick="datMatKhau(this.dataset.ten)">Đặt mật khẩu</button></td>
+        <td><button class="btn-hanh-dong phu" data-ten="${escapeHtml(u.Ten)}" onclick="xoaMatKhau(this.dataset.ten)">Xoá mật khẩu</button></td>
         <td><button class="btn-hanh-dong phu" data-ten="${escapeHtml(u.Ten)}" data-kich-hoat="${escapeHtml(u.KichHoat)}" onclick="doiKichHoat(this.dataset.ten, this.dataset.kichHoat)">
           ${String(u.KichHoat).toUpperCase() === 'TRUE' ? 'Khoá' : 'Mở lại'}
         </button></td>
@@ -122,6 +129,34 @@ async function doiXuong(ten, xuongMoi) {
     await apiFetch('/users/' + encodeURIComponent(ten), { method: 'PUT', body: JSON.stringify({ Xuong: xuongMoi }) });
     await taiDanhSach();
   } catch (err) { alert(err.message); await taiDanhSach(); }
+}
+
+async function doiVaiTro(ten, vaiTroMoi) {
+  try {
+    await apiFetch('/users/' + encodeURIComponent(ten), { method: 'PUT', body: JSON.stringify({ VaiTro: vaiTroMoi }) });
+    await taiDanhSach();
+  } catch (err) { alert(err.message); await taiDanhSach(); }
+}
+
+async function doiTen(tenCu) {
+  const moi = prompt(`Nhập tên mới cho "${tenCu}":`, tenCu);
+  if (moi === null) return;
+  const tenMoi = moi.trim();
+  if (!tenMoi || tenMoi === tenCu) return;
+  try {
+    await apiFetch('/users/' + encodeURIComponent(tenCu), { method: 'PUT', body: JSON.stringify({ TenMoi: tenMoi }) });
+    await taiDanhSach();
+  } catch (err) { alert(err.message); }
+}
+
+// Xoá mật khẩu (bổ sung 21/09/2026) — tài khoản về trạng thái "chưa đặt", đăng nhập không cần PIN,
+// cùng ý nghĩa với tài khoản cũ chưa từng đặt mật khẩu — xem matKhauHopLe ở routes/users.js.
+async function xoaMatKhau(ten) {
+  if (!confirm(`Xoá mật khẩu của "${ten}"? Sau khi xoá, tài khoản này đăng nhập KHÔNG cần mật khẩu.`)) return;
+  try {
+    await apiFetch('/users/' + encodeURIComponent(ten), { method: 'PUT', body: JSON.stringify({ MatKhau: '' }) });
+    await taiDanhSach();
+  } catch (err) { alert(err.message); }
 }
 
 async function doiKichHoat(ten, kichHoatHienTai) {

@@ -55,16 +55,27 @@ router.post('/', async (req, res) => {
   res.json({ ok: true });
 });
 
-// Đổi vai trò / team / xưởng / khoá-mở tài khoản / đặt (lại) mật khẩu / ẩn-hiện khỏi màn hình đăng nhập
+// Đổi tên / vai trò / team / xưởng / khoá-mở tài khoản / đặt (lại)/xoá mật khẩu / ẩn-hiện khỏi màn hình
+// đăng nhập. MatKhau === '' (chuỗi rỗng, KHÁC undefined) = xoá mật khẩu, cho đăng nhập không cần PIN —
+// cùng trạng thái "chưa đặt" tài khoản cũ đã có sẵn từ trước (xem matKhauHopLe ở đầu file).
 router.put('/:ten', async (req, res) => {
   const user = taiKhoanService.layTheoTen(req.params.ten);
   if (!user) return res.status(404).json({ error: 'Không tìm thấy nhân viên' });
 
-  if (req.body.MatKhau !== undefined && !matKhauHopLe(req.body.MatKhau)) {
-    return res.status(400).json({ error: 'Mật khẩu phải là 1-4 chữ số' });
+  if (req.body.MatKhau !== undefined && req.body.MatKhau !== '' && !matKhauHopLe(req.body.MatKhau)) {
+    return res.status(400).json({ error: 'Mật khẩu phải là 1-4 chữ số (hoặc rỗng để xoá mật khẩu)' });
   }
   if (req.body.Xuong && !DANH_SACH_XUONG.includes(req.body.Xuong)) {
     return res.status(400).json({ error: `Xưởng không hợp lệ: "${req.body.Xuong}" — chỉ chấp nhận: ${DANH_SACH_XUONG.join(', ')}` });
+  }
+
+  let ten = req.params.ten;
+  if (req.body.TenMoi !== undefined) {
+    const tenMoi = String(req.body.TenMoi).trim();
+    if (!tenMoi) return res.status(400).json({ error: 'Tên mới không được để trống' });
+    if (tenMoi !== ten && taiKhoanService.layTheoTen(tenMoi)) return res.status(400).json({ error: 'Tên này đã tồn tại' });
+    taiKhoanService.doiTen(ten, tenMoi);
+    ten = tenMoi;
   }
 
   const updates = {};
@@ -72,8 +83,8 @@ router.put('/:ten', async (req, res) => {
     if (req.body[f] !== undefined) updates[f] = f === 'MatKhau' ? String(req.body[f]) : req.body[f];
   });
 
-  taiKhoanService.capNhat(req.params.ten, updates);
-  res.json({ ok: true });
+  taiKhoanService.capNhat(ten, updates);
+  res.json({ ok: true, ten });
 });
 
 module.exports = router;

@@ -84,4 +84,12 @@ function capNhat(ten, updates) {
   db.prepare(`UPDATE nguoi_dung SET ${cot.map(c => `${c} = ?`).join(', ')} WHERE Ten = ?`).run(...giaTri, String(ten));
 }
 
-module.exports = { CAC_COT, layTatCa, layTheoTen, themMoi, capNhat };
+// Đổi Ten (khoá chính) — nơi gọi tự kiểm tra tên mới chưa trùng ai trước khi gọi hàm này.
+// ponytail: KHÔNG cascade sang các chỗ khác đang lưu Ten dạng chuỗi tự do (NguoiVanHanh/NguoiVeFile/
+// NguoiChayMay trên đơn, NguoiDung trong log...) — các bản ghi CŨ vẫn hiện tên cũ, chỉ đăng nhập/bảng
+// nhân viên theo tên mới. Nâng cấp nếu cần: cập nhật hàng loạt các cột đó khi đổi tên.
+function doiTen(tenCu, tenMoi) {
+  db.prepare(`UPDATE nguoi_dung SET Ten = ? WHERE Ten = ?`).run(String(tenMoi).trim(), String(tenCu));
+}
+
+module.exports = { CAC_COT, layTatCa, layTheoTen, themMoi, capNhat, doiTen };
