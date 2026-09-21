@@ -3,7 +3,7 @@
 // ngắn — quét dày hơn để độ trễ thực tế sát với x đã chọn hơn (lệch tối đa ~2 phút thay vì tối đa 30
 // phút nếu dùng chung lịch với cảnh báo).
 const cron = require('node-cron');
-const { chayQuetTuDongMuaTracking, chayQuetCapNhatTrangThaiTracking } = require('./trackingAutoService');
+const { chayQuetTuDongMuaTracking, chayQuetTrangThaiNeuDenLuot } = require('./trackingAutoService');
 
 async function chayKiemTraTracking() {
   try {
@@ -17,15 +17,19 @@ async function chayKiemTraTracking() {
 }
 
 // Cập nhật trạng thái tracking THẬT (bổ sung 14/09/2026, theo yêu cầu người dùng — xem
-// docs/superpowers/specs/2026-09-14-cap-nhat-trang-thai-tracking-design.md) — lịch RIÊNG, thưa hơn hẳn
-// (mỗi 2 tiếng, rút từ 4 tiếng ngày 21/09/2026 theo yêu cầu người dùng — thấy được cập nhật sớm hơn;
-// đơn đã giao xong tự động bị loại khỏi lượt quét, xem daGiaoThanhCongGke() trong trackingAutoService.js,
-// nên rút ngắn không làm tăng vô hạn số lượt gọi GKE) so với lịch mua tracking (2 phút) vì trạng thái
-// vận chuyển đổi chậm hơn nhiều so với việc cần mua tracking đúng lúc.
+// docs/superpowers/specs/2026-09-14-cap-nhat-trang-thai-tracking-design.md) — lịch tick CỐ ĐỊNH mỗi 5
+// phút (KHÁC lịch mua tracking 2 phút ở trên vì trạng thái vận chuyển đổi chậm hơn nhiều), nhưng
+// KHÔNG chạy lượt quét thật ở MỌI tick — chayQuetTrangThaiNeuDenLuot() tự so sánh với khoảng cách
+// người dùng cấu hình trên giao diện Tracking (giờ+phút, mặc định 2 tiếng nếu chưa từng chỉnh) để
+// quyết định có đến lượt hay chưa (bổ sung 21/09/2026, theo yêu cầu người dùng — cho chỉnh khoảng cách
+// này trực tiếp trên UI thay vì sửa code/deploy lại; xem trackingAutoService.js#layCauHinhQuetTrangThai
+// để biết vì sao KHÔNG đổi lịch cron trực tiếp theo cấu hình).
 async function chayCapNhatTrangThaiTracking() {
   try {
-    const ketQua = await chayQuetCapNhatTrangThaiTracking();
-    console.log(`[TrackingTuDong] Đã cập nhật trạng thái tracking cho ${ketQua.soDaCapNhat}/${ketQua.tongSoCoTracking} đơn có tracking (bỏ qua ${ketQua.soDaBoQuaDaXong} đơn đã giao xong).`);
+    const ketQua = await chayQuetTrangThaiNeuDenLuot();
+    if (ketQua.daChayLuotNay) {
+      console.log(`[TrackingTuDong] Đã cập nhật trạng thái tracking cho ${ketQua.soDaCapNhat}/${ketQua.tongSoCoTracking} đơn có tracking (bỏ qua ${ketQua.soDaBoQuaDaXong} đơn đã giao xong).`);
+    }
   } catch (err) {
     console.error('[TrackingTuDong] Lỗi khi cập nhật trạng thái tracking:', err.message);
   }
@@ -34,8 +38,8 @@ async function chayCapNhatTrangThaiTracking() {
 function batDauLichTracking() {
   cron.schedule('*/2 * * * *', chayKiemTraTracking);
   console.log('[TrackingTuDong] Đã bật lịch quét tự động mua tracking (mỗi 2 phút).');
-  cron.schedule('0 */2 * * *', chayCapNhatTrangThaiTracking);
-  console.log('[TrackingTuDong] Đã bật lịch cập nhật trạng thái tracking thật (mỗi 2 tiếng).');
+  cron.schedule('*/5 * * * *', chayCapNhatTrangThaiTracking);
+  console.log('[TrackingTuDong] Đã bật lịch kiểm tra đến lượt cập nhật trạng thái tracking (tick mỗi 5 phút — khoảng cách quét thật tự chỉnh được ở giao diện Tracking).');
 }
 
 module.exports = { batDauLichTracking, chayKiemTraTracking, chayCapNhatTrangThaiTracking };

@@ -139,6 +139,23 @@
     </span>
   </div>
   <p id="thong-bao-luu" style="display:none;margin-top:8px"></p>
+
+  <!-- Khoảng cách quét trạng thái tracking THẬT từ GKE (bổ sung 21/09/2026, theo yêu cầu người dùng —
+       trước đó cố định 2 tiếng trong code, giờ cho tự chỉnh trên giao diện). CÙNG khuôn ô "Chờ ... giờ
+       ... phút" ở trên (2 ô cộng dồn thành 1 tổng số phút khi lưu — xem luuCauHinhQuetTrangThai()) —
+       KHÁC tính năng "Tự động mua tracking" ở trên (không có công tắc bật/tắt riêng, job này luôn chạy
+       nền, chỉ đổi được KHOẢNG CÁCH giữa các lượt). -->
+  <div class="cong-tac-hang" style="flex-wrap:wrap;row-gap:var(--space-2);margin-top:var(--space-2)">
+    <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap" title="Khoảng cách giữa các lượt tự động tra cứu trạng thái vận chuyển thật từ GKE cho đơn đã có mã tracking">
+      <span style="font-size:0.85rem;color:var(--color-text-muted)">Quét trạng thái vận chuyển mỗi</span>
+      <input type="number" id="so-gio-quet-trang-thai" min="0" step="1" style="width:56px" aria-label="Số giờ">
+      <span style="font-size:0.85rem">giờ</span>
+      <input type="number" id="so-phut-quet-trang-thai" min="0" step="1" style="width:56px" aria-label="Số phút">
+      <span style="font-size:0.85rem">phút</span>
+      <button type="button" class="btn-hanh-dong" id="btn-luu-cau-hinh-quet-trang-thai" style="padding:8px 16px">Lưu</button>
+    </span>
+  </div>
+  <p id="thong-bao-luu-quet-trang-thai" style="display:none;margin-top:8px"></p>
   <!-- Chuyển xuống đây (bổ sung 13/09/2026, theo yêu cầu người dùng) — trước đó nằm ngay dưới <h2>, đứng
        TRƯỚC cả ô quét/Cấu hình. Nội dung không đổi, chỉ đổi vị trí. -->
   <p style="color:var(--color-text-muted);margin:8px 0 0">Tự động mua tracking GKE cho đơn đánh dấu <code>AUTO_TRACKING = "YES"</code>, sau khi đủ thời gian chờ kể từ lúc đơn chuyển "Đã in mã".</p>
@@ -214,6 +231,8 @@ const KHOA_LAN_XEM_CUOI = 'trackingLanXemCuoi';
 
   await taiCauHinh();
   document.getElementById('btn-luu-cau-hinh').onclick = luuCauHinh;
+  await taiCauHinhQuetTrangThai();
+  document.getElementById('btn-luu-cau-hinh-quet-trang-thai').onclick = luuCauHinhQuetTrangThai;
   document.getElementById('btn-dong-popup').onclick = () => {
     document.getElementById('tk-popup-moi').style.display = 'none';
   };
@@ -465,6 +484,50 @@ async function luuCauHinh() {
   nut.textContent = 'Đang lưu...';
   try {
     await apiFetch('/tracking/cau-hinh', { method: 'POST', body: JSON.stringify({ bat, soPhutCho }) });
+    thongBao.style.display = 'block';
+    thongBao.style.color = '#16a34a';
+    thongBao.textContent = 'Đã lưu cấu hình.';
+  } catch (e) {
+    thongBao.style.display = 'block';
+    thongBao.style.color = 'var(--color-primary)';
+    thongBao.textContent = 'Lỗi khi lưu: ' + e.message;
+  } finally {
+    nut.disabled = false;
+    nut.textContent = 'Lưu';
+  }
+}
+
+async function taiCauHinhQuetTrangThai() {
+  try {
+    const cauHinh = await apiFetch('/tracking/cau-hinh-quet-trang-thai');
+    // Tách tổng số phút lưu ở DB thành giờ + phút để hiện lên 2 ô riêng — xem luuCauHinhQuetTrangThai().
+    document.getElementById('so-gio-quet-trang-thai').value = Math.floor(cauHinh.soPhutQuet / 60);
+    document.getElementById('so-phut-quet-trang-thai').value = cauHinh.soPhutQuet % 60;
+  } catch (e) {
+    document.getElementById('thong-bao-luu-quet-trang-thai').style.display = 'block';
+    document.getElementById('thong-bao-luu-quet-trang-thai').style.color = 'var(--color-primary)';
+    document.getElementById('thong-bao-luu-quet-trang-thai').textContent = 'Không tải được cấu hình: ' + e.message;
+  }
+}
+
+async function luuCauHinhQuetTrangThai() {
+  const soGio = Number(document.getElementById('so-gio-quet-trang-thai').value) || 0;
+  const soPhut = Number(document.getElementById('so-phut-quet-trang-thai').value) || 0;
+  const soPhutQuet = soGio * 60 + soPhut; // DB vẫn chỉ lưu 1 tổng số phút, không đổi schema
+  const thongBao = document.getElementById('thong-bao-luu-quet-trang-thai');
+  const nut = document.getElementById('btn-luu-cau-hinh-quet-trang-thai');
+
+  if (!Number.isFinite(soPhutQuet) || soPhutQuet < 5) {
+    thongBao.style.display = 'block';
+    thongBao.style.color = 'var(--color-primary)';
+    thongBao.textContent = 'Khoảng cách quét (giờ + phút) phải từ 5 phút trở lên.';
+    return;
+  }
+
+  nut.disabled = true;
+  nut.textContent = 'Đang lưu...';
+  try {
+    await apiFetch('/tracking/cau-hinh-quet-trang-thai', { method: 'POST', body: JSON.stringify({ soPhutQuet }) });
     thongBao.style.display = 'block';
     thongBao.style.color = '#16a34a';
     thongBao.textContent = 'Đã lưu cấu hình.';

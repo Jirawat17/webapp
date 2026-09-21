@@ -46,11 +46,29 @@ const CAC_COT_CAU_HINH_TRACKING = [
   'GkeShipperAddress', 'GkeShipperCity', 'GkeShipperProvince', 'GkeShipperPostcode',
   'GkeCustomsItemName', 'GkeCustomsHsCode', 'GkeCustomsDeclaredPrice', 'GkeCustomsCurrency',
   'CanNangMoiAoKg',
+  // SoPhutQuetTrangThai (bổ sung 21/09/2026, theo yêu cầu người dùng — cho chỉnh khoảng cách quét
+  // trạng thái tracking thật trên giao diện, theo giờ+phút cộng dồn, cùng khuôn SoPhutCho ở trên) +
+  // ThoiDiemQuetTrangThaiGanNhat (bookkeeping NỘI BỘ của job, KHÔNG hiện trên form cấu hình — xem
+  // services/trackingAutoService.js#chayQuetTrangThaiNeuDenLuot) — dùng CHUNG 1 dòng/1 bảng cho gọn,
+  // đúng tinh thần "cau_hinh_tracking gộp mọi thứ liên quan tới tracking" đã có sẵn.
+  'SoPhutQuetTrangThai', 'ThoiDiemQuetTrangThaiGanNhat',
 ];
 db.exec(`CREATE TABLE IF NOT EXISTS cau_hinh_tracking (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   ${CAC_COT_CAU_HINH_TRACKING.map(c => `${c} TEXT NOT NULL DEFAULT ''`).join(',\n  ')}
 )`);
+
+// Tự thêm cột MỚI vào bảng ĐÃ TỒN TẠI (bổ sung 21/09/2026, cùng lý do/khuôn với
+// trangThaiDbService.js#CAC_COT — CREATE TABLE IF NOT EXISTS ở trên là NO-OP nếu bảng đã tồn tại từ
+// trước, KHÔNG tự thêm cột mới. Thiếu bước này, thêm SoPhutQuetTrangThai/ThoiDiemQuetTrangThaiGanNhat
+// vào mảng trên mà chưa xoá+tạo lại DB thật trên VPS sẽ khiến layCauHinhTracking() lỗi "no such column"
+// ngay khi deploy — hỏng LUÔN CẢ cấu hình GKE hiện có (username/password...) vì SELECT chung 1 câu.
+const cacCotCauHinhTrackingHienCo = new Set(db.prepare(`PRAGMA table_info(cau_hinh_tracking)`).all().map(c => c.name));
+for (const cot of CAC_COT_CAU_HINH_TRACKING) {
+  if (!cacCotCauHinhTrackingHienCo.has(cot)) {
+    db.exec(`ALTER TABLE cau_hinh_tracking ADD COLUMN ${cot} TEXT NOT NULL DEFAULT ''`);
+  }
+}
 
 function layCauHinhTracking() {
   return db.prepare(`SELECT ${CAC_COT_CAU_HINH_TRACKING.join(', ')} FROM cau_hinh_tracking WHERE id = 1`).get();

@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   layCauHinh, luuCauHinh, layDanhSachDonAutoTracking, layLogTracking, muaTrackingChoDon,
   inLabelChoDon, muaTrackingVaInLabelChoDon, capNhatTrangThaiTrackingChoDon,
+  layCauHinhQuetTrangThai, luuCauHinhQuetTrangThai, SO_PHUT_QUET_TRANG_THAI_TOI_THIEU,
 } = require('../services/trackingAutoService');
 const { layCauHinhGke, luuCauHinhGke, gopCacTemPdf } = require('../services/gkeService');
 const orderService = require('../services/orderService');
@@ -35,6 +36,22 @@ router.post('/cau-hinh', async (req, res) => {
     return res.status(400).json({ error: 'Số phút chờ phải là số dương' });
   }
   await luuCauHinh({ bat, soPhutCho: soPhut });
+  res.json({ ok: true });
+});
+
+// Khoảng cách quét trạng thái tracking thật (bổ sung 21/09/2026, theo yêu cầu người dùng — cho chỉnh
+// trực tiếp trên giao diện, xem trackingAutoService.js#layCauHinhQuetTrangThai để biết lý do KHÔNG
+// đổi lịch cron trực tiếp theo giá trị này).
+router.get('/cau-hinh-quet-trang-thai', (req, res) => {
+  res.json(layCauHinhQuetTrangThai());
+});
+
+router.post('/cau-hinh-quet-trang-thai', (req, res) => {
+  const soPhutQuet = Number(req.body.soPhutQuet);
+  if (!Number.isFinite(soPhutQuet) || soPhutQuet < SO_PHUT_QUET_TRANG_THAI_TOI_THIEU) {
+    return res.status(400).json({ error: `Khoảng cách quét (giờ + phút) phải từ ${SO_PHUT_QUET_TRANG_THAI_TOI_THIEU} phút trở lên.` });
+  }
+  luuCauHinhQuetTrangThai({ soPhutQuet });
   res.json({ ok: true });
 });
 

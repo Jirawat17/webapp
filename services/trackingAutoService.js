@@ -90,6 +90,28 @@ async function luuCauHinh({ bat, soPhutCho }) {
   caiDatDbService.datCauHinhTracking({ BatTuDongMuaTracking: bat ? 'TRUE' : 'FALSE', SoPhutCho: soPhutCho });
 }
 
+// Khoảng cách quét trạng thái tracking thật — bổ sung 21/09/2026, theo yêu cầu người dùng: cho chỉnh
+// trực tiếp trên giao diện Tracking (giờ+phút, cùng khuôn SoPhutCho ở trên), KHÔNG cần sửa code/deploy
+// lại. node-cron KHÔNG thể biểu diễn "mỗi X giờ Y phút" tuỳ ý bằng 1 pattern cố định (vd 90 phút không
+// chia hết cho giờ) — nên KHÔNG đổi lịch cron theo cấu hình. Thay vào đó services/trackingJob.js giữ 1
+// lịch tick CỐ ĐỊNH tần suất cao hơn (mỗi 5 phút), còn chayQuetTrangThaiNeuDenLuot() bên dưới tự so
+// sánh thời gian đã trôi qua kể từ lần quét trước (ThoiDiemQuetTrangThaiGanNhat — bookkeeping NỘI BỘ,
+// KHÔNG hiện trên form cấu hình) với khoảng cách đã cấu hình để quyết định có thực sự quét lượt này hay
+// không — cách này biểu diễn được MỌI khoảng thời gian tuỳ ý, không giới hạn bởi cú pháp cron.
+const SO_PHUT_QUET_TRANG_THAI_MAC_DINH = 120; // giữ đúng hành vi cũ (2 tiếng) nếu chưa từng cấu hình
+const SO_PHUT_QUET_TRANG_THAI_TOI_THIEU = 5; // = đúng tần suất tick ở trackingJob.js, đặt thấp hơn vô nghĩa
+
+function layCauHinhQuetTrangThai() {
+  const dong = caiDatDbService.layCauHinhTracking();
+  return {
+    soPhutQuet: dong && Number(dong.SoPhutQuetTrangThai) > 0 ? Number(dong.SoPhutQuetTrangThai) : SO_PHUT_QUET_TRANG_THAI_MAC_DINH,
+  };
+}
+
+function luuCauHinhQuetTrangThai({ soPhutQuet }) {
+  caiDatDbService.datCauHinhTracking({ SoPhutQuetTrangThai: soPhutQuet });
+}
+
 // Mua tracking cho 1 đơn — tạo vận đơn (nếu chưa từng) → ghi placeholder chống trùng → lấy tem → ghi
 // TRACKING_ID/HANG_VAN_CHUYEN thật. KHÔNG đổi TRANG_THAI_XUONG — việc mua tracking (hàm này) và việc
 // đổi trạng thái "ĐÃ DÁN TEM" (qua chụp ảnh xác nhận, xem routes/photos.js mốc da_dan_tem) là 2 THAO
@@ -425,6 +447,25 @@ async function chayQuetCapNhatTrangThaiTracking() {
   };
 }
 
+// Gọi ở MỖI lượt tick cố định (5 phút, xem services/trackingJob.js) — tự quyết định có ĐẾN LƯỢT quét
+// thật hay chưa, dựa vào ThoiDiemQuetTrangThaiGanNhat so với khoảng cách đã cấu hình
+// (layCauHinhQuetTrangThai). Chưa từng quét lần nào (server mới cài/mới migrate) hoặc mốc lưu bị hỏng
+// (không parse được thành ngày hợp lệ) đều coi như "đến lượt ngay" — an toàn hơn là kẹt cứng không bao
+// giờ quét được. Đánh dấu mốc MỚI ngay TRƯỚC khi chạy lượt quét thật (không phải sau) — đơn giản, chấp
+// nhận lệch vài giây/phút do thời gian chạy thật của lượt quét (không đáng kể so với khoảng cách tính
+// bằng giờ), đồng thời tránh 2 tick liền kề cùng tưởng "đến lượt" nếu lượt quét trước chạy lâu.
+async function chayQuetTrangThaiNeuDenLuot() {
+  const dong = caiDatDbService.layCauHinhTracking();
+  const { soPhutQuet } = layCauHinhQuetTrangThai();
+  const lanTruoc = dong && dong.ThoiDiemQuetTrangThaiGanNhat ? new Date(dong.ThoiDiemQuetTrangThaiGanNhat).getTime() : NaN;
+  const daDuGio = isNaN(lanTruoc) || (Date.now() - lanTruoc) >= soPhutQuet * 60 * 1000;
+  if (!daDuGio) return { daChayLuotNay: false };
+
+  caiDatDbService.datCauHinhTracking({ ThoiDiemQuetTrangThaiGanNhat: new Date().toISOString() });
+  const ketQua = await chayQuetCapNhatTrangThaiTracking();
+  return { daChayLuotNay: true, ...ketQua };
+}
+
 // Danh sách MỌI đơn AUTO_TRACKING="YES" kèm trạng thái — dùng cho trang public/tracking.html. Lọc
 // theo Xưởng của `user` (bổ sung 13/09/2026, theo yêu cầu người dùng — admin xem hết, vai trò khác
 // chỉ thấy đơn cùng Xưởng, xem orderService.js#locTheoXuong) — hàm này CHỈ dùng cho route GET
@@ -466,5 +507,6 @@ async function layDanhSachDonAutoTracking(user) {
 module.exports = {
   layCauHinh, luuCauHinh, chayQuetTuDongMuaTracking, layDanhSachDonAutoTracking, layLogTracking,
   muaTrackingChoDon, inLabelChoDon, muaTrackingVaInLabelChoDon,
-  capNhatTrangThaiTrackingChoDon, chayQuetCapNhatTrangThaiTracking,
+  capNhatTrangThaiTrackingChoDon, chayQuetCapNhatTrangThaiTracking, chayQuetTrangThaiNeuDenLuot,
+  layCauHinhQuetTrangThai, luuCauHinhQuetTrangThai, SO_PHUT_QUET_TRANG_THAI_TOI_THIEU,
 };
