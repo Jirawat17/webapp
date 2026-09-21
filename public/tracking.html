@@ -229,20 +229,17 @@ const KHOA_LAN_XEM_CUOI = 'trackingLanXemCuoi';
 
   document.getElementById('o-quet-in-label').focus();
 
-  await taiCauHinh();
   document.getElementById('btn-luu-cau-hinh').onclick = luuCauHinh;
-  await taiCauHinhQuetTrangThai();
   document.getElementById('btn-luu-cau-hinh-quet-trang-thai').onclick = luuCauHinhQuetTrangThai;
   document.getElementById('btn-dong-popup').onclick = () => {
     document.getElementById('tk-popup-moi').style.display = 'none';
   };
-
-  await taiCauHinhGke();
   document.getElementById('btn-luu-cau-hinh-gke').onclick = luuCauHinhGke;
 
-  await taiDanhSach();
-
-  await taiLogs();
+  // 5 lượt tải ban đầu ĐỘC LẬP nhau (cấu hình mua tracking/quét trạng thái/GKE/danh sách đơn/logs) —
+  // chạy SONG SONG thay vì xếp hàng tuần tự (bổ sung 22/09/2026, theo yêu cầu người dùng cải thiện tốc
+  // độ tải trang) — trước đây thời gian tải = TỔNG 5 round-trip, giờ = round-trip CHẬM NHẤT trong số đó.
+  await Promise.all([taiCauHinh(), taiCauHinhQuetTrangThai(), taiCauHinhGke(), taiDanhSach(), taiLogs()]);
   // Cùng chu kỳ với Bảng điều khiển ("hiển thị động" — tự tải lại, không cần bấm gì thêm).
   setInterval(taiLogs, 60000);
 })();

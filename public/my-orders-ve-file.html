@@ -237,6 +237,13 @@ let danhSachToiVe = [];
 let donToiVeChonSet = new Set();
 let coLocNaoDangChonToiVe = false;
 
+// Giới hạn số THẺ render/tải ảnh cùng lúc (bổ sung 22/09/2026, theo yêu cầu người dùng cải thiện hiệu
+// năng — cùng cơ chế đã áp dụng ở orders.html) — CHỈ ảnh hưởng hiển thị, danhSach*/don*ChonSet vẫn giữ
+// đầy đủ nên "Chọn tất cả" không đổi.
+const SO_DON_MOI_LUOT = 60;
+let soDangHienThiCanVe = SO_DON_MOI_LUOT;
+let soDangHienThiToiVe = SO_DON_MOI_LUOT;
+
 // Trạng thái và Phôi ĐƯA VÀO bộ lọc (khác trang my-orders.html của san_xuat, nơi 2 trường này luôn
 // cố định 1 giá trị nên bị loại) — ở đây "Đơn cần vẽ file"/"Đơn vẽ file của tôi" có thể là "Đã in mã"
 // HOẶC "LỖI SẢN XUẤT CẦN LÀM LẠI" (Trạng thái), và phôi có thể "Chưa"/"Đã lấy phôi" (2 việc phôi/vẽ
@@ -251,14 +258,19 @@ const CAC_O_LOC_TV = ['loc-trang-thai-tv', 'loc-phoi-tv', 'loc-kh-tv', 'loc-tu-n
 
   // "Chỉ định người vẽ file" — CHỈ admin (xem docs/superpowers/specs/2026-09-08-don-cua-toi-ve-file-design.md).
   // display:contents (không phải '') vì khối này nằm trong .thanh-hanh-dong-hang-loat (flex container).
+  // Tải SONG SONG với 2 danh sách đơn bên dưới thay vì đợi xong mới bắt đầu (bổ sung 22/09/2026, theo
+  // yêu cầu người dùng cải thiện tốc độ tải trang) — độc lập hoàn toàn.
+  let taiDsNhanVienVeFile = Promise.resolve();
   if (laAdmin(user.vaiTro)) {
     document.getElementById('khoi-chi-dinh-nguoi-ve-file').style.display = 'contents';
-    try {
-      const dsNhanVien = await apiFetch('/users/tom-tat');
-      const dsVeFile = dsNhanVien.filter(u => u.VaiTro === 've_file' && String(u.KichHoat).toUpperCase() === 'TRUE');
-      document.getElementById('nguoi-ve-file-dich').innerHTML = '<option value="">Chỉ định người vẽ file...</option>' +
-        dsVeFile.map(u => `<option value="${escapeHtml(u.Ten)}">${escapeHtml(u.Ten)}</option>`).join('');
-    } catch (e) { /* không tải được danh sách nhân viên — ô chọn giữ nguyên rỗng, không chặn tải trang */ }
+    taiDsNhanVienVeFile = (async () => {
+      try {
+        const dsNhanVien = await apiFetch('/users/tom-tat');
+        const dsVeFile = dsNhanVien.filter(u => u.VaiTro === 've_file' && String(u.KichHoat).toUpperCase() === 'TRUE');
+        document.getElementById('nguoi-ve-file-dich').innerHTML = '<option value="">Chỉ định người vẽ file...</option>' +
+          dsVeFile.map(u => `<option value="${escapeHtml(u.Ten)}">${escapeHtml(u.Ten)}</option>`).join('');
+      } catch (e) { /* không tải được danh sách nhân viên — ô chọn giữ nguyên rỗng, không chặn tải trang */ }
+    })();
 
     // "Người vẽ file" — ô lọc mục 2, CHỈ admin (ve_file luôn tự lọc đúng tên mình, xem taiDonToiVe()).
     document.getElementById('loc-nguoi-ve-file-wrap').style.display = '';
@@ -273,7 +285,7 @@ const CAC_O_LOC_TV = ['loc-trang-thai-tv', 'loc-phoi-tv', 'loc-kh-tv', 'loc-tu-n
   ganSuKienLocSapXep('-cv', taiDonCanVe, boChonTatCaDonCanVe);
   ganSuKienLocSapXep('-tv', taiDonToiVe, boChonTatCaDonToiVe);
 
-  await Promise.all([taiDonCanVe(), taiDonToiVe()]);
+  await Promise.all([taiDonCanVe(), taiDonToiVe(), taiDsNhanVienVeFile]);
 })();
 
 // Gắn onchange/oninput cho đúng bộ ô lọc + Chỉ đơn hàng loạt + Sắp xếp của 1 mục — dùng chung cho cả
@@ -415,6 +427,7 @@ async function taiDonCanVe() {
     el.innerHTML = `<p>Không tải được danh sách: ${escapeHtml(e.message)}</p>`;
     return;
   }
+  soDangHienThiCanVe = SO_DON_MOI_LUOT; // lọc/tải lại -> luôn bắt đầu lại từ lượt đầu
 
   const cacSttHienTai = new Set(danhSachCanVe.map(o => o.STT_Key));
   [...donCanVeChonSet].forEach(k => { if (!cacSttHienTai.has(k)) donCanVeChonSet.delete(k); });
@@ -435,7 +448,10 @@ function renderDanhSachCanVe() {
     return;
   }
 
-  el.innerHTML = danhSachCanVe.map(o => {
+  const dsDeRender = danhSachCanVe.slice(0, soDangHienThiCanVe);
+  const conLai = danhSachCanVe.length - dsDeRender.length;
+
+  el.innerHTML = dsDeRender.map(o => {
     const daChon = donCanVeChonSet.has(o.STT_Key);
     return `
     <div class="order-card ${daChon ? 'da-chon' : ''}" data-stt-can-ve="${escapeHtml(o.STT_Key)}"
@@ -461,7 +477,9 @@ function renderDanhSachCanVe() {
         </div>
       </div>
     </div>`;
-  }).join('');
+  }).join('') + (conLai > 0
+    ? `<button type="button" class="btn-hanh-dong phu" style="grid-column:1/-1" onclick="soDangHienThiCanVe+=SO_DON_MOI_LUOT;renderDanhSachCanVe()">Xem thêm (còn ${conLai} đơn)</button>`
+    : '');
 
   capNhatCheckboxChonTatCaCanVe();
   capNhatThanhHanhDongCanVe();
@@ -475,16 +493,29 @@ function toggleChonDonCanVe(sttKey, daChon) {
   capNhatThanhHanhDongCanVe();
 }
 
+// Toggle TRỰC TIẾP trên DOM đã render thay vì gọi lại renderDanhSachCanVe() (dựng lại TOÀN BỘ qua
+// innerHTML) — bổ sung 22/09/2026, theo yêu cầu người dùng cải thiện hiệu năng.
 function chonTatCaCanVe(daChonHet) {
   danhSachCanVe.forEach(o => {
     if (daChonHet) donCanVeChonSet.add(o.STT_Key); else donCanVeChonSet.delete(o.STT_Key);
   });
-  renderDanhSachCanVe();
+  document.querySelectorAll('#danh-sach-can-ve [data-stt-can-ve]').forEach(the => {
+    the.classList.toggle('da-chon', daChonHet);
+    const cb = the.querySelector('.order-checkbox');
+    if (cb) cb.checked = daChonHet;
+  });
+  capNhatThanhHanhDongCanVe();
 }
 
 function boChonTatCaDonCanVe() {
   donCanVeChonSet.clear();
-  renderDanhSachCanVe();
+  document.querySelectorAll('#danh-sach-can-ve [data-stt-can-ve]').forEach(the => {
+    the.classList.remove('da-chon');
+    const cb = the.querySelector('.order-checkbox');
+    if (cb) cb.checked = false;
+  });
+  document.getElementById('chon-tat-ca-can-ve').checked = false;
+  capNhatThanhHanhDongCanVe();
 }
 
 function capNhatCheckboxChonTatCaCanVe() {
@@ -619,6 +650,7 @@ async function taiDonToiVe() {
     return;
   }
   danhSachToiVe = list;
+  soDangHienThiToiVe = SO_DON_MOI_LUOT; // lọc/tải lại -> luôn bắt đầu lại từ lượt đầu
 
   // Chỉ đổ lại danh sách người vẽ file trong ô lọc khi CHƯA lọc theo người nào — nếu đã lọc rồi mà
   // vẫn đổ lại theo đúng danh sách đã bị thu hẹp (chỉ còn 1 người) thì các tên khác sẽ biến mất khỏi
@@ -651,7 +683,10 @@ function renderDanhSachToiVe() {
     return;
   }
 
-  el.innerHTML = danhSachToiVe.map(o => {
+  const dsDeRender = danhSachToiVe.slice(0, soDangHienThiToiVe);
+  const conLai = danhSachToiVe.length - dsDeRender.length;
+
+  el.innerHTML = dsDeRender.map(o => {
     const daChon = donToiVeChonSet.has(o.STT_Key);
     return `
     <div class="order-card ${daChon ? 'da-chon' : ''}" data-stt-toi-ve="${escapeHtml(o.STT_Key)}"
@@ -679,7 +714,9 @@ function renderDanhSachToiVe() {
         </div>
       </div>
     </div>`;
-  }).join('');
+  }).join('') + (conLai > 0
+    ? `<button type="button" class="btn-hanh-dong phu" style="grid-column:1/-1" onclick="soDangHienThiToiVe+=SO_DON_MOI_LUOT;renderDanhSachToiVe()">Xem thêm (còn ${conLai} đơn)</button>`
+    : '');
 
   capNhatCheckboxChonTatCaToiVe();
   capNhatThanhHanhDongToiVe();
@@ -693,16 +730,29 @@ function toggleChonDonToiVe(sttKey, daChon) {
   capNhatThanhHanhDongToiVe();
 }
 
+// Toggle TRỰC TIẾP trên DOM đã render thay vì gọi lại renderDanhSachToiVe() (dựng lại TOÀN BỘ qua
+// innerHTML) — bổ sung 22/09/2026, theo yêu cầu người dùng cải thiện hiệu năng.
 function chonTatCaToiVe(daChonHet) {
   danhSachToiVe.forEach(o => {
     if (daChonHet) donToiVeChonSet.add(o.STT_Key); else donToiVeChonSet.delete(o.STT_Key);
   });
-  renderDanhSachToiVe();
+  document.querySelectorAll('#danh-sach-toi-ve [data-stt-toi-ve]').forEach(the => {
+    the.classList.toggle('da-chon', daChonHet);
+    const cb = the.querySelector('.order-checkbox');
+    if (cb) cb.checked = daChonHet;
+  });
+  capNhatThanhHanhDongToiVe();
 }
 
 function boChonTatCaDonToiVe() {
   donToiVeChonSet.clear();
-  renderDanhSachToiVe();
+  document.querySelectorAll('#danh-sach-toi-ve [data-stt-toi-ve]').forEach(the => {
+    the.classList.remove('da-chon');
+    const cb = the.querySelector('.order-checkbox');
+    if (cb) cb.checked = false;
+  });
+  document.getElementById('chon-tat-ca-toi-ve').checked = false;
+  capNhatThanhHanhDongToiVe();
 }
 
 function capNhatCheckboxChonTatCaToiVe() {

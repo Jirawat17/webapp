@@ -206,6 +206,13 @@ let user; // dùng lại ở taiDon() (biết vaiTro để quyết định hiệ
 let danhSachSanSang = [];
 let donSanSangChonSet = new Set();
 let coLocNaoDangChonSanSang = false; // ghi lại ở taiDonSanSang(), renderDanhSachSanSang() đọc lại để chọn đúng thông báo khi danh sách rỗng
+// Giới hạn số THẺ render/tải ảnh cùng lúc (bổ sung 22/09/2026, theo yêu cầu người dùng cải thiện hiệu
+// năng — cùng cơ chế đã áp dụng ở orders.html) — CHỈ ảnh hưởng hiển thị, danhSachSanSang/donSanSangChonSet
+// vẫn giữ đầy đủ nên "Chọn tất cả" không đổi.
+const SO_DON_MOI_LUOT = 60;
+let soDangHienThiSanSang = SO_DON_MOI_LUOT;
+let soDangHienThiDangChay = SO_DON_MOI_LUOT;
+let danhSachDangChay = [];
 
 // Các ô lọc (không tính Trạng thái — cố định, và Chỉ đơn hàng loạt — checkbox riêng) của mỗi mục —
 // dùng chung cho cả việc đếm số lọc đang áp dụng (capNhatNhanNutLoc) lẫn xoá trắng (xoaCacOLoc).
@@ -230,14 +237,19 @@ const CAC_O_LOC_DC = ['loc-kh', 'loc-tu-ngay', 'loc-den-ngay', 'loc-canh-bao', '
   // docs/superpowers/specs/2026-09-08-admin-chi-dinh-tai-san-sang-design.md). display:contents (không
   // phải '') vì khối này nằm trong .thanh-hanh-dong-hang-loat (flex container) — dùng '' sẽ làm mất
   // flex:1/align-self:stretch của các phần tử con (lỗi đã gặp ở orders.html trước đây).
+  // Tải danh sách nhân viên (admin) SONG SONG với 2 danh sách đơn bên dưới thay vì đợi xong mới bắt đầu
+  // (bổ sung 22/09/2026, theo yêu cầu người dùng cải thiện tốc độ tải trang) — độc lập hoàn toàn.
+  let taiDsNhanVienSanSang = Promise.resolve();
   if (laAdmin(user.vaiTro)) {
     document.getElementById('khoi-chi-dinh-nguoi-chay-may-san-sang').style.display = 'contents';
-    try {
-      const dsNhanVien = await apiFetch('/users/tom-tat');
-      const dsSanXuat = dsNhanVien.filter(u => u.VaiTro === 'san_xuat' && String(u.KichHoat).toUpperCase() === 'TRUE');
-      document.getElementById('nguoi-chay-may-dich-san-sang').innerHTML = '<option value="">Chỉ định người chạy máy...</option>' +
-        dsSanXuat.map(u => `<option value="${escapeHtml(u.Ten)}">${escapeHtml(u.Ten)}</option>`).join('');
-    } catch (e) { /* không tải được danh sách nhân viên — ô chọn giữ nguyên rỗng, không chặn tải trang */ }
+    taiDsNhanVienSanSang = (async () => {
+      try {
+        const dsNhanVien = await apiFetch('/users/tom-tat');
+        const dsSanXuat = dsNhanVien.filter(u => u.VaiTro === 'san_xuat' && String(u.KichHoat).toUpperCase() === 'TRUE');
+        document.getElementById('nguoi-chay-may-dich-san-sang').innerHTML = '<option value="">Chỉ định người chạy máy...</option>' +
+          dsSanXuat.map(u => `<option value="${escapeHtml(u.Ten)}">${escapeHtml(u.Ten)}</option>`).join('');
+      } catch (e) { /* không tải được danh sách nhân viên — ô chọn giữ nguyên rỗng, không chặn tải trang */ }
+    })();
   }
 
   document.getElementById('btn-mo-loc-ss').innerHTML = icon('filter', { size: 16 }) + ' Lọc';
@@ -248,7 +260,7 @@ const CAC_O_LOC_DC = ['loc-kh', 'loc-tu-ngay', 'loc-den-ngay', 'loc-canh-bao', '
   ganSuKienLocSapXep('-ss', taiDonSanSang, boChonTatCaDonSanSang);
   ganSuKienLocSapXep('', taiDon, null);
 
-  await Promise.all([taiDonSanSang(), taiDon()]);
+  await Promise.all([taiDonSanSang(), taiDon(), taiDsNhanVienSanSang]);
 })();
 
 // Gắn onchange/oninput cho đúng bộ 8 ô lọc + Chỉ đơn hàng loạt + Sắp xếp của 1 mục — dùng chung cho
@@ -363,6 +375,7 @@ async function taiDonSanSang() {
     el.innerHTML = `<p>Không tải được danh sách: ${escapeHtml(e.message)}</p>`;
     return;
   }
+  soDangHienThiSanSang = SO_DON_MOI_LUOT; // lọc/tải lại -> luôn bắt đầu lại từ lượt đầu
 
   // Bỏ khỏi tập đang chọn những đơn không còn trong danh sách (đã bị người khác nhận/xử lý ở nơi
   // khác giữa 2 lần tải, hoặc vừa bị lọc bớt) — tránh giữ trạng thái "đã chọn" cho 1 đơn không còn
@@ -386,7 +399,10 @@ function renderDanhSachSanSang() {
     return;
   }
 
-  el.innerHTML = danhSachSanSang.map(o => {
+  const dsDeRender = danhSachSanSang.slice(0, soDangHienThiSanSang);
+  const conLai = danhSachSanSang.length - dsDeRender.length;
+
+  el.innerHTML = dsDeRender.map(o => {
     const daChon = donSanSangChonSet.has(o.STT_Key);
     return `
     <div class="order-card ${daChon ? 'da-chon' : ''}" data-stt-san-sang="${escapeHtml(o.STT_Key)}"
@@ -411,7 +427,9 @@ function renderDanhSachSanSang() {
         </div>
       </div>
     </div>`;
-  }).join('');
+  }).join('') + (conLai > 0
+    ? `<button type="button" class="btn-hanh-dong phu" style="grid-column:1/-1" onclick="soDangHienThiSanSang+=SO_DON_MOI_LUOT;renderDanhSachSanSang()">Xem thêm (còn ${conLai} đơn)</button>`
+    : '');
 
   capNhatCheckboxChonTatCaSanSang();
   capNhatThanhHanhDongSanSang();
@@ -425,16 +443,31 @@ function toggleChonDonSanSang(sttKey, daChon) {
   capNhatThanhHanhDongSanSang();
 }
 
+// Toggle TRỰC TIẾP trên DOM đã render thay vì gọi lại renderDanhSachSanSang() (dựng lại TOÀN BỘ danh
+// sách qua innerHTML) — bổ sung 22/09/2026, theo yêu cầu người dùng cải thiện hiệu năng. Chỉ cần cập
+// nhật đúng các thẻ ĐANG hiển thị; thẻ chưa hiển thị (còn ẩn sau "Xem thêm") sẽ tự đọc đúng
+// donSanSangChonSet khi tới lượt render qua renderDanhSachSanSang().
 function chonTatCaSanSang(daChonHet) {
   danhSachSanSang.forEach(o => {
     if (daChonHet) donSanSangChonSet.add(o.STT_Key); else donSanSangChonSet.delete(o.STT_Key);
   });
-  renderDanhSachSanSang();
+  document.querySelectorAll('#danh-sach-san-sang [data-stt-san-sang]').forEach(the => {
+    the.classList.toggle('da-chon', daChonHet);
+    const cb = the.querySelector('.order-checkbox');
+    if (cb) cb.checked = daChonHet;
+  });
+  capNhatThanhHanhDongSanSang();
 }
 
 function boChonTatCaDonSanSang() {
   donSanSangChonSet.clear();
-  renderDanhSachSanSang();
+  document.querySelectorAll('#danh-sach-san-sang [data-stt-san-sang]').forEach(the => {
+    the.classList.remove('da-chon');
+    const cb = the.querySelector('.order-checkbox');
+    if (cb) cb.checked = false;
+  });
+  document.getElementById('chon-tat-ca-san-sang').checked = false;
+  capNhatThanhHanhDongSanSang();
 }
 
 function capNhatCheckboxChonTatCaSanSang() {
@@ -610,12 +643,22 @@ async function taiDon() {
   // Server (routes/orders.js, locDonDangChayMayTheoNguoiVanHanh) đã tự lọc: san_xuat chỉ nhận về
   // đúng đơn mình đang vận hành, hoặc đơn không xác định được ai đang chạy (an toàn, tránh thất lạc)
   // — không cần lọc lại lần nữa ở đây.
-  if (list.length === 0) {
+  danhSachDangChay = list;
+  soDangHienThiDangChay = SO_DON_MOI_LUOT; // lọc/tải lại -> luôn bắt đầu lại từ lượt đầu
+  renderDanhSachDangChay(coLocNaoDangChon);
+}
+
+function renderDanhSachDangChay(coLocNaoDangChon) {
+  const el = document.getElementById('danh-sach-don');
+  if (danhSachDangChay.length === 0) {
     el.innerHTML = `<div class="trang-thai-rong">${icon('package')}<p>${coLocNaoDangChon ? 'Không có đơn nào khớp bộ lọc.' : 'Bạn chưa chạy máy đơn nào — mọi việc đã xong hoặc chưa bắt đầu.'}</p></div>`;
     return;
   }
 
-  el.innerHTML = list.map(o => `
+  const dsDeRender = danhSachDangChay.slice(0, soDangHienThiDangChay);
+  const conLai = danhSachDangChay.length - dsDeRender.length;
+
+  el.innerHTML = dsDeRender.map(o => `
     <div class="order-card" onclick="location.href='/order.html?stt=${encodeURIComponent(o.STT_Key)}'">
       ${o.DUONG_DAN_URL || o.MOCKUP
         ? `<div class="nhom-anh-dai-dien">${urlAnhHienThiList(o.DUONG_DAN_URL || o.MOCKUP).map(src => `<img src="${escapeHtml(src)}" alt="" loading="lazy" onerror="this.remove()">`).join('')}</div>`
@@ -636,7 +679,9 @@ async function taiDon() {
             </span>` : ''}
         </div>
       </div>
-    </div>`).join('');
+    </div>`).join('') + (conLai > 0
+    ? `<button type="button" class="btn-hanh-dong phu" style="grid-column:1/-1" onclick="soDangHienThiDangChay+=SO_DON_MOI_LUOT;renderDanhSachDangChay(${JSON.stringify(!!coLocNaoDangChon)})">Xem thêm (còn ${conLai} đơn)</button>`
+    : '');
 }
 </script>
 </body>

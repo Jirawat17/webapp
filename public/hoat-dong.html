@@ -93,16 +93,21 @@ const NHAN_MOC_ANH = { mau: 'Ảnh mẫu (PNG)', mockup: 'Ảnh Mockup', ve_file
   // "Xem hoạt động của bất kỳ ai" — chỉ admin. Dùng lại NHAN_VAI_TRO đã có sẵn từ api.js (KHÔNG khai
   // báo lại — 2 thẻ <script> thường dùng chung 1 scope cho const, khai báo trùng tên là SyntaxError
   // lúc parse, hỏng cả trang — gặp thật ở bang-dieu-khien.html 08/09/2026).
+  // Tải SONG SONG với taiHoatDong() bên dưới thay vì đợi xong mới bắt đầu (bổ sung 22/09/2026, theo yêu
+  // cầu người dùng cải thiện tốc độ tải trang) — độc lập hoàn toàn.
+  let taiDsNhanVien = Promise.resolve();
   if (laAdmin(user.vaiTro)) {
-    try {
-      const dsNhanVien = await apiFetch('/users/tom-tat');
-      const dsChoChon = dsNhanVien.filter(u => String(u.KichHoat).toUpperCase() === 'TRUE' && u.Ten !== user.ten);
-      document.getElementById('khoi-chon-nguoi').style.display = 'flex';
-      const chon = document.getElementById('chon-nguoi-xem');
-      chon.innerHTML = '<option value="">Chính tôi (Admin)</option>' +
-        dsChoChon.map(u => `<option value="${escapeHtml(u.Ten)}">${escapeHtml(u.Ten)} (${escapeHtml(NHAN_VAI_TRO[u.VaiTro] || u.VaiTro)})</option>`).join('');
-      chon.onchange = () => { nguoiDangXem = chon.value; taiHoatDong(); };
-    } catch (e) { /* không tải được danh sách nhân viên — ẩn ô chọn, admin vẫn xem được hoạt động chính mình */ }
+    taiDsNhanVien = (async () => {
+      try {
+        const dsNhanVien = await apiFetch('/users/tom-tat');
+        const dsChoChon = dsNhanVien.filter(u => String(u.KichHoat).toUpperCase() === 'TRUE' && u.Ten !== user.ten);
+        document.getElementById('khoi-chon-nguoi').style.display = 'flex';
+        const chon = document.getElementById('chon-nguoi-xem');
+        chon.innerHTML = '<option value="">Chính tôi (Admin)</option>' +
+          dsChoChon.map(u => `<option value="${escapeHtml(u.Ten)}">${escapeHtml(u.Ten)} (${escapeHtml(NHAN_VAI_TRO[u.VaiTro] || u.VaiTro)})</option>`).join('');
+        chon.onchange = () => { nguoiDangXem = chon.value; taiHoatDong(); };
+      } catch (e) { /* không tải được danh sách nhân viên — ẩn ô chọn, admin vẫn xem được hoạt động chính mình */ }
+    })();
   }
 
   document.querySelectorAll('#thanh-chon-ky button').forEach(btn => {
@@ -115,7 +120,7 @@ const NHAN_MOC_ANH = { mau: 'Ảnh mẫu (PNG)', mockup: 'Ảnh Mockup', ve_file
   });
   document.getElementById('btn-ap-dung-khoang').onclick = () => taiHoatDong();
 
-  await taiHoatDong();
+  await Promise.all([taiHoatDong(), taiDsNhanVien]);
 })();
 
 // Giống hệt logic ở dashboard.html (tinhKhoangTheoKy/dinhDangYMD) — mỗi trang tự chứa, không dùng
@@ -232,10 +237,28 @@ function dongRong(chuThich) {
   return `<div class="trang-thai-rong">${icon('package')}<p>${escapeHtml(chuThich)}</p></div>`;
 }
 
+// Phân trang 4 timeline hoạt động (bổ sung 22/09/2026, theo yêu cầu người dùng cải thiện hiệu năng —
+// chọn kỳ "Toàn bộ" có thể trả về log rất dài, render hết 1 lần vừa chậm vừa tốn bộ nhớ trên điện
+// thoại). Mỗi hàm renderDs*() tự nhớ ĐẦY ĐỦ mảng gốc (biến moi-danh-sach-*Day) + số đang hiển thị —
+// gọi renderDsX(list) khi có dữ liệu MỚI (từ taiHoatDong()), gọi renderDsX() không tham số để render
+// lại đúng cỡ đã tăng (nút "Xem thêm"). 2 hàm dùng chung dưới đây tránh lặp lại y hệt logic cắt/nút
+// 4 lần — mỗi timeline vẫn tự giữ HTML mục riêng (không gộp thành 1 hàm chung khó đọc).
+const SO_MOI_LUOT_HOAT_DONG = 60;
+function phanTrangTimeline(danhSachDay, soDangHienThi) {
+  const dsDeRender = danhSachDay.slice(0, soDangHienThi);
+  return { dsDeRender, conLai: danhSachDay.length - dsDeRender.length };
+}
+function nutXemThemTimeline(conLai, goiLai) {
+  return conLai > 0 ? `<button type="button" class="btn-hanh-dong phu" onclick="${goiLai}">Xem thêm (còn ${conLai})</button>` : '';
+}
+
+let dsQuetDay = [], soDangHienThiQuet = SO_MOI_LUOT_HOAT_DONG;
 function renderDsQuet(list) {
+  if (list !== undefined) { dsQuetDay = list; soDangHienThiQuet = SO_MOI_LUOT_HOAT_DONG; }
   const el = document.getElementById('ds-quet');
-  if (list.length === 0) { el.innerHTML = dongRong('Chưa có lượt quét thành công nào trong khoảng này.'); return; }
-  el.innerHTML = list.map(x => `
+  if (dsQuetDay.length === 0) { el.innerHTML = dongRong('Chưa có lượt quét thành công nào trong khoảng này.'); return; }
+  const { dsDeRender, conLai } = phanTrangTimeline(dsQuetDay, soDangHienThiQuet);
+  el.innerHTML = dsDeRender.map(x => `
     <div class="timeline-item">
       <div class="timeline-info">
         <strong><a href="/order.html?stt=${encodeURIComponent(x.sttKey)}">${escapeHtml(x.sttKey)}</a></strong>
@@ -244,7 +267,7 @@ function renderDsQuet(list) {
         </div>
       </div>
       <div class="timeline-time">${tsDep(x.thoiGian)}</div>
-    </div>`).join('');
+    </div>`).join('') + nutXemThemTimeline(conLai, 'soDangHienThiQuet+=SO_MOI_LUOT_HOAT_DONG;renderDsQuet()');
 }
 
 // "Lượt quét bị từ chối" — bổ sung 12/09/2026, theo yêu cầu người dùng: các lượt quét kịch bản KHÔNG
@@ -252,10 +275,13 @@ function renderDsQuet(list) {
 // dù đã ghi log đầy đủ (xem HANH_DONG_QUET_BI_TU_CHOI trong services/logService.js) — người dùng
 // không có cách nào đối soát lại đã quét nhầm đơn nào. `x.lyDo` do server dựng sẵn (routes/qr.js), đã
 // tự chứa mã đơn nên không cần lặp lại <strong>{sttKey}</strong> riêng như 3 khối còn lại.
+let dsQuetBiTuChoiDay = [], soDangHienThiQuetBiTuChoi = SO_MOI_LUOT_HOAT_DONG;
 function renderDsQuetBiTuChoi(list) {
+  if (list !== undefined) { dsQuetBiTuChoiDay = list; soDangHienThiQuetBiTuChoi = SO_MOI_LUOT_HOAT_DONG; }
   const el = document.getElementById('ds-quet-bi-tu-choi');
-  if (list.length === 0) { el.innerHTML = dongRong('Chưa có lượt quét nào bị từ chối trong khoảng này.'); return; }
-  el.innerHTML = list.map(x => `
+  if (dsQuetBiTuChoiDay.length === 0) { el.innerHTML = dongRong('Chưa có lượt quét nào bị từ chối trong khoảng này.'); return; }
+  const { dsDeRender, conLai } = phanTrangTimeline(dsQuetBiTuChoiDay, soDangHienThiQuetBiTuChoi);
+  el.innerHTML = dsDeRender.map(x => `
     <div class="timeline-item">
       <div class="timeline-info">
         <span style="font-size:1.1rem">${x.nhom === 'KHONG_TIM_THAY' ? '❌' : '⚠️'}</span>
@@ -263,13 +289,16 @@ function renderDsQuetBiTuChoi(list) {
         ${x.kichBan ? `<div style="font-size:0.85rem;color:var(--color-text-muted);margin-top:2px">Kịch bản: ${escapeHtml(x.kichBan)}</div>` : ''}
       </div>
       <div class="timeline-time">${tsDep(x.thoiGian)}</div>
-    </div>`).join('');
+    </div>`).join('') + nutXemThemTimeline(conLai, 'soDangHienThiQuetBiTuChoi+=SO_MOI_LUOT_HOAT_DONG;renderDsQuetBiTuChoi()');
 }
 
+let dsDoiTrangThaiDay = [], soDangHienThiDoiTrangThai = SO_MOI_LUOT_HOAT_DONG;
 function renderDsDoiTrangThai(list) {
+  if (list !== undefined) { dsDoiTrangThaiDay = list; soDangHienThiDoiTrangThai = SO_MOI_LUOT_HOAT_DONG; }
   const el = document.getElementById('ds-doi-trang-thai');
-  if (list.length === 0) { el.innerHTML = dongRong('Chưa có thay đổi trạng thái nào trong khoảng này.'); return; }
-  el.innerHTML = list.map(x => `
+  if (dsDoiTrangThaiDay.length === 0) { el.innerHTML = dongRong('Chưa có thay đổi trạng thái nào trong khoảng này.'); return; }
+  const { dsDeRender, conLai } = phanTrangTimeline(dsDoiTrangThaiDay, soDangHienThiDoiTrangThai);
+  el.innerHTML = dsDeRender.map(x => `
     <div class="timeline-item">
       <div class="timeline-info">
         <strong><a href="/order.html?stt=${encodeURIComponent(x.sttKey)}">${escapeHtml(x.sttKey)}</a></strong>
@@ -278,13 +307,16 @@ function renderDsDoiTrangThai(list) {
         </div>
       </div>
       <div class="timeline-time">${tsDep(x.thoiGian)}</div>
-    </div>`).join('');
+    </div>`).join('') + nutXemThemTimeline(conLai, 'soDangHienThiDoiTrangThai+=SO_MOI_LUOT_HOAT_DONG;renderDsDoiTrangThai()');
 }
 
+let dsUploadAnhDay = [], soDangHienThiUploadAnh = SO_MOI_LUOT_HOAT_DONG;
 function renderDsUploadAnh(list) {
+  if (list !== undefined) { dsUploadAnhDay = list; soDangHienThiUploadAnh = SO_MOI_LUOT_HOAT_DONG; }
   const el = document.getElementById('ds-upload-anh');
-  if (list.length === 0) { el.innerHTML = dongRong('Chưa có ảnh nào được tải lên trong khoảng này.'); return; }
-  el.innerHTML = list.map(x => `
+  if (dsUploadAnhDay.length === 0) { el.innerHTML = dongRong('Chưa có ảnh nào được tải lên trong khoảng này.'); return; }
+  const { dsDeRender, conLai } = phanTrangTimeline(dsUploadAnhDay, soDangHienThiUploadAnh);
+  el.innerHTML = dsDeRender.map(x => `
     <div class="timeline-item">
       <div class="timeline-info">
         <strong><a href="/order.html?stt=${encodeURIComponent(x.sttKey)}">${escapeHtml(x.sttKey)}</a></strong>
@@ -293,7 +325,7 @@ function renderDsUploadAnh(list) {
         </div>
       </div>
       <div class="timeline-time">${tsDep(x.thoiGian)}</div>
-    </div>`).join('');
+    </div>`).join('') + nutXemThemTimeline(conLai, 'soDangHienThiUploadAnh+=SO_MOI_LUOT_HOAT_DONG;renderDsUploadAnh()');
 }
 </script>
 </body>
