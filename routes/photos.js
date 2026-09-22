@@ -92,6 +92,9 @@ router.post('/kiem-tra', async (req, res) => {
 // Vì mã đơn đã lấy từ bước quét QR ngay trước đó trong cùng luồng thao tác (sttKey gửi kèm trong
 // form), KHÔNG cần AI đọc ảnh để nhận diện mã — nhanh hơn, không tốn quota Gemini, chính xác 100%.
 router.post('/upload', upload.single('photo'), async (req, res) => {
+  const tBatDau = Date.now(); // bổ sung 23/09/2026, theo yêu cầu người dùng — đo thời gian từng bước để
+  // biết chính xác khâu nào chậm nếu người dùng vẫn báo "upload lâu" sau các lần sửa trước, thay vì
+  // phải đoán tiếp không có bằng chứng thật từ máy chủ đang chạy.
   const { sttKey, moc } = req.body;
   const user = req.session.user;
 
@@ -112,6 +115,7 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
   // không phụ thuộc độ mới của lượt đọc Sheets ở đây; kiểm tra bên dưới chỉ có thể trễ phát hiện tối đa
   // ~10s trong tình huống hiếm (đơn đổi trạng thái đúng lúc), vẫn được chặn đúng khi ghi thật.
   const { headers, row } = await orderService.getByKey(sttKey);
+  const tSauDocDon = Date.now();
   // Đơn khác Xưởng coi như không tồn tại (bổ sung 13/09/2026).
   if (!row || !orderService.coQuyenTheoXuong(user, row)) return res.status(404).json({ error: 'Không tìm thấy đơn hàng: ' + sttKey });
 
@@ -143,9 +147,10 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
     await storageService.uploadImageBuffer(req.file.buffer, objectKey, req.file.mimetype);
     url = storageService.objectKeyToProxyUrl(objectKey);
   } catch (err) {
-    console.error('[MinIO] Upload ảnh thất bại:', err.message);
+    console.error(`[MinIO] Upload ảnh thất bại sau ${Date.now() - tSauDocDon}ms:`, err.message);
     return res.status(502).json({ error: 'Lưu ảnh lên kho lưu trữ thất bại — vui lòng thử lại' });
   }
+  const tSauMinio = Date.now();
 
   const updates = { [cotAnh]: url, NguoiCapNhatCuoi: user.ten, ThoiGianCapNhatCuoi: now.toISOString() };
   if (chuyenTuDong) updates.TRANG_THAI_XUONG = chuyenTuDong.chuyenSang;
@@ -165,6 +170,11 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
     nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'UPLOAD_ANH',
     sttKey, chiTiet: { moc, url, ...(chuyenTuDong ? { tu: chuyenTuDong.yeuCau, sang: chuyenTuDong.chuyenSang } : {}) },
   }).catch(err => console.error('[Photos] Lỗi ghi log nền:', err.message));
+
+  console.log(
+    `[Photos] Upload ${sttKey}/${moc}: đọc đơn ${tSauDocDon - tBatDau}ms, MinIO ${tSauMinio - tSauDocDon}ms, ` +
+    `ghi cập nhật ${Date.now() - tSauMinio}ms, TỔNG ${Date.now() - tBatDau}ms, ảnh ${(req.file.size / 1024).toFixed(0)}KB`
+  );
   res.json({ ok: true, url, don: updated });
 });
 

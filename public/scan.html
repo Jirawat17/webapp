@@ -805,7 +805,15 @@ document.getElementById('input-chup-anh').addEventListener('change', async (e) =
 // render lại để khối "Danh sách đã chụp" tự cập nhật, dù người dùng có thể đã quét sang đơn khác hoặc
 // đổi mode trong lúc chờ (renderDsDaChup()/renderDemNhomAnh() luôn đọc đúng dsDaChupTheoMoc[mode] hiện
 // tại — vô hại nếu mode đã đổi, chỉ là redraw lại đúng màn hình đang hiện, lịch sử vẫn đúng khi quay lại).
-async function taiAnhLenNgam(sttKey, cauHinh, fileDaNen, dong) {
+async function taiAnhLenNgam(sttKey, cauHinh, file, dong) {
+  // Nén ảnh (bổ sung 21/09/2026) — DỜI VÀO ĐÂY, chạy ngầm cùng upload (bổ sung 23/09/2026, theo yêu
+  // cầu người dùng: quay lại [Đang quét] vẫn còn chậm dù upload đã chạy ngầm). Ảnh gốc từ điện thoại/
+  // iPad đời mới có thể tới 12-48MP — createImageBitmap() phải giải mã NGUYÊN độ phân giải gốc trước
+  // khi canvas mới vẽ xuống kích thước nhỏ hơn, tốn tới vài giây trên máy yếu/đang tải nặng (vừa đóng
+  // camera). Trước đây bước này vẫn await() trong xuLyChupAnh() TRƯỚC KHI cho quét đơn tiếp theo — dời
+  // vào đây để KHÔNG còn bước nào (nén lẫn upload) chặn quay lại màn hình quét sau khi bấm chụp.
+  const fileDaNen = await nenAnhTruocKhiTaiLen(file);
+
   const form = new FormData();
   form.append('photo', fileDaNen);
   form.append('sttKey', sttKey);
@@ -846,26 +854,17 @@ async function xuLyChupAnh(file) {
     return;
   }
 
-  const btn = document.getElementById('btn-chup-anh');
-  btn.disabled = true;
-  btn.innerHTML = icon('spinner', { className: 'icon-spin', size: 24 }) + ' Đang xử lý ảnh...';
-
-  // Nén ảnh trước khi upload (bổ sung 21/09/2026, theo yêu cầu người dùng — xem api.js#nenAnhTruocKhiTaiLen)
-  // — ảnh camera gốc thường vài MB, nén trước giúp upload nhanh hơn hẳn trên mạng xưởng/di động yếu.
-  const fileDaNen = await nenAnhTruocKhiTaiLen(file);
-
-  // Thêm dòng "đang tải lên" ngay, rồi QUAY LẠI [Đang quét] cho đơn tiếp theo NGAY — không đợi upload
-  // xong. Việc tải ảnh thật chạy ở taiAnhLenNgam() phía trên, KHÔNG await ở đây (cố ý).
+  // Thêm dòng "đang tải lên" ngay, rồi QUAY LẠI [Đang quét] cho đơn tiếp theo NGAY — không đợi nén
+  // ảnh lẫn upload xong. Cả 2 việc đó chạy ở taiAnhLenNgam() phía trên, KHÔNG await ở đây (cố ý) —
+  // xuLyChupAnh() giờ không còn bước nào tốn thời gian đáng kể, quay lại quét gần như tức thì.
   const dong = { trangThai: 'dang-tai', sttKey, ghiChu: 'Đang tải ảnh lên...' };
   themDongDaChup(dong);
   dsUploadDangCho.add(sttKey);
 
   donDaXacDinhChoAnh = null;
-  btn.disabled = false;
-  btn.innerHTML = icon('camera', { size: 40 }) + ' Chụp ảnh';
   await capNhatManHinh();
 
-  taiAnhLenNgam(sttKey, cauHinh, fileDaNen, dong);
+  taiAnhLenNgam(sttKey, cauHinh, file, dong);
 }
 
 // Hiện thông tin đơn đã xác định ở trạng thái [Sẵn sàng chụp] — dùng lại đúng class
