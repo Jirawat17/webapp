@@ -112,9 +112,18 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
   // dụng và được chấp nhận cho thao tác hàng loạt (xem orderService.js#getManyByKeys). AN TOÀN vì các
   // cột QUYẾT ĐỊNH đúng/sai khi ghi (TRANG_THAI_XUONG, TRACKING_ID...) đều là cột SQLite, được
   // capNhatThat() tự đọc LẠI bản mới nhất ngay trước khi ghi thật (xem services/orderService.js) —
-  // không phụ thuộc độ mới của lượt đọc Sheets ở đây; kiểm tra bên dưới chỉ có thể trễ phát hiện tối đa
-  // ~10s trong tình huống hiếm (đơn đổi trạng thái đúng lúc), vẫn được chặn đúng khi ghi thật.
-  const { headers, row } = await orderService.getByKey(sttKey);
+  // không phụ thuộc độ mới của lượt đọc Sheets ở đây.
+  //
+  // ttlMs: 30000 (bổ sung 23/09/2026, theo yêu cầu người dùng tiếp tục cải thiện tốc độ) — TTL mặc định
+  // 10s của getAll() giả định /kiem-tra vừa chạy fresh CHỈ vài giây trước, nhưng thực tế người quét còn
+  // phải mở camera, canh góc, chụp — có thể vượt 10s, khiến cache lại "nguội" và /upload vẫn phải đọc
+  // tươi như trước khi sửa. Nới lên 30s cho riêng nơi gọi này — cùng mức đánh đổi độ mới đã chấp nhận
+  // cho thao tác hàng loạt (orderService.js#getManyByKeys), chỉ dài hơn một chút.
+  // LƯU Ý: cache này DÙNG CHUNG cho mọi nơi đọc tab Don_Hang_ALL — nếu ĐÚNG LÚC lượt đọc của /upload là
+  // lượt "đổ đầy lại" cache (còn hết hạn), các trang khác (danh sách, dashboard...) đọc ngay sau đó
+  // trong cửa sổ 30s này cũng tạm thời thấy dữ liệu cũ hơn 10s thường lệ — chấp nhận được vì hiếm khi
+  // trúng đúng thời điểm, và các trang đó vốn đã chấp nhận vài giây cũ.
+  const { headers, row } = await orderService.getByKey(sttKey, { ttlMs: 30000 });
   const tSauDocDon = Date.now();
   // Đơn khác Xưởng coi như không tồn tại (bổ sung 13/09/2026).
   if (!row || !orderService.coQuyenTheoXuong(user, row)) return res.status(404).json({ error: 'Không tìm thấy đơn hàng: ' + sttKey });

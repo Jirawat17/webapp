@@ -812,22 +812,32 @@ async function taiAnhLenNgam(sttKey, cauHinh, file, dong) {
   // khi canvas mới vẽ xuống kích thước nhỏ hơn, tốn tới vài giây trên máy yếu/đang tải nặng (vừa đóng
   // camera). Trước đây bước này vẫn await() trong xuLyChupAnh() TRƯỚC KHI cho quét đơn tiếp theo — dời
   // vào đây để KHÔNG còn bước nào (nén lẫn upload) chặn quay lại màn hình quét sau khi bấm chụp.
+  const tNen0 = performance.now();
   const fileDaNen = await nenAnhTruocKhiTaiLen(file);
+  const tNen1 = performance.now();
 
+  // Đo tạm THỜI GIAN TRUYỀN THẬT (bổ sung 23/09/2026, theo yêu cầu người dùng — log server chỉ đo từ
+  // lúc Express NHẬN XONG file, không thấy được thời gian ảnh đi từ máy người dùng lên server, vốn có
+  // thể là phần chậm nhất trên mạng yếu). In thẳng vào ghiChu hiển thị trên màn hình (không cần mở
+  // console — máy tính bảng/điện thoại khó bật devtools) để đối chiếu trực tiếp với log server.
+  // XOÁ đoạn đo này sau khi xác định xong nguyên nhân, không phải tính năng vĩnh viễn.
   const form = new FormData();
   form.append('photo', fileDaNen);
   form.append('sttKey', sttKey);
   form.append('moc', cauHinh.moc);
 
+  const tGuiDi0 = performance.now();
   try {
     const res = await fetch('/api/photos/upload', { method: 'POST', body: form, credentials: 'include' });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
+    const tGuiDi1 = performance.now();
 
     const don = data.don || {};
+    const doDo = `[đo: nén ${((tNen1 - tNen0) / 1000).toFixed(1)}s ${(file.size / 1024).toFixed(0)}→${(fileDaNen.size / 1024).toFixed(0)}KB, gửi+chờ ${((tGuiDi1 - tGuiDi0) / 1000).toFixed(1)}s]`;
     dong.trangThai = 'ok';
-    dong.ghiChu = `${don.TenKhachHang || ''} — ${cauHinh.yeuCau} → ${cauHinh.chuyenSang}`;
-    hienThiToastAnh('ok', `${don.STT_Key || sttKey}${don.TenKhachHang ? ' · ' + don.TenKhachHang : ''} — đã chuyển sang "${cauHinh.chuyenSang}"`);
+    dong.ghiChu = `${don.TenKhachHang || ''} — ${cauHinh.yeuCau} → ${cauHinh.chuyenSang} ${doDo}`;
+    hienThiToastAnh('ok', `${don.STT_Key || sttKey}${don.TenKhachHang ? ' · ' + don.TenKhachHang : ''} — đã chuyển sang "${cauHinh.chuyenSang}" ${doDo}`);
     phatAmThanhKetQua('OK');
   } catch (err) {
     // Lỗi upload thật (mất mạng, server từ chối vì đơn vừa đổi trạng thái...) — đơn đã quay lại [Đang

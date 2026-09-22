@@ -21,8 +21,8 @@ const KEY_COL = 'STT_Key';
 // không còn thể "lạc chủ" dù Don_Hang_ALL (công thức QUERY/VSTACK sống, xem layTatCa ở trangThaiDbService)
 // xáo trộn dòng bất cứ lúc nào. Đơn chưa từng có dòng trong SQLite (đơn mới) nhận toàn bộ giá trị rỗng —
 // đúng hành vi cũ khi các cột này còn là ô trống trong Sheet.
-async function getAll({ fresh = false } = {}) {
-  const { headers, rows } = fresh ? await readTab(TAB) : await readTabCached(TAB, 10000);
+async function getAll({ fresh = false, ttlMs = 10000 } = {}) {
+  const { headers, rows } = fresh ? await readTab(TAB) : await readTabCached(TAB, ttlMs);
   const banDoTrangThai = trangThaiDbService.layTatCa();
   const rowsGop = rows
     // Lọc bỏ dòng KHÔNG có STT_Key (bổ sung 21/09/2026, theo yêu cầu người dùng) — Don_Hang_ALL là công
