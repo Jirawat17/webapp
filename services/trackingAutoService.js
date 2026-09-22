@@ -20,6 +20,26 @@ const SO_PHUT_MAC_DINH = 10;
 // đơn trùng đã có (xem muaTrackingChoDon bên dưới), không viết lại logic đó lần 2.
 const NGUOI_HE_THONG = { ten: 'Hệ thống (tự động)', vaiTro: 'admin' };
 
+// Xếp hàng theo STT_Key (bổ sung 22/09/2026, theo yêu cầu người dùng) — cùng khuôn với
+// orderService.js#xepHangTheoDon. Trước đây KHÔNG có khoá nào: cron quét mỗi 2 phút (trackingJob.js)
+// và người bấm "Mua ngay"/"Mua thủ công" CHO ĐÚNG 1 đơn có thể trùng thời điểm — cả 2 đều tự đọc
+// row.TRACKING_ID/TAM_THOI (thấy "chưa có") TRƯỚC khi lượt còn lại kịp ghi xong, nên cả 2 đều gọi GKE
+// tạo đơn thật, chỉ trông chờ GKE tự nhận diện "đã tồn tại" (code 301) — tốn 1 lượt gọi GKE thừa mỗi
+// lần trùng, và có khoảng hở thật trước khi GKE kịp nhận diện (xem chú thích guard chống chồng lượt
+// CÙNG NGUỒN ở trackingJob.js — guard đó KHÔNG chặn được trùng GIỮA 2 NGUỒN khác nhau như ở đây).
+// Khoá RIÊNG theo từng đơn (không khoá toàn cục) — mua tracking cho các đơn khác nhau vẫn chạy song
+// song bình thường, không chậm đi.
+const _hangDoiMuaTracking = new Map(); // sttKey -> Promise của lượt muaTrackingChoDon() gần nhất đang xếp hàng
+function xepHangMuaTracking(sttKey, congViec) {
+  const hangCho = (_hangDoiMuaTracking.get(sttKey) || Promise.resolve()).catch(() => {});
+  const luotNay = hangCho.then(congViec);
+  _hangDoiMuaTracking.set(sttKey, luotNay);
+  luotNay.catch(() => {}).finally(() => {
+    if (_hangDoiMuaTracking.get(sttKey) === luotNay) _hangDoiMuaTracking.delete(sttKey);
+  });
+  return luotNay;
+}
+
 // Log NGẮN GỌN (mỗi việc 1 dòng) cho tính năng này, xem NGAY trên trang "Tracking" — bổ sung
 // 09/09/2026, theo yêu cầu người dùng (chọn mức "ngắn gọn", không phải log kỹ thuật chi tiết từng
 // bước gọi GKE — mức đó vẫn chỉ xem qua console server như cũ). Mảng trong bộ nhớ, mất khi restart
@@ -132,7 +152,11 @@ function luuCauHinhQuetTrangThai({ soPhutQuet }) {
 // lẫn nút hàng loạt) đều tự động được ghi log đầy đủ, không phải lặp lại try/catch+log ở từng nơi gọi.
 // Mỗi dòng log gắn nhãn nguồn [Tự động]/[Thủ công - <tên>] ở đầu để phân biệt rõ ngay khi lướt qua,
 // không phải suy luận "không có hậu tố nghĩa là tự động" như cách làm cũ.
-async function muaTrackingChoDon(sttKey, cauHinhGke, user = NGUOI_HE_THONG) {
+function muaTrackingChoDon(sttKey, cauHinhGke, user = NGUOI_HE_THONG) {
+  return xepHangMuaTracking(sttKey, () => _muaTrackingChoDonThat(sttKey, cauHinhGke, user));
+}
+
+async function _muaTrackingChoDonThat(sttKey, cauHinhGke, user) {
   const laThuCong = user !== NGUOI_HE_THONG;
   const nhanNguon = laThuCong ? `[Thủ công - ${user.ten}]` : '[Tự động]';
   const nguonSheet = laThuCong ? 'Thủ công' : 'Tự động';

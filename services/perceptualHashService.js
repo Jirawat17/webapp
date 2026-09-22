@@ -54,18 +54,30 @@ const KERNEL_RESIZE = 'nearest';
 // cách Hamming giữa 2 chuỗi hex mà không cần vòng lặp bit-by-bit.
 const SO_BIT_1_TRONG_NIBBLE = [0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4];
 
+// Timeout cho sharp (bổ sung 22/09/2026, theo yêu cầu người dùng) — sharp từng gây treo THẬT 2 lần ở
+// tính năng khác (viền QR, xem docs/... đã gỡ bỏ sharp ở đó), dù đã benchmark chấp nhận dùng lại cho
+// riêng tính năng hash này. Vòng lặp "Quét hàng loạt" gọi hàm này cho NHIỀU ảnh liên tiếp — 1 ảnh khiến
+// sharp kẹt (buffer hỏng theo cách lạ, bug native binary...) sẽ treo LUÔN cả vòng lặp, không chỉ riêng
+// ảnh đó. Promise.race không huỷ được tiến trình sharp bên trong (không có API huỷ chính thức), nhưng
+// đảm bảo NƠI GỌI không đợi vô hạn — coi như hash lỗi (trả null, đúng hợp đồng sẵn có của hàm này) và
+// tiếp tục ảnh kế tiếp.
+const THOI_GIAN_TOI_DA_MS = 10000;
+
 // Trả về chuỗi hex 16 ký tự (64 bit) hoặc null nếu ảnh lỗi/định dạng không đọc được (sharp ném lỗi
 // với buffer rỗng, hỏng, hoặc không phải ảnh — bắt lỗi ở đây để nơi gọi không cần tự try/catch).
 async function tinhHashAnh(buffer) {
   if (!buffer || buffer.length === 0) return null;
 
   try {
-    const { data } = await sharp(buffer)
-      .trim()
-      .resize(CHIEU_RONG_HASH, CHIEU_CAO_HASH, { fit: 'fill', kernel: KERNEL_RESIZE })
-      .grayscale()
-      .raw()
-      .toBuffer({ resolveWithObject: true });
+    const { data } = await Promise.race([
+      sharp(buffer)
+        .trim()
+        .resize(CHIEU_RONG_HASH, CHIEU_CAO_HASH, { fit: 'fill', kernel: KERNEL_RESIZE })
+        .grayscale()
+        .raw()
+        .toBuffer({ resolveWithObject: true }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Quá thời gian chờ tính hash ảnh')), THOI_GIAN_TOI_DA_MS)),
+    ]);
 
     let bit = '';
     for (let y = 0; y < CHIEU_CAO_HASH; y++) {

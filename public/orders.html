@@ -562,6 +562,16 @@ async function taiDon() {
   danhSachHienTai = list;
   soDonDangHienThi = SO_DON_MOI_LUOT; // lọc/tải lại danh sách -> luôn bắt đầu lại từ lượt đầu
 
+  // Dọn donDaChonSet theo danh sách MỚI (bổ sung 22/09/2026, theo yêu cầu người dùng) — 1 đơn đang
+  // được tick chọn có thể biến mất khỏi danh sách hiển thị sau khi tải lại (đổi bộ lọc, hoặc chính đơn
+  // đó vừa đổi trạng thái/ưu tiên khiến không còn khớp bộ lọc hiện tại — vd toggleUuTienNhanh() gọi
+  // taiDon() ngay sau khi bật/tắt ưu tiên nhanh). Nếu không dọn, STT_Key đó vẫn nằm trong donDaChonSet
+  // dù người dùng không còn thấy/chọn nó nữa, và có thể lọt vào 1 thao tác hàng loạt KẾ TIẾP ngoài ý
+  // muốn. Đặt Ở ĐÂY (nơi DUY NHẤT gán lại danhSachHienTai) để áp dụng cho MỌI luồng tải lại, không chỉ
+  // riêng nút ưu tiên nhanh.
+  const sttKeyHienTai = new Set(list.map(o => o.STT_Key));
+  donDaChonSet.forEach(stt => { if (!sttKeyHienTai.has(stt)) donDaChonSet.delete(stt); });
+
   const coLocNaoDangChon = trangThai || trangThaiPhoi || trangThaiVeFile || canhBao || xuong || uuTien || loai || kichThuoc || mauSac || hangVanChuyen || quocGiaTracking || tinhTrang || kh || tuNgay || denNgay;
   if (!coLocNaoDangChon) capNhatCacBoLocDong(list);
   capNhatNhanNutLoc();

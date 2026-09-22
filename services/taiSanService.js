@@ -20,6 +20,26 @@ function chuan(str) {
   return String(str || '').trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
+// Xếp hàng theo TỔ HỢP phôi (bổ sung 22/09/2026, theo yêu cầu người dùng) — cùng khuôn với
+// orderService.js#xepHangTheoDon. truKhoTheoDon/hoanKhoTheoDon (bên dưới) đều tự đọc TON_HIEN_TAI rồi
+// tính tonMoi = cũ ± soLuong trước khi ghi — 2 đơn khác nhau nhưng CÙNG 1 tổ hợp phôi được quét gần
+// như đồng thời (2 người quét song song "Đã lấy phôi" cho 2 đơn cùng mẫu) đều đọc cùng 1 giá trị cũ rồi
+// ghi đè lẫn nhau, làm MẤT 1 lượt trừ kho thật (lost update) — chỉ khác nguồn gốc so với race đã sửa ở
+// orderService.js#xepHangTheoDon (đó là race giữa 2 lượt update() CÙNG 1 ĐƠN; đây là race giữa 2 ĐƠN
+// KHÁC NHAU nhưng CHUNG 1 dòng tồn kho). Khoá theo tổ hợp phôi (không khoá toàn cục) — phôi khác nhau
+// vẫn trừ/hoàn kho song song bình thường. apDungThayDoiKhoHangLoat() (hàng loạt) không cần khoá này vì
+// đã tự gộp+ghi 1 lần duy nhất cho cả lô, không có 2 lượt đọc-ghi rời nhau.
+const _hangDoiTheoToHopPhoi = new Map(); // khoá tổ hợp -> Promise của lượt trừ/hoàn kho gần nhất đang xếp hàng
+function xepHangTheoToHopPhoi(khoa, congViec) {
+  const hangCho = (_hangDoiTheoToHopPhoi.get(khoa) || Promise.resolve()).catch(() => {});
+  const luotNay = hangCho.then(congViec);
+  _hangDoiTheoToHopPhoi.set(khoa, luotNay);
+  luotNay.catch(() => {}).finally(() => {
+    if (_hangDoiTheoToHopPhoi.get(khoa) === luotNay) _hangDoiTheoToHopPhoi.delete(khoa);
+  });
+  return luotNay;
+}
+
 // Khớp đúng CẢ 3 thông tin loại/kích thước/màu sắc — đây là "mã định danh" của 1 loại phôi, không
 // có cột mã riêng nào khác để tra theo.
 function khopLoaiPhoi(dong, loai, kichThuoc, mauSac) {
@@ -79,7 +99,12 @@ async function nhapKho({ loai, kichThuoc, mauSac, soLuong, nguoiNhap, vaiTro, gh
 // Chuyển NGƯỢC lại "Chưa lấy phôi" giờ ĐƯỢC hoàn kho — xem hoanKhoTheoDon() ngay dưới đây (sửa
 // 20/09/2026, phát hiện qua rà soát bảo mật: trước đây chỉ trừ 1 chiều, khiến chu trình "Đã lấy phôi ->
 // Chưa lấy phôi -> Đã lấy phôi" trừ kho 2 lần cho đúng 1 lượt lấy phôi thật).
-async function truKhoTheoDon(donHang, user) {
+function truKhoTheoDon(donHang, user) {
+  const khoa = `${chuan(donHang.LOAI)}|${chuan(donHang.KICH_THUOC)}|${chuan(donHang.MAU_SAC)}`;
+  return xepHangTheoToHopPhoi(khoa, () => truKhoTheoDonThat(donHang, user));
+}
+
+async function truKhoTheoDonThat(donHang, user) {
   const soLuong = Number(donHang.SO_LUONG);
   if (!soLuong || soLuong <= 0) return; // thiếu/sai dữ liệu số lượng trên đơn — bỏ qua, không chặn đơn
 
@@ -112,7 +137,12 @@ async function truKhoTheoDon(donHang, user) {
 // trừ trước đó, khớp loại phôi theo LOAI+KICH_THUOC+MAU_SAC. Thiếu hàm này khiến chu trình "Đã lấy
 // phôi -> Chưa lấy phôi -> Đã lấy phôi" (sửa nhầm, bấm nhầm nút quick-toggle 2 lần...) trừ kho 2 LẦN
 // cho đúng 1 lượt lấy phôi thật ngoài đời — xem orderService.js#update() nơi gọi hàm này.
-async function hoanKhoTheoDon(donHang, user) {
+function hoanKhoTheoDon(donHang, user) {
+  const khoa = `${chuan(donHang.LOAI)}|${chuan(donHang.KICH_THUOC)}|${chuan(donHang.MAU_SAC)}`;
+  return xepHangTheoToHopPhoi(khoa, () => hoanKhoTheoDonThat(donHang, user));
+}
+
+async function hoanKhoTheoDonThat(donHang, user) {
   const soLuong = Number(donHang.SO_LUONG);
   if (!soLuong || soLuong <= 0) return; // thiếu/sai dữ liệu số lượng trên đơn — bỏ qua, không chặn đơn
 

@@ -418,7 +418,11 @@ router.post('/chi-dinh-nguoi-chay-may', async (req, res) => {
       thanhCong.push(sttKey);
       ghiLog({
         nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'CHI_DINH_NGUOI_CHAY_MAY',
-        sttKey, chiTiet: { nguoiDuocChiDinh: nguoiSanXuat, tuTrangThai: row.TRANG_THAI_XUONG },
+        // sang (bổ sung 22/09/2026, theo yêu cầu người dùng) — trạng thái MỚI thật sự được set ở
+        // orderService.update() ngay trên (TRANG_THAI_XUONG: 'Đang chạy máy'). Thiếu trường này khiến
+        // layLichSuChuyenSangTrangThai() (services/logService.js) không nhận diện được lượt chuyển
+        // trạng thái này dù đã whitelist đúng HanhDong — hàm đó đọc chiTiet.sang/chiTiet.TRANG_THAI_XUONG.
+        sttKey, chiTiet: { nguoiDuocChiDinh: nguoiSanXuat, tuTrangThai: row.TRANG_THAI_XUONG, sang: 'Đang chạy máy' },
       }).catch(err => console.error('[Orders] Lỗi ghi log nền:', err.message));
     } catch (err) {
       loi.push({ sttKey, lyDo: err.message });
@@ -479,7 +483,10 @@ router.post('/chi-dinh-nguoi-ve-file', async (req, res) => {
       thanhCong.push(sttKey);
       ghiLog({
         nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'CHI_DINH_NGUOI_VE_FILE',
-        sttKey, chiTiet: { nguoiDuocChiDinh: nguoiVeFile },
+        // sang (bổ sung 22/09/2026, theo yêu cầu người dùng) — cùng lý do CHI_DINH_NGUOI_CHAY_MAY ở
+        // trên: trạng thái MỚI thật sự set ở orderService.update() ngay trên (TRANG_THAI_VE_FILE:
+        // 'Đang vẽ file').
+        sttKey, chiTiet: { nguoiDuocChiDinh: nguoiVeFile, sang: 'Đang vẽ file' },
       }).catch(err => console.error('[Orders] Lỗi ghi log nền:', err.message));
     } catch (err) {
       loi.push({ sttKey, lyDo: err.message });

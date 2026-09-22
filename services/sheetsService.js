@@ -16,6 +16,16 @@ const _cacheBang = new Map(); // tabName -> { data: {headers, rows}, hetHan }
 const _cacheHeader = new Map(); // tabName -> { headers, hetHan } — KHÔNG xoá khi appendRow, vì thêm 1
                                  // dòng dữ liệu không làm đổi header; chỉ xoá khi updateCells sửa hẳn dòng 1
 
+// Đếm số LẦN xoaCacheBang đã gọi cho từng tab (bổ sung 22/09/2026, theo yêu cầu người dùng) — chống
+// race "đọc-đang-chạy ghi đè lại dữ liệu CŨ ngay sau khi 1 lượt GHI khác vừa xoá cache": nếu 1 lượt
+// readTabCached() đã đọc DỞ (network) đúng lúc 1 thao tác ghi khác gọi xoaCacheBang() xong, lượt đọc dở
+// đó vẫn mang dữ liệu CŨ (đọc trước khi ghi xảy ra) và sẽ tự ghi lại vào _cacheBang khi resolve — vô
+// tình phục hồi cache cũ ngay sau khi nó vừa bị xoá vì lý do dữ liệu đã đổi, khiến các lượt đọc SAU đó
+// (trong TTL còn lại) thấy dữ liệu cũ dù đã có 1 lượt ghi mới hơn. Không mất dữ liệu (tự hết hạn theo
+// TTL như cũ) nhưng vi phạm tính nhất quán "đọc sau ghi phải thấy dữ liệu mới". Chỉ ghi cache nếu KHÔNG
+// có lượt xoaCacheBang nào xảy ra trong lúc đang đọc (so thế hệ trước/sau).
+const _theHeCache = new Map(); // tabName -> số nguyên tăng dần
+
 // Yêu cầu ĐANG ĐỌC DỞ theo từng tab — gộp các lượt gọi readTabCached/getHeadersCached xảy ra CÙNG
 // LÚC (vd nhiều nhân viên cùng mở trang Đơn hàng đúng lúc cache vừa hết hạn) thành 1 request thật
 // duy nhất tới Google, thay vì mỗi lượt gọi tự bắn 1 request riêng ("cache stampede") — đây từng là
@@ -25,6 +35,7 @@ const _dangDocHeader = new Map(); // tabName -> Promise
 
 function xoaCacheBang(tabName) {
   _cacheBang.delete(tabName);
+  _theHeCache.set(tabName, (_theHeCache.get(tabName) || 0) + 1);
 }
 
 // Đổi index cột (0-based) thành chữ cột kiểu Sheets (0 -> A, 1 -> B, 26 -> AA...)
@@ -159,8 +170,13 @@ async function readTabCached(tabName, ttlMs = 5000) {
   if (cached && cached.hetHan > now) return cached.data;
 
   return gopYeuCauTrung(_dangDocBang, tabName, async () => {
+    const theHeLucBatDau = _theHeCache.get(tabName) || 0;
     const data = await readTab(tabName);
-    _cacheBang.set(tabName, { data, hetHan: Date.now() + ttlMs });
+    // Chỉ ghi cache nếu KHÔNG có lượt xoaCacheBang() nào chạy xen giữa lúc đang đọc — nếu có, dữ liệu
+    // vừa đọc được đã CŨ hơn 1 lượt ghi khác, ghi vào cache lúc này sẽ phục hồi nhầm dữ liệu cũ.
+    if ((_theHeCache.get(tabName) || 0) === theHeLucBatDau) {
+      _cacheBang.set(tabName, { data, hetHan: Date.now() + ttlMs });
+    }
     return data;
   });
 }

@@ -538,6 +538,16 @@ async function luuCauHinhQuetTrangThai() {
   }
 }
 
+// Escape 1 chuỗi để nhét an toàn vào literal JS trong thuộc tính onclick="...('...')" (bổ sung
+// 22/09/2026, theo yêu cầu người dùng) — PHẢI escape dấu \ TRƯỚC, rồi mới escape dấu ' (thứ tự ngược
+// lại sẽ tự nhân đôi \ vừa được escape của bước sau). Dùng .replace(/'/g, "\\'") một mình (như trước
+// đây) chỉ escape ' mà bỏ sót \: 1 chuỗi có chứa \ sẽ thoát khỏi literal JS, phá cú pháp onclick — rủi
+// ro thấp trong thực tế vì hiện chỉ dùng cho STT_Key (không phải input tự do), nhưng vẫn nên escape
+// đúng chuẩn.
+function escapeJsChuoi(chuoi) {
+  return String(chuoi).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
 async function taiDanhSach() {
   const el = document.getElementById('bang-danh-sach');
   let ds;
@@ -564,9 +574,9 @@ async function taiDanhSach() {
               <td>${escapeHtml(d.hangVanChuyen || '—')}</td>
               <td>${d.thoiGianInMa ? dinhDangNgayGioNganAnToan(d.thoiGianInMa) : '—'}</td>
               <td style="display:flex;gap:6px;flex-wrap:wrap">
-                ${d.trangThai === 'DA_MUA' ? '' : `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="muaThuCongTuBang(this, '${d.sttKey.replace(/'/g, "\\'")}')">Mua ngay</button>`}
-                ${d.trangThai === 'DA_MUA' ? `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="apDungInLabelTuBang(this, '${d.sttKey.replace(/'/g, "\\'")}')">IN LABEL</button>` : ''}
-                <button type="button" class="btn-hanh-dong" style="padding:6px 10px;font-size:0.82rem" onclick="apDungMuaVaInLabelTuBang(this, '${d.sttKey.replace(/'/g, "\\'")}')">MUA TRACKING và IN LABEL</button>
+                ${d.trangThai === 'DA_MUA' ? '' : `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="muaThuCongTuBang(this, '${escapeJsChuoi(d.sttKey)}')">Mua ngay</button>`}
+                ${d.trangThai === 'DA_MUA' ? `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="apDungInLabelTuBang(this, '${escapeJsChuoi(d.sttKey)}')">IN LABEL</button>` : ''}
+                <button type="button" class="btn-hanh-dong" style="padding:6px 10px;font-size:0.82rem" onclick="apDungMuaVaInLabelTuBang(this, '${escapeJsChuoi(d.sttKey)}')">MUA TRACKING và IN LABEL</button>
               </td>
             </tr>`;
           }).join('')}

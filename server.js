@@ -61,3 +61,7 @@ require('./services/canhBaoJob').batDauLichCanhBao();
 // docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md) — TẮT theo mặc định cho tới khi
 // admin tự bật ở trang "Tracking" (services/trackingAutoService.js tự đọc cấu hình mỗi lượt quét).
 require('./services/trackingJob').batDauLichTracking();
+
+// Bật lịch backup SQLite (bổ sung 22/09/2026, theo yêu cầu người dùng — data/ trước đây không có
+// cơ chế backup nào, xem services/backupDbService.js).
+require('./services/backupDbService').batDauLichBackup();

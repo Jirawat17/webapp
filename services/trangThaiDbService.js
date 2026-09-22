@@ -73,10 +73,36 @@ for (const cot of CAC_COT) {
   }
 }
 
+// 2 cột "trạng thái 2 nấc" (TRANG_THAI_PHOI/TRANG_THAI_VE_FILE) LUÔN có 1 giá trị nghiệp vụ thật theo
+// pipeline (data/pipelineTinhTrang.js) — không có khái niệm "chưa biết"/trống hợp lệ như các cột khác
+// trong CAC_COT (vd GHI_CHU_VE_FILE, NGUOI_VAN_HANH... trống nghĩa là "chưa có", vẫn hợp lệ). '' cho
+// riêng 2 cột này CHỈ phát sinh do kỹ thuật lưu trữ — SQL DEFAULT '' khi cột chưa từng được ghi (đơn đã
+// có dòng trong bảng vì lý do khác nhưng chưa từng đụng tới cột này), hoặc đơn CHƯA TỪNG có dòng nào
+// (RONG_MAC_DINH bên dưới) — KHÔNG PHẢI 1 trạng thái nghiệp vụ thật.
+//
+// Bổ sung 22/09/2026, theo yêu cầu người dùng — trước đây route quét QR (routes/qr.js) so khớp CHÍNH
+// XÁC requireStatus === 'Chưa lấy phôi', nên đơn có TRANG_THAI_PHOI === '' (đơn cũ từ trước ngày
+// chuyển cột này sang SQLite 18/09/2026, hoặc đơn có dòng SQLite vì lý do khác nhưng chưa từng đụng
+// TRANG_THAI_PHOI) bị từ chối OAN dù bản chất nghiệp vụ đúng là "chưa lấy phôi". Sửa TẬN GỐC ở tầng đọc
+// (layTheoKey/layTatCa dưới đây) thay vì vá riêng từng route đang so khớp requireStatus — mọi nơi đọc
+// qua 2 hàm này (và getAll() dùng RONG_MAC_DINH khi đơn chưa từng có dòng nào) đều thấy đúng giá trị
+// nghiệp vụ, không cần sửa lại nếu sau này có route/kịch bản mới cũng đọc 2 cột này.
+// orderService.js#tinhPhoiVeFileTuDongKhiInMa() vẫn giữ nguyên, không bị thay thế — hàm đó GHI tường
+// minh 2 giá trị này vào SQLite đúng lúc đơn chuyển "Đã in mã" (bổ trợ, không trùng lặp): lớp ở ĐÂY chỉ
+// xử lý tầng ĐỌC, không ghi gì, nên không giúp được cho ai đọc thẳng SQLite mà không qua 2 hàm dưới đây.
+const MAC_DINH_THAT_THEO_COT = { TRANG_THAI_PHOI: 'Chưa lấy phôi', TRANG_THAI_VE_FILE: 'Chưa vẽ file' };
+function apDungMacDinhThat(row) {
+  for (const cot in MAC_DINH_THAT_THEO_COT) {
+    if (row[cot] === '') row[cot] = MAC_DINH_THAT_THEO_COT[cot];
+  }
+  return row;
+}
+
 // Object rỗng mặc định cho STT_Key chưa từng có dòng nào trong DB (đơn mới) — TRẢ VỀ DẠNG GIỐNG HỆT 1
-// dòng SQLite thật (mọi cột = '') để nơi gọi (orderService.js#getAll) gộp vào row Sheets mà không cần
-// phân biệt "có/chưa có trong DB" — đúng hành vi hiện tại của Sheets (ô trống = '', không phải undefined).
-const RONG_MAC_DINH = Object.freeze(Object.fromEntries(CAC_COT.map(c => [c, ''])));
+// dòng SQLite thật (mọi cột = '', trừ TRANG_THAI_PHOI/TRANG_THAI_VE_FILE ở trên) để nơi gọi
+// (orderService.js#getAll) gộp vào row Sheets mà không cần phân biệt "có/chưa có trong DB" — đúng hành
+// vi hiện tại của Sheets (ô trống = '', không phải undefined) cho MỌI cột trừ 2 cột nghiệp vụ ở trên.
+const RONG_MAC_DINH = Object.freeze({ ...Object.fromEntries(CAC_COT.map(c => [c, ''])), ...MAC_DINH_THAT_THEO_COT });
 
 function chuanHoaKey(sttKey) {
   return String(sttKey).trim();
@@ -89,7 +115,7 @@ const DS_COT_SELECT = CAC_COT.join(', ');
 const cauLayTheoKey = db.prepare(`SELECT ${DS_COT_SELECT} FROM trang_thai_don WHERE stt_key = ?`);
 function layTheoKey(sttKey) {
   const row = cauLayTheoKey.get(chuanHoaKey(sttKey));
-  return row ? { ...RONG_MAC_DINH, ...row } : { ...RONG_MAC_DINH };
+  return apDungMacDinhThat(row ? { ...RONG_MAC_DINH, ...row } : { ...RONG_MAC_DINH });
 }
 
 // Toàn bộ dòng trong DB, kèm stt_key riêng để làm khoá Map — dùng cho orderService.js#getAll() gộp vào
@@ -98,7 +124,7 @@ function layTheoKey(sttKey) {
 const cauLayTatCa = db.prepare(`SELECT stt_key, ${DS_COT_SELECT} FROM trang_thai_don`);
 function layTatCa() {
   const ketQua = new Map();
-  for (const { stt_key, ...conLai } of cauLayTatCa.iterate()) ketQua.set(stt_key, conLai);
+  for (const { stt_key, ...conLai } of cauLayTatCa.iterate()) ketQua.set(stt_key, apDungMacDinhThat(conLai));
   return ketQua;
 }
 

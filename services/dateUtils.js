@@ -20,7 +20,15 @@ function parseNgay(giaTri) {
   if (m) {
     const ngay = Number(m[1]), thang = Number(m[2]), nam = Number(m[3]);
     const d = new Date(nam, thang - 1, ngay);
-    return isNaN(d) ? null : d;
+    // Chặn ngày KHÔNG có thật tự "lăn" qua tháng sau (bổ sung 22/09/2026, theo yêu cầu người dùng) —
+    // vd 29/02/2025 (năm không nhuận) hay 31/04/2026 (tháng 4 chỉ có 30 ngày): new Date() của JS KHÔNG
+    // báo Invalid Date cho các giá trị này, mà tự cộng dồn phần dư sang tháng/năm kế tiếp (ra hẳn
+    // 01/03/2025) — sai ÂM THẦM, không có gì báo hiệu. Trường hợp này xảy ra thật khi nhân viên gõ tay
+    // 1 chuỗi ngày trực tiếp vào ô Sheet dạng TEXT (không qua ô ngày tháng chuẩn của Sheets, vốn không
+    // cho nhập ngày sai). So khớp lại đúng 3 phần đã đọc — lệch phần nào nghĩa là đã bị lăn, coi như
+    // không đọc được (trả null, đúng hợp đồng sẵn có của hàm này) thay vì âm thầm trả ngày sai.
+    if (isNaN(d) || d.getDate() !== ngay || d.getMonth() !== thang - 1 || d.getFullYear() !== nam) return null;
+    return d;
   }
 
   // ISO chuẩn: 2026-08-23 (vd giá trị từ <input type="date">) hoặc có kèm giờ

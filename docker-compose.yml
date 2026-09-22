@@ -22,3 +22,6 @@ services:
       # services/trangThaiDbService.js). BẮT BUỘC mount ra ngoài container — không có volume này,
       # dữ liệu sẽ mất mỗi lần rebuild/redeploy (image không tự giữ lại file ghi trong lúc chạy).
       - ./data:/app/data
+      # Backup định kỳ SQLite, cố ý TÁCH RIÊNG khỏi volume ./data ở trên (bổ sung 22/09/2026, xem
+      # services/backupDbService.js) — mất/hỏng ./data không kéo mất luôn bản backup theo.
+      - ./data-backups:/app/data-backups

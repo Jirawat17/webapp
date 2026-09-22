@@ -66,7 +66,16 @@ async function layHoatDongGanDay({ nguoiDung, hanhDong, gioiHan = 20 } = {}) {
 // không sửa lại lịch sử cũ) — nếu chỉ so khớp đúng 1 tên mới, mọi lần lỗi xảy ra TRƯỚC khi đổi
 // pipeline sẽ bị bỏ sót hoàn toàn, khiến báo cáo báo thiếu/báo 0 dù thực tế có lỗi (lỗi thật đã xảy
 // ra, xem routes/reports.js — TRANG_THAI_LOI giờ truyền cả tên cũ lẫn tên mới).
-const HANH_DONG_CO_THE_DOI_TRANG_THAI = ['QUET_KICH_BAN', 'QUET_KICH_BAN_HANG_LOAT', 'CHUYEN_TRANG_THAI_HANG_LOAT', 'CAP_NHAT_DON'];
+// UPLOAD_ANH, CHI_DINH_NGUOI_CHAY_MAY, CHI_DINH_NGUOI_VE_FILE thêm vào 22/09/2026, theo yêu cầu người
+// dùng — cả 3 đều CÓ THỂ đổi 1 cột trạng thái (UPLOAD_ANH: chụp ảnh bắt buộc tự chuyển "Đã sản xuất",
+// xem routes/photos.js; 2 cái sau: admin chỉ định người chạy máy/vẽ file tự chuyển "Đang chạy máy"/
+// "Đang vẽ file", xem routes/orders.js) nhưng TRƯỚC ĐÓ không nằm trong danh sách này — báo cáo lỗi/thời
+// gian chạy máy (routes/reports.js, dùng layLichSuChuyenSangTrangThai() bên dưới) bỏ sót hoàn toàn các
+// lượt chuyển trạng thái qua 2 luồng này, dù log đã ghi đầy đủ (báo sai "không xác định"/thiếu số liệu).
+const HANH_DONG_CO_THE_DOI_TRANG_THAI = [
+  'QUET_KICH_BAN', 'QUET_KICH_BAN_HANG_LOAT', 'CHUYEN_TRANG_THAI_HANG_LOAT', 'CAP_NHAT_DON',
+  'UPLOAD_ANH', 'CHI_DINH_NGUOI_CHAY_MAY', 'CHI_DINH_NGUOI_VE_FILE',
+];
 
 async function layLichSuChuyenSangTrangThai(trangThaiDich) {
   const dsTrangThaiDich = Array.isArray(trangThaiDich) ? trangThaiDich : [trangThaiDich];
@@ -159,10 +168,20 @@ async function layHoatDongCuaToi({ nguoiDung, tuNgay, denNgay }) {
     }
     if (r.HanhDong === 'CAP_NHAT_DON') {
       // _truocKhiSua (bổ sung 07/09/2026, xem routes/orders.js PUT /:sttKey) chứa giá trị TRƯỚC khi
-      // sửa cho từng cột trạng thái thực sự đổi — log CŨ (ghi trước ngày này) không có trường này,
-      // vẫn ra tu:'' như trước giờ (tương thích ngược hoàn toàn).
-      const truoc = (chiTiet._truocKhiSua && typeof chiTiet._truocKhiSua === 'object') ? chiTiet._truocKhiSua : {};
-      COT_TRANG_THAI_CUA_DON.filter(cot => chiTiet[cot] !== undefined).forEach(cot => {
+      // sửa CHO ĐÚNG những cột trạng thái THỰC SỰ đổi giá trị (route đã tự so sánh updates[cot] !==
+      // row[cot] trước khi đưa vào _truocKhiSua). Trước 22/09/2026, dòng dưới đây đếm mọi cột trạng
+      // thái CÓ MẶT trong `updates` gửi lên — nhưng trang Chi tiết đơn luôn gửi cả 3 cột trạng thái
+      // (kể cả cột không đổi giá trị), nên 1 lượt sửa tay chỉ đổi 1 cột vẫn bị đếm thành 3 lượt "đổi
+      // trạng thái", làm phồng sai số liệu báo cáo hiệu suất. Log MỚI (có _truocKhiSua): chỉ đếm đúng
+      // cột có trong _truocKhiSua (thật sự đổi). Log CŨ (ghi trước 07/09/2026, chưa từng có trường
+      // này) không phân biệt được đổi thật hay không — GIỮ NGUYÊN hành vi cũ (đếm theo cột có mặt
+      // trong updates) để không làm sai lệch số liệu lịch sử đã có từ trước.
+      const coTruocKhiSua = chiTiet._truocKhiSua && typeof chiTiet._truocKhiSua === 'object';
+      const truoc = coTruocKhiSua ? chiTiet._truocKhiSua : {};
+      const cacCotThatSuDoi = coTruocKhiSua
+        ? COT_TRANG_THAI_CUA_DON.filter(cot => truoc[cot] !== undefined)
+        : COT_TRANG_THAI_CUA_DON.filter(cot => chiTiet[cot] !== undefined);
+      cacCotThatSuDoi.forEach(cot => {
         doiTrangThai.push({ sttKey: r.STT_Key, thoiGian: r.ThoiGian, nguon: 'Sửa tay', cot, tu: truoc[cot] || '', sang: chiTiet[cot] });
       });
       continue;
