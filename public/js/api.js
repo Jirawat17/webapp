@@ -423,8 +423,19 @@ function taoThanhTienDo(sauPhanTu, { onHuy } = {}) {
 const CANH_DAI_NHAT_TOI_DA_KHI_NEN_ANH = 1600; // px — đủ nét để xem/đối chiếu trên màn hình
 const CHAT_LUONG_JPEG_KHI_NEN_ANH = 0.8;
 const BO_QUA_NEN_NEU_DA_NHO_HON = 400 * 1024; // 400KB — ảnh đã nhỏ sẵn thì khỏi nén lại tốn công vô ích
+
+// Lý do lần GẦN NHẤT nenAnhTruocKhiTaiLen() KHÔNG nén được (null = lần đó nén thành công bình thường) —
+// bổ sung 23/09/2026, theo yêu cầu người dùng: phát hiện qua thực tế 1 máy tính bảng nén ra ĐÚNG bằng
+// kích thước gốc (0 byte thay đổi) — nghi ngờ createImageBitmap() lỗi/không hỗ trợ trên thiết bị đó
+// nhưng lỗi chỉ in ra console (không xem được trên máy tính bảng/điện thoại không có devtools). Giữ 1
+// biến side-channel ĐƠN GIẢN thay vì đổi kiểu trả về của hàm (order.html đang gọi hàm này, không nên
+// đổi hợp đồng cũ) — nơi gọi nào cần biết lý do thì tự đọc biến này NGAY SAU KHI await xong.
+let lyDoKhongNenGanNhat = null;
+
 async function nenAnhTruocKhiTaiLen(file) {
-  if (!file || !file.type || !file.type.startsWith('image/') || file.size <= BO_QUA_NEN_NEU_DA_NHO_HON) return file;
+  lyDoKhongNenGanNhat = null;
+  if (!file || !file.type || !file.type.startsWith('image/')) { lyDoKhongNenGanNhat = 'Không phải file ảnh'; return file; }
+  if (file.size <= BO_QUA_NEN_NEU_DA_NHO_HON) { lyDoKhongNenGanNhat = 'Ảnh đã nhỏ sẵn (bỏ qua)'; return file; }
   try {
     const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
     const tyLe = Math.min(1, CANH_DAI_NHAT_TOI_DA_KHI_NEN_ANH / Math.max(bitmap.width, bitmap.height));
@@ -438,11 +449,13 @@ async function nenAnhTruocKhiTaiLen(file) {
     bitmap.close();
 
     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', CHAT_LUONG_JPEG_KHI_NEN_ANH));
-    if (!blob || blob.size >= file.size) return file; // nén không hiệu quả (hiếm) — giữ nguyên bản gốc
+    if (!blob) { lyDoKhongNenGanNhat = 'canvas.toBlob() trả về rỗng'; return file; }
+    if (blob.size >= file.size) { lyDoKhongNenGanNhat = `Nén không hiệu quả (${(blob.size/1024).toFixed(0)}KB >= gốc)`; return file; }
 
     const tenFileMoi = String(file.name || 'anh').replace(/\.[^.]+$/, '') + '.jpg';
     return new File([blob], tenFileMoi, { type: 'image/jpeg' });
   } catch (e) {
+    lyDoKhongNenGanNhat = 'Lỗi: ' + e.message;
     console.error('[Nén ảnh] Lỗi khi nén, dùng ảnh gốc:', e.message);
     return file;
   }

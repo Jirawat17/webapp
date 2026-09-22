@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Quét QR — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=97">
-<script src="/js/theme.js?v=97"></script>
+<link rel="stylesheet" href="/css/style.css?v=98">
+<script src="/js/theme.js?v=98"></script>
 <style>
 /* Tự ẩn header khi cuộn xuống, hiện lại khi cuộn lên — chỉ áp dụng riêng cho trang Quét QR
    (chỉ định nghĩa trong <style> của trang này, không đụng style.css dùng chung) để tăng vùng
@@ -73,8 +73,8 @@
 </div>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="/js/icons.js?v=97"></script>
-<script src="/js/api.js?v=97"></script>
+<script src="/js/icons.js?v=98"></script>
+<script src="/js/api.js?v=98"></script>
 <script>
 let user;
 // Mặc định mở vào "Quét kịch bản" (batch) khi vào trang — theo yêu cầu người dùng 05/09/2026, vì đây
@@ -815,6 +815,7 @@ async function taiAnhLenNgam(sttKey, cauHinh, file, dong) {
   const tNen0 = performance.now();
   const fileDaNen = await nenAnhTruocKhiTaiLen(file);
   const tNen1 = performance.now();
+  const lyDoKhongNen = lyDoKhongNenGanNhat; // biến khai báo ở api.js (let top-level, cùng phạm vi toàn cục giữa các thẻ <script> không phải module) — null nếu nén thành công bình thường, xem chú thích ở api.js#nenAnhTruocKhiTaiLen
 
   // Đo tạm THỜI GIAN TRUYỀN THẬT (bổ sung 23/09/2026, theo yêu cầu người dùng — log server chỉ đo từ
   // lúc Express NHẬN XONG file, không thấy được thời gian ảnh đi từ máy người dùng lên server, vốn có
@@ -834,7 +835,7 @@ async function taiAnhLenNgam(sttKey, cauHinh, file, dong) {
     const tGuiDi1 = performance.now();
 
     const don = data.don || {};
-    const doDo = `[đo: nén ${((tNen1 - tNen0) / 1000).toFixed(1)}s ${(file.size / 1024).toFixed(0)}→${(fileDaNen.size / 1024).toFixed(0)}KB, gửi+chờ ${((tGuiDi1 - tGuiDi0) / 1000).toFixed(1)}s]`;
+    const doDo = `[đo: nén ${((tNen1 - tNen0) / 1000).toFixed(1)}s ${(file.size / 1024).toFixed(0)}→${(fileDaNen.size / 1024).toFixed(0)}KB${lyDoKhongNen ? ' (KHÔNG nén: ' + lyDoKhongNen + ')' : ''}, gửi+chờ ${((tGuiDi1 - tGuiDi0) / 1000).toFixed(1)}s]`;
     dong.trangThai = 'ok';
     dong.ghiChu = `${don.TenKhachHang || ''} — ${cauHinh.yeuCau} → ${cauHinh.chuyenSang} ${doDo}`;
     hienThiToastAnh('ok', `${don.STT_Key || sttKey}${don.TenKhachHang ? ' · ' + don.TenKhachHang : ''} — đã chuyển sang "${cauHinh.chuyenSang}" ${doDo}`);
@@ -843,8 +844,9 @@ async function taiAnhLenNgam(sttKey, cauHinh, file, dong) {
     // Lỗi upload thật (mất mạng, server từ chối vì đơn vừa đổi trạng thái...) — đơn đã quay lại [Đang
     // quét] từ lúc bấm chụp, người dùng cần quét lại QR đơn này để thử chụp lại (khác hành vi cũ — cũ
     // giữ nguyên màn hình [Sẵn sàng chụp] để bấm lại ngay, không còn hợp lý khi ảnh đã tải ngầm).
+    const doDoLoi = `[đo: nén ${((tNen1 - tNen0) / 1000).toFixed(1)}s ${(file.size / 1024).toFixed(0)}→${(fileDaNen.size / 1024).toFixed(0)}KB${lyDoKhongNen ? ' (KHÔNG nén: ' + lyDoKhongNen + ')' : ''}, gửi+chờ ${((performance.now() - tGuiDi0) / 1000).toFixed(1)}s]`;
     dong.trangThai = 'canh-bao';
-    dong.ghiChu = err.message;
+    dong.ghiChu = `${err.message} ${doDoLoi}`;
     hienThiToastAnh('canh-bao', `${sttKey}: ${err.message}`);
     phatAmThanhKetQua('SAI_TRANG_THAI');
   } finally {
