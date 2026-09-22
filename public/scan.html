@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Quét QR — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=96">
-<script src="/js/theme.js?v=96"></script>
+<link rel="stylesheet" href="/css/style.css?v=97">
+<script src="/js/theme.js?v=97"></script>
 <style>
 /* Tự ẩn header khi cuộn xuống, hiện lại khi cuộn lên — chỉ áp dụng riêng cho trang Quét QR
    (chỉ định nghĩa trong <style> của trang này, không đụng style.css dùng chung) để tăng vùng
@@ -73,8 +73,8 @@
 </div>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="/js/icons.js?v=96"></script>
-<script src="/js/api.js?v=96"></script>
+<script src="/js/icons.js?v=97"></script>
+<script src="/js/api.js?v=97"></script>
 <script>
 let user;
 // Mặc định mở vào "Quét kịch bản" (batch) khi vào trang — theo yêu cầu người dùng 05/09/2026, vì đây
@@ -130,6 +130,10 @@ const CAU_HINH_ANH = {
   },
 };
 let dsDaChupTheoMoc = { photo_san_xuat: [], photo_da_dan_tem: [] };
+// STT_Key đang có 1 lượt upload ngầm CHƯA XONG (bổ sung 22/09/2026, theo yêu cầu người dùng — chụp
+// liên tục nhiều đơn, ảnh tải ngầm phía sau, không chặn nhịp quét→chụp) — chỉ để chặn chụp TRÙNG cho
+// ĐÚNG 1 đơn đang chờ ảnh trước tải xong, không khoá gì giữa các đơn khác nhau.
+const dsUploadDangCho = new Set();
 
 document.getElementById('mode-lookup').innerHTML = icon('scan') + ' Quét mã QR xem thông tin 1 đơn';
 document.getElementById('mode-batch').innerHTML = icon('check') + ' Quét kịch bản';
@@ -794,18 +798,14 @@ document.getElementById('input-chup-anh').addEventListener('change', async (e) =
   await xuLyChupAnh(file);
 });
 
-async function xuLyChupAnh(file) {
-  if (!donDaXacDinhChoAnh) { alert('Chưa xác định được đơn — quét lại mã QR trước khi chụp.'); return; }
-  const cauHinh = CAU_HINH_ANH[mode];
-  const sttKey = donDaXacDinhChoAnh.sttKey;
-  const btn = document.getElementById('btn-chup-anh');
-  btn.disabled = true;
-  btn.innerHTML = icon('spinner', { className: 'icon-spin', size: 24 }) + ' Đang tải ảnh lên...';
-
-  // Nén ảnh trước khi upload (bổ sung 21/09/2026, theo yêu cầu người dùng — xem api.js#nenAnhTruocKhiTaiLen)
-  // — ảnh camera gốc thường vài MB, nén trước giúp upload nhanh hơn hẳn trên mạng xưởng/di động yếu.
-  const fileDaNen = await nenAnhTruocKhiTaiLen(file);
-
+// Tải ảnh lên NGẦM (bổ sung 22/09/2026, theo yêu cầu người dùng — quét mã QR + chụp ảnh xong là cho
+// quét đơn TIẾP THEO ngay, không đợi ảnh trước tải xong; server mỗi lượt tải mất thật vài giây do phải
+// đọc dữ liệu đơn trước khi ghi) — hàm này CHẠY NỀN, KHÔNG được await bởi nơi gọi (xuLyChupAnh bên
+// dưới). `dong` là đúng object đã unshift vào dsDaChupTheoMoc[mode] — sửa TRỰC TIẾP field của nó rồi
+// render lại để khối "Danh sách đã chụp" tự cập nhật, dù người dùng có thể đã quét sang đơn khác hoặc
+// đổi mode trong lúc chờ (renderDsDaChup()/renderDemNhomAnh() luôn đọc đúng dsDaChupTheoMoc[mode] hiện
+// tại — vô hại nếu mode đã đổi, chỉ là redraw lại đúng màn hình đang hiện, lịch sử vẫn đúng khi quay lại).
+async function taiAnhLenNgam(sttKey, cauHinh, fileDaNen, dong) {
   const form = new FormData();
   form.append('photo', fileDaNen);
   form.append('sttKey', sttKey);
@@ -817,24 +817,55 @@ async function xuLyChupAnh(file) {
     if (!res.ok) throw new Error(data.error);
 
     const don = data.don || {};
+    dong.trangThai = 'ok';
+    dong.ghiChu = `${don.TenKhachHang || ''} — ${cauHinh.yeuCau} → ${cauHinh.chuyenSang}`;
     hienThiToastAnh('ok', `${don.STT_Key || sttKey}${don.TenKhachHang ? ' · ' + don.TenKhachHang : ''} — đã chuyển sang "${cauHinh.chuyenSang}"`);
     phatAmThanhKetQua('OK');
-    themDongDaChup({ trangThai: 'ok', sttKey: don.STT_Key || sttKey, ghiChu: `${don.TenKhachHang || ''} — ${cauHinh.yeuCau} → ${cauHinh.chuyenSang}` });
-
-    // Xong 1 đơn — quay lại [Đang quét] cho đơn tiếp theo, giữ đúng nhịp quét→chụp liên tục cho cả lô.
-    donDaXacDinhChoAnh = null;
-    btn.disabled = false;
-    btn.innerHTML = icon('camera', { size: 40 }) + ' Chụp ảnh';
-    await capNhatManHinh();
   } catch (err) {
-    // Lỗi upload thật (mất mạng, server từ chối vì đơn vừa đổi trạng thái...) — đơn ĐÃ BIẾT vẫn giữ
-    // nguyên (donDaXacDinhChoAnh không đổi), cho chụp lại NGAY không cần quét lại QR từ đầu.
+    // Lỗi upload thật (mất mạng, server từ chối vì đơn vừa đổi trạng thái...) — đơn đã quay lại [Đang
+    // quét] từ lúc bấm chụp, người dùng cần quét lại QR đơn này để thử chụp lại (khác hành vi cũ — cũ
+    // giữ nguyên màn hình [Sẵn sàng chụp] để bấm lại ngay, không còn hợp lý khi ảnh đã tải ngầm).
+    dong.trangThai = 'canh-bao';
+    dong.ghiChu = err.message;
     hienThiToastAnh('canh-bao', `${sttKey}: ${err.message}`);
     phatAmThanhKetQua('SAI_TRANG_THAI');
-    themDongDaChup({ trangThai: 'canh-bao', sttKey, ghiChu: err.message });
-    btn.disabled = false;
-    btn.innerHTML = icon('camera', { size: 40 }) + ' Chụp lại';
+  } finally {
+    dsUploadDangCho.delete(sttKey);
+    renderDemNhomAnh();
+    renderDsDaChup();
   }
+}
+
+async function xuLyChupAnh(file) {
+  if (!donDaXacDinhChoAnh) { alert('Chưa xác định được đơn — quét lại mã QR trước khi chụp.'); return; }
+  const cauHinh = CAU_HINH_ANH[mode];
+  const sttKey = donDaXacDinhChoAnh.sttKey;
+
+  if (dsUploadDangCho.has(sttKey)) {
+    alert(`Đơn ${sttKey} vừa chụp xong, ảnh trước đang tải lên — đợi 1 chút rồi quét lại nếu cần chụp thêm.`);
+    return;
+  }
+
+  const btn = document.getElementById('btn-chup-anh');
+  btn.disabled = true;
+  btn.innerHTML = icon('spinner', { className: 'icon-spin', size: 24 }) + ' Đang xử lý ảnh...';
+
+  // Nén ảnh trước khi upload (bổ sung 21/09/2026, theo yêu cầu người dùng — xem api.js#nenAnhTruocKhiTaiLen)
+  // — ảnh camera gốc thường vài MB, nén trước giúp upload nhanh hơn hẳn trên mạng xưởng/di động yếu.
+  const fileDaNen = await nenAnhTruocKhiTaiLen(file);
+
+  // Thêm dòng "đang tải lên" ngay, rồi QUAY LẠI [Đang quét] cho đơn tiếp theo NGAY — không đợi upload
+  // xong. Việc tải ảnh thật chạy ở taiAnhLenNgam() phía trên, KHÔNG await ở đây (cố ý).
+  const dong = { trangThai: 'dang-tai', sttKey, ghiChu: 'Đang tải ảnh lên...' };
+  themDongDaChup(dong);
+  dsUploadDangCho.add(sttKey);
+
+  donDaXacDinhChoAnh = null;
+  btn.disabled = false;
+  btn.innerHTML = icon('camera', { size: 40 }) + ' Chụp ảnh';
+  await capNhatManHinh();
+
+  taiAnhLenNgam(sttKey, cauHinh, fileDaNen, dong);
 }
 
 // Hiện thông tin đơn đã xác định ở trạng thái [Sẵn sàng chụp] — dùng lại đúng class
@@ -865,12 +896,16 @@ function themDongDaChup(item) {
 function renderDemNhomAnh() {
   const el = document.getElementById('dem-nhom-anh');
   const ds = dsDaChupTheoMoc[mode];
+  const soDangTai = ds.filter(x => x.trangThai === 'dang-tai').length;
   const soOK = ds.filter(x => x.trangThai === 'ok').length;
   const soCanhBao = ds.filter(x => x.trangThai === 'canh-bao').length;
   // Bỏ ô đếm "Không đọc được mã" (07/09/2026) — từ khi tách quét/chụp thành 2 bước, ảnh chụp không
   // còn cần tự đọc mã QR nữa nên themDongDaChup() không bao giờ còn gọi với trangThai:'loi' (xem
   // docs/superpowers/specs/2026-09-07-tach-quet-chup-anh-design.md) — ô đếm này sẽ luôn là 0.
+  // Ô "Đang tải" (bổ sung 22/09/2026) — chỉ hiện khi có ít nhất 1 ảnh đang tải ngầm, cho người dùng
+  // biết còn ảnh chưa tải xong, đừng thoát/đóng trang vội.
   el.innerHTML = `
+    ${soDangTai > 0 ? `<div class="dem-o dang-tai"><div class="hang-tren"><span class="dem-icon">${icon('spinner', { className: 'icon-spin', size: 20 })}</span><span class="dem-so">${soDangTai}</span></div><div class="dem-nhan">Đang tải</div></div>` : ''}
     <div class="dem-o ok"><div class="hang-tren"><span class="dem-icon">✅</span><span class="dem-so">${soOK}</span></div><div class="dem-nhan">Thành công</div></div>
     <div class="dem-o canh-bao"><div class="hang-tren"><span class="dem-icon">⚠️</span><span class="dem-so">${soCanhBao}</span></div><div class="dem-nhan">Lỗi nghiệp vụ</div></div>`;
 }
@@ -879,9 +914,13 @@ function renderDsDaChup() {
   const el = document.getElementById('ds-da-chup');
   const ds = dsDaChupTheoMoc[mode];
   if (ds.length === 0) { el.innerHTML = '<p style="color:var(--color-text-faint)">Chưa chụp ảnh nào.</p>'; return; }
+  const ICON_THEO_TRANG_THAI = {
+    ok: '✅', 'canh-bao': '⚠️',
+    'dang-tai': icon('spinner', { className: 'icon-spin', size: 18 }),
+  };
   el.innerHTML = ds.map(item => `
     <div class="dong-quet ${item.trangThai}">
-      <span style="font-size:1.3rem">${item.trangThai === 'ok' ? '✅' : item.trangThai === 'canh-bao' ? '⚠️' : '❌'}</span>
+      <span style="font-size:1.3rem">${ICON_THEO_TRANG_THAI[item.trangThai] || '❌'}</span>
       <div class="noi-dung">
         <strong>${escapeHtml(item.sttKey)}</strong>
         <div class="ly-do">${escapeHtml(item.ghiChu || '')}</div>

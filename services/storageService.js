@@ -39,6 +39,15 @@ function taoObjectKeyDonHang(sttKey, tenFileGoc) {
   return `${ORDERS_PREFIX}${sttKey}/${crypto.randomUUID()}-${base}${ext}`;
 }
 
+// S3Client mặc định KHÔNG có timeout nào áp dụng cho send() hay đọc body — nếu MinIO (tự host trên
+// NAS) chậm/đứng kết nối giữa chừng, promise treo VÔ THỜI HẠN, không throw, không resolve (bổ sung
+// 17/09/2026, xem docs/superpowers/specs/2026-09-17-sua-loi-treo-quet-hang-loat-design.md, ban đầu chỉ
+// áp dụng cho chiều ĐỌC — getObjectBuffer() bên dưới; bổ sung 22/09/2026 cho CẢ chiều GHI/upload ở
+// uploadImageBuffer() ngay dưới đây, trước đó bị bỏ sót nên 1 lần MinIO nghẽn khi upload ảnh chụp QR là
+// treo vô thời hạn, không có cách nào tự phục hồi). Đồng bộ mức với anhNguonService.js#taiUrlTho (15s
+// cho URL thường) + chút biên cho ảnh thiết kế có thể nặng.
+const THOI_GIAN_CHO_TOI_DA_MS = 20000;
+
 /**
  * Upload buffer ảnh (từ multer memoryStorage) lên MinIO.
  * Trả về object key duy nhất.
@@ -47,12 +56,16 @@ async function uploadImageBuffer(buffer, objectKey, contentType = 'image/jpeg') 
   requireConfig();
   if (!buffer || !buffer.length) throw new Error('Buffer ảnh rỗng');
 
-  await s3.send(new PutObjectCommand({
-    Bucket: BUCKET,
-    Key: objectKey,
-    Body: buffer,
-    ContentType: contentType,
-  }));
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), THOI_GIAN_CHO_TOI_DA_MS);
+  try {
+    await s3.send(
+      new PutObjectCommand({ Bucket: BUCKET, Key: objectKey, Body: buffer, ContentType: contentType }),
+      { abortSignal: controller.signal }
+    );
+  } finally {
+    clearTimeout(timer);
+  }
 
   return objectKey;
 }
@@ -64,12 +77,6 @@ async function getObjectStream(objectKey) {
   requireConfig();
   return s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: objectKey }));
 }
-
-// S3Client mặc định KHÔNG có timeout nào áp dụng cho send() hay đọc body — nếu MinIO (tự host trên
-// NAS) chậm/đứng kết nối giữa chừng, promise treo VÔ THỜI HẠN, không throw, không resolve (bổ sung
-// 17/09/2026, xem docs/superpowers/specs/2026-09-17-sua-loi-treo-quet-hang-loat-design.md). Đồng bộ
-// mức với anhNguonService.js#taiUrlTho (15s cho URL thường) + chút biên cho ảnh thiết kế có thể nặng.
-const THOI_GIAN_CHO_TOI_DA_MS = 20000;
 
 /**
  * Tải TOÀN BỘ nội dung 1 object MinIO thành Buffer, có giới hạn thời gian chờ — khác getObjectStream

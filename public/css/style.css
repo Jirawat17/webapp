@@ -724,6 +724,8 @@ select.chon-trang-thai-tieu-cuc { border-color: var(--color-warning-text); color
 .dem-o.ok   { background: var(--color-success-bg); color: var(--color-success-text); }
 .dem-o.canh-bao { background: var(--color-warning-bg); color: var(--color-warning-text); }
 .dem-o.loi  { background: var(--color-danger-bg); color: var(--color-danger-text); }
+/* "Đang tải" (bổ sung 22/09/2026) — ảnh chụp QR đang tải ngầm phía sau, xem public/scan.html#taiAnhLenNgam */
+.dem-o.dang-tai { background: var(--color-info-bg); color: var(--color-info-text); }
 
 /* --- Nút bật/tắt đèn flash — icon tròn nổi trên góc khung camera thay vì chiếm nguyên 1 hàng
    riêng; chỉ hiện khi thiết bị thực sự có torch (xem capNhatHoTroFlash trong scan.html). --- */
@@ -783,6 +785,7 @@ select.chon-trang-thai-tieu-cuc { border-color: var(--color-warning-text); color
 .dong-quet.ok       { border-left-color: var(--color-success-text); }
 .dong-quet.canh-bao { border-left-color: var(--color-warning-text); }
 .dong-quet.loi      { border-left-color: var(--color-danger-text); }
+.dong-quet.dang-tai { border-left-color: var(--color-info-text); } /* bổ sung 22/09/2026 — xem .dem-o.dang-tai */
 .dong-quet .noi-dung { flex: 1; min-width: 0; }
 .dong-quet .noi-dung strong { display: block; font-size: 0.95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dong-quet .noi-dung .ly-do { font-size: 0.8rem; color: var(--color-text-muted); }

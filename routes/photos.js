@@ -101,7 +101,17 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
   const cotAnh = COT_ANH_THEO_MOC[moc];
   if (!cotAnh) return res.status(400).json({ error: 'Mốc ảnh không hợp lệ: ' + moc });
 
-  const { headers, row } = await orderService.getByKey(sttKey, { fresh: true }); // fresh: mốc da_san_xuat kiểm tra TRANG_THAI_XUONG ngay dưới đây, không được dùng bản cache cũ
+  // Đọc QUA CACHE (bổ sung 22/09/2026, theo yêu cầu người dùng cải thiện tốc độ — trước đây fresh:true
+  // ở đây, đọc lại TOÀN BỘ tab Don_Hang_ALL (công thức QUERY/VSTACK sống, Google phải tính lại mỗi lần
+  // đọc tươi) ngay sau khi /kiem-tra (route trên) VỪA đọc tươi đúng dữ liệu này vài giây trước — tốn
+  // thêm ~1-3s cho MỌI lượt chụp ảnh dù dữ liệu gần như chắc chắn chưa đổi). Cache 10s (readTabCached
+  // mặc định của getAll) gần như luôn "nóng" nhờ /kiem-tra vừa chạy — cùng mức đánh đổi độ mới đã áp
+  // dụng và được chấp nhận cho thao tác hàng loạt (xem orderService.js#getManyByKeys). AN TOÀN vì các
+  // cột QUYẾT ĐỊNH đúng/sai khi ghi (TRANG_THAI_XUONG, TRACKING_ID...) đều là cột SQLite, được
+  // capNhatThat() tự đọc LẠI bản mới nhất ngay trước khi ghi thật (xem services/orderService.js) —
+  // không phụ thuộc độ mới của lượt đọc Sheets ở đây; kiểm tra bên dưới chỉ có thể trễ phát hiện tối đa
+  // ~10s trong tình huống hiếm (đơn đổi trạng thái đúng lúc), vẫn được chặn đúng khi ghi thật.
+  const { headers, row } = await orderService.getByKey(sttKey);
   // Đơn khác Xưởng coi như không tồn tại (bổ sung 13/09/2026).
   if (!row || !orderService.coQuyenTheoXuong(user, row)) return res.status(404).json({ error: 'Không tìm thấy đơn hàng: ' + sttKey });
 
@@ -151,10 +161,10 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
     return res.status(400).json({ error: err.message });
   }
 
-  await ghiLog({
+  ghiLog({
     nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'UPLOAD_ANH',
     sttKey, chiTiet: { moc, url, ...(chuyenTuDong ? { tu: chuyenTuDong.yeuCau, sang: chuyenTuDong.chuyenSang } : {}) },
-  });
+  }).catch(err => console.error('[Photos] Lỗi ghi log nền:', err.message));
   res.json({ ok: true, url, don: updated });
 });
 
