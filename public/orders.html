@@ -18,9 +18,10 @@
     <div class="thanh-cong-cu-danh-sach">
       <button type="button" class="btn-hanh-dong phu" id="btn-mo-loc" onclick="batTatPanel('panel-loc')"></button>
       <button type="button" class="btn-hanh-dong phu" id="btn-mo-sap-xep" onclick="batTatPanel('panel-sap-xep')"></button>
-      <!-- 2 nút dưới đây TẠM ẨN theo yêu cầu người dùng 07/09/2026 — CHỈ ẩn (style="display:none"),
-           KHÔNG xoá code/JS liên quan — bỏ thuộc tính style này để hiện lại khi cần. -->
-      <button type="button" class="btn-hanh-dong phu" id="btn-in-phoi-ao" onclick="inPhoiDangChon(this)" style="display:none"></button>
+      <!-- "IN DANH SÁCH PHÔI CỦA ĐƠN ĐANG CHỌN" hiện LẠI 23/09/2026, theo yêu cầu người dùng — đã tạm
+           ẩn cùng nút dưới đây từ 07/09/2026, giờ chỉ hiện lại đúng nút này (nút dưới vẫn TẠM ẨN,
+           CHỈ ẩn qua style="display:none", KHÔNG xoá code/JS — bỏ thuộc tính style để hiện lại khi cần). -->
+      <button type="button" class="btn-hanh-dong phu" id="btn-in-phoi-ao" onclick="inPhoiDangChon(this)"></button>
       <button type="button" class="btn-hanh-dong phu" id="btn-in-don-dang-chon" onclick="inDonDangChon(this)" style="display:none"></button>
       <button type="button" class="btn-hanh-dong phu" id="btn-in-ma-phoi-don" onclick="inMaPhoiDonDangChon(this)"></button>
       <!-- btn-quet-hang-loat: hiện lại 13/09/2026 theo yêu cầu người dùng (để thử đánh giá độ chính
