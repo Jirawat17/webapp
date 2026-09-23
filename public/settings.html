@@ -6,6 +6,14 @@
 <title>Thiết lập — Xưởng Thêu</title>
 <link rel="stylesheet" href="/css/style.css?v=104">
 <script src="/js/theme.js?v=104"></script>
+<style>
+/* Cấu hình GKE — mượn nguyên bố cục lưới đã có ở tracking.html trước khi chuyển sang đây (bổ sung
+   23/09/2026, theo yêu cầu người dùng), đổi tên tk- -> st- (settings) cho đúng ngữ cảnh trang mới —
+   CSS khai trong <style> riêng từng trang không va chạm nhau nên đổi tên chỉ để dễ đọc, không bắt buộc. */
+.st-cau-hinh-gke { max-width: 1400px; }
+.st-luoi-gke { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: var(--space-3); }
+.st-ghi-chu-truong { font-size: 0.78rem; color: var(--color-text-muted); margin: 4px 0 0; }
+</style>
 </head>
 <body>
 <div id="nav"></div>
@@ -80,6 +88,39 @@
   <p>Mỗi Xưởng 1 màu nền riêng cho thẻ đơn ở Đơn hàng/Chạy máy/Vẽ file — dễ phân biệt đơn thuộc Xưởng nào.</p>
   <div class="bao-cao-form" id="khoi-mau-xuong"></div>
   <p id="thong-bao-mau-xuong" style="display:none"></p>
+
+  <!-- Cấu hình GKE — CHUYỂN từ menu Tracking sang đây (bổ sung 23/09/2026, theo yêu cầu người dùng —
+       hạn chế người không phải superadmin đổi được, gồm cả username/password API GKE THẬT + thông tin
+       khai báo hải quan, có thể phát sinh chi phí thật nếu cấu hình sai). Trước đây mở cho admin/
+       ve_file/san_xuat cùng sửa (xem routes/tracking.js) — giờ CHỈ superadmin, khớp đúng phạm vi trang
+       Settings này. Gộp vào <details> (mặc định đóng) — giữ đúng hành vi ẩn-mặc-định tracking.html
+       từng có, dùng lại pattern <details> như Themes ở trên, không cần JS toggle riêng nữa. -->
+  <details style="margin-top:var(--space-6)">
+    <summary class="btn-hanh-dong phu">Cấu hình GKE</summary>
+    <p style="color:var(--color-text-muted)">Tài khoản API + thông tin người gửi/khai báo hải quan dùng để tự động mua tracking/in label qua GKE Logistics (menu Tracking). Đổi sai có thể khiến việc mua tracking thất bại hoặc sai thông tin trên vận đơn thật.</p>
+    <div class="bao-cao-form st-cau-hinh-gke">
+      <div class="st-luoi-gke">
+        <div class="truong"><label for="gke-username">Username</label><input type="text" id="gke-username" autocomplete="off"></div>
+        <div class="truong"><label for="gke-password">Password</label><input type="password" id="gke-password" autocomplete="new-password"></div>
+        <div class="truong"><label for="gke-service-code">Mã dịch vụ (service_code)</label><input type="text" id="gke-service-code"></div>
+        <div class="truong"><label for="gke-customs-currency">Đơn vị tiền tệ khai báo</label><input type="text" id="gke-customs-currency" placeholder="USD" style="text-transform:uppercase"></div>
+        <div class="truong"><label for="gke-customs-item-name">Tên hàng khai báo</label><input type="text" id="gke-customs-item-name" placeholder="Embroidered garment"></div>
+        <div class="truong"><label for="gke-customs-hs-code">Mã HS</label><input type="text" id="gke-customs-hs-code"></div>
+        <div class="truong"><label for="gke-customs-declared-price">Giá trị khai báo (mỗi kiện)</label><input type="number" id="gke-customs-declared-price" min="0" step="0.01"></div>
+        <div class="truong"><label for="gke-shipper-name">Tên xưởng</label><input type="text" id="gke-shipper-name" placeholder="Maxthread VN"></div>
+        <div class="truong"><label for="gke-shipper-phone">Số điện thoại</label><input type="text" id="gke-shipper-phone"></div>
+        <div class="truong"><label for="gke-shipper-address">Địa chỉ</label><input type="text" id="gke-shipper-address"></div>
+        <div class="truong"><label for="gke-shipper-city">Thành phố</label><input type="text" id="gke-shipper-city"></div>
+        <div class="truong"><label for="gke-shipper-province">Tỉnh/Bang</label><input type="text" id="gke-shipper-province"></div>
+        <div class="truong"><label for="gke-shipper-postcode">Mã bưu điện</label><input type="text" id="gke-shipper-postcode"></div>
+        <div class="truong"><label for="gke-can-nang-moi-ao">Cân nặng mỗi áo (kg)</label><input type="number" id="gke-can-nang-moi-ao" min="0" step="0.01"></div>
+      </div>
+      <p class="st-ghi-chu-truong">Cân nặng cả kiện = TRONG_LUONG (nếu đơn có) × Số lượng; đơn thiếu TRONG_LUONG thì dùng giá trị "Cân nặng mỗi áo" ở trên thay thế.</p>
+
+      <button type="button" class="btn-hanh-dong" id="btn-luu-cau-hinh-gke" style="justify-self:start">Lưu cấu hình GKE</button>
+    </div>
+    <p id="thong-bao-gke" style="display:none"></p>
+  </details>
 </div>
 
 <script src="/js/icons.js?v=104"></script>
@@ -100,8 +141,10 @@
   await taiNguongCanhBao();
   await taiCauHinhNenAnh();
   await taiMauXuong();
+  await taiCauHinhGke();
   document.getElementById('btn-luu-canh-bao').onclick = luuNguongCanhBao;
   document.getElementById('btn-luu-nen-anh').onclick = luuCauHinhNenAnh;
+  document.getElementById('btn-luu-cau-hinh-gke').onclick = luuCauHinhGke;
 })();
 
 // Xưởng vật lý có màu riêng (bổ sung 23/09/2026) — CHỈ HN/BN, không có "ChuaGanXuong" (đơn chưa gán
@@ -147,6 +190,72 @@ async function luuMauXuong() {
   } finally {
     nut.disabled = false;
     nut.textContent = 'Lưu';
+  }
+}
+
+// Ánh xạ field cấu hình GKE (khớp đúng tên trả về từ services/gkeService.js#layCauHinhGke) sang id
+// input trên trang — dùng chung cho cả tải và lưu để không lặp danh sách 2 lần. CHUYỂN nguyên từ
+// tracking.html sang đây (bổ sung 23/09/2026) — endpoint /tracking/cau-hinh-gke giữ nguyên (thuộc
+// domain "tracking" dù sửa ở Settings, cùng cách /orders/mau-xuong ở trên vẫn thuộc domain "orders").
+const TRUONG_CAU_HINH_GKE = [
+  ['username', 'gke-username'], ['password', 'gke-password'],
+  ['serviceCode', 'gke-service-code'],
+  ['customsCurrency', 'gke-customs-currency'], ['customsItemName', 'gke-customs-item-name'],
+  ['customsHsCode', 'gke-customs-hs-code'], ['customsDeclaredPrice', 'gke-customs-declared-price'],
+  ['shipperName', 'gke-shipper-name'], ['shipperPhone', 'gke-shipper-phone'],
+  ['shipperAddress', 'gke-shipper-address'], ['shipperCity', 'gke-shipper-city'],
+  ['shipperProvince', 'gke-shipper-province'], ['shipperPostcode', 'gke-shipper-postcode'],
+  ['canNangMoiAoKg', 'gke-can-nang-moi-ao'],
+];
+
+async function taiCauHinhGke() {
+  try {
+    const cauHinh = await apiFetch('/tracking/cau-hinh-gke');
+    TRUONG_CAU_HINH_GKE.forEach(([khoa, id]) => {
+      document.getElementById(id).value = cauHinh[khoa] ?? '';
+    });
+  } catch (e) {
+    const thongBao = document.getElementById('thong-bao-gke');
+    thongBao.style.display = 'block';
+    thongBao.style.color = 'var(--color-primary)';
+    thongBao.textContent = 'Không tải được cấu hình GKE: ' + e.message;
+  }
+}
+
+async function luuCauHinhGke() {
+  const giaTri = {};
+  TRUONG_CAU_HINH_GKE.forEach(([khoa, id]) => {
+    giaTri[khoa] = document.getElementById(id).value.trim();
+  });
+  if (giaTri.customsCurrency) giaTri.customsCurrency = giaTri.customsCurrency.toUpperCase();
+
+  const thongBao = document.getElementById('thong-bao-gke');
+  const nut = document.getElementById('btn-luu-cau-hinh-gke');
+  nut.disabled = true;
+  nut.textContent = 'Đang lưu...';
+  try {
+    const ketQua = await apiFetch('/tracking/cau-hinh-gke', { method: 'POST', body: JSON.stringify(giaTri) });
+    const khoaBiBoQua = ketQua.khoaBiBoQua || [];
+    thongBao.style.display = 'block';
+    if (khoaBiBoQua.length) {
+      const nhanCacTruong = khoaBiBoQua.map(khoa => {
+        const truong = TRUONG_CAU_HINH_GKE.find(([k]) => k === khoa);
+        const nhan = truong && document.querySelector(`label[for="${truong[1]}"]`);
+        return nhan ? nhan.textContent : khoa;
+      });
+      thongBao.style.color = 'var(--color-primary)';
+      thongBao.textContent = `Đã lưu các trường còn lại, nhưng KHÔNG lưu được: ${nhanCacTruong.join(', ')} — tab CauHinhTracking trong Google Sheet còn thiếu cột tương ứng, hãy thêm cột rồi lưu lại.`;
+    } else {
+      thongBao.style.color = '#16a34a';
+      thongBao.textContent = 'Đã lưu cấu hình GKE.';
+    }
+  } catch (e) {
+    thongBao.style.display = 'block';
+    thongBao.style.color = 'var(--color-primary)';
+    thongBao.textContent = 'Lỗi khi lưu: ' + e.message;
+  } finally {
+    nut.disabled = false;
+    nut.textContent = 'Lưu cấu hình GKE';
   }
 }
 

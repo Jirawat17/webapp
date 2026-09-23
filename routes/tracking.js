@@ -7,7 +7,7 @@ const {
 } = require('../services/trackingAutoService');
 const { layCauHinhGke, luuCauHinhGke, gopCacTemPdf } = require('../services/gkeService');
 const orderService = require('../services/orderService');
-const { requireLogin } = require('../middleware/auth');
+const { requireLogin, requireExactRole } = require('../middleware/auth');
 
 router.use(requireLogin);
 
@@ -63,11 +63,16 @@ router.get('/danh-sach', async (req, res) => {
 // 09/09/2026, theo yêu cầu người dùng đưa toàn bộ lên giao diện thay vì nằm cứng trong .env. Người
 // dùng đã CHỦ ĐỘNG chọn đưa cả username/password API GKE lên giao diện (không giữ riêng trong .env
 // như đề xuất ban đầu) — xem docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md.
-router.get('/cau-hinh-gke', async (req, res) => {
+// CHỈ superadmin (thu hẹp từ admin/ve_file/san_xuat xuống CHỈ superadmin — bổ sung 23/09/2026, theo
+// yêu cầu người dùng: form đã CHUYỂN từ menu Tracking sang settings.html, hạn chế người không phải
+// superadmin đổi được thông tin này, kể cả username/password API GKE thật). Không còn client nào khác
+// gọi 2 route này ngoài settings.html (đã rà — tracking.js tự gọi layCauHinhGke() trực tiếp trong
+// process, không qua HTTP, nên các role khác vẫn mua tracking/in label bình thường dù mất quyền sửa).
+router.get('/cau-hinh-gke', requireExactRole('superadmin'), async (req, res) => {
   res.json(await layCauHinhGke());
 });
 
-router.post('/cau-hinh-gke', async (req, res) => {
+router.post('/cau-hinh-gke', requireExactRole('superadmin'), async (req, res) => {
   const { khoaBiBoQua } = await luuCauHinhGke(req.body || {});
   res.json({ ok: true, khoaBiBoQua });
 });
