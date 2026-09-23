@@ -117,31 +117,33 @@ function trangChuTheoVaiTro(vaiTro) {
 function renderNav(user, active) {
   let links;
   if (user.vaiTro === 'nguoi_lay_phoi') {
-    // Bỏ "Lịch sử" (bổ sung 20/09/2026, theo yêu cầu người dùng) — quay lại đúng chính sách gốc
-    // "chỉ thấy Quét QR" + ngoại lệ SL Phôi, không còn ngoại lệ thứ 3 nữa. CHỈ ẩn menu điều hướng,
-    // KHÔNG khoá route backend (routes/hoatDong.js không có requireRole riêng).
+    // Thu hẹp xuống ĐÚNG 1 menu (bổ sung 23/09/2026, theo yêu cầu người dùng — bỏ nốt "SL Phôi", trước
+    // đó là ngoại lệ duy nhất). CHỈ ẩn menu điều hướng, KHÔNG khoá route backend (routes/taiSan.js không
+    // có requireRole riêng) — đúng quy ước đã áp dụng nhất quán trong hàm này.
     links = [
       { href: '/scan.html', label: 'Quét QR', icon: 'navScan', key: 'scan' },
-      { href: '/tai-san.html', label: 'SL Phôi', icon: 'navAssets', key: 'tai-san' },
     ];
   } else if (user.vaiTro === 'san_xuat') {
-    // Nhánh riêng cho san_xuat (bổ sung 08/09/2026, theo yêu cầu người dùng) — trước đây dùng chung
-    // nhánh else bên dưới với admin/ve_file, chỉ chèn thêm "Đơn của tôi". Giờ san_xuat CHỈ thấy đúng
-    // 4 menu (bớt Thống kê/SL Phôi/Trợ lý/Báo cáo — không phục vụ trực tiếp việc chạy máy hằng ngày),
-    // và "Đơn của tôi" lên ĐẦU TIÊN (không còn đứng sau "Đơn hàng") vì đây là màn hình họ cần thấy
-    // ngay khi vào — cũng là trang mặc định sau đăng nhập (xem trangChu bên dưới và index.html).
-    // Bỏ "Setting"/"Tracking" khỏi menu (bổ sung 15/09/2026, theo yêu cầu người dùng — CHỈ ẩn menu
-    // điều hướng, KHÔNG khoá route backend: settings.html chỉ có cài đặt giao diện, không có gì
-    // san_xuat cần; nút "IN LABEL"/"MUA TRACKING và IN LABEL" họ vẫn dùng hằng ngày nằm trên
-    // order.html, không đi qua trang Tracking nên không bị ảnh hưởng — xem
-    // docs/superpowers/specs/2026-09-15-thong-ke-khach-hang-va-an-menu-san-xuat-design.md).
+    // Thu hẹp xuống ĐÚNG 2 menu (bổ sung 23/09/2026, theo yêu cầu người dùng — bỏ nốt "Đơn hàng"/"Lịch
+    // sử"). CHỈ ẩn menu điều hướng, KHÔNG khoá route backend (cùng quy ước như trên).
     links = [
       { href: '/my-orders.html', label: 'Chạy máy', icon: 'navMyOrders', key: 'my-orders' },
-      { href: '/orders.html', label: 'Đơn hàng', icon: 'navOrders', key: 'orders' },
       { href: '/scan.html', label: 'Quét QR', icon: 'navScan', key: 'scan' },
-      { href: '/hoat-dong.html', label: 'Lịch sử', icon: 'navActivity', key: 'hoat-dong' },
+    ];
+  } else if (user.vaiTro === 've_file') {
+    // Nhánh riêng cho ve_file (bổ sung 23/09/2026, theo yêu cầu người dùng) — trước đây dùng chung
+    // nhánh else bên dưới với admin/superadmin (chèn thêm Vẽ file/Đơn hàng loạt/Tracking vào bộ menu
+    // admin), giờ tách hẳn ra vì chỉ còn ĐÚNG 4 menu, không còn "thừa hưởng" gì từ nhánh admin nữa
+    // (bỏ Đơn hàng loạt/TK/SL Phôi/Báo cáo/Lịch sử). CHỈ ẩn menu điều hướng, KHÔNG khoá route backend.
+    links = [
+      { href: '/orders.html', label: 'Đơn hàng', icon: 'navOrders', key: 'orders' },
+      { href: '/my-orders-ve-file.html', label: 'Vẽ file', icon: 'navMyOrders', key: 'my-orders-ve-file' },
+      { href: '/scan.html', label: 'Quét QR', icon: 'navScan', key: 'scan' },
+      { href: '/tracking.html', label: 'Tracking', icon: 'navTracking', key: 'tracking' },
     ];
   } else {
+    // Chỉ còn admin/superadmin đi qua nhánh này (nguoi_lay_phoi/san_xuat/ve_file đã tách nhánh riêng ở
+    // trên, bổ sung 23/09/2026).
     links = [
       { href: '/orders.html', label: 'Đơn hàng', icon: 'navOrders', key: 'orders' },
       { href: '/scan.html', label: 'Quét QR', icon: 'navScan', key: 'scan' },
@@ -195,21 +197,6 @@ function renderNav(user, active) {
       // gốc ở trên, để admin/ve_file không còn thấy menu này nữa.
       links.splice(links.findIndex(l => l.key === 'reports'), 0, { href: '/chatbot.html', label: 'Trợ lý', icon: 'navSupport', key: 'chatbot' });
       links.push({ href: '/users.html', label: 'Nhân viên', icon: 'navUsers', key: 'users' });
-    }
-    // "Đơn của tôi (Vẽ file)" (bổ sung 08/09/2026, theo yêu cầu người dùng — xem
-    // docs/superpowers/specs/2026-09-08-don-cua-toi-ve-file-design.md) — ve_file. KHÔNG ẩn menu nào
-    // khác, KHÔNG đổi trang mặc định sau đăng nhập của ve_file (khác hẳn cách làm cho san_xuat ở
-    // trên) — ngoài phạm vi yêu cầu lần này.
-    if (user.vaiTro === 've_file') {
-      links.splice(1, 0, { href: '/my-orders-ve-file.html', label: 'Vẽ file', icon: 'navMyOrders', key: 'my-orders-ve-file' });
-      // "Đơn hàng loạt" (bổ sung 13/09/2026, theo yêu cầu người dùng — LUÔN hiện) — ngay sau "Vẽ file",
-      // trước "Quét QR", cùng vị trí tương đối với nhánh admin ở trên.
-      links.splice(2, 0, { href: '/don-hang-loat.html', label: 'Đơn hàng loạt', icon: 'navOrders', key: 'don-hang-loat' });
-      // "Tracking" cho ve_file (bổ sung 09/09/2026 lần 2, cùng lý do với nhánh san_xuat ở trên) — chèn
-      // ngay sau "Quét QR". Mảng gốc (trước 2 splice 'Vẽ file'/'Đơn hàng loạt' ở trên) là [Đơn hàng,
-      // Quét QR, TK, SL Phôi, Trợ lý, Báo cáo]; 2 splice đó đẩy Quét QR từ index 1 lên index 3 — chèn
-      // Tracking vào index 4 là đúng ngay sau Quét QR, trước TK.
-      links.splice(4, 0, { href: '/tracking.html', label: 'Tracking', icon: 'navTracking', key: 'tracking' });
     }
     links.push({ href: '/hoat-dong.html', label: 'Lịch sử', icon: 'navActivity', key: 'hoat-dong' });
     // Setting (thu hẹp từ admin/ve_file/superadmin xuống CHỈ superadmin, bổ sung 23/09/2026, theo yêu
