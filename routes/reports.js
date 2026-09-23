@@ -89,8 +89,22 @@ async function layDonDaLoc(query, user) {
   return locDon(orderService.locTheoXuong(rows, user), query);
 }
 
+// Bổ sung 24/09/2026 — phát hiện qua báo lỗi người dùng: các nút "IN ... ĐANG CHỌN" ở trang Đơn hàng
+// (inPhoiDangChon/inHaiQuanDangChon/inDonHangLoatCoTienDo trong public/orders.html) chỉ gửi 'sttKeys'
+// (danh sách đơn đã tick chọn), KHÔNG gửi kèm bộ lọc Từ ngày/Đến ngày đang hiển thị trên trang — dòng
+// "Khoảng thời gian: ... (không giới hạn)" ở dưới trước đây đọc thẳng tuNgay/denNgay từ query nên luôn
+// hiện "không giới hạn" dù người dùng RÕ RÀNG đã lọc theo ngày trước khi chọn, gây hiểu lầm là app bỏ
+// qua bộ lọc. KHÔNG sửa bằng cách forward thêm tuNgay/denNgay từ client — chọn tay từng đơn (bỏ bớt
+// vài đơn sau khi "Chọn tất cả", hoặc đổi bộ lọc mà chưa bấm lại) không chắc còn khớp ĐÚNG 1 khoảng
+// ngày liền mạch nữa, forward bừa vẫn có thể sai theo hướng khác. Thay vào đó: hễ in theo danh sách đã
+// CHỌN (stt/sttKeys — xem locDon() ở trên, luôn ưu tiên qua mọi bộ lọc khác) thì nói thẳng đây là danh
+// sách chọn thủ công, không đưa ra tuyên bố sai về khoảng ngày nữa.
 function dongThongTinLoc(query, kieu) {
-  const { tuNgay, denNgay, khachHang, trangThai, tuKhoa } = query;
+  const { tuNgay, denNgay, khachHang, trangThai, tuKhoa, stt, sttKeys } = query;
+  if (stt || sttKeys) {
+    const soDon = stt ? 1 : (Array.isArray(sttKeys) ? sttKeys.length : 1);
+    return `Danh sách: ${soDon} đơn đã chọn thủ công (không theo bộ lọc ngày/trạng thái)`;
+  }
   const khHienThi = khachHang || 'Tất cả khách hàng';
   const ttHienThi = trangThai === GIA_TRI_LOC_TRONG ? '(Trống)' : (trangThai || 'Tất cả trạng thái');
   const dongTuKhoa = tuKhoa ? ` · Từ khoá tìm kiếm: ${tuKhoa}` : '';
