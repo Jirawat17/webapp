@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Quét QR — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=99">
-<script src="/js/theme.js?v=99"></script>
+<link rel="stylesheet" href="/css/style.css?v=100">
+<script src="/js/theme.js?v=100"></script>
 <style>
 /* Tự ẩn header khi cuộn xuống, hiện lại khi cuộn lên — chỉ áp dụng riêng cho trang Quét QR
    (chỉ định nghĩa trong <style> của trang này, không đụng style.css dùng chung) để tăng vùng
@@ -19,11 +19,11 @@
 <div class="page">
   <h2>Quét mã QR</h2>
   <div class="scan-mode">
-    <button id="mode-lookup"></button>
     <button id="mode-batch" class="active"></button>
     <button id="mode-photo-san-xuat"></button>
+    <button id="mode-photo-da-dan-tem"></button>
+    <button id="mode-lookup"></button>
   </div>
-  <select id="mode-select" class="mode-select"></select>
 
   <div id="chon-kich-ban-wrap" style="display:none"></div>
 
@@ -73,13 +73,13 @@
 </div>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="/js/icons.js?v=99"></script>
-<script src="/js/api.js?v=99"></script>
+<script src="/js/icons.js?v=100"></script>
+<script src="/js/api.js?v=100"></script>
 <script>
 let user;
 // Mặc định mở vào "Quét kịch bản" (batch) khi vào trang — theo yêu cầu người dùng 05/09/2026, vì đây
-// là chế độ dùng thường xuyên nhất, "Tra cứu" (lookup) ít dùng hơn hẳn (đã đẩy xuống cuối dropdown
-// chọn chế độ, xem MODE_OPTIONS bên dưới).
+// là chế độ dùng thường xuyên nhất, "Tra cứu" (lookup) ít dùng hơn hẳn (đã đẩy xuống nút cuối cùng
+// trong thanh chọn chế độ — xem .scan-mode trong HTML phía trên).
 let mode = 'batch';
 let scanner = null;
 let cameraDangChayCho = null;
@@ -138,24 +138,15 @@ const dsUploadDangCho = new Set();
 document.getElementById('mode-lookup').innerHTML = icon('scan') + ' Quét mã QR xem thông tin 1 đơn';
 document.getElementById('mode-batch').innerHTML = icon('check') + ' Quét kịch bản';
 document.getElementById('mode-photo-san-xuat').innerHTML = icon('camera', { size: 18 }) + ' ' + CAU_HINH_ANH.photo_san_xuat.nhanTab;
+document.getElementById('mode-photo-da-dan-tem').innerHTML = icon('camera', { size: 18 }) + ' ' + CAU_HINH_ANH.photo_da_dan_tem.nhanTab;
 document.getElementById('btn-dung-quet').innerHTML = icon('stop', { size: 40 }) + ' Dừng quét → Xem lại';
 document.getElementById('btn-chup-anh').innerHTML = icon('camera', { size: 40 }) + ' Chụp ảnh';
 capNhatNutFlash();
 
-// Dropdown là cách DUY NHẤT để chọn chế độ (đã bỏ hẳn menu 4 nút — xem .mode-select / .scan-mode
-// trong style.css). 4 nút cũ vẫn còn trong DOM (ẩn) vì JS phía dưới vẫn toggle class active lên
-// chúng — vô hại, không cần dọn vì không hiển thị.
-// Thứ tự hiện trong dropdown — "Tra cứu" xếp CUỐI CÙNG (ít dùng nhất, theo yêu cầu người dùng
-// 05/09/2026), không ảnh hưởng chế độ mặc định khi vào trang (vẫn là 'lookup', xem biến `mode` khai
-// báo phía trên — đổi thứ tự dropdown không tự đổi luôn mặc định, 2 việc độc lập nhau).
-const MODE_OPTIONS = [
-  { value: 'batch', label: 'Quét kịch bản' },
-  { value: 'photo_san_xuat', label: CAU_HINH_ANH.photo_san_xuat.nhanTab },
-  { value: 'photo_da_dan_tem', label: CAU_HINH_ANH.photo_da_dan_tem.nhanTab },
-  { value: 'lookup', label: 'Quét mã QR xem thông tin 1 đơn' },
-];
-const elModeSelect = document.getElementById('mode-select');
-elModeSelect.innerHTML = MODE_OPTIONS.map(o => `<option value="${o.value}">${escapeHtml(o.label)}</option>`).join('');
+// Khôi phục thanh 4 nút bấm làm cách DUY NHẤT để chọn chế độ (bổ sung 23/09/2026, theo yêu cầu người
+// dùng — 3 chế độ "Chụp ảnh đã sản xuất"/"Chụp ảnh ĐÃ DÁN TEM"/"Tra cứu" phải thấy NGAY khi vào trang,
+// không còn giấu trong dropdown như trước — xem .scan-mode trong style.css, đổi từ display:none sang
+// lưới 2x2). "Tra cứu" vẫn xếp CUỐI cùng trong DOM (ít dùng nhất, theo yêu cầu người dùng 05/09/2026).
 
 // Đổi mode LUÔN đi qua đây (không gán thẳng biến `mode`) — reset donDaXacDinhChoAnh mỗi lần đổi mode
 // để không lỡ giữ "đơn đã xác định" cũ từ trước sang 1 phiên chụp ảnh mới đối tượng vật lý đã khác
@@ -165,8 +156,6 @@ function doiMode(moiMode) {
   donDaXacDinhChoAnh = null;
   capNhatManHinh();
 }
-
-elModeSelect.onchange = () => doiMode(elModeSelect.value);
 
 // Tự ẩn header khi cuộn xuống, hiện lại khi cuộn lên (chỉ trang này — xem <style> ở đầu file).
 // Không đụng tới thanh tab điều hướng dưới cùng, vẫn cố định như trước.
@@ -191,12 +180,30 @@ elModeSelect.onchange = () => doiMode(elModeSelect.value);
   if (!user) return;
   renderNav(user, 'scan');
   await taiKichBan();
+  await taiCauHinhNenAnh();
   capNhatManHinh();
 })();
+
+// Cấu hình nén ảnh do superadmin đặt ở settings.html (bổ sung 23/09/2026, theo yêu cầu người dùng) —
+// tải 1 lần lúc vào trang, dùng cho MỌI lượt chụp ở taiAnhLenNgam() bên dưới. Rỗng (chưa cấu hình) →
+// giữ nguyên object rỗng, nenAnhTruocKhiTaiLen() tự áp mặc định 80%/1600px như trước (xem api.js).
+let cauHinhNenAnh = {};
+async function taiCauHinhNenAnh() {
+  try {
+    const cfg = await apiFetch('/photos/cau-hinh-nen');
+    cauHinhNenAnh = {
+      chatLuongJpeg: Number(cfg.ChatLuongJpeg) ? Number(cfg.ChatLuongJpeg) / 100 : undefined,
+      canhDaiToiDa: Number(cfg.CanhDaiToiDa) || undefined,
+    };
+  } catch (e) {
+    cauHinhNenAnh = {};
+  }
+}
 
 document.getElementById('mode-lookup').onclick = () => doiMode('lookup');
 document.getElementById('mode-batch').onclick = () => doiMode('batch');
 document.getElementById('mode-photo-san-xuat').onclick = () => doiMode('photo_san_xuat');
+document.getElementById('mode-photo-da-dan-tem').onclick = () => doiMode('photo_da_dan_tem');
 
 async function taiKichBan() {
   try {
@@ -210,7 +217,7 @@ async function capNhatManHinh() {
   document.getElementById('mode-lookup').classList.toggle('active', mode === 'lookup');
   document.getElementById('mode-batch').classList.toggle('active', mode === 'batch');
   document.getElementById('mode-photo-san-xuat').classList.toggle('active', mode === 'photo_san_xuat');
-  document.getElementById('mode-select').value = mode;
+  document.getElementById('mode-photo-da-dan-tem').classList.toggle('active', mode === 'photo_da_dan_tem');
 
   document.getElementById('chon-kich-ban-wrap').style.display = 'none';
   document.getElementById('camera-wrap').style.display = 'none';
@@ -813,7 +820,7 @@ async function taiAnhLenNgam(sttKey, cauHinh, file, dong) {
   // camera). Trước đây bước này vẫn await() trong xuLyChupAnh() TRƯỚC KHI cho quét đơn tiếp theo — dời
   // vào đây để KHÔNG còn bước nào (nén lẫn upload) chặn quay lại màn hình quét sau khi bấm chụp.
   const tNen0 = performance.now();
-  const fileDaNen = await nenAnhTruocKhiTaiLen(file);
+  const fileDaNen = await nenAnhTruocKhiTaiLen(file, cauHinhNenAnh);
   const tNen1 = performance.now();
   const lyDoKhongNen = lyDoKhongNenGanNhat; // biến khai báo ở api.js (let top-level, cùng phạm vi toàn cục giữa các thẻ <script> không phải module) — null nếu nén thành công bình thường, xem chú thích ở api.js#nenAnhTruocKhiTaiLen
 

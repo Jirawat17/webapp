@@ -212,7 +212,13 @@ function renderNav(user, active) {
       links.splice(4, 0, { href: '/tracking.html', label: 'Tracking', icon: 'navTracking', key: 'tracking' });
     }
     links.push({ href: '/hoat-dong.html', label: 'Lịch sử', icon: 'navActivity', key: 'hoat-dong' });
-    links.push({ href: '/settings.html', label: 'Setting', icon: 'navSettings', key: 'settings' });
+    // Setting (thu hẹp từ admin/ve_file/superadmin xuống CHỈ superadmin, bổ sung 23/09/2026, theo yêu
+    // cầu người dùng — Settings giờ có thêm Cảnh báo tự động/Tỷ lệ nén ảnh, ảnh hưởng toàn hệ thống,
+    // không còn chỉ là cài đặt giao diện cá nhân như trước). Chặn thật nằm ở settings.html (giống
+    // users.html) + các route API — dòng dưới chỉ ẩn menu, không phải lớp bảo vệ.
+    if (user.vaiTro === 'superadmin') {
+      links.push({ href: '/settings.html', label: 'Setting', icon: 'navSettings', key: 'settings' });
+    }
   }
 
   const nav = document.getElementById('nav');
@@ -432,13 +438,18 @@ const BO_QUA_NEN_NEU_DA_NHO_HON = 400 * 1024; // 400KB — ảnh đã nhỏ sẵ
 // đổi hợp đồng cũ) — nơi gọi nào cần biết lý do thì tự đọc biến này NGAY SAU KHI await xong.
 let lyDoKhongNenGanNhat = null;
 
-async function nenAnhTruocKhiTaiLen(file) {
+// tuyChon (bổ sung 23/09/2026, theo yêu cầu người dùng — menu Thiết lập/Tỷ lệ nén ảnh, CHỈ áp dụng cho
+// 2 chế độ chụp ảnh ở scan.html) — cho phép override 2 hằng số mặc định ở trên theo cấu hình superadmin
+// đã lưu. order.html gọi hàm này KHÔNG truyền tham số thứ 2 → giữ nguyên hành vi cũ (2 hằng số mặc định).
+async function nenAnhTruocKhiTaiLen(file, tuyChon = {}) {
+  const canhDaiToiDa = tuyChon.canhDaiToiDa || CANH_DAI_NHAT_TOI_DA_KHI_NEN_ANH;
+  const chatLuongJpeg = tuyChon.chatLuongJpeg || CHAT_LUONG_JPEG_KHI_NEN_ANH;
   lyDoKhongNenGanNhat = null;
   if (!file || !file.type || !file.type.startsWith('image/')) { lyDoKhongNenGanNhat = 'Không phải file ảnh'; return file; }
   if (file.size <= BO_QUA_NEN_NEU_DA_NHO_HON) { lyDoKhongNenGanNhat = 'Ảnh đã nhỏ sẵn (bỏ qua)'; return file; }
   try {
     const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
-    const tyLe = Math.min(1, CANH_DAI_NHAT_TOI_DA_KHI_NEN_ANH / Math.max(bitmap.width, bitmap.height));
+    const tyLe = Math.min(1, canhDaiToiDa / Math.max(bitmap.width, bitmap.height));
     const rong = Math.round(bitmap.width * tyLe);
     const cao = Math.round(bitmap.height * tyLe);
 
@@ -448,7 +459,7 @@ async function nenAnhTruocKhiTaiLen(file) {
     canvas.getContext('2d').drawImage(bitmap, 0, 0, rong, cao);
     bitmap.close();
 
-    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', CHAT_LUONG_JPEG_KHI_NEN_ANH));
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', chatLuongJpeg));
     if (!blob) { lyDoKhongNenGanNhat = 'canvas.toBlob() trả về rỗng'; return file; }
     if (blob.size >= file.size) { lyDoKhongNenGanNhat = `Nén không hiệu quả (${(blob.size/1024).toFixed(0)}KB >= gốc)`; return file; }
 

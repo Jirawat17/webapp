@@ -83,7 +83,53 @@ function datCauHinhTracking(updates) {
   `).run(...giaTri);
 }
 
+// ---------- CaiDatCanhBao — ngưỡng số ngày cho 3 mức cảnh báo (Vàng/Cam/Đỏ) ----------
+// Bổ sung 23/09/2026, theo yêu cầu người dùng, xem services/alertService.js#tinhMucCanhBao — trước đây
+// hard-code 3/5/7, giờ superadmin chỉnh được ở settings.html. Rỗng ('') = chưa cấu hình → dùng đúng mặc
+// định 3/5/7 cũ (xem tinhMucCanhBao), KHÔNG đổi hành vi hiện có cho tới khi superadmin chủ động lưu.
+db.exec(`CREATE TABLE IF NOT EXISTS cai_dat_canh_bao (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  NGUONG_VANG TEXT NOT NULL DEFAULT '',
+  NGUONG_CAM TEXT NOT NULL DEFAULT '',
+  NGUONG_DO TEXT NOT NULL DEFAULT ''
+)`);
+
+function layCaiDatCanhBao() {
+  return db.prepare(`SELECT NGUONG_VANG, NGUONG_CAM, NGUONG_DO FROM cai_dat_canh_bao WHERE id = 1`).get()
+    || { NGUONG_VANG: '', NGUONG_CAM: '', NGUONG_DO: '' };
+}
+function datCaiDatCanhBao({ NGUONG_VANG, NGUONG_CAM, NGUONG_DO }) {
+  db.prepare(`
+    INSERT INTO cai_dat_canh_bao (id, NGUONG_VANG, NGUONG_CAM, NGUONG_DO) VALUES (1, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET NGUONG_VANG = excluded.NGUONG_VANG, NGUONG_CAM = excluded.NGUONG_CAM, NGUONG_DO = excluded.NGUONG_DO
+  `).run(String(NGUONG_VANG), String(NGUONG_CAM), String(NGUONG_DO));
+}
+
+// ---------- CaiDatNenAnh — chất lượng nén JPEG + cạnh dài tối đa, riêng cho 2 chế độ chụp ảnh ở
+// scan.html (Chụp ảnh đã sản xuất / Chụp ảnh ĐÃ DÁN TEM) ----------
+// Bổ sung 23/09/2026, theo yêu cầu người dùng, xem public/js/api.js#nenAnhTruocKhiTaiLen — trước đây
+// hard-code 0.8/1600px cho MỌI nơi gọi (kể cả order.html). Rỗng = chưa cấu hình → dùng đúng mặc định
+// 80%/1600px cũ. order.html KHÔNG đọc bảng này, không bị ảnh hưởng khi superadmin đổi giá trị.
+db.exec(`CREATE TABLE IF NOT EXISTS cai_dat_nen_anh (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  ChatLuongJpeg TEXT NOT NULL DEFAULT '',
+  CanhDaiToiDa TEXT NOT NULL DEFAULT ''
+)`);
+
+function layCaiDatNenAnh() {
+  return db.prepare(`SELECT ChatLuongJpeg, CanhDaiToiDa FROM cai_dat_nen_anh WHERE id = 1`).get()
+    || { ChatLuongJpeg: '', CanhDaiToiDa: '' };
+}
+function datCaiDatNenAnh({ ChatLuongJpeg, CanhDaiToiDa }) {
+  db.prepare(`
+    INSERT INTO cai_dat_nen_anh (id, ChatLuongJpeg, CanhDaiToiDa) VALUES (1, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET ChatLuongJpeg = excluded.ChatLuongJpeg, CanhDaiToiDa = excluded.CanhDaiToiDa
+  `).run(String(ChatLuongJpeg), String(CanhDaiToiDa));
+}
+
 module.exports = {
   layCaiDatHangLoat, datCaiDatHangLoat,
   layCauHinhTracking, datCauHinhTracking, CAC_COT_CAU_HINH_TRACKING,
+  layCaiDatCanhBao, datCaiDatCanhBao,
+  layCaiDatNenAnh, datCaiDatNenAnh,
 };

@@ -660,19 +660,13 @@ select.chon-trang-thai-tieu-cuc { border-color: var(--color-warning-text); color
 /* ============================================================
    QUÉT QR
    ============================================================ */
-/* Đã bỏ hẳn menu 4 nút cố định (mọi kích thước màn hình) — chỉ còn .mode-select bên dưới. */
-.scan-mode { display: none; }
-
-/* To hơn ~30% so với dropdown gốc (min-height 46px/font 1rem/padding 12px 14px) để dễ bấm hơn
-   khi đây là cách chọn chế độ DUY NHẤT (không còn 4 nút song song để dự phòng). */
-.mode-select {
-  display: block; width: 100%; margin-bottom: var(--space-3);
-  padding: 16px 18px; border-radius: var(--radius-md); border: 1.5px solid var(--color-border);
-  background: var(--color-surface); color: var(--color-text); font-family: inherit;
-  font-size: 1.3rem; font-weight: 700; min-height: 60px;
-}
+/* Lưới 2x2 (bổ sung 23/09/2026, theo yêu cầu người dùng — Chụp ảnh đã sản xuất/Chụp ảnh ĐÃ DÁN TEM/Tra
+   cứu phải thấy NGAY khi vào trang, không giấu trong dropdown nữa) — thay cho dropdown .mode-select cũ
+   (đã xoá, đây lại là cách chọn chế độ DUY NHẤT). 2 cột thay vì 1 hàng ngang 4 nút vì nhãn "Quét mã QR
+   xem thông tin 1 đơn" quá dài để chia đều 4, xuống dòng lộn xộn nếu ép 1 hàng. */
+.scan-mode { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); margin-bottom: var(--space-3); }
 .scan-mode button {
-  display: flex; align-items: center; justify-content: center; gap: 8px;
+  display: flex; align-items: center; justify-content: center; gap: 8px; text-align: center;
   padding: 12px; border-radius: var(--radius-md); border: 1.5px solid var(--color-border);
   background: var(--color-surface); color: var(--color-text); cursor: pointer; font-size: 15px; font-weight: 700;
   min-height: var(--tap-min); font-family: inherit;

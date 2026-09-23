@@ -8,9 +8,32 @@ const orderService = require('../services/orderService');
 const storageService = require('../services/storageService');
 const { taiDsAnh } = require('../services/anhNguonService');
 const { ghiLog } = require('../services/logService');
-const { requireLogin } = require('../middleware/auth');
+const { requireLogin, requireExactRole } = require('../middleware/auth');
+const { layCaiDatNenAnh, datCaiDatNenAnh } = require('../services/caiDatDbService');
 
 router.use(requireLogin);
+
+// Cấu hình nén ảnh cho 2 chế độ chụp ảnh ở scan.html (bổ sung 23/09/2026, theo yêu cầu người dùng — xem
+// public/js/api.js#nenAnhTruocKhiTaiLen). GET mở cho MỌI vai trò đã đăng nhập (ai chụp ảnh ở scan.html
+// cũng cần đọc được để nén đúng cấu hình, không chỉ superadmin); POST (đổi giá trị) CHỈ superadmin.
+// Rỗng '' = chưa cấu hình → trả nguyên giá trị rỗng, client tự áp mặc định 80%/1600px (xem
+// nenAnhTruocKhiTaiLen — tuyChon.chatLuongJpeg/canhDaiToiDa falsy thì dùng hằng số mặc định).
+router.get('/cau-hinh-nen', (req, res) => {
+  res.json(layCaiDatNenAnh());
+});
+
+router.post('/cau-hinh-nen', requireExactRole('superadmin'), (req, res) => {
+  const chatLuong = Number(req.body.ChatLuongJpeg);
+  const canhDai = Number(req.body.CanhDaiToiDa);
+  if (!Number.isInteger(chatLuong) || chatLuong < 10 || chatLuong > 100) {
+    return res.status(400).json({ error: 'Chất lượng JPEG phải là số nguyên 10-100.' });
+  }
+  if (!Number.isInteger(canhDai) || canhDai < 400 || canhDai > 4000) {
+    return res.status(400).json({ error: 'Cạnh dài tối đa phải là số nguyên 400-4000.' });
+  }
+  datCaiDatNenAnh({ ChatLuongJpeg: chatLuong, CanhDaiToiDa: canhDai });
+  res.json({ ok: true });
+});
 
 // Mỗi "mốc nghiệp vụ" ghi URL vào đúng cột tương ứng — cả 3 cột dưới đây giờ ở SQLite (schema tạo sẵn
 // lúc khởi động, xem services/trangThaiDbService.js), luôn có sẵn.

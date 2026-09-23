@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn của tôi (Vẽ file) — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=99">
-<script src="/js/theme.js?v=99"></script>
+<link rel="stylesheet" href="/css/style.css?v=100">
+<script src="/js/theme.js?v=100"></script>
 </head>
 <body>
 <div id="nav"></div>
@@ -57,9 +57,9 @@
         <label for="loc-canh-bao-tv">Mức cảnh báo</label>
         <select id="loc-canh-bao-tv">
           <option value="">Tất cả mức cảnh báo</option>
-          <option value="VANG">Vàng · 3 ngày</option>
-          <option value="CAM">Cam · 5 ngày</option>
-          <option value="DO">Đỏ · 7 ngày</option>
+          <option value="VANG">Vàng</option>
+          <option value="CAM">Cam</option>
+          <option value="DO">Đỏ</option>
         </select>
       </div>
       <label class="chon-tat-ca-hang truong-hang-loat" for="loc-hang-loat-tv">
@@ -157,9 +157,9 @@
         <label for="loc-canh-bao-cv">Mức cảnh báo</label>
         <select id="loc-canh-bao-cv">
           <option value="">Tất cả mức cảnh báo</option>
-          <option value="VANG">Vàng · 3 ngày</option>
-          <option value="CAM">Cam · 5 ngày</option>
-          <option value="DO">Đỏ · 7 ngày</option>
+          <option value="VANG">Vàng</option>
+          <option value="CAM">Cam</option>
+          <option value="DO">Đỏ</option>
         </select>
       </div>
       <label class="chon-tat-ca-hang truong-hang-loat" for="loc-hang-loat-cv">
@@ -223,10 +223,12 @@
   <div id="danh-sach-can-ve" class="order-list"></div>
 </div>
 
-<script src="/js/icons.js?v=99"></script>
-<script src="/js/api.js?v=99"></script>
+<script src="/js/icons.js?v=100"></script>
+<script src="/js/api.js?v=100"></script>
 <script>
-const NHAN_CANH_BAO = { VANG: 'Vàng · 3 ngày', CAM: 'Cam · 5 ngày', DO: 'Đỏ · 7 ngày' };
+// Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
+// settings.html (superadmin), 3/5/7 không còn luôn đúng nên không hard-code vào nhãn hiển thị nữa.
+const NHAN_CANH_BAO = { VANG: 'Vàng', CAM: 'Cam', DO: 'Đỏ' };
 
 let user;
 let danhSachCanVe = [];

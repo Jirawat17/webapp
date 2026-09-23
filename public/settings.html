@@ -4,38 +4,161 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Thiết lập — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=99">
-<script src="/js/theme.js?v=99"></script>
+<link rel="stylesheet" href="/css/style.css?v=100">
+<script src="/js/theme.js?v=100"></script>
 </head>
 <body>
 <div id="nav"></div>
 <div class="page">
   <h2>Thiết lập</h2>
 
-  <h3>Giao diện</h3>
-  <label class="cong-tac-hang">
-    <span class="cong-tac-nhan"><span id="icon-che-do-toi"></span> Chế độ tối</span>
-    <span class="cong-tac">
-      <input type="checkbox" id="cong-tac-che-do-toi">
-      <span class="cong-tac-slider"></span>
-    </span>
-  </label>
+  <!-- Themes gộp vào <details> (bổ sung 23/09/2026, theo yêu cầu người dùng — "chuyển thành 1 nút bấm"
+       để tiết kiệm diện tích cho 2 mục mới bên dưới) — dùng thẻ <details>/<summary> gốc trình duyệt
+       (đã có pattern tương tự ở index.html), không cần JS thu/mở riêng; <summary> mượn class nút bấm
+       .btn-hanh-dong.phu sẵn có (display:inline-flex ghi đè list-item mặc định nên tam giác mở/đóng
+       gốc của <summary> tự biến mất, không cần thêm CSS mới). -->
+  <details>
+    <summary class="btn-hanh-dong phu">Themes</summary>
+    <h3>Giao diện</h3>
+    <label class="cong-tac-hang">
+      <span class="cong-tac-nhan"><span id="icon-che-do-toi"></span> Chế độ tối</span>
+      <span class="cong-tac">
+        <input type="checkbox" id="cong-tac-che-do-toi">
+        <span class="cong-tac-slider"></span>
+      </span>
+    </label>
 
-  <h3>Màu chủ đạo</h3>
-  <p>Chọn màu bạn thích — áp dụng ngay cho toàn bộ ứng dụng trên thiết bị này (mỗi máy/trình duyệt lưu riêng).</p>
-  <div id="bang-mau" class="bang-chon-mau"></div>
+    <h3>Màu chủ đạo</h3>
+    <p>Chọn màu bạn thích — áp dụng ngay cho toàn bộ ứng dụng trên thiết bị này (mỗi máy/trình duyệt lưu riêng).</p>
+    <div id="bang-mau" class="bang-chon-mau"></div>
+  </details>
+
+  <!-- Thời gian cảnh báo tự động (bổ sung 23/09/2026, theo yêu cầu người dùng) — thay 3 ngưỡng ngày
+       hard-code 3/5/7 trong services/alertService.js#tinhMucCanhBao. -->
+  <h3 style="margin-top:var(--space-6)">Thời gian cảnh báo tự động</h3>
+  <p>Số ngày kể từ ngày lên đơn mà vẫn chưa tiến triển đủ thì phát cảnh báo (badge trên đơn hàng + Telegram). Phải tăng dần: Vàng &lt; Cam &lt; Đỏ.</p>
+  <div class="bao-cao-form">
+    <div class="truong">
+      <label for="nguong-vang">Vàng · chưa "Sẵn sàng chạy máy" (ngày)</label>
+      <input type="number" id="nguong-vang" min="1" step="1">
+    </div>
+    <div class="truong">
+      <label for="nguong-cam">Cam · chưa "Đã sản xuất" (ngày)</label>
+      <input type="number" id="nguong-cam" min="1" step="1">
+    </div>
+    <div class="truong">
+      <label for="nguong-do">Đỏ · chưa ship (ngày)</label>
+      <input type="number" id="nguong-do" min="1" step="1">
+    </div>
+    <button type="button" class="btn-hanh-dong" id="btn-luu-canh-bao" style="justify-self:start">Lưu</button>
+  </div>
+  <p id="thong-bao-canh-bao" style="display:none"></p>
+
+  <!-- Tỷ lệ nén ảnh (bổ sung 23/09/2026, theo yêu cầu người dùng) — CHỈ áp dụng cho 2 chế độ chụp ảnh
+       ở scan.html (Chụp ảnh đã sản xuất / Chụp ảnh ĐÃ DÁN TEM), không ảnh hưởng upload ảnh ở order.html
+       (xem public/js/api.js#nenAnhTruocKhiTaiLen). -->
+  <h3 style="margin-top:var(--space-6)">Tỷ lệ nén ảnh (Quét QR)</h3>
+  <p>Áp dụng khi chụp ảnh "Đã sản xuất"/"ĐÃ DÁN TEM" ở menu Quét mã QR. Không ảnh hưởng ảnh tải lên ở trang chi tiết đơn hàng.</p>
+  <div class="bao-cao-form">
+    <div class="truong">
+      <label for="nen-anh-chat-luong">Chất lượng nén JPEG (%)</label>
+      <input type="number" id="nen-anh-chat-luong" min="10" max="100" step="1">
+    </div>
+    <div class="truong">
+      <label for="nen-anh-canh-dai">Cạnh dài tối đa (px)</label>
+      <input type="number" id="nen-anh-canh-dai" min="400" max="4000" step="1">
+    </div>
+    <button type="button" class="btn-hanh-dong" id="btn-luu-nen-anh" style="justify-self:start">Lưu</button>
+  </div>
+  <p id="thong-bao-nen-anh" style="display:none"></p>
 </div>
 
-<script src="/js/icons.js?v=99"></script>
-<script src="/js/api.js?v=99"></script>
+<script src="/js/icons.js?v=100"></script>
+<script src="/js/api.js?v=100"></script>
 <script>
 (async () => {
   const user = await requireLoginOrRedirect();
   if (!user) return;
   renderNav(user, 'settings');
+  // CHỈ superadmin (bổ sung 23/09/2026, theo yêu cầu người dùng — giống hệt guard của users.html vì
+  // Settings giờ có cấu hình ảnh hưởng toàn hệ thống, không còn chỉ là cài đặt giao diện cá nhân).
+  if (user.vaiTro !== 'superadmin') {
+    document.querySelector('.page').innerHTML = '<p>Bạn không có quyền truy cập trang này.</p>';
+    return;
+  }
   renderBangMau();
   renderCongTacCheDoToi();
+  await taiNguongCanhBao();
+  await taiCauHinhNenAnh();
+  document.getElementById('btn-luu-canh-bao').onclick = luuNguongCanhBao;
+  document.getElementById('btn-luu-nen-anh').onclick = luuCauHinhNenAnh;
 })();
+
+async function taiNguongCanhBao() {
+  const nguong = await apiFetch('/canh-bao/nguong');
+  document.getElementById('nguong-vang').value = nguong.VANG;
+  document.getElementById('nguong-cam').value = nguong.CAM;
+  document.getElementById('nguong-do').value = nguong.DO;
+}
+
+async function luuNguongCanhBao() {
+  const nut = document.getElementById('btn-luu-canh-bao');
+  const thongBao = document.getElementById('thong-bao-canh-bao');
+  nut.disabled = true;
+  nut.textContent = 'Đang lưu...';
+  try {
+    await apiFetch('/canh-bao/nguong', {
+      method: 'POST',
+      body: JSON.stringify({
+        NGUONG_VANG: document.getElementById('nguong-vang').value,
+        NGUONG_CAM: document.getElementById('nguong-cam').value,
+        NGUONG_DO: document.getElementById('nguong-do').value,
+      }),
+    });
+    thongBao.style.display = 'block';
+    thongBao.style.color = '#16a34a';
+    thongBao.textContent = 'Đã lưu.';
+  } catch (e) {
+    thongBao.style.display = 'block';
+    thongBao.style.color = 'var(--color-primary)';
+    thongBao.textContent = 'Lỗi: ' + e.message;
+  } finally {
+    nut.disabled = false;
+    nut.textContent = 'Lưu';
+  }
+}
+
+async function taiCauHinhNenAnh() {
+  const cfg = await apiFetch('/photos/cau-hinh-nen');
+  document.getElementById('nen-anh-chat-luong').value = cfg.ChatLuongJpeg || 80;
+  document.getElementById('nen-anh-canh-dai').value = cfg.CanhDaiToiDa || 1600;
+}
+
+async function luuCauHinhNenAnh() {
+  const nut = document.getElementById('btn-luu-nen-anh');
+  const thongBao = document.getElementById('thong-bao-nen-anh');
+  nut.disabled = true;
+  nut.textContent = 'Đang lưu...';
+  try {
+    await apiFetch('/photos/cau-hinh-nen', {
+      method: 'POST',
+      body: JSON.stringify({
+        ChatLuongJpeg: document.getElementById('nen-anh-chat-luong').value,
+        CanhDaiToiDa: document.getElementById('nen-anh-canh-dai').value,
+      }),
+    });
+    thongBao.style.display = 'block';
+    thongBao.style.color = '#16a34a';
+    thongBao.textContent = 'Đã lưu.';
+  } catch (e) {
+    thongBao.style.display = 'block';
+    thongBao.style.color = 'var(--color-primary)';
+    thongBao.textContent = 'Lỗi: ' + e.message;
+  } finally {
+    nut.disabled = false;
+    nut.textContent = 'Lưu';
+  }
+}
 
 function renderCongTacCheDoToi() {
   const bat = dangCheDoToi();
