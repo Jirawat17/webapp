@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=98">
-<script src="/js/theme.js?v=98"></script>
+<link rel="stylesheet" href="/css/style.css?v=99">
+<script src="/js/theme.js?v=99"></script>
 </head>
 <body>
 <div id="nav"></div>
@@ -231,8 +231,8 @@
   <button class="btn-hanh-dong phu" onclick="boChonTatCaDon()">Bỏ chọn</button>
 </div>
 
-<script src="/js/icons.js?v=98"></script>
-<script src="/js/api.js?v=98"></script>
+<script src="/js/icons.js?v=99"></script>
+<script src="/js/api.js?v=99"></script>
 <script>
 const NHAN_CANH_BAO = { VANG: 'Vàng · 3 ngày', CAM: 'Cam · 5 ngày', DO: 'Đỏ · 7 ngày' };
 
@@ -604,12 +604,13 @@ function renderDanhSachDon() {
     const lopXuong = o.XUONG === 'BN' ? 'xuong-bn' : o.XUONG === 'HN' ? 'xuong-hn' : '';
     return `
     <div class="order-card ${daChon ? 'da-chon' : ''} ${lopXuong}" data-stt="${escapeHtml(o.STT_Key)}"
-         onclick="moChiTietDon(event, '${encodeURIComponent(o.STT_Key)}')">
+         onclick="toggleChonDon('${escapeHtml(o.STT_Key)}', !donDaChonSet.has('${escapeHtml(o.STT_Key)}'))">
       <div class="cot-chon-the">
-        <input type="checkbox" class="order-checkbox" ${daChon ? 'checked' : ''}
-               aria-label="Chọn đơn ${escapeHtml(o.STT_Key)}"
-               onclick="event.stopPropagation()"
-               onchange="toggleChonDon('${escapeHtml(o.STT_Key)}', this.checked)">
+        <button type="button" class="btn-xem-the" title="Xem chi tiết đơn"
+                aria-label="Xem chi tiết đơn ${escapeHtml(o.STT_Key)}"
+                onclick="event.stopPropagation(); moChiTietDon('${encodeURIComponent(o.STT_Key)}')">
+          ${icon('arrowRight', { size: 16 })}
+        </button>
         ${(laAdmin(user.vaiTro) || user.vaiTro === 've_file') ? `
           <button type="button" class="btn-uu-tien-nhanh ${o.DonUuTien ? 'bat' : ''}"
                   title="${o.DonUuTien ? 'Bỏ ưu tiên' : 'Đánh dấu ưu tiên'}"
@@ -656,8 +657,7 @@ function taiThemDon() {
   renderDanhSachDon();
 }
 
-function moChiTietDon(e, sttKeyEncoded) {
-  if (e.target.tagName === 'INPUT') return;
+function moChiTietDon(sttKeyEncoded) {
   window.location.href = '/order.html?stt=' + sttKeyEncoded;
 }
 

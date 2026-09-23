@@ -361,12 +361,19 @@ body.trang-dang-nhap {
 .order-card.xuong-bn { background: #86efac; border-color: #22c55e; }
 .order-card.xuong-hn { background: #93c5fd; border-color: #3b82f6; }
 .order-card.da-chon { border-color: var(--color-primary); background: var(--color-primary-light); }
-/* Tăng kích thước 22px -> var(--tap-min) (bổ sung 13/09/2026, theo yêu cầu người dùng — dễ bấm chọn
-   đơn hơn, nhất là trên màn cảm ứng) — dùng đúng biến "kích thước chạm thoải mái" app đã định nghĩa
-   sẵn, thay vì chọn 1 số tuỳ ý. Lớp .order-checkbox dùng chung ở public/orders.html, my-orders.html,
-   my-orders-ve-file.html — cùng 1 hành động "chọn đơn" nên tăng đồng bộ cả 3, không có lý do để khác
-   kích thước giữa các trang. */
-.order-checkbox { width: var(--tap-min); height: var(--tap-min); flex-shrink: 0; margin-top: 2px; cursor: pointer; accent-color: var(--color-primary); }
+/* Nút "Xem chi tiết đơn" (bổ sung 23/09/2026, theo yêu cầu người dùng) — THAY cho checkbox ở đúng vị
+   trí cũ. Đảo ngược hành vi thẻ đơn: trước đây bấm checkbox NHỎ mới chọn được đơn, dễ bấm trượt ra
+   ngoài khiến văng nhầm sang trang chi tiết (ít dùng); giờ bấm CẢ THẺ (trừ đúng nút này + nút ưu tiên)
+   để CHỌN đơn — vùng bấm rộng hơn hẳn, đỡ bấm nhầm — còn xem chi tiết dồn về đúng 1 nút nhỏ này. Giữ
+   cùng kích thước --tap-min như checkbox cũ để không đổi layout, dùng chung ở orders.html,
+   my-orders.html, my-orders-ve-file.html — cùng 1 hành động nên nhất quán cả 3 trang. */
+.btn-xem-the {
+  display: flex; align-items: center; justify-content: center;
+  width: var(--tap-min); height: var(--tap-min); flex-shrink: 0; margin-top: 2px; padding: 0;
+  border: 1px solid var(--color-border); border-radius: 50%; background: var(--color-surface); color: var(--color-text-muted);
+  cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.btn-xem-the:hover { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
 /* Cột dọc chứa checkbox chọn đơn + nút ưu tiên nhanh (bổ sung 13/09/2026, theo yêu cầu người dùng —
    kéo icon sao xuống DƯỚI checkbox, cùng 1 cột thay vì nằm ngang hàng như trước). Chỉ orders.html có
    nút ưu tiên (admin/ve_file) nên cột này có thể chỉ chứa đúng 1 checkbox ở các trang khác (my-orders*)

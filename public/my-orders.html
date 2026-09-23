@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn của tôi — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=98">
-<script src="/js/theme.js?v=98"></script>
+<link rel="stylesheet" href="/css/style.css?v=99">
+<script src="/js/theme.js?v=99"></script>
 </head>
 <body>
 <div id="nav"></div>
@@ -196,8 +196,8 @@
   <div id="danh-sach-san-sang" class="order-list"></div>
 </div>
 
-<script src="/js/icons.js?v=98"></script>
-<script src="/js/api.js?v=98"></script>
+<script src="/js/icons.js?v=99"></script>
+<script src="/js/api.js?v=99"></script>
 <script>
 const NHAN_CANH_BAO = { VANG: 'Vàng · 3 ngày', CAM: 'Cam · 5 ngày', DO: 'Đỏ · 7 ngày' };
 const NHAN_NGUOI_VAN_HANH_KHONG_RO = 'ĐƠN SỬA TRONG GGSHEET, KHÔNG RÕ TÀI KHOẢN SẢN XUẤT NÀO ĐANG CHẠY';
@@ -406,11 +406,12 @@ function renderDanhSachSanSang() {
     const daChon = donSanSangChonSet.has(o.STT_Key);
     return `
     <div class="order-card ${daChon ? 'da-chon' : ''}" data-stt-san-sang="${escapeHtml(o.STT_Key)}"
-         onclick="location.href='/order.html?stt=${encodeURIComponent(o.STT_Key)}'">
-      <input type="checkbox" class="order-checkbox" ${daChon ? 'checked' : ''}
-             aria-label="Chọn đơn ${escapeHtml(o.STT_Key)}"
-             onclick="event.stopPropagation()"
-             onchange="toggleChonDonSanSang('${escapeHtml(o.STT_Key)}', this.checked)">
+         onclick="toggleChonDonSanSang('${escapeHtml(o.STT_Key)}', !donSanSangChonSet.has('${escapeHtml(o.STT_Key)}'))">
+      <button type="button" class="btn-xem-the" title="Xem chi tiết đơn"
+              aria-label="Xem chi tiết đơn ${escapeHtml(o.STT_Key)}"
+              onclick="event.stopPropagation(); location.href='/order.html?stt=${encodeURIComponent(o.STT_Key)}'">
+        ${icon('arrowRight', { size: 16 })}
+      </button>
       ${o.DUONG_DAN_URL || o.MOCKUP
         ? `<div class="nhom-anh-dai-dien">${urlAnhHienThiList(o.DUONG_DAN_URL || o.MOCKUP).map(src => `<img src="${escapeHtml(src)}" alt="" loading="lazy" onerror="this.remove()">`).join('')}</div>`
         : ''}
@@ -453,8 +454,6 @@ function chonTatCaSanSang(daChonHet) {
   });
   document.querySelectorAll('#danh-sach-san-sang [data-stt-san-sang]').forEach(the => {
     the.classList.toggle('da-chon', daChonHet);
-    const cb = the.querySelector('.order-checkbox');
-    if (cb) cb.checked = daChonHet;
   });
   capNhatThanhHanhDongSanSang();
 }
@@ -463,8 +462,6 @@ function boChonTatCaDonSanSang() {
   donSanSangChonSet.clear();
   document.querySelectorAll('#danh-sach-san-sang [data-stt-san-sang]').forEach(the => {
     the.classList.remove('da-chon');
-    const cb = the.querySelector('.order-checkbox');
-    if (cb) cb.checked = false;
   });
   document.getElementById('chon-tat-ca-san-sang').checked = false;
   capNhatThanhHanhDongSanSang();
