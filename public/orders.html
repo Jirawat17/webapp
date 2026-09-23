@@ -1150,16 +1150,26 @@ function taiFileTuBlob(blob, contentDisposition, tenMacDinh) {
 // in 1 danh sách đã CHỤP LẠI từ trước (xem inMaPhoiDonDangChon()), không phụ thuộc donDaChonSet có bị
 // đổi sau đó hay không. `tuyChon.baoLoiBangAlert` (mặc định true) — false thì không tự alert() khi
 // lỗi, chỉ trả {ok:false, loi} để bên gọi tự gộp vào 1 alert tổng kết khác.
-// Đọc Từ ngày/Đến ngày ĐANG LỌC trên trang (bổ sung 24/09/2026, theo yêu cầu người dùng — các nút
-// "IN ... ĐANG CHỌN" chỉ gửi sttKeys, không kèm bộ lọc, khiến dòng "Khoảng thời gian" trong file in
-// luôn hiện "không giới hạn" dù đã lọc theo ngày trước khi chọn). Gửi kèm 2 giá trị này CHỈ để hiển
-// thị đúng trong file in (dongThongTinLoc ở routes/reports.js) — KHÔNG ảnh hưởng đơn nào được đưa vào
-// danh sách in (locDon() vẫn ưu tiên tuyệt đối sttKeys, bỏ qua tuNgay/denNgay khi có sttKeys).
-function layBoLocNgayDangDung() {
-  return {
-    tuNgay: document.getElementById('loc-tu-ngay').value,
-    denNgay: document.getElementById('loc-den-ngay').value,
+// Đọc TOÀN BỘ bộ lọc ĐANG HIỂN THỊ trên trang (mở rộng 24/09/2026, theo yêu cầu người dùng — bản trước
+// chỉ đọc Từ ngày/Đến ngày, các nút "IN ... ĐANG CHỌN" chỉ gửi sttKeys nên dòng thông tin lọc trong file
+// in bỏ sót/hiện sai mọi bộ lọc khác đang dùng, vd Trạng thái/Kích thước). Gửi kèm CÁC GIÁ TRỊ NÀY CHỈ để
+// hiển thị đúng trong file in (dongThongTinLoc ở routes/reports.js) — KHÔNG ảnh hưởng đơn nào được đưa
+// vào danh sách in (locDon() vẫn ưu tiên tuyệt đối sttKeys, bỏ qua mọi bộ lọc khác khi có sttKeys). Chỉ
+// đưa vào kết quả các ô ĐANG CÓ GIÁ TRỊ — khớp đúng cách đọc/tên tham số của routes/reports.js (lưu ý
+// 'loc-kh' ở trang này là ô tìm từ khoá, tương ứng tham số 'tuKhoa' bên reports.js, không phải 'khachHang').
+function layBoLocDangDung() {
+  const doc = (id) => document.getElementById(id).value;
+  const cacTruong = {
+    tuNgay: doc('loc-tu-ngay'), denNgay: doc('loc-den-ngay'),
+    trangThai: doc('loc-trang-thai'), trangThaiPhoi: doc('loc-phoi'), trangThaiVeFile: doc('loc-ve-file'),
+    canhBao: doc('loc-canh-bao'), xuong: doc('loc-xuong'), uuTien: doc('loc-uu-tien'),
+    timDonHangLoat: doc('loc-don-hang-loat'), loai: doc('loc-loai'), kichThuoc: doc('loc-kich-thuoc'),
+    mauSac: doc('loc-mau-sac'), hangVanChuyen: doc('loc-hang-van-chuyen'),
+    quocGiaTracking: doc('loc-quoc-gia-tracking'), tinhTrang: doc('loc-tinh-trang'), tuKhoa: doc('loc-kh'),
   };
+  const ketQua = {};
+  Object.entries(cacTruong).forEach(([k, v]) => { if (v) ketQua[k] = v; });
+  return ketQua;
 }
 
 async function inPhoiDangChon(nut, tuyChon = {}) {
@@ -1174,11 +1184,9 @@ async function inPhoiDangChon(nut, tuyChon = {}) {
   nut.disabled = true;
   nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 18 }) + ' Đang tạo file...';
 
-  const { tuNgay, denNgay } = layBoLocNgayDangDung();
   const qs = new URLSearchParams();
   qs.set('mau', 'phoi_ao_gop');
-  if (tuNgay) qs.set('tuNgay', tuNgay);
-  if (denNgay) qs.set('denNgay', denNgay);
+  Object.entries(layBoLocDangDung()).forEach(([k, v]) => qs.set(k, v));
   danhSach.forEach(sttKey => qs.append('sttKeys', sttKey));
 
   try {
@@ -1209,11 +1217,9 @@ async function inHaiQuanDangChon(nut) {
   nut.disabled = true;
   nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 18 }) + ' Đang tạo file...';
 
-  const { tuNgay, denNgay } = layBoLocNgayDangDung();
   const qs = new URLSearchParams();
   qs.set('mau', 'hai_quan');
-  if (tuNgay) qs.set('tuNgay', tuNgay);
-  if (denNgay) qs.set('denNgay', denNgay);
+  Object.entries(layBoLocDangDung()).forEach(([k, v]) => qs.set(k, v));
   Array.from(donDaChonSet).forEach(sttKey => qs.append('sttKeys', sttKey));
 
   try {
@@ -1435,7 +1441,7 @@ async function inDonDangChon(nut) {
   nut.disabled = true;
   nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 18 }) + ' Đang tạo file...';
 
-  await inDonHangLoatCoTienDo(nut, nhanGoc, { sttKeys: Array.from(donDaChonSet), ...layBoLocNgayDangDung() });
+  await inDonHangLoatCoTienDo(nut, nhanGoc, { sttKeys: Array.from(donDaChonSet), ...layBoLocDangDung() });
 }
 
 // Nút gộp "IN MÃ + IN DANH SÁCH PHÔI ĐƠN ĐANG CHỌN + IN ĐƠN ĐANG CHỌN" — làm 1 lần cả 3 việc:
@@ -1472,7 +1478,7 @@ async function inMaPhoiDonDangChon(nut) {
   // với người dùng: luôn in cho toàn bộ đơn đã chọn dù bước đổi trạng thái có lỗi 1 phần hay không).
   nut.disabled = true;
   nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Đang tạo file đơn...';
-  const ketQuaInDon = await inDonHangLoatCoTienDo(nut, nhanGoc, { sttKeys: danhSach, ...layBoLocNgayDangDung() }, { baoLoiBangAlert: false });
+  const ketQuaInDon = await inDonHangLoatCoTienDo(nut, nhanGoc, { sttKeys: danhSach, ...layBoLocDangDung() }, { baoLoiBangAlert: false });
 
   // Bước 3 — in PDF phôi cho TOÀN BỘ đơn đã chọn ban đầu (không phụ thuộc kết quả bước 1/2).
   const ketQuaInPhoi = await inPhoiDangChon(nut, { sttKeys: danhSach, baoLoiBangAlert: false });

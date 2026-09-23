@@ -94,15 +94,42 @@ async function layDonDaLoc(query, user) {
 // tuNgay/denNgay đang lọc trên trang khi in "...ĐANG CHỌN" (xem public/orders.html#inPhoiDangChon/
 // inHaiQuanDangChon/inDonHangLoatCoTienDo) — hàm này KHÔNG cần biết gì về sttKeys nữa, chỉ việc đọc
 // đúng tuNgay/denNgay như trước giờ vẫn làm cho luồng lọc thường.
+//
+// MỞ RỘNG THÊM 24/09/2026 (cùng ngày, người dùng test tiếp thấy trường Trạng thái/Kích thước vẫn hiện
+// sai) — bản trên chỉ gửi/đọc đúng tuNgay+denNgay, bỏ sót MỌI bộ lọc khác đang hiển thị trên trang
+// (Phôi/Vẽ file/Kích thước/Loại/Màu sắc/...). Giờ CLIENT gửi kèm TOÀN BỘ bộ lọc đang dùng (xem
+// layBoLocDangDung() ở public/orders.html), hàm này liệt kê ĐỘNG đúng các bộ lọc THỰC SỰ có giá trị —
+// tránh dòng thông tin dài lê thê với "Tất cả..." lặp lại cho mọi bộ lọc có thể có khi không lọc gì.
+const NHAN_LOC_PHU = [
+  ['trangThaiPhoi', 'Phôi'],
+  ['trangThaiVeFile', 'Vẽ file'],
+  ['canhBao', 'Mức cảnh báo'],
+  ['xuong', 'Xưởng'],
+  ['uuTien', 'Ưu tiên'],
+  ['timDonHangLoat', 'Đơn hàng loạt'],
+  ['loai', 'Loại'],
+  ['kichThuoc', 'Kích thước'],
+  ['mauSac', 'Màu sắc'],
+  ['hangVanChuyen', 'Hãng vận chuyển'],
+  ['quocGiaTracking', 'Quốc gia Tracking'],
+  ['tinhTrang', 'Tình trạng'],
+];
+
 function dongThongTinLoc(query, kieu) {
   const { tuNgay, denNgay, khachHang, trangThai, tuKhoa } = query;
   const khHienThi = khachHang || 'Tất cả khách hàng';
   const ttHienThi = trangThai === GIA_TRI_LOC_TRONG ? '(Trống)' : (trangThai || 'Tất cả trạng thái');
   const dongTuKhoa = tuKhoa ? ` · Từ khoá tìm kiếm: ${tuKhoa}` : '';
-  if (kieu === 'tracking') {
-    return `Khoảng thời gian: ${tuNgay || '(không giới hạn)'} ${denNgay || '(không giới hạn)'} · Khách hàng: ${khHienThi} · Trạng thái: ${ttHienThi}${dongTuKhoa}`;
-  }
-  return `Khoảng thời gian: Từ ngày ${tuNgay || '(không giới hạn)'} đến ngày ${denNgay || '(không giới hạn)'} · Khách hàng: ${khHienThi} · Trạng thái: ${ttHienThi}${dongTuKhoa}`;
+  const dongLocPhu = NHAN_LOC_PHU
+    .filter(([key]) => query[key])
+    .map(([key, nhan]) => `${nhan}: ${key === 'uuTien' ? (query[key] === '1' ? 'Đơn ưu tiên' : 'Đơn thường') : query[key]}`)
+    .join(' · ');
+  const dongLocPhuHienThi = dongLocPhu ? ` · ${dongLocPhu}` : '';
+
+  const dongThoiGian = kieu === 'tracking'
+    ? `Khoảng thời gian: ${tuNgay || '(không giới hạn)'} ${denNgay || '(không giới hạn)'}`
+    : `Khoảng thời gian: Từ ngày ${tuNgay || '(không giới hạn)'} đến ngày ${denNgay || '(không giới hạn)'}`;
+  return `${dongThoiGian} · Khách hàng: ${khHienThi} · Trạng thái: ${ttHienThi}${dongTuKhoa}${dongLocPhuHienThi}`;
 }
 
 function dongNguoiXuatChuoi(tenNguoiXuat) {
@@ -962,6 +989,7 @@ function xayDungBaoCaoDangBang(list, query, tenNguoiXuat) {
   }
 
   if (mau === 'phoi_ao_gop') {
+    const rowsGop = gomNhomPhoiAo(list);
     return {
       tenFileGoc: 'DSPhoiAoTongHop',
       bang: [{
@@ -970,7 +998,12 @@ function xayDungBaoCaoDangBang(list, query, tenNguoiXuat) {
         dongThongTin: dongThongTinLoc(query, 'phoi_ao'),
         dongNguoiXuat,
         cot: COT_PHOI_AO_GOP,
-        rows: gomNhomPhoiAo(list),
+        rows: rowsGop,
+        // "Tổng số dòng" (số dòng ĐÃ GỘP theo Loại+Kích+Màu) không hữu ích với người dùng (24/09/2026,
+        // theo yêu cầu người dùng) — thay bằng tổng số lượng phôi thật (cộng dồn TRƯỚC khi gộp, tức
+        // list.length đơn gốc, không phải rowsGop.length) và tổng số lượng phôi cần lấy.
+        tongSoLuong: list.reduce((tong, don) => tong + (Number(don.SO_LUONG) || 0), 0),
+        tongSoDon: list.length,
       }],
     };
   }
@@ -1024,7 +1057,7 @@ router.get('/xem-truoc', async (req, res) => {
 });
 
 function veSheetExcel(wb, bang) {
-  const { tenSheet, tieuDe, dongThongTin, dongNguoiXuat, cot, rows } = bang;
+  const { tenSheet, tieuDe, dongThongTin, dongNguoiXuat, cot, rows, tongSoLuong, tongSoDon } = bang;
   const sheet = wb.addWorksheet(tenSheet);
   cot.forEach((c, i) => { sheet.getColumn(i + 1).width = c.width; });
 
@@ -1052,8 +1085,15 @@ function veSheetExcel(wb, bang) {
   });
 
   sheet.addRow([]);
-  const dongTong = sheet.addRow([`Tổng số dòng: ${rows.length}`]);
-  dongTong.font = { bold: true };
+  // "Tổng số dòng" (số dòng bảng, đã gộp theo Loại+Kích+Màu với mẫu phôi áo gộp) không hữu ích với
+  // người dùng (24/09/2026, theo yêu cầu người dùng) — mẫu 'phoi_ao_gop' có tongSoLuong/tongSoDon
+  // (xem xayDungBaoCaoDangBang) thì hiện 2 dòng tổng có ý nghĩa hơn; mẫu khác vẫn giữ "Tổng số dòng".
+  if (tongSoLuong !== undefined) {
+    sheet.addRow([`TỔNG SỐ LƯỢNG TẤT CẢ CÁC PHÔI CẦN LẤY: ${tongSoLuong}`]).font = { bold: true };
+    sheet.addRow([`TỔNG SỐ LƯỢNG ĐƠN: ${tongSoDon}`]).font = { bold: true };
+  } else {
+    sheet.addRow([`Tổng số dòng: ${rows.length}`]).font = { bold: true };
+  }
 }
 
 router.get('/excel', async (req, res) => {
@@ -1077,7 +1117,7 @@ router.get('/excel', async (req, res) => {
 });
 
 function veBangPdf(doc, bang, canTrangMoi) {
-  const { tieuDe, dongThongTin, dongNguoiXuat, cot, rows } = bang;
+  const { tieuDe, dongThongTin, dongNguoiXuat, cot, rows, tongSoLuong, tongSoDon } = bang;
   if (canTrangMoi) doc.addPage();
 
   doc.font('NotoSans-Bold').fontSize(15).text(tieuDe, { align: 'center' });
@@ -1142,7 +1182,18 @@ function veBangPdf(doc, bang, canTrangMoi) {
 
   y += 10;
   if (y > doc.page.height - doc.page.margins.bottom - 20) { doc.addPage(); y = doc.page.margins.top; }
-  doc.font('NotoSans-Bold').fontSize(10).text(`Tổng số dòng: ${rows.length}`, startX, y);
+  doc.font('NotoSans-Bold').fontSize(10);
+  // Xem chú thích ở veSheetExcel() — cùng quy tắc: có tongSoLuong (mẫu 'phoi_ao_gop') thì hiện 2 dòng
+  // tổng có ý nghĩa hơn "Tổng số dòng" (đếm dòng đã gộp, không phải số phôi/số đơn thật).
+  if (tongSoLuong !== undefined) {
+    const dong1 = `TỔNG SỐ LƯỢNG TẤT CẢ CÁC PHÔI CẦN LẤY: ${tongSoLuong}`;
+    doc.text(dong1, startX, y);
+    y += doc.heightOfString(dong1) + 4;
+    if (y > doc.page.height - doc.page.margins.bottom - 20) { doc.addPage(); y = doc.page.margins.top; }
+    doc.text(`TỔNG SỐ LƯỢNG ĐƠN: ${tongSoDon}`, startX, y);
+  } else {
+    doc.text(`Tổng số dòng: ${rows.length}`, startX, y);
+  }
 }
 
 router.get('/pdf', async (req, res) => {
