@@ -206,11 +206,13 @@ function renderNav(user, active) {
     // CHỈ superadmin — KHÁC mọi nhánh khác trong hàm này (đều dùng laAdmin(), coi admin/superadmin
     // ngang quyền). admin không còn thấy menu này nữa, dù vẫn thấy mọi menu khác như trước.
     if (user.vaiTro === 'superadmin') {
-      // "Trợ lý" (bổ sung 20/09/2026, theo yêu cầu người dùng — thu hẹp từ admin+superadmin+ve_file
-      // xuống CHỈ superadmin) — chèn lại đúng vị trí cũ (trước "Báo cáo") thay vì nằm sẵn trong mảng
-      // gốc ở trên, để admin/ve_file không còn thấy menu này nữa.
-      links.splice(links.findIndex(l => l.key === 'reports'), 0, { href: '/chatbot.html', label: 'Trợ lý', icon: 'navSupport', key: 'chatbot' });
+      // "Trợ lý" ẨN khỏi menu (bổ sung 23/09/2026, theo yêu cầu người dùng — chưa dùng tới tính năng
+      // này) — CHỈ ẩn nav, route /chatbot.html + API vẫn hoạt động bình thường nếu gõ thẳng URL, dễ bật
+      // lại sau (đúng quy ước "ẩn menu, không khoá route" đã áp dụng nhất quán trong hàm này).
       links.push({ href: '/users.html', label: 'Nhân viên', icon: 'navUsers', key: 'users' });
+      // "Logs" (bổ sung 23/09/2026, theo yêu cầu người dùng) — xem log console server, CHỈ superadmin
+      // (cùng mức nhạy cảm với Nhân viên/Setting) — xem routes/logs.js + public/logs.html.
+      links.push({ href: '/logs.html', label: 'Logs', icon: 'navLogs', key: 'logs' });
     }
     links.push({ href: '/hoat-dong.html', label: 'Lịch sử', icon: 'navActivity', key: 'hoat-dong' });
     // Setting (thu hẹp từ admin/ve_file/superadmin xuống CHỈ superadmin, bổ sung 23/09/2026, theo yêu

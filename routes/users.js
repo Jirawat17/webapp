@@ -12,7 +12,7 @@ function matKhauHopLe(mk) {
   return /^\d{1,4}$/.test(String(mk));
 }
 
-// Danh sách RÚT GỌN (Ten/VaiTro/KichHoat — KHÔNG có MatKhau/Team/Xuong) — dùng cho các trang KHÁC cần
+// Danh sách RÚT GỌN (Ten/VaiTro/KichHoat — KHÔNG có MatKhau/Xuong) — dùng cho các trang KHÁC cần
 // liệt kê nhân viên để đổ vào ô chọn (chỉ định người chạy máy/vẽ file, xem hoạt động của người khác...
 // — xem public/orders.html, order.html, my-orders.html, my-orders-ve-file.html, hoat-dong.html), KHÔNG
 // phải trang Quản lý nhân viên (GET / dưới đây, giờ CHỈ superadmin — xem router.use bên dưới). Đặt
@@ -37,7 +37,7 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { ten, vaiTro, team, xuong, matKhau } = req.body;
+  const { ten, vaiTro, xuong, matKhau } = req.body;
   if (!ten || !vaiTro) return res.status(400).json({ error: 'Thiếu tên hoặc vai trò' });
   // Tài khoản MỚI bắt buộc phải có mật khẩu ngay từ đầu — chỉ tài khoản CŨ (tạo trước khi có tính
   // năng này) mới được tạm thời chưa có (xem routes/auth.js).
@@ -51,7 +51,7 @@ router.post('/', async (req, res) => {
   }
   if (taiKhoanService.layTheoTen(ten)) return res.status(400).json({ error: 'Tên này đã tồn tại' });
 
-  taiKhoanService.themMoi({ Ten: ten, VaiTro: vaiTro, Team: team || '', Xuong: xuong || '', KichHoat: 'TRUE', MatKhau: String(matKhau) });
+  taiKhoanService.themMoi({ Ten: ten, VaiTro: vaiTro, Xuong: xuong || '', KichHoat: 'TRUE', MatKhau: String(matKhau) });
   res.json({ ok: true });
 });
 
@@ -79,7 +79,7 @@ router.put('/:ten', async (req, res) => {
   }
 
   const updates = {};
-  ['VaiTro', 'Team', 'Xuong', 'KichHoat', 'MatKhau', 'HienThiDangNhap'].forEach(f => {
+  ['VaiTro', 'Xuong', 'KichHoat', 'MatKhau', 'HienThiDangNhap'].forEach(f => {
     if (req.body[f] !== undefined) updates[f] = f === 'MatKhau' ? String(req.body[f]) : req.body[f];
   });
 

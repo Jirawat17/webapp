@@ -29,7 +29,11 @@ db.exec(`CREATE TABLE IF NOT EXISTS nguoi_dung (
   HienThiDangNhap TEXT NOT NULL DEFAULT ''
 )`);
 
-const CAC_COT = ['VaiTro', 'Team', 'Xuong', 'KichHoat', 'MatKhau', 'HienThiDangNhap'];
+// Team KHÔNG còn ở đây nữa (bổ sung 23/09/2026, theo yêu cầu người dùng — không dùng dữ liệu này nữa,
+// xem routes/reports.js đã bỏ luôn phần gom nhóm "Theo Team"). Cột Team vẫn còn trong CREATE TABLE ở
+// trên (dữ liệu cũ nếu có không bị mất) nhưng không đọc/ghi qua CAC_COT nữa — ALTER TABLE DROP COLUMN
+// không cần thiết, chỉ thêm rủi ro cho lợi ích không đáng.
+const CAC_COT = ['VaiTro', 'Xuong', 'KichHoat', 'MatKhau', 'HienThiDangNhap'];
 const DS_COT_SELECT = ['Ten', ...CAC_COT].join(', ');
 
 // CHƯA migrate dữ liệu cũ lúc app khởi động (khác trangThaiDbService — ở đó "trắng trạng thái" chấp

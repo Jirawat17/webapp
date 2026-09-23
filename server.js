@@ -1,4 +1,8 @@
 require('dotenv').config();
+// PHẢI require SỚM NHẤT có thể (bổ sung 23/09/2026, theo yêu cầu người dùng) — "chặn" console.log/warn/
+// error để ghi thêm ra file, xem services/logCapture.js. Trước dòng này, mọi console.* KHÔNG được ghi
+// (chỉ 2 dòng dotenv/express-async-errors phía trên có thể lỡ mất, không đáng kể).
+require('./services/logCapture');
 require('express-async-errors'); // tự bắt lỗi từ các route async, không cần try/catch thủ công ở mỗi route
 
 const express = require('express');
@@ -42,6 +46,7 @@ app.use('/api/hoat-dong', require('./routes/hoatDong'));
 app.use('/api/tracking', require('./routes/tracking'));
 app.use('/api/trung-tam-hanh-dong', require('./routes/actionCenter'));
 app.use('/api/kich-ban', require('./routes/kichBan'));
+app.use('/api/logs', require('./routes/logs'));
 
 app.use(express.static(path.join(__dirname, 'public')));
 

@@ -243,16 +243,24 @@ body.trang-dang-nhap {
   padding-bottom: env(safe-area-inset-bottom);
   box-shadow: 0 -4px 16px rgba(24,24,27,0.06);
 }
-/* display:contents — trên điện thoại wrapper này "biến mất" khỏi box model, các <a> bên trong thành
-   con flex trực tiếp của .tab-links như cũ, giữ NGUYÊN 100% cách chia đều (space-around) của thanh
-   icon dính đáy màn hình. Chỉ có tác dụng thật (display:flex) từ 768px trở lên, xem bên dưới. */
-.tab-links-menu { display: contents; }
+/* ĐỔI 23/09/2026, theo yêu cầu người dùng — trước là display:contents (các <a> thành con flex trực
+   tiếp của .tab-links, luôn chia đều bằng space-around, KHÔNG cuộn được) — vai trò nhiều menu
+   (superadmin ~15 mục) bị co dúm không đọc nổi trên điện thoại. Giờ .tab-links-menu là 1 flex item
+   thật (flex:1 lấp đầy thanh), min-width:0 là chỗ mấu chốt (không có dòng này, flex item mặc định
+   không chịu co nhỏ hơn tổng bề rộng nội dung, overflow-x:auto sẽ vô tác dụng). Mỗi <a> bên dưới dùng
+   flex:1 0 68px (LƯU Ý flex-shrink:0, KHÔNG phải 1) — CÒN CHỖ thì tự giãn đều lấp đầy (flex-grow:1, vai
+   trò ít menu như nguoi_lay_phoi/san_xuat nhìn y hệt trước đây), KHÔNG đủ chỗ thì GIỮ NGUYÊN 68px (từ
+   chối co nhỏ hơn) rồi cuộn ngang thay vì co dúm mất chữ — flex-shrink:1 (giá trị mặc định nếu viết
+   flex:1 1 68px) sẽ cho phép co NHỎ HƠN 68px khi không đủ chỗ, làm hỏng đúng mục tiêu "cuộn thay vì co".
+   Cùng cơ chế overflow-x:auto desktop đã dùng (xem @media bên dưới) — không cần phân biệt riêng theo
+   vai trò. */
+.tab-links-menu { display: flex; flex: 1; min-width: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 /* Bản tên/đăng xuất đi kèm menu — CHỈ dùng ở desktop (xem @media bên dưới), điện thoại vẫn dùng bản
    trong .app-header như cũ (không đụng gì) — bổ sung 09/09/2026, xem docs/superpowers/specs/
    2026-09-09-gop-1-hang-nav-desktop-design.md. */
 .tab-links-user { display: none; }
 .tab-links a {
-  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  flex: 1 0 68px; display: flex; flex-direction: column; align-items: center; gap: 2px;
   padding: 8px 4px; min-height: var(--tap-min);
   text-decoration: none; color: var(--color-text-muted); font-size: 0.72rem; font-weight: 600;
   transition: color 0.15s ease;

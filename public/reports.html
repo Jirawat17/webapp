@@ -4,14 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Báo cáo — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=101">
-<script src="/js/theme.js?v=101"></script>
+<link rel="stylesheet" href="/css/style.css?v=103">
+<script src="/js/theme.js?v=103"></script>
 </head>
 <body>
 <div id="nav"></div>
 <div class="page">
   <h2>Thống kê tỷ lệ lỗi sản xuất</h2>
-  <p>Đếm số lần đơn hàng bị chuyển sang <strong>LỖI SẢN XUẤT CẦN LÀM LẠI</strong>, theo loại sản phẩm / team sản xuất / tuần — dựa trên lịch sử thao tác, không phải trạng thái hiện tại của đơn (vì đơn lỗi sau khi làm lại sẽ không còn ở trạng thái này nữa).</p>
+  <p>Đếm số lần đơn hàng bị chuyển sang <strong>LỖI SẢN XUẤT CẦN LÀM LẠI</strong>, theo loại sản phẩm / tuần — dựa trên lịch sử thao tác, không phải trạng thái hiện tại của đơn (vì đơn lỗi sau khi làm lại sẽ không còn ở trạng thái này nữa).</p>
 
   <form id="form-thong-ke-loi" class="bao-cao-form">
     <div class="truong">
@@ -95,8 +95,8 @@
   </div>
 </div>
 
-<script src="/js/icons.js?v=101"></script>
-<script src="/js/api.js?v=101"></script>
+<script src="/js/icons.js?v=103"></script>
+<script src="/js/api.js?v=103"></script>
 <script>
 (async () => {
   const user = await requireLoginOrRedirect();
@@ -181,10 +181,10 @@ async function xemThongKeLoi() {
       <h3>Chi tiết ${ketQua.chiTiet.length < ketQua.tongSoLoi ? `(mới nhất ${ketQua.chiTiet.length}/${ketQua.tongSoLoi})` : ''}</h3>
       <div class="bang-cuon-ngang">
         <table class="bang-xem-truoc">
-          <thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Loại</th><th>Team</th><th>Người chuyển</th><th>Người sản xuất</th><th>Thời gian</th></tr></thead>
+          <thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Loại</th><th>Người chuyển</th><th>Người sản xuất</th><th>Thời gian</th></tr></thead>
           <tbody>${ketQua.chiTiet.map(c => `<tr>
             <td><a href="/order.html?stt=${encodeURIComponent(c.sttKey)}">${escapeHtml(c.sttKey)}</a></td><td>${escapeHtml(c.khachHang)}</td><td>${escapeHtml(c.loai)}</td>
-            <td>${escapeHtml(c.team)}</td><td>${escapeHtml(c.nguoiDung)}</td>
+            <td>${escapeHtml(c.nguoiDung)}</td>
             <td style="color:${c.nguoiSanXuat === 'Không xác định do đã sửa trên GGSheet không qua app' ? 'var(--color-text-faint)' : 'inherit'}">${escapeHtml(c.nguoiSanXuat)}</td>
             <td>${escapeHtml(c.thoiGian)}</td>
           </tr>`).join('')}</tbody>

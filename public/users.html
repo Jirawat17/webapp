@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Nhân viên — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=101">
-<script src="/js/theme.js?v=101"></script>
+<link rel="stylesheet" href="/css/style.css?v=103">
+<script src="/js/theme.js?v=103"></script>
 </head>
 <body>
 <div id="nav"></div>
@@ -27,10 +27,6 @@
       </select>
     </div>
     <div class="truong">
-      <label for="team-moi">Team (nếu là Sản xuất)</label>
-      <input id="team-moi">
-    </div>
-    <div class="truong">
       <label for="xuong-moi">Xưởng</label>
       <select id="xuong-moi">
         <option value="">(chưa gán)</option>
@@ -48,8 +44,8 @@
   <table id="bang-nv" class="info-table"></table>
 </div>
 
-<script src="/js/icons.js?v=101"></script>
-<script src="/js/api.js?v=101"></script>
+<script src="/js/icons.js?v=103"></script>
+<script src="/js/api.js?v=103"></script>
 <script>
 (async () => {
   const user = await requireLoginOrRedirect();
@@ -73,11 +69,10 @@ document.getElementById('form-them').onsubmit = async (e) => {
   e.preventDefault();
   const ten = document.getElementById('ten-moi').value.trim();
   const vaiTro = document.getElementById('vaitro-moi').value;
-  const team = document.getElementById('team-moi').value.trim();
   const xuong = document.getElementById('xuong-moi').value;
   const matKhau = document.getElementById('matkhau-moi').value.trim();
   try {
-    await apiFetch('/users', { method: 'POST', body: JSON.stringify({ ten, vaiTro, team, xuong, matKhau }) });
+    await apiFetch('/users', { method: 'POST', body: JSON.stringify({ ten, vaiTro, xuong, matKhau }) });
     e.target.reset();
     await taiDanhSach();
   } catch (err) { alert(err.message); }
@@ -91,7 +86,7 @@ document.getElementById('form-them').onsubmit = async (e) => {
 async function taiDanhSach() {
   const list = await apiFetch('/users');
   document.getElementById('bang-nv').innerHTML = `
-    <tr><th>Tên</th><th>Vai trò</th><th>Team</th><th>Xưởng</th><th>Trạng thái</th><th>Mật khẩu</th><th>Đăng nhập</th><th></th><th></th><th></th><th></th><th></th></tr>
+    <tr><th>Tên</th><th>Vai trò</th><th>Xưởng</th><th>Trạng thái</th><th>Mật khẩu</th><th>Đăng nhập</th><th></th><th></th><th></th><th></th><th></th></tr>
     ${list.map(u => `
       <tr>
         <td>${escapeHtml(u.Ten)}
@@ -102,7 +97,6 @@ async function taiDanhSach() {
             ${Object.keys(NHAN_VAI_TRO).map(vt => `<option value="${vt}" ${u.VaiTro === vt ? 'selected' : ''}>${NHAN_VAI_TRO[vt]}</option>`).join('')}
           </select>
         </td>
-        <td>${escapeHtml(u.Team || '')}</td>
         <td>
           <select data-ten="${escapeHtml(u.Ten)}" onchange="doiXuong(this.dataset.ten, this.value)">
             <option value="" ${!u.Xuong ? 'selected' : ''}>(chưa gán)</option>

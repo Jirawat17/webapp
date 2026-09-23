@@ -167,14 +167,11 @@ function soTuanTrongNam(d) {
   return Math.ceil(((d - dauNam) / 86400000 + dauNam.getDay() + 1) / 7);
 }
 
-// Thống kê tỷ lệ lỗi sản xuất (LỖI SẢN XUẤT CẦN LÀM LẠI) theo loại sản phẩm / team sản xuất / tuần.
+// Thống kê tỷ lệ lỗi sản xuất (LỖI SẢN XUẤT CẦN LÀM LẠI) theo loại sản phẩm / tuần.
 // LƯU Ý QUAN TRỌNG: đây là trạng thái THOÁNG QUA — đơn lỗi được set tay làm lại từ phôi/file, nên
 // sau 1 thời gian sẽ không còn ở trạng thái này nữa. KHÔNG thể đếm bằng cách lọc TRANG_THAI_XUONG hiện tại
 // (hầu hết đơn từng lỗi trong quá khứ giờ đã không còn ở trạng thái lỗi nữa). Phải tính từ LỊCH SỬ
 // (mỗi lần có đơn được CHUYỂN SANG trạng thái lỗi tính là 1 lần lỗi, dù sau đó đã được làm lại hay chưa).
-// Đơn hàng không lưu "team sản xuất" trực tiếp — suy ra team bằng cách tra NGƯỜI đã bấm chuyển đơn
-// sang trạng thái lỗi (lấy từ lịch sử) rồi tra Team của người đó trong tab NguoiDung. Nếu không tìm
-// được (vd log bị xoá, hoặc trạng thái bị đổi trực tiếp trên Sheet không qua app) thì xếp vào "Không xác định".
 // "Người sản xuất" (khác với "Người chuyển" — người bấm chuyển đơn SANG trạng thái lỗi): người đã
 // thực hiện lần "Đã sản xuất" gần nhất của đơn đó — cho biết vấn đề chất lượng là ở khâu sản xuất nào.
 router.get('/thong-ke-loi', async (req, res) => {
@@ -204,28 +201,24 @@ router.get('/thong-ke-loi', async (req, res) => {
     return don ? orderService.coQuyenTheoXuong(user, don) : laSuperAdmin(user.vaiTro);
   });
 
-  const nhanVien = taiKhoanService.layTatCa();
-  const banDoTeam = {};
-  nhanVien.forEach(nv => { banDoTeam[nv.Ten] = nv.Team || 'Không rõ team'; });
-
   const nguoiSanXuatTheoDon = await layNguoiSanXuatTheoDon();
 
-  const theoLoai = {}, theoTeam = {}, theoTuan = {};
+  // theoTeam ĐÃ BỎ 23/09/2026, theo yêu cầu người dùng (không dùng dữ liệu Team nữa, xem
+  // services/taiKhoanService.js#CAC_COT) — cùng lúc bỏ cột "Team" ở bảng chi tiết bên dưới.
+  const theoLoai = {}, theoTuan = {};
   const chiTiet = [];
   const locTheoNgaySapXep = [...locTheoNgay].sort((a, b) => (a.thoiGian < b.thoiGian ? 1 : -1)); // sắp theo chuỗi ISO gốc — mới nhất trước
   for (const l of locTheoNgaySapXep) {
     const don = banDoDon[l.sttKey];
     const loai = (don && don.LOAI) || '(Không rõ loại)';
-    const team = banDoTeam[l.nguoiDung] || 'Không xác định';
     const d = new Date(l.thoiGian);
     const nhanTuan = `${d.getFullYear()}-T${String(soTuanTrongNam(d)).padStart(2, '0')}`;
 
     theoLoai[loai] = (theoLoai[loai] || 0) + 1;
-    theoTeam[team] = (theoTeam[team] || 0) + 1;
     theoTuan[nhanTuan] = (theoTuan[nhanTuan] || 0) + 1;
 
     chiTiet.push({
-      sttKey: l.sttKey, loai, team, nguoiDung: l.nguoiDung || '(Không rõ)',
+      sttKey: l.sttKey, loai, nguoiDung: l.nguoiDung || '(Không rõ)',
       thoiGian: dinhDangNgayGioNgan(d), khachHang: don ? (don.MA_KHACH_HANG || '') : '',
       nguoiSanXuat: (nguoiSanXuatTheoDon[l.sttKey] && nguoiSanXuatTheoDon[l.sttKey].nguoiDung) || KHONG_XAC_DINH_NGUOI_SAN_XUAT,
     });
@@ -233,7 +226,7 @@ router.get('/thong-ke-loi', async (req, res) => {
 
   res.json({
     tongSoLoi: locTheoNgay.length,
-    theoLoai, theoTeam, theoTuan,
+    theoLoai, theoTuan,
     chiTiet: chiTiet.slice(0, 200),
   });
 });

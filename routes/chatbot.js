@@ -228,7 +228,7 @@ async function thucThiTool(tenHam, thamSo, ctx) {
       // (xem TOOLS_QUAN_LY phía dưới) — kiểm tra lại 1 lần nữa ở đây phòng model tự bịa tên công cụ.
       if (!laAdmin(ctx.user.vaiTro)) return { loi: 'Không có quyền tra cứu danh sách nhân viên.' };
       const rows = taiKhoanService.layTatCa();
-      let list = rows.map(r => ({ ten: r.Ten, vaiTro: r.VaiTro, team: r.Team, kichHoat: r.KichHoat }));
+      let list = rows.map(r => ({ ten: r.Ten, vaiTro: r.VaiTro, kichHoat: r.KichHoat }));
       if (thamSo.vaiTro) list = list.filter(nv => nv.vaiTro === thamSo.vaiTro);
       return list;
     }

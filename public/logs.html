@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Logs — Xưởng Thêu</title>
+<link rel="stylesheet" href="/css/style.css?v=103">
+<script src="/js/theme.js?v=103"></script>
+<style>
+/* Font đơn cách + cỡ nhỏ để hiện nhiều dòng — cùng tinh thần .tk-logs ở tracking.html, khai riêng ở đây
+   vì chỉ trang này dùng (không đáng thêm vào style.css dùng chung). */
+#khoi-log {
+  font-size: 0.78rem; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  padding: var(--space-3); white-space: pre-wrap; word-break: break-word; line-height: 1.6;
+  max-height: 70vh; overflow-y: auto; margin-top: var(--space-4);
+}
+</style>
+</head>
+<body>
+<div id="nav"></div>
+<div class="page">
+  <h2>Logs</h2>
+  <p>Log console của server (console.log/warn/error) — chỉ giữ tối đa ~5MB gần nhất, tự xoay vòng.</p>
+  <div class="bao-cao-form">
+    <div class="truong">
+      <label for="loc-log">Lọc theo từ khoá</label>
+      <input id="loc-log" placeholder="Ví dụ: [CanhBao], ERROR...">
+    </div>
+    <div class="truong">
+      <label for="so-dong-log">Số dòng gần nhất</label>
+      <input type="number" id="so-dong-log" value="500" min="50" max="5000" step="50">
+    </div>
+    <button type="button" class="btn-hanh-dong" id="btn-lam-moi-log">Làm mới</button>
+  </div>
+  <pre id="khoi-log">Đang tải...</pre>
+</div>
+
+<script src="/js/icons.js?v=103"></script>
+<script src="/js/api.js?v=103"></script>
+<script>
+let toanBoDong = [];
+
+(async () => {
+  const user = await requireLoginOrRedirect();
+  if (!user) return;
+  renderNav(user, 'logs');
+  // CHỈ superadmin (bổ sung 23/09/2026, theo yêu cầu người dùng — cùng mức nhạy cảm với
+  // Settings/Nhân viên, log có thể chứa thông tin không nên lộ ra ngoài).
+  if (user.vaiTro !== 'superadmin') {
+    document.querySelector('.page').innerHTML = '<p>Bạn không có quyền truy cập trang này.</p>';
+    return;
+  }
+  document.getElementById('btn-lam-moi-log').onclick = taiLog;
+  document.getElementById('loc-log').oninput = renderLog;
+  await taiLog();
+})();
+
+async function taiLog() {
+  const khoi = document.getElementById('khoi-log');
+  khoi.textContent = 'Đang tải...';
+  try {
+    const soDong = document.getElementById('so-dong-log').value;
+    const ketQua = await apiFetch('/logs?soDong=' + encodeURIComponent(soDong));
+    toanBoDong = (ketQua.text || '').split('\n');
+    renderLog();
+  } catch (e) {
+    khoi.textContent = 'Lỗi: ' + e.message;
+  }
+}
+
+// textContent (KHÔNG innerHTML) — log có thể chứa bất kỳ ký tự nào (kể cả trông giống thẻ HTML nếu 1
+// lỗi nào đó in ra chuỗi lạ) — textContent luôn hiện đúng dạng chữ thô, không có rủi ro XSS.
+function renderLog() {
+  const tuKhoa = document.getElementById('loc-log').value.trim().toLowerCase();
+  const khoi = document.getElementById('khoi-log');
+  const dong = tuKhoa ? toanBoDong.filter(d => d.toLowerCase().includes(tuKhoa)) : toanBoDong;
+  khoi.textContent = dong.length ? dong.join('\n') : '(Không có dòng nào khớp.)';
+  khoi.scrollTop = khoi.scrollHeight;
+}
+</script>
+</body>
+</html>

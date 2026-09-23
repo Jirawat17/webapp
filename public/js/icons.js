@@ -42,6 +42,9 @@ const ICONS = {
   navUsers: '<circle cx="9" cy="7.5" r="3"/><path d="M3.5 20c0-3.6 2.9-6.5 5.5-6.5s5.5 2.9 5.5 6.5"/><circle cx="17.5" cy="8.5" r="2.3"/><path d="M15.2 13.7c2.6.3 4.6 2.5 5 5.3"/>',
   navSettings: '<circle cx="12" cy="12" r="3.2"/><line x1="12" y1="3" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="21"/><line x1="3" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="21" y2="12"/><line x1="5.6" y1="5.6" x2="7.8" y2="7.8"/><line x1="16.2" y1="16.2" x2="18.4" y2="18.4"/><line x1="5.6" y1="18.4" x2="7.8" y2="16.2"/><line x1="16.2" y1="7.8" x2="18.4" y2="5.6"/>',
   navAssets: '<path d="M12 3 4 7v10l8 4 8-4V7l-8-4z"/><path d="M4 7l8 4 8-4"/><line x1="12" y1="11" x2="12" y2="21"/>',
+  // Trang giấy góc gấp (khung trùng icon `file` gốc) + 3 dòng kẻ — dùng riêng cho menu "Logs" (bổ sung
+  // 23/09/2026, theo yêu cầu người dùng — superadmin xem log server).
+  navLogs: '<path d="M6.5 2.5h8l5 5v13.5a1 1 0 0 1-1 1h-12a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1z"/><polyline points="14.5 2.5 14.5 7.5 19.5 7.5"/><line x1="7.5" y1="12" x2="16.5" y2="12"/><line x1="7.5" y1="15.5" x2="16.5" y2="15.5"/><line x1="7.5" y1="19" x2="13" y2="19"/>',
   // Ghim định vị — dùng riêng cho menu "Tracking" (bổ sung 09/09/2026, quản lý tự động mua tracking GKE).
   navTracking: '<path d="M12 21s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.3"/>',
   // Trùng path icon `alert` gốc — dùng riêng cho menu "Cần xử lý" (bổ sung 14/09/2026, Trung tâm hành
