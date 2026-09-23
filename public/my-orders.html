@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn của tôi — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=100">
-<script src="/js/theme.js?v=100"></script>
+<link rel="stylesheet" href="/css/style.css?v=101">
+<script src="/js/theme.js?v=101"></script>
 </head>
 <body>
 <div id="nav"></div>
@@ -196,8 +196,8 @@
   <div id="danh-sach-san-sang" class="order-list"></div>
 </div>
 
-<script src="/js/icons.js?v=100"></script>
-<script src="/js/api.js?v=100"></script>
+<script src="/js/icons.js?v=101"></script>
+<script src="/js/api.js?v=101"></script>
 <script>
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
 // settings.html (superadmin), 3/5/7 không còn luôn đúng nên không hard-code vào nhãn hiển thị nữa.
@@ -215,6 +215,9 @@ const SO_DON_MOI_LUOT = 60;
 let soDangHienThiSanSang = SO_DON_MOI_LUOT;
 let soDangHienThiDangChay = SO_DON_MOI_LUOT;
 let danhSachDangChay = [];
+// Màu nền thẻ theo Xưởng (bổ sung 23/09/2026, theo yêu cầu người dùng) — tải 1 lần lúc vào trang, xem
+// public/js/api.js#taiMauTheoXuong/lopVaStyleXuong.
+let mauTheoXuong = {};
 
 // Các ô lọc (không tính Trạng thái — cố định, và Chỉ đơn hàng loạt — checkbox riêng) của mỗi mục —
 // dùng chung cho cả việc đếm số lọc đang áp dụng (capNhatNhanNutLoc) lẫn xoá trắng (xoaCacOLoc).
@@ -225,6 +228,7 @@ const CAC_O_LOC_DC = ['loc-kh', 'loc-tu-ngay', 'loc-den-ngay', 'loc-canh-bao', '
   user = await requireLoginOrRedirect();
   if (!user) return;
   renderNav(user, 'my-orders');
+  mauTheoXuong = await taiMauTheoXuong();
 
   // Bộ lọc "Người sản xuất" — bổ sung 07/09/2026, CHỈ dành cho admin (xem
   // docs/superpowers/specs/2026-09-07-loc-nguoi-san-xuat-don-cua-toi-design.md). san_xuat vốn đã chỉ
@@ -406,8 +410,11 @@ function renderDanhSachSanSang() {
 
   el.innerHTML = dsDeRender.map(o => {
     const daChon = donSanSangChonSet.has(o.STT_Key);
+    // Tô màu nền thẻ theo Xưởng (bổ sung 23/09/2026, theo yêu cầu người dùng — mở rộng từ orders.html
+    // sang đây, xem style.css .order-card.co-mau-xuong + public/js/api.js#lopVaStyleXuong).
+    const xuongCard = lopVaStyleXuong(o.XUONG, mauTheoXuong);
     return `
-    <div class="order-card ${daChon ? 'da-chon' : ''}" data-stt-san-sang="${escapeHtml(o.STT_Key)}"
+    <div class="order-card ${daChon ? 'da-chon' : ''} ${xuongCard.lop}" style="${xuongCard.style}" data-stt-san-sang="${escapeHtml(o.STT_Key)}"
          onclick="toggleChonDonSanSang('${escapeHtml(o.STT_Key)}', !donSanSangChonSet.has('${escapeHtml(o.STT_Key)}'))">
       <button type="button" class="btn-xem-the" title="Xem chi tiết đơn"
               aria-label="Xem chi tiết đơn ${escapeHtml(o.STT_Key)}"
@@ -657,8 +664,12 @@ function renderDanhSachDangChay(coLocNaoDangChon) {
   const dsDeRender = danhSachDangChay.slice(0, soDangHienThiDangChay);
   const conLai = danhSachDangChay.length - dsDeRender.length;
 
-  el.innerHTML = dsDeRender.map(o => `
-    <div class="order-card" onclick="location.href='/order.html?stt=${encodeURIComponent(o.STT_Key)}'">
+  el.innerHTML = dsDeRender.map(o => {
+    // Tô màu nền thẻ theo Xưởng (bổ sung 23/09/2026, theo yêu cầu người dùng — xem
+    // style.css .order-card.co-mau-xuong + public/js/api.js#lopVaStyleXuong).
+    const xuongCard = lopVaStyleXuong(o.XUONG, mauTheoXuong);
+    return `
+    <div class="order-card ${xuongCard.lop}" style="${xuongCard.style}" onclick="location.href='/order.html?stt=${encodeURIComponent(o.STT_Key)}'">
       ${o.DUONG_DAN_URL || o.MOCKUP
         ? `<div class="nhom-anh-dai-dien">${urlAnhHienThiList(o.DUONG_DAN_URL || o.MOCKUP).map(src => `<img src="${escapeHtml(src)}" alt="" loading="lazy" onerror="this.remove()">`).join('')}</div>`
         : ''}
@@ -678,7 +689,8 @@ function renderDanhSachDangChay(coLocNaoDangChon) {
             </span>` : ''}
         </div>
       </div>
-    </div>`).join('') + (conLai > 0
+    </div>`;
+  }).join('') + (conLai > 0
     ? `<button type="button" class="btn-hanh-dong phu" style="grid-column:1/-1" onclick="soDangHienThiDangChay+=SO_DON_MOI_LUOT;renderDanhSachDangChay(${JSON.stringify(!!coLocNaoDangChon)})">Xem thêm (còn ${conLai} đơn)</button>`
     : '');
 }

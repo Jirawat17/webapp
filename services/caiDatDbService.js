@@ -127,9 +127,32 @@ function datCaiDatNenAnh({ ChatLuongJpeg, CanhDaiToiDa }) {
   `).run(String(ChatLuongJpeg), String(CanhDaiToiDa));
 }
 
+// ---------- CaiDatMauXuong — màu nền thẻ đơn theo Xưởng (bổ sung 23/09/2026, theo yêu cầu người dùng —
+// "mỗi Xưởng có thể có màu riêng để dễ phân biệt các đơn thuộc các xưởng khác nhau"). KHÁC 3 bảng trên
+// (đúng 1 dòng cố định) — đây là bảng nhiều dòng, 1 dòng/1 giá trị Xưởng (khớp orderService.js#
+// DANH_SACH_XUONG, có thể thêm/bớt Xưởng mà không cần đổi schema). Trước đây 2 màu HN/BN hard-code
+// trong style.css (.order-card.xuong-hn/xuong-bn) — giờ superadmin tự chọn qua settings.html, KHÔNG
+// còn giới hạn đúng 2 màu cố định.
+db.exec(`CREATE TABLE IF NOT EXISTS cai_dat_mau_xuong (
+  Xuong TEXT PRIMARY KEY,
+  Mau TEXT NOT NULL DEFAULT ''
+)`);
+
+function layMauTheoXuong() {
+  const rows = db.prepare(`SELECT Xuong, Mau FROM cai_dat_mau_xuong`).all();
+  return Object.fromEntries(rows.map(r => [r.Xuong, r.Mau]));
+}
+function datMauXuong(xuong, mau) {
+  db.prepare(`
+    INSERT INTO cai_dat_mau_xuong (Xuong, Mau) VALUES (?, ?)
+    ON CONFLICT(Xuong) DO UPDATE SET Mau = excluded.Mau
+  `).run(xuong, mau);
+}
+
 module.exports = {
   layCaiDatHangLoat, datCaiDatHangLoat,
   layCauHinhTracking, datCauHinhTracking, CAC_COT_CAU_HINH_TRACKING,
   layCaiDatCanhBao, datCaiDatCanhBao,
   layCaiDatNenAnh, datCaiDatNenAnh,
+  layMauTheoXuong, datMauXuong,
 };

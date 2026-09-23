@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=100">
-<script src="/js/theme.js?v=100"></script>
+<link rel="stylesheet" href="/css/style.css?v=101">
+<script src="/js/theme.js?v=101"></script>
 </head>
 <body>
 <div id="nav"></div>
@@ -231,8 +231,8 @@
   <button class="btn-hanh-dong phu" onclick="boChonTatCaDon()">Bỏ chọn</button>
 </div>
 
-<script src="/js/icons.js?v=100"></script>
-<script src="/js/api.js?v=100"></script>
+<script src="/js/icons.js?v=101"></script>
+<script src="/js/api.js?v=101"></script>
 <script>
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
 // settings.html (superadmin), 3/5/7 không còn luôn đúng nên không hard-code vào nhãn hiển thị nữa.
@@ -260,6 +260,9 @@ const DANH_SACH_XUONG = ['HN', 'BN', 'ChuaGanXuong'];
 
 let danhSachHienTai = [];
 let donDaChonSet = new Set();
+// Màu nền thẻ theo Xưởng (bổ sung 23/09/2026, theo yêu cầu người dùng) — tải 1 lần lúc vào trang, xem
+// public/js/api.js#taiMauTheoXuong/lopVaStyleXuong.
+let mauTheoXuong = {};
 // Giới hạn số THẺ render/tải ảnh cùng lúc (bổ sung 21/09/2026, theo yêu cầu người dùng cải thiện tốc độ
 // Danh sách đơn hàng trên điện thoại) — CHỈ ảnh hưởng phần HIỂN THỊ (DOM + ảnh), KHÔNG đụng
 // danhSachHienTai/donDaChonSet (vẫn giữ NGUYÊN toàn bộ danh sách khớp lọc) — "Chọn tất cả"/bulk action
@@ -274,6 +277,7 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   user = await requireLoginOrRedirect();
   if (!user) return;
   renderNav(user, 'orders');
+  mauTheoXuong = await taiMauTheoXuong();
 
   document.getElementById('loc-trang-thai').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-phoi').onchange = () => { boChonTatCaDon(); taiDon(); };
@@ -600,12 +604,12 @@ function renderDanhSachDon() {
 
   el.innerHTML = dsDeRender.map(o => {
     const daChon = donDaChonSet.has(o.STT_Key);
-    // Tô màu nền thẻ theo Xưởng (bổ sung 21/09/2026 — xem style.css .order-card.xuong-bn/xuong-hn) —
-    // o.XUONG rỗng/undefined (vai trò admin bị ẩn giá trị này, xem orderService.js#anXuongVoiAdmin,
-    // hoặc đơn chưa gán Xưởng) thì không thêm class nào, giữ nguyên nền mặc định.
-    const lopXuong = o.XUONG === 'BN' ? 'xuong-bn' : o.XUONG === 'HN' ? 'xuong-hn' : '';
+    // Tô màu nền thẻ theo Xưởng (bổ sung 21/09/2026, ĐỔI 23/09/2026 sang màu superadmin tự chọn — xem
+    // style.css .order-card.co-mau-xuong + public/js/api.js#lopVaStyleXuong) — o.XUONG rỗng/undefined
+    // (admin bị ẩn giá trị này, hoặc Xưởng chưa được gán màu) thì không thêm class/style gì.
+    const xuongCard = lopVaStyleXuong(o.XUONG, mauTheoXuong);
     return `
-    <div class="order-card ${daChon ? 'da-chon' : ''} ${lopXuong}" data-stt="${escapeHtml(o.STT_Key)}"
+    <div class="order-card ${daChon ? 'da-chon' : ''} ${xuongCard.lop}" style="${xuongCard.style}" data-stt="${escapeHtml(o.STT_Key)}"
          onclick="toggleChonDon('${escapeHtml(o.STT_Key)}', !donDaChonSet.has('${escapeHtml(o.STT_Key)}'))">
       <div class="cot-chon-the">
         <button type="button" class="btn-xem-the" title="Xem chi tiết đơn"

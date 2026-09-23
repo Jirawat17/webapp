@@ -105,6 +105,20 @@ function laSuperAdmin(vaiTro) {
   return vaiTro === 'superadmin';
 }
 
+// Màu nền thẻ đơn theo Xưởng (bổ sung 23/09/2026, theo yêu cầu người dùng) — dùng chung bởi orders.html/
+// my-orders.html/my-orders-ve-file.html, mỗi trang tự gọi 1 lần lúc vào trang rồi truyền kết quả vào
+// lopVaStyleXuong() khi render từng thẻ. Rỗng/lỗi mạng → {} (an toàn, mọi thẻ về lại nền mặc định, y hệt
+// hành vi "chưa cấu hình màu" — không chặn hiển thị danh sách chỉ vì lỗi tải màu).
+async function taiMauTheoXuong() {
+  try { return await apiFetch('/orders/mau-xuong'); } catch (e) { return {}; }
+}
+// o.XUONG rỗng/undefined (admin bị ẩn giá trị này, hoặc đơn/Xưởng chưa được gán màu) → không có class/
+// style gì, giữ nguyên nền mặc định — đúng hành vi 2 màu hard-code cũ trước khi có tính năng này.
+function lopVaStyleXuong(xuong, mauTheoXuong) {
+  const mau = mauTheoXuong && mauTheoXuong[xuong];
+  return mau ? { lop: 'co-mau-xuong', style: `--mau-xuong:${escapeHtml(mau)}` } : { lop: '', style: '' };
+}
+
 function trangChuTheoVaiTro(vaiTro) {
   if (vaiTro === 'nguoi_lay_phoi') return '/scan.html';
   if (vaiTro === 'san_xuat') return '/my-orders.html';

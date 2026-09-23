@@ -15,6 +15,7 @@ const { taiDsAnh } = require('../services/anhNguonService');
 const { tinhHashAnh, khoangCachHamming } = require('../services/perceptualHashService');
 const { requireLogin, laAdmin, laSuperAdmin } = require('../middleware/auth');
 const { xoaDuLieuDon } = require('../services/xoaDuLieuDonService');
+const { layMauTheoXuong, datMauXuong } = require('../services/caiDatDbService');
 
 router.use(requireLogin);
 
@@ -494,6 +495,33 @@ router.post('/chi-dinh-nguoi-ve-file', async (req, res) => {
   });
 
   res.json({ ok: true, thanhCong, loi });
+});
+
+// Màu nền thẻ đơn theo Xưởng (bổ sung 23/09/2026, theo yêu cầu người dùng — "mỗi Xưởng có thể có màu
+// riêng để dễ phân biệt các đơn thuộc các xưởng khác nhau", thay cho 2 màu HN/BN hard-code cũ trong
+// style.css). GET mở cho MỌI người đã đăng nhập (orders.html/my-orders.html/my-orders-ve-file.html đều
+// cần đọc để tô màu thẻ — admin không có XUONG trong dữ liệu đơn nên tự nhiên không tô được gì, không
+// cần chặn riêng, xem services/orderService.js#anXuongVoiAdmin). POST (đổi màu) CHỈ superadmin — cùng
+// mức nhạy cảm với /gan-xuong ở dưới.
+router.get('/mau-xuong', (req, res) => {
+  res.json(layMauTheoXuong());
+});
+
+router.post('/mau-xuong', (req, res) => {
+  const user = req.session.user;
+  if (!laSuperAdmin(user.vaiTro)) {
+    return res.status(403).json({ error: 'Chỉ superadmin mới được đổi màu Xưởng' });
+  }
+  const { xuong, mau } = req.body;
+  if (!orderService.DANH_SACH_XUONG.includes(xuong)) {
+    return res.status(400).json({ error: `Xưởng không hợp lệ: "${xuong}" — chỉ chấp nhận: ${orderService.DANH_SACH_XUONG.join(', ')}` });
+  }
+  // mau = '' hợp lệ (bỏ màu, về lại nền mặc định) — chỉ chặn giá trị SAI định dạng, không chặn rỗng.
+  if (mau && !/^#[0-9a-f]{6}$/i.test(mau)) {
+    return res.status(400).json({ error: `Mã màu không hợp lệ: "${mau}" — cần dạng #rrggbb.` });
+  }
+  datMauXuong(xuong, mau || '');
+  res.json({ ok: true });
 });
 
 // GÁN XƯỞNG (HN/BN...) cho 1 lô đơn đã chọn — bổ sung 13/09/2026, theo yêu cầu người

@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Thiết lập — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=100">
-<script src="/js/theme.js?v=100"></script>
+<link rel="stylesheet" href="/css/style.css?v=101">
+<script src="/js/theme.js?v=101"></script>
 </head>
 <body>
 <div id="nav"></div>
@@ -71,10 +71,19 @@
     <button type="button" class="btn-hanh-dong" id="btn-luu-nen-anh" style="justify-self:start">Lưu</button>
   </div>
   <p id="thong-bao-nen-anh" style="display:none"></p>
+
+  <!-- Màu nền theo Xưởng (bổ sung 23/09/2026, theo yêu cầu người dùng — "mỗi Xưởng có thể có màu riêng
+       để dễ phân biệt các đơn thuộc các xưởng khác nhau") — thay 2 màu HN/BN hard-code cũ trong
+       style.css bằng ô chọn màu tự do (input type=color, không giới hạn ~20 màu như bảng màu chủ đạo ở
+       trên). Áp dụng cho thẻ đơn ở Đơn hàng/Chạy máy/Vẽ file — xem public/js/api.js#lopVaStyleXuong. -->
+  <h3 style="margin-top:var(--space-6)">Màu nền theo Xưởng</h3>
+  <p>Mỗi Xưởng 1 màu nền riêng cho thẻ đơn ở Đơn hàng/Chạy máy/Vẽ file — dễ phân biệt đơn thuộc Xưởng nào.</p>
+  <div class="bao-cao-form" id="khoi-mau-xuong"></div>
+  <p id="thong-bao-mau-xuong" style="display:none"></p>
 </div>
 
-<script src="/js/icons.js?v=100"></script>
-<script src="/js/api.js?v=100"></script>
+<script src="/js/icons.js?v=101"></script>
+<script src="/js/api.js?v=101"></script>
 <script>
 (async () => {
   const user = await requireLoginOrRedirect();
@@ -90,9 +99,56 @@
   renderCongTacCheDoToi();
   await taiNguongCanhBao();
   await taiCauHinhNenAnh();
+  await taiMauXuong();
   document.getElementById('btn-luu-canh-bao').onclick = luuNguongCanhBao;
   document.getElementById('btn-luu-nen-anh').onclick = luuCauHinhNenAnh;
 })();
+
+// Xưởng vật lý có màu riêng (bổ sung 23/09/2026) — CHỈ HN/BN, không có "ChuaGanXuong" (đơn chưa gán
+// Xưởng giữ nguyên nền mặc định, không tô màu — đúng hành vi 2 màu hard-code cũ). PHẢI khớp
+// DANH_SACH_XUONG trong services/orderService.js (trừ ChuaGanXuong) — cùng quy ước duplicate-với-
+// comment-nhắc đã dùng ở orders.html/users.html.
+const DANH_SACH_XUONG_CO_MAU = ['HN', 'BN'];
+// Màu mặc định = ĐÚNG 2 màu hard-code cũ (xem style.css trước 23/09/2026) — giữ nguyên hình ảnh hiện có
+// cho tới khi superadmin chủ động đổi, không đổi gì ngay khi tính năng này lên production.
+const MAU_MAC_DINH_XUONG = { HN: '#93c5fd', BN: '#86efac' };
+
+async function taiMauXuong() {
+  const mau = await apiFetch('/orders/mau-xuong');
+  const el = document.getElementById('khoi-mau-xuong');
+  el.innerHTML = DANH_SACH_XUONG_CO_MAU.map(x => `
+    <div class="truong">
+      <label for="mau-xuong-${x}">Xưởng ${x}</label>
+      <input type="color" id="mau-xuong-${x}" value="${mau[x] || MAU_MAC_DINH_XUONG[x]}">
+    </div>`).join('') +
+    `<button type="button" class="btn-hanh-dong" id="btn-luu-mau-xuong" style="justify-self:start">Lưu</button>`;
+  document.getElementById('btn-luu-mau-xuong').onclick = luuMauXuong;
+}
+
+async function luuMauXuong() {
+  const nut = document.getElementById('btn-luu-mau-xuong');
+  const thongBao = document.getElementById('thong-bao-mau-xuong');
+  nut.disabled = true;
+  nut.textContent = 'Đang lưu...';
+  try {
+    for (const x of DANH_SACH_XUONG_CO_MAU) {
+      await apiFetch('/orders/mau-xuong', {
+        method: 'POST',
+        body: JSON.stringify({ xuong: x, mau: document.getElementById('mau-xuong-' + x).value }),
+      });
+    }
+    thongBao.style.display = 'block';
+    thongBao.style.color = '#16a34a';
+    thongBao.textContent = 'Đã lưu.';
+  } catch (e) {
+    thongBao.style.display = 'block';
+    thongBao.style.color = 'var(--color-primary)';
+    thongBao.textContent = 'Lỗi: ' + e.message;
+  } finally {
+    nut.disabled = false;
+    nut.textContent = 'Lưu';
+  }
+}
 
 async function taiNguongCanhBao() {
   const nguong = await apiFetch('/canh-bao/nguong');

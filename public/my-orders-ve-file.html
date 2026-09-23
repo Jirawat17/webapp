@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn của tôi (Vẽ file) — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=100">
-<script src="/js/theme.js?v=100"></script>
+<link rel="stylesheet" href="/css/style.css?v=101">
+<script src="/js/theme.js?v=101"></script>
 </head>
 <body>
 <div id="nav"></div>
@@ -223,8 +223,8 @@
   <div id="danh-sach-can-ve" class="order-list"></div>
 </div>
 
-<script src="/js/icons.js?v=100"></script>
-<script src="/js/api.js?v=100"></script>
+<script src="/js/icons.js?v=101"></script>
+<script src="/js/api.js?v=101"></script>
 <script>
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
 // settings.html (superadmin), 3/5/7 không còn luôn đúng nên không hard-code vào nhãn hiển thị nữa.
@@ -238,6 +238,10 @@ let coLocNaoDangChonCanVe = false;
 let danhSachToiVe = [];
 let donToiVeChonSet = new Set();
 let coLocNaoDangChonToiVe = false;
+
+// Màu nền thẻ theo Xưởng (bổ sung 23/09/2026, theo yêu cầu người dùng) — tải 1 lần lúc vào trang, xem
+// public/js/api.js#taiMauTheoXuong/lopVaStyleXuong.
+let mauTheoXuong = {};
 
 // Giới hạn số THẺ render/tải ảnh cùng lúc (bổ sung 22/09/2026, theo yêu cầu người dùng cải thiện hiệu
 // năng — cùng cơ chế đã áp dụng ở orders.html) — CHỈ ảnh hưởng hiển thị, danhSach*/don*ChonSet vẫn giữ
@@ -257,6 +261,7 @@ const CAC_O_LOC_TV = ['loc-trang-thai-tv', 'loc-phoi-tv', 'loc-kh-tv', 'loc-tu-n
   user = await requireLoginOrRedirect();
   if (!user) return;
   renderNav(user, 'my-orders-ve-file');
+  mauTheoXuong = await taiMauTheoXuong();
 
   // "Chỉ định người vẽ file" — CHỈ admin (xem docs/superpowers/specs/2026-09-08-don-cua-toi-ve-file-design.md).
   // display:contents (không phải '') vì khối này nằm trong .thanh-hanh-dong-hang-loat (flex container).
@@ -455,8 +460,11 @@ function renderDanhSachCanVe() {
 
   el.innerHTML = dsDeRender.map(o => {
     const daChon = donCanVeChonSet.has(o.STT_Key);
+    // Tô màu nền thẻ theo Xưởng (bổ sung 23/09/2026, theo yêu cầu người dùng — xem
+    // style.css .order-card.co-mau-xuong + public/js/api.js#lopVaStyleXuong).
+    const xuongCard = lopVaStyleXuong(o.XUONG, mauTheoXuong);
     return `
-    <div class="order-card ${daChon ? 'da-chon' : ''}" data-stt-can-ve="${escapeHtml(o.STT_Key)}"
+    <div class="order-card ${daChon ? 'da-chon' : ''} ${xuongCard.lop}" style="${xuongCard.style}" data-stt-can-ve="${escapeHtml(o.STT_Key)}"
          onclick="toggleChonDonCanVe('${escapeHtml(o.STT_Key)}', !donCanVeChonSet.has('${escapeHtml(o.STT_Key)}'))">
       <button type="button" class="btn-xem-the" title="Xem chi tiết đơn"
               aria-label="Xem chi tiết đơn ${escapeHtml(o.STT_Key)}"
@@ -687,8 +695,11 @@ function renderDanhSachToiVe() {
 
   el.innerHTML = dsDeRender.map(o => {
     const daChon = donToiVeChonSet.has(o.STT_Key);
+    // Tô màu nền thẻ theo Xưởng (bổ sung 23/09/2026, theo yêu cầu người dùng — xem
+    // style.css .order-card.co-mau-xuong + public/js/api.js#lopVaStyleXuong).
+    const xuongCard = lopVaStyleXuong(o.XUONG, mauTheoXuong);
     return `
-    <div class="order-card ${daChon ? 'da-chon' : ''}" data-stt-toi-ve="${escapeHtml(o.STT_Key)}"
+    <div class="order-card ${daChon ? 'da-chon' : ''} ${xuongCard.lop}" style="${xuongCard.style}" data-stt-toi-ve="${escapeHtml(o.STT_Key)}"
          onclick="toggleChonDonToiVe('${escapeHtml(o.STT_Key)}', !donToiVeChonSet.has('${escapeHtml(o.STT_Key)}'))">
       <button type="button" class="btn-xem-the" title="Xem chi tiết đơn"
               aria-label="Xem chi tiết đơn ${escapeHtml(o.STT_Key)}"
