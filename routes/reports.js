@@ -1101,28 +1101,49 @@ function veBangPdf(doc, bang, canTrangMoi) {
   const usableWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
   const colWidth = usableWidth / cot.length;
   let y = doc.y;
-  const caoHang = 16;
+  const caoHangToiThieu = 16;
 
-  function veDuongKeNgang(yHang) {
-    doc.moveTo(startX, yHang + caoHang - 4).lineTo(startX + usableWidth, yHang + caoHang - 4)
+  function veDuongKeNgang(yHang, cao) {
+    doc.moveTo(startX, yHang + cao - 4).lineTo(startX + usableWidth, yHang + cao - 4)
       .lineWidth(0.5).strokeColor('#e5e7eb').stroke();
     doc.strokeColor('#000000');
   }
 
+  // ĐỔI 24/09/2026, theo yêu cầu người dùng — "bắt buộc phải hiển thị đủ tên của tất cả các đơn hàng",
+  // không được cắt bớt (…) như trước (ô gộp nhiều mã đơn ở bảng "phôi áo gộp" — vd 1 dòng gộp 10+ đơn
+  // cùng loại/kích/màu — hay bị cắt vì trước đây MỌI hàng đều cố định cao caoHangToiThieu=16, ellipsis
+  // cắt bớt chữ cho vừa đúng 1 dòng). Giờ ĐO TRƯỚC chiều cao thật cần cho hàng (lấy max qua mọi ô, ô
+  // nào cần bọc nhiều dòng hơn thì hàng đó cao hơn) bằng heightOfString() RỒI MỚI vẽ — khác hẳn cách cũ
+  // (vẽ luôn với chiều cao cố định) vốn là nguyên nhân phải cần đến ellipsis ngay từ đầu (bỏ ellipsis
+  // mà không đo trước sẽ tái diễn đúng lỗi cũ đã ghi chú ở đây trước khi sửa: pdfkit tự xuống dòng, đè
+  // chồng lên hàng kế tiếp vì y vẫn tăng đúng caoHangToiThieu bất kể nội dung cao hơn).
   function veHang(values, dam) {
     doc.font(dam ? 'NotoSans-Bold' : 'NotoSans').fontSize(9);
-    values.forEach((v, i) => {
-      // PHẢI có 'height' thì 'ellipsis' mới thật sự cắt bớt (…) ở 1 dòng — thiếu 'height' thì pdfkit
-      // XUỐNG DÒNG nội dung dài thay vì cắt, đè chồng lên dòng bảng kế tiếp (đã thấy lỗi thật khi ô
-      // gộp nhiều mã đơn/nhiều ngày — cột STT_Key/NGAY_LEN_DON ở bảng "phôi áo gộp").
-      doc.text(String(v ?? ''), startX + i * colWidth, y, { width: colWidth - 4, height: caoHang - 4, ellipsis: true });
-    });
-    veDuongKeNgang(y);
-    y += caoHang;
-    if (y > doc.page.height - doc.page.margins.bottom - 20) {
+    const caoNoiDung = Math.max(
+      caoHangToiThieu - 4,
+      ...values.map(v => doc.heightOfString(String(v ?? ''), { width: colWidth - 4 }))
+    );
+    const caoHangThat = caoNoiDung + 4;
+
+    // Sang trang MỚI nếu hàng này (đúng chiều cao thật) không còn đủ chỗ — kiểm tra TRƯỚC khi vẽ (khác
+    // trước đây kiểm tra SAU, dựa trên giả định mọi hàng cao bằng nhau). Chỉ sang trang khi ĐÃ có nội
+    // dung trên trang hiện tại (y > margins.top) — hàng cao bất thường (nhiều chục mã đơn gộp 1 dòng)
+    // vẫn phải vẽ ngay trên trang mới thay vì lặp vô hạn việc sang trang vì không bao giờ đủ chỗ.
+    if (y > doc.page.margins.top && y + caoHangThat > doc.page.height - doc.page.margins.bottom - 20) {
       doc.addPage();
       y = doc.page.margins.top;
     }
+
+    // KHÔNG truyền 'height' ở đây (khác lúc ĐO ở heightOfString() phía trên) — đã dành đủ chỗ theo
+    // đúng caoHangThat rồi (qua y += bên dưới + kiểm tra sang trang ở trên), còn nếu vẫn ép thêm
+    // 'height' vào đúng lúc VẼ thì rủi ro pdfkit tính wrap hơi khác lúc ĐO (sai số làm tròn dòng cuối)
+    // sẽ lặng lẽ CẮT MẤT vài dòng cuối — đã thấy lỗi thật này khi test (10 mã đơn gộp chỉ hiện 8, mất
+    // "9LH579.1, 9LH579.2, 9LH580" dù không có dấu "…" báo hiệu, còn nguy hiểm hơn ellipsis cũ).
+    values.forEach((v, i) => {
+      doc.text(String(v ?? ''), startX + i * colWidth, y, { width: colWidth - 4 });
+    });
+    veDuongKeNgang(y, caoHangThat);
+    y += caoHangThat;
   }
 
   veHang(cot.map(c => c.header), true);
