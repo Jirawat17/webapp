@@ -128,6 +128,10 @@ a { color: var(--color-primary); }
 }
 .icon-btn:hover { background: var(--color-primary-light); color: var(--color-primary); }
 .icon-btn:active { transform: scale(0.94); }
+/* Icon kèm chữ (bổ sung 23/09/2026, theo yêu cầu người dùng — nút Thoát icon-only khó nhận ra với
+   người dùng mới) — riêng biến thể này mới cần gap/padding ngang (icon-btn gốc chỉ có đúng 1 icon,
+   canh giữa bằng min-width/min-height là đủ, không cần đụng class gốc). */
+.icon-btn-nhan { gap: 6px; padding: 0 10px; font-size: 0.85rem; font-weight: 600; }
 
 /* Phản hồi chạm vật lý cho MỌI nút chính — bấm xuống nhẹ khi active, cảm giác "thật" hơn là hiệu ứng trang trí */
 button, .btn-ten, .kich-ban-btn, .btn-hanh-dong, .btn-dung-quet, .btn-xac-nhan-nhom,

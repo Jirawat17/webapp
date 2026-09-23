@@ -244,7 +244,7 @@ function renderNav(user, active) {
   const noiDungNguoiDung = `
     <span class="nav-user">${escapeHtml(user.ten)} · ${escapeHtml(NHAN_VAI_TRO[user.vaiTro] || user.vaiTro)}</span>
     <button class="icon-btn btn-fullscreen" onclick="toggleFullscreen()" aria-label="${dangFullscreenLucVe ? 'Thoát toàn màn hình' : 'Toàn màn hình'}">${icon(dangFullscreenLucVe ? 'minimize' : 'maximize')}</button>
-    <button class="icon-btn" onclick="dangXuat()" aria-label="Đăng xuất">${icon('logout')}</button>`;
+    <button class="icon-btn icon-btn-nhan" onclick="dangXuat()">${icon('logout')}<span>Thoát</span></button>`;
   nav.innerHTML = `
     <header class="app-header">
       <a href="${trangChu}" class="brand">${icon('logo', { size: 26 })}<span>Xưởng Thêu</span></a>
