@@ -13,6 +13,13 @@
 .st-cau-hinh-gke { max-width: 1400px; }
 .st-luoi-gke { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: var(--space-3); }
 .st-ghi-chu-truong { font-size: 0.78rem; color: var(--color-text-muted); margin: 4px 0 0; }
+/* Quản lý Xưởng (bổ sung 24/09/2026) — mỗi Xưởng 1 dòng: tên + màu + đổi tên + xoá. */
+.st-danh-sach-xuong { display: flex; flex-direction: column; gap: var(--space-2); }
+.st-dong-xuong {
+  display: flex; align-items: center; gap: var(--space-3); background: var(--color-surface);
+  border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 8px 12px;
+}
+.st-dong-xuong .ten-xuong { flex: 1; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -80,13 +87,23 @@
   </div>
   <p id="thong-bao-nen-anh" style="display:none"></p>
 
-  <!-- Màu nền theo Xưởng (bổ sung 23/09/2026, theo yêu cầu người dùng — "mỗi Xưởng có thể có màu riêng
-       để dễ phân biệt các đơn thuộc các xưởng khác nhau") — thay 2 màu HN/BN hard-code cũ trong
-       style.css bằng ô chọn màu tự do (input type=color, không giới hạn ~20 màu như bảng màu chủ đạo ở
-       trên). Áp dụng cho thẻ đơn ở Đơn hàng/Chạy máy/Vẽ file — xem public/js/api.js#lopVaStyleXuong. -->
-  <h3 style="margin-top:var(--space-6)">Màu nền theo Xưởng</h3>
-  <p>Mỗi Xưởng 1 màu nền riêng cho thẻ đơn ở Đơn hàng/Chạy máy/Vẽ file — dễ phân biệt đơn thuộc Xưởng nào.</p>
-  <div class="bao-cao-form" id="khoi-mau-xuong"></div>
+  <!-- Quản lý Xưởng (mở rộng 24/09/2026, theo yêu cầu người dùng — trước đây danh sách Xưởng cố định
+       trong code, chỉ đúng 2 Xưởng HN/BN chọn được màu; giờ tạo/đổi tên/xoá Xưởng được qua đây, MỌI
+       Xưởng có tên đều chọn màu được (kể cả "ChuaGanXuong" — giờ là 1 Xưởng bình thường, KHÁC trạng
+       thái "(chưa gán)" THẬT của đơn/nhân viên chưa có Xưởng nào, vẫn luôn giữ nền mặc định). Gộp CHUNG
+       1 khối với màu nền vì 2 việc luôn đi cùng nhau (Xưởng mới tạo cũng cần chọn màu ngay) — thay 2 màu
+       HN/BN hard-code cũ trong style.css bằng ô chọn màu tự do. Áp dụng cho thẻ đơn ở Đơn hàng/Chạy
+       máy/Vẽ file — xem public/js/api.js#lopVaStyleXuong. -->
+  <h3 style="margin-top:var(--space-6)">Quản lý Xưởng</h3>
+  <p style="color:var(--color-text-muted)">Tạo/đổi tên/xoá Xưởng, mỗi Xưởng 1 màu nền riêng cho thẻ đơn ở Đơn hàng/Chạy máy/Vẽ file. Chỉ xoá được Xưởng không còn đơn/nhân viên nào đang gán.</p>
+  <div class="st-danh-sach-xuong" id="khoi-mau-xuong"></div>
+  <div class="inline-form" style="margin-top:var(--space-3)">
+    <div class="truong">
+      <label for="xuong-moi-ten">Tên Xưởng mới</label>
+      <input type="text" id="xuong-moi-ten" placeholder="VD: HCM">
+    </div>
+    <button type="button" class="btn-hanh-dong phu" id="btn-them-xuong">Thêm Xưởng</button>
+  </div>
   <p id="thong-bao-mau-xuong" style="display:none"></p>
 
   <!-- Cấu hình GKE — CHUYỂN từ menu Tracking sang đây (bổ sung 23/09/2026, theo yêu cầu người dùng —
@@ -164,6 +181,7 @@
   document.getElementById('btn-luu-nen-anh').onclick = luuCauHinhNenAnh;
   document.getElementById('btn-luu-cau-hinh-gke').onclick = luuCauHinhGke;
   document.getElementById('btn-khoi-phuc-du-lieu-don').onclick = khoiPhucDuLieuDon;
+  document.getElementById('btn-them-xuong').onclick = themXuongMoi;
 })();
 
 // "Khôi phục đơn đã xoá dữ liệu" (bổ sung 24/09/2026, theo yêu cầu người dùng) — gọi
@@ -206,24 +224,36 @@ async function khoiPhucDuLieuDon() {
   }
 }
 
-// Xưởng vật lý có màu riêng (bổ sung 23/09/2026) — CHỈ HN/BN, không có "ChuaGanXuong" (đơn chưa gán
-// Xưởng giữ nguyên nền mặc định, không tô màu — đúng hành vi 2 màu hard-code cũ). PHẢI khớp
-// DANH_SACH_XUONG trong services/orderService.js (trừ ChuaGanXuong) — cùng quy ước duplicate-với-
-// comment-nhắc đã dùng ở orders.html/users.html.
-const DANH_SACH_XUONG_CO_MAU = ['HN', 'BN'];
-// Màu mặc định = ĐÚNG 2 màu hard-code cũ (xem style.css trước 23/09/2026) — giữ nguyên hình ảnh hiện có
-// cho tới khi superadmin chủ động đổi, không đổi gì ngay khi tính năng này lên production.
+// Quản lý Xưởng — CRUD + màu nền (mở rộng 24/09/2026, theo yêu cầu người dùng) — trước đây CHỈ HN/BN
+// hard-code chọn được màu, "ChuaGanXuong" bị loại trừ chủ đích (đơn chưa gán Xưởng giữ nguyên nền mặc
+// định). Giờ MỌI Xưởng trong danh sách (kể cả "ChuaGanXuong" — người dùng xác nhận coi đây là 1 Xưởng
+// BÌNH THƯỜNG, đổi tên/xoá/chọn màu được như mọi Xưởng khác) đều hiện ở đây; trạng thái "(chưa gán)"
+// THẬT (XUONG rỗng) không nằm trong danh sách quản lý này, luôn giữ nền mặc định — xem
+// public/js/api.js#lopVaStyleXuong. Màu mặc định HN/BN = ĐÚNG 2 màu hard-code cũ (giữ nguyên hình ảnh
+// hiện có cho Xưởng nào chưa từng tự chọn màu); Xưởng khác chưa chọn màu dùng xám trung tính.
 const MAU_MAC_DINH_XUONG = { HN: '#93c5fd', BN: '#86efac' };
+const MAU_MAC_DINH_CHUNG = '#e5e7eb';
+
+// Nhớ lại danh sách Xưởng của lần tải GẦN NHẤT (bổ sung 24/09/2026) — luuMauXuong() dùng lại, khỏi phải
+// gọi lại /orders/danh-sach-xuong lần nữa (danh sách Xưởng hiển thị trên trang lúc này CHÍNH LÀ danh
+// sách vừa render, không thể lệch nhau giữa 2 lượt gọi liên tiếp trong cùng 1 thao tác của người dùng).
+let danhSachXuongDangHienThi = [];
 
 async function taiMauXuong() {
-  const mau = await apiFetch('/orders/mau-xuong');
+  const [danhSach, mau] = await Promise.all([
+    apiFetch('/orders/danh-sach-xuong'),
+    apiFetch('/orders/mau-xuong'),
+  ]);
+  danhSachXuongDangHienThi = danhSach;
   const el = document.getElementById('khoi-mau-xuong');
-  el.innerHTML = DANH_SACH_XUONG_CO_MAU.map(x => `
-    <div class="truong">
-      <label for="mau-xuong-${x}">Xưởng ${x}</label>
-      <input type="color" id="mau-xuong-${x}" value="${mau[x] || MAU_MAC_DINH_XUONG[x]}">
-    </div>`).join('') +
-    `<button type="button" class="btn-hanh-dong" id="btn-luu-mau-xuong" style="justify-self:start">Lưu</button>`;
+  el.innerHTML = danhSach.map(x => `
+    <div class="st-dong-xuong">
+      <span class="ten-xuong">${escapeHtml(x)}</span>
+      <input type="color" id="mau-xuong-${escapeHtml(x)}" value="${mau[x] || MAU_MAC_DINH_XUONG[x] || MAU_MAC_DINH_CHUNG}">
+      <button type="button" class="btn-hanh-dong phu" data-ten="${escapeHtml(x)}" onclick="doiTenXuongUi(this.dataset.ten)">Đổi tên</button>
+      <button type="button" class="btn-hanh-dong phu nguy-hiem" data-ten="${escapeHtml(x)}" onclick="xoaXuongUi(this.dataset.ten)">Xoá</button>
+    </div>`).join('');
+  el.innerHTML += `<button type="button" class="btn-hanh-dong" id="btn-luu-mau-xuong" style="justify-self:start;margin-top:var(--space-1)">Lưu màu</button>`;
   document.getElementById('btn-luu-mau-xuong').onclick = luuMauXuong;
 }
 
@@ -233,7 +263,7 @@ async function luuMauXuong() {
   nut.disabled = true;
   nut.textContent = 'Đang lưu...';
   try {
-    for (const x of DANH_SACH_XUONG_CO_MAU) {
+    for (const x of danhSachXuongDangHienThi) {
       await apiFetch('/orders/mau-xuong', {
         method: 'POST',
         body: JSON.stringify({ xuong: x, mau: document.getElementById('mau-xuong-' + x).value }),
@@ -248,8 +278,39 @@ async function luuMauXuong() {
     thongBao.textContent = 'Lỗi: ' + e.message;
   } finally {
     nut.disabled = false;
-    nut.textContent = 'Lưu';
+    nut.textContent = 'Lưu màu';
   }
+}
+
+async function themXuongMoi() {
+  const o = document.getElementById('xuong-moi-ten');
+  const ten = o.value.trim();
+  if (!ten) return;
+  try {
+    await apiFetch('/orders/xuong', { method: 'POST', body: JSON.stringify({ ten }) });
+    o.value = '';
+    await taiMauXuong();
+  } catch (e) { alert(e.message); }
+}
+
+// Cùng khuôn doiTen() ở public/users.html — prompt() đổi tên, PUT rồi tải lại danh sách.
+async function doiTenXuongUi(tenCu) {
+  const moi = prompt(`Nhập tên mới cho Xưởng "${tenCu}":`, tenCu);
+  if (moi === null) return;
+  const tenMoi = moi.trim();
+  if (!tenMoi || tenMoi === tenCu) return;
+  try {
+    await apiFetch('/orders/xuong/' + encodeURIComponent(tenCu), { method: 'PUT', body: JSON.stringify({ tenMoi }) });
+    await taiMauXuong();
+  } catch (e) { alert(e.message); }
+}
+
+async function xoaXuongUi(ten) {
+  if (!confirm(`Xoá Xưởng "${ten}"? Chỉ xoá được nếu không còn đơn/nhân viên nào đang gán Xưởng này.`)) return;
+  try {
+    await apiFetch('/orders/xuong/' + encodeURIComponent(ten), { method: 'DELETE' });
+    await taiMauXuong();
+  } catch (e) { alert(e.message); }
 }
 
 // Ánh xạ field cấu hình GKE (khớp đúng tên trả về từ services/gkeService.js#layCauHinhGke) sang id

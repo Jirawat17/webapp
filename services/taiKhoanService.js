@@ -96,4 +96,13 @@ function doiTen(tenCu, tenMoi) {
   db.prepare(`UPDATE nguoi_dung SET Ten = ? WHERE Ten = ?`).run(String(tenMoi).trim(), String(tenCu));
 }
 
-module.exports = { CAC_COT, layTatCa, layTheoTen, themMoi, capNhat, doiTen };
+// Đếm/đổi tên hàng loạt theo Xuong (bổ sung 24/09/2026, theo yêu cầu người dùng — CRUD Xưởng qua
+// Settings) — cùng lý do/cách dùng với demTheoXuong()/doiTenXuongHangLoat() ở trangThaiDbService.js.
+function demTheoXuong(xuong) {
+  return db.prepare(`SELECT COUNT(*) AS c FROM nguoi_dung WHERE Xuong = ?`).get(xuong).c;
+}
+function doiTenXuongHangLoat(tenCu, tenMoi) {
+  db.prepare(`UPDATE nguoi_dung SET Xuong = ? WHERE Xuong = ?`).run(tenMoi, tenCu);
+}
+
+module.exports = { CAC_COT, layTatCa, layTheoTen, themMoi, capNhat, doiTen, demTheoXuong, doiTenXuongHangLoat };

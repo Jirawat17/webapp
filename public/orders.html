@@ -91,11 +91,10 @@
            orderService.js#locTheoXuong) nên lọc theo Xưởng không có ý nghĩa với họ. -->
       <div class="truong" id="truong-loc-xuong" style="display:none">
         <label for="loc-xuong">Xưởng</label>
+        <!-- Danh sách Xưởng giờ đổ ĐỘNG (bổ sung 24/09/2026, theo yêu cầu người dùng — quản lý qua
+             Settings) — xem init IIFE bên dưới, đổ ngay sau "Tất cả Xưởng"/trước "(chưa gán)". -->
         <select id="loc-xuong">
           <option value="">Tất cả Xưởng</option>
-          <option value="HN">HN</option>
-          <option value="BN">BN</option>
-          <option value="ChuaGanXuong">ChuaGanXuong</option>
           <option value="__CHUA_GAN__">(chưa gán)</option>
         </select>
       </div>
@@ -262,9 +261,9 @@ const DANH_SACH_TRANG_THAI_DAY_DU = [
   'DELIVERED_Đã giao đến khách', 'CANCELLED_Đã hủy', 'REFUNDED_Hoàn đơn',
 ];
 
-// Xưởng vật lý (HN/BN — bổ sung 13/09/2026, theo yêu cầu người dùng, đổi tên từ HANOI/BACNINH cùng
-// ngày) — PHẢI khớp ĐÚNG DANH_SACH_XUONG trong services/orderService.js.
-const DANH_SACH_XUONG = ['HN', 'BN', 'ChuaGanXuong'];
+// Danh sách Xưởng (bổ sung 24/09/2026, theo yêu cầu người dùng) — KHÔNG còn hardcode ở đây nữa, tải
+// động từ GET /orders/danh-sach-xuong lúc vào trang (xem init IIFE bên dưới) — quản lý qua Settings.
+let danhSachXuong = [];
 
 let danhSachHienTai = [];
 let donDaChonSet = new Set();
@@ -286,6 +285,9 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   if (!user) return;
   renderNav(user, 'orders');
   mauTheoXuong = await taiMauTheoXuong();
+  // Chỉ superadmin mới thấy/dùng được các ô liên quan Xưởng (khối bên dưới) — nhưng tải danh sách này
+  // sớm ở đây, dùng chung cho cả khối đó, tránh phải tách 1 lượt gọi API riêng.
+  try { danhSachXuong = await apiFetch('/orders/danh-sach-xuong'); } catch (e) { danhSachXuong = []; }
 
   document.getElementById('loc-trang-thai').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-phoi').onchange = () => { boChonTatCaDon(); taiDon(); };
@@ -422,8 +424,14 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   if (laSuperAdmin(user.vaiTro)) {
     document.getElementById('truong-loc-xuong').style.display = 'flex';
     document.getElementById('khoi-gan-xuong').style.display = 'contents';
+    // Đổ ĐỘNG danh sách Xưởng (bổ sung 24/09/2026, theo yêu cầu người dùng) — chèn ngay sau "Tất cả
+    // Xưởng", TRƯỚC "(chưa gán)" (option cố định cuối cùng, đại diện XUONG THẬT SỰ rỗng — KHÔNG nằm
+    // trong danh sách Xưởng quản lý được, xem chú thích ở khai báo danhSachXuong phía trên).
+    document.getElementById('loc-xuong').innerHTML = '<option value="">Tất cả Xưởng</option>' +
+      danhSachXuong.map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('') +
+      '<option value="__CHUA_GAN__">(chưa gán)</option>';
     document.getElementById('xuong-dich').innerHTML = '<option value="">Gán Xưởng...</option>' +
-      DANH_SACH_XUONG.map(x => `<option value="${x}">${x}</option>`).join('') +
+      danhSachXuong.map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('') +
       '<option value="__GO_GAN__">(Gỡ gán Xưởng)</option>';
   }
 

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const taiKhoanService = require('../services/taiKhoanService');
-const { DANH_SACH_XUONG } = require('../services/orderService');
+const { layDanhSachXuong } = require('../services/orderService');
 const { requireRole, requireExactRole } = require('../middleware/auth');
 
 // Mật khẩu PIN 1-4 chữ số (xem docs/superpowers/specs/2026-09-07-mat-khau-dang-nhap-design.md) —
@@ -46,8 +46,8 @@ router.post('/', async (req, res) => {
   // HN/BN) — không bắt buộc phải chọn ngay lúc tạo tài khoản (admin có thể gán sau), nhưng
   // nếu CÓ chọn thì phải đúng 1 trong danh sách hợp lệ, tránh gõ nhầm khiến nhân viên đó không thấy
   // đơn nào (xem services/orderService.js#locTheoXuong — thiếu/sai Xuong coi như không có quyền xem).
-  if (xuong && !DANH_SACH_XUONG.includes(xuong)) {
-    return res.status(400).json({ error: `Xưởng không hợp lệ: "${xuong}" — chỉ chấp nhận: ${DANH_SACH_XUONG.join(', ')}` });
+  if (xuong && !layDanhSachXuong().includes(xuong)) {
+    return res.status(400).json({ error: `Xưởng không hợp lệ: "${xuong}" — chỉ chấp nhận: ${layDanhSachXuong().join(', ')}` });
   }
   if (taiKhoanService.layTheoTen(ten)) return res.status(400).json({ error: 'Tên này đã tồn tại' });
 
@@ -65,8 +65,8 @@ router.put('/:ten', async (req, res) => {
   if (req.body.MatKhau !== undefined && req.body.MatKhau !== '' && !matKhauHopLe(req.body.MatKhau)) {
     return res.status(400).json({ error: 'Mật khẩu phải là 1-4 chữ số (hoặc rỗng để xoá mật khẩu)' });
   }
-  if (req.body.Xuong && !DANH_SACH_XUONG.includes(req.body.Xuong)) {
-    return res.status(400).json({ error: `Xưởng không hợp lệ: "${req.body.Xuong}" — chỉ chấp nhận: ${DANH_SACH_XUONG.join(', ')}` });
+  if (req.body.Xuong && !layDanhSachXuong().includes(req.body.Xuong)) {
+    return res.status(400).json({ error: `Xưởng không hợp lệ: "${req.body.Xuong}" — chỉ chấp nhận: ${layDanhSachXuong().join(', ')}` });
   }
 
   let ten = req.params.ten;

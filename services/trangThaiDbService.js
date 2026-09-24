@@ -24,10 +24,10 @@ const Database = require('better-sqlite3');
 // chỉ đọc không ghi nữa).
 const CAC_COT = [
   'TRANG_THAI_PHOI', 'TRANG_THAI_VE_FILE', 'QUOC_GIA', 'MA_CODE_STT', 'MA_KHACH_HANG', 'NGUOI_VAN_HANH',
-  // Anh_File_Theu_URL_2 (bổ sung 24/09/2026, theo yêu cầu người dùng — cho phép tải ảnh file thêu THỨ
-  // 2, độc lập với ảnh đầu, xem routes/photos.js COT_ANH_THEO_MOC) — tự thêm cột qua cơ chế bên dưới,
-  // không cần migrate tay.
-  'Anh_File_Theu_URL', 'Anh_File_Theu_URL_2', 'Anh_Da_San_Xuat_URL', 'TRONG_LUONG', 'TRANG_THAI_XUONG', 'Anh_Da_Dan_Tem_URL',
+  // Anh_File_Theu_URL_2/_3 (bổ sung 24/09/2026, theo yêu cầu người dùng — cho phép tải ảnh file thêu
+  // THỨ 2 và THỨ 3, độc lập với nhau, xem routes/photos.js COT_ANH_THEO_MOC) — tự thêm cột qua cơ chế
+  // bên dưới, không cần migrate tay.
+  'Anh_File_Theu_URL', 'Anh_File_Theu_URL_2', 'Anh_File_Theu_URL_3', 'Anh_Da_San_Xuat_URL', 'TRONG_LUONG', 'TRANG_THAI_XUONG', 'Anh_Da_Dan_Tem_URL',
   'NGUOI_VE_FILE', 'GHI_CHU_VE_FILE', 'NGUOI_CHAY_MAY', 'GHI_CHU_CHAY_MAY', 'HASH_ANH_MAU', 'NHOM_HANG_LOAT',
   'AUTO_TRACKING', 'THOI_GIAN_IN_MA', 'IN_LABEL', 'THOI_GIAN_IN_LABEL', 'DON_UU_TIEN', 'TAM_THOI',
   'HANG_VAN_CHUYEN', 'TRACKING_ID', 'TRANG_THAI_TRACKING', 'THOI_GIAN_CAP_NHAT_TRACKING',
@@ -167,4 +167,15 @@ function ghiDe(sttKey, updates) {
   layPreparedGhiDe(cot).run(key, ...giaTri);
 }
 
-module.exports = { CAC_COT, RONG_MAC_DINH, layTheoKey, layTatCa, ghiDe };
+// Đếm/đổi tên hàng loạt theo XUONG (bổ sung 24/09/2026, theo yêu cầu người dùng — CRUD Xưởng qua
+// Settings, xem services/caiDatDbService.js#layDanhSachXuong/routes/orders.js). demTheoXuong() dùng để
+// CHẶN xoá 1 Xưởng còn đơn đang gán (an toàn hơn xoá liều); doiTenXuongHangLoat() cascade đổi tên để
+// đơn không bị "mất kết nối" với Xưởng sau khi đổi tên (đã xác nhận với người dùng).
+function demTheoXuong(xuong) {
+  return db.prepare(`SELECT COUNT(*) AS c FROM trang_thai_don WHERE XUONG = ?`).get(xuong).c;
+}
+function doiTenXuongHangLoat(tenCu, tenMoi) {
+  db.prepare(`UPDATE trang_thai_don SET XUONG = ? WHERE XUONG = ?`).run(tenMoi, tenCu);
+}
+
+module.exports = { CAC_COT, RONG_MAC_DINH, layTheoKey, layTatCa, ghiDe, demTheoXuong, doiTenXuongHangLoat };

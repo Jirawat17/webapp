@@ -83,7 +83,7 @@ let user; // dùng lại ở taiHoatDong() (biết vaiTro để hiện đúng nh
 let nguoiDangXem = ''; // rỗng = xem hoạt động của chính người đăng nhập; admin có thể đổi sang người khác
 
 const NHAN_COT_TRANG_THAI = { TRANG_THAI_XUONG: 'Trạng thái chung', TRANG_THAI_PHOI: 'Phôi', TRANG_THAI_VE_FILE: 'Vẽ file' };
-const NHAN_MOC_ANH = { mau: 'Ảnh mẫu (PNG)', mockup: 'Ảnh Mockup', ve_file: 'Ảnh file thêu', ve_file_2: 'Ảnh File Thêu 2', da_san_xuat: 'Ảnh đã sản xuất', dong_goi: 'Ảnh đóng gói' };
+const NHAN_MOC_ANH = { mau: 'Ảnh mẫu (PNG)', mockup: 'Ảnh Mockup', ve_file: 'Ảnh file thêu', ve_file_2: 'Ảnh File Thêu 2', ve_file_3: 'Ảnh File Thêu 3', da_san_xuat: 'Ảnh đã sản xuất', dong_goi: 'Ảnh đóng gói' };
 
 (async () => {
   user = await requireLoginOrRedirect();

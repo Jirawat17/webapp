@@ -149,10 +149,52 @@ function datMauXuong(xuong, mau) {
   `).run(xuong, mau);
 }
 
+// ---------- DanhSachXuong — danh sách CÁC Xưởng (bổ sung 24/09/2026, theo yêu cầu người dùng) — trước
+// đây DANH_SACH_XUONG cố định trong code (services/orderService.js), lặp lại thủ công ở 2 nơi khác
+// (public/orders.html, public/users.html, mỗi nơi tự ghi chú "PHẢI khớp") — giờ quản lý được qua
+// Settings (thêm/đổi tên/xoá, xem routes/orders.js POST|PUT|DELETE /xuong). Seed sẵn 3 giá trị CŨ nếu
+// bảng còn trống — deploy lần đầu không mất khả năng gán những giá trị đơn/nhân viên hiện có đang mang.
+// "ChuaGanXuong" giờ là 1 Xưởng BÌNH THƯỜNG trong danh sách này (đổi tên/xoá/chọn màu được như mọi
+// Xưởng khác, theo yêu cầu người dùng) — KHÁC hẳn trạng thái "(chưa gán)" THẬT (XUONG rỗng), vốn KHÔNG
+// nằm trong danh sách này và luôn giữ nền mặc định (xem public/js/api.js#lopVaStyleXuong).
+db.exec(`CREATE TABLE IF NOT EXISTS danh_sach_xuong (
+  Ten TEXT PRIMARY KEY
+)`);
+if (db.prepare(`SELECT COUNT(*) AS c FROM danh_sach_xuong`).get().c === 0) {
+  const cauChen = db.prepare(`INSERT INTO danh_sach_xuong (Ten) VALUES (?)`);
+  ['HN', 'BN', 'ChuaGanXuong'].forEach(ten => cauChen.run(ten));
+}
+
+// KHÔNG ORDER BY theo chữ cái — giữ thứ tự chèn (rowid) để Xưởng mới tạo luôn nối cuối danh sách,
+// không nhảy lung tung giữa các Xưởng cũ mỗi khi thêm 1 Xưởng mới.
+function layDanhSachXuong() {
+  return db.prepare(`SELECT Ten FROM danh_sach_xuong ORDER BY rowid`).all().map(r => r.Ten);
+}
+// Nơi gọi (routes/orders.js) tự kiểm tra trùng tên/rỗng trước khi gọi — hàm này không tự validate lại,
+// cùng quy ước các hàm ghi khác trong file này (themMoi() của taiKhoanService.js cũng vậy).
+function themXuong(ten) {
+  db.prepare(`INSERT INTO danh_sach_xuong (Ten) VALUES (?)`).run(ten);
+}
+// Xoá luôn màu đã cấu hình cho Xưởng này (nếu có) — tránh để lại dòng mồ côi trong cai_dat_mau_xuong
+// không còn Xưởng nào tham chiếu tới. Nơi gọi tự kiểm tra KHÔNG còn đơn/nhân viên nào đang gán Xưởng
+// này trước khi gọi hàm này (xem routes/orders.js DELETE /xuong/:ten).
+function xoaXuong(ten) {
+  db.prepare(`DELETE FROM danh_sach_xuong WHERE Ten = ?`).run(ten);
+  db.prepare(`DELETE FROM cai_dat_mau_xuong WHERE Xuong = ?`).run(ten);
+}
+// Đổi tên CẢ Ở ĐÂY lẫn màu đã gán (giữ màu gắn liền với đúng Xưởng, không "mất màu" khi đổi tên) —
+// nơi gọi (routes/orders.js) chịu trách nhiệm cascade sang trang_thai_don.XUONG/nguoi_dung.Xuong
+// (2 file DB SQLite khác, tách biệt khỏi file cai_dat.db này).
+function doiTenXuong(tenCu, tenMoi) {
+  db.prepare(`UPDATE danh_sach_xuong SET Ten = ? WHERE Ten = ?`).run(tenMoi, tenCu);
+  db.prepare(`UPDATE cai_dat_mau_xuong SET Xuong = ? WHERE Xuong = ?`).run(tenMoi, tenCu);
+}
+
 module.exports = {
   layCaiDatHangLoat, datCaiDatHangLoat,
   layCauHinhTracking, datCauHinhTracking, CAC_COT_CAU_HINH_TRACKING,
   layCaiDatCanhBao, datCaiDatCanhBao,
   layCaiDatNenAnh, datCaiDatNenAnh,
   layMauTheoXuong, datMauXuong,
+  layDanhSachXuong, themXuong, xoaXuong, doiTenXuong,
 };

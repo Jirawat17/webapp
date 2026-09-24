@@ -5,6 +5,7 @@ const taiSanService = require('./taiSanService');
 const { chiSoTinhTrang, TINH_TRANG_VALUES, TRANG_THAI_PHOI_VALUES, TRANG_THAI_VE_FILE_VALUES } = require('../data/pipelineTinhTrang');
 const { thoiGianVNISOString } = require('./dateUtils');
 const { laAdmin, laSuperAdmin } = require('../middleware/auth');
+const { layDanhSachXuong } = require('./caiDatDbService');
 
 const TAB = 'Don_Hang_ALL';
 const KEY_COL = 'STT_Key';
@@ -83,8 +84,8 @@ function kiemTraGiaTriHopLe(updates) {
   if ('TRANG_THAI_VE_FILE' in updates && !TRANG_THAI_VE_FILE_VALUES.includes(updates.TRANG_THAI_VE_FILE)) {
     throw new Error(`Giá trị TRANG_THAI_VE_FILE không hợp lệ: "${updates.TRANG_THAI_VE_FILE}"`);
   }
-  if ('XUONG' in updates && updates.XUONG && !DANH_SACH_XUONG.includes(updates.XUONG)) {
-    throw new Error(`Giá trị XUONG không hợp lệ: "${updates.XUONG}" — chỉ chấp nhận: ${DANH_SACH_XUONG.join(', ')}`);
+  if ('XUONG' in updates && updates.XUONG && !layDanhSachXuong().includes(updates.XUONG)) {
+    throw new Error(`Giá trị XUONG không hợp lệ: "${updates.XUONG}" — chỉ chấp nhận: ${layDanhSachXuong().join(', ')}`);
   }
   if ('DON_UU_TIEN' in updates && !['TRUE', 'FALSE'].includes(updates.DON_UU_TIEN)) {
     throw new Error(`Giá trị DON_UU_TIEN không hợp lệ: "${updates.DON_UU_TIEN}" — chỉ chấp nhận TRUE hoặc FALSE.`);
@@ -436,7 +437,10 @@ function filterForRole(rows, user) {
 // giá trị "HANOI"/"BACNINH" cũ cho tới khi tự sửa tay trong Sheet; so khớp ở locTheoXuong là CHÍNH
 // XÁC CHUỖI nên đơn/người dùng còn mang giá trị cũ sẽ bị coi như "khác Xưởng" (không thấy nhau) với
 // mọi người đã được gán "HN"/"BN" mới, cho tới khi migrate xong dữ liệu cũ.
-const DANH_SACH_XUONG = ['HN', 'BN', 'ChuaGanXuong'];
+// KHÔNG còn là hằng số cố định (bổ sung 24/09/2026, theo yêu cầu người dùng — quản lý Thêm/Đổi tên/Xoá
+// Xưởng qua Settings) — danh sách giờ đọc TƯƠI mỗi lần từ SQLite (services/caiDatDbService.js), lấy
+// nguyên `layDanhSachXuong` làm export CHÍNH của module này để mọi nơi gọi orderService.layDanhSachXuong()
+// luôn thấy đúng danh sách MỚI NHẤT (đổi tại Settings có hiệu lực ngay, không cần khởi động lại server).
 
 function locTheoXuong(rows, user) {
   if (laSuperAdmin(user.vaiTro)) return rows;
@@ -477,5 +481,5 @@ function laUuTien(row) {
 
 module.exports = {
   TAB, KEY_COL, getAll, getByKey, getManyByKeys, update, filterForRole, ganTenKhachHang, tieuDeSanPham, danhSachViTriTheu,
-  DANH_SACH_XUONG, locTheoXuong, coQuyenTheoXuong, laUuTien, anXuongVoiAdmin, anXuongNhieuDonVoiAdmin,
+  layDanhSachXuong, locTheoXuong, coQuyenTheoXuong, laUuTien, anXuongVoiAdmin, anXuongNhieuDonVoiAdmin,
 };

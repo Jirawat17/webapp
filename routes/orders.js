@@ -15,7 +15,7 @@ const { taiDsAnh } = require('../services/anhNguonService');
 const { tinhHashAnh, khoangCachHamming } = require('../services/perceptualHashService');
 const { requireLogin, laAdmin, laSuperAdmin } = require('../middleware/auth');
 const { xoaDuLieuDon } = require('../services/xoaDuLieuDonService');
-const { layMauTheoXuong, datMauXuong } = require('../services/caiDatDbService');
+const { layMauTheoXuong, datMauXuong, themXuong, xoaXuong, doiTenXuong } = require('../services/caiDatDbService');
 
 router.use(requireLogin);
 
@@ -503,6 +503,76 @@ router.post('/chi-dinh-nguoi-ve-file', async (req, res) => {
 // cần đọc để tô màu thẻ — admin không có XUONG trong dữ liệu đơn nên tự nhiên không tô được gì, không
 // cần chặn riêng, xem services/orderService.js#anXuongVoiAdmin). POST (đổi màu) CHỈ superadmin — cùng
 // mức nhạy cảm với /gan-xuong ở dưới.
+// Danh sách Xưởng (bổ sung 24/09/2026, theo yêu cầu người dùng — trước đây hằng số cố định trong code,
+// giờ quản lý được qua Settings: thêm/đổi tên/xoá, xem services/caiDatDbService.js#layDanhSachXuong).
+// GET mở cho MỌI người đã đăng nhập (orders.html/users.html đều cần đọc để đổ vào các ô chọn Xưởng) —
+// cùng mức mở với /mau-xuong ở dưới. "ChuaGanXuong" giờ là 1 Xưởng BÌNH THƯỜNG trong danh sách này
+// (theo yêu cầu người dùng) — KHÁC trạng thái "(chưa gán)" thật (XUONG rỗng), không nằm trong đây.
+router.get('/danh-sach-xuong', (req, res) => {
+  res.json(orderService.layDanhSachXuong());
+});
+
+router.post('/xuong', (req, res) => {
+  const user = req.session.user;
+  if (!laSuperAdmin(user.vaiTro)) {
+    return res.status(403).json({ error: 'Chỉ superadmin mới được tạo Xưởng' });
+  }
+  const ten = String(req.body.ten || '').trim();
+  if (!ten) return res.status(400).json({ error: 'Tên Xưởng không được để trống' });
+  if (orderService.layDanhSachXuong().includes(ten)) {
+    return res.status(400).json({ error: `Xưởng "${ten}" đã tồn tại` });
+  }
+  themXuong(ten);
+  res.json({ ok: true });
+});
+
+// Đổi tên CASCADE sang mọi đơn/nhân viên đang mang tên cũ (đã xác nhận với người dùng — không cascade
+// thì đơn/nhân viên "mất kết nối" với Xưởng ngay sau khi đổi tên, không còn khớp bộ lọc/phân quyền theo
+// Xưởng nữa) + màu đã cấu hình (doiTenXuong() ở caiDatDbService.js tự lo phần màu). 2 bảng đơn/nhân
+// viên nằm ở 2 file SQLite RIÊNG (trang_thai_don.db, tai_khoan.db) nên phải tự gọi cả 2, không có cách
+// nào 1 câu SQL xử lý chung được.
+router.put('/xuong/:tenCu', (req, res) => {
+  const user = req.session.user;
+  if (!laSuperAdmin(user.vaiTro)) {
+    return res.status(403).json({ error: 'Chỉ superadmin mới được đổi tên Xưởng' });
+  }
+  const tenCu = req.params.tenCu;
+  const tenMoi = String(req.body.tenMoi || '').trim();
+  const danhSach = orderService.layDanhSachXuong();
+  if (!danhSach.includes(tenCu)) return res.status(404).json({ error: `Không tìm thấy Xưởng "${tenCu}"` });
+  if (!tenMoi) return res.status(400).json({ error: 'Tên mới không được để trống' });
+  if (tenMoi !== tenCu && danhSach.includes(tenMoi)) {
+    return res.status(400).json({ error: `Xưởng "${tenMoi}" đã tồn tại` });
+  }
+
+  doiTenXuong(tenCu, tenMoi);
+  trangThaiDbService.doiTenXuongHangLoat(tenCu, tenMoi);
+  taiKhoanService.doiTenXuongHangLoat(tenCu, tenMoi);
+  res.json({ ok: true });
+});
+
+// Chặn xoá nếu còn đơn/nhân viên đang gán Xưởng này (đã xác nhận với người dùng — an toàn hơn xoá liều
+// rồi để lại dữ liệu "mồ côi" không còn Xưởng nào khớp).
+router.delete('/xuong/:ten', (req, res) => {
+  const user = req.session.user;
+  if (!laSuperAdmin(user.vaiTro)) {
+    return res.status(403).json({ error: 'Chỉ superadmin mới được xoá Xưởng' });
+  }
+  const ten = req.params.ten;
+  if (!orderService.layDanhSachXuong().includes(ten)) {
+    return res.status(404).json({ error: `Không tìm thấy Xưởng "${ten}"` });
+  }
+  const soDon = trangThaiDbService.demTheoXuong(ten);
+  const soNhanVien = taiKhoanService.demTheoXuong(ten);
+  if (soDon > 0 || soNhanVien > 0) {
+    return res.status(400).json({
+      error: `Không thể xoá — còn ${soDon} đơn và ${soNhanVien} nhân viên đang gán Xưởng "${ten}". Hãy chuyển hết sang Xưởng khác trước.`,
+    });
+  }
+  xoaXuong(ten);
+  res.json({ ok: true });
+});
+
 router.get('/mau-xuong', (req, res) => {
   res.json(layMauTheoXuong());
 });
@@ -513,8 +583,8 @@ router.post('/mau-xuong', (req, res) => {
     return res.status(403).json({ error: 'Chỉ superadmin mới được đổi màu Xưởng' });
   }
   const { xuong, mau } = req.body;
-  if (!orderService.DANH_SACH_XUONG.includes(xuong)) {
-    return res.status(400).json({ error: `Xưởng không hợp lệ: "${xuong}" — chỉ chấp nhận: ${orderService.DANH_SACH_XUONG.join(', ')}` });
+  if (!orderService.layDanhSachXuong().includes(xuong)) {
+    return res.status(400).json({ error: `Xưởng không hợp lệ: "${xuong}" — chỉ chấp nhận: ${orderService.layDanhSachXuong().join(', ')}` });
   }
   // mau = '' hợp lệ (bỏ màu, về lại nền mặc định) — chỉ chặn giá trị SAI định dạng, không chặn rỗng.
   if (mau && !/^#[0-9a-f]{6}$/i.test(mau)) {
@@ -543,8 +613,8 @@ router.post('/gan-xuong', async (req, res) => {
     return res.status(400).json({ error: 'Danh sách đơn trống' });
   }
   // xuong = '' hợp lệ (gỡ gán, đưa đơn về "chưa có xưởng") — chỉ chặn giá trị SAI, không chặn rỗng.
-  if (xuong && !orderService.DANH_SACH_XUONG.includes(xuong)) {
-    return res.status(400).json({ error: `Xưởng không hợp lệ: "${xuong}" — chỉ chấp nhận: ${orderService.DANH_SACH_XUONG.join(', ')}` });
+  if (xuong && !orderService.layDanhSachXuong().includes(xuong)) {
+    return res.status(400).json({ error: `Xưởng không hợp lệ: "${xuong}" — chỉ chấp nhận: ${orderService.layDanhSachXuong().join(', ')}` });
   }
 
   const thanhCong = [];

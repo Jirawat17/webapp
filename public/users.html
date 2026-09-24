@@ -28,11 +28,10 @@
     </div>
     <div class="truong">
       <label for="xuong-moi">Xưởng</label>
+      <!-- Danh sách Xưởng đổ ĐỘNG (bổ sung 24/09/2026, theo yêu cầu người dùng — quản lý qua Settings)
+           — xem init IIFE bên dưới. -->
       <select id="xuong-moi">
         <option value="">(chưa gán)</option>
-        <option value="HN">HN</option>
-        <option value="BN">BN</option>
-        <option value="ChuaGanXuong">ChuaGanXuong</option>
       </select>
     </div>
     <div class="truong">
@@ -57,13 +56,16 @@
     document.querySelector('.page').innerHTML = '<p>Bạn không có quyền truy cập trang này.</p>';
     return;
   }
+  danhSachXuong = await apiFetch('/orders/danh-sach-xuong');
+  document.getElementById('xuong-moi').innerHTML = '<option value="">(chưa gán)</option>' +
+    danhSachXuong.map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
   await taiDanhSach();
 })();
 
-// Xưởng vật lý (HN/BN — bổ sung 13/09/2026, theo yêu cầu người dùng, đổi tên từ HANOI/BACNINH cùng
-// ngày) — PHẢI khớp ĐÚNG DANH_SACH_XUONG trong services/orderService.js (tự khai báo lại ở đây thay
-// vì import, cùng cách public/order.html đang tự khai báo lại DANH_SACH_TINH_TRANG).
-const DANH_SACH_XUONG = ['HN', 'BN', 'ChuaGanXuong'];
+// Danh sách Xưởng (bổ sung 24/09/2026, theo yêu cầu người dùng) — KHÔNG còn hardcode ở đây nữa, tải
+// động từ GET /orders/danh-sach-xuong lúc vào trang (xem init IIFE ở trên) — quản lý qua Settings.
+// Gán TRƯỚC taiDanhSach() ở trên vì hàm đó (định nghĩa dưới) cần dùng ngay để đổ ô chọn từng dòng.
+let danhSachXuong = [];
 
 document.getElementById('form-them').onsubmit = async (e) => {
   e.preventDefault();
@@ -100,7 +102,7 @@ async function taiDanhSach() {
         <td>
           <select data-ten="${escapeHtml(u.Ten)}" onchange="doiXuong(this.dataset.ten, this.value)">
             <option value="" ${!u.Xuong ? 'selected' : ''}>(chưa gán)</option>
-            ${DANH_SACH_XUONG.map(x => `<option value="${x}" ${u.Xuong === x ? 'selected' : ''}>${x}</option>`).join('')}
+            ${danhSachXuong.map(x => `<option value="${escapeHtml(x)}" ${u.Xuong === x ? 'selected' : ''}>${escapeHtml(x)}</option>`).join('')}
           </select>
         </td>
         <td>${String(u.KichHoat).toUpperCase() === 'TRUE' ? 'Đang hoạt động' : 'Đã khoá'}</td>
