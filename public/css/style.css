@@ -466,6 +466,12 @@ body.trang-dang-nhap {
 .btn-hanh-dong.phu.nguy-hiem { border-color: var(--color-danger-text); color: var(--color-danger-text); }
 .btn-hanh-dong.phu.nguy-hiem:hover { background: var(--color-danger-bg); }
 
+/* "Xoá dữ liệu đơn" (nền tím riêng, bổ sung 24/09/2026, theo yêu cầu người dùng — để tránh nhầm với các
+   nút .nguy-hiem khác dùng chung ở don-hang-loat.html, vốn chỉ đổi màu khi hover chứ không có nền màu
+   sẵn) — nhắm thẳng #id thay vì sửa class .nguy-hiem dùng chung, tránh ảnh hưởng các nút khác. */
+#nut-xoa-du-lieu-don { background: #7c3aed; color: #fff; border-color: #7c3aed; }
+#nut-xoa-du-lieu-don:hover { background: #6d28d9; border-color: #6d28d9; }
+
 /* "Chọn tất cả đơn đang hiển thị" + thanh hành động chuyển trạng thái hàng loạt */
 .chon-tat-ca-hang {
   display: flex; align-items: center; gap: 8px; margin-bottom: var(--space-3);
@@ -921,7 +927,7 @@ select.chon-trang-thai-tieu-cuc { border-color: var(--color-warning-text); color
 .bao-cao-form { background: var(--color-surface); padding: var(--space-4); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); border: 1px solid var(--color-border); display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-3); }
 .bao-cao-form .truong { display: flex; flex-direction: column; gap: 6px; }
 .bao-cao-form label { font-weight: 700; font-size: 0.9rem; }
-.bao-cao-form input, .bao-cao-form select {
+.bao-cao-form input, .bao-cao-form select, .bao-cao-form textarea {
   padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--color-border); font-size: 15px; min-height: var(--tap-min);
   font-family: inherit;
 }

@@ -639,6 +639,14 @@ router.post('/danh-dau-uu-tien', async (req, res) => {
   res.json({ ok: true, thanhCong, loi });
 });
 
+// Mật khẩu xác nhận riêng cho 2 thao tác PHÁ HUỶ/KHÔI PHỤC dữ liệu đơn hàng (bổ sung 24/09/2026, theo
+// yêu cầu người dùng) — CHỈ là 1 lớp xác nhận CHỦ ĐÍCH thêm (đứng SAU laSuperAdmin(), vốn đã là lớp
+// phân quyền thật qua session), không phải mật khẩu tài khoản: mục đích là chặn bấm nhầm/dùng ẩu khi
+// phiên superadmin đang mở sẵn (vd người khác mượn máy), không phải để chống truy cập trái phép — vẫn
+// hardcode CỐ Ý (không cần cấu hình được ở Settings, người dùng không yêu cầu). Kiểm tra Ở SERVER (không
+// chỉ client) để không thể lách qua bằng cách gọi thẳng API.
+const MAT_KHAU_THAO_TAC_DU_LIEU_DON = '2511';
+
 // "Xoá dữ liệu đơn hàng" (bổ sung 20/09/2026, theo yêu cầu người dùng) — CHỈ superadmin (laSuperAdmin(),
 // KHÁC mọi bulk action khác trong file này vốn cho cả admin qua laAdmin()) vì đây là thao tác PHÁ HUỶ
 // VĨNH VIỄN, không thể hoàn tác — cùng khuôn chặt chẽ nhất đã dùng cho POST /gan-xuong ở trên. Xem
@@ -653,6 +661,9 @@ router.post('/xoa-du-lieu-hang-loat', async (req, res) => {
   const user = req.session.user;
   if (!laSuperAdmin(user.vaiTro)) {
     return res.status(403).json({ error: 'Chỉ superadmin mới được xoá dữ liệu đơn hàng' });
+  }
+  if (req.body.matKhau !== MAT_KHAU_THAO_TAC_DU_LIEU_DON) {
+    return res.status(403).json({ error: 'Sai mật khẩu xác nhận — không xoá gì cả.' });
   }
 
   const { sttKeys } = req.body;
@@ -680,6 +691,50 @@ router.post('/xoa-du-lieu-hang-loat', async (req, res) => {
   if (thanhCong.length > 0) {
     ghiLog({
       nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'XOA_DU_LIEU_DON_HANG',
+      sttKey: '', chiTiet: { sttKeys: thanhCong, soLuong: thanhCong.length },
+    }).catch(err => console.error('[Orders] Lỗi ghi log nền:', err.message));
+  }
+
+  res.json({ ok: true, thanhCong, loi });
+});
+
+// "Khôi phục đơn đã xoá dữ liệu" (bổ sung 24/09/2026, theo yêu cầu người dùng) — bản web của
+// scripts/khoi-phuc-don-da-xoa.js (vẫn giữ nguyên, dùng được từ VPS không cần trình duyệt): CHỈ xoá cờ
+// DA_XOA, dữ liệu app đã xoá thật trước đó (lịch sử, ảnh, tư cách nhóm...) KHÔNG khôi phục lại được —
+// xem đúng chú thích ở script CLI. Nhận danh sách STT_Key CỤ THỂ (không có nút "khôi phục tất cả") —
+// theo yêu cầu người dùng, để luôn chủ động chọn đúng đơn cần khôi phục, tránh khôi phục nhầm đơn đã
+// xoá có chủ đích khác. CHỈ superadmin + đúng mật khẩu xác nhận, cùng khuôn với /xoa-du-lieu-hang-loat.
+router.post('/khoi-phuc-du-lieu-hang-loat', async (req, res) => {
+  const user = req.session.user;
+  if (!laSuperAdmin(user.vaiTro)) {
+    return res.status(403).json({ error: 'Chỉ superadmin mới được khôi phục dữ liệu đơn hàng' });
+  }
+  if (req.body.matKhau !== MAT_KHAU_THAO_TAC_DU_LIEU_DON) {
+    return res.status(403).json({ error: 'Sai mật khẩu xác nhận — không khôi phục gì cả.' });
+  }
+
+  const { sttKeys } = req.body;
+  if (!Array.isArray(sttKeys) || sttKeys.length === 0) {
+    return res.status(400).json({ error: 'Danh sách đơn trống' });
+  }
+
+  const thanhCong = [];
+  const loi = [];
+  for (const sttKey of sttKeys) {
+    const dong = trangThaiDbService.layTheoKey(sttKey);
+    if (dong.DA_XOA !== 'TRUE') {
+      loi.push({ sttKey, lyDo: 'Đơn này không bị ẩn do "Xoá dữ liệu đơn" — không có gì để khôi phục' });
+      continue;
+    }
+    trangThaiDbService.ghiDe(sttKey, { DA_XOA: '' });
+    thanhCong.push(sttKey);
+  }
+
+  // Ghi 1 dòng log audit chung cho cả lô — cùng lý do đã ghi ở /xoa-du-lieu-hang-loat (dòng audit phải
+  // sống sót độc lập, không gắn STT_Key nào trong danh sách vừa khôi phục).
+  if (thanhCong.length > 0) {
+    ghiLog({
+      nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'KHOI_PHUC_DU_LIEU_DON_HANG',
       sttKey: '', chiTiet: { sttKeys: thanhCong, soLuong: thanhCong.length },
     }).catch(err => console.error('[Orders] Lỗi ghi log nền:', err.message));
   }

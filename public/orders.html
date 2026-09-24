@@ -186,6 +186,13 @@
   <button id="btn-da-lay-phoi" class="btn-hanh-dong phu nhanh-phoi-ve-file trang-thai-tich-cuc" onclick="apDungNhanh('TRANG_THAI_PHOI', 'Đã lấy phôi', this)"></button>
   <button id="btn-chua-lay-phoi" class="btn-hanh-dong phu nhanh-phoi-ve-file trang-thai-tieu-cuc" onclick="apDungNhanh('TRANG_THAI_PHOI', 'Chưa lấy phôi', this)"></button>
   <button id="btn-da-ve-file" class="btn-hanh-dong phu nhanh-phoi-ve-file trang-thai-tich-cuc" onclick="apDungNhanh('TRANG_THAI_VE_FILE', 'Đã vẽ file', this)"></button>
+  <!-- "Đang vẽ file" (bổ sung 24/09/2026, theo yêu cầu người dùng) — giá trị này đã có sẵn trong pipeline
+       (TRANG_THAI_VE_FILE_VALUES, data/pipelineTinhTrang.js) và đã dùng ở bộ lọc/trang chi tiết đơn, chỉ
+       thiếu nút bấm nhanh hàng loạt ở đây. Tái dùng NGUYÊN route/hàm apDungNhanh() có sẵn — server tự
+       stamp NGUOI_VE_FILE qua hook đã có trong orderService.update(), không cần sửa gì ở server. Không
+       gắn trang-thai-tich-cuc/tieu-cuc (chỉ có 2 sắc thái xanh/vàng cho "xong"/"chưa làm") vì đây là
+       trạng thái TRUNG GIAN (đang làm dở), không khớp nghĩa với cả 2. -->
+  <button id="btn-dang-ve-file" class="btn-hanh-dong phu nhanh-phoi-ve-file" onclick="apDungNhanh('TRANG_THAI_VE_FILE', 'Đang vẽ file', this)"></button>
   <button id="btn-chua-ve-file" class="btn-hanh-dong phu nhanh-phoi-ve-file trang-thai-tieu-cuc" onclick="apDungNhanh('TRANG_THAI_VE_FILE', 'Chưa vẽ file', this)"></button>
   <span id="khoi-chi-dinh-nguoi-chay-may" style="display:none">
     <span class="thanh-hanh-dong-cach"></span>
@@ -373,6 +380,7 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   document.getElementById('btn-da-lay-phoi').innerHTML = icon('check', { size: 16 }) + ' Đã lấy phôi';
   document.getElementById('btn-chua-lay-phoi').innerHTML = icon('undo', { size: 16 }) + ' Chưa lấy phôi';
   document.getElementById('btn-da-ve-file').innerHTML = icon('check', { size: 16 }) + ' Đã vẽ file';
+  document.getElementById('btn-dang-ve-file').innerHTML = icon('navActivity', { size: 16 }) + ' Đang vẽ file';
   document.getElementById('btn-chua-ve-file').innerHTML = icon('undo', { size: 16 }) + ' Chưa vẽ file';
 
   document.getElementById('trang-thai-dich').innerHTML = '<option value="">Chuyển đến trạng thái...</option>' +
@@ -919,6 +927,9 @@ async function apDungDanhDauUuTien(uuTien, nut) {
 // lại ĐÚNG số lượng đơn đang chọn (không phải confirm() thường, dễ bấm nhầm khi chọn nhiều đơn cùng lúc).
 // Xem routes/orders.js POST /xoa-du-lieu-hang-loat + services/xoaDuLieuDonService.js để biết chính xác
 // những gì bị xoá (KHÔNG xoá được dòng "gốc" trên Sheets — chỉ ẩn vĩnh viễn khỏi app).
+// Thêm bước nhập MẬT KHẨU xác nhận (bổ sung 24/09/2026, theo yêu cầu người dùng) — ĐỨNG SAU bước gõ số
+// lượng ở trên (không thay thế), kiểm tra thật ở SERVER (routes/orders.js) chứ không so sánh ở đây —
+// tránh lộ mật khẩu trong mã nguồn client, và không thể lách qua bằng cách gọi thẳng API.
 async function apDungXoaDuLieuDon(nut) {
   const soLuong = donDaChonSet.size;
   if (soLuong === 0) { alert('Hãy chọn ít nhất 1 đơn.'); return; }
@@ -929,6 +940,9 @@ async function apDungXoaDuLieuDon(nut) {
   );
   if (goNhap === null) return;
   if (goNhap.trim() !== String(soLuong)) { alert('Số nhập không khớp — đã huỷ, KHÔNG xoá gì cả.'); return; }
+
+  const matKhau = prompt('Nhập mật khẩu xác nhận để xoá dữ liệu đơn:');
+  if (matKhau === null) return;
 
   // Tự khoá nút NÀY (bổ sung 20/09/2026, phát hiện qua rà soát bảo mật — trước đây nút này không nằm
   // trong danh sách chọn ở dưới nên KHÔNG tự khoá, bấm 2 lần trong lúc đang chạy mở 2 lô xoá chồng
@@ -947,7 +961,7 @@ async function apDungXoaDuLieuDon(nut) {
   const ketQua = await chayHangLoatCoTienDo(
     danhSach,
     sttKey => apiFetch('/orders/xoa-du-lieu-hang-loat', {
-      method: 'POST', body: JSON.stringify({ sttKeys: [sttKey] }),
+      method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], matKhau }),
     }),
     { onTienDo: (hienTai, tong) => thanhTienDo.capNhat(hienTai, tong), kiemTraHuy: () => daHuy }
   );

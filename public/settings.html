@@ -121,6 +121,24 @@
     </div>
     <p id="thong-bao-gke" style="display:none"></p>
   </details>
+
+  <!-- "Khôi phục đơn đã xoá dữ liệu" (bổ sung 24/09/2026, theo yêu cầu người dùng) — bản web của
+       scripts/khoi-phuc-don-da-xoa.js (script dòng lệnh gốc vẫn giữ nguyên). CHỈ khôi phục đúng các
+       STT_Key được nhập tay (không có nút "khôi phục tất cả") — chủ động chọn đúng đơn, tránh khôi phục
+       nhầm đơn đã xoá có chủ đích khác. Trang này đã CHỈ superadmin xem được (chặn ở IIFE bên dưới) nên
+       không cần thêm điều kiện hiện/ẩn riêng cho khối này. -->
+  <details style="margin-top:var(--space-6)">
+    <summary class="btn-hanh-dong phu">Khôi phục đơn đã xoá dữ liệu</summary>
+    <p style="color:var(--color-text-muted)">Chỉ xoá cờ ẩn (DA_XOA) cho đúng các mã đơn nhập bên dưới — dữ liệu app đã xoá thật trước đó (lịch sử, ảnh, tư cách nhóm Đơn hàng loạt...) KHÔNG khôi phục lại được. Đơn hiện lại với dữ liệu Sheets nguyên vẹn nhưng trạng thái app hoàn toàn trắng (chưa in mã/chưa lấy phôi/chưa vẽ file...). Chỉ dùng được nếu dòng gốc trên Google Sheets vẫn còn.</p>
+    <div class="bao-cao-form">
+      <div class="truong truong-rong">
+        <label for="khoi-phuc-stt-keys">Mã đơn (STT_Key) cần khôi phục</label>
+        <textarea id="khoi-phuc-stt-keys" rows="3" placeholder="Mỗi mã 1 dòng, hoặc cách nhau dấu phẩy — VD: 9LH575, 9LH577.1"></textarea>
+      </div>
+      <button type="button" class="btn-hanh-dong" id="btn-khoi-phuc-du-lieu-don" style="justify-self:start">Khôi phục</button>
+    </div>
+    <p id="thong-bao-khoi-phuc" style="display:none"></p>
+  </details>
 </div>
 
 <script src="/js/icons.js?v=104"></script>
@@ -145,7 +163,48 @@
   document.getElementById('btn-luu-canh-bao').onclick = luuNguongCanhBao;
   document.getElementById('btn-luu-nen-anh').onclick = luuCauHinhNenAnh;
   document.getElementById('btn-luu-cau-hinh-gke').onclick = luuCauHinhGke;
+  document.getElementById('btn-khoi-phuc-du-lieu-don').onclick = khoiPhucDuLieuDon;
 })();
+
+// "Khôi phục đơn đã xoá dữ liệu" (bổ sung 24/09/2026, theo yêu cầu người dùng) — gọi
+// routes/orders.js POST /khoi-phuc-du-lieu-hang-loat, CHỈ xoá cờ DA_XOA cho đúng các STT_Key nhập tay
+// (không "khôi phục tất cả"). Mật khẩu xác nhận kiểm tra Ở SERVER (không so sánh ở đây) — client chỉ
+// hỏi rồi gửi kèm, không lộ giá trị đúng trong mã nguồn.
+async function khoiPhucDuLieuDon() {
+  const raw = document.getElementById('khoi-phuc-stt-keys').value;
+  const sttKeys = raw.split(/[\n,]/).map(s => s.trim()).filter(Boolean);
+  const thongBao = document.getElementById('thong-bao-khoi-phuc');
+  thongBao.style.display = 'block';
+  if (sttKeys.length === 0) {
+    thongBao.style.color = 'var(--color-primary)';
+    thongBao.textContent = 'Chưa nhập mã đơn nào.';
+    return;
+  }
+
+  const matKhau = prompt(`Nhập mật khẩu xác nhận để khôi phục ${sttKeys.length} đơn:`);
+  if (matKhau === null) return;
+
+  const nut = document.getElementById('btn-khoi-phuc-du-lieu-don');
+  nut.disabled = true;
+  nut.textContent = 'Đang khôi phục...';
+  try {
+    const ketQua = await apiFetch('/orders/khoi-phuc-du-lieu-hang-loat', {
+      method: 'POST', body: JSON.stringify({ sttKeys, matKhau }),
+    });
+    let text = `Đã khôi phục ${ketQua.thanhCong.length}/${sttKeys.length} đơn.`;
+    if (ketQua.loi.length > 0) {
+      text += ' Không khôi phục được: ' + ketQua.loi.map(l => `${l.sttKey} (${l.lyDo})`).join('; ');
+    }
+    thongBao.style.color = ketQua.loi.length > 0 ? 'var(--color-primary)' : '#16a34a';
+    thongBao.textContent = text;
+  } catch (e) {
+    thongBao.style.color = 'var(--color-primary)';
+    thongBao.textContent = 'Lỗi: ' + e.message;
+  } finally {
+    nut.disabled = false;
+    nut.textContent = 'Khôi phục';
+  }
+}
 
 // Xưởng vật lý có màu riêng (bổ sung 23/09/2026) — CHỈ HN/BN, không có "ChuaGanXuong" (đơn chưa gán
 // Xưởng giữ nguyên nền mặc định, không tô màu — đúng hành vi 2 màu hard-code cũ). PHẢI khớp
