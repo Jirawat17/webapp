@@ -51,6 +51,9 @@ const COT_ANH_THEO_MOC = {
   da_san_xuat: 'Anh_Da_San_Xuat_URL', // bổ sung 31/08/2026 — ảnh chụp ngay khi vừa chạy máy xong
   da_dan_tem: 'Anh_Da_Dan_Tem_URL', // bổ sung 09/09/2026 lần 4 — ảnh xác nhận đã dán tem lên kiện hàng
   ve_file: 'Anh_File_Theu_URL', // bổ sung 26/08/2026 — ảnh file thêu do ve_file upload sau khi vẽ file xong, để san_xuat xem trước khi chọn chỉ
+  // ve_file_2 (bổ sung 24/09/2026, theo yêu cầu người dùng — không phải đơn nào cũng cần 2 ảnh file
+  // thêu) — ô/nút tải ĐỘC LẬP với ve_file ở trên, cùng cơ chế ghi đè khi tải lại, chỉ khác cột lưu.
+  ve_file_2: 'Anh_File_Theu_URL_2',
 };
 
 // Mốc dưới đây KHÔNG chỉ lưu ảnh — CHÍNH LÀ 1 hành động "chụp ảnh bằng chứng kèm chuyển giai đoạn": tự

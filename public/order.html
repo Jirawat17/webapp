@@ -136,11 +136,12 @@ async function taiChiTiet() {
     <div class="${user.vaiTro === 'san_xuat' ? '' : 'chi-tiet-layout'}">
       <div>
         ${dsAnh.length ? `<div class="nhom-anh-mau">${dsAnh.map(src => `<img class="anh-mau" src="${escapeHtml(src)}" alt="Ảnh mẫu/mockup" loading="lazy" onerror="this.remove()">`).join('')}</div>` : ''}
-        ${(user.vaiTro !== 'nguoi_lay_phoi' && (don.DUONG_DAN_URL || don.MOCKUP)) || don.Anh_File_Theu_URL || don.Anh_Da_San_Xuat_URL || don.Anh_Dong_Goi_URL ? `
+        ${(user.vaiTro !== 'nguoi_lay_phoi' && (don.DUONG_DAN_URL || don.MOCKUP)) || don.Anh_File_Theu_URL || don.Anh_File_Theu_URL_2 || don.Anh_Da_San_Xuat_URL || don.Anh_Dong_Goi_URL ? `
         <div class="danh-sach-link-anh">
           ${user.vaiTro !== 'nguoi_lay_phoi' && don.DUONG_DAN_URL ? `<a href="${escapeHtml(don.DUONG_DAN_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh PNG</a>` : ''}
           ${user.vaiTro !== 'nguoi_lay_phoi' && don.MOCKUP ? `<a href="${escapeHtml(don.MOCKUP)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh Mockup</a>` : ''}
           ${don.Anh_File_Theu_URL ? `<a href="${escapeHtml(don.Anh_File_Theu_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh file thêu</a>` : ''}
+          ${don.Anh_File_Theu_URL_2 ? `<a href="${escapeHtml(don.Anh_File_Theu_URL_2)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh File Thêu 2</a>` : ''}
           ${don.Anh_Da_San_Xuat_URL ? `<a href="${escapeHtml(don.Anh_Da_San_Xuat_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh đã sản xuất</a>` : ''}
           ${don.Anh_Da_Dan_Tem_URL ? `<a href="${escapeHtml(don.Anh_Da_Dan_Tem_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh ĐÃ DÁN TEM</a>` : ''}
           ${don.Anh_Dong_Goi_URL ? `<a href="${escapeHtml(don.Anh_Dong_Goi_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh đóng gói</a>` : ''}
@@ -297,6 +298,10 @@ function renderKhuVucThaoTac(don) {
   // Ảnh "File thêu" (bổ sung 26/08/2026) — ve_file upload sau khi vẽ file xong, để san_xuat xem
   // trước khi chọn chỉ thêu. Thuần lưu ảnh, KHÔNG đụng gì tới trạng thái (khác với "Chụp ảnh hoàn
   // thành" bên dưới).
+  // Ảnh file thêu 2 (bổ sung 24/09/2026, theo yêu cầu người dùng) — không phải đơn nào cũng cần 2 ảnh
+  // nên tách 2 ô/2 nút tải ĐỘC LẬP (không bắt buộc tải đủ cả 2, không phụ thuộc thứ tự) thay vì gộp
+  // chung 1 ô chọn nhiều ảnh — cùng khuôn moc/cột riêng (ve_file_2 -> Anh_File_Theu_URL_2, xem
+  // routes/photos.js) như ảnh 1, chỉ khác tên cột lưu.
   if (user.vaiTro === 've_file' || laAdmin(user.vaiTro)) {
     html += `
       <div class="upload-box">
@@ -304,6 +309,12 @@ function renderKhuVucThaoTac(don) {
         <input type="file" accept="image/*" capture="environment" id="anh-ve-file">
         <button class="btn-hanh-dong" onclick="taiAnh('ve_file')">${icon('download')} Tải ảnh lên</button>
         <p style="margin:0;font-size:0.8rem">Cần cột <code>Anh_File_Theu_URL</code> trong Sheet — nếu chưa có, thao tác này sẽ báo lỗi.</p>
+      </div>
+      <div class="upload-box">
+        <label for="anh-ve-file-2">${icon('camera', { size: 18 })} Ảnh File Thêu 2 (không bắt buộc)</label>
+        <input type="file" accept="image/*" capture="environment" id="anh-ve-file-2">
+        <button class="btn-hanh-dong" onclick="taiAnh('ve_file_2')">${icon('download')} Tải ảnh lên</button>
+        <p style="margin:0;font-size:0.8rem">Cần cột <code>Anh_File_Theu_URL_2</code> trong Sheet — nếu chưa có, thao tác này sẽ báo lỗi.</p>
       </div>`;
   }
 
