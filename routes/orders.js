@@ -9,7 +9,7 @@ const taiSanService = require('../services/taiSanService');
 const alertService = require('../services/alertService');
 const scenarioService = require('../services/scenarioService');
 const { parseNgay } = require('../services/dateUtils');
-const { DANH_SACH_TRANG_THAI_BAO_CAO, TRANG_THAI_PHOI_VALUES, TRANG_THAI_VE_FILE_VALUES, khopGiaTriLoc } = require('../data/pipelineTinhTrang');
+const { DANH_SACH_TRANG_THAI_BAO_CAO, TRANG_THAI_PHOI_VALUES, TRANG_THAI_VE_FILE_VALUES, khopGiaTriLoc, chiSoTinhTrang } = require('../data/pipelineTinhTrang');
 const { ghiLog, layLichSuTheoDon } = require('../services/logService');
 const { taiDsAnh } = require('../services/anhNguonService');
 const { tinhHashAnh, khoangCachHamming } = require('../services/perceptualHashService');
@@ -361,6 +361,62 @@ router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
       await taiSanService.apDungThayDoiKhoHangLoat(gomThayDoiKho);
     } catch (err) {
       console.error('[Orders] Lỗi ghi gộp kho phôi hàng loạt:', err.message);
+    }
+  }
+
+  res.json({ ok: true, thanhCong, loi });
+});
+
+// CHUYỂN TRẠNG THÁI THỦ CÔNG SUPERADMIN (bổ sung 25/09/2026, theo yêu cầu người dùng) — CHỈ superadmin,
+// nhập danh sách mã đơn tự do, đặt thẳng TRANG_THAI_XUONG bỏ qua MỌI ràng buộc (trạng thái trước đó, cổng
+// chụp ảnh/quét QR, tracking của "ĐÃ DÁN TEM", tự chuyển trạng thái) — qua tuyChon.boQuaRangBuoc của
+// orderService.update(). Giữ dữ liệu KHỚP (đã xác nhận với người dùng): đích từ "ĐÃ SẴN SÀNG CHẠY MÁY" trở
+// đi tự đặt phôi/file sang "Đã..." (trừ kho như lấy phôi thật); đích "Chưa in mã" tự đặt về "Chưa...".
+router.post('/chuyen-trang-thai-superadmin', async (req, res) => {
+  const user = req.session.user;
+  if (!laSuperAdmin(user.vaiTro)) {
+    return res.status(403).json({ error: 'Chỉ superadmin mới được dùng chức năng này' });
+  }
+  const { trangThaiMoi } = req.body;
+  const sttKeys = [...new Set(String(req.body.danhSachDon || '').split(/[,\s]+/).map(k => k.trim().toUpperCase()).filter(Boolean))];
+  if (sttKeys.length === 0) return res.status(400).json({ error: 'Danh sách đơn trống' });
+  if (!DANH_SACH_TRANG_THAI_BAO_CAO.includes(trangThaiMoi)) {
+    return res.status(400).json({ error: 'Trạng thái đích không hợp lệ' });
+  }
+
+  const updates = { TRANG_THAI_XUONG: trangThaiMoi, NguoiCapNhatCuoi: user.ten, ThoiGianCapNhatCuoi: new Date().toISOString() };
+  const idx = chiSoTinhTrang(trangThaiMoi);
+  if (idx !== null && idx >= chiSoTinhTrang('ĐÃ SẴN SÀNG CHẠY MÁY')) {
+    Object.assign(updates, { TRANG_THAI_PHOI: 'Đã lấy phôi', TRANG_THAI_VE_FILE: 'Đã vẽ file' });
+  } else if (trangThaiMoi === 'Chưa in mã') {
+    Object.assign(updates, { TRANG_THAI_PHOI: 'Chưa lấy phôi', TRANG_THAI_VE_FILE: 'Chưa vẽ file' });
+  }
+
+  const thanhCong = [];
+  const loi = [];
+  const { headers, banDoTheoKey } = await orderService.getManyByKeys(sttKeys, { fresh: true });
+  const gomThayDoiKho = [];
+
+  await chayHangLoatSongSong(sttKeys, async (sttKey) => {
+    try {
+      const row = banDoTheoKey.get(sttKey);
+      if (!row) { loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng' }); return; }
+      await orderService.update(sttKey, updates, user, { donDaDoc: { headers, row }, gomThayDoiKho, boQuaRangBuoc: true });
+      thanhCong.push(sttKey);
+      ghiLog({
+        nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'CHUYEN_TRANG_THAI_HANG_LOAT',
+        sttKey, chiTiet: { cot: 'TRANG_THAI_XUONG', tu: row.TRANG_THAI_XUONG, sang: trangThaiMoi, superadminBoQuaRangBuoc: true },
+      }).catch(err => console.error('[Orders] Lỗi ghi log nền:', err.message));
+    } catch (err) {
+      loi.push({ sttKey, lyDo: err.message });
+    }
+  });
+
+  if (gomThayDoiKho.length > 0) {
+    try {
+      await taiSanService.apDungThayDoiKhoHangLoat(gomThayDoiKho);
+    } catch (err) {
+      console.error('[Orders] Lỗi ghi gộp kho phôi (superadmin):', err.message);
     }
   }
 

@@ -155,14 +155,19 @@ function tinhPhoiVeFileTuDongKhiInMa(rowHienTai, updates) {
 // (đã xác nhận rõ với người dùng, xem data/pipelineTinhTrang.js). Hàm này không tự đổi TRANG_THAI_XUONG
 // nếu người gọi đã tự chỉ định TRANG_THAI_XUONG trong chính updates đó — tôn trọng giá trị người dùng
 // muốn set tay, không ghi đè.
+// Sửa 25/09/2026, theo yêu cầu người dùng: (1) TRANG_THAI_XUONG gửi lên TRÙNG giá trị đang có KHÔNG còn
+// tính là "tự set" — ô "Sửa trạng thái thủ công" ở order.html luôn gửi cả 3 cột, trước đây khiến đơn
+// kẹt ở "Đã in mã" dù đã đủ phôi + file; (2) người gọi CHỦ ĐỘNG đặt về "Đã in mã" (vd từ LỖI SẢN XUẤT)
+// mà phôi + file đều đã xong cũng tự chuyển tiếp sang "ĐÃ SẴN SÀNG CHẠY MÁY" luôn.
 function tinhTinhTrangTuDong(rowHienTai, updates) {
-  if ('TRANG_THAI_XUONG' in updates) return updates; // người gọi đã tự set — không can thiệp
+  const tinhTrangDich = updates.TRANG_THAI_XUONG ?? rowHienTai.TRANG_THAI_XUONG;
+  if (tinhTrangDich !== 'Đã in mã') return updates;
 
   const phoiMoi = updates.TRANG_THAI_PHOI ?? rowHienTai.TRANG_THAI_PHOI;
   const veFileMoi = updates.TRANG_THAI_VE_FILE ?? rowHienTai.TRANG_THAI_VE_FILE;
   const caPhoiVaFileXong = phoiMoi === 'Đã lấy phôi' && veFileMoi === 'Đã vẽ file';
 
-  if (caPhoiVaFileXong && rowHienTai.TRANG_THAI_XUONG === 'Đã in mã') {
+  if (caPhoiVaFileXong) {
     return { ...updates, TRANG_THAI_XUONG: 'ĐÃ SẴN SÀNG CHẠY MÁY' };
   }
   return updates;
@@ -263,11 +268,16 @@ async function capNhatThat(sttKey, updates, user, tuyChon) {
   // đọc lại đây RẺ (SQLite tại chỗ, không tốn quota Sheets như getByKey({fresh:true})) nên luôn làm.
   const row = { ...rowDaDoc, ...trangThaiDbService.layTheoKey(sttKey) };
 
+  // tuyChon.boQuaRangBuoc (bổ sung 25/09/2026) — CHỈ route POST /orders/chuyen-trang-thai-superadmin
+  // truyền (superadmin, đã kiểm tra quyền ở route): bỏ qua cổng ảnh bắt buộc, điều kiện nguồn/tracking
+  // của "ĐÃ DÁN TEM", tự chuyển trạng thái và kiểm tra tính hợp lý — đặt ĐÚNG trạng thái được chọn.
+  const boQua = tuyChon.boQuaRangBuoc === true;
+
   kiemTraGiaTriHopLe(updates);
-  kiemTraCongAnhBatBuoc(row, updates, user, tuyChon.quaAnh);
+  if (!boQua) kiemTraCongAnhBatBuoc(row, updates, user, tuyChon.quaAnh);
 
   const updatesSauInMa = tinhPhoiVeFileTuDongKhiInMa(row, updates);
-  const updatesDaTinh = tinhTinhTrangTuDong(row, updatesSauInMa);
+  const updatesDaTinh = boQua ? updatesSauInMa : tinhTinhTrangTuDong(row, updatesSauInMa);
 
   // Ảnh mẫu đổi thì hash cũ không còn đúng nữa — xoá để lượt "Quét tìm đơn hàng loạt" kế tiếp
   // (routes/orders.js) tính lại, tránh nhóm hàng loạt sai lặng lẽ theo ảnh cũ đã không còn tồn tại.
@@ -325,7 +335,7 @@ async function capNhatThat(sttKey, updates, user, tuyChon) {
     updatesDaTinh.THOI_GIAN_IN_MA = thoiGianVNISOString();
   }
 
-  kiemTraTinhHopLy(row, updatesDaTinh); // kiểm tra SAU khi đã tính tự động, để không báo nhầm khi chính việc tự động hoá làm cho tổ hợp trở nên hợp lệ
+  if (!boQua) kiemTraTinhHopLy(row, updatesDaTinh); // kiểm tra SAU khi đã tính tự động, để không báo nhầm khi chính việc tự động hoá làm cho tổ hợp trở nên hợp lệ
 
   // Ghi theo STT_Key (khoá), không phải số dòng vật lý — xem trangThaiDbService.js. Không còn khái
   // niệm "đọc lại số dòng mới nhất trước khi ghi cả lô" nữa (bỏ hẳn layLaiSoDongMoiNhat/soDongMoiNhat,
@@ -479,7 +489,26 @@ function laUuTien(row) {
   return String(row.DON_UU_TIEN || '').toUpperCase() === 'TRUE';
 }
 
+// Sửa 1 lần lúc khởi động (bổ sung 25/09/2026, theo yêu cầu người dùng) — các đơn đã KẸT ở "Đã in mã"
+// dù đủ phôi + file (do lỗi cũ ở tinhTinhTrangTuDong, xem trên) được chuyển sang "ĐÃ SẴN SÀNG CHẠY MÁY".
+// Chỉ đọc/ghi SQLite (3 cột này đều ở trangThaiDbService), không tốn quota Sheets. Chạy lại mỗi lần
+// khởi động vô hại — sau lần đầu không còn đơn nào khớp.
+function suaDonKetSanSang() {
+  const { ghiLog } = require('./logService');
+  const ketQua = [];
+  for (const [sttKey, r] of trangThaiDbService.layTatCa()) {
+    if (r.DA_XOA === 'TRUE') continue;
+    if (r.TRANG_THAI_XUONG !== 'Đã in mã' || r.TRANG_THAI_PHOI !== 'Đã lấy phôi' || r.TRANG_THAI_VE_FILE !== 'Đã vẽ file') continue;
+    trangThaiDbService.ghiDe(sttKey, { TRANG_THAI_XUONG: 'ĐÃ SẴN SÀNG CHẠY MÁY', NguoiCapNhatCuoi: 'Hệ thống', ThoiGianCapNhatCuoi: new Date().toISOString() });
+    ghiLog({ nguoiDung: 'Hệ thống', vaiTro: '', hanhDong: 'CHUYEN_TRANG_THAI_HANG_LOAT', sttKey, chiTiet: { cot: 'TRANG_THAI_XUONG', tu: 'Đã in mã', sang: 'ĐÃ SẴN SÀNG CHẠY MÁY', lyDo: 'Sửa đơn kẹt lúc khởi động' } });
+    ketQua.push(sttKey);
+  }
+  if (ketQua.length) console.log(`[Orders] Đã tự chuyển ${ketQua.length} đơn kẹt sang ĐÃ SẴN SÀNG CHẠY MÁY: ${ketQua.join(', ')}`);
+  return ketQua;
+}
+
 module.exports = {
+  suaDonKetSanSang,
   TAB, KEY_COL, getAll, getByKey, getManyByKeys, update, filterForRole, ganTenKhachHang, tieuDeSanPham, danhSachViTriTheu,
   layDanhSachXuong, locTheoXuong, coQuyenTheoXuong, laUuTien, anXuongVoiAdmin, anXuongNhieuDonVoiAdmin,
 };

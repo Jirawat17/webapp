@@ -36,7 +36,28 @@
            tick vào 1 Đơn hàng loạt có sẵn/mới, thay vì phải gõ tay từng mã ở public/don-hang-loat.html. -->
       <button type="button" class="btn-hanh-dong phu" id="btn-them-hang-loat" onclick="themVaoDonHangLoat()" style="display:none"></button>
       <button type="button" class="btn-hanh-dong phu" id="btn-in-hai-quan" onclick="inHaiQuanDangChon(this)" style="display:none"></button>
+      <!-- CHUYỂN TRẠNG THÁI THỦ CÔNG SUPERADMIN (bổ sung 25/09/2026) — CHỈ superadmin, hiện qua JS. -->
+      <button type="button" class="btn-hanh-dong phu nguy-hiem" id="btn-mo-superadmin" onclick="batTatPanelSuperadmin()" style="display:none">CHUYỂN TRẠNG THÁI THỦ CÔNG SUPERADMIN</button>
     </div>
+  </div>
+
+  <div id="panel-superadmin" class="panel-dieu-khien" style="display:none">
+    <div style="background:var(--color-danger-bg);color:var(--color-danger-text);border:3px solid var(--color-danger-text);border-radius:8px;padding:16px;margin-bottom:12px;font-size:1.15rem;font-weight:700;line-height:1.5">
+      ⚠ CẢNH BÁO — CHỨC NĂNG NGUY HIỂM CHỈ DÀNH CHO SUPERADMIN<br>
+      <span style="font-size:1rem;font-weight:600">Chuyển THẲNG các đơn nhập bên dưới sang trạng thái đã chọn, BỎ QUA MỌI RÀNG BUỘC: trạng thái trước đó, yêu cầu quét mã/chụp ảnh, yêu cầu có Tracking. Chuyển tới "ĐÃ SẴN SÀNG CHẠY MÁY" trở đi sẽ tự đặt Phôi = "Đã lấy phôi" (TRỪ KHO PHÔI) và Vẽ file = "Đã vẽ file"; chuyển về "Chưa in mã" sẽ tự đặt Phôi/Vẽ file về "Chưa...". Kiểm tra kỹ trước khi bấm.</span>
+    </div>
+    <div class="inline-form" style="align-items:flex-end">
+      <div class="truong" style="flex:1;min-width:260px">
+        <label for="sa-danh-sach-don">Danh sách mã đơn (cách nhau dấu ,)</label>
+        <textarea id="sa-danh-sach-don" rows="3" style="text-transform:uppercase" oninput="this.value = this.value.toUpperCase()"></textarea>
+      </div>
+      <div class="truong">
+        <label for="sa-trang-thai">Chuyển đến trạng thái</label>
+        <select id="sa-trang-thai"></select>
+      </div>
+      <button type="button" class="btn-hanh-dong" style="background:var(--color-danger-text);border-color:var(--color-danger-text)" onclick="apDungChuyenSuperadmin(this)">Thực hiện</button>
+    </div>
+    <div id="sa-ket-qua" style="margin-top:8px"></div>
   </div>
 
   <div id="panel-loc" class="panel-dieu-khien" style="display:none">
@@ -439,6 +460,9 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   // hẹp nhất trong trang (như "Gán Xưởng" ở trên) vì là thao tác phá huỷ vĩnh viễn không thể hoàn tác.
   if (laSuperAdmin(user.vaiTro)) {
     document.getElementById('khoi-xoa-du-lieu-don').style.display = 'contents';
+    document.getElementById('btn-mo-superadmin').style.display = '';
+    document.getElementById('sa-trang-thai').innerHTML = DANH_SACH_TRANG_THAI_DAY_DU
+      .map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
   }
 
   // "Đơn ưu tiên" (bổ sung 13/09/2026, theo yêu cầu người dùng) — RỘNG HƠN khối "Gán Xưởng" ở trên
@@ -494,6 +518,34 @@ function batTatPanel(idPanelMuonMo) {
     document.getElementById(idPanelMuonMo).style.display = 'block';
     document.getElementById(idPanelMuonMo === 'panel-loc' ? 'btn-mo-loc' : 'btn-mo-sap-xep').classList.add('dang-mo');
   }
+}
+
+// CHUYỂN TRẠNG THÁI THỦ CÔNG SUPERADMIN (bổ sung 25/09/2026) — xem routes/orders.js
+// POST /chuyen-trang-thai-superadmin. Server tự tách/viết hoa/bỏ trùng mã đơn; ở đây tách lại chỉ để
+// đếm số đơn trong hộp xác nhận.
+function batTatPanelSuperadmin() {
+  const el = document.getElementById('panel-superadmin');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+async function apDungChuyenSuperadmin(btn) {
+  const danhSachDon = document.getElementById('sa-danh-sach-don').value.toUpperCase();
+  const trangThaiMoi = document.getElementById('sa-trang-thai').value;
+  const soDon = new Set(danhSachDon.split(/[,\s]+/).filter(Boolean)).size;
+  if (!soDon) { alert('Hãy nhập ít nhất 1 mã đơn'); return; }
+  if (!confirm(`SUPERADMIN: chuyển ${soDon} đơn sang "${trangThaiMoi}", BỎ QUA MỌI RÀNG BUỘC?`)) return;
+
+  btn.disabled = true;
+  const kq = document.getElementById('sa-ket-qua');
+  try {
+    const { thanhCong, loi } = await apiFetch('/orders/chuyen-trang-thai-superadmin', {
+      method: 'POST', body: JSON.stringify({ danhSachDon, trangThaiMoi }),
+    });
+    kq.innerHTML = `<p style="margin:0">Thành công: ${thanhCong.length} đơn${thanhCong.length ? ' — ' + escapeHtml(thanhCong.join(', ')) : ''}</p>` +
+      (loi.length ? `<p style="margin:4px 0 0;color:var(--color-danger-text)">Lỗi ${loi.length} đơn:<br>${loi.map(l => escapeHtml(l.sttKey + ': ' + l.lyDo)).join('<br>')}</p>` : '');
+    if (thanhCong.length) await taiDon();
+  } catch (e) { alert(e.message); }
+  finally { btn.disabled = false; }
 }
 
 const CAC_O_LOC = ['loc-trang-thai', 'loc-phoi', 'loc-ve-file', 'loc-canh-bao', 'loc-xuong', 'loc-uu-tien', 'loc-don-hang-loat', 'loc-loai', 'loc-kich-thuoc', 'loc-hang-van-chuyen', 'loc-mau-sac', 'loc-quoc-gia-tracking', 'loc-tinh-trang', 'loc-kh', 'loc-tu-ngay', 'loc-den-ngay'];

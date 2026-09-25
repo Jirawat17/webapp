@@ -59,6 +59,9 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Xưởng Thêu app đang chạy tại http://localhost:${PORT}`));
 
+// Sửa 1 lần các đơn kẹt ở "Đã in mã" dù đủ phôi + file (bổ sung 25/09/2026, xem orderService.js).
+try { require('./services/orderService').suaDonKetSanSang(); } catch (err) { console.error('[Orders] Lỗi sửa đơn kẹt:', err.message); }
+
 // Bật lịch kiểm tra cảnh báo 3 tầng + nhắc ship — chạy nền, độc lập với request nào đang tới
 require('./services/canhBaoJob').batDauLichCanhBao();
 
