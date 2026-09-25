@@ -20,6 +20,8 @@
       <button type="button" class="btn-hanh-dong phu" data-ky="tuan_nay">Tuần này</button>
       <button type="button" class="btn-hanh-dong phu" data-ky="thang_nay">Tháng này</button>
       <button type="button" class="btn-hanh-dong phu" data-ky="tuy_chon">Tuỳ chọn...</button>
+      <!-- Lọc theo khách hàng (bổ sung 25/09/2026) — mã khách tách từ STT_Key, xem routes/dashboard.js. -->
+      <select id="loc-khach-hang" aria-label="Lọc theo khách hàng"><option value="">Tất cả khách hàng</option></select>
     </div>
   </div>
 
@@ -56,7 +58,23 @@
     </div>
   </div>
 
+  <!-- Bảng theo Xưởng (bổ sung 25/09/2026) — cùng cột với bảng khách hàng ở trên. -->
+  <div class="chart-card" style="margin-bottom:var(--space-4)">
+    <h3 style="margin-top:0">Theo Xưởng</h3>
+    <div class="bang-cuon-ngang">
+      <table class="bang-xem-truoc">
+        <thead><tr>
+          <th>Xưởng</th><th>Tổng đơn</th><th>Đã DÁN TEM</th><th>Chưa DÁN TEM</th>
+          <th>Đã vẽ file</th><th>Đã chạy máy</th><th>Có file, chưa chạy máy</th><th>Chưa có file vẽ</th>
+        </tr></thead>
+        <tbody id="bang-theo-xuong-body"></tbody>
+      </table>
+    </div>
+  </div>
+
   <div class="chart-grid">
+    <div class="chart-card"><canvas id="chart-khach-hang"></canvas></div>
+    <div class="chart-card"><canvas id="chart-xuong"></canvas></div>
     <div class="chart-card"><canvas id="chart-trangthai"></canvas></div>
     <div class="chart-card"><canvas id="chart-loai"></canvas></div>
     <div class="chart-card"><canvas id="chart-tuan"></canvas></div>
@@ -95,6 +113,7 @@ let dangCheDoToiHienTai = false;
     };
   });
   document.getElementById('btn-ap-dung-khoang').onclick = () => taiThongKe();
+  document.getElementById('loc-khach-hang').onchange = () => taiThongKe();
 
   await taiThongKe();
 })();
@@ -141,6 +160,8 @@ async function taiThongKe() {
       qs.set('denNgay', dinhDangYMD(khoang.den));
     }
   }
+  const oKhach = document.getElementById('loc-khach-hang');
+  if (oKhach.value) qs.set('khachHang', oKhach.value);
 
   let stats;
   try {
@@ -152,14 +173,35 @@ async function taiThongKe() {
 
   document.getElementById('tong-so').textContent = `Tổng số đơn: ${stats.tongSoDon}`;
 
-  veBieuDo('chart-trangthai', 'pie', 'Theo trạng thái', stats.theoTrangThai);
-  veBieuDo('chart-loai', 'bar', 'Theo loại sản phẩm', stats.theoLoaiSanPham);
-  veBieuDo('chart-tuan', 'line', 'Đơn theo tuần (theo ngày lên đơn)', stats.theoTuan);
-  veBangTheoKhachHang(stats.theoKhachHangChiTiet);
+  // Đổ lại ô lọc khách hàng, giữ lựa chọn hiện tại.
+  const dangChon = oKhach.value;
+  oKhach.innerHTML = '<option value="">Tất cả khách hàng</option>' +
+    stats.danhSachKhachHang.map(k => `<option value="${escapeHtml(k)}" ${k === dangChon ? 'selected' : ''}>${escapeHtml(k)}</option>`).join('');
+
+  // Màu CỐ ĐỊNH theo khách (theo thứ tự danh sách đầy đủ) — cùng 1 khách luôn cùng màu ở mọi biểu đồ.
+  mauTheoKhach = Object.fromEntries(stats.danhSachKhachHang.map((k, i) => [k, `hsl(${Math.round(i * 137.5) % 360} 65% 52%)`]));
+
+  const tongDonTheoNhom = list => Object.fromEntries(list.map(n => [n.khachHang, n.tongDon]));
+  veBieuDoCot('chart-khach-hang', 'Số đơn theo khách hàng', tongDonTheoNhom(stats.theoKhachHangChiTiet));
+  veBieuDoCot('chart-xuong', 'Số đơn theo Xưởng', tongDonTheoNhom(stats.theoXuongChiTiet));
+  veBieuDoChong('chart-trangthai', 'Theo trạng thái (chia theo khách hàng)', stats.chongTheoKhach.trangThai);
+  veBieuDoChong('chart-loai', 'Theo loại sản phẩm (chia theo khách hàng)', stats.chongTheoKhach.loai);
+  veBieuDoChong('chart-tuan', 'Đơn theo tuần — ngày lên đơn (chia theo khách hàng)', stats.chongTheoKhach.tuan, soSanhTuan);
+  veBangTheoNhom('bang-theo-khach-hang-body', stats.theoKhachHangChiTiet);
+  veBangTheoNhom('bang-theo-xuong-body', stats.theoXuongChiTiet);
 }
 
-function veBangTheoKhachHang(danhSach) {
-  const tbody = document.getElementById('bang-theo-khach-hang-body');
+let mauTheoKhach = {};
+
+// "2026-W9" trước "2026-W10" (so chuỗi thường xếp sai).
+function soSanhTuan(a, b) {
+  const [na, ta] = a.split('-W').map(Number);
+  const [nb, tb] = b.split('-W').map(Number);
+  return na - nb || ta - tb;
+}
+
+function veBangTheoNhom(tbodyId, danhSach) {
+  const tbody = document.getElementById(tbodyId);
   if (!danhSach || danhSach.length === 0) {
     tbody.innerHTML = '<tr><td colspan="8">Không có dữ liệu.</td></tr>';
     return;
@@ -177,43 +219,65 @@ function veBangTheoKhachHang(danhSach) {
     </tr>`).join('');
 }
 
-// Bảng màu đủ tương phản, không chỉ dựa vào màu sắc để phân biệt (mỗi cột/lát đều có nhãn kèm theo)
-const MAU = ['#4338ca','#22c55e','#f59e0b','#ef4444','#0891b2','#a855f7','#65a30d','#64748b'];
-
-// Cấu hình chartjs-plugin-datalabels theo TỪNG loại biểu đồ — mỗi loại cần vẽ số ở vị trí/màu khác
-// nhau mới đọc rõ: lát tròn (pie) nền màu đậm nên chữ trắng nổi giữa lát; cột/đường (bar/line) vẽ
-// trên nền trong suốt nên dùng đúng màu chữ theo Chế độ tối/sáng hiện tại, kèm khung nền mờ phía sau
-// để không bị lẫn vào lưới biểu đồ.
-function datalabelsChoLoai(type) {
-  const mauChu = dangCheDoToiHienTai ? '#f4f4f5' : '#1f2937';
-  const chung = { font: { weight: 'bold', size: 11 }, formatter: v => v };
-  if (type === 'pie') {
-    return { ...chung, color: '#ffffff', textStrokeColor: 'rgba(0,0,0,0.35)', textStrokeWidth: 2 };
-  }
+function nhanSoTrenCot() {
   return {
-    ...chung, color: mauChu, anchor: 'end', align: 'top',
+    color: dangCheDoToiHienTai ? '#f4f4f5' : '#1f2937', anchor: 'end', align: 'top',
+    font: { weight: 'bold', size: 11 },
     backgroundColor: dangCheDoToiHienTai ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.75)',
     borderRadius: 4, padding: { top: 1, bottom: 1, left: 4, right: 4 },
   };
 }
 
-function veBieuDo(canvasId, type, title, dataObj) {
-  // taiThongKe() có thể gọi lại nhiều lần khi đổi kỳ thống kê — phải huỷ biểu đồ cũ trên cùng
-  // canvas trước, nếu không Chart.js báo lỗi "Canvas is already in use".
+// taiThongKe() có thể gọi lại nhiều lần khi đổi kỳ/khách — phải huỷ biểu đồ cũ trên cùng canvas trước,
+// nếu không Chart.js báo lỗi "Canvas is already in use".
+function taoBieuDo(canvasId, cauHinh) {
   if (cacBieuDo[canvasId]) cacBieuDo[canvasId].destroy();
+  cacBieuDo[canvasId] = new Chart(document.getElementById(canvasId), cauHinh);
+}
 
-  const labels = Object.keys(dataObj);
-  const data = Object.values(dataObj);
-  cacBieuDo[canvasId] = new Chart(document.getElementById(canvasId), {
-    type,
-    data: { labels, datasets: [{ label: title, data, backgroundColor: MAU, borderColor: '#4338ca' }] },
+// Cột đơn — 1 màu, số ghi trên đầu cột. Người dùng ưu tiên biểu đồ cột hơn tròn/đường (25/09/2026).
+function veBieuDoCot(canvasId, title, dataObj) {
+  taoBieuDo(canvasId, {
+    type: 'bar',
+    data: { labels: Object.keys(dataObj), datasets: [{ label: title, data: Object.values(dataObj), backgroundColor: '#4338ca' }] },
     options: {
       responsive: true,
+      scales: { y: { grace: '12%' } }, // chừa chỗ cho số trên đỉnh cột cao nhất
       plugins: {
         title: { display: true, text: title, font: { size: 14 } },
-        legend: { display: type === 'pie', position: 'bottom' },
-        tooltip: { enabled: true },
-        datalabels: datalabelsChoLoai(type),
+        legend: { display: false },
+        datalabels: { ...nhanSoTrenCot(), formatter: v => v },
+      },
+    },
+  });
+}
+
+// Cột CHỒNG theo khách hàng (bổ sung 25/09/2026) — chong = { nhãn: { maKhach: soDon } }. Mỗi khách 1
+// dataset, màu cố định (mauTheoKhach). Chỉ ghi TỔNG trên đỉnh cột (ghi số từng đoạn quá rối khi nhiều
+// khách) — rê chuột vào cột để xem số của từng khách.
+function veBieuDoChong(canvasId, title, chong, soSanhNhan) {
+  const labels = Object.keys(chong);
+  if (soSanhNhan) labels.sort(soSanhNhan);
+  const cacKhach = [...new Set(labels.flatMap(l => Object.keys(chong[l])))].sort();
+  const datasets = cacKhach.map(k => ({
+    label: k, data: labels.map(l => chong[l][k] || 0), backgroundColor: mauTheoKhach[k] || '#64748b',
+  }));
+  const tongTheoCot = labels.map(l => Object.values(chong[l]).reduce((a, b) => a + b, 0));
+  taoBieuDo(canvasId, {
+    type: 'bar',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      scales: { x: { stacked: true }, y: { stacked: true, grace: '12%' } }, // grace: chừa chỗ cho số trên đỉnh cột cao nhất
+      plugins: {
+        title: { display: true, text: title, font: { size: 14 } },
+        legend: { display: true, position: 'bottom' },
+        tooltip: { mode: 'index', filter: item => item.raw > 0 },
+        datalabels: {
+          ...nhanSoTrenCot(),
+          display: ctx => ctx.datasetIndex === datasets.length - 1,
+          formatter: (v, ctx) => tongTheoCot[ctx.dataIndex],
+        },
       },
     },
   });
