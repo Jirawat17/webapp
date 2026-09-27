@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=104">
+<link rel="stylesheet" href="/css/style.css?v=105">
 <script src="/js/theme.js?v=104"></script>
 </head>
 <body>
@@ -125,6 +125,16 @@
           <option value="">Tất cả đơn</option>
           <option value="1">Đơn ưu tiên</option>
           <option value="0">Đơn thường</option>
+        </select>
+      </div>
+      <!-- DonNhieuAo (bổ sung 26/09/2026) — nhiều đơn cùng OrderID dùng chung 1 tracking, xem
+           services/donNhieuAoService.js. -->
+      <div class="truong">
+        <label for="loc-don-nhieu-ao">DonNhieuAo</label>
+        <select id="loc-don-nhieu-ao">
+          <option value="">Tất cả đơn</option>
+          <option value="1">Chỉ DonNhieuAo</option>
+          <option value="0">Đơn lẻ</option>
         </select>
       </div>
       <!-- Bỏ checkbox "Chỉ đơn hàng loạt" (nhóm TỰ ĐỘNG đề xuất, cột NHOM_HANG_LOAT) — 13/09/2026,
@@ -260,7 +270,7 @@
 </div>
 
 <script src="/js/icons.js?v=104"></script>
-<script src="/js/api.js?v=104"></script>
+<script src="/js/api.js?v=105"></script>
 <script>
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
 // settings.html (superadmin), 3/5/7 không còn luôn đúng nên không hard-code vào nhãn hiển thị nữa.
@@ -316,6 +326,7 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   document.getElementById('loc-canh-bao').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-xuong').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-uu-tien').onchange = () => { boChonTatCaDon(); taiDon(); };
+  document.getElementById('loc-don-nhieu-ao').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-don-hang-loat').oninput = debounce(() => { boChonTatCaDon(); taiDon(); }, 400);
   document.getElementById('loc-loai').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-kich-thuoc').onchange = () => { boChonTatCaDon(); taiDon(); };
@@ -523,6 +534,7 @@ function batTatPanel(idPanelMuonMo) {
 // CHUYỂN TRẠNG THÁI THỦ CÔNG SUPERADMIN (bổ sung 25/09/2026) — xem routes/orders.js
 // POST /chuyen-trang-thai-superadmin. Server tự tách/viết hoa/bỏ trùng mã đơn; ở đây tách lại chỉ để
 // đếm số đơn trong hộp xác nhận.
+const TACH_MA_DON = /\s*,\s*(?!\d+(?:[\s,]|$))|\s+/; // trùng routes/orders.js
 function batTatPanelSuperadmin() {
   const el = document.getElementById('panel-superadmin');
   el.style.display = el.style.display === 'none' ? 'block' : 'none';
@@ -531,7 +543,7 @@ function batTatPanelSuperadmin() {
 async function apDungChuyenSuperadmin(btn) {
   const danhSachDon = document.getElementById('sa-danh-sach-don').value.toUpperCase();
   const trangThaiMoi = document.getElementById('sa-trang-thai').value;
-  const soDon = new Set(danhSachDon.split(/[,\s]+/).filter(Boolean)).size;
+  const soDon = new Set(danhSachDon.split(TACH_MA_DON).filter(Boolean)).size;
   if (!soDon) { alert('Hãy nhập ít nhất 1 mã đơn'); return; }
   if (!confirm(`SUPERADMIN: chuyển ${soDon} đơn sang "${trangThaiMoi}", BỎ QUA MỌI RÀNG BUỘC?`)) return;
 
@@ -548,7 +560,7 @@ async function apDungChuyenSuperadmin(btn) {
   finally { btn.disabled = false; }
 }
 
-const CAC_O_LOC = ['loc-trang-thai', 'loc-phoi', 'loc-ve-file', 'loc-canh-bao', 'loc-xuong', 'loc-uu-tien', 'loc-don-hang-loat', 'loc-loai', 'loc-kich-thuoc', 'loc-hang-van-chuyen', 'loc-mau-sac', 'loc-quoc-gia-tracking', 'loc-tinh-trang', 'loc-kh', 'loc-tu-ngay', 'loc-den-ngay'];
+const CAC_O_LOC = ['loc-trang-thai', 'loc-phoi', 'loc-ve-file', 'loc-canh-bao', 'loc-xuong', 'loc-uu-tien', 'loc-don-nhieu-ao', 'loc-don-hang-loat', 'loc-loai', 'loc-kich-thuoc', 'loc-hang-van-chuyen', 'loc-mau-sac', 'loc-quoc-gia-tracking', 'loc-tinh-trang', 'loc-kh', 'loc-tu-ngay', 'loc-den-ngay'];
 
 function xoaTatCaLoc() {
   CAC_O_LOC.forEach(id => { document.getElementById(id).value = ''; });
@@ -614,6 +626,8 @@ async function taiDon() {
   if (canhBao) qs.set('canhBao', canhBao);
   if (xuong) qs.set('xuong', xuong);
   if (uuTien) qs.set('uuTien', uuTien);
+  const donNhieuAo = document.getElementById('loc-don-nhieu-ao').value;
+  if (donNhieuAo) qs.set('donNhieuAo', donNhieuAo);
   if (timDonHangLoat) qs.set('timDonHangLoat', timDonHangLoat);
   if (loai) qs.set('loai', loai);
   if (kichThuoc) qs.set('kichThuoc', kichThuoc);
@@ -647,7 +661,7 @@ async function taiDon() {
   const sttKeyHienTai = new Set(list.map(o => o.STT_Key));
   donDaChonSet.forEach(stt => { if (!sttKeyHienTai.has(stt)) donDaChonSet.delete(stt); });
 
-  const coLocNaoDangChon = trangThai || trangThaiPhoi || trangThaiVeFile || canhBao || xuong || uuTien || loai || kichThuoc || mauSac || hangVanChuyen || quocGiaTracking || tinhTrang || kh || tuNgay || denNgay;
+  const coLocNaoDangChon = trangThai || trangThaiPhoi || trangThaiVeFile || canhBao || xuong || uuTien || donNhieuAo || loai || kichThuoc || mauSac || hangVanChuyen || quocGiaTracking || tinhTrang || kh || tuNgay || denNgay;
   if (!coLocNaoDangChon) capNhatCacBoLocDong(list);
   capNhatNhanNutLoc();
 
@@ -702,6 +716,7 @@ function renderDanhSachDon() {
         <div class="meta">${escapeHtml(o.TenKhachHang || '')} · Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgayNgan(o.NGAY_LEN_DON) : '—')} · SL: <strong>${escapeHtml(o.SO_LUONG || '')}</strong></div>
         <div class="badge-row">
           ${o.DonUuTien ? `<span class="badge trang-thai-danger">${icon('star', {size:14})} Ưu tiên</span>` : ''}
+          ${nhanNhomNhieuAo(o.NhomNhieuAo)}
           <span class="badge ${lopTrangThai(o.TRANG_THAI_XUONG)}">${escapeHtml(o.TRANG_THAI_XUONG || '')}</span>
           ${o.TRANG_THAI_XUONG === 'Đang chạy máy' ? `
             <span class="badge trang-thai-info">${icon('users', {size:14})} Đang vận hành: <strong>${escapeHtml(o.NguoiVanHanh || NHAN_NGUOI_VAN_HANH_KHONG_RO)}</strong></span>` : ''}
@@ -1135,11 +1150,13 @@ async function apDungMuaTrackingThuCong() {
   );
   thanhTienDo.xoa();
 
+  const loiKhac = await tachVaBaoDonDaHuy(ketQua.loi); // đơn đã huỷ: hộp đỏ riêng trước
   let thongBao = `Đã mua tracking cho ${ketQua.thanhCong.length}/${soLuong} đơn.`;
+  if (ketQua.loi.length > loiKhac.length) thongBao += `\n\nBỏ qua ${ketQua.loi.length - loiKhac.length} đơn ĐÃ HỦY (không mua tracking).`;
   if (ketQua.daHuy) thongBao += `\n\nĐã HỦY giữa chừng — các đơn còn lại vẫn đang được chọn, bấm lại nếu muốn tiếp tục.`;
-  if (ketQua.loi.length > 0) {
-    thongBao += `\n\nKhông mua được ${ketQua.loi.length} đơn:\n` +
-      ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
+  if (loiKhac.length > 0) {
+    thongBao += `\n\nKhông mua được ${loiKhac.length} đơn:\n` +
+      loiKhac.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
   }
   // Đẩy tracking sang Sheet khách hàng (bổ sung 21/09/2026, theo yêu cầu người dùng) — TÁCH RIÊNG khỏi
   // "Không mua được" ở trên vì tracking THẬT đã mua thành công, chỉ bước đồng bộ ra Sheet khách hàng
@@ -1186,9 +1203,11 @@ async function xuLyInLabel(duongDan, danhSach, idNut, nhanGoc) {
       const goiIn = moHopThoaiInPdf(ketQua.labelBase64);
       if (goiIn) goiIn();
     }
+    const loiKhac = await tachVaBaoDonDaHuy(ketQua.loi); // đơn đã huỷ: hộp đỏ riêng trước
     let thongBao = `Thành công: ${ketQua.thanhCong.length}/${danhSach.length}`;
-    if (ketQua.loi.length > 0) {
-      thongBao += `\n\nLỗi (${ketQua.loi.length}):\n` + ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
+    if (ketQua.loi.length > loiKhac.length) thongBao += `\n\nBỏ qua ${ketQua.loi.length - loiKhac.length} đơn ĐÃ HỦY (không mua tracking).`;
+    if (loiKhac.length > 0) {
+      thongBao += `\n\nLỗi (${loiKhac.length}):\n` + loiKhac.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
     }
     alert(thongBao);
     if (ketQua.thanhCong.length > 0) await taiDon();
@@ -1236,7 +1255,7 @@ function layBoLocDangDung() {
   const cacTruong = {
     tuNgay: doc('loc-tu-ngay'), denNgay: doc('loc-den-ngay'),
     trangThai: doc('loc-trang-thai'), trangThaiPhoi: doc('loc-phoi'), trangThaiVeFile: doc('loc-ve-file'),
-    canhBao: doc('loc-canh-bao'), xuong: doc('loc-xuong'), uuTien: doc('loc-uu-tien'),
+    canhBao: doc('loc-canh-bao'), xuong: doc('loc-xuong'), uuTien: doc('loc-uu-tien'), donNhieuAo: doc('loc-don-nhieu-ao'),
     timDonHangLoat: doc('loc-don-hang-loat'), loai: doc('loc-loai'), kichThuoc: doc('loc-kich-thuoc'),
     mauSac: doc('loc-mau-sac'), hangVanChuyen: doc('loc-hang-van-chuyen'),
     quocGiaTracking: doc('loc-quoc-gia-tracking'), tinhTrang: doc('loc-tinh-trang'), tuKhoa: doc('loc-kh'),

@@ -16,6 +16,15 @@ async function ghiLog({ nguoiDung, vaiTro, hanhDong, sttKey = '', chiTiet = '' }
   });
 }
 
+// Như ghiLog() cho cả danh sách, 1 giao dịch SQLite (dùng khi hệ thống ghi hàng loạt 1 lượt).
+function ghiLogNhieu(dsLog) {
+  const thoiGian = thoiGianVNISOString();
+  nhatKyDbService.ghiNhieuLichSuHoatDong(dsLog.map(({ nguoiDung, vaiTro, hanhDong, sttKey = '', chiTiet = '' }) => ({
+    ThoiGian: thoiGian, NguoiDung: nguoiDung, VaiTro: vaiTro, HanhDong: hanhDong, STT_Key: sttKey,
+    ChiTiet: typeof chiTiet === 'string' ? chiTiet : JSON.stringify(chiTiet),
+  })));
+}
+
 // Lấy lịch sử của 1 đơn hàng, sắp theo thời gian tăng dần (dùng cho timeline chi tiết đơn).
 async function layLichSuTheoDon(sttKey) {
   const rows = nhatKyDbService.layTatCaLichSuHoatDong();
@@ -250,6 +259,6 @@ function tinhChiTieuCongViec(hoatDong, slTheoStt) {
 }
 
 module.exports = {
-  ghiLog, layLichSuTheoDon, ghiNhatKyQuetHangLoat, layHoatDongGanDay, layLichSuChuyenSangTrangThai,
+  ghiLog, ghiLogNhieu, layLichSuTheoDon, ghiNhatKyQuetHangLoat, layHoatDongGanDay, layLichSuChuyenSangTrangThai,
   layHoatDongCuaToi, tinhChiTieuCongViec, trongKhoangThoiGian,
 };

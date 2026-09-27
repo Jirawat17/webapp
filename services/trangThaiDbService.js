@@ -38,6 +38,13 @@ const CAC_COT = [
   // của pipeline cũng có node_status="000") — phải xét đúng cặp với order_node.
   'MA_NODE_TRACKING', 'MA_TRANG_THAI_NODE_TRACKING', 'KHACH_HANG',
   'XUONG', 'NguoiCapNhatCuoi', 'ThoiGianCapNhatCuoi',
+  // TRACKING_CHUNG_CUA (bổ sung 26/09/2026, DonNhieuAo — xem services/donNhieuAoService.js): STT_Key của
+  // đơn ".1" đã mua tracking, khi TRACKING_ID của đơn này là bản SAO từ đơn đó. Rỗng = tracking của chính đơn.
+  'TRACKING_CHUNG_CUA',
+  // TAI_KHOAN_GKE (bổ sung 27/09/2026) — id tài khoản GKE đã TẠO vận đơn cho đơn này (xem
+  // gkeService.js#layCauHinhGkeChoDon) — in lại tem/tra trạng thái luôn dùng đúng tài khoản đó, kể cả khi
+  // đơn đổi Xưởng sau khi mua. Rỗng = chưa tạo vận đơn (hoặc tạo trước khi có cột này).
+  'TAI_KHOAN_GKE',
   // CanhBaoDaGui: không nằm trong danh sách 31 cột người dùng liệt kê (có thể chỉ là sót khi liệt kê) —
   // nhưng rà code xác nhận đây CŨNG là cột app tự ghi (services/canhBaoJob.js, cờ chống spam Telegram),
   // không thuộc RAW/A:AM lẫn AN:BR người dùng mô tả. Xếp vào đây theo đúng tiêu chí "app tự ghi" đã
@@ -167,6 +174,9 @@ function ghiDe(sttKey, updates) {
   layPreparedGhiDe(cot).run(key, ...giaTri);
 }
 
+// [[sttKey, updates], ...] trong 1 giao dịch — dùng khi hệ thống tự ghi hàng loạt (orderService.js#tuGanXuongTheoTeam).
+const ghiDeNhieu = db.transaction(ds => ds.forEach(([sttKey, updates]) => ghiDe(sttKey, updates)));
+
 // Đếm/đổi tên hàng loạt theo XUONG (bổ sung 24/09/2026, theo yêu cầu người dùng — CRUD Xưởng qua
 // Settings, xem services/caiDatDbService.js#layDanhSachXuong/routes/orders.js). demTheoXuong() dùng để
 // CHẶN xoá 1 Xưởng còn đơn đang gán (an toàn hơn xoá liều); doiTenXuongHangLoat() cascade đổi tên để
@@ -178,4 +188,4 @@ function doiTenXuongHangLoat(tenCu, tenMoi) {
   db.prepare(`UPDATE trang_thai_don SET XUONG = ? WHERE XUONG = ?`).run(tenMoi, tenCu);
 }
 
-module.exports = { CAC_COT, RONG_MAC_DINH, layTheoKey, layTatCa, ghiDe, demTheoXuong, doiTenXuongHangLoat };
+module.exports = { CAC_COT, RONG_MAC_DINH, layTheoKey, layTatCa, ghiDe, ghiDeNhieu, demTheoXuong, doiTenXuongHangLoat };

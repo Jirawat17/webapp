@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tracking — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=104">
+<link rel="stylesheet" href="/css/style.css?v=105">
 <script src="/js/theme.js?v=104"></script>
 <style>
 /* Popup báo "vừa tự động mua tracking" — trang này tự chứa, chưa có class modal/popup dùng chung nào
@@ -151,7 +151,7 @@
 
   <!-- Cấu hình GKE ĐÃ CHUYỂN sang Settings (bổ sung 23/09/2026, theo yêu cầu người dùng — hạn chế
        người không phải superadmin đổi được thông tin này, kể cả username/password API GKE thật). Xem
-       public/settings.html + routes/tracking.js (GET/POST /cau-hinh-gke giờ CHỈ superadmin). -->
+       public/settings.html + routes/tracking.js (tài khoản GKE theo Xưởng, /tai-khoan-gke — CHỈ superadmin). -->
 
   <h3 style="margin-top:var(--space-5)">Danh sách đơn AUTO_TRACKING</h3>
   <div id="bang-danh-sach">Đang tải...</div>
@@ -170,7 +170,7 @@
 </div>
 
 <script src="/js/icons.js?v=104"></script>
-<script src="/js/api.js?v=104"></script>
+<script src="/js/api.js?v=105"></script>
 <script>
 // Nhãn + class hiển thị cho từng trạng thái trả về từ services/trackingAutoService.js
 // (layDanhSachDonAutoTracking) — xem docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md.
@@ -180,6 +180,14 @@ const NHAN_TRANG_THAI = {
   DEN_HAN_CHO_XU_LY: { nhan: 'Đến hạn, chờ xử lý', lop: 'den-han' },
   DANG_CHO: { nhan: 'Đang chờ đủ giờ', lop: 'dang-cho' },
   THIEU_THOI_GIAN_IN_MA: { nhan: 'Thiếu THOI_GIAN_IN_MA', lop: 'thieu-du-lieu' },
+  // DonNhieuAo (bổ sung 26/09/2026): đơn con chưa có tracking — chờ đơn ".1" mua rồi tự gán.
+  CHO_DON_MUA_NHOM: { nhan: 'Chờ đơn .1 của nhóm mua', lop: 'dang-cho' },
+  LOI_NHOM: { nhan: 'Lỗi dữ liệu DonNhieuAo', lop: 'thieu-du-lieu' },
+  // Tài khoản GKE theo Xưởng (bổ sung 27/09/2026): Xưởng của đơn chưa gán tài khoản / đơn chưa gán Xưởng.
+  THIEU_TAI_KHOAN_GKE: { nhan: 'Chưa có tài khoản GKE cho Xưởng', lop: 'thieu-du-lieu' },
+  // Chỉ mua tracking GKE cho đơn giao tới US/UK (bổ sung 27/09/2026, xét cột DIA_CHI_NUOC).
+  KHONG_THUOC_US_UK: { nhan: 'Không thuộc US/UK — không mua GKE', lop: 'thieu-du-lieu' },
+  DA_HUY: { nhan: 'Đơn đã huỷ — không mua', lop: 'thieu-du-lieu' },
 };
 
 const KHOA_LAN_XEM_CUOI = 'trackingLanXemCuoi';
@@ -463,9 +471,9 @@ async function taiDanhSach() {
               <td>${escapeHtml(d.hangVanChuyen || '—')}</td>
               <td>${d.thoiGianInMa ? dinhDangNgayGioNganAnToan(d.thoiGianInMa) : '—'}</td>
               <td style="display:flex;gap:6px;flex-wrap:wrap">
-                ${d.trangThai === 'DA_MUA' ? '' : `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="muaThuCongTuBang(this, '${escapeJsChuoi(d.sttKey)}')">Mua ngay</button>`}
+                ${d.trangThai === 'DA_MUA' ? '' : `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="muaThuCongTuBang(this, '${escapeJsChuoi(d.sttKey)}', '${d.trangThai}')">Mua ngay</button>`}
                 ${d.trangThai === 'DA_MUA' ? `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="apDungInLabelTuBang(this, '${escapeJsChuoi(d.sttKey)}')">IN LABEL</button>` : ''}
-                <button type="button" class="btn-hanh-dong" style="padding:6px 10px;font-size:0.82rem" onclick="apDungMuaVaInLabelTuBang(this, '${escapeJsChuoi(d.sttKey)}')">MUA TRACKING và IN LABEL</button>
+                <button type="button" class="btn-hanh-dong" style="padding:6px 10px;font-size:0.82rem" onclick="apDungMuaVaInLabelTuBang(this, '${escapeJsChuoi(d.sttKey)}', '${d.trangThai}')">MUA TRACKING và IN LABEL</button>
               </td>
             </tr>`;
           }).join('')}
@@ -478,7 +486,9 @@ async function taiDanhSach() {
 
 // Nút "Mua ngay" — mua tracking THỦ CÔNG cho 1 đơn, bỏ qua bộ đếm "x phút" (bổ sung 09/09/2026, theo
 // yêu cầu người dùng). Dùng CHUNG API /tracking/mua-thu-cong với nút tương tự ở order.html.
-async function muaThuCongTuBang(btn, sttKey) {
+// trangThai = mã trạng thái của hàng (layDanhSachDonAutoTracking) — đơn đã huỷ báo đỏ ngay, không hỏi xác nhận.
+async function muaThuCongTuBang(btn, sttKey, trangThai) {
+  if (trangThai === 'DA_HUY') return hienThongBaoDonDaHuy([sttKey]);
   if (!confirm(`Mua tracking GKE thủ công cho đơn ${sttKey} ngay bây giờ? Đây là thao tác tạo vận đơn THẬT, có thể phát sinh chi phí.`)) return;
 
   const nhanGoc = btn.innerHTML;
@@ -488,7 +498,8 @@ async function muaThuCongTuBang(btn, sttKey) {
   try {
     const ketQua = await apiFetch('/tracking/mua-thu-cong', { method: 'POST', body: JSON.stringify({ sttKeys: [sttKey] }) });
     if (ketQua.loi && ketQua.loi.length > 0) {
-      alert('Không mua được tracking: ' + ketQua.loi[0].lyDo);
+      const loiKhac = await tachVaBaoDonDaHuy(ketQua.loi);
+      if (loiKhac.length) alert('Không mua được tracking: ' + loiKhac[0].lyDo);
       btn.disabled = false;
       btn.innerHTML = nhanGoc;
       return;
@@ -516,7 +527,8 @@ async function apDungInLabelTuBang(btn, sttKey) {
   await xuLyInLabelTuBang(btn, sttKey, '/tracking/in-label');
 }
 
-async function apDungMuaVaInLabelTuBang(btn, sttKey) {
+async function apDungMuaVaInLabelTuBang(btn, sttKey, trangThai) {
+  if (trangThai === 'DA_HUY') return hienThongBaoDonDaHuy([sttKey]);
   if (!confirm(`Mua tracking (nếu chưa có) và in label cho đơn ${sttKey}? Có thể phát sinh phí thật với đơn chưa có tracking.`)) return;
   await xuLyInLabelTuBang(btn, sttKey, '/tracking/mua-va-in-label');
 }
@@ -529,7 +541,8 @@ async function xuLyInLabelTuBang(btn, sttKey, duongDan) {
   try {
     const ketQua = await apiFetch(duongDan, { method: 'POST', body: JSON.stringify({ sttKeys: [sttKey] }) });
     if (ketQua.loi && ketQua.loi.length > 0) {
-      alert('Lỗi: ' + ketQua.loi[0].lyDo);
+      const loiKhac = await tachVaBaoDonDaHuy(ketQua.loi);
+      if (loiKhac.length) alert('Lỗi: ' + loiKhac[0].lyDo);
       btn.disabled = false;
       btn.innerHTML = nhanGoc;
       return;

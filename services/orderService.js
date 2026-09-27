@@ -5,7 +5,11 @@ const taiSanService = require('./taiSanService');
 const { chiSoTinhTrang, TINH_TRANG_VALUES, TRANG_THAI_PHOI_VALUES, TRANG_THAI_VE_FILE_VALUES } = require('../data/pipelineTinhTrang');
 const { thoiGianVNISOString } = require('./dateUtils');
 const { laAdmin, laSuperAdmin } = require('../middleware/auth');
-const { layDanhSachXuong } = require('./caiDatDbService');
+const { layDanhSachXuong, layTeamXuongMacDinh } = require('./caiDatDbService');
+const donNhieuAoService = require('./donNhieuAoService');
+const taiKhoanService = require('./taiKhoanService');
+const TRANG_THAI_HUY = donNhieuAoService.TRANG_THAI_HUY;
+const TRANG_THAI_DA_GUI_DI = ['ĐÃ DÁN TEM', 'DELIVERED_Đã giao đến khách'];
 
 const TAB = 'Don_Hang_ALL';
 const KEY_COL = 'STT_Key';
@@ -41,7 +45,45 @@ async function getAll({ fresh = false, ttlMs = 10000 } = {}) {
     // services/xoaDuLieuDonService.js) — dòng RAW gốc trên Sheets vẫn còn (không xoá được, xem lý do
     // trong file trên) nhưng với TOÀN BỘ app (danh sách, dashboard, báo cáo...) coi như đã biến mất.
     .filter(r => r.DA_XOA !== 'TRUE');
+  tuGanXuongTheoTeam(rowsGop);
   return { headers, rows: rowsGop };
+}
+
+// Tự gán Xưởng theo Team (bổ sung 27/09/2026, theo yêu cầu người dùng): MỌI đơn đang "chưa gán" (XUONG
+// rỗng) thuộc Team đã cấu hình ở Settings (caiDatDbService.js#layTeamXuongMacDinh) được ghi Xưởng đó vào
+// SQLite ngay lúc đọc — đơn mới về từ Sheet có Xưởng ở lần đọc kế tiếp. Chỉ đụng đơn đang trống: đổi cấu
+// hình KHÔNG chuyển đơn đã gán (đã xác nhận với người dùng). Team chưa cấu hình -> giữ nguyên "chưa gán".
+// Đồng bộ hoàn toàn (không await) -> 2 lượt getAll() chạy song song không gán/ghi log trùng.
+function tuGanXuongTheoTeam(rows) {
+  const banDo = layTeamXuongMacDinh();
+  if (Object.keys(banDo).length === 0) return;
+  const donCanGan = [];
+  const canGan = new Map(); // sttKey -> { xuong, team } — Sheet lỡ trùng STT_Key vẫn chỉ ghi/log 1 lần
+  for (const r of rows) {
+    if (r.XUONG) continue;
+    const p = donNhieuAoService.phanTichStt(r[KEY_COL]);
+    if (!p || !banDo[p.team]) continue;
+    donCanGan.push([r, banDo[p.team]]);
+    canGan.set(String(r[KEY_COL]).trim(), { xuong: banDo[p.team], team: p.team });
+  }
+  if (canGan.size === 0) return;
+  // Lỗi ghi ở đây KHÔNG được làm hỏng việc đọc đơn của cả app — đơn giữ "chưa gán", lượt đọc sau thử lại.
+  try {
+    trangThaiDbService.ghiDeNhieu([...canGan].map(([sttKey, { xuong }]) => [sttKey, { XUONG: xuong }]));
+  } catch (err) {
+    console.error('[Orders] Lỗi tự gán Xưởng theo Team:', err.message);
+    return;
+  }
+  donCanGan.forEach(([r, xuong]) => { r.XUONG = xuong; });
+  try {
+    require('./logService').ghiLogNhieu([...canGan].map(([sttKey, { xuong, team }]) => ({
+      nguoiDung: 'Hệ thống', vaiTro: '', hanhDong: 'GAN_XUONG', sttKey,
+      chiTiet: { tuXuong: '', sangXuong: xuong, lyDo: `Tự gán theo Team ${team}` },
+    })));
+  } catch (err) {
+    console.error('[Orders] Lỗi ghi log tự gán Xưởng theo Team:', err.message);
+  }
+  console.log(`[Orders] Tự gán Xưởng theo Team cho ${canGan.size} đơn`);
 }
 
 async function getByKey(sttKey, opts) {
@@ -335,6 +377,21 @@ async function capNhatThat(sttKey, updates, user, tuyChon) {
     updatesDaTinh.THOI_GIAN_IN_MA = thoiGianVNISOString();
   }
 
+  // DonNhieuAo — huỷ 1 đơn = huỷ CẢ nhóm (bổ sung 26/09/2026, theo yêu cầu người dùng). Chặn nếu trong
+  // nhóm đã có đơn gửi đi (ĐÃ DÁN TEM/DELIVERED). Nút superadmin (boQua) KHÔNG áp dụng: đổi đúng các đơn
+  // được nhập, không chặn, không kéo theo. getAll() đọc cache Sheets nhưng cột trạng thái luôn mới (SQLite).
+  const donHuyTheoNhom = [];
+  if (!boQua && updatesDaTinh.TRANG_THAI_XUONG === TRANG_THAI_HUY && row.TRANG_THAI_XUONG !== TRANG_THAI_HUY) {
+    const nhom = donNhieuAoService.layNhomCuaDon(sttKey, (await getAll()).rows);
+    const cacDonKhac = nhom ? nhom.thanhVien.filter(r => r.STT_Key !== sttKey) : [];
+    const daGui = cacDonKhac.filter(r => TRANG_THAI_DA_GUI_DI.includes(r.TRANG_THAI_XUONG));
+    if (daGui.length) {
+      throw new Error(`Không huỷ được: đơn thuộc nhóm DonNhieuAo ${nhom.goc}, huỷ 1 đơn là huỷ cả nhóm, nhưng đã có đơn gửi đi: ${daGui.map(r => `${r.STT_Key} (${r.TRANG_THAI_XUONG})`).join(', ')}. Superadmin dùng nút CHUYỂN TRẠNG THÁI THỦ CÔNG SUPERADMIN nếu vẫn cần huỷ.`);
+    }
+    cacDonKhac.filter(r => r.TRANG_THAI_XUONG !== TRANG_THAI_HUY)
+      .forEach(r => donHuyTheoNhom.push({ sttKey: r.STT_Key, tu: r.TRANG_THAI_XUONG, goc: nhom.goc }));
+  }
+
   if (!boQua) kiemTraTinhHopLy(row, updatesDaTinh); // kiểm tra SAU khi đã tính tự động, để không báo nhầm khi chính việc tự động hoá làm cho tổ hợp trở nên hợp lệ
 
   // Ghi theo STT_Key (khoá), không phải số dòng vật lý — xem trangThaiDbService.js. Không còn khái
@@ -342,6 +399,20 @@ async function capNhatThat(sttKey, updates, user, tuyChon) {
   // xem docs/superpowers/specs/2026-09-18-chuyen-cot-app-ghi-sang-sqlite-design.md) — SQLite ghi đúng
   // đơn dù Don_Hang_ALL xáo trộn dòng bất cứ lúc nào trước/trong/sau khi hàm này chạy.
   trangThaiDbService.ghiDe(sttKey, updatesDaTinh);
+
+  // Ghi THẲNG SQLite (không qua update()) cho các đơn cùng nhóm — gọi update() lồng ở đây có thể TREO nếu
+  // 2 đơn cùng nhóm được huỷ song song (mỗi lượt đợi lượt kia trong hàng đợi theo đơn). Huỷ không có tác
+  // dụng phụ nào khác cần update() (không đụng kho phôi/người chạy máy...).
+  if (donHuyTheoNhom.length) {
+    const { ghiLog } = require('./logService');
+    for (const d of donHuyTheoNhom) {
+      trangThaiDbService.ghiDe(d.sttKey, { TRANG_THAI_XUONG: TRANG_THAI_HUY, NguoiCapNhatCuoi: (user && user.ten) || '', ThoiGianCapNhatCuoi: new Date().toISOString() });
+      ghiLog({
+        nguoiDung: (user && user.ten) || '', vaiTro: (user && user.vaiTro) || '', hanhDong: 'CHUYEN_TRANG_THAI_HANG_LOAT', sttKey: d.sttKey,
+        chiTiet: { cot: 'TRANG_THAI_XUONG', tu: d.tu, sang: TRANG_THAI_HUY, lyDo: `Huỷ theo nhóm DonNhieuAo ${d.goc} (do huỷ ${sttKey})` },
+      }).catch(err => console.error('[Orders] Lỗi ghi log huỷ theo nhóm:', err.message));
+    }
+  }
 
   // Trừ kho phôi (tab Ton_Kho_Phoi) khi đơn VỪA chuyển sang "Đã lấy phôi" — không hoàn kho khi chuyển
   // ngược lại (xem taiSanService.truKhoTheoDon). Chạy SAU khi ghi Sheet đơn hàng đã thành công; lỗi ở
@@ -384,7 +455,7 @@ async function capNhatThat(sttKey, updates, user, tuyChon) {
     }
   }
 
-  return { ...row, ...updatesDaTinh };
+  return { ...row, ...updatesDaTinh, _huyTheoNhom: donHuyTheoNhom.map(d => d.sttKey) };
 }
 
 // Đơn chỉ lưu MA_KHACH_HANG (mã) — gắn thêm tên khách hàng thật để hiển thị, không sửa dữ liệu gốc
@@ -452,15 +523,18 @@ function filterForRole(rows, user) {
 // nguyên `layDanhSachXuong` làm export CHÍNH của module này để mọi nơi gọi orderService.layDanhSachXuong()
 // luôn thấy đúng danh sách MỚI NHẤT (đổi tại Settings có hiệu lực ngay, không cần khởi động lại server).
 
+// Nhân viên thuộc được nhiều Xưởng (27/09/2026) — xem đơn của MỌI Xưởng mình thuộc, đọc Xưởng hiện tại
+// từ DB mỗi lần (taiKhoanService.js#cacXuongCuaNguoiDung).
 function locTheoXuong(rows, user) {
   if (laSuperAdmin(user.vaiTro)) return rows;
-  if (!user.xuong) return [];
-  return rows.filter(r => r.XUONG === user.xuong);
+  const cacXuong = taiKhoanService.cacXuongCuaNguoiDung(user);
+  if (cacXuong.length === 0) return [];
+  return rows.filter(r => r.XUONG && cacXuong.includes(r.XUONG));
 }
 
 function coQuyenTheoXuong(user, row) {
   if (laSuperAdmin(user.vaiTro)) return true;
-  return !!user.xuong && !!row.XUONG && user.xuong === row.XUONG;
+  return !!row.XUONG && taiKhoanService.cacXuongCuaNguoiDung(user).includes(row.XUONG);
 }
 
 // ẨN thông tin Xưởng của ĐƠN HÀNG với riêng vai trò admin (bổ sung 18/09/2026, theo yêu cầu người

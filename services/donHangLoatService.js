@@ -100,7 +100,8 @@ async function layDanhSachNhom(user) {
   // ẩn bớt đơn, xem mục 2.1 spec — về lý thuyết không nên xảy ra vì đã chặn khác Xưởng lúc tạo/thêm,
   // đây là phòng hờ dữ liệu bị đổi Xưởng sau đó qua routes/orders.js POST /gan-xuong).
   if (!laAdmin(user.vaiTro)) {
-    nhoms = user.xuong ? nhoms.filter(n => n.donHang.every(d => d.XUONG === user.xuong)) : [];
+    const cacXuong = require('./taiKhoanService').cacXuongCuaNguoiDung(user);
+    nhoms = nhoms.filter(n => n.donHang.every(d => d.XUONG && cacXuong.includes(d.XUONG)));
   }
   return nhoms.sort((a, b) => a.maDonHangLoat.localeCompare(b.maDonHangLoat));
 }

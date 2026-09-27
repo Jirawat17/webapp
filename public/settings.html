@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Thiết lập — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=104">
+<link rel="stylesheet" href="/css/style.css?v=105">
 <script src="/js/theme.js?v=104"></script>
 <style>
 /* Cấu hình GKE — mượn nguyên bố cục lưới đã có ở tracking.html trước khi chuyển sang đây (bổ sung
@@ -13,6 +13,9 @@
 .st-cau-hinh-gke { max-width: 1400px; }
 .st-luoi-gke { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: var(--space-3); }
 .st-ghi-chu-truong { font-size: 0.78rem; color: var(--color-text-muted); margin: 4px 0 0; }
+/* Thẻ 1 tài khoản GKE (bổ sung 27/09/2026) — .bao-cao-form mặc định flex ngang, xếp dọc lại cho thẻ. */
+.st-the-tk-gke { flex-direction: column; align-items: stretch; }
+.st-the-tk-gke > div:last-child { align-self: flex-start; }
 /* Quản lý Xưởng (bổ sung 24/09/2026) — mỗi Xưởng 1 dòng: tên + màu + đổi tên + xoá. */
 .st-danh-sach-xuong { display: flex; flex-direction: column; gap: var(--space-2); }
 .st-dong-xuong {
@@ -106,6 +109,19 @@
   </div>
   <p id="thong-bao-mau-xuong" style="display:none"></p>
 
+  <!-- Team -> Xưởng mặc định (bổ sung 27/09/2026, theo yêu cầu người dùng) — API routes/orders.js /team-xuong. -->
+  <h3 style="margin-top:var(--space-6)">Xưởng mặc định theo Team</h3>
+  <p style="color:var(--color-text-muted)">Team = phần chữ cái trong mã đơn (9TRA471 → TRA). Mọi đơn đang <em>Chưa gán</em> của Team có cấu hình sẽ tự vào Xưởng đó — cả đơn đang có lẫn đơn mới về. Đổi cấu hình KHÔNG chuyển các đơn đã gán. Team để "Không tự gán" thì đơn vẫn Chưa gán như cũ.</p>
+  <div class="st-danh-sach-xuong" id="khoi-team-xuong"></div>
+  <div class="inline-form" style="margin-top:var(--space-3)">
+    <div class="truong">
+      <label for="team-moi">Team chưa có đơn nào</label>
+      <input type="text" id="team-moi" placeholder="VD: TRA" style="text-transform:uppercase">
+    </div>
+    <button type="button" class="btn-hanh-dong phu" id="btn-them-team">Thêm Team</button>
+  </div>
+  <p id="thong-bao-team-xuong" style="display:none"></p>
+
   <!-- Cấu hình GKE — CHUYỂN từ menu Tracking sang đây (bổ sung 23/09/2026, theo yêu cầu người dùng —
        hạn chế người không phải superadmin đổi được, gồm cả username/password API GKE THẬT + thông tin
        khai báo hải quan, có thể phát sinh chi phí thật nếu cấu hình sai). Trước đây mở cho admin/
@@ -113,29 +129,14 @@
        Settings này. Gộp vào <details> (mặc định đóng) — giữ đúng hành vi ẩn-mặc-định tracking.html
        từng có, dùng lại pattern <details> như Themes ở trên, không cần JS toggle riêng nữa. -->
   <details style="margin-top:var(--space-6)">
-    <summary class="btn-hanh-dong phu">Cấu hình GKE</summary>
-    <p style="color:var(--color-text-muted)">Tài khoản API + thông tin người gửi/khai báo hải quan dùng để tự động mua tracking/in label qua GKE Logistics (menu Tracking). Đổi sai có thể khiến việc mua tracking thất bại hoặc sai thông tin trên vận đơn thật.</p>
-    <div class="bao-cao-form st-cau-hinh-gke">
-      <div class="st-luoi-gke">
-        <div class="truong"><label for="gke-username">Username</label><input type="text" id="gke-username" autocomplete="off"></div>
-        <div class="truong"><label for="gke-password">Password</label><input type="password" id="gke-password" autocomplete="new-password"></div>
-        <div class="truong"><label for="gke-service-code">Mã dịch vụ (service_code)</label><input type="text" id="gke-service-code"></div>
-        <div class="truong"><label for="gke-customs-currency">Đơn vị tiền tệ khai báo</label><input type="text" id="gke-customs-currency" placeholder="USD" style="text-transform:uppercase"></div>
-        <div class="truong"><label for="gke-customs-item-name">Tên hàng khai báo</label><input type="text" id="gke-customs-item-name" placeholder="Embroidered garment"></div>
-        <div class="truong"><label for="gke-customs-hs-code">Mã HS</label><input type="text" id="gke-customs-hs-code"></div>
-        <div class="truong"><label for="gke-customs-declared-price">Giá trị khai báo (mỗi kiện)</label><input type="number" id="gke-customs-declared-price" min="0" step="0.01"></div>
-        <div class="truong"><label for="gke-shipper-name">Tên xưởng</label><input type="text" id="gke-shipper-name" placeholder="Maxthread VN"></div>
-        <div class="truong"><label for="gke-shipper-phone">Số điện thoại</label><input type="text" id="gke-shipper-phone"></div>
-        <div class="truong"><label for="gke-shipper-address">Địa chỉ</label><input type="text" id="gke-shipper-address"></div>
-        <div class="truong"><label for="gke-shipper-city">Thành phố</label><input type="text" id="gke-shipper-city"></div>
-        <div class="truong"><label for="gke-shipper-province">Tỉnh/Bang</label><input type="text" id="gke-shipper-province"></div>
-        <div class="truong"><label for="gke-shipper-postcode">Mã bưu điện</label><input type="text" id="gke-shipper-postcode"></div>
-        <div class="truong"><label for="gke-can-nang-moi-ao">Cân nặng mỗi áo (kg)</label><input type="number" id="gke-can-nang-moi-ao" min="0" step="0.01"></div>
-      </div>
-      <p class="st-ghi-chu-truong">Cân nặng cả kiện = TRONG_LUONG (nếu đơn có) × Số lượng; đơn thiếu TRONG_LUONG thì dùng giá trị "Cân nặng mỗi áo" ở trên thay thế.</p>
-
-      <button type="button" class="btn-hanh-dong" id="btn-luu-cau-hinh-gke" style="justify-self:start">Lưu cấu hình GKE</button>
-    </div>
+    <summary class="btn-hanh-dong phu">Tài khoản GKE</summary>
+    <p style="color:var(--color-text-muted)">Mỗi Xưởng dùng 1 tài khoản GKE riêng để mua tracking/in label. Đơn của Xưởng chưa được gán tài khoản sẽ KHÔNG mua được tracking (hệ thống không tự dùng tài khoản của Xưởng khác). Đơn đã mua tracking luôn in lại tem/tra trạng thái bằng đúng tài khoản đã mua.</p>
+    <h3>Gán tài khoản cho Xưởng</h3>
+    <div class="st-danh-sach-xuong" id="gke-gan-xuong"></div>
+    <h3 style="margin-top:var(--space-5)">Danh sách tài khoản</h3>
+    <div id="gke-danh-sach-tk" style="display:flex;flex-direction:column;gap:var(--space-4)"></div>
+    <button type="button" class="btn-hanh-dong phu" id="btn-them-tk-gke" style="margin-top:var(--space-3)">+ Thêm tài khoản GKE</button>
+    <p class="st-ghi-chu-truong">Cân nặng cả kiện = TRONG_LUONG (nếu đơn có) × Số lượng; đơn thiếu TRONG_LUONG thì dùng "Cân nặng mỗi áo" của tài khoản thay thế.</p>
     <p id="thong-bao-gke" style="display:none"></p>
   </details>
 
@@ -159,7 +160,7 @@
 </div>
 
 <script src="/js/icons.js?v=104"></script>
-<script src="/js/api.js?v=104"></script>
+<script src="/js/api.js?v=105"></script>
 <script>
 (async () => {
   const user = await requireLoginOrRedirect();
@@ -175,13 +176,13 @@
   renderCongTacCheDoToi();
   await taiNguongCanhBao();
   await taiCauHinhNenAnh();
-  await taiMauXuong();
-  await taiCauHinhGke();
+  await taiMauXuong(); await taiTaiKhoanGke(); await taiTeamXuong();
   document.getElementById('btn-luu-canh-bao').onclick = luuNguongCanhBao;
   document.getElementById('btn-luu-nen-anh').onclick = luuCauHinhNenAnh;
-  document.getElementById('btn-luu-cau-hinh-gke').onclick = luuCauHinhGke;
+  document.getElementById('btn-them-tk-gke').onclick = themTheTaiKhoanGke;
   document.getElementById('btn-khoi-phuc-du-lieu-don').onclick = khoiPhucDuLieuDon;
   document.getElementById('btn-them-xuong').onclick = themXuongMoi;
+  document.getElementById('btn-them-team').onclick = themTeamMoi;
 })();
 
 // "Khôi phục đơn đã xoá dữ liệu" (bổ sung 24/09/2026, theo yêu cầu người dùng) — gọi
@@ -289,7 +290,7 @@ async function themXuongMoi() {
   try {
     await apiFetch('/orders/xuong', { method: 'POST', body: JSON.stringify({ ten }) });
     o.value = '';
-    await taiMauXuong();
+    await taiMauXuong(); await taiTaiKhoanGke(); await taiTeamXuong();
   } catch (e) { alert(e.message); }
 }
 
@@ -301,7 +302,7 @@ async function doiTenXuongUi(tenCu) {
   if (!tenMoi || tenMoi === tenCu) return;
   try {
     await apiFetch('/orders/xuong/' + encodeURIComponent(tenCu), { method: 'PUT', body: JSON.stringify({ tenMoi }) });
-    await taiMauXuong();
+    await taiMauXuong(); await taiTaiKhoanGke(); await taiTeamXuong();
   } catch (e) { alert(e.message); }
 }
 
@@ -309,74 +310,149 @@ async function xoaXuongUi(ten) {
   if (!confirm(`Xoá Xưởng "${ten}"? Chỉ xoá được nếu không còn đơn/nhân viên nào đang gán Xưởng này.`)) return;
   try {
     await apiFetch('/orders/xuong/' + encodeURIComponent(ten), { method: 'DELETE' });
-    await taiMauXuong();
+    await taiMauXuong(); await taiTaiKhoanGke(); await taiTeamXuong();
   } catch (e) { alert(e.message); }
 }
 
-// Ánh xạ field cấu hình GKE (khớp đúng tên trả về từ services/gkeService.js#layCauHinhGke) sang id
-// input trên trang — dùng chung cho cả tải và lưu để không lặp danh sách 2 lần. CHUYỂN nguyên từ
-// tracking.html sang đây (bổ sung 23/09/2026) — endpoint /tracking/cau-hinh-gke giữ nguyên (thuộc
-// domain "tracking" dù sửa ở Settings, cùng cách /orders/mau-xuong ở trên vẫn thuộc domain "orders").
-const TRUONG_CAU_HINH_GKE = [
-  ['username', 'gke-username'], ['password', 'gke-password'],
-  ['serviceCode', 'gke-service-code'],
-  ['customsCurrency', 'gke-customs-currency'], ['customsItemName', 'gke-customs-item-name'],
-  ['customsHsCode', 'gke-customs-hs-code'], ['customsDeclaredPrice', 'gke-customs-declared-price'],
-  ['shipperName', 'gke-shipper-name'], ['shipperPhone', 'gke-shipper-phone'],
-  ['shipperAddress', 'gke-shipper-address'], ['shipperCity', 'gke-shipper-city'],
-  ['shipperProvince', 'gke-shipper-province'], ['shipperPostcode', 'gke-shipper-postcode'],
-  ['canNangMoiAoKg', 'gke-can-nang-moi-ao'],
-];
-
-async function taiCauHinhGke() {
-  try {
-    const cauHinh = await apiFetch('/tracking/cau-hinh-gke');
-    TRUONG_CAU_HINH_GKE.forEach(([khoa, id]) => {
-      document.getElementById(id).value = cauHinh[khoa] ?? '';
-    });
-  } catch (e) {
-    const thongBao = document.getElementById('thong-bao-gke');
-    thongBao.style.display = 'block';
-    thongBao.style.color = 'var(--color-primary)';
-    thongBao.textContent = 'Không tải được cấu hình GKE: ' + e.message;
+// Team -> Xưởng mặc định (bổ sung 27/09/2026, theo yêu cầu người dùng). Danh sách = Team đang có trong
+// đơn hàng + Team đã cấu hình + Team vừa thêm tay (chưa lưu cho tới khi chọn Xưởng).
+const teamThemTay = new Set();
+async function taiTeamXuong() {
+  let kq;
+  try { kq = await apiFetch('/orders/team-xuong'); } catch (e) {
+    thongBaoGke('Không tải được cấu hình Team: ' + e.message, true, 'thong-bao-team-xuong');
+    return;
   }
+  const teams = [...new Set([...Object.keys(kq.demTeam), ...Object.keys(kq.banDo), ...teamThemTay])].sort();
+  document.getElementById('khoi-team-xuong').innerHTML = teams.length ? teams.map(t => {
+    const d = kq.demTeam[t] || { tong: 0, chuaGan: 0 };
+    return `
+    <div class="st-dong-xuong">
+      <span class="ten-xuong">${escapeHtml(t)} <span class="st-ghi-chu-truong">${d.tong} đơn${d.chuaGan ? ` · ${d.chuaGan} chưa gán` : ''}</span></span>
+      <select id="team-xuong-${escapeHtml(t)}" data-team="${escapeHtml(t)}" onchange="ganTeamXuong(this.dataset.team, this.value)">
+        <option value="">— Không tự gán —</option>
+        ${kq.danhSachXuong.map(x => `<option value="${escapeHtml(x)}" ${kq.banDo[t] === x ? 'selected' : ''}>${escapeHtml(x)}</option>`).join('')}
+      </select>
+    </div>`;
+  }).join('') : '<p style="color:var(--color-text-muted)">Chưa có Team nào.</p>';
 }
 
-async function luuCauHinhGke() {
-  const giaTri = {};
-  TRUONG_CAU_HINH_GKE.forEach(([khoa, id]) => {
-    giaTri[khoa] = document.getElementById(id).value.trim();
-  });
-  if (giaTri.customsCurrency) giaTri.customsCurrency = giaTri.customsCurrency.toUpperCase();
+async function themTeamMoi() {
+  const o = document.getElementById('team-moi');
+  const team = o.value.trim().toUpperCase();
+  if (!/^[A-Z]+$/.test(team)) { alert('Team chỉ gồm chữ cái, vd TRA'); return; }
+  teamThemTay.add(team);
+  o.value = '';
+  await taiTeamXuong();
+  document.getElementById('team-xuong-' + team).focus();
+}
 
-  const thongBao = document.getElementById('thong-bao-gke');
-  const nut = document.getElementById('btn-luu-cau-hinh-gke');
-  nut.disabled = true;
-  nut.textContent = 'Đang lưu...';
+async function ganTeamXuong(team, xuong) {
   try {
-    const ketQua = await apiFetch('/tracking/cau-hinh-gke', { method: 'POST', body: JSON.stringify(giaTri) });
-    const khoaBiBoQua = ketQua.khoaBiBoQua || [];
-    thongBao.style.display = 'block';
-    if (khoaBiBoQua.length) {
-      const nhanCacTruong = khoaBiBoQua.map(khoa => {
-        const truong = TRUONG_CAU_HINH_GKE.find(([k]) => k === khoa);
-        const nhan = truong && document.querySelector(`label[for="${truong[1]}"]`);
-        return nhan ? nhan.textContent : khoa;
-      });
-      thongBao.style.color = 'var(--color-primary)';
-      thongBao.textContent = `Đã lưu các trường còn lại, nhưng KHÔNG lưu được: ${nhanCacTruong.join(', ')} — tab CauHinhTracking trong Google Sheet còn thiếu cột tương ứng, hãy thêm cột rồi lưu lại.`;
-    } else {
-      thongBao.style.color = '#16a34a';
-      thongBao.textContent = 'Đã lưu cấu hình GKE.';
-    }
+    await apiFetch('/orders/team-xuong', { method: 'POST', body: JSON.stringify({ team, xuong }) });
+    thongBaoGke(xuong ? `Team ${team} → Xưởng ${xuong}: đã lưu, các đơn Chưa gán của Team đã được gán.` : `Đã bỏ Xưởng mặc định của Team ${team}.`, false, 'thong-bao-team-xuong');
+  } catch (e) { thongBaoGke('Lỗi khi lưu: ' + e.message, true, 'thong-bao-team-xuong'); }
+  await taiTeamXuong();
+}
+
+// Tài khoản GKE theo Xưởng (bổ sung 27/09/2026, theo yêu cầu người dùng — thay form "Cấu hình GKE" 1 bộ
+// chung cũ) — API ở routes/tracking.js (/tai-khoan-gke, /gan-tai-khoan-gke, CHỈ superadmin). Khoá field
+// khớp đúng services/gkeService.js#CAC_TRUONG_CAU_HINH_GKE.
+const TRUONG_TK_GKE = [
+  ['ten', 'Tên tài khoản', 'text'], ['username', 'Username', 'text'], ['password', 'Password', 'password'],
+  ['serviceCode', 'Mã dịch vụ (service_code)', 'text'],
+  ['customsCurrency', 'Đơn vị tiền tệ khai báo', 'text', 'USD'], ['customsItemName', 'Tên hàng khai báo', 'text', 'Embroidered garment'],
+  ['customsHsCode', 'Mã HS', 'text'], ['customsDeclaredPrice', 'Giá trị khai báo (mỗi kiện)', 'number'],
+  ['shipperName', 'Tên xưởng (người gửi)', 'text', 'Maxthread VN'], ['shipperPhone', 'Số điện thoại', 'text'],
+  ['shipperAddress', 'Địa chỉ', 'text'], ['shipperCity', 'Thành phố', 'text'], ['shipperProvince', 'Tỉnh/Bang', 'text'],
+  ['shipperPostcode', 'Mã bưu điện', 'text'], ['canNangMoiAoKg', 'Cân nặng mỗi áo (kg)', 'number'],
+];
+
+function thongBaoGke(chu, loi, id = 'thong-bao-gke') {
+  const el = document.getElementById(id);
+  el.style.display = 'block';
+  el.style.color = loi ? 'var(--color-primary)' : '#16a34a';
+  el.textContent = chu;
+}
+
+// `id` = id tài khoản ('moi' cho thẻ đang thêm mới chưa lưu).
+function theTaiKhoanGke(tk, id, dungCho) {
+  return `
+    <div class="bao-cao-form st-cau-hinh-gke st-the-tk-gke" data-tk="${escapeHtml(id)}">
+      <strong>${id === 'moi' ? 'Tài khoản mới' : escapeHtml(tk.ten || '(chưa đặt tên)')}</strong>
+      <span class="st-ghi-chu-truong">${id === 'moi' ? '' : (dungCho.length ? 'Đang dùng cho Xưởng: ' + dungCho.map(escapeHtml).join(', ') : 'Chưa gán cho Xưởng nào')}</span>
+      <div class="st-luoi-gke">
+        ${TRUONG_TK_GKE.map(([khoa, nhan, loai, goiY]) => `
+          <div class="truong"><label for="gke-${id}-${khoa}">${nhan}</label>
+            <input type="${loai}" id="gke-${id}-${khoa}" value="${escapeHtml(tk[khoa] ?? '')}" ${goiY ? `placeholder="${goiY}"` : ''} ${loai === 'number' ? 'min="0" step="0.01"' : ''} autocomplete="${loai === 'password' ? 'new-password' : 'off'}">
+          </div>`).join('')}
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button type="button" class="btn-hanh-dong" data-tk="${escapeHtml(id)}" onclick="luuTaiKhoanGke(this.dataset.tk)">Lưu tài khoản</button>
+        ${id === 'moi'
+          ? `<button type="button" class="btn-hanh-dong phu" onclick="taiTaiKhoanGke()">Huỷ</button>`
+          : `<button type="button" class="btn-hanh-dong phu nguy-hiem" data-tk="${escapeHtml(id)}" onclick="xoaTaiKhoanGke(this.dataset.tk)">Xoá tài khoản</button>`}
+      </div>
+    </div>`;
+}
+
+async function taiTaiKhoanGke() {
+  let kq;
+  try {
+    kq = await apiFetch('/tracking/tai-khoan-gke');
   } catch (e) {
-    thongBao.style.display = 'block';
-    thongBao.style.color = 'var(--color-primary)';
-    thongBao.textContent = 'Lỗi khi lưu: ' + e.message;
-  } finally {
-    nut.disabled = false;
-    nut.textContent = 'Lưu cấu hình GKE';
+    thongBaoGke('Không tải được tài khoản GKE: ' + e.message, true);
+    return;
   }
+  const tenTk = Object.fromEntries(kq.taiKhoan.map(t => [t.id, t.ten]));
+  document.getElementById('gke-gan-xuong').innerHTML = kq.danhSachXuong.map(x => `
+    <div class="st-dong-xuong">
+      <span class="ten-xuong">${escapeHtml(x)}</span>
+      <select data-xuong="${escapeHtml(x)}" onchange="ganTaiKhoanGke(this.dataset.xuong, this.value)">
+        <option value="">— Chưa gán (không mua được tracking) —</option>
+        ${kq.taiKhoan.map(t => `<option value="${t.id}" ${kq.ganXuong[x] === t.id ? 'selected' : ''}>${escapeHtml(t.ten || '#' + t.id)}</option>`).join('')}
+      </select>
+      ${kq.ganXuong[x] && !tenTk[kq.ganXuong[x]] ? '<span style="color:var(--color-danger-text)">Tài khoản đã gán không còn tồn tại</span>' : ''}
+    </div>`).join('');
+  document.getElementById('gke-danh-sach-tk').innerHTML = kq.taiKhoan.length
+    ? kq.taiKhoan.map(t => theTaiKhoanGke(t, t.id, kq.danhSachXuong.filter(x => kq.ganXuong[x] === t.id))).join('')
+    : '<p style="color:var(--color-text-muted)">Chưa có tài khoản GKE nào — bấm "Thêm tài khoản GKE".</p>';
+}
+
+function themTheTaiKhoanGke() {
+  if (document.querySelector('[data-tk="moi"]')) return;
+  document.getElementById('gke-danh-sach-tk').insertAdjacentHTML('beforeend', theTaiKhoanGke({}, 'moi', []));
+  document.getElementById('gke-moi-ten').focus();
+}
+
+async function luuTaiKhoanGke(id) {
+  const giaTri = {};
+  TRUONG_TK_GKE.forEach(([khoa]) => { giaTri[khoa] = document.getElementById(`gke-${id}-${khoa}`).value.trim(); });
+  if (!giaTri.ten) { alert('Nhập tên tài khoản'); return; }
+  try {
+    await apiFetch('/tracking/tai-khoan-gke' + (id === 'moi' ? '' : '/' + encodeURIComponent(id)), {
+      method: id === 'moi' ? 'POST' : 'PUT', body: JSON.stringify(giaTri),
+    });
+    thongBaoGke(`Đã lưu tài khoản "${giaTri.ten}".`);
+    await taiTaiKhoanGke();
+  } catch (e) { thongBaoGke('Lỗi khi lưu: ' + e.message, true); }
+}
+
+async function xoaTaiKhoanGke(id) {
+  if (!confirm('Xoá tài khoản GKE này? Đơn ĐÃ mua tracking bằng tài khoản này sẽ không in lại tem/tra trạng thái vận chuyển được nữa.')) return;
+  try {
+    await apiFetch('/tracking/tai-khoan-gke/' + encodeURIComponent(id), { method: 'DELETE' });
+    thongBaoGke('Đã xoá tài khoản.');
+    await taiTaiKhoanGke();
+  } catch (e) { thongBaoGke(e.message, true); }
+}
+
+async function ganTaiKhoanGke(xuong, taiKhoanId) {
+  try {
+    await apiFetch('/tracking/gan-tai-khoan-gke', { method: 'POST', body: JSON.stringify({ xuong, taiKhoanId }) });
+    thongBaoGke(taiKhoanId ? `Đã gán tài khoản cho Xưởng ${xuong}.` : `Đã bỏ gán tài khoản của Xưởng ${xuong}.`);
+    await taiTaiKhoanGke();
+  } catch (e) { thongBaoGke('Lỗi khi gán: ' + e.message, true); await taiTaiKhoanGke(); }
 }
 
 async function taiNguongCanhBao() {

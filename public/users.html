@@ -4,8 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Nhân viên — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=104">
+<link rel="stylesheet" href="/css/style.css?v=105">
 <script src="/js/theme.js?v=104"></script>
+<style>
+/* Ô tick Xưởng — 1 nhân viên thuộc được nhiều Xưởng (27/09/2026). Bỏ padding/min-height của .inline-form input. */
+.nv-xuong { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
+.nv-xuong label { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font-size: 0.9rem; font-weight: 400; color: inherit; }
+.nv-xuong input[type="checkbox"] { width: 18px; height: 18px; min-height: 0; padding: 0; margin: 0; }
+.nv-xuong .nv-chua-gan { color: var(--color-text-muted); font-size: 0.85rem; }
+.nv-xuong .nv-xuong-la { color: var(--color-danger-text); font-size: 0.85rem; font-weight: 700; }
+</style>
 </head>
 <body>
 <div id="nav"></div>
@@ -27,12 +35,10 @@
       </select>
     </div>
     <div class="truong">
-      <label for="xuong-moi">Xưởng</label>
+      <label>Xưởng (chọn được nhiều)</label>
       <!-- Danh sách Xưởng đổ ĐỘNG (bổ sung 24/09/2026, theo yêu cầu người dùng — quản lý qua Settings)
-           — xem init IIFE bên dưới. -->
-      <select id="xuong-moi">
-        <option value="">(chưa gán)</option>
-      </select>
+           — xem init IIFE bên dưới. Ô tick: 1 nhân viên thuộc được nhiều Xưởng (27/09/2026). -->
+      <div id="xuong-moi" class="nv-xuong"></div>
     </div>
     <div class="truong">
       <label for="matkhau-moi">Mật khẩu (tối đa 4 số)</label>
@@ -44,7 +50,7 @@
 </div>
 
 <script src="/js/icons.js?v=104"></script>
-<script src="/js/api.js?v=104"></script>
+<script src="/js/api.js?v=105"></script>
 <script>
 (async () => {
   const user = await requireLoginOrRedirect();
@@ -57,8 +63,7 @@
     return;
   }
   danhSachXuong = await apiFetch('/orders/danh-sach-xuong');
-  document.getElementById('xuong-moi').innerHTML = '<option value="">(chưa gán)</option>' +
-    danhSachXuong.map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
+  document.getElementById('xuong-moi').innerHTML = oTickXuong([]);
   await taiDanhSach();
 })();
 
@@ -67,15 +72,24 @@
 // Gán TRƯỚC taiDanhSach() ở trên vì hàm đó (định nghĩa dưới) cần dùng ngay để đổ ô chọn từng dòng.
 let danhSachXuong = [];
 
+// Ô tick các Xưởng (đánh dấu sẵn `daChon`); onDoi = đoạn JS gọi khi tick/bỏ tick (rỗng ở form thêm mới).
+function oTickXuong(daChon, onDoi = '') {
+  return danhSachXuong.map(x => `<label><input type="checkbox" value="${escapeHtml(x)}" ${daChon.includes(x) ? 'checked' : ''} ${onDoi ? `onchange="${onDoi}"` : ''}> ${escapeHtml(x)}</label>`).join('')
+    || '<span class="nv-chua-gan">Chưa có Xưởng nào (tạo ở Settings)</span>';
+}
+const xuongDangTick = khoi => [...khoi.querySelectorAll('input[type="checkbox"]:checked')].map(o => o.value);
+const tachXuong = s => String(s || '').split(',').map(x => x.trim()).filter(Boolean);
+
 document.getElementById('form-them').onsubmit = async (e) => {
   e.preventDefault();
   const ten = document.getElementById('ten-moi').value.trim();
   const vaiTro = document.getElementById('vaitro-moi').value;
-  const xuong = document.getElementById('xuong-moi').value;
+  const xuong = xuongDangTick(document.getElementById('xuong-moi'));
   const matKhau = document.getElementById('matkhau-moi').value.trim();
   try {
     await apiFetch('/users', { method: 'POST', body: JSON.stringify({ ten, vaiTro, xuong, matKhau }) });
     e.target.reset();
+    document.getElementById('xuong-moi').innerHTML = oTickXuong([]);
     await taiDanhSach();
   } catch (err) { alert(err.message); }
 };
@@ -100,10 +114,11 @@ async function taiDanhSach() {
           </select>
         </td>
         <td>
-          <select data-ten="${escapeHtml(u.Ten)}" onchange="doiXuong(this.dataset.ten, this.value)">
-            <option value="" ${!u.Xuong ? 'selected' : ''}>(chưa gán)</option>
-            ${danhSachXuong.map(x => `<option value="${escapeHtml(x)}" ${u.Xuong === x ? 'selected' : ''}>${escapeHtml(x)}</option>`).join('')}
-          </select>
+          <div class="nv-xuong" data-ten="${escapeHtml(u.Ten)}">
+            ${oTickXuong(tachXuong(u.Xuong), "doiXuong(this.closest('.nv-xuong'))")}
+            ${tachXuong(u.Xuong).length ? '' : '<span class="nv-chua-gan">(chưa gán)</span>'}
+            ${tachXuong(u.Xuong).filter(x => !danhSachXuong.includes(x)).map(x => `<span class="nv-xuong-la" title="Không còn trong danh sách Xưởng — nhân viên không thấy đơn nào của giá trị này. Tick lại Xưởng đúng để thay.">${escapeHtml(x)} (không tồn tại)</span>`).join('')}
+          </div>
         </td>
         <td>${String(u.KichHoat).toUpperCase() === 'TRUE' ? 'Đang hoạt động' : 'Đã khoá'}</td>
         <td>${u.MatKhau ? escapeHtml(u.MatKhau) : '(chưa đặt)'}</td>
@@ -121,9 +136,11 @@ async function taiDanhSach() {
 
 // ten đến từ this.dataset.ten (xem taiDanhSach() ở trên) — chuỗi GỐC chưa encode, tự encodeURIComponent
 // ở ĐÂY khi ghép vào URL (đây mới là đúng mục đích của hàm này — mã hoá cho URL, không phải cho JS).
-async function doiXuong(ten, xuongMoi) {
+// khoi = ô chứa các ô tick Xưởng của 1 nhân viên (data-ten) — gửi TOÀN BỘ Xưởng đang tick.
+async function doiXuong(khoi) {
+  const ten = khoi.dataset.ten;
   try {
-    await apiFetch('/users/' + encodeURIComponent(ten), { method: 'PUT', body: JSON.stringify({ Xuong: xuongMoi }) });
+    await apiFetch('/users/' + encodeURIComponent(ten), { method: 'PUT', body: JSON.stringify({ Xuong: xuongDangTick(khoi) }) });
     await taiDanhSach();
   } catch (err) { alert(err.message); await taiDanhSach(); }
 }

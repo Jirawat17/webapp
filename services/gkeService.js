@@ -27,13 +27,11 @@
 //
 // CẤU HÌNH (bổ sung 09/09/2026, theo yêu cầu người dùng — trước đó toàn bộ nằm cứng trong .env, khó
 // chỉnh cho người không rành kỹ thuật): mọi hàm dưới đây nhận `cauHinh` làm tham số thay vì tự đọc
-// process.env.GKE_* trực tiếp — gọi layCauHinhGke() 1 lần rồi truyền xuống, xem
-// docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md mục cấu hình GKE trên giao diện.
-// Đọc/ghi CÙNG tab CauHinhTracking (gộp chung với cấu hình bật/tắt tự động mua tracking cho gọn, chỉ
-// 1 tab cần quản lý) — .env vẫn dùng làm GIÁ TRỊ NGẦM ĐỊNH nếu ô tương ứng trên Sheet còn trống, để
-// không phá vỡ cấu hình đang chạy khi mới nâng cấp lên bản có giao diện này.
+// process.env.GKE_* trực tiếp. Từ 27/09/2026: cấu hình theo TỪNG TÀI KHOẢN GKE gán cho từng Xưởng —
+// nơi gọi lấy cấu hình đúng tài khoản của đơn qua layCauHinhGkeChoDon(row) rồi truyền xuống (xem khối
+// "TÀI KHOẢN GKE THEO XƯỞNG" bên dưới). .env chỉ còn dùng 1 lần khi chuyển cấu hình cũ sang Tài khoản 1.
 const caiDatDbService = require('./caiDatDbService');
-const { PDFDocument } = require('pdf-lib');
+const { PDFDocument, StandardFonts } = require('pdf-lib');
 
 function layGiaTri(dong, tenCot, bienEnv, macDinh = '') {
   if (dong && dong[tenCot]) return dong[tenCot];
@@ -41,29 +39,16 @@ function layGiaTri(dong, tenCot, bienEnv, macDinh = '') {
   return macDinh;
 }
 
-async function layCauHinhGke() {
-  const dong = caiDatDbService.layCauHinhTracking();
-  return {
-    username: layGiaTri(dong, 'GkeUsername', 'GKE_API_USERNAME'),
-    password: layGiaTri(dong, 'GkePassword', 'GKE_API_PASSWORD'),
-    serviceCode: layGiaTri(dong, 'GkeServiceCode', 'GKE_SERVICE_CODE'),
-    shipperName: layGiaTri(dong, 'GkeShipperName', 'GKE_SHIPPER_NAME', 'Maxthread VN'),
-    shipperPhone: layGiaTri(dong, 'GkeShipperPhone', 'GKE_SHIPPER_PHONE'),
-    shipperAddress: layGiaTri(dong, 'GkeShipperAddress', 'GKE_SHIPPER_ADDRESS'),
-    shipperCity: layGiaTri(dong, 'GkeShipperCity', 'GKE_SHIPPER_CITY'),
-    shipperProvince: layGiaTri(dong, 'GkeShipperProvince', 'GKE_SHIPPER_PROVINCE'),
-    shipperPostcode: layGiaTri(dong, 'GkeShipperPostcode', 'GKE_SHIPPER_POSTCODE'),
-    customsItemName: layGiaTri(dong, 'GkeCustomsItemName', 'GKE_CUSTOMS_ITEM_NAME', 'Embroidered garment'),
-    customsHsCode: layGiaTri(dong, 'GkeCustomsHsCode', 'GKE_CUSTOMS_HS_CODE'),
-    customsDeclaredPrice: layGiaTri(dong, 'GkeCustomsDeclaredPrice', 'GKE_CUSTOMS_DECLARED_PRICE'),
-    customsCurrency: layGiaTri(dong, 'GkeCustomsCurrency', 'GKE_CUSTOMS_CURRENCY', 'USD'),
-    canNangMoiAoKg: Number(layGiaTri(dong, 'CanNangMoiAoKg', null, '0.05')) || 0.05,
-  };
-}
+// ============================================================
+// TÀI KHOẢN GKE THEO XƯỞNG (bổ sung 27/09/2026, theo yêu cầu người dùng) — mỗi Xưởng dùng 1 tài khoản
+// GKE riêng (đủ 14 trường: đăng nhập, người gửi, hải quan, cân nặng mặc định), quản lý ở Settings. Thay
+// cho 1 bộ cấu hình chung duy nhất trước đây (cau_hinh_tracking). Chọn tài khoản cho 1 đơn — xem
+// layCauHinhGkeChoDon(). KHÔNG bao giờ tự dùng tài khoản của Xưởng khác thay thế.
+// ============================================================
 
-// [khoá trong giaTri, tên cột Sheet] — PHẢI khớp đúng danh sách trường mà layCauHinhGke() đọc ở trên
-// và mảng TRUONG_CAU_HINH_GKE trong public/tracking.html.
+// [khoá dùng trong code/giao diện, tên cột SQLite]
 const CAC_TRUONG_CAU_HINH_GKE = [
+  ['ten', 'Ten'],
   ['username', 'GkeUsername'], ['password', 'GkePassword'], ['serviceCode', 'GkeServiceCode'],
   ['shipperName', 'GkeShipperName'], ['shipperPhone', 'GkeShipperPhone'],
   ['shipperAddress', 'GkeShipperAddress'], ['shipperCity', 'GkeShipperCity'],
@@ -72,21 +57,95 @@ const CAC_TRUONG_CAU_HINH_GKE = [
   ['customsDeclaredPrice', 'GkeCustomsDeclaredPrice'], ['customsCurrency', 'GkeCustomsCurrency'],
   ['canNangMoiAoKg', 'CanNangMoiAoKg'],
 ];
+const MAC_DINH_CAU_HINH_GKE = { shipperName: 'Maxthread VN', customsItemName: 'Embroidered garment', customsCurrency: 'USD' };
 
-// Ghi cấu hình GKE — bảng SQLite cau_hinh_tracking (bổ sung 19/09/2026, xem
-// services/caiDatDbService.js), UPSERT ghi 1 phần trên CÙNG dòng với luuCauHinh() (tracking bật/tắt)
-// trong trackingAutoService.js.
-//
-// khoaBiBoQua LUÔN rỗng từ nay — SQLite có schema CỐ ĐỊNH (đủ mọi cột ngay từ đầu), khác Sheets cũ nơi
-// người dùng có thể chỉ tạo 1 phần cột. Giữ nguyên field này trong kết quả trả về (routes/tracking.js
-// dòng 54 + tracking.html vẫn đọc field này) để không phải sửa gì ở 2 nơi đó.
-async function luuCauHinhGke(giaTri) {
-  const ghiHopLe = {};
-  for (const [khoa, tenCot] of CAC_TRUONG_CAU_HINH_GKE) {
-    ghiHopLe[tenCot] = giaTri[khoa] || '';
+// Dòng SQLite -> object cấu hình dùng trong code (cùng khuôn object layCauHinhGke() cũ + id/ten).
+function cauHinhTuDong(dong) {
+  const ch = { id: String(dong.id) };
+  for (const [khoa, cot] of CAC_TRUONG_CAU_HINH_GKE) ch[khoa] = dong[cot] || MAC_DINH_CAU_HINH_GKE[khoa] || '';
+  ch.canNangMoiAoKg = Number(dong.CanNangMoiAoKg) || 0.05;
+  return ch;
+}
+
+// Chuyển 1 LẦN bộ cấu hình chung cũ (cau_hinh_tracking + .env làm giá trị ngầm định, đúng cách
+// layCauHinhGke() cũ từng đọc) thành "Tài khoản 1", tự gán cho Xưởng BN (đã xác nhận với người dùng).
+// Đơn đã tạo vận đơn trước khi nâng cấp coi như mua bằng tài khoản này — xem ID_TAI_KHOAN_CU.
+const ID_TAI_KHOAN_CU = '1';
+function chuyenCauHinhCuSangTaiKhoan() {
+  const dong = caiDatDbService.layCauHinhTracking();
+  if (dong && dong.DaChuyenTaiKhoanGke === 'TRUE') return;
+  const ENV = {
+    GkeUsername: 'GKE_API_USERNAME', GkePassword: 'GKE_API_PASSWORD', GkeServiceCode: 'GKE_SERVICE_CODE',
+    GkeShipperName: 'GKE_SHIPPER_NAME', GkeShipperPhone: 'GKE_SHIPPER_PHONE', GkeShipperAddress: 'GKE_SHIPPER_ADDRESS',
+    GkeShipperCity: 'GKE_SHIPPER_CITY', GkeShipperProvince: 'GKE_SHIPPER_PROVINCE', GkeShipperPostcode: 'GKE_SHIPPER_POSTCODE',
+    GkeCustomsItemName: 'GKE_CUSTOMS_ITEM_NAME', GkeCustomsHsCode: 'GKE_CUSTOMS_HS_CODE',
+    GkeCustomsDeclaredPrice: 'GKE_CUSTOMS_DECLARED_PRICE', GkeCustomsCurrency: 'GKE_CUSTOMS_CURRENCY',
+  };
+  const giaTri = { Ten: 'Tài khoản 1', CanNangMoiAoKg: layGiaTri(dong, 'CanNangMoiAoKg', null) };
+  for (const [cot, env] of Object.entries(ENV)) giaTri[cot] = layGiaTri(dong, cot, env);
+  if (giaTri.GkeUsername && caiDatDbService.layDanhSachTaiKhoanGke().length === 0) {
+    const id = caiDatDbService.ghiTaiKhoanGke(null, giaTri);
+    if (caiDatDbService.layDanhSachXuong().includes('BN') && !caiDatDbService.layGanTaiKhoanGke().BN) {
+      caiDatDbService.ganTaiKhoanGkeChoXuong('BN', id);
+    }
+    console.log(`[GKE] Đã chuyển cấu hình GKE cũ thành "Tài khoản 1" (id ${id}), gán cho Xưởng BN.`);
   }
-  caiDatDbService.datCauHinhTracking(ghiHopLe);
-  return { khoaBiBoQua: [] };
+  caiDatDbService.datCauHinhTracking({ DaChuyenTaiKhoanGke: 'TRUE' });
+}
+chuyenCauHinhCuSangTaiKhoan();
+
+// Chọn tài khoản GKE cho 1 đơn: (1) tài khoản ĐÃ tạo vận đơn cho đơn này (cột TAI_KHOAN_GKE) — in lại
+// tem/tra trạng thái phải dùng đúng tài khoản đó dù đơn đã đổi Xưởng; đơn tạo vận đơn TRƯỚC khi có cột
+// này -> tài khoản cũ (ID_TAI_KHOAN_CU); (2) chưa tạo vận đơn -> tài khoản đang gán cho Xưởng của đơn.
+// Không xác định được -> throw lỗi rõ ràng (không dùng tài khoản Xưởng khác thay thế).
+function layCauHinhGkeChoDon(row) {
+  let id = row.TAI_KHOAN_GKE;
+  if (!id && (row.TRACKING_ID || row.TAM_THOI)) id = ID_TAI_KHOAN_CU;
+  if (!id) {
+    if (!row.XUONG) throw new Error(`[tài khoản GKE] Đơn ${row.STT_Key} chưa gán Xưởng — không xác định được tài khoản GKE để dùng.`);
+    id = caiDatDbService.layGanTaiKhoanGke()[row.XUONG];
+    if (!id) throw new Error(`[tài khoản GKE] Xưởng "${row.XUONG}" chưa được gán tài khoản GKE — vào Settings > Tài khoản GKE để gán.`);
+  }
+  const dong = caiDatDbService.layTaiKhoanGke(id);
+  if (!dong) throw new Error(`[tài khoản GKE] Tài khoản GKE #${id} (dùng cho đơn ${row.STT_Key}) không còn tồn tại — kiểm tra lại ở Settings.`);
+  const ch = cauHinhTuDong(dong);
+  if (!ch.username || !ch.password) throw new Error(`[tài khoản GKE] Tài khoản "${ch.ten}" chưa có username/password — cập nhật ở Settings.`);
+  return ch;
+}
+
+// ---- Dùng cho routes/tracking.js (giao diện Settings, CHỈ superadmin) ----
+function layDanhSachTaiKhoanGke() {
+  const gan = caiDatDbService.layGanTaiKhoanGke();
+  return {
+    taiKhoan: caiDatDbService.layDanhSachTaiKhoanGke().map(d => {
+      const ch = { id: String(d.id) };
+      for (const [khoa, cot] of CAC_TRUONG_CAU_HINH_GKE) ch[khoa] = d[cot];
+      return ch;
+    }),
+    danhSachXuong: caiDatDbService.layDanhSachXuong(),
+    ganXuong: gan,
+  };
+}
+function luuTaiKhoanGke(id, giaTri) {
+  const ghi = {};
+  for (const [khoa, cot] of CAC_TRUONG_CAU_HINH_GKE) ghi[cot] = String(giaTri[khoa] ?? '').trim();
+  if (ghi.GkeCustomsCurrency) ghi.GkeCustomsCurrency = ghi.GkeCustomsCurrency.toUpperCase();
+  if (!ghi.Ten) throw new Error('Thiếu tên tài khoản');
+  if (id && !caiDatDbService.layTaiKhoanGke(id)) throw new Error('Không tìm thấy tài khoản');
+  const moiId = caiDatDbService.ghiTaiKhoanGke(id, ghi);
+  tokenCache.delete(String(moiId)); // đổi username/password -> buộc đăng nhập lại
+  return String(moiId);
+}
+function xoaTaiKhoanGke(id) {
+  const dangGan = Object.entries(caiDatDbService.layGanTaiKhoanGke()).filter(([, v]) => v === String(id)).map(([x]) => x);
+  if (dangGan.length) throw new Error(`Tài khoản đang được gán cho Xưởng: ${dangGan.join(', ')} — bỏ gán trước khi xoá.`);
+  caiDatDbService.xoaTaiKhoanGke(id);
+  tokenCache.delete(String(id));
+}
+function ganTaiKhoanGkeChoXuong(xuong, id) {
+  if (!caiDatDbService.layDanhSachXuong().includes(xuong)) throw new Error(`Xưởng không hợp lệ: "${xuong}"`);
+  if (id && !caiDatDbService.layTaiKhoanGke(id)) throw new Error('Không tìm thấy tài khoản');
+  caiDatDbService.ganTaiKhoanGkeChoXuong(xuong, id);
 }
 
 const BASE_URL = 'https://order.gkelogistics.com/openapi/customer';
@@ -157,15 +216,19 @@ async function fetchJson(buoc, url, options, nhatKy) {
 // (xem Integration Guide). Làm mới sớm hơn hạn thật để tránh trường hợp gọi API đúng lúc token
 // vừa hết hạn giữa chừng 1 request.
 const TOKEN_TTL_MS = 12 * 60 * 60 * 1000;
-let tokenCache = { token: null, thoiDiemLay: 0 };
+// Cache RIÊNG theo từng tài khoản (bổ sung 27/09/2026) — id tài khoản -> { token, thoiDiemLay }. Dùng
+// chung 1 biến như trước sẽ khiến Xưởng này gọi API bằng token của tài khoản Xưởng kia.
+const tokenCache = new Map();
 
 async function layToken(cauHinh, { boQuaCache = false } = {}, nhatKy) {
-  if (!boQuaCache && tokenCache.token && Date.now() - tokenCache.thoiDiemLay < TOKEN_TTL_MS) {
-    return tokenCache.token;
+  const daCache = tokenCache.get(cauHinh.id);
+  if (!boQuaCache && daCache && Date.now() - daCache.thoiDiemLay < TOKEN_TTL_MS) {
+    return daCache.token;
   }
   if (!cauHinh.username || !cauHinh.password) {
-    throw new Error('[đăng nhập] Thiếu tài khoản API GKE — vào menu Tracking để nhập.');
+    throw new Error('[đăng nhập] Thiếu username/password tài khoản GKE — cập nhật ở Settings.');
   }
+  ghi(nhatKy, `[GKE] [đăng nhập] Dùng tài khoản "${cauHinh.ten}" (id ${cauHinh.id})`);
 
   const { data } = await fetchJson('đăng nhập', `${BASE_URL}/auth/login/`, {
     method: 'POST',
@@ -179,9 +242,9 @@ async function layToken(cauHinh, { boQuaCache = false } = {}, nhatKy) {
     throw new Error('[đăng nhập] Đăng nhập GKE thất bại: ' + (data.detail || 'phản hồi thiếu token'));
   }
 
-  tokenCache = { token: data.data.token, thoiDiemLay: Date.now() };
+  tokenCache.set(cauHinh.id, { token: data.data.token, thoiDiemLay: Date.now() });
   ghi(nhatKy, '[GKE] [đăng nhập] Lấy token mới thành công, hiệu lực tới', new Date(Date.now() + TOKEN_TTL_MS).toLocaleString('vi-VN'));
-  return tokenCache.token;
+  return data.data.token;
 }
 
 // Gọi 1 endpoint POST của GKE, tự đính token — nếu bị từ chối do token hỏng (401, hoặc code khác
@@ -229,31 +292,47 @@ function chuanHoa(str) {
       const maDiem = kyTu.codePointAt(0);
       return !(maDiem >= 0x0300 && maDiem <= 0x036f);
     })
-    .join('');
+    .join('')
+    .replace(/đ/g, 'd'); // "đ" không tách dấu qua NFD — đổi tay (vd "Đức" -> "duc")
 }
 
 // GKE bắt buộc mã quốc gia 2 ký tự (ISO 3166-1 alpha-2) — cột DIA_CHI_NUOC trong Sheet nhiều khả
 // năng đang lưu tên đầy đủ (vd "United States"), không phải mã 2 ký tự. Bổ sung thêm dòng khi gặp
 // quốc gia mới báo lỗi "chưa có ánh xạ" — cố tình KHÔNG đoán bừa để tránh gửi sai mã quốc gia
 // (ảnh hưởng trực tiếp tới việc định tuyến vận chuyển quốc tế).
+// Khoá tra đã bỏ dấu, chữ thường, bỏ dấu chấm (xem khoaQuocGia) — "U.S.A." -> "usa", "Mỹ" -> "my".
 const MA_QUOC_GIA = {
-  'united states': 'US', 'usa': 'US', 'us': 'US', 'hoa ky': 'US',
+  'united states': 'US', 'united states of america': 'US', usa: 'US', us: 'US', america: 'US',
+  my: 'US', 'nuoc my': 'US', 'hoa ky': 'US',
   canada: 'CA',
   'south korea': 'KR', korea: 'KR', 'han quoc': 'KR',
-  'united kingdom': 'GB', uk: 'GB', anh: 'GB',
+  'united kingdom': 'GB', uk: 'GB', gb: 'GB', 'great britain': 'GB', britain: 'GB', england: 'GB',
+  scotland: 'GB', wales: 'GB', 'northern ireland': 'GB', anh: 'GB', 'vuong quoc anh': 'GB',
   australia: 'AU', uc: 'AU',
   vietnam: 'VN', 'viet nam': 'VN',
   france: 'FR', phap: 'FR',
   germany: 'DE', duc: 'DE',
 };
 
+function khoaQuocGia(ten) {
+  return chuanHoa(ten).replace(/\./g, '').replace(/\s+/g, ' ').trim();
+}
+
 function maQuocGia(ten) {
   const goc = String(ten || '').trim();
   if (!goc) throw new Error('[chuẩn bị dữ liệu] Đơn thiếu DIA_CHI_NUOC — không xác định được mã quốc gia cho GKE');
-  if (/^[a-zA-Z]{2}$/.test(goc)) return goc.toUpperCase(); // đã là mã 2 ký tự sẵn thì dùng luôn
-  const ma = MA_QUOC_GIA[chuanHoa(goc)];
+  // Tra bảng TRƯỚC, rồi mới coi chuỗi 2 chữ cái là mã ISO sẵn (sửa 27/09/2026 — trước đây "UK" được gửi
+  // nguyên văn cho GKE thay vì mã ISO đúng "GB").
+  const ma = MA_QUOC_GIA[khoaQuocGia(goc)] || (/^[a-zA-Z]{2}$/.test(goc) ? goc.toUpperCase() : null);
   if (!ma) throw new Error(`[chuẩn bị dữ liệu] Chưa có ánh xạ mã quốc gia cho "${goc}" — bổ sung vào MA_QUOC_GIA trong services/gkeService.js`);
   return ma;
+}
+
+// Mua tracking GKE CHỈ cho đơn giao tới US hoặc UK (bổ sung 27/09/2026, theo yêu cầu người dùng) — xét
+// cột DIA_CHI_NUOC (đúng cột dùng tạo vận đơn). Trống/không nhận ra = không được mua.
+const QUOC_GIA_DUOC_MUA_TRACKING = ['US', 'GB'];
+function duocMuaTrackingTheoQuocGia(row) {
+  try { return QUOC_GIA_DUOC_MUA_TRACKING.includes(maQuocGia(row.DIA_CHI_NUOC)); } catch { return false; }
 }
 
 function thongTinNguoiGui(cauHinh) {
@@ -300,6 +379,9 @@ function thongTinNguoiNhan(donHang) {
 // thế (trước đây cố định 0.05kg trong code — bổ sung 09/09/2026, chuyển lên giao diện Tracking để
 // chỉnh không cần sửa code, xem layCauHinhGke()).
 function tinhCanNangKg(donHang, cauHinh) {
+  // DonNhieuAo (bổ sung 26/09/2026): đơn ".1" mua tracking cho CẢ nhóm — nơi gọi truyền sẵn tổng cân
+  // nặng các đơn chưa huỷ trong nhóm (xem trackingAutoService.js#_muaTrackingChoDonThat).
+  if (donHang._CAN_NANG_KG > 0) return donHang._CAN_NANG_KG;
   const soLuong = Number(donHang.SO_LUONG) || 1;
   const trongLuongMoiCai = Number(donHang.TRONG_LUONG);
   const canNangMoiCai = trongLuongMoiCai > 0 ? trongLuongMoiCai : cauHinh.canNangMoiAoKg;
@@ -422,4 +504,23 @@ async function gopCacTemPdf(danhSachBase64) {
   return Buffer.from(bytesGop).toString('base64');
 }
 
-module.exports = { taoDonGke, layTemIn, layLichSuTrackingGke, maQuocGia, MA_DANG_CHO_TEM, layCauHinhGke, luuCauHinhGke, gopCacTemPdf };
+// Ghi 1 dòng chữ nhỏ ở mép dưới MỌI trang tem (bổ sung 26/09/2026, DonNhieuAo) — vd "KIEN GOM 4 DON:
+// 9F13.1, 9F13.2, ..." để người đóng gói biết 1 tem này dùng cho cả kiện. Font chuẩn của pdf-lib KHÔNG
+// có dấu tiếng Việt nên chỉ dùng chữ không dấu. Tự thu nhỏ cỡ chữ cho vừa bề ngang tem.
+// ponytail: vị trí cố định ở mép dưới — nếu đè lên mã vạch của hãng nào thì đổi toạ độ y ở đây.
+async function ghiChuLenTem(base64, chu) {
+  const taiLieu = await PDFDocument.load(Buffer.from(base64, 'base64'));
+  const font = await taiLieu.embedFont(StandardFonts.HelveticaBold);
+  for (const trang of taiLieu.getPages()) {
+    const { width } = trang.getSize();
+    let co = 7;
+    while (co > 4 && font.widthOfTextAtSize(chu, co) > width - 8) co -= 0.5;
+    trang.drawText(chu, { x: 4, y: 3, size: co, font });
+  }
+  return Buffer.from(await taiLieu.save()).toString('base64');
+}
+
+module.exports = {
+  duocMuaTrackingTheoQuocGia,
+  layCauHinhGkeChoDon, layDanhSachTaiKhoanGke, luuTaiKhoanGke, xoaTaiKhoanGke, ganTaiKhoanGkeChoXuong,
+  ghiChuLenTem, tinhCanNangKg, taoDonGke, layTemIn, layLichSuTrackingGke, maQuocGia, MA_DANG_CHO_TEM, gopCacTemPdf };

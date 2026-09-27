@@ -37,7 +37,7 @@ function datCaiDatHangLoat(nguongHamming) {
 
 // ---------- CauHinhTracking — bật/tắt tự động mua tracking + toàn bộ cấu hình GKE ----------
 // Gộp CHUNG 1 bảng (đúng như Sheets cũ gộp chung 1 tab/1 dòng) — trackingAutoService.js#layCauHinh/
-// luuCauHinh chỉ đụng BatTuDongMuaTracking/SoPhutCho; gkeService.js#layCauHinhGke/luuCauHinhGke chỉ
+// luuCauHinh chỉ đụng BatTuDongMuaTracking/SoPhutCho; 14 cột Gke* bên dưới là cấu hình GKE CŨ (từ 27/09/2026 chỉ còn đọc 1 lần để chuyển sang bảng tai_khoan_gke, xem cuối file) — trước đó gkeService.js chỉ
 // đụng 14 cột Gke* — 2 nơi ghi ĐỘC LẬP lên CÙNG 1 dòng, giữ nguyên qua UPSERT ghi 1 phần (giống
 // trangThaiDbService.js#ghiDe), không phải nơi nào ghi cũng phải biết đủ mọi cột.
 const CAC_COT_CAU_HINH_TRACKING = [
@@ -52,6 +52,10 @@ const CAC_COT_CAU_HINH_TRACKING = [
   // services/trackingAutoService.js#chayQuetTrangThaiNeuDenLuot) — dùng CHUNG 1 dòng/1 bảng cho gọn,
   // đúng tinh thần "cau_hinh_tracking gộp mọi thứ liên quan tới tracking" đã có sẵn.
   'SoPhutQuetTrangThai', 'ThoiDiemQuetTrangThaiGanNhat',
+  // DaChuyenTaiKhoanGke (bổ sung 27/09/2026) — cờ 'TRUE' sau khi đã chuyển 14 cột Gke* ở trên sang
+  // bảng tai_khoan_gke (xem gkeService.js#chuyenCauHinhCuSangTaiKhoan) — 14 cột Gke* giữ nguyên làm bản
+  // lưu, KHÔNG còn nơi nào đọc nữa.
+  'DaChuyenTaiKhoanGke',
 ];
 db.exec(`CREATE TABLE IF NOT EXISTS cau_hinh_tracking (
   id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -181,6 +185,7 @@ function themXuong(ten) {
 function xoaXuong(ten) {
   db.prepare(`DELETE FROM danh_sach_xuong WHERE Ten = ?`).run(ten);
   db.prepare(`DELETE FROM cai_dat_mau_xuong WHERE Xuong = ?`).run(ten);
+  db.prepare(`DELETE FROM team_xuong_mac_dinh WHERE Xuong = ?`).run(ten);
 }
 // Đổi tên CẢ Ở ĐÂY lẫn màu đã gán (giữ màu gắn liền với đúng Xưởng, không "mất màu" khi đổi tên) —
 // nơi gọi (routes/orders.js) chịu trách nhiệm cascade sang trang_thai_don.XUONG/nguoi_dung.Xuong
@@ -188,13 +193,74 @@ function xoaXuong(ten) {
 function doiTenXuong(tenCu, tenMoi) {
   db.prepare(`UPDATE danh_sach_xuong SET Ten = ? WHERE Ten = ?`).run(tenMoi, tenCu);
   db.prepare(`UPDATE cai_dat_mau_xuong SET Xuong = ? WHERE Xuong = ?`).run(tenMoi, tenCu);
+  db.prepare(`UPDATE team_xuong_mac_dinh SET Xuong = ? WHERE Xuong = ?`).run(tenMoi, tenCu);
+}
+
+// ---------- Team -> Xưởng mặc định (bổ sung 27/09/2026, theo yêu cầu người dùng) ----------
+// Team = chữ cái trong STT_Key (9TRA471 -> TRA, xem donNhieuAoService.js#phanTichStt). Đơn đang "chưa
+// gán" (XUONG rỗng) thuộc Team có cấu hình được tự gán lúc đọc — xem orderService.js#tuGanXuongTheoTeam.
+// Đổi tên/xoá Xưởng (2 hàm trên) tự mang theo/xoá cấu hình tương ứng.
+db.exec(`CREATE TABLE IF NOT EXISTS team_xuong_mac_dinh (
+  Team TEXT PRIMARY KEY,
+  Xuong TEXT NOT NULL
+)`);
+// { TEAM: 'Xưởng' }
+function layTeamXuongMacDinh() {
+  return Object.fromEntries(db.prepare(`SELECT Team, Xuong FROM team_xuong_mac_dinh`).all().map(r => [r.Team, r.Xuong]));
+}
+// xuong rỗng = bỏ cấu hình của Team đó.
+function ganTeamXuongMacDinh(team, xuong) {
+  if (!xuong) db.prepare(`DELETE FROM team_xuong_mac_dinh WHERE Team = ?`).run(team);
+  else db.prepare(`INSERT INTO team_xuong_mac_dinh (Team, Xuong) VALUES (?, ?) ON CONFLICT(Team) DO UPDATE SET Xuong = excluded.Xuong`).run(team, xuong);
+}
+
+// ---------- Tài khoản GKE theo Xưởng (bổ sung 27/09/2026, theo yêu cầu người dùng) ----------
+// Mỗi tài khoản đủ 14 trường cấu hình (cùng tên cột Gke* với cau_hinh_tracking cũ). Tài khoản gán cho
+// Xưởng lưu ở cột TaiKhoanGke NGAY TRONG danh_sach_xuong — đổi tên/xoá Xưởng (doiTenXuong/xoaXuong ở
+// trên) tự mang theo/xoá luôn việc gán, không cần cascade riêng.
+const CAC_COT_TAI_KHOAN_GKE = ['Ten', ...CAC_COT_CAU_HINH_TRACKING.filter(c => c.startsWith('Gke') || c === 'CanNangMoiAoKg')];
+db.exec(`CREATE TABLE IF NOT EXISTS tai_khoan_gke (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ${CAC_COT_TAI_KHOAN_GKE.map(c => `${c} TEXT NOT NULL DEFAULT ''`).join(', ')}
+)`);
+if (!db.prepare(`PRAGMA table_info(danh_sach_xuong)`).all().some(c => c.name === 'TaiKhoanGke')) {
+  db.exec(`ALTER TABLE danh_sach_xuong ADD COLUMN TaiKhoanGke TEXT NOT NULL DEFAULT ''`);
+}
+
+function layDanhSachTaiKhoanGke() {
+  return db.prepare(`SELECT id, ${CAC_COT_TAI_KHOAN_GKE.join(', ')} FROM tai_khoan_gke ORDER BY id`).all();
+}
+function layTaiKhoanGke(id) {
+  return db.prepare(`SELECT id, ${CAC_COT_TAI_KHOAN_GKE.join(', ')} FROM tai_khoan_gke WHERE id = ?`).get(Number(id)) || null;
+}
+function ghiTaiKhoanGke(id, giaTri) {
+  const cot = CAC_COT_TAI_KHOAN_GKE.filter(c => giaTri[c] !== undefined);
+  const vals = cot.map(c => String(giaTri[c] ?? ''));
+  if (id) {
+    if (cot.length) db.prepare(`UPDATE tai_khoan_gke SET ${cot.map(c => `${c} = ?`).join(', ')} WHERE id = ?`).run(...vals, Number(id));
+    return Number(id);
+  }
+  return Number(db.prepare(`INSERT INTO tai_khoan_gke (${cot.join(', ')}) VALUES (${cot.map(() => '?').join(', ')})`).run(...vals).lastInsertRowid);
+}
+function xoaTaiKhoanGke(id) {
+  db.prepare(`DELETE FROM tai_khoan_gke WHERE id = ?`).run(Number(id));
+}
+// { Xuong: 'id tài khoản' } — chỉ các Xưởng đã gán.
+function layGanTaiKhoanGke() {
+  return Object.fromEntries(db.prepare(`SELECT Ten, TaiKhoanGke FROM danh_sach_xuong WHERE TaiKhoanGke != ''`).all().map(r => [r.Ten, r.TaiKhoanGke]));
+}
+function ganTaiKhoanGkeChoXuong(xuong, id) {
+  db.prepare(`UPDATE danh_sach_xuong SET TaiKhoanGke = ? WHERE Ten = ?`).run(id ? String(id) : '', xuong);
 }
 
 module.exports = {
+  CAC_COT_TAI_KHOAN_GKE, layDanhSachTaiKhoanGke, layTaiKhoanGke, ghiTaiKhoanGke, xoaTaiKhoanGke,
+  layGanTaiKhoanGke, ganTaiKhoanGkeChoXuong,
   layCaiDatHangLoat, datCaiDatHangLoat,
   layCauHinhTracking, datCauHinhTracking, CAC_COT_CAU_HINH_TRACKING,
   layCaiDatCanhBao, datCaiDatCanhBao,
   layCaiDatNenAnh, datCaiDatNenAnh,
   layMauTheoXuong, datMauXuong,
   layDanhSachXuong, themXuong, xoaXuong, doiTenXuong,
+  layTeamXuongMacDinh, ganTeamXuongMacDinh,
 };

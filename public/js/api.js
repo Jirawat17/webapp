@@ -342,6 +342,37 @@ function base64ThanhBlob(base64, kieuMime) {
   return new Blob([mang], { type: kieuMime });
 }
 
+// Đơn đã huỷ KHÔNG được mua tracking (bổ sung 27/09/2026, theo yêu cầu người dùng) — hộp đỏ lớn phủ
+// màn hình, chỉ tắt khi bấm "Đã hiểu" (Promise xong lúc đó). Server trả lỗi maLoi 'DON_DA_HUY' ở
+// /tracking/mua-thu-cong và /tracking/mua-va-in-label (services/trackingAutoService.js#chanMuaDonDaHuy).
+const TRANG_THAI_DON_DA_HUY = 'CANCELLED_Đã hủy';
+function hienThongBaoDonDaHuy(dsStt) {
+  return new Promise(xong => {
+    const nen = document.createElement('div');
+    nen.className = 'hop-don-da-huy';
+    nen.setAttribute('role', 'alertdialog');
+    nen.setAttribute('aria-modal', 'true');
+    nen.innerHTML = `
+      <div class="hop-don-da-huy__khung">
+        <div class="hop-don-da-huy__tieu-de">${icon('alert', { size: 44 })}<div>ĐƠN ĐÃ HỦY</div><div>(KHÔNG MUA TRACKING)</div></div>
+        <div class="hop-don-da-huy__noi-dung">
+          <p>${dsStt.length > 1 ? dsStt.length + ' đơn dưới đây đang' : 'Đơn này đang'} ở trạng thái "${TRANG_THAI_DON_DA_HUY}" nên hệ thống không mua tracking:</p>
+          <p class="hop-don-da-huy__ma">${dsStt.map(escapeHtml).join(', ')}</p>
+          <button type="button" class="btn-hanh-dong">Đã hiểu</button>
+        </div>
+      </div>`;
+    nen.querySelector('button').onclick = () => { nen.remove(); xong(); };
+    document.body.appendChild(nen);
+    nen.querySelector('button').focus();
+  });
+}
+// Tách lỗi "đơn đã huỷ" khỏi loi[] server trả về: hiện hộp đỏ cho các đơn đó, trả lại các lỗi còn lại.
+async function tachVaBaoDonDaHuy(loi) {
+  const daHuy = (loi || []).filter(l => l.maLoi === 'DON_DA_HUY');
+  if (daHuy.length) await hienThongBaoDonDaHuy(daHuy.map(l => l.sttKey));
+  return (loi || []).filter(l => l.maLoi !== 'DON_DA_HUY');
+}
+
 // Mở 1 file PDF (tem/label GKE, base64) trong iframe ẩn rồi gọi hộp thoại in của trình duyệt — khổ
 // giấy 100x150mm mặc định phụ thuộc máy in đang đặt mặc định trên máy tính đang mở trang này (giống
 // hệt cơ chế ở scan.html#inTemTuDong), KHÔNG có cấu hình khổ giấy nào trong code vì PDF từ GKE vốn đã
@@ -534,6 +565,18 @@ const MAU_TRANG_THAI = {
   'Đang vẽ file': 'trang-thai-info',
   'Đã vẽ file': 'trang-thai-success',
 };
+// Nhãn DonNhieuAo (bổ sung 26/09/2026) — `n` là NhomNhieuAo do routes/orders.js#lamGiauDon gắn vào đơn
+// (xem services/donNhieuAoService.js#tomTatChoDon). Đỏ khi nhóm có lỗi dữ liệu, xanh cho đơn mua
+// tracking, vàng cho đơn dùng chung.
+function nhanNhomNhieuAo(n) {
+  if (!n) return '';
+  const coLoi = n.loiChan.length + n.canhBao.length > 0;
+  const chu = `Nhóm ${n.goc} · ${n.viTri}/${n.tong} · ${n.laDonMua ? 'MUA TRACKING' : 'Dùng chung ' + (n.donMua || '?')}`;
+  const lop = coLoi ? 'trang-thai-danger' : n.laDonMua ? 'trang-thai-info' : 'trang-thai-warning';
+  const goiY = [`OrderID ${n.orderId}`, ...n.loiChan, ...n.canhBao].join('\n');
+  return `<span class="badge ${lop}" title="${escapeHtml(goiY)}">${icon('package', { size: 14 })} ${escapeHtml(chu)}${coLoi ? ' · LỖI' : ''}</span>`;
+}
+
 function lopTrangThai(tinhTrang) {
   return MAU_TRANG_THAI[tinhTrang] || 'trang-thai-info'; // giá trị lạ/chưa biết
 }

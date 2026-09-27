@@ -46,6 +46,8 @@ const cauGhiLichSuHoatDong = db.prepare(`
 function ghiLichSuHoatDong(dong) {
   cauGhiLichSuHoatDong.run(dong);
 }
+// Nhiều dòng trong 1 giao dịch — ghi hàng nghìn dòng 1 lượt (vd tự gán Xưởng theo Team) không phải commit từng dòng.
+const ghiNhieuLichSuHoatDong = db.transaction(dsDong => dsDong.forEach(d => cauGhiLichSuHoatDong.run(d)));
 
 // Trả về TOÀN BỘ bảng — logService.js tự lọc/sắp bằng JS sau đó (y hệt cách readTabCached('LichSuHoatDong')
 // trả về trước đây), giữ nguyên logic lọc phức tạp (parse ChiTiet JSON, nhiều điều kiện...) không phải
@@ -124,7 +126,7 @@ function xoaLogsTrackingTheoDon(sttKey) {
 }
 
 module.exports = {
-  ghiLichSuHoatDong, layTatCaLichSuHoatDong, xoaLichSuHoatDongTheoDon,
+  ghiLichSuHoatDong, ghiNhieuLichSuHoatDong, layTatCaLichSuHoatDong, xoaLichSuHoatDongTheoDon,
   ghiNhatKyQuetHangLoat, xoaNhatKyQuetHangLoatTheoDon,
   ghiLogsTracking, layTatCaLogsTracking, xoaLogsTrackingTheoDon,
 };

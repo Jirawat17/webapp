@@ -98,11 +98,28 @@ function doiTen(tenCu, tenMoi) {
 
 // Đếm/đổi tên hàng loạt theo Xuong (bổ sung 24/09/2026, theo yêu cầu người dùng — CRUD Xưởng qua
 // Settings) — cùng lý do/cách dùng với demTheoXuong()/doiTenXuongHangLoat() ở trangThaiDbService.js.
-function demTheoXuong(xuong) {
-  return db.prepare(`SELECT COUNT(*) AS c FROM nguoi_dung WHERE Xuong = ?`).get(xuong).c;
-}
-function doiTenXuongHangLoat(tenCu, tenMoi) {
-  db.prepare(`UPDATE nguoi_dung SET Xuong = ? WHERE Xuong = ?`).run(tenMoi, tenCu);
+// 1 nhân viên thuộc được NHIỀU Xưởng (bổ sung 27/09/2026, theo yêu cầu người dùng) — cột Xuong lưu danh
+// sách cách nhau dấu phẩy ("HN,BN"); giá trị 1 Xưởng cũ ("HN") vẫn đọc đúng, không cần migrate.
+const tachXuong = s => String(s || '').split(',').map(x => x.trim()).filter(Boolean);
+
+// Xưởng HIỆN TẠI của người đang đăng nhập — đọc lại từ DB mỗi lần (superadmin đổi Xưởng là có hiệu lực
+// ngay, không cần đăng nhập lại); tài khoản không còn trong DB (vừa đổi tên...) thì dùng giá trị trong phiên.
+function cacXuongCuaNguoiDung(user) {
+  const tk = layTheoTen(user.ten);
+  return tachXuong(tk ? tk.Xuong : user.xuong);
 }
 
-module.exports = { CAC_COT, layTatCa, layTheoTen, themMoi, capNhat, doiTen, demTheoXuong, doiTenXuongHangLoat };
+function demTheoXuong(xuong) {
+  return layTatCa().filter(u => tachXuong(u.Xuong).includes(xuong)).length;
+}
+const doiTenXuongHangLoat = db.transaction((tenCu, tenMoi) => {
+  for (const u of cauLayTatCa.all()) {
+    const ds = tachXuong(u.Xuong);
+    if (ds.includes(tenCu)) capNhat(u.Ten, { Xuong: [...new Set(ds.map(x => (x === tenCu ? tenMoi : x)))].join(',') });
+  }
+});
+
+module.exports = {
+  CAC_COT, layTatCa, layTheoTen, themMoi, capNhat, doiTen, demTheoXuong, doiTenXuongHangLoat,
+  tachXuong, cacXuongCuaNguoiDung,
+};

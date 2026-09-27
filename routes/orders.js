@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const orderService = require('../services/orderService');
+const donNhieuAoService = require('../services/donNhieuAoService');
 const taiKhoanService = require('../services/taiKhoanService');
 const trangThaiDbService = require('../services/trangThaiDbService');
 const donHangLoatService = require('../services/donHangLoatService');
@@ -15,7 +16,7 @@ const { taiDsAnh } = require('../services/anhNguonService');
 const { tinhHashAnh, khoangCachHamming } = require('../services/perceptualHashService');
 const { requireLogin, laAdmin, laSuperAdmin } = require('../middleware/auth');
 const { xoaDuLieuDon } = require('../services/xoaDuLieuDonService');
-const { layMauTheoXuong, datMauXuong, themXuong, xoaXuong, doiTenXuong } = require('../services/caiDatDbService');
+const { layMauTheoXuong, datMauXuong, themXuong, xoaXuong, doiTenXuong, layTeamXuongMacDinh, ganTeamXuongMacDinh } = require('../services/caiDatDbService');
 
 router.use(requireLogin);
 
@@ -45,7 +46,9 @@ const TRANG_THAI_DANG_CHAY_MAY = 'Đang chạy máy';
 // ĐÚNG KHUÔN NguoiVanHanh — chỉ trả về khi TRANG_THAI_VE_FILE đang là "Đang vẽ file". Đơn đã "Đã vẽ
 // file" hoặc bị reset về "Chưa vẽ file" (vd sau lỗi sản xuất) sẽ không còn hiện "ai đang vẽ" ở đây
 // nữa, dù cột thật trong Sheet vẫn giữ giá trị cũ làm dấu vết.
-async function lamGiauDon(rows) {
+// `banDoNhom` (tuỳ chọn, bổ sung 26/09/2026) — kết quả donNhieuAoService.xayDungBanDoNhom() trên TOÀN BỘ
+// đơn (nhóm có thể gồm đơn nằm ngoài `rows` sau lọc) — gắn NhomNhieuAo cho giao diện.
+async function lamGiauDon(rows, banDoNhom) {
   const daGanKH = await orderService.ganTenKhachHang(rows);
   return daGanKH.map(r => ({
     ...r,
@@ -55,6 +58,7 @@ async function lamGiauDon(rows) {
     NguoiVanHanh: r.TRANG_THAI_XUONG === TRANG_THAI_DANG_CHAY_MAY ? (r.NGUOI_CHAY_MAY || null) : null,
     NguoiVeFile: r.TRANG_THAI_VE_FILE === 'Đang vẽ file' ? (r.NGUOI_VE_FILE || null) : null,
     DonUuTien: orderService.laUuTien(r),
+    NhomNhieuAo: banDoNhom ? donNhieuAoService.tomTatChoDon(r.STT_Key, banDoNhom.get(r.STT_Key)) : null,
   }));
 }
 
@@ -148,7 +152,9 @@ router.get('/', async (req, res) => {
   // Gắn CanhBao/TenKhachHang SỚM (trước khi lọc/sắp xếp) — cần có CanhBao để lọc theo "canhBao" và
   // sắp theo "canh_bao" bên dưới; đọc dữ liệu để gắn không phụ thuộc số dòng còn lại sau lọc nên
   // gắn sớm hay muộn cũng cùng 1 chi phí, không tốn thêm gì.
-  list = await lamGiauDon(list);
+  list = await lamGiauDon(list, donNhieuAoService.xayDungBanDoNhom(rows));
+  // Lọc DonNhieuAo (bổ sung 26/09/2026): '1' = chỉ đơn thuộc nhóm, '0' = chỉ đơn lẻ.
+  if (req.query.donNhieuAo === '1' || req.query.donNhieuAo === '0') list = list.filter(r => !!r.NhomNhieuAo === (req.query.donNhieuAo === '1'));
 
   const {
     trangThai, trangThaiPhoi, trangThaiVeFile, kh, tuNgay, denNgay,
@@ -184,7 +190,7 @@ router.get('/', async (req, res) => {
   if (canhBao) list = list.filter(r => r.CanhBao === canhBao);
   // Lọc theo Xưởng/Ưu tiên (bổ sung 13/09/2026, theo yêu cầu người dùng — chỉ hiện ô lọc này ở giao
   // diện cho admin, xem public/orders.html) — KHÔNG cần chặn riêng ở đây cho vai trò khác: san_xuat/
-  // ve_file đã bị filterForRole/locTheoXuong lọc CÒN ĐÚNG 1 Xưởng của họ từ dòng 141 (TRƯỚC bộ lọc
+  // ve_file đã bị filterForRole/locTheoXuong lọc CÒN ĐÚNG các Xưởng của họ từ dòng 141 (TRƯỚC bộ lọc
   // này), nên dù lỡ tự truyền xuong=X qua URL cũng chỉ có thể thu hẹp thêm (hoặc về rỗng), không lộ
   // thêm dữ liệu nào ngoài phạm vi đã được phép xem. DON_UU_TIEN vốn đã hiển thị công khai cho mọi vai
   // trò (viền đỏ + badge, xem lamGiauDon()) nên lọc theo nó cũng không lộ thông tin gì mới.
@@ -372,13 +378,17 @@ router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
 // chụp ảnh/quét QR, tracking của "ĐÃ DÁN TEM", tự chuyển trạng thái) — qua tuyChon.boQuaRangBuoc của
 // orderService.update(). Giữ dữ liệu KHỚP (đã xác nhận với người dùng): đích từ "ĐÃ SẴN SÀNG CHẠY MÁY" trở
 // đi tự đặt phôi/file sang "Đã..." (trừ kho như lấy phôi thật); đích "Chưa in mã" tự đặt về "Chưa...".
+// Tách danh sách mã đơn: dấu cách/xuống dòng, hoặc dấu phẩy NGĂN CÁCH 2 mã — KHÔNG tách dấu phẩy nằm
+// TRONG mã DonNhieuAo (bổ sung 26/09/2026): "9F13,1, 9F13,2" -> ["9F13,1", "9F13,2"] (phẩy theo sau là
+// một số đứng riêng = hậu tố .n). Trùng lặp ở public/orders.html — sửa 1 chỗ nhớ sửa chỗ kia.
+const TACH_MA_DON = /\s*,\s*(?!\d+(?:[\s,]|$))|\s+/;
 router.post('/chuyen-trang-thai-superadmin', async (req, res) => {
   const user = req.session.user;
   if (!laSuperAdmin(user.vaiTro)) {
     return res.status(403).json({ error: 'Chỉ superadmin mới được dùng chức năng này' });
   }
   const { trangThaiMoi } = req.body;
-  const sttKeys = [...new Set(String(req.body.danhSachDon || '').split(/[,\s]+/).map(k => k.trim().toUpperCase()).filter(Boolean))];
+  const sttKeys = [...new Set(String(req.body.danhSachDon || '').split(TACH_MA_DON).map(k => k.trim().toUpperCase()).filter(Boolean))];
   if (sttKeys.length === 0) return res.status(400).json({ error: 'Danh sách đơn trống' });
   if (!DANH_SACH_TRANG_THAI_BAO_CAO.includes(trangThaiMoi)) {
     return res.status(400).json({ error: 'Trạng thái đích không hợp lệ' });
@@ -629,6 +639,37 @@ router.delete('/xuong/:ten', (req, res) => {
   res.json({ ok: true });
 });
 
+// Team -> Xưởng mặc định (bổ sung 27/09/2026, theo yêu cầu người dùng) — CHỈ superadmin (cùng mức với
+// CRUD Xưởng ở trên). GET kèm các Team đang có trong đơn hàng + số đơn chưa gán của từng Team.
+router.get('/team-xuong', async (req, res) => {
+  if (!laSuperAdmin(req.session.user.vaiTro)) return res.status(403).json({ error: 'Chỉ superadmin' });
+  const { rows } = await orderService.getAll();
+  const demTeam = {};
+  for (const r of rows) {
+    const p = donNhieuAoService.phanTichStt(r.STT_Key);
+    if (!p) continue;
+    const d = demTeam[p.team] || (demTeam[p.team] = { tong: 0, chuaGan: 0 });
+    d.tong++;
+    if (!r.XUONG) d.chuaGan++;
+  }
+  res.json({ banDo: layTeamXuongMacDinh(), danhSachXuong: orderService.layDanhSachXuong(), demTeam });
+});
+
+router.post('/team-xuong', async (req, res) => {
+  if (!laSuperAdmin(req.session.user.vaiTro)) return res.status(403).json({ error: 'Chỉ superadmin' });
+  const team = String(req.body.team || '').trim().toUpperCase();
+  const xuong = String(req.body.xuong || '').trim();
+  if (!/^[A-Z]+$/.test(team)) return res.status(400).json({ error: `Team không hợp lệ: "${team}" — chỉ gồm chữ cái (vd TRA, LH)` });
+  if (xuong && !orderService.layDanhSachXuong().includes(xuong)) {
+    return res.status(400).json({ error: `Xưởng không hợp lệ: "${xuong}" — chỉ chấp nhận: ${orderService.layDanhSachXuong().join(', ')}` });
+  }
+  ganTeamXuongMacDinh(team, xuong);
+  ghiLog({ nguoiDung: req.session.user.ten, vaiTro: req.session.user.vaiTro, hanhDong: 'CAU_HINH_TEAM_XUONG', chiTiet: { team, xuong } })
+    .catch(err => console.error('[Orders] Lỗi ghi log nền:', err.message));
+  await orderService.getAll(); // gán ngay các đơn đang chưa gán của Team này
+  res.json({ ok: true });
+});
+
 router.get('/mau-xuong', (req, res) => {
   res.json(layMauTheoXuong());
 });
@@ -678,12 +719,19 @@ router.post('/gan-xuong', async (req, res) => {
 
   // Đọc TOÀN BỘ sheet ĐÚNG 1 LẦN cho cả lô (bổ sung 13/09/2026, xem orderService.js#getManyByKeys).
   const { headers, banDoTheoKey } = await orderService.getManyByKeys(sttKeys, { fresh: true });
+  const teamXuong = layTeamXuongMacDinh();
 
   await chayHangLoatSongSong(sttKeys, async (sttKey) => {
     try {
       const row = banDoTheoKey.get(sttKey);
       if (!row) {
         loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
+        return;
+      }
+      // Gỡ gán đơn thuộc Team có Xưởng mặc định -> lần đọc kế tiếp tự gán lại ngay (orderService.js#tuGanXuongTheoTeam), báo rõ thay vì "thành công" giả.
+      const team = xuong ? null : (donNhieuAoService.phanTichStt(sttKey) || {}).team;
+      if (team && teamXuong[team]) {
+        loi.push({ sttKey, lyDo: `Team ${team} đang có Xưởng mặc định ${teamXuong[team]} — gỡ gán sẽ bị tự gán lại. Hãy gán sang Xưởng khác, hoặc bỏ cấu hình Team ${team} ở Settings.` });
         return;
       }
 
@@ -884,7 +932,8 @@ async function layKichBanKeTiep(row, user) {
 }
 
 router.get('/:sttKey', async (req, res) => {
-  const { row } = await orderService.getByKey(req.params.sttKey);
+  const { rows } = await orderService.getAll();
+  const row = rows.find(r => r.STT_Key === req.params.sttKey);
   if (!row) return res.status(404).json({ error: 'Không tìm thấy đơn hàng' });
 
   const user = req.session.user;
@@ -896,7 +945,7 @@ router.get('/:sttKey', async (req, res) => {
 
   const [lichSu, [donDaLamGiau], kichBanKeTiep] = await Promise.all([
     layLichSuTheoDon(req.params.sttKey),
-    lamGiauDon([row]),
+    lamGiauDon([row], donNhieuAoService.xayDungBanDoNhom(rows)),
     layKichBanKeTiep(row, user),
   ]);
 

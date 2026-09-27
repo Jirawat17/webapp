@@ -2,6 +2,7 @@ const orderService = require('./orderService');
 const logService = require('./logService');
 const nhatKyDbService = require('./nhatKyDbService');
 const { TRANG_THAI_KET_THUC, TRANG_THAI_DA_SHIP } = require('../data/pipelineTinhTrang');
+const donNhieuAoService = require('./donNhieuAoService');
 
 // Trung tâm hành động (bổ sung 14/09/2026, xem
 // docs/superpowers/specs/2026-09-14-trung-tam-hanh-dong-design.md) — gom 4 loại "việc cần xử lý" cho
@@ -62,10 +63,31 @@ async function layLoiTrackingGanDay() {
   }
 }
 
+// DonNhieuAo (bổ sung 26/09/2026): nhóm vừa bị huỷ (48 giờ, theo cùng danh sách huyGanDay) mà đơn ".1"
+// ĐÃ mua tracking — hệ thống không tự huỷ vận đơn bên GKE, cần làm tay. Tự biến mất sau 48 giờ.
+function layNhomHuyConTracking(rows, huyGanDay) {
+  const vuaHuy = new Set(huyGanDay.map(d => d.sttKey));
+  const ketQua = [];
+  const daXet = new Set();
+  for (const nhom of donNhieuAoService.xayDungBanDoNhom(rows).values()) {
+    if (daXet.has(nhom.khoa)) continue;
+    daXet.add(nhom.khoa);
+    const d = nhom.donMua;
+    // Chỉ khi CẢ nhóm đã huỷ — .1 huỷ riêng thì các đơn còn lại vẫn dùng tracking này, không phải huỷ vận đơn.
+    const caNhomDaHuy = nhom.thanhVien.every(r => r.TRANG_THAI_XUONG === donNhieuAoService.TRANG_THAI_HUY);
+    if (d && d.TRACKING_ID && caNhomDaHuy && nhom.thanhVien.some(r => vuaHuy.has(r.STT_Key))) {
+      ketQua.push({ sttKey: d.STT_Key, goc: nhom.goc, trackingId: d.TRACKING_ID });
+    }
+  }
+  return ketQua;
+}
+
 async function layTrungTamHanhDong() {
   const { rows } = await orderService.getAll();
   const [huyGanDay, loiTrackingGke] = await Promise.all([layDonHuyGanDay(), layLoiTrackingGanDay()]);
   return {
+    loiDonNhieuAo: donNhieuAoService.danhSachLoiDuLieu(rows),
+    nhomHuyConTracking: layNhomHuyConTracking(rows, huyGanDay),
     huyGanDay,
     loiSanXuat: layDonLoiSanXuat(rows),
     uuTienChuaXuLy: layDonUuTienChuaXuLy(rows),

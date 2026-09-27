@@ -5,7 +5,9 @@ const {
   inLabelChoDon, muaTrackingVaInLabelChoDon, capNhatTrangThaiTrackingChoDon,
   layCauHinhQuetTrangThai, luuCauHinhQuetTrangThai, SO_PHUT_QUET_TRANG_THAI_TOI_THIEU,
 } = require('../services/trackingAutoService');
-const { layCauHinhGke, luuCauHinhGke, gopCacTemPdf } = require('../services/gkeService');
+const {
+  gopCacTemPdf, layDanhSachTaiKhoanGke, luuTaiKhoanGke, xoaTaiKhoanGke, ganTaiKhoanGkeChoXuong,
+} = require('../services/gkeService');
 const orderService = require('../services/orderService');
 const { requireLogin, requireExactRole } = require('../middleware/auth');
 
@@ -59,22 +61,29 @@ router.get('/danh-sach', async (req, res) => {
   res.json(await layDanhSachDonAutoTracking(req.session.user));
 });
 
-// Cấu hình GKE (tài khoản API, thông tin người gửi, khai báo hải quan, cân nặng mặc định) — thêm
-// 09/09/2026, theo yêu cầu người dùng đưa toàn bộ lên giao diện thay vì nằm cứng trong .env. Người
-// dùng đã CHỦ ĐỘNG chọn đưa cả username/password API GKE lên giao diện (không giữ riêng trong .env
-// như đề xuất ban đầu) — xem docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md.
-// CHỈ superadmin (thu hẹp từ admin/ve_file/san_xuat xuống CHỈ superadmin — bổ sung 23/09/2026, theo
-// yêu cầu người dùng: form đã CHUYỂN từ menu Tracking sang settings.html, hạn chế người không phải
-// superadmin đổi được thông tin này, kể cả username/password API GKE thật). Không còn client nào khác
-// gọi 2 route này ngoài settings.html (đã rà — tracking.js tự gọi layCauHinhGke() trực tiếp trong
-// process, không qua HTTP, nên các role khác vẫn mua tracking/in label bình thường dù mất quyền sửa).
-router.get('/cau-hinh-gke', requireExactRole('superadmin'), async (req, res) => {
-  res.json(await layCauHinhGke());
+// Tài khoản GKE theo Xưởng (bổ sung 27/09/2026, theo yêu cầu người dùng — thay cho /cau-hinh-gke, 1 bộ
+// cấu hình chung cũ) — CHỈ superadmin, dùng ở settings.html. Có username/password API GKE THẬT nên giữ
+// nguyên phạm vi superadmin như trước. Việc mua tracking/in label của các vai trò khác KHÔNG gọi qua
+// đây — trackingAutoService.js tự lấy tài khoản đúng Xưởng của từng đơn trong process.
+router.get('/tai-khoan-gke', requireExactRole('superadmin'), (req, res) => {
+  res.json(layDanhSachTaiKhoanGke());
 });
-
-router.post('/cau-hinh-gke', requireExactRole('superadmin'), async (req, res) => {
-  const { khoaBiBoQua } = await luuCauHinhGke(req.body || {});
-  res.json({ ok: true, khoaBiBoQua });
+router.post('/tai-khoan-gke', requireExactRole('superadmin'), (req, res) => {
+  try { res.json({ ok: true, id: luuTaiKhoanGke(null, req.body || {}) }); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+});
+router.put('/tai-khoan-gke/:id', requireExactRole('superadmin'), (req, res) => {
+  try { res.json({ ok: true, id: luuTaiKhoanGke(req.params.id, req.body || {}) }); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+});
+router.delete('/tai-khoan-gke/:id', requireExactRole('superadmin'), (req, res) => {
+  try { xoaTaiKhoanGke(req.params.id); res.json({ ok: true }); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+});
+// Gán (hoặc bỏ gán, taiKhoanId rỗng) tài khoản cho 1 Xưởng.
+router.post('/gan-tai-khoan-gke', requireExactRole('superadmin'), (req, res) => {
+  try { ganTaiKhoanGkeChoXuong(String(req.body.xuong || ''), req.body.taiKhoanId || ''); res.json({ ok: true }); }
+  catch (err) { res.status(400).json({ error: err.message }); }
 });
 
 router.get('/logs', (req, res) => {
@@ -100,7 +109,6 @@ router.post('/mua-thu-cong', async (req, res) => {
     return res.status(400).json({ error: 'Danh sách đơn trống' });
   }
 
-  const cauHinhGke = await layCauHinhGke();
   const thanhCong = [];
   const loi = [];
   // Đơn đã MUA TRACKING THẬT thành công nhưng KHÔNG đẩy được sang Sheet khách hàng (bổ sung
@@ -119,15 +127,19 @@ router.post('/mua-thu-cong', async (req, res) => {
         loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng' });
         continue;
       }
-      const ketQua = await muaTrackingChoDon(sttKey, cauHinhGke, user);
+      const ketQua = await muaTrackingChoDon(sttKey, user);
       if (!ketQua) { loi.push({ sttKey, lyDo: 'Đơn này đã có mã tracking thật rồi — không mua lại.' }); continue; }
+      if (ketQua.dungChung) {
+        loi.push({ sttKey, lyDo: `Không mua — đơn DonNhieuAo dùng chung tracking ${ketQua.tracking_num} của ${ketQua.donMua} (đã gán).` });
+        continue;
+      }
       thanhCong.push(sttKey);
       if (ketQua.dayCheKhachHang && !ketQua.dayCheKhachHang.ok) {
         loiDaySheetKh.push({ sttKey, lyDo: ketQua.dayCheKhachHang.lyDo });
       }
     } catch (err) {
-      console.error(`[TrackingThuCong] Lỗi mua tracking cho ${sttKey}:`, err.stack || err.message);
-      loi.push({ sttKey, lyDo: err.message });
+      if (!err.maLoi) console.error(`[TrackingThuCong] Lỗi mua tracking cho ${sttKey}:`, err.stack || err.message);
+      loi.push({ sttKey, lyDo: err.message, maLoi: err.maLoi });
     }
   }
 
@@ -146,7 +158,6 @@ async function xuLyInLabelHangLoat(req, res, hamXuLy) {
     return res.status(400).json({ error: 'Danh sách đơn trống' });
   }
 
-  const cauHinhGke = await layCauHinhGke();
   const thanhCong = [];
   const loi = [];
   const cacLabelBase64 = [];
@@ -159,11 +170,11 @@ async function xuLyInLabelHangLoat(req, res, hamXuLy) {
         loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng' });
         continue;
       }
-      const ketQua = await hamXuLy(sttKey, cauHinhGke, user);
+      const ketQua = await hamXuLy(sttKey, user);
       thanhCong.push(sttKey);
       if (ketQua && ketQua.label_base64) cacLabelBase64.push(ketQua.label_base64);
     } catch (err) {
-      loi.push({ sttKey, lyDo: err.message });
+      loi.push({ sttKey, lyDo: err.message, maLoi: err.maLoi });
     }
   }
 
@@ -193,7 +204,6 @@ router.post('/cap-nhat-trang-thai-thu-cong', async (req, res) => {
     return res.status(400).json({ error: 'Danh sách đơn trống' });
   }
 
-  const cauHinhGke = await layCauHinhGke();
   const thanhCong = [];
   const loi = [];
 
@@ -208,7 +218,7 @@ router.post('/cap-nhat-trang-thai-thu-cong', async (req, res) => {
         loi.push({ sttKey, lyDo: 'Đơn chưa có mã tracking thật — chưa có gì để tra cứu.' });
         continue;
       }
-      const ketQua = await capNhatTrangThaiTrackingChoDon(sttKey, cauHinhGke);
+      const ketQua = await capNhatTrangThaiTrackingChoDon(sttKey);
       if (!ketQua.ok) { loi.push({ sttKey, lyDo: ketQua.lyDo }); continue; }
       thanhCong.push({
         sttKey,

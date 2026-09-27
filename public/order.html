@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Chi tiết đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=104">
+<link rel="stylesheet" href="/css/style.css?v=105">
 <script src="/js/theme.js?v=104"></script>
 </head>
 <body>
@@ -14,7 +14,7 @@
 </div>
 
 <script src="/js/icons.js?v=104"></script>
-<script src="/js/api.js?v=104"></script>
+<script src="/js/api.js?v=105"></script>
 <script>
 const sttKey = new URLSearchParams(location.search).get('stt');
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
@@ -42,6 +42,7 @@ function tsDep(isoStr) {
 }
 
 let user;
+let donHienTai = null; // đơn đang xem (lần tải gần nhất) — nút mua tracking kiểm tra đơn đã huỷ trước khi hỏi xác nhận
 let dsSanXuatDangHoatDong = []; // chỉ admin cần, nạp 1 lần lúc vào trang (xem renderKhuVucThaoTac)
 let dsVeFileDangHoatDong = []; // chỉ admin cần, nạp 1 lần lúc vào trang (xem renderKhuVucThaoTac)
 
@@ -84,13 +85,14 @@ function renderBangThongTin(don, viTri) {
   return `
     <tr><td>Mã đơn</td><td>${escapeHtml(don.STT_Key)}</td></tr>
     <tr><td>Mã đơn (sàn TMĐT)</td><td>${escapeHtml(don.MA_DON_HANG_ORDERID || '')}</td></tr>
+    ${dongNhomNhieuAo(don.NhomNhieuAo)}
     <tr><td>Khách hàng</td><td>${escapeHtml(don.TenKhachHang || '')} <span style="color:var(--color-text-faint)">(${escapeHtml(don.MA_KHACH_HANG || '')})</span></td></tr>
     <tr><td>Loại / Kích thước / Màu</td><td>${escapeHtml(don.LOAI || '')} · ${escapeHtml(don.KICH_THUOC || '')} · ${escapeHtml(don.MAU_SAC || '')}</td></tr>
     <tr><td>Vị trí thêu</td><td>${viTri}</td></tr>
     <tr><td>Số lượng</td><td>${escapeHtml(don.SO_LUONG || '')} ${don.SO_LUONG_AO_TREN_DON ? `(áo trên đơn: ${escapeHtml(don.SO_LUONG_AO_TREN_DON)})` : ''}</td></tr>
     <tr><td>Ngày lên đơn</td><td>${don.NGAY_LEN_DON ? dinhDangNgay(don.NGAY_LEN_DON) : ''}</td></tr>
     <tr><td>Hãng vận chuyển</td><td>${escapeHtml(don.HANG_VAN_CHUYEN || '')}</td></tr>
-    <tr><td>Mã tracking</td><td>${escapeHtml(don.TRACKING_ID || '')}</td></tr>
+    <tr><td>Mã tracking</td><td>${escapeHtml(don.TRACKING_ID || '')}${don.TRACKING_CHUNG_CUA ? ` <span style="color:var(--color-text-faint)">(dùng chung của ${escapeHtml(don.TRACKING_CHUNG_CUA)})</span>` : ''}</td></tr>
     ${don.TRACKING_ID && don.TRANG_THAI_TRACKING ? `
     <tr><td>Trạng thái vận chuyển</td><td>${escapeHtml(don.TRANG_THAI_TRACKING)}${don.THOI_GIAN_CAP_NHAT_TRACKING ? ` <span style="color:var(--color-text-faint)">(cập nhật ${escapeHtml(don.THOI_GIAN_CAP_NHAT_TRACKING)})</span>` : ''}</td></tr>` : ''}
     <tr><td>Người nhận</td><td>${escapeHtml(don.TEN || '')} ${don.SDT ? '· ' + escapeHtml(don.SDT) : ''}</td></tr>
@@ -101,10 +103,20 @@ function renderBangThongTin(don, viTri) {
     <tr><td>Cập nhật lần cuối</td><td>${escapeHtml(don.NguoiCapNhatCuoi || '')}${don.ThoiGianCapNhatCuoi ? ' · ' + tsDep(don.ThoiGianCapNhatCuoi) : ''}</td></tr>`;
 }
 
+// DonNhieuAo (bổ sung 26/09/2026) — liệt kê cả nhóm (link từng đơn + trạng thái + tracking) và lỗi dữ
+// liệu của nhóm, nếu có. Xem services/donNhieuAoService.js#tomTatChoDon.
+function dongNhomNhieuAo(n) {
+  if (!n) return '';
+  const cacDon = n.thanhVien.map(t => `<div><a href="/order.html?stt=${encodeURIComponent(t.sttKey)}">${escapeHtml(t.sttKey)}</a>${t.sttKey === n.donMua ? ' <strong>(mua tracking)</strong>' : ''}${t.sttKey === n.donIn && n.donIn !== n.donMua ? ' <strong>(in label)</strong>' : ''} · ${escapeHtml(t.trangThai)}${t.trackingId ? ' · ' + escapeHtml(t.trackingId) : ''}</div>`).join('');
+  const loi = [...n.loiChan, ...n.canhBao];
+  return `<tr><td>Nhóm DonNhieuAo</td><td>${nhanNhomNhieuAo(n)}<div style="margin-top:6px">${cacDon}</div>${loi.length ? `<p style="margin:6px 0 0;color:var(--color-danger-text)">${loi.map(escapeHtml).join('<br>')}</p>` : ''}</td></tr>`;
+}
+
 async function taiChiTiet() {
   let don;
   try {
     don = await apiFetch('/orders/' + encodeURIComponent(sttKey));
+    donHienTai = don;
   } catch (e) {
     document.getElementById('don-hang').innerHTML = `<p>${escapeHtml(e.message)}</p>`;
     return;
@@ -120,6 +132,7 @@ async function taiChiTiet() {
     </div>
     <div class="badge-row" style="margin-bottom:16px">
       ${don.DonUuTien ? `<span class="badge trang-thai-danger">${icon('star', {size:14})} Đơn ưu tiên</span>` : ''}
+      ${nhanNhomNhieuAo(don.NhomNhieuAo)}
       <span class="badge ${lopTrangThai(don.TRANG_THAI_XUONG)}">${escapeHtml(don.TRANG_THAI_XUONG || '')}</span>
       ${don.TRANG_THAI_XUONG === 'Đang chạy máy' ? `
         <span class="badge trang-thai-info">${icon('users', {size:14})} Đang vận hành: <strong>${escapeHtml(don.NguoiVanHanh || NHAN_NGUOI_VAN_HANH_KHONG_RO)}</strong></span>` : ''}
@@ -266,7 +279,13 @@ function renderKhuVucThaoTac(don) {
     // ngay cho đơn ĐANG XEM. Dùng chung API /tracking/mua-thu-cong với nút tương tự ở tracking.html
     // (trang danh sách đơn AUTO_TRACKING). Từ 12/09/2026 lần 14, TRACKING_ID không còn khi nào mang giá
     // trị placeholder "chờ tem" nữa (chuyển sang cột TAM_THOI) nên chỉ cần kiểm tra rỗng/không rỗng.
-    if (!don.TRACKING_ID) {
+    if (!don.TRACKING_ID && laDonConNhieuAo(don)) {
+      html += `
+      <div class="upload-box">
+        <label>${icon('package', { size: 18 })} Mua tracking GKE thủ công</label>
+        <p style="margin:0;font-size:0.85rem">Đơn thuộc nhóm DonNhieuAo ${escapeHtml(don.NhomNhieuAo.goc)} — dùng chung tracking của <strong>${escapeHtml(don.NhomNhieuAo.donMua || '(chưa xác định)')}</strong>, không mua riêng. Tracking tự gán sau khi đơn đó mua.</p>
+      </div>`;
+    } else if (!don.TRACKING_ID) {
       html += `
       <div class="upload-box">
         <label>${icon('package', { size: 18 })} Mua tracking GKE thủ công</label>
@@ -283,7 +302,13 @@ function renderKhuVucThaoTac(don) {
   // hiện nút gộp (tránh bấm nhầm vào nút không chạy được, đã xác nhận với người dùng). Bỏ san_xuat
   // khỏi khối này 12/09/2026 (theo yêu cầu người dùng, gộp cùng lúc ẩn khu vực thao tác không cần
   // thiết cho vai trò này) — trước đó san_xuat cũng thấy được.
-  if (user.vaiTro !== 'nguoi_lay_phoi' && user.vaiTro !== 'san_xuat') {
+  if (user.vaiTro !== 'nguoi_lay_phoi' && user.vaiTro !== 'san_xuat' && don.NhomNhieuAo && !don.NhomNhieuAo.laDonIn) {
+    html += `
+      <div class="upload-box">
+        <label>${icon('printer', { size: 18 })} In label vận chuyển (GKE)</label>
+        <p style="margin:0;font-size:0.85rem">Cả nhóm DonNhieuAo ${escapeHtml(don.NhomNhieuAo.goc)} dùng 1 tem — in label ở đơn <strong>${escapeHtml(don.NhomNhieuAo.donIn || '(chưa xác định)')}</strong> khi cả nhóm đã "Đã sản xuất".</p>
+      </div>`;
+  } else if (user.vaiTro !== 'nguoi_lay_phoi' && user.vaiTro !== 'san_xuat') {
     const daCoTrackingThat = !!don.TRACKING_ID;
     html += `
       <div class="upload-box">
@@ -456,7 +481,14 @@ async function apDungChiDinhNguoiVeFileChiTiet(btn) {
   }
 }
 
+function laDonConNhieuAo(don) {
+  return !!don.NhomNhieuAo && !don.NhomNhieuAo.laDonMua;
+}
+
+const laDonDaHuy = () => donHienTai && donHienTai.TRANG_THAI_XUONG === TRANG_THAI_DON_DA_HUY;
+
 async function muaTrackingThuCongChiTiet(btn) {
+  if (laDonDaHuy()) return hienThongBaoDonDaHuy([sttKey]);
   if (!confirm(`Mua tracking GKE thủ công cho đơn ${sttKey} ngay bây giờ? Đây là thao tác tạo vận đơn THẬT, có thể phát sinh chi phí.`)) return;
 
   const nhanGoc = btn.innerHTML;
@@ -466,7 +498,8 @@ async function muaTrackingThuCongChiTiet(btn) {
   try {
     const ketQua = await apiFetch('/tracking/mua-thu-cong', { method: 'POST', body: JSON.stringify({ sttKeys: [sttKey] }) });
     if (ketQua.loi && ketQua.loi.length > 0) {
-      alert('Không mua được tracking: ' + ketQua.loi[0].lyDo);
+      const loiKhac = await tachVaBaoDonDaHuy(ketQua.loi);
+      if (loiKhac.length) alert('Không mua được tracking: ' + loiKhac[0].lyDo);
       btn.disabled = false;
       btn.innerHTML = nhanGoc;
     } else {
@@ -494,6 +527,7 @@ async function apDungInLabelChiTiet(btn) {
 }
 
 async function apDungMuaVaInLabelChiTiet(btn) {
+  if (laDonDaHuy()) return hienThongBaoDonDaHuy([sttKey]);
   if (!confirm(`Mua tracking (nếu chưa có) và in label cho đơn ${sttKey}? Có thể phát sinh phí thật với đơn chưa có tracking.`)) return;
   await xuLyInLabelChiTiet(btn, '/tracking/mua-va-in-label');
 }
@@ -506,7 +540,8 @@ async function xuLyInLabelChiTiet(btn, duongDan) {
   try {
     const ketQua = await apiFetch(duongDan, { method: 'POST', body: JSON.stringify({ sttKeys: [sttKey] }) });
     if (ketQua.loi && ketQua.loi.length > 0) {
-      alert('Lỗi: ' + ketQua.loi[0].lyDo);
+      const loiKhac = await tachVaBaoDonDaHuy(ketQua.loi);
+      if (loiKhac.length) alert('Lỗi: ' + loiKhac[0].lyDo);
       btn.disabled = false;
       btn.innerHTML = nhanGoc;
       return;

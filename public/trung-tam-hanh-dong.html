@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Trung tâm hành động — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=104">
+<link rel="stylesheet" href="/css/style.css?v=105">
 <script src="/js/theme.js?v=104"></script>
 <style>
 /* Trang chính mới sau đăng nhập cho admin (bổ sung 14/09/2026, xem
@@ -41,7 +41,7 @@
 </div>
 
 <script src="/js/icons.js?v=104"></script>
-<script src="/js/api.js?v=104"></script>
+<script src="/js/api.js?v=105"></script>
 <script>
 function dinhDangThoiGian(iso) {
   const d = new Date(iso);
@@ -85,11 +85,25 @@ function veKhoiLoiTracking(ds) {
   ).join('')}</div><p style="margin-top:8px"><a href="/tracking.html">Mở trang Tracking →</a></p>`;
 }
 
+// DonNhieuAo (bổ sung 26/09/2026) — lỗi dữ liệu nhóm (xem services/donNhieuAoService.js) + nhóm đã huỷ
+// nhưng đơn ".1" còn vận đơn GKE cần huỷ tay.
+function veKhoiDonNhieuAo(loi, huy) {
+  if (loi.length === 0 && huy.length === 0) return khoiRong('Không có lỗi DonNhieuAo nào.');
+  return `<div class="ttha-danh-sach">${
+    huy.map(d => dongDon(d.sttKey, `Nhóm ${escapeHtml(d.goc)} ĐÃ HUỶ — huỷ vận đơn ${escapeHtml(d.trackingId)} bên GKE bằng tay`)).join('') +
+    loi.map(n => dongDon(n.sttKeys[0], `Nhóm ${escapeHtml(n.goc)} · OrderID ${escapeHtml(n.orderId)} · ${escapeHtml(n.sttKeys.join(', '))}<br>${n.loi.map(escapeHtml).join('<br>')}`)).join('')
+  }</div>`;
+}
+
 async function taiTrungTamHanhDong() {
   const khu = document.getElementById('khu-noi-dung');
   khu.innerHTML = skeletonList(4);
   const kq = await apiFetch('/trung-tam-hanh-dong/danh-sach');
   khu.innerHTML = `
+    <div class="ttha-khoi">
+      <h3>DonNhieuAo cần xử lý <span class="ttha-dem">${kq.loiDonNhieuAo.length + kq.nhomHuyConTracking.length}</span></h3>
+      ${veKhoiDonNhieuAo(kq.loiDonNhieuAo, kq.nhomHuyConTracking)}
+    </div>
     <div class="ttha-khoi">
       <h3>Đơn mới huỷ (48 giờ gần đây) <span class="ttha-dem">${kq.huyGanDay.length}</span></h3>
       ${veKhoiHuy(kq.huyGanDay)}

@@ -11,6 +11,7 @@ const customerSheetService = require('./customerSheetService');
 const telegramService = require('./telegramService');
 const { ghiLog } = require('./logService');
 const { dinhDangNgayGioNgan } = require('./dateUtils');
+const donNhieuAoService = require('./donNhieuAoService');
 
 const SO_PHUT_MAC_DINH = 10;
 
@@ -152,11 +153,71 @@ function luuCauHinhQuetTrangThai({ soPhutQuet }) {
 // lẫn nút hàng loạt) đều tự động được ghi log đầy đủ, không phải lặp lại try/catch+log ở từng nơi gọi.
 // Mỗi dòng log gắn nhãn nguồn [Tự động]/[Thủ công - <tên>] ở đầu để phân biệt rõ ngay khi lướt qua,
 // không phải suy luận "không có hậu tố nghĩa là tự động" như cách làm cũ.
-function muaTrackingChoDon(sttKey, cauHinhGke, user = NGUOI_HE_THONG) {
-  return xepHangMuaTracking(sttKey, () => _muaTrackingChoDonThat(sttKey, cauHinhGke, user));
+// Từ 27/09/2026 KHÔNG còn nhận cauHinhGke từ nơi gọi — mỗi đơn tự lấy đúng tài khoản GKE của Xưởng mình
+// (gkeService.layCauHinhGkeChoDon) BÊN TRONG hàm, vì 1 lô/1 lượt job có thể gồm đơn của nhiều Xưởng.
+function muaTrackingChoDon(sttKey, user = NGUOI_HE_THONG) {
+  return xepHangMuaTracking(sttKey, () => _muaTrackingChoDonThat(sttKey, user));
 }
 
-async function _muaTrackingChoDonThat(sttKey, cauHinhGke, user) {
+// DonNhieuAo (bổ sung 26/09/2026) — SAO tracking của đơn ".1" xuống các đơn con chưa có tracking (bỏ qua
+// đơn đã huỷ), đánh dấu TRACKING_CHUNG_CUA = đơn ".1", đẩy luôn sang Sheet khách hàng (best-effort, cùng
+// cách xử lý với đơn ".1"). `tracking` truyền riêng vì nhom.thanhVien là dữ liệu đọc TRƯỚC lúc mua.
+// Chỉ ghi SQLite qua update() — KHÔNG gọi GKE (GKE chỉ biết vận đơn dưới STT_Key của đơn ".1").
+async function saoTrackingXuongNhom(nhom, tracking, user) {
+  const daSao = [];
+  for (const con of nhom.thanhVien) {
+    if (con.STT_Key === nhom.donMua.STT_Key || con.TRACKING_ID || con.TRANG_THAI_XUONG === donNhieuAoService.TRANG_THAI_HUY) continue;
+    await orderService.update(con.STT_Key, {
+      TRACKING_ID: tracking.trackingId,
+      HANG_VAN_CHUYEN: tracking.hangVanChuyen,
+      TRACKING_CHUNG_CUA: nhom.donMua.STT_Key,
+      TRANG_THAI_TRACKING: tracking.trangThaiTracking || '',
+      THOI_GIAN_CAP_NHAT_TRACKING: tracking.thoiGianCapNhat || '',
+      MA_NODE_TRACKING: tracking.maNode || '',
+      MA_TRANG_THAI_NODE_TRACKING: tracking.maTrangThaiNode || '',
+      TAI_KHOAN_GKE: tracking.taiKhoanGke || '',
+    }, user);
+    daSao.push(con.STT_Key);
+    ghiLogTrackingVaoDb({
+      sttKey: con.STT_Key, nguon: 'DonNhieuAo', nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: 'Dùng chung',
+      trackingId: tracking.trackingId, hangVanChuyen: tracking.hangVanChuyen,
+      chiTiet: `Dùng chung tracking của ${nhom.donMua.STT_Key} (nhóm DonNhieuAo ${nhom.goc}) — không mua riêng.`,
+    });
+    const thongTinSheetKh = con.MA_KHACH_HANG
+      ? await khachHangService.layThongTinSheetKhachHang(con.MA_KHACH_HANG).catch(() => null)
+      : null;
+    if (thongTinSheetKh) {
+      await customerSheetService.dayTrackingSangSheetKhachHang({
+        ...thongTinSheetKh, sttKey: con.STT_Key, trackingId: tracking.trackingId, hangVanChuyen: tracking.hangVanChuyen,
+      }).catch(err => console.error(`[DonNhieuAo] Lỗi đẩy tracking sang Sheet khách hàng cho ${con.STT_Key}:`, err.message));
+    }
+  }
+  return daSao;
+}
+
+const trackingCuaDon = r => ({
+  trackingId: r.TRACKING_ID, hangVanChuyen: r.HANG_VAN_CHUYEN, trangThaiTracking: r.TRANG_THAI_TRACKING,
+  thoiGianCapNhat: r.THOI_GIAN_CAP_NHAT_TRACKING, maNode: r.MA_NODE_TRACKING, maTrangThaiNode: r.MA_TRANG_THAI_NODE_TRACKING,
+  taiKhoanGke: r.TAI_KHOAN_GKE,
+});
+
+// Đồng bộ mọi nhóm mà đơn ".1" ĐÃ có tracking nhưng còn đơn con chưa có (vd đơn con thêm vào Sheet sau
+// khi đã mua) — gọi ở mỗi lượt job tự động mua tracking.
+async function dongBoTrackingCacNhom(rows) {
+  const daXet = new Set();
+  for (const nhom of donNhieuAoService.xayDungBanDoNhom(rows).values()) {
+    if (daXet.has(nhom.khoa)) continue;
+    daXet.add(nhom.khoa);
+    if (!nhom.donMua || !nhom.donMua.TRACKING_ID || nhom.loiChan.length) continue;
+    try {
+      await saoTrackingXuongNhom(nhom, trackingCuaDon(nhom.donMua), NGUOI_HE_THONG);
+    } catch (err) {
+      console.error(`[DonNhieuAo] Lỗi đồng bộ tracking nhóm ${nhom.goc}:`, err.message);
+    }
+  }
+}
+
+async function _muaTrackingChoDonThat(sttKey, user) {
   const laThuCong = user !== NGUOI_HE_THONG;
   const nhanNguon = laThuCong ? `[Thủ công - ${user.ten}]` : '[Tự động]';
   const nguonSheet = laThuCong ? 'Thủ công' : 'Tự động';
@@ -166,8 +227,10 @@ async function _muaTrackingChoDonThat(sttKey, cauHinhGke, user) {
   const nhatKy = [];
 
   try {
-    const { headers, row } = await orderService.getByKey(sttKey, { fresh: true });
+    const { headers, rows } = await orderService.getAll({ fresh: true });
+    const row = rows.find(r => r.STT_Key === sttKey);
     if (!row) throw new Error('Không tìm thấy đơn: ' + sttKey);
+    chanMuaDonDaHuy(row);
     if (row.TRACKING_ID) {
       ghiLogTrackingVaoDb({
         sttKey, nguon: nguonSheet, nguoiDung: user.ten, vaiTro: user.vaiTro,
@@ -184,12 +247,45 @@ async function _muaTrackingChoDonThat(sttKey, cauHinhGke, user) {
       throw new Error('Chưa có cột TAM_THOI trong tab Don_Hang_ALL — cần thêm cột này (đánh dấu đơn đang chờ tem GKE) trước khi mua tracking.');
     }
 
+    // DonNhieuAo (bổ sung 26/09/2026) — CHỐT CHẶN DUY NHẤT cho mọi lối mua (job tự động, nút mua đơn
+    // lẻ/hàng loạt, "MUA TRACKING và IN LABEL" đều đi qua đây): nhóm lỗi dữ liệu thì không mua; đơn con
+    // không bao giờ gọi GKE — chỉ nhận bản sao tracking của đơn ".1" (nếu đơn ".1" đã có).
+    const nhom = donNhieuAoService.layNhomCuaDon(sttKey, rows);
+    if (nhom && nhom.loiChan.length) {
+      throw new Error(`[DonNhieuAo ${nhom.goc}] ${nhom.loiChan.join(' ')} Sửa dữ liệu rồi thử lại.`);
+    }
+    if (nhom && nhom.donMua.STT_Key !== sttKey) {
+      if (!nhom.donMua.TRACKING_ID) {
+        throw new Error(`Đơn thuộc nhóm DonNhieuAo ${nhom.goc} — chỉ mua tracking ở đơn ${nhom.donMua.STT_Key}, các đơn còn lại dùng chung.`);
+      }
+      await saoTrackingXuongNhom(nhom, trackingCuaDon(nhom.donMua), user);
+      return { dungChung: true, donMua: nhom.donMua.STT_Key, tracking_num: nhom.donMua.TRACKING_ID };
+    }
+    // CHỈ mua cho đơn giao tới US/UK (bổ sung 27/09/2026, theo yêu cầu người dùng) — xét DIA_CHI_NUOC của
+    // đơn mua (đơn ".1" nếu là DonNhieuAo). Chặn ở ĐÂY nên áp dụng cho mọi lối mua.
+    if (!gkeService.duocMuaTrackingTheoQuocGia(row)) {
+      throw new Error(`Chỉ mua tracking GKE cho đơn giao tới US hoặc UK — đơn ${sttKey} có quốc gia "${row.DIA_CHI_NUOC || '(trống)'}".`);
+    }
+    // Tài khoản GKE theo Xưởng của đơn (đơn ".1" nếu là DonNhieuAo) — lỗi rõ ràng nếu Xưởng chưa gán
+    // tài khoản, KHÔNG dùng tài khoản Xưởng khác thay thế (xem gkeService.js#layCauHinhGkeChoDon).
+    const cauHinhGke = gkeService.layCauHinhGkeChoDon(row);
+    let donGuiGke = row;
+    if (nhom) {
+      const canNang = nhom.thanhVien
+        .filter(r => r.TRANG_THAI_XUONG !== donNhieuAoService.TRANG_THAI_HUY)
+        .reduce((tong, r) => tong + gkeService.tinhCanNangKg(r, cauHinhGke), 0);
+      donGuiGke = { ...row, _CAN_NANG_KG: canNang };
+      nhatKy.push(`[DonNhieuAo] Nhóm ${nhom.goc} (${nhom.thanhVien.length} đơn) — mua 1 tracking cho cả nhóm, cân nặng tổng ${canNang} kg.`);
+    }
+
     const chuaTungTaoDon = !row.TAM_THOI;
     const dangChoTuLanTruoc = row.TAM_THOI === gkeService.MA_DANG_CHO_TEM;
 
     if (chuaTungTaoDon) {
-      await gkeService.taoDonGke(row, cauHinhGke, nhatKy);
-      await orderService.update(sttKey, { TAM_THOI: gkeService.MA_DANG_CHO_TEM }, user);
+      await gkeService.taoDonGke(donGuiGke, cauHinhGke, nhatKy);
+      // Ghi tài khoản đã tạo vận đơn CÙNG lượt với TAM_THOI — lượt lấy tem lại sau này (và in lại tem/tra
+      // trạng thái) phải dùng đúng tài khoản này dù Xưởng của đơn có đổi.
+      await orderService.update(sttKey, { TAM_THOI: gkeService.MA_DANG_CHO_TEM, TAI_KHOAN_GKE: cauHinhGke.id }, user);
     }
 
     const ketQuaTem = await gkeService.layTemIn(row, cauHinhGke, { laLanDauSauKhiTao: chuaTungTaoDon || dangChoTuLanTruoc }, nhatKy);
@@ -197,7 +293,13 @@ async function _muaTrackingChoDonThat(sttKey, cauHinhGke, user) {
       TRACKING_ID: ketQuaTem.tracking_num,
       HANG_VAN_CHUYEN: ketQuaTem.delivery_carrier,
       TAM_THOI: '', // đã có tracking thật — không còn "tạm" nữa
+      TAI_KHOAN_GKE: cauHinhGke.id,
     }, user);
+
+    if (nhom) {
+      const daSao = await saoTrackingXuongNhom(nhom, { trackingId: ketQuaTem.tracking_num, hangVanChuyen: ketQuaTem.delivery_carrier, taiKhoanGke: cauHinhGke.id }, user);
+      nhatKy.push(`[DonNhieuAo] Đã sao tracking xuống: ${daSao.join(', ') || '(không có đơn nào cần sao)'}.`);
+    }
 
     // Đẩy sang Sheet RIÊNG của khách hàng (bổ sung 21/09/2026, theo yêu cầu người dùng — xem
     // services/customerSheetService.js) — BEST-EFFORT, KHÔNG được chặn/rollback việc mua tracking THẬT
@@ -268,6 +370,28 @@ function kiemTraDieuKienInLabel(row) {
   }
 }
 
+// DonNhieuAo (bổ sung 26/09/2026) — 1 kiện = 1 tem: chỉ in ở nhom.donIn (thường là ".1"), và chỉ khi MỌI đơn chưa huỷ trong
+// nhóm đã "Đã sản xuất" trở đi. Trả nhóm (hoặc null nếu đơn không thuộc nhóm nào) để nơi gọi ghi chú lên tem.
+function kiemTraNhomKhiInLabel(row, rows) {
+  const nhom = donNhieuAoService.layNhomCuaDon(row.STT_Key, rows);
+  if (!nhom) return null;
+  if (nhom.loiChan.length) throw new Error(`[DonNhieuAo ${nhom.goc}] ${nhom.loiChan.join(' ')}`);
+  if (nhom.donIn.STT_Key !== row.STT_Key) {
+    throw new Error(`Đơn thuộc nhóm DonNhieuAo ${nhom.goc} — cả nhóm dùng 1 tem, in label ở đơn ${nhom.donIn.STT_Key}.`);
+  }
+  const chuaXong = donNhieuAoService.cacDonChuaSanXuat(nhom);
+  if (chuaXong.length) {
+    throw new Error(`Nhóm DonNhieuAo ${nhom.goc} còn đơn chưa sản xuất xong: ${chuaXong.map(r => `${r.STT_Key} (${r.TRANG_THAI_XUONG})`).join(', ')} — cả nhóm phải "Đã sản xuất" mới in label.`);
+  }
+  return nhom;
+}
+
+async function ghiChuNhomLenTem(ketQuaTem, nhom) {
+  if (!nhom || !ketQuaTem || !ketQuaTem.label_base64) return ketQuaTem;
+  const cacDon = nhom.thanhVien.filter(r => r.TRANG_THAI_XUONG !== donNhieuAoService.TRANG_THAI_HUY).map(r => r.STT_Key);
+  return { ...ketQuaTem, label_base64: await gkeService.ghiChuLenTem(ketQuaTem.label_base64, `KIEN GOM ${cacDon.length} DON: ${cacDon.join(', ')}`) };
+}
+
 // Đánh dấu đơn ĐÃ in label — cột IN_LABEL (YES/NO, người dùng tự thêm 09/09/2026) + THOI_GIAN_IN_LABEL
 // (mốc thời gian lần in gần nhất, CÙNG khuôn THOI_GIAN_IN_MA — người dùng cần tự thêm cột này vào Sheet
 // nếu muốn dùng). Cả 2 cột đều TUỲ CHỌN (guard headers.includes) — chưa thêm cột nào thì bỏ qua việc
@@ -290,23 +414,28 @@ async function ghiDaInLabel(sttKey, user) {
 // Đơn hàng chi tiết/Tracking. KHÔNG liên quan gì tới việc đổi TRANG_THAI_XUONG sang "ĐÃ DÁN TEM" (việc
 // đó nay làm qua chụp ảnh xác nhận thuần, xem routes/photos.js mốc da_dan_tem) — chỉ yêu cầu đơn đang
 // "Đã sản xuất"/"ĐÃ DÁN TEM" và đã có tracking thật để có gì mà in lại (xem kiemTraDieuKienInLabel).
-async function inLabelChoDon(sttKey, cauHinhGke, user) {
+async function inLabelChoDon(sttKey, user) {
   const nhatKy = [];
-  const { row } = await orderService.getByKey(sttKey, { fresh: true });
+  const { rows } = await orderService.getAll({ fresh: true });
+  const row = rows.find(r => r.STT_Key === sttKey);
   if (!row) throw new Error('Không tìm thấy đơn: ' + sttKey);
 
   try {
     kiemTraDieuKienInLabel(row);
-    if (!row.TRACKING_ID) {
+    const nhom = kiemTraNhomKhiInLabel(row, rows);
+    // Tem lấy theo vận đơn của đơn ĐÃ MUA — khác đơn bấm in khi .1 đã mua rồi mới bị huỷ riêng.
+    const donLayTem = nhom ? nhom.donMua : row;
+    if (!donLayTem.TRACKING_ID) {
       throw new Error('Đơn chưa có mã tracking thật — dùng nút "MUA TRACKING và IN LABEL" thay vì "IN LABEL".');
     }
 
-    const ketQuaTem = await gkeService.layTemIn(row, cauHinhGke, { laLanDauSauKhiTao: false }, nhatKy);
+    const cauHinhGke = gkeService.layCauHinhGkeChoDon(donLayTem);
+    const ketQuaTem = await ghiChuNhomLenTem(await gkeService.layTemIn(donLayTem, cauHinhGke, { laLanDauSauKhiTao: false }, nhatKy), nhom);
     await ghiDaInLabel(sttKey, user);
 
     ghiLogTrackingVaoDb({
       sttKey, nguon: 'In label', nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: 'Thành công',
-      trackingId: row.TRACKING_ID, hangVanChuyen: row.HANG_VAN_CHUYEN, chiTiet: nhatKy.join('\n'),
+      trackingId: donLayTem.TRACKING_ID, hangVanChuyen: donLayTem.HANG_VAN_CHUYEN, chiTiet: nhatKy.join('\n'),
     });
     return ketQuaTem;
   } catch (err) {
@@ -318,6 +447,16 @@ async function inLabelChoDon(sttKey, cauHinhGke, user) {
   }
 }
 
+// Đơn đã huỷ: KHÔNG mua tracking ở MỌI đường mua (bổ sung 27/09/2026, theo yêu cầu người dùng) — job tự
+// động đã lọc trước; đây chặn nút mua tay/"MUA TRACKING và IN LABEL". maLoi để giao diện hiện hộp đỏ riêng
+// (public/js/api.js#tachVaBaoDonDaHuy).
+function chanMuaDonDaHuy(row) {
+  if (row.TRANG_THAI_XUONG !== donNhieuAoService.TRANG_THAI_HUY) return;
+  const err = new Error(`ĐƠN ĐÃ HỦY (KHÔNG MUA TRACKING) — đơn ${row.STT_Key} đang "${row.TRANG_THAI_XUONG}".`);
+  err.maLoi = 'DON_DA_HUY';
+  throw err;
+}
+
 // "MUA TRACKING và IN LABEL" — 1 nút làm CẢ 2 việc (bổ sung 09/09/2026 lần 2, theo yêu cầu người
 // dùng): đơn CHƯA có tracking thì mua trước (dùng lại muaTrackingChoDon(), đã tự lấy tem trong lúc mua
 // nên KHÔNG cần gọi GKE thêm lần nào cho bước in — label_base64 đã có sẵn trong kết quả trả về); đơn
@@ -326,12 +465,16 @@ async function inLabelChoDon(sttKey, cauHinhGke, user) {
 // Bắt buộc "Đã sản xuất"/"ĐÃ DÁN TEM" cho CẢ 2 nhánh — khác nút "Mua Tracking" gốc (không kiểm tra
 // trạng thái): đã xác nhận với người dùng, 2 nút MỚI này dành riêng cho lúc chuẩn bị gửi hàng, không
 // phải để lấy mã tracking sớm như nút gốc.
-async function muaTrackingVaInLabelChoDon(sttKey, cauHinhGke, user) {
-  const { row } = await orderService.getByKey(sttKey, { fresh: true });
+async function muaTrackingVaInLabelChoDon(sttKey, user) {
+  const { rows } = await orderService.getAll({ fresh: true });
+  const row = rows.find(r => r.STT_Key === sttKey);
   if (!row) throw new Error('Không tìm thấy đơn: ' + sttKey);
 
+  let nhom;
   try {
+    chanMuaDonDaHuy(row);
     kiemTraDieuKienInLabel(row);
+    nhom = kiemTraNhomKhiInLabel(row, rows);
   } catch (err) {
     ghiLogTrackingVaoDb({
       sttKey, nguon: 'Mua tracking + In label', nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: 'Lỗi',
@@ -340,12 +483,12 @@ async function muaTrackingVaInLabelChoDon(sttKey, cauHinhGke, user) {
     throw err;
   }
 
-  const daCoTrackingThat = !!row.TRACKING_ID;
+  const daCoTrackingThat = !!(nhom ? nhom.donMua : row).TRACKING_ID;
   if (daCoTrackingThat) {
-    return inLabelChoDon(sttKey, cauHinhGke, user);
+    return inLabelChoDon(sttKey, user);
   }
 
-  const ketQuaTem = await muaTrackingChoDon(sttKey, cauHinhGke, user); // tự ghi log riêng (Nguồn "Thủ công"), cả 2 chiều
+  const ketQuaTem = await ghiChuNhomLenTem(await muaTrackingChoDon(sttKey, user), nhom); // tự ghi log riêng (Nguồn "Thủ công"), cả 2 chiều
   if (!ketQuaTem) throw new Error('Đơn vừa được mua tracking bởi người khác — thử lại thao tác này.');
 
   await ghiDaInLabel(sttKey, user);
@@ -363,24 +506,42 @@ async function chayQuetTuDongMuaTracking() {
   const cauHinh = await layCauHinh();
   if (!cauHinh.bat) return { daQuet: false, soDonDaMua: 0 };
 
-  const [{ rows }, cauHinhGke] = await Promise.all([orderService.getAll(), gkeService.layCauHinhGke()]);
+  const { rows } = await orderService.getAll();
   const bayGio = Date.now();
   const nguongMs = cauHinh.soPhutCho * 60 * 1000;
 
+  // DonNhieuAo: sao tracking xuống đơn con mới thêm (nếu đơn ".1" đã mua), rồi loại hẳn đơn con + nhóm
+  // lỗi dữ liệu khỏi danh sách mua — nhóm lỗi đã hiện ở Trung tâm hành động, không cần báo lỗi lại mỗi 2 phút.
+  await dongBoTrackingCacNhom(rows);
+  const banDoNhom = donNhieuAoService.xayDungBanDoNhom(rows);
+
   const donDuDieuKien = rows.filter(r => {
     if (String(r.AUTO_TRACKING).toUpperCase() !== 'YES') return false;
+    if (r.TRANG_THAI_XUONG === donNhieuAoService.TRANG_THAI_HUY) return false; // đơn đã huỷ — không mua tem (27/09/2026)
     if (r.TRACKING_ID) return false; // đã có tracking thật
+    const nhom = banDoNhom.get(r.STT_Key);
+    if (nhom && (nhom.loiChan.length || nhom.donMua.STT_Key !== r.STT_Key)) return false;
+    if (!gkeService.duocMuaTrackingTheoQuocGia(r)) return false; // chỉ US/UK — trang Tracking hiện rõ lý do
     if (!r.THOI_GIAN_IN_MA) return false;
     const thoiDiem = new Date(r.THOI_GIAN_IN_MA).getTime();
     if (isNaN(thoiDiem)) return false;
     return (bayGio - thoiDiem) >= nguongMs;
   });
 
+  // Tài khoản GKE theo Xưởng (bổ sung 27/09/2026): đơn không xác định được tài khoản (chưa gán Xưởng,
+  // Xưởng chưa gán tài khoản...) — bỏ qua ở lượt tự động thay vì ghi lỗi mỗi 2 phút cho từng đơn; trang
+  // Tracking hiện rõ trạng thái "Chưa có tài khoản GKE" cho các đơn này (xem layDanhSachDonAutoTracking).
+  const loiTaiKhoan = new Map();
+  const donMua = donDuDieuKien.filter(r => {
+    try { gkeService.layCauHinhGkeChoDon(r); return true; } catch (err) { loiTaiKhoan.set(err.message, (loiTaiKhoan.get(err.message) || 0) + 1); return false; }
+  });
+  for (const [lyDo, so] of loiTaiKhoan) console.warn(`[TrackingTuDong] Bỏ qua ${so} đơn — ${lyDo}`);
+
   let soDonDaMua = 0;
-  for (const don of donDuDieuKien) {
+  for (const don of donMua) {
     try {
-      const ketQua = await muaTrackingChoDon(don.STT_Key, cauHinhGke);
-      if (ketQua) soDonDaMua++;
+      const ketQua = await muaTrackingChoDon(don.STT_Key);
+      if (ketQua && !ketQua.dungChung) soDonDaMua++;
     } catch (err) {
       // Đã ghi vào layLogTracking() BÊN TRONG muaTrackingChoDon() rồi (xem ghi chú ở đó) — ở đây chỉ
       // cần in thêm ra console server để xem full stack khi cần debug sâu hơn dòng log ngắn gọn.
@@ -426,11 +587,20 @@ function daGiaoThanhCongGke(maNode, maTrangThaiNode) {
 // Trả {ok:true, suKien} khi ghi thành công — `lyDo` (bổ sung 14/09/2026, theo yêu cầu người dùng, cho
 // nút "Tracking thủ công" ở routes/tracking.js hiện rõ LÝ DO thay vì chỉ biết chung chung "không có gì
 // mới") dùng ĐƯỢC cho cả job tự động (chỉ cần `.ok`, bỏ qua `.lyDo`) lẫn route thủ công (cần cả 2).
-async function capNhatTrangThaiTrackingChoDon(sttKey, cauHinhGke) {
-  const { headers, row } = await orderService.getByKey(sttKey, { fresh: true });
+async function capNhatTrangThaiTrackingChoDon(sttKey) {
+  const { headers, rows } = await orderService.getAll({ fresh: true });
+  const row = rows.find(r => r.STT_Key === sttKey);
   if (!row) return { ok: false, lyDo: 'Không tìm thấy đơn: ' + sttKey };
 
-  const lichSu = await gkeService.layLichSuTrackingGke(sttKey, cauHinhGke, []);
+  // DonNhieuAo (bổ sung 26/09/2026): GKE chỉ biết vận đơn dưới STT_Key của đơn ".1" — đơn dùng chung tra
+  // theo đơn đó, rồi ghi kết quả cho CẢ đơn ".1" lẫn mọi đơn đang dùng chung tracking của nó.
+  const keyTra = row.TRACKING_CHUNG_CUA || sttKey;
+  const cacDonGhi = rows.filter(r => r.STT_Key === keyTra || r.TRACKING_CHUNG_CUA === keyTra);
+
+  const donTra = rows.find(r => r.STT_Key === keyTra);
+  if (!donTra) return { ok: false, lyDo: `Không tìm thấy đơn ${keyTra} (đơn mua tracking của nhóm)` };
+  const cauHinhGke = gkeService.layCauHinhGkeChoDon(donTra); // tài khoản ĐÃ tạo vận đơn
+  const lichSu = await gkeService.layLichSuTrackingGke(keyTra, cauHinhGke, []);
   if (lichSu.length === 0) {
     return { ok: false, lyDo: 'GKE chưa có sự kiện tracking nào cho đơn này (có thể vừa tạo nhãn, chưa được đơn vị vận chuyển quét nhận).' };
   }
@@ -442,7 +612,9 @@ async function capNhatTrangThaiTrackingChoDon(sttKey, cauHinhGke) {
     MA_NODE_TRACKING: suKienMoiNhat.order_node || '',
     MA_TRANG_THAI_NODE_TRACKING: suKienMoiNhat.node_status || '',
   };
-  await orderService.update(sttKey, capNhat, NGUOI_HE_THONG, { donDaDoc: { headers, row } });
+  for (const don of cacDonGhi) {
+    await orderService.update(don.STT_Key, capNhat, NGUOI_HE_THONG, { donDaDoc: { headers, row: don } });
+  }
   return { ok: true, suKien: suKienMoiNhat };
 }
 
@@ -451,14 +623,15 @@ async function capNhatTrangThaiTrackingChoDon(sttKey, cauHinhGke) {
 // thành công ở lượt quét trước (daGiaoThanhCongGke — xem comment trên) để đỡ tốn lượt gọi GKE vô ích.
 // Lỗi ở 1 đơn chỉ log console, KHÔNG dừng cả lượt — đơn đó tự thử lại ở lượt sau.
 async function chayQuetCapNhatTrangThaiTracking() {
-  const [{ rows }, cauHinhGke] = await Promise.all([orderService.getAll(), gkeService.layCauHinhGke()]);
-  const donCoTracking = rows.filter(r => r.TRACKING_ID);
+  const { rows } = await orderService.getAll();
+  // Bỏ đơn dùng chung tracking (DonNhieuAo) — cập nhật theo đơn ".1" của nó (xem capNhatTrangThaiTrackingChoDon).
+  const donCoTracking = rows.filter(r => r.TRACKING_ID && !r.TRACKING_CHUNG_CUA);
   const donCanQuet = donCoTracking.filter(r => !daGiaoThanhCongGke(r.MA_NODE_TRACKING, r.MA_TRANG_THAI_NODE_TRACKING));
 
   let soDaCapNhat = 0;
   for (const don of donCanQuet) {
     try {
-      const ketQua = await capNhatTrangThaiTrackingChoDon(don.STT_Key, cauHinhGke);
+      const ketQua = await capNhatTrangThaiTrackingChoDon(don.STT_Key);
       if (ketQua.ok) soDaCapNhat++;
     } catch (err) {
       console.error(`[TrackingTuDong] Lỗi tra cứu trạng thái tracking cho ${don.STT_Key}:`, err.message);
@@ -495,9 +668,12 @@ async function chayQuetTrangThaiNeuDenLuot() {
 // chỉ thấy đơn cùng Xưởng, xem orderService.js#locTheoXuong) — hàm này CHỈ dùng cho route GET
 // /tracking/danh-sach (không dùng bởi job tự động chayQuetTuDongMuaTracking(), vốn phải xử lý MỌI
 // xưởng), nên lọc thẳng ở đây an toàn, không ảnh hưởng job nền.
+const coTaiKhoanGke = r => { try { gkeService.layCauHinhGkeChoDon(r); return true; } catch { return false; } };
+
 async function layDanhSachDonAutoTracking(user) {
   const [{ rows: tatCaDon }, cauHinh] = await Promise.all([orderService.getAll(), layCauHinh()]);
   const rows = orderService.locTheoXuong(tatCaDon, user);
+  const banDoNhom = donNhieuAoService.xayDungBanDoNhom(tatCaDon);
   const bayGio = Date.now();
   const nguongMs = cauHinh.soPhutCho * 60 * 1000;
 
@@ -509,8 +685,14 @@ async function layDanhSachDonAutoTracking(user) {
       const thoiDiemInMa = r.THOI_GIAN_IN_MA ? new Date(r.THOI_GIAN_IN_MA).getTime() : null;
       const daDuGio = thoiDiemInMa && !isNaN(thoiDiemInMa) ? (bayGio - thoiDiemInMa) >= nguongMs : false;
 
+      const nhom = banDoNhom.get(r.STT_Key);
       let trangThai;
       if (daCoTrackingThat) trangThai = 'DA_MUA';
+      else if (r.TRANG_THAI_XUONG === donNhieuAoService.TRANG_THAI_HUY) trangThai = 'DA_HUY';
+      else if (nhom && nhom.loiChan.length) trangThai = 'LOI_NHOM';
+      else if (nhom && nhom.donMua.STT_Key !== r.STT_Key) trangThai = 'CHO_DON_MUA_NHOM';
+      else if (!gkeService.duocMuaTrackingTheoQuocGia(r)) trangThai = 'KHONG_THUOC_US_UK';
+      else if (!coTaiKhoanGke(r)) trangThai = 'THIEU_TAI_KHOAN_GKE';
       else if (dangChoTem) trangThai = 'DANG_CHO_TEM';
       else if (!thoiDiemInMa || isNaN(thoiDiemInMa)) trangThai = 'THIEU_THOI_GIAN_IN_MA';
       else if (daDuGio) trangThai = 'DEN_HAN_CHO_XU_LY';

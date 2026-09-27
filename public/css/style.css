@@ -1196,3 +1196,20 @@ body, .app-header, .order-card, .btn-hanh-dong, .badge, .mau-swatch, .tab-links 
   .dang-go-cham span { animation: none; opacity: 1; }
   .trang-thai-rong svg { animation: none; }
 }
+
+/* Hộp "ĐƠN ĐÃ HỦY (KHÔNG MUA TRACKING)" (27/09/2026) — public/js/api.js#hienThongBaoDonDaHuy. */
+.hop-don-da-huy {
+  position: fixed; inset: 0; z-index: 1000; background: rgba(0, 0, 0, 0.6);
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+.hop-don-da-huy__khung {
+  background: var(--color-surface); color: var(--color-text); border: 4px solid #dc2626; border-radius: 14px;
+  width: 100%; max-width: 520px; max-height: 90vh; overflow: auto; text-align: center;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+}
+.hop-don-da-huy__tieu-de {
+  background: #dc2626; color: #fff; font-weight: 800; line-height: 1.2; padding: 20px 16px;
+  font-size: clamp(1.5rem, 6vw, 2.2rem); display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.hop-don-da-huy__noi-dung { padding: 16px 20px 20px; }
+.hop-don-da-huy__ma { color: #dc2626; font-weight: 800; font-size: 1.2rem; word-break: break-word; margin: 8px 0 16px; }

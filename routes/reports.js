@@ -106,6 +106,7 @@ const NHAN_LOC_PHU = [
   ['canhBao', 'Mức cảnh báo'],
   ['xuong', 'Xưởng'],
   ['uuTien', 'Ưu tiên'],
+  ['donNhieuAo', 'DonNhieuAo'],
   ['timDonHangLoat', 'Đơn hàng loạt'],
   ['loai', 'Loại'],
   ['kichThuoc', 'Kích thước'],
@@ -115,6 +116,12 @@ const NHAN_LOC_PHU = [
   ['tinhTrang', 'Tình trạng'],
 ];
 
+// Bộ lọc dạng cờ '1'/'0' -> chữ dễ đọc trên dòng thông tin lọc của file xuất.
+const GIA_TRI_HIEN_THI_LOC = {
+  uuTien: { 1: 'Đơn ưu tiên', 0: 'Đơn thường' },
+  donNhieuAo: { 1: 'Chỉ DonNhieuAo', 0: 'Đơn lẻ' },
+};
+
 function dongThongTinLoc(query, kieu) {
   const { tuNgay, denNgay, khachHang, trangThai, tuKhoa } = query;
   const khHienThi = khachHang || 'Tất cả khách hàng';
@@ -122,7 +129,7 @@ function dongThongTinLoc(query, kieu) {
   const dongTuKhoa = tuKhoa ? ` · Từ khoá tìm kiếm: ${tuKhoa}` : '';
   const dongLocPhu = NHAN_LOC_PHU
     .filter(([key]) => query[key])
-    .map(([key, nhan]) => `${nhan}: ${key === 'uuTien' ? (query[key] === '1' ? 'Đơn ưu tiên' : 'Đơn thường') : query[key]}`)
+    .map(([key, nhan]) => `${nhan}: ${GIA_TRI_HIEN_THI_LOC[key] ? GIA_TRI_HIEN_THI_LOC[key][query[key]] || query[key] : query[key]}`)
     .join(' · ');
   const dongLocPhuHienThi = dongLocPhu ? ` · ${dongLocPhu}` : '';
 

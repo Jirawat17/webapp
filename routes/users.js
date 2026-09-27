@@ -2,6 +2,15 @@ const express = require('express');
 const router = express.Router();
 const taiKhoanService = require('../services/taiKhoanService');
 const { layDanhSachXuong } = require('../services/orderService');
+
+// Xưởng của nhân viên: nhận mảng hoặc chuỗi "HN,BN" (1 người thuộc được nhiều Xưởng, 27/09/2026) ->
+// chuỗi lưu DB, hoặc { loi } nếu có Xưởng không tồn tại.
+function chuanHoaXuong(giaTri) {
+  const ds = [...new Set(Array.isArray(giaTri) ? giaTri.map(x => String(x).trim()).filter(Boolean) : taiKhoanService.tachXuong(giaTri))];
+  const sai = ds.filter(x => !layDanhSachXuong().includes(x));
+  if (sai.length) return { loi: `Xưởng không hợp lệ: "${sai.join('", "')}" — chỉ chấp nhận: ${layDanhSachXuong().join(', ')}` };
+  return { xuong: ds.join(',') };
+}
 const { requireRole, requireExactRole } = require('../middleware/auth');
 
 // Mật khẩu PIN 1-4 chữ số (xem docs/superpowers/specs/2026-09-07-mat-khau-dang-nhap-design.md) —
@@ -46,12 +55,11 @@ router.post('/', async (req, res) => {
   // HN/BN) — không bắt buộc phải chọn ngay lúc tạo tài khoản (admin có thể gán sau), nhưng
   // nếu CÓ chọn thì phải đúng 1 trong danh sách hợp lệ, tránh gõ nhầm khiến nhân viên đó không thấy
   // đơn nào (xem services/orderService.js#locTheoXuong — thiếu/sai Xuong coi như không có quyền xem).
-  if (xuong && !layDanhSachXuong().includes(xuong)) {
-    return res.status(400).json({ error: `Xưởng không hợp lệ: "${xuong}" — chỉ chấp nhận: ${layDanhSachXuong().join(', ')}` });
-  }
+  const xuongDaChuan = chuanHoaXuong(xuong);
+  if (xuongDaChuan.loi) return res.status(400).json({ error: xuongDaChuan.loi });
   if (taiKhoanService.layTheoTen(ten)) return res.status(400).json({ error: 'Tên này đã tồn tại' });
 
-  taiKhoanService.themMoi({ Ten: ten, VaiTro: vaiTro, Xuong: xuong || '', KichHoat: 'TRUE', MatKhau: String(matKhau) });
+  taiKhoanService.themMoi({ Ten: ten, VaiTro: vaiTro, Xuong: xuongDaChuan.xuong, KichHoat: 'TRUE', MatKhau: String(matKhau) });
   res.json({ ok: true });
 });
 
@@ -65,8 +73,10 @@ router.put('/:ten', async (req, res) => {
   if (req.body.MatKhau !== undefined && req.body.MatKhau !== '' && !matKhauHopLe(req.body.MatKhau)) {
     return res.status(400).json({ error: 'Mật khẩu phải là 1-4 chữ số (hoặc rỗng để xoá mật khẩu)' });
   }
-  if (req.body.Xuong && !layDanhSachXuong().includes(req.body.Xuong)) {
-    return res.status(400).json({ error: `Xưởng không hợp lệ: "${req.body.Xuong}" — chỉ chấp nhận: ${layDanhSachXuong().join(', ')}` });
+  if (req.body.Xuong !== undefined) {
+    const xuongDaChuan = chuanHoaXuong(req.body.Xuong);
+    if (xuongDaChuan.loi) return res.status(400).json({ error: xuongDaChuan.loi });
+    req.body.Xuong = xuongDaChuan.xuong;
   }
 
   let ten = req.params.ten;
