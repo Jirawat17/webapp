@@ -43,11 +43,9 @@ async function datNguong(nguongMoi, user) {
   await ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'DOI_NGUONG_HANG_LOAT', chiTiet: { nguongCu, nguong: so } });
 }
 
-// Bản NHẸ, tìm theo TỪ KHOÁ trong TÊN nhóm (không phân biệt hoa/thường, khớp chuỗi con — KHÔNG cần
-// đúng nguyên tên) — dùng cho ô lọc "Đơn hàng loạt" ở Danh sách đơn hàng (routes/orders.js GET /,
-// đổi từ lọc đúng mã sang tìm theo tên 13/09/2026, theo yêu cầu người dùng vì tên sắp tới sẽ dài hơn
-// theo mẫu DHLXX_<mã đơn đầu>_<mô tả>). Gộp STT_Key của MỌI nhóm có tên khớp từ khoá, không chỉ 1
-// nhóm — vd gõ "áo thun" khớp cả 2 nhóm khác nhau cùng có "áo thun" trong tên. KHÔNG tự lọc theo
+// Bản NHẸ, lọc theo TÊN nhóm (không phân biệt hoa/thường, khớp NGUYÊN TÊN từ 28/09/2026 — trước đó
+// khớp chuỗi con khi ô lọc còn là ô gõ) — dùng cho ô chọn "Đơn hàng loạt" ở Danh sách đơn hàng
+// (routes/orders.js GET /). Nhiều nhóm trùng tên thì gộp STT_Key của cả các nhóm đó. KHÔNG tự lọc theo
 // Xưởng ở đây — nơi gọi (GET /orders) đã tự lọc `list` theo Xưởng người xem TRƯỚC khi áp dụng bộ lọc
 // này (đúng nguyên tắc đang dùng cho xuong=/uuTien= ngay phía trên), nên dù khớp phải nhóm có đơn
 // ngoài Xưởng cũng chỉ khiến kết quả bị thu hẹp thêm, không lộ thêm dữ liệu.
@@ -56,7 +54,9 @@ async function layDanhSachSttKeyTheoTenNhom(tuKhoa) {
   if (!tuKhoaChuanHoa) return new Set();
   const maNhomKhop = new Set(
     donHangLoatDbService.layTatCaNhom()
-      .filter(n => String(n.TenNhom || '').toLowerCase().includes(tuKhoaChuanHoa))
+      // Khớp NGUYÊN TÊN (28/09/2026) — ô lọc giờ là ô chọn (public/orders.html), khớp chuỗi con sẽ kéo
+      // lẫn nhóm khác có tên chứa tên này (vd "Let'go" lẫn "Let'go 2").
+      .filter(n => String(n.TenNhom || '').trim().toLowerCase() === tuKhoaChuanHoa)
       .map(n => n.MaDonHangLoat)
   );
   return new Set(

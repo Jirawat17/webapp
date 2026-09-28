@@ -147,11 +147,13 @@
            dropdown chọn đúng 1 mã sang ô gõ tìm + datalist gợi ý (13/09/2026, theo yêu cầu người dùng
            — tên sắp dài hơn theo mẫu DHLXX_<mã đơn đầu>_<mô tả>, dropdown khó nhìn khi nhiều nhóm).
            Khớp CHUỖI CON trong tên, không cần gõ đúng nguyên tên. CHỈ admin/ve_file, cùng phạm vi với
-           toàn bộ tính năng "Đơn hàng loạt" — ẩn mặc định, hiện + đổ datalist bằng JS bên dưới. -->
+           toàn bộ tính năng "Đơn hàng loạt" — ẩn mặc định, hiện + đổ datalist bằng JS bên dưới.
+           Đổi lại thành ô CHỌN như Trạng thái (28/09/2026, theo yêu cầu người dùng) — datalist chỉ gợi ý
+           tên chứa chữ đang có trong ô, phải xoá đi mới thấy nhóm khác. Nhóm mới nhất lên đầu; chọn nhóm
+           nào hiện ĐÚNG nhóm đó (khớp nguyên tên, xem donHangLoatService.js#layDanhSachSttKeyTheoTenNhom). -->
       <div class="truong" id="truong-loc-don-hang-loat" style="display:none">
         <label for="loc-don-hang-loat">Đơn hàng loạt</label>
-        <input type="text" id="loc-don-hang-loat" list="ds-ten-don-hang-loat" placeholder="Gõ tên nhóm...">
-        <datalist id="ds-ten-don-hang-loat"></datalist>
+        <select id="loc-don-hang-loat"><option value="">Tất cả đơn hàng loạt</option></select>
       </div>
       <div class="truong">
         <label for="loc-loai">Loại</label>
@@ -329,7 +331,7 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   document.getElementById('loc-xuong').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-uu-tien').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-don-nhieu-ao').onchange = () => { boChonTatCaDon(); taiDon(); };
-  document.getElementById('loc-don-hang-loat').oninput = debounce(() => { boChonTatCaDon(); taiDon(); }, 400);
+  document.getElementById('loc-don-hang-loat').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-loai').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-kich-thuoc').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-mau-sac').onchange = () => { boChonTatCaDon(); taiDon(); };
@@ -396,8 +398,11 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   if (laAdmin(user.vaiTro) || user.vaiTro === 've_file') {
     apiFetch('/don-hang-loat').then(({ nhoms }) => {
       if (nhoms.length === 0) return;
-      document.getElementById('ds-ten-don-hang-loat').innerHTML =
-        nhoms.map(n => `<option value="${escapeHtml(n.tenNhom)}">`).join('');
+      // Mã DHLXX tăng dần, không tái dùng (donHangLoatDbService.js) → số lớn hơn = nhóm mới hơn.
+      const soCuaMa = n => Number(String(n.maDonHangLoat).replace(/\D/g, '')) || 0;
+      const cacTen = [...new Set([...nhoms].sort((a, b) => soCuaMa(b) - soCuaMa(a)).map(n => n.tenNhom).filter(Boolean))];
+      document.getElementById('loc-don-hang-loat').innerHTML = '<option value="">Tất cả đơn hàng loạt</option>' +
+        cacTen.map(ten => `<option value="${escapeHtml(ten)}">${escapeHtml(ten)}</option>`).join('');
       document.getElementById('truong-loc-don-hang-loat').style.display = 'flex';
     }).catch(() => {}); // im lặng bỏ qua — không có Đơn hàng loạt nào cũng là trạng thái bình thường
   }
