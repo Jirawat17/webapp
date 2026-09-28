@@ -1,5 +1,5 @@
 // PDF "THUÊ TEAM KHÁC" (bổ sung 28/09/2026, theo yêu cầu người dùng) — bàn giao đơn cho 1 team thêu bên ngoài: mỗi đơn
-// 1 phần riêng (A4 dọc) gồm 10 trường chữ + TOÀN BỘ ảnh PNG (DUONG_DAN_URL) và Mockup (MOCKUP), mỗi ảnh kèm link gốc.
+// ĐÚNG 1 trang A4 dọc gồm 10 trường chữ + TOÀN BỘ ảnh PNG (DUONG_DAN_URL) và Mockup (MOCKUP), mỗi ảnh kèm link gốc.
 // "Tuyệt đối không thiếu ảnh": ô trống, link hỏng, thư mục rỗng, file không phải ảnh... đều thành 1 mục LỖI — ô đỏ
 // ngay tại chỗ ảnh + danh sách đỏ ở trang đầu + trả về cho giao diện (hộp đỏ). Không bao giờ bỏ qua lặng lẽ.
 // Ảnh thu nhỏ bằng sharp (giữ tỷ lệ) + nền đen cho PNG trong suốt — cùng cách ảnh đang hiển thị trong app
@@ -112,99 +112,106 @@ const RONG = KHO[0] - 2 * LE;
 const DAY_TRANG = KHO[1] - LE - 14; // chừa chỗ footer
 const MAU = { chu: '#111827', mo: '#6b7280', vien: '#d1d5db', do: '#b91c1c', nenDo: '#fee2e2', nenVang: '#fef3c7', nenXanh: '#e0f2fe', link: '#1d4ed8' };
 
-function canCho(doc, cao, tieuDeTiep) {
-  if (doc.y + cao <= DAY_TRANG) return;
-  doc.addPage();
-  if (tieuDeTiep) {
-    doc.font('NotoSans-Bold').fontSize(9).fillColor(MAU.mo).text(tieuDeTiep, LE, LE, { width: RONG });
-    doc.moveDown(0.4);
-  }
+// Chỉ dùng ở trang đầu (danh sách đơn có thể dài nhiều trang) — trang đơn tự xếp vừa 1 trang, xem veDon.
+function canCho(doc, cao) {
+  if (doc.y + cao > DAY_TRANG) doc.addPage();
 }
 
-// 1 dòng bảng thông tin — nhãn trái, giá trị phải, KHÔNG cắt chữ (cao theo nội dung; dài hơn 1 trang thì để PDFKit tự
-// chảy sang trang sau, bỏ nền màu).
-function veDongThongTin(doc, nhan, giaTri, { noiBat = false, nen = null, coChu = 10 } = {}, tieuDeTiep) {
-  const rongNhan = 140;
-  const rongGiaTri = RONG - rongNhan - 12;
-  const chu = String(giaTri ?? '').trim();
-  const font = noiBat ? 'NotoSans-Bold' : 'NotoSans';
-  doc.font(font).fontSize(coChu);
-  const cao = Math.max(doc.heightOfString(chu || '—', { width: rongGiaTri }), 12) + 10;
-  if (cao > DAY_TRANG - LE - 20) { // dài hơn cả 1 trang: in liền mạch, không nền
-    doc.font('NotoSans-Bold').fontSize(9).fillColor(MAU.mo).text(nhan, LE, doc.y);
-    doc.font(font).fontSize(coChu).fillColor(MAU.chu).text(chu, LE, doc.y, { width: RONG });
-    doc.moveDown(0.5);
-    return;
-  }
-  canCho(doc, cao, tieuDeTiep);
-  const y = doc.y;
-  if (nen) doc.rect(LE, y, RONG, cao).fill(nen);
-  doc.moveTo(LE, y + cao).lineTo(LE + RONG, y + cao).lineWidth(0.5).stroke(MAU.vien);
-  doc.font('NotoSans-Bold').fontSize(9).fillColor(MAU.mo).text(nhan, LE + 6, y + 6, { width: rongNhan - 6 });
-  doc.font(font).fontSize(coChu).fillColor(chu ? MAU.chu : MAU.mo).text(chu || '(không có)', LE + rongNhan + 6, y + 5, { width: rongGiaTri });
-  doc.x = LE;
-  doc.y = y + cao;
-}
-
+// ---------- Trang đơn: 1 đơn = ĐÚNG 1 trang A4 (28/09/2026, theo yêu cầu người dùng — trước đó ảnh cao tối đa 300pt
+// xếp dọc, đơn 2+ ảnh tràn sang nhiều trang) ----------
+// Bố cục: thanh tiêu đề → bảng thông tin (ô nhãn-trên-giá-trị, trường ngắn ghép chung hàng) → hộp "chỉ tham khảo" → link
+// thư mục Drive (mỗi thư mục 1 lần) → LƯỚI ảnh lấp hết phần còn lại, số cột chọn sao cho tổng diện tích ảnh lớn nhất.
+// Không vừa thì thu nhỏ chữ dần; mọi lệnh text trên trang đơn đều có `height` → PDFKit không bao giờ tự sinh trang mới.
+const KHE = 8; // khoảng cách giữa các ô ảnh
+const CAO_ANH_TOI_THIEU = 40;
+const CAC_TI_LE_CHU = [1, 0.9, 0.8, 0.7, 0.6, 0.5];
+const CAO_TIEU_DE_DON = 28;
 const laLinkHttp = link => /^https?:\/\//i.test(link);
-function veLink(doc, link, x, rong) {
-  doc.font('NotoSans').fontSize(CO_CHU_LINK).fillColor(MAU.link)
-    .text(link, x, doc.y, { width: rong, link: laLinkHttp(link) ? link : null, underline: laLinkHttp(link) });
+
+// Viết chữ từ doc.y, không vượt quá `day` — hết chỗ thì cắt bằng "…" (chỉ xảy ra khi phải ép vừa trang, xem veDon).
+function vietGioiHan(doc, chu, x, rong, day, font, co, mau, them = {}) {
+  const conLai = day - doc.y + 1;
+  if (conLai < co) return;
+  doc.font(font).fontSize(co).fillColor(mau).text(chu, x, doc.y, { width: rong, height: conLai, ellipsis: true, ...them });
 }
-// Link ảnh (+ "Nằm trong thư mục:" + link thư mục) — doCaoLink đo ĐÚNG phần veCacLink vẽ.
-function doCaoLink(doc, a, rong) {
-  doc.font('NotoSans').fontSize(CO_CHU_LINK);
-  let cao = a.link ? doc.heightOfString(a.link, { width: rong }) : 0;
-  if (a.linkThuMuc) {
-    cao += doc.heightOfString(a.linkThuMuc, { width: rong });
-    doc.fontSize(9);
-    cao += doc.heightOfString('Nằm trong thư mục:', { width: rong });
-  }
+
+const oTT = (nhan, giaTri, { dam = false, co = 10, nen = null } = {}) => ({ nhan, chu: String(giaTri ?? '').trim(), dam, co, nen });
+function cacHangThongTin(don, ghiChuXuong) {
+  return [
+    [oTT('Mã đơn hàng (STT_Key)', don.STT_Key, { dam: true, co: 14, nen: MAU.nenXanh }), oTT('Tên khách hàng (TEN)', don.TEN, { dam: true, co: 13, nen: MAU.nenXanh })],
+    [oTT('Ngày lên đơn', dinhDangNgay(don.NGAY_LEN_DON) || don.NGAY_LEN_DON), oTT('Số lượng', don.SO_LUONG, { dam: true }), oTT('Kích thước', don.KICH_THUOC), oTT('Màu sắc', don.MAU_SAC)],
+    [oTT('Loại', don.LOAI), oTT('Vị trí thêu (VI_TRI_1)', don.VI_TRI_1)],
+    [oTT('Ghi chú', don.GHI_CHU, { dam: true, co: 12, nen: MAU.nenVang })],
+    [oTT('Ghi chú xưởng', ghiChuXuong, { dam: true, co: 11, nen: MAU.nenVang })],
+  ];
+}
+function doHang(doc, hang, s) {
+  const rong = RONG / hang.length - 10;
+  return Math.max(...hang.map(o => {
+    doc.font('NotoSans-Bold').fontSize(8 * s);
+    const caoNhan = doc.heightOfString(o.nhan, { width: rong });
+    doc.font(o.dam ? 'NotoSans-Bold' : 'NotoSans').fontSize(o.co * s);
+    return 4 + caoNhan + 2 + doc.heightOfString(o.chu || '(không có)', { width: rong }) + 5;
+  }));
+}
+function veHang(doc, hang, y, cao, s) {
+  const rong = RONG / hang.length;
+  hang.forEach((o, i) => {
+    const x = LE + i * rong;
+    if (o.nen) doc.rect(x, y, rong, cao).fill(o.nen);
+    doc.rect(x, y, rong, cao).lineWidth(0.5).stroke(MAU.vien);
+    doc.y = y + 4;
+    vietGioiHan(doc, o.nhan, x + 5, rong - 10, y + cao, 'NotoSans-Bold', 8 * s, MAU.mo);
+    doc.y += 2;
+    vietGioiHan(doc, o.chu || '(không có)', x + 5, rong - 10, y + cao - 4, o.dam ? 'NotoSans-Bold' : 'NotoSans', o.co * s, o.chu ? MAU.chu : MAU.mo);
+  });
+}
+
+// 1 mục lưới = 1 ảnh (hoặc 1 ô đỏ "KHÔNG CÓ ẢNH"): nhãn + [lỗi] + link gốc. doChuMuc đo ĐÚNG phần veChuMuc vẽ.
+function doChuMuc(doc, m, rong, s) {
+  doc.font('NotoSans-Bold').fontSize(9 * s);
+  let cao = doc.heightOfString(m.nhan, { width: rong });
+  if (m.a.loi) { doc.fontSize(10 * s); cao += doc.heightOfString(`KHÔNG CÓ ẢNH — ${m.a.loi}`, { width: rong }); }
+  if (m.a.link) { doc.font('NotoSans').fontSize(CO_CHU_LINK * s); cao += doc.heightOfString(m.a.link, { width: rong }); }
   return cao;
 }
-function veCacLink(doc, a, x, rong, mauNhan) {
-  if (a.link) veLink(doc, a.link, x, rong);
-  if (a.linkThuMuc) {
-    doc.font('NotoSans').fontSize(9).fillColor(mauNhan).text('Nằm trong thư mục:', x, doc.y, { width: rong });
-    veLink(doc, a.linkThuMuc, x, rong);
-  }
+function veChuMuc(doc, m, x, y, rong, day, s) {
+  doc.y = y;
+  vietGioiHan(doc, m.nhan, x, rong, day, 'NotoSans-Bold', 9 * s, m.a.loi ? MAU.do : MAU.chu);
+  if (m.a.loi) vietGioiHan(doc, `KHÔNG CÓ ẢNH — ${m.a.loi}`, x, rong, day, 'NotoSans-Bold', 10 * s, MAU.do);
+  if (m.a.link) vietGioiHan(doc, m.a.link, x, rong, day, 'NotoSans', CO_CHU_LINK * s, MAU.link, laLinkHttp(m.a.link) ? { link: m.a.link, underline: true } : {});
 }
 
-const CAO_ANH_TOI_DA = 300; // pt — vừa 2 ảnh/trang A4
-
-// Chiều cao cả khối 1 ảnh (nhãn + link + ảnh, hoặc ô đỏ) — để quyết định ngắt trang TRƯỚC khi vẽ (ảnh không bao giờ bị cắt đôi).
-function doKhoiAnh(doc, a) {
-  const caoLink = doCaoLink(doc, a, a.loi ? RONG - 16 : RONG); // ô đỏ thụt lề 8pt mỗi bên
-  if (a.loi) {
-    doc.font('NotoSans-Bold').fontSize(10);
-    return { caoLink, cao: 18 + doc.heightOfString(`KHÔNG CÓ ẢNH — ${a.loi}`, { width: RONG - 16 }) + caoLink + 16 };
+// Lưới `cot` cột: hàng CHỈ có ô đỏ cao vừa đủ chữ, các hàng có ảnh chia đều phần còn lại. `vua` = mọi ảnh còn cao
+// ≥ CAO_ANH_TOI_THIEU và mọi ô đỏ đủ chỗ; `dienTich` = tổng diện tích ảnh (để so các số cột).
+function thuLuoi(doc, dsMuc, caoVung, s, cot) {
+  const rong = (RONG - (cot - 1) * KHE) / cot;
+  const caoO = m => doChuMuc(doc, m, rong - 12, s) + 12; // ô đỏ
+  const cacHang = [];
+  for (let i = 0; i < dsMuc.length; i += cot) cacHang.push(dsMuc.slice(i, i + cot));
+  const caoCoDinh = cacHang.map(h => (h.every(m => m.a.loi) ? Math.max(...h.map(caoO)) : 0));
+  const soHangAnh = caoCoDinh.filter(c => !c).length;
+  const caoHangAnh = soHangAnh && (caoVung - (cacHang.length - 1) * KHE - caoCoDinh.reduce((a, b) => a + b, 0)) / soHangAnh;
+  const caoHang = caoCoDinh.map(c => c || caoHangAnh);
+  let dienTich = 0;
+  let vua = caoCoDinh.reduce((a, b) => a + b, 0) + (cacHang.length - 1) * KHE <= caoVung;
+  for (const m of soHangAnh ? dsMuc : []) {
+    if (m.a.loi) { vua = vua && caoO(m) <= caoHangAnh; continue; }
+    const caoAnh = caoHangAnh - doChuMuc(doc, m, rong, s) - 4;
+    vua = vua && caoAnh >= CAO_ANH_TOI_THIEU;
+    const k = Math.min(rong / m.a.rong, Math.max(caoAnh, 0) / m.a.cao, 1);
+    dienTich += m.a.rong * m.a.cao * k * k;
   }
-  const tiLe = Math.min(RONG / a.rong, CAO_ANH_TOI_DA / a.cao, 1);
-  return { caoLink, rongAnh: a.rong * tiLe, caoAnh: a.cao * tiLe, cao: 16 + caoLink + 6 + a.cao * tiLe + 12 };
+  return { cot, rong, caoCacHang: caoHang, vua, dienTich };
 }
-
-function veMotAnh(doc, a, nhanAnh, tieuDeTiep) {
-  const { cao, rongAnh, caoAnh } = doKhoiAnh(doc, a);
-  if (a.loi) {
-    canCho(doc, cao, tieuDeTiep);
-    const y = doc.y;
-    doc.rect(LE, y, RONG, cao).lineWidth(1.5).fillAndStroke(MAU.nenDo, MAU.do);
-    doc.font('NotoSans-Bold').fontSize(9).fillColor(MAU.do).text(nhanAnh, LE + 8, y + 6, { width: RONG - 16 });
-    doc.font('NotoSans-Bold').fontSize(10).fillColor(MAU.do).text(`KHÔNG CÓ ẢNH — ${a.loi}`, LE + 8, doc.y, { width: RONG - 16 });
-    veCacLink(doc, a, LE + 8, RONG - 16, MAU.do);
-    doc.x = LE;
-    doc.y = y + cao + 10;
-    return;
+// Thử 1..8 cột, lấy cách vừa trang có tổng diện tích ảnh lớn nhất. null nếu không cách nào vừa với cỡ chữ `s`.
+function chonLuoi(doc, dsMuc, caoVung, s) {
+  let tot = null;
+  for (let cot = 1; cot <= Math.min(dsMuc.length, 8); cot++) {
+    const l = thuLuoi(doc, dsMuc, caoVung, s, cot);
+    if (l.vua && (!tot || l.dienTich > tot.dienTich)) tot = l;
   }
-  canCho(doc, cao, tieuDeTiep);
-  doc.font('NotoSans-Bold').fontSize(9).fillColor(MAU.chu).text(nhanAnh + (a.ten ? ` — ${a.ten}` : ''), LE, doc.y, { width: RONG });
-  veCacLink(doc, a, LE, RONG, MAU.mo);
-  const y = doc.y + 4;
-  doc.image(a.anh, LE, y, { width: rongAnh, height: caoAnh });
-  a.anh = null; // đã nhúng vào PDF — nhả bộ nhớ
-  doc.rect(LE, y, rongAnh, caoAnh).lineWidth(0.5).stroke(MAU.vien);
-  doc.x = LE;
-  doc.y = y + caoAnh + 14;
+  return tot;
 }
 
 function veHopGhiChuThamKhao(doc) {
@@ -258,32 +265,87 @@ function veTrangDau(doc, dsDon, { thoiGianXuat, nguoiXuat, dsLoi, tongAnh }) {
 
 function veDon(doc, { don, nhom, ghiChuXuong }, thuTu, tong) {
   doc.addPage();
-  const tieuDeTiep = `ĐƠN ${thuTu}/${tong} · ${don.STT_Key} (tiếp)`;
-  const y = doc.y;
-  doc.rect(LE, y, RONG, 30).fill(MAU.chu);
-  doc.font('NotoSans-Bold').fontSize(15).fillColor('#ffffff').text(`ĐƠN ${thuTu}/${tong} · ${don.STT_Key}`, LE + 10, y + 6, { width: RONG - 20 });
-  doc.x = LE;
-  doc.y = y + 36;
+  const hangTT = cacHangThongTin(don, ghiChuXuong);
+  const dsMuc = nhom.flatMap(g => g.anh.map((a, i) => ({ a, nhan: `${g.nhan} ${i + 1}/${g.anh.length}${a.ten ? ` — ${a.ten}` : ''}` })));
+  const dsThuMuc = nhom.flatMap(g => [...new Set(g.anh.map(a => a.linkThuMuc).filter(Boolean))]
+    .map(link => ({ nhan: `Thư mục Drive chứa ảnh ${g.nhan}:`, link })));
 
-  veDongThongTin(doc, 'Mã đơn hàng (STT_Key)', don.STT_Key, { noiBat: true, nen: MAU.nenXanh, coChu: 14 }, tieuDeTiep);
-  veDongThongTin(doc, 'Tên khách hàng (TEN)', don.TEN, { noiBat: true, nen: MAU.nenXanh, coChu: 13 }, tieuDeTiep);
-  veDongThongTin(doc, 'Ngày lên đơn', dinhDangNgay(don.NGAY_LEN_DON) || don.NGAY_LEN_DON, {}, tieuDeTiep);
-  veDongThongTin(doc, 'Số lượng', don.SO_LUONG, { noiBat: true }, tieuDeTiep);
-  veDongThongTin(doc, 'Loại', don.LOAI, {}, tieuDeTiep);
-  veDongThongTin(doc, 'Kích thước', don.KICH_THUOC, {}, tieuDeTiep);
-  veDongThongTin(doc, 'Màu sắc', don.MAU_SAC, {}, tieuDeTiep);
-  veDongThongTin(doc, 'Vị trí thêu (VI_TRI_1)', don.VI_TRI_1, {}, tieuDeTiep);
-  veDongThongTin(doc, 'Ghi chú', don.GHI_CHU, { noiBat: true, nen: MAU.nenVang, coChu: 12 }, tieuDeTiep);
-  veDongThongTin(doc, 'Ghi chú xưởng', ghiChuXuong, { noiBat: true, nen: MAU.nenVang, coChu: 11 }, tieuDeTiep);
-  doc.moveDown(0.8);
-  veHopGhiChuThamKhao(doc);
-
-  for (const g of nhom) {
-    canCho(doc, 24 + doKhoiAnh(doc, g.anh[0]).cao, tieuDeTiep); // tiêu đề nhóm không nằm lẻ cuối trang
-    doc.font('NotoSans-Bold').fontSize(12).fillColor(MAU.chu).text(`ẢNH ${g.nhan.toUpperCase()} (${g.anh.length})`, LE, doc.y, { width: RONG });
-    doc.moveDown(0.3);
-    g.anh.forEach((a, i) => veMotAnh(doc, a, `${g.nhan} ${i + 1}/${g.anh.length}`, tieuDeTiep));
+  const doBoCuc = s => {
+    const caoHang = hangTT.map(h => doHang(doc, h, s));
+    doc.font('NotoSans-Bold').fontSize(10 * s);
+    const caoGhiChu = doc.heightOfString(GHI_CHU_THAM_KHAO, { width: RONG - 16 }) + 8;
+    const caoThuMuc = dsThuMuc.reduce((t, d) => {
+      doc.font('NotoSans-Bold').fontSize(8.5 * s);
+      t += doc.heightOfString(d.nhan, { width: RONG });
+      doc.font('NotoSans').fontSize(CO_CHU_LINK * s);
+      return t + doc.heightOfString(d.link, { width: RONG });
+    }, 0);
+    const yLuoi = LE + CAO_TIEU_DE_DON + 4 + caoHang.reduce((a, b) => a + b, 0) + 6 + caoGhiChu + 6 + caoThuMuc + (caoThuMuc ? 6 : 0);
+    return { s, caoHang, caoGhiChu, yLuoi, luoi: chonLuoi(doc, dsMuc, DAY_TRANG - yLuoi, s) };
+  };
+  let bo;
+  for (const s of CAC_TI_LE_CHU) {
+    bo = doBoCuc(s);
+    if (bo.luoi) break;
   }
+  if (!bo.luoi) {
+    // ponytail: ép vừa 1 trang khi chữ nhỏ nhất vẫn không đủ chỗ (ghi chú dài hàng nghìn chữ / hàng chục ảnh) — bảng
+    // thông tin tối đa ~45% trang, lưới vuông; phần chữ không còn chỗ bị cắt "…" (ảnh vẫn luôn được vẽ).
+    // Chỉ thu hàng DÀI (ghi chú); hàng ngắn (Mã đơn, Tên, Size, Màu...) giữ nguyên để không mất chữ.
+    const toiDa = (DAY_TRANG - LE) * 0.45;
+    const tong = ds => ds.reduce((a, b) => a + b, 0);
+    const tongHang = tong(bo.caoHang);
+    if (tongHang > toiDa) {
+      const laHangNgan = h => h <= 60;
+      const caoNgan = tong(bo.caoHang.filter(laHangNgan));
+      const tiLe = Math.max(toiDa - caoNgan, 0) / (tongHang - caoNgan);
+      bo.caoHang = bo.caoHang.map(h => (laHangNgan(h) ? h : h * tiLe));
+      bo.yLuoi -= tongHang - tong(bo.caoHang);
+    }
+    // Mọi hàng cao BẰNG NHAU, cộng lại đúng phần còn lại của trang (hàng chỉ có ô đỏ cũng không được cao hơn) — ô
+    // đỏ/chữ trong ô bị cắt vừa ô, ảnh luôn còn chỗ (xem vòng vẽ bên dưới).
+    const cot = Math.ceil(Math.sqrt(dsMuc.length));
+    const soHang = Math.ceil(dsMuc.length / cot);
+    const caoHang = Math.max((DAY_TRANG - bo.yLuoi - (soHang - 1) * KHE) / soHang, 12);
+    bo.luoi = { cot, rong: (RONG - (cot - 1) * KHE) / cot, caoCacHang: Array(soHang).fill(caoHang) };
+  }
+  const { s, caoHang, caoGhiChu, yLuoi, luoi } = bo;
+
+  doc.rect(LE, LE, RONG, CAO_TIEU_DE_DON).fill(MAU.chu);
+  doc.y = LE + 5;
+  vietGioiHan(doc, `ĐƠN ${thuTu}/${tong} · ${don.STT_Key}`, LE + 10, RONG - 20, LE + CAO_TIEU_DE_DON, 'NotoSans-Bold', 14, '#ffffff');
+  let y = LE + CAO_TIEU_DE_DON + 4;
+  hangTT.forEach((h, i) => { veHang(doc, h, y, caoHang[i], s); y += caoHang[i]; });
+  y += 6;
+  doc.rect(LE, y, RONG, caoGhiChu).lineWidth(1.5).fillAndStroke(MAU.nenVang, '#d97706');
+  doc.y = y + 4;
+  vietGioiHan(doc, GHI_CHU_THAM_KHAO, LE + 8, RONG - 16, y + caoGhiChu, 'NotoSans-Bold', 10 * s, '#92400e');
+  doc.y = y + caoGhiChu + 6;
+  for (const d of dsThuMuc) {
+    vietGioiHan(doc, d.nhan, LE, RONG, yLuoi, 'NotoSans-Bold', 8.5 * s, MAU.mo);
+    vietGioiHan(doc, d.link, LE, RONG, yLuoi, 'NotoSans', CO_CHU_LINK * s, MAU.link, { link: d.link, underline: true });
+  }
+
+  const yHang = luoi.caoCacHang.map((_, h) => yLuoi + luoi.caoCacHang.slice(0, h).reduce((a, b) => a + b + KHE, 0));
+  dsMuc.forEach((m, i) => {
+    const hang = Math.floor(i / luoi.cot);
+    const [x, yO, caoO] = [LE + (i % luoi.cot) * (luoi.rong + KHE), yHang[hang], luoi.caoCacHang[hang]];
+    if (m.a.loi) {
+      const caoDo = Math.min(doChuMuc(doc, m, luoi.rong - 12, s) + 12, caoO);
+      doc.rect(x, yO, luoi.rong, caoDo).lineWidth(1.5).fillAndStroke(MAU.nenDo, MAU.do);
+      veChuMuc(doc, m, x + 6, yO + 6, luoi.rong - 12, yO + caoDo - 6, s);
+      return;
+    }
+    const caoChu = Math.min(doChuMuc(doc, m, luoi.rong, s), caoO - 4 - Math.min(CAO_ANH_TOI_THIEU, caoO * 0.6));
+    veChuMuc(doc, m, x, yO, luoi.rong, yO + caoChu, s);
+    const caoAnh = Math.max(caoO - caoChu - 4, 1);
+    const k = Math.min(luoi.rong / m.a.rong, caoAnh / m.a.cao, 1);
+    const [rongAnh, caoAnhThat] = [m.a.rong * k, m.a.cao * k];
+    const xAnh = x + (luoi.rong - rongAnh) / 2; // căn giữa trong ô
+    doc.image(m.a.anh, xAnh, yO + caoChu + 4, { width: rongAnh, height: caoAnhThat });
+    doc.rect(xAnh, yO + caoChu + 4, rongAnh, caoAnhThat).lineWidth(0.5).stroke(MAU.vien);
+    m.a.anh = null; // đã nhúng vào PDF — nhả bộ nhớ
+  });
 }
 
 // dsDonGoc: đơn theo ĐÚNG thứ tự cần in. onTienDo() sau mỗi đơn tải xong ảnh; kiemTraHuy() true -> dừng (trả null).

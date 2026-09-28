@@ -126,7 +126,7 @@ function renderBangThongTin(don, viTri) {
     <tr><td>Ghi chú</td><td>${escapeHtml(don.GHI_CHU || '')}</td></tr>
     <tr><td>Ghi chú xưởng</td><td>${escapeHtml(don.GHI_CHU_XUONG || '')}</td></tr>
     ${dongGhiChuNoiBo(don)}
-    ${user.vaiTro !== 'admin' ? `<tr><td>Xưởng</td><td>${escapeHtml(don.XUONG || '(chưa gán)')}</td></tr>` : ''}
+    <tr><td>Xưởng</td><td>${escapeHtml(don.XUONG || '(chưa gán)')}</td></tr>
     <tr><td>Cập nhật lần cuối</td><td>${escapeHtml(don.NguoiCapNhatCuoi || '')}${don.ThoiGianCapNhatCuoi ? ' · ' + tsDep(don.ThoiGianCapNhatCuoi) : ''}</td></tr>`;
 }
 

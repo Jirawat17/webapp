@@ -484,7 +484,13 @@ router.get('/hieu-suat-theo-nguoi', async (req, res) => {
 
   const { rows: donRows } = await orderService.getAll();
   const logRows = nhatKyDbService.layTatCaLichSuHoatDong();
-  const nhanVienRows = taiKhoanService.layTatCa();
+  // Phạm vi Xưởng (29/09/2026, theo yêu cầu người dùng — Bảng điều khiển): admin chỉ thấy nhân viên cùng Xưởng mình
+  // phụ trách, và chỉ tính việc làm trên đơn thuộc các Xưởng đó (việc cho Xưởng khác không lộ qua con số).
+  const trongPhamVi = taiKhoanService.phamViNhanVien(req.session.user);
+  const nhanVienRows = taiKhoanService.layTatCa().filter(r => trongPhamVi(r.Xuong));
+  // superadmin: null = giữ nguyên cách tính cũ (kể cả log của đơn đã xoá/không còn trong Sheet).
+  const donTrongPhamVi = laSuperAdmin(req.session.user.vaiTro) ? null
+    : new Set(orderService.locTheoXuong(donRows, req.session.user).map(r => r.STT_Key));
 
   const slTheoStt = new Map(donRows.map(r => [r.STT_Key, Number(r.SO_LUONG) || 0]));
 
@@ -501,7 +507,7 @@ router.get('/hieu-suat-theo-nguoi', async (req, res) => {
   // tinhChiTieuCongViec() dùng, không cần đủ chi tiết hiển thị timeline.
   for (const r of logRows) {
     const bucket = theoNguoi.get(r.NguoiDung);
-    if (!bucket || !trongKhoangThoiGian(r.ThoiGian, tuNgay, denNgay)) continue;
+    if (!bucket || (donTrongPhamVi && !donTrongPhamVi.has(r.STT_Key)) || !trongKhoangThoiGian(r.ThoiGian, tuNgay, denNgay)) continue;
 
     let chiTiet;
     try { chiTiet = JSON.parse(r.ChiTiet); } catch (e) { chiTiet = {}; }

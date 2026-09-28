@@ -91,7 +91,9 @@ router.get('/dang-hoat-dong', (req, res) => {
   if (!laAdmin(req.session.user.vaiTro)) {
     return res.status(403).json({ error: 'Chỉ admin mới được xem danh sách đang hoạt động' });
   }
-  res.json(layDangHoatDong());
+  // Admin chỉ thấy tài khoản cùng Xưởng mình phụ trách (29/09/2026, xem taiKhoanService.js#phamViNhanVien).
+  const trongPhamVi = taiKhoanService.phamViNhanVien(req.session.user);
+  res.json(layDangHoatDong().filter(n => trongPhamVi((taiKhoanService.layTheoTen(n.ten) || {}).Xuong)));
 });
 
 module.exports = router;

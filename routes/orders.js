@@ -228,8 +228,10 @@ router.get('/', async (req, res) => {
   }
 
   list = sapXepDon(list, sapXep);
-  list = locDonDangChayMayTheoNguoiVanHanh(list, req.session.user);
-  res.json(orderService.anXuongNhieuDonVoiAdmin(list, req.session.user.vaiTro));
+  // Trả cả XUONG cho admin (29/09/2026, theo yêu cầu người dùng — trước đó ẩn qua orderService.anXuongVoiAdmin):
+  // filterForRole/locTheoXuong ở trên đã giới hạn admin CHỈ còn đơn thuộc các Xưởng mình phụ trách, nên XUONG trả về
+  // luôn là Xưởng của chính admin đó.
+  res.json(locDonDangChayMayTheoNguoiVanHanh(list, req.session.user));
 });
 
 // Số liệu đếm nhanh cho Bảng điều khiển (bổ sung 22/09/2026, theo yêu cầu người dùng cải thiện hiệu
@@ -577,16 +579,20 @@ router.post('/chi-dinh-nguoi-ve-file', async (req, res) => {
 // Màu nền thẻ đơn theo Xưởng (bổ sung 23/09/2026, theo yêu cầu người dùng — "mỗi Xưởng có thể có màu
 // riêng để dễ phân biệt các đơn thuộc các xưởng khác nhau", thay cho 2 màu HN/BN hard-code cũ trong
 // style.css). GET mở cho MỌI người đã đăng nhập (orders.html/my-orders.html/my-orders-ve-file.html đều
-// cần đọc để tô màu thẻ — admin không có XUONG trong dữ liệu đơn nên tự nhiên không tô được gì, không
-// cần chặn riêng, xem services/orderService.js#anXuongVoiAdmin). POST (đổi màu) CHỈ superadmin — cùng
-// mức nhạy cảm với /gan-xuong ở dưới.
+// cần đọc để tô màu thẻ; không phải superadmin chỉ nhận màu các Xưởng của mình). POST (đổi màu) CHỈ superadmin —
+// cùng mức nhạy cảm với /gan-xuong ở dưới.
 // Danh sách Xưởng (bổ sung 24/09/2026, theo yêu cầu người dùng — trước đây hằng số cố định trong code,
 // giờ quản lý được qua Settings: thêm/đổi tên/xoá, xem services/caiDatDbService.js#layDanhSachXuong).
 // GET mở cho MỌI người đã đăng nhập (orders.html/users.html đều cần đọc để đổ vào các ô chọn Xưởng) —
 // cùng mức mở với /mau-xuong ở dưới. "ChuaGanXuong" giờ là 1 Xưởng BÌNH THƯỜNG trong danh sách này
 // (theo yêu cầu người dùng) — KHÁC trạng thái "(chưa gán)" thật (XUONG rỗng), không nằm trong đây.
+// Không phải superadmin (29/09/2026, theo yêu cầu người dùng — admin giờ lọc được theo Xưởng mình phụ trách): CHỈ trả
+// các Xưởng được phân công cho chính tài khoản đó, không lộ tên Xưởng khác. /mau-xuong ở dưới cùng quy tắc.
+const xuongDuocThay = user => (laSuperAdmin(user.vaiTro) ? null : taiKhoanService.cacXuongCuaNguoiDung(user));
 router.get('/danh-sach-xuong', (req, res) => {
-  res.json(orderService.layDanhSachXuong());
+  const duocThay = xuongDuocThay(req.session.user);
+  const ds = orderService.layDanhSachXuong();
+  res.json(duocThay ? ds.filter(x => duocThay.includes(x)) : ds);
 });
 
 router.post('/xuong', (req, res) => {
@@ -683,7 +689,9 @@ router.post('/team-xuong', async (req, res) => {
 });
 
 router.get('/mau-xuong', (req, res) => {
-  res.json(layMauTheoXuong());
+  const duocThay = xuongDuocThay(req.session.user);
+  const mau = layMauTheoXuong();
+  res.json(duocThay ? Object.fromEntries(Object.entries(mau).filter(([x]) => duocThay.includes(x))) : mau);
 });
 
 router.post('/mau-xuong', (req, res) => {
@@ -970,7 +978,9 @@ router.get('/:sttKey', async (req, res) => {
 
   // Lần ghi ghi chú xưởng gần nhất sang Sheet Seller — order.html dùng để quyết định hiện bản trong app hay bản Sheet.
   const DongBoGhiChuXuong = require('../services/nhatKyDbService').layDongBoGanNhat(req.params.sttKey, 'GHI_CHU');
-  res.json(orderService.anXuongVoiAdmin({ ...donDaLamGiau, lichSu, kichBanKeTiep, DongBoGhiChuXuong }, user.vaiTro));
+  // XUONG hiện cho admin (29/09/2026) — coQuyenTheoXuong ở trên đã chặn đơn ngoài Xưởng của admin. Lịch sử (lichSu) vẫn
+  // ẩn tên Xưởng với admin (logService.ganMoTa) vì có thể nhắc Xưởng khác (vd "chuyển từ Xưởng A sang B").
+  res.json({ ...donDaLamGiau, lichSu, kichBanKeTiep, DongBoGhiChuXuong });
 });
 
 // CHÍNH SÁCH PHÂN QUYỀN (cập nhật 26/08/2026 — nguoi_lay_phoi KHÔNG được set tay bất kỳ trường nào

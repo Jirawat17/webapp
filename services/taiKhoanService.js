@@ -109,6 +109,15 @@ function cacXuongCuaNguoiDung(user) {
   return tachXuong(tk ? tk.Xuong : user.xuong);
 }
 
+// Phạm vi NHÂN VIÊN người xem được thấy (29/09/2026, theo yêu cầu người dùng — Bảng điều khiển): superadmin thấy tất
+// cả; người khác chỉ thấy nhân viên được phân ít nhất 1 Xưởng mà chính mình phụ trách (người xem chưa được phân Xưởng
+// nào -> không thấy ai). Trả hàm kiểm tra theo cột Xuong của nhân viên — đọc Xưởng người xem 1 lần cho cả danh sách.
+function phamViNhanVien(nguoiXem) {
+  if (nguoiXem.vaiTro === 'superadmin') return () => true;
+  const cua = cacXuongCuaNguoiDung(nguoiXem);
+  return xuongCuaNhanVien => tachXuong(xuongCuaNhanVien).some(x => cua.includes(x));
+}
+
 function demTheoXuong(xuong) {
   return layTatCa().filter(u => tachXuong(u.Xuong).includes(xuong)).length;
 }
@@ -121,5 +130,5 @@ const doiTenXuongHangLoat = db.transaction((tenCu, tenMoi) => {
 
 module.exports = {
   CAC_COT, layTatCa, layTheoTen, themMoi, capNhat, doiTen, demTheoXuong, doiTenXuongHangLoat,
-  tachXuong, cacXuongCuaNguoiDung,
+  tachXuong, cacXuongCuaNguoiDung, phamViNhanVien,
 };

@@ -69,8 +69,8 @@ function tuanCuaDon(r) {
 
 router.get('/thong-ke', async (req, res) => {
   const { rows: tatCaDonMoiXuong } = await orderService.getAll();
-  // Lọc theo Xưởng (bổ sung 13/09/2026) — admin xem thống kê toàn bộ, vai trò khác chỉ thấy đơn cùng
-  // Xưởng với mình (xem services/orderService.js#locTheoXuong).
+  // Lọc theo Xưởng (bổ sung 13/09/2026) — superadmin xem thống kê toàn bộ, vai trò khác (kể cả admin) chỉ thấy đơn
+  // thuộc các Xưởng mình phụ trách (xem services/orderService.js#locTheoXuong).
   const tatCaDon = orderService.locTheoXuong(tatCaDonMoiXuong, req.session.user);
 
   // Lọc theo khoảng NGAY_LEN_DON nếu FE gửi kèm tuNgay/denNgay (nút Hôm nay/Tuần này/Tháng

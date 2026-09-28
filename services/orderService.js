@@ -548,13 +548,11 @@ function coQuyenTheoXuong(user, row) {
   return !!row.XUONG && taiKhoanService.cacXuongCuaNguoiDung(user).includes(row.XUONG);
 }
 
-// ẨN thông tin Xưởng của ĐƠN HÀNG với riêng vai trò admin (bổ sung 18/09/2026, theo yêu cầu người
-// dùng) — CHỈ superadmin còn thấy được giá trị XUONG, KHÁC HẲN quyền THAO TÁC/XEM đơn theo Xưởng ở
-// locTheoXuong/coQuyenTheoXuong phía trên (KHÔNG đổi — admin vẫn xem/thao tác được MỌI đơn bất kể
-// Xưởng, chỉ không còn được trả về/hiển thị giá trị Xưởng của đơn đó nữa). Vai trò khác (ve_file/
-// san_xuat...) không đổi gì — họ vốn đã chỉ thấy đúng 1 Xưởng (của chính mình) nên trả lại không lộ
-// thêm thông tin gì mới. Trả về BẢN SAO (không mutate row gốc — row có thể là object đang được cache/
-// dùng lại ở nơi khác trong cùng request).
+// ẨN thông tin Xưởng của ĐƠN HÀNG với riêng vai trò admin (bổ sung 18/09/2026, theo yêu cầu người dùng).
+// Từ 29/09/2026 Danh sách đơn/Chi tiết đơn KHÔNG còn dùng hàm này (admin đã bị locTheoXuong giới hạn còn đúng
+// Xưởng mình phụ trách, nay được xem Xưởng đó) — CHỈ còn dùng ở trang Đơn hàng loạt (routes/donHangLoat.js), nơi
+// admin vẫn thấy nhóm có đơn của Xưởng khác. Trả về BẢN SAO (không mutate row gốc — row có thể là object đang được
+// cache/dùng lại ở nơi khác trong cùng request).
 function anXuongVoiAdmin(row, vaiTro) {
   if (vaiTro !== 'admin') return row;
   const { XUONG, ...conLai } = row;
