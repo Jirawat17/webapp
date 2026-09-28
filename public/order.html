@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Chi tiết đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=105">
+<link rel="stylesheet" href="/css/style.css?v=106">
 <script src="/js/theme.js?v=104"></script>
 </head>
 <body>
@@ -14,7 +14,7 @@
 </div>
 
 <script src="/js/icons.js?v=104"></script>
-<script src="/js/api.js?v=105"></script>
+<script src="/js/api.js?v=106"></script>
 <script>
 const sttKey = new URLSearchParams(location.search).get('stt');
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
@@ -225,12 +225,19 @@ function renderKhuVucThaoTac(don) {
   const el = document.getElementById('khu-vuc-thao-tac');
   let html = '';
 
+  // 2 nút lớn (28/09/2026, theo yêu cầu người dùng — routes/orders.js POST /:sttKey/nut-trang-thai):
+  // xanh "BẮT ĐẦU CHẠY MÁY" chỉ san_xuat, khi đơn "ĐÃ SẴN SÀNG CHẠY MÁY"; đỏ "BÁO LỖI" cho mọi vai trò
+  // xem được đơn, khi đơn "Đang chạy máy" (hỏi xác nhận trước — theo yêu cầu, chỉ nút này).
+  if (user.vaiTro === 'san_xuat' && don.TRANG_THAI_XUONG === 'ĐÃ SẴN SÀNG CHẠY MÁY') {
+    html += `<button type="button" class="nut-trang-thai-lon xanh" onclick="bamNutTrangThai('BAT_DAU_CHAY_MAY', this)">${icon('arrowRight', { size: 28 })} BẮT ĐẦU CHẠY MÁY</button>`;
+  }
+  if (don.TRANG_THAI_XUONG === 'Đang chạy máy') {
+    html += `<button type="button" class="nut-trang-thai-lon do" onclick="bamNutTrangThai('BAO_LOI_SAN_XUAT', this)">${icon('alert', { size: 28 })} BÁO LỖI SẢN XUẤT – CẦN LÀM LẠI</button>`;
+  }
+
   // nguoi_san_xuat (bổ sung 12/09/2026, theo yêu cầu người dùng — hạn chế thông tin/thao tác không
   // cần thiết dễ gây nhiễu khi chỉ tập trung chạy máy): ẩn nút chuyển giai đoạn theo kịch bản + ô ghi
-  // chú xưởng — GIỮ NGUYÊN khối "Sửa trạng thái thủ công" bên dưới (không nằm trong nhánh này) vì đó
-  // là cách DUY NHẤT hiện nay để tự đánh dấu "LỖI SẢN XUẤT CẦN LÀM LẠI" rồi set lại sau khi làm lại
-  // xong (quét QR không có kịch bản nào cho việc này — theo yêu cầu cũ "lỗi thì set tay, làm lại cũng
-  // set tay"). admin/ve_file vẫn thấy đủ như cũ.
+  // chú xưởng. Báo lỗi sản xuất giờ qua nút đỏ ở trên (khối "Sửa trạng thái thủ công" chỉ còn admin).
   if (user.vaiTro !== 'san_xuat') {
     // Nút chuyển giai đoạn — đọc từ chính tab CauHinhKichBan (dùng chung logic với quét QR),
     // không hardcode nút theo vai trò vì Sheet không định nghĩa vai trò cho từng kịch bản.
@@ -251,12 +258,10 @@ function renderKhuVucThaoTac(don) {
       </div>`;
   }
 
-  // Sửa trạng thái THỦ CÔNG — bắt buộc phải có vì "LỖI SẢN XUẤT CẦN LÀM LẠI" và việc làm lại sau đó
-  // KHÔNG đi qua kịch bản quét QR (theo Prompt_Ver_24.docx: "lỗi thì set tay, làm lại cũng set tay").
-  // Hiện cho mọi vai trò có mặt ở trang này (nguoi_lay_phoi không tới được trang này — menu đã ẩn
-  // hết trừ Quét QR — nên không cần loại riêng ở đây). Server (routes/orders.js, TRUONG_DUOC_SUA)
-  // vẫn là nơi chặn thật sự nếu vai trò không đủ quyền sửa cột nào đó.
-  html += `
+  // Sửa trạng thái THỦ CÔNG — CHỈ admin/superadmin (28/09/2026, theo yêu cầu người dùng; trước đây mọi vai trò).
+  // ve_file đưa đơn lỗi về làm lại ở trang Đơn hàng (chọn đơn -> "Chuyển đến trạng thái..." / nút Phôi, Vẽ file).
+  // Server (routes/orders.js, TRUONG_DUOC_SUA) vẫn là nơi chặn thật sự nếu vai trò không đủ quyền sửa cột nào đó.
+  if (laAdmin(user.vaiTro)) html += `
     <div class="upload-box">
       <label>Sửa trạng thái thủ công</label>
       <label for="sua-tinh-trang" style="font-size:0.85rem;font-weight:400">Trạng thái chung (TRANG_THAI_XUONG)</label>
@@ -397,9 +402,11 @@ function renderKhuVucThaoTac(don) {
   }
 
   el.innerHTML = html;
-  canhBaoToHopSai();
-  capNhatMauChonTrangThai(document.getElementById('sua-phoi'));
-  capNhatMauChonTrangThai(document.getElementById('sua-ve-file'));
+  if (document.getElementById('sua-tinh-trang')) { // khối "Sửa trạng thái thủ công" chỉ có với admin/superadmin
+    canhBaoToHopSai();
+    capNhatMauChonTrangThai(document.getElementById('sua-phoi'));
+    capNhatMauChonTrangThai(document.getElementById('sua-ve-file'));
+  }
 }
 
 // Cảnh báo TRƯỚC khi lưu, ngay khi người dùng đổi 1 trong 3 dropdown — soi gương lại đúng 2 quy tắc
@@ -407,9 +414,12 @@ function renderKhuVucThaoTac(don) {
 // mới biết bị từ chối. Đây CHỈ là gợi ý trên giao diện — server vẫn kiểm tra lại đầy đủ (không thể
 // bỏ qua bằng cách sửa JS trên trình duyệt), đây không phải là chốt bảo mật.
 function loiToHopTrangThai(tinhTrang, phoi, veFile) {
-  if (tinhTrang === 'Chưa in mã') {
-    if (phoi === 'Đã lấy phôi') return 'Đơn đang "Chưa in mã" thì chưa thể "Đã lấy phôi" — in mã đơn trước.';
-    if (veFile !== 'Chưa vẽ file') return `Đơn đang "Chưa in mã" thì vẽ file phải đang "Chưa vẽ file" (đang là "${veFile}") — in mã đơn trước.`;
+  // Vẽ file độc lập với in mã; chỉ chặn khi CHÍNH lần lưu này tạo ra "Chưa in mã + Đã lấy phôi" (đơn cũ lỡ lấy phôi
+  // trước khi in mã vẫn lưu được thay đổi khác) — cùng quy tắc với kiemTraTinhHopLy (28/09/2026).
+  const truoc = donHienTai || {};
+  if (tinhTrang === 'Chưa in mã' && phoi === 'Đã lấy phôi' &&
+      (truoc.TRANG_THAI_PHOI !== 'Đã lấy phôi' || truoc.TRANG_THAI_XUONG !== 'Chưa in mã')) {
+    return 'Đơn đang "Chưa in mã" thì chưa thể "Đã lấy phôi" — in mã đơn trước.';
   }
   // Cùng danh sách với THU_TU_TINH_TRANG trong data/pipelineTinhTrang.js (bỏ 2 bước đầu "Chưa/Đã in
   // mã", xử lý riêng ở trên) — sửa 1 chỗ thì nhớ sửa chỗ kia. Đã bỏ "Đã đóng gói", thêm "ĐÃ DÁN TEM"
@@ -599,6 +609,17 @@ async function chuyenGiaiDoan(scenarioId, btn) {
 // Ghi chú xưởng (28/09/2026): server LUÔN lưu bản trong app rồi ghi vào ô GHI_CHU_XUONG của Sheet Seller
 // (routes/orders.js POST /:sttKey/ghi-chu-xuong). Ghi Sheet lỗi -> hộp đỏ; nội dung vẫn còn trong ô (tải lại
 // trang điền sẵn bản trong app) để sửa nguyên nhân rồi Lưu lại / superadmin Đẩy lại.
+async function bamNutTrangThai(nut, btn) {
+  if (nut === 'BAO_LOI_SAN_XUAT' && !confirm(`Báo lỗi sản xuất đơn ${sttKey}?\n\n"Đang chạy máy" → "LỖI SẢN XUẤT CẦN LÀM LẠI"`)) return;
+  btn.disabled = true;
+  try {
+    await apiFetch('/orders/' + encodeURIComponent(sttKey) + '/nut-trang-thai', { method: 'POST', body: JSON.stringify({ nut }) });
+  } catch (e) {
+    alert(e.message);
+  }
+  await taiChiTiet();
+}
+
 async function luuGhiChu() {
   const ghiChu = document.getElementById('ghi-chu-moi').value;
   try {

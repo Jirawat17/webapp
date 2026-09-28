@@ -136,8 +136,7 @@ function kiemTraGiaTriHopLe(updates) {
 
 // Kiểm tra tính HỢP LÝ giữa 3 cột VỚI NHAU — không chỉ đúng giá trị từng cột riêng lẻ mà còn phải
 // khớp logic pipeline. 2 quy tắc:
-//   1. "Chưa in mã" thì KHÔNG THỂ đã có phôi/đã vẽ file (đơn còn chưa in mã thì chưa ai chuẩn bị
-//      phôi/vẽ file cho đơn đó).
+//   1. "Chưa in mã" thì KHÔNG THỂ lấy phôi (vẽ file được — độc lập với in mã từ 28/09/2026, xem bên dưới).
 //   2. Đã tới "ĐÃ SẴN SÀNG CHẠY MÁY" hoặc các bước SAU đó trên đường chính (Đã sản xuất, Đã đóng
 //      gói, ĐÃ DÁN TEM, DELIVERED) thì BẮT BUỘC phải có đủ CẢ phôi lẫn file — không tính LỖI SẢN
 //      XUẤT CẦN LÀM LẠI/CANCELLED/REFUNDED (nhánh rẽ, không nằm trong THU_TU_TINH_TRANG nên
@@ -153,15 +152,16 @@ function kiemTraTinhHopLy(rowHienTai, updates) {
   const phoiMoi = updates.TRANG_THAI_PHOI ?? rowHienTai.TRANG_THAI_PHOI;
   const veFileMoi = updates.TRANG_THAI_VE_FILE ?? rowHienTai.TRANG_THAI_VE_FILE;
 
-  if (tinhTrangMoi === 'Chưa in mã') {
-    if (phoiMoi === 'Đã lấy phôi') {
+  // Lấy phôi PHỤ THUỘC in mã (phải có mã in ra để nhận diện đúng phôi) — vẽ file thì ĐỘC LẬP với in mã (28/09/2026,
+  // theo yêu cầu người dùng: bỏ quy tắc cũ "Chưa in mã thì vẽ file phải Chưa vẽ file"). Chỉ chặn khi CHÍNH lần ghi
+  // này tạo ra tổ hợp "Chưa in mã + Đã lấy phôi" (lấy phôi mới, hoặc đưa đơn đã có phôi về "Chưa in mã") — đơn cũ
+  // lỡ lấy phôi trước khi in mã (18/09-28/09, trạng thái chung còn trống nên quy tắc không chạy) vẫn cập nhật vẽ
+  // file / in mã bình thường, không bị kẹt (đã xác nhận với người dùng: giữ nguyên, cho làm tiếp).
+  if (tinhTrangMoi === 'Chưa in mã' && phoiMoi === 'Đã lấy phôi') {
+    const vuaLayPhoi = updates.TRANG_THAI_PHOI === 'Đã lấy phôi' && rowHienTai.TRANG_THAI_PHOI !== 'Đã lấy phôi';
+    const vuaVeChuaInMa = updates.TRANG_THAI_XUONG === 'Chưa in mã' && rowHienTai.TRANG_THAI_XUONG !== 'Chưa in mã';
+    if (vuaLayPhoi || vuaVeChuaInMa) {
       throw new Error('Không hợp lệ: đơn đang "Chưa in mã" thì chưa thể "Đã lấy phôi" — in mã đơn trước.');
-    }
-    // Đơn "Chưa in mã" bắt buộc vẽ file phải ĐÚNG "Chưa vẽ file" (không chỉ chặn riêng "Đã vẽ file")
-    // — từ khi có thêm "Đang vẽ file" (08/09/2026), không ai được phép "đang vẽ" cho 1 đơn còn chưa
-    // in mã, tức chưa ai chuẩn bị được gì để vẽ.
-    if (veFileMoi !== 'Chưa vẽ file') {
-      throw new Error(`Không hợp lệ: đơn đang "Chưa in mã" thì vẽ file phải đang "Chưa vẽ file" (đang là "${veFileMoi}") — in mã đơn trước.`);
     }
   }
 
@@ -185,9 +185,12 @@ function kiemTraTinhHopLy(rowHienTai, updates) {
 function tinhPhoiVeFileTuDongKhiInMa(rowHienTai, updates) {
   if (updates.TRANG_THAI_XUONG !== 'Đã in mã' || rowHienTai.TRANG_THAI_XUONG !== 'Chưa in mã') return updates;
 
+  // GIỮ tiến độ đã có (sửa 28/09/2026): từ 18/09 tới 28/09 đơn mới mang TRANG_THAI_XUONG '' nên được lấy phôi/vẽ
+  // file TRƯỚC khi in mã — đặt cứng "Chưa..." ở đây sẽ xoá mất tiến độ đó (và hoàn kho phôi) lúc bấm in mã. Đơn đúng
+  // quy trình vốn đang "Chưa..." nên kết quả không đổi.
   const ketQua = { ...updates };
-  if (!('TRANG_THAI_PHOI' in ketQua)) ketQua.TRANG_THAI_PHOI = 'Chưa lấy phôi';
-  if (!('TRANG_THAI_VE_FILE' in ketQua)) ketQua.TRANG_THAI_VE_FILE = 'Chưa vẽ file';
+  if (!('TRANG_THAI_PHOI' in ketQua)) ketQua.TRANG_THAI_PHOI = rowHienTai.TRANG_THAI_PHOI || 'Chưa lấy phôi';
+  if (!('TRANG_THAI_VE_FILE' in ketQua)) ketQua.TRANG_THAI_VE_FILE = rowHienTai.TRANG_THAI_VE_FILE || 'Chưa vẽ file';
   return ketQua;
 }
 
@@ -309,6 +312,14 @@ async function capNhatThat(sttKey, updates, user, tuyChon) {
   // bỏ lỡ auto-transition khi 2 lượt cập nhật (vd lấy phôi + vẽ file) cho CÙNG đơn xếp hàng sát nhau —
   // đọc lại đây RẺ (SQLite tại chỗ, không tốn quota Sheets như getByKey({fresh:true})) nên luôn làm.
   const row = { ...rowDaDoc, ...trangThaiDbService.layTheoKey(sttKey) };
+
+  // tuyChon.yeuCauDangLa ({ COT: 'giá trị' }, bổ sung 28/09/2026 — nút lớn ở Chi tiết đơn): chỉ ghi nếu đơn VẪN
+  // đang đúng giá trị đó, kiểm tra TRONG lượt khoá theo đơn — người khác vừa đổi thì báo lỗi, không ghi đè.
+  for (const [cot, giaTri] of Object.entries(tuyChon.yeuCauDangLa || {})) {
+    if ((row[cot] || '') !== giaTri) {
+      throw new Error(`Đơn đang "${row[cot] || '(trống)'}", không còn "${giaTri}" — có người vừa đổi trạng thái, tải lại trang để xem.`);
+    }
+  }
 
   // tuyChon.boQuaRangBuoc (bổ sung 25/09/2026) — CHỈ route POST /orders/chuyen-trang-thai-superadmin
   // truyền (superadmin, đã kiểm tra quyền ở route): bỏ qua cổng ảnh bắt buộc, điều kiện nguồn/tracking

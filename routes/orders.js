@@ -170,14 +170,11 @@ router.get('/', async (req, res) => {
   // toàn với san_xuat dù truyền tham số này: locDonDangChayMayTheoNguoiVanHanh() luôn chạy SAU CÙNG,
   // vẫn giới hạn san_xuat chỉ thấy đơn "Đang chạy máy" của chính họ bất kể nguoiVanHanh là gì.
   if (nguoiVanHanh) list = list.filter(r => r.NguoiVanHanh === nguoiVanHanh);
-  // "Đơn của tôi (Vẽ file)" — cần vẽ file = Chưa vẽ file VÀ chưa tới lượt (khác "Chưa in mã"), gồm cả
-  // đơn LỖI SẢN XUẤT CẦN LÀM LẠI (bị reset về Chưa vẽ file nhưng KHÔNG quay lại "Đã in mã" — xem
-  // docs/superpowers/specs/2026-09-08-don-cua-toi-ve-file-design.md). Không so khớp được bằng
-  // khopGiaTriLoc (cần loại trừ 1 giá trị, không phải so khớp đúng 1 giá trị) nên thêm cờ riêng, đúng
-  // tiền lệ hangLoat=1 bên dưới. Không cần cờ "chưa ai nhận" riêng nữa (đã bỏ, xem
-  // docs/superpowers/specs/2026-09-08-trang-thai-dang-ve-file-design.md) — từ khi có "Đang vẽ file",
-  // "Chưa vẽ file" tự nó đã luôn đúng nghĩa "chưa ai nhận".
-  if (canVeFile) list = list.filter(r => r.TRANG_THAI_VE_FILE === 'Chưa vẽ file' && r.TRANG_THAI_XUONG !== 'Chưa in mã');
+  // "Đơn của tôi (Vẽ file)" — cần vẽ file = "Chưa vẽ file", KỂ CẢ đơn "Chưa in mã" (28/09/2026, theo yêu cầu người
+  // dùng: vẽ file độc lập với in mã — trước đây loại đơn "Chưa in mã") và đơn LỖI SẢN XUẤT CẦN LÀM LẠI. Không cần
+  // cờ "chưa ai nhận" riêng (xem docs/superpowers/specs/2026-09-08-trang-thai-dang-ve-file-design.md) — từ khi có
+  // "Đang vẽ file", "Chưa vẽ file" tự nó đã luôn đúng nghĩa "chưa ai nhận".
+  if (canVeFile) list = list.filter(r => r.TRANG_THAI_VE_FILE === 'Chưa vẽ file');
   if (nguoiVeFile) list = list.filter(r => r.NguoiVeFile === nguoiVeFile);
   if (loai) list = list.filter(r => r.LOAI === loai);
   if (kichThuoc) list = list.filter(r => r.KICH_THUOC === kichThuoc);
@@ -1026,6 +1023,42 @@ router.post('/:sttKey/ghi-chu-xuong', async (req, res) => {
     chiTiet: { tu: kq.thayDoi.length ? kq.thayDoi[0].tu : (row.GHI_CHU_XUONG_NOI_BO || row.GHI_CHU_XUONG || ''), sang: ghiChu, sheet: sheetSellerService.chiTietLichSu(kq) },
   });
   res.json({ ok: true, sheet: { ok: kq.ok, lyDo: kq.lyDo, tab: kq.tab, dong: kq.dong } });
+});
+
+// 2 nút lớn ở Chi tiết đơn (28/09/2026, theo yêu cầu người dùng) — mỗi nút chuyển TRANG_THAI_XUONG đúng 1 bước cố định:
+//   BAT_DAU_CHAY_MAY: chỉ san_xuat — người bấm thành người chạy máy (orderService.update tự ghi NGUOI_CHAY_MAY).
+//   BAO_LOI_SAN_XUAT: mọi vai trò xem được đơn — CHỈ đổi trạng thái chung (phôi/vẽ file/kho giữ nguyên, như chọn
+//   LỖI ở ô "Sửa trạng thái thủ công").
+// Chỉ ghi khi đơn VẪN ở trạng thái nguồn (yeuCauDangLa). Lịch sử cùng loại với nút nhận chạy máy ở my-orders.html.
+const NUT_TRANG_THAI = {
+  BAT_DAU_CHAY_MAY: { tu: 'ĐÃ SẴN SÀNG CHẠY MÁY', sang: 'Đang chạy máy', nhan: 'BẮT ĐẦU CHẠY MÁY', vaiTro: ['san_xuat'] },
+  BAO_LOI_SAN_XUAT: { tu: 'Đang chạy máy', sang: 'LỖI SẢN XUẤT CẦN LÀM LẠI', nhan: 'BÁO LỖI SẢN XUẤT – CẦN LÀM LẠI' },
+};
+router.post('/:sttKey/nut-trang-thai', async (req, res) => {
+  const user = req.session.user;
+  const nut = NUT_TRANG_THAI[req.body.nut];
+  if (!nut) return res.status(400).json({ error: 'Nút không hợp lệ' });
+  if (nut.vaiTro && !nut.vaiTro.includes(user.vaiTro)) return res.status(403).json({ error: `Vai trò này không dùng nút "${nut.nhan}"` });
+  const sttKey = req.params.sttKey;
+  const { headers, row } = await orderService.getByKey(sttKey, { fresh: true });
+  // Cùng quyền xem với GET /:sttKey: khác Xưởng, hoặc san_xuat với đơn người KHÁC đang chạy -> coi như không có.
+  const nguoiKhacDangChay = user.vaiTro === 'san_xuat' && row && row.TRANG_THAI_XUONG === TRANG_THAI_DANG_CHAY_MAY &&
+    row.NGUOI_CHAY_MAY && row.NGUOI_CHAY_MAY !== user.ten;
+  if (!row || !orderService.coQuyenTheoXuong(user, row) || nguoiKhacDangChay) {
+    return res.status(404).json({ error: 'Không tìm thấy đơn hàng: ' + sttKey });
+  }
+  try {
+    await orderService.update(sttKey, {
+      TRANG_THAI_XUONG: nut.sang, NguoiCapNhatCuoi: user.ten, ThoiGianCapNhatCuoi: new Date().toISOString(),
+    }, user, { donDaDoc: { headers, row }, yeuCauDangLa: { TRANG_THAI_XUONG: nut.tu } });
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
+  }
+  await ghiLog({
+    nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'CHUYEN_TRANG_THAI_HANG_LOAT', sttKey,
+    chiTiet: { cot: 'TRANG_THAI_XUONG', tu: nut.tu, sang: nut.sang, lyDo: `bấm nút "${nut.nhan}" ở Chi tiết đơn` },
+  });
+  res.json({ ok: true, trangThai: nut.sang });
 });
 
 router.put('/:sttKey', async (req, res) => {

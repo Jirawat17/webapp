@@ -6,11 +6,12 @@ const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const orderService = require('../services/orderService');
 const { layDanhSachKhachHang, layBanDoTenKhachHang } = require('../services/khachHangService');
-const { layLichSuChuyenSangTrangThai, tinhChiTieuCongViec, trongKhoangThoiGian } = require('../services/logService');
+const { layLichSuChuyenSangTrangThai, tinhChiTieuCongViec, trongKhoangThoiGian, ghiLogNhieu } = require('../services/logService');
+const { taoPdfThueTeamKhac } = require('../services/thueTeamKhacService');
 const taiKhoanService = require('../services/taiKhoanService');
 const nhatKyDbService = require('../services/nhatKyDbService');
 const { laAdmin, laSuperAdmin } = require('../middleware/auth');
-const { parseNgay, dinhDangNgay, dinhDangNgayGioVN, dinhDangNgayGioNgan, bienGioiNgayVN } = require('../services/dateUtils');
+const { parseNgay, dinhDangNgay, dinhDangNgayGioVN, dinhDangNgayGioNgan, bienGioiNgayVN, thoiGianVNISOString } = require('../services/dateUtils');
 const { taoQRCodeBuffer, KICH_THUOC_QR_CHUAN_DPI_MM } = require('../services/qrService');
 const { taiDsAnh } = require('../services/anhNguonService');
 const { DANH_SACH_TRANG_THAI_BAO_CAO, GIA_TRI_LOC_TRONG, khopGiaTriLoc } = require('../data/pipelineTinhTrang');
@@ -1332,7 +1333,7 @@ router.post('/don-can-in/bat-dau', async (req, res) => {
 router.get('/don-can-in/tien-do/:jobId', (req, res) => {
   const job = _congViecInDon.get(req.params.jobId);
   if (!job) return res.status(404).json({ error: 'Không tìm thấy tiến trình (có thể đã hết hạn)' });
-  res.json({ tongSo: job.tongSo, daXong: job.daXong, trangThai: job.trangThai, loi: job.loi });
+  res.json({ tongSo: job.tongSo, daXong: job.daXong, trangThai: job.trangThai, loi: job.loi, loiAnh: job.loiAnh || [] });
 });
 
 // Nút "DỪNG" ở public/orders.html gọi route này — chỉ đặt cờ 'daHuy', KHÔNG xoá job ngay (job vẫn
@@ -1352,6 +1353,64 @@ router.get('/don-can-in/tai-ve/:jobId', (req, res) => {
   res.setHeader('Content-Disposition', `attachment; filename="${job.tenFile}"`);
   res.send(job.buffer);
   _congViecInDon.delete(req.params.jobId); // đã tải về xong, dọn ngay không cần đợi hết hạn
+});
+
+// "THUÊ TEAM KHÁC" (bổ sung 28/09/2026, theo yêu cầu người dùng) — PDF bàn giao các đơn ĐANG CHỌN cho team thêu bên
+// ngoài (services/thueTeamKhacService.js). admin/superadmin/ve_file. Chạy nền chung kho _congViecInDon với IN ĐƠN —
+// giao diện hỏi tiến độ/dừng/tải về qua đúng 3 route /don-can-in/... ở trên (tien-do trả thêm loiAnh: ảnh thiếu).
+// Đơn không tìm thấy/khác Xưởng -> từ chối cả lượt (không bỏ sót đơn nào mà vẫn xuất). Tên file theo giờ VN lúc bấm.
+router.post('/thue-team-khac/bat-dau', async (req, res) => {
+  const user = req.session.user;
+  if (!laAdmin(user.vaiTro) && user.vaiTro !== 've_file') return res.status(403).json({ error: 'Vai trò này không dùng được THUÊ TEAM KHÁC' });
+  const sttKeys = [...new Set((Array.isArray(req.body.sttKeys) ? req.body.sttKeys : []).map(k => String(k).trim()).filter(Boolean))];
+  if (sttKeys.length === 0) return res.status(400).json({ error: 'Hãy chọn ít nhất 1 đơn hàng.' });
+  const { rows } = await orderService.getAll({ fresh: true });
+  const theoKey = new Map(orderService.locTheoXuong(rows, user).map(r => [r.STT_Key, r]));
+  const khongThay = sttKeys.filter(k => !theoKey.has(k));
+  if (khongThay.length) return res.status(404).json({ error: `Không tìm thấy đơn: ${khongThay.join(', ')} — bỏ chọn đơn này rồi xuất lại.` });
+
+  donDepJobCu();
+  const vn = thoiGianVNISOString(); // "2026-09-28T15:30:25.123+07:00"
+  const tenFile = `THUE_TEAM_KHAC_${vn.slice(0, 10).replace(/-/g, '')}_${vn.slice(11, 19).replace(/:/g, '')}.pdf`;
+  const thoiGianXuat = `${vn.slice(8, 10)}/${vn.slice(5, 7)}/${vn.slice(0, 4)} ${vn.slice(11, 19)}`;
+  const jobId = crypto.randomUUID();
+  const job = {
+    tongSo: sttKeys.length, daXong: 0, trangThai: 'dang_chay', daHuy: false,
+    buffer: null, contentType: 'application/pdf', tenFile, loi: null, loiAnh: [], capNhatLucNao: Date.now(),
+  };
+  _congViecInDon.set(jobId, job);
+  res.json({ jobId, tongSo: sttKeys.length, tenFile });
+
+  (async () => {
+    try {
+      const ketQua = await taoPdfThueTeamKhac(sttKeys.map(k => theoKey.get(k)), {
+        thoiGianXuat, nguoiXuat: user.ten,
+        onTienDo: () => { job.daXong += 1; job.capNhatLucNao = Date.now(); },
+        kiemTraHuy: () => job.daHuy,
+      });
+      if (!ketQua) {
+        job.trangThai = 'huy';
+      } else {
+        Object.assign(job, { buffer: ketQua.buffer, loiAnh: ketQua.dsLoi, trangThai: 'xong' });
+        try { // lỗi ghi lịch sử không được làm mất file PDF đã tạo xong
+          ghiLogNhieu(sttKeys.map(sttKey => {
+            const loi = ketQua.dsLoi.filter(l => l.sttKey === sttKey);
+            return {
+              nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'XUAT_PDF_THUE_TEAM_KHAC', sttKey,
+              chiTiet: { tenFile, soDon: sttKeys.length, soAnhLoi: loi.length, anhLoi: loi.map(l => `${l.nhan}: ${l.loi}${l.link ? ` (${l.link})` : ''}`) },
+            };
+          }));
+        } catch (err) {
+          console.error('[Reports] Lỗi ghi lịch sử THUÊ TEAM KHÁC:', err.message);
+        }
+      }
+    } catch (err) {
+      console.error('[Reports] Lỗi tạo PDF THUÊ TEAM KHÁC:', err.stack || err.message);
+      job.trangThai = 'loi';
+      job.loi = err.message;
+    }
+    job.capNhatLucNao = Date.now();
+  })();
 });
 
 module.exports = router;

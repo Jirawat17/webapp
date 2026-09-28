@@ -106,7 +106,10 @@ for (const cot of CAC_COT) {
 // orderService.js#tinhPhoiVeFileTuDongKhiInMa() vẫn giữ nguyên, không bị thay thế — hàm đó GHI tường
 // minh 2 giá trị này vào SQLite đúng lúc đơn chuyển "Đã in mã" (bổ trợ, không trùng lặp): lớp ở ĐÂY chỉ
 // xử lý tầng ĐỌC, không ghi gì, nên không giúp được cho ai đọc thẳng SQLite mà không qua 2 hàm dưới đây.
-const MAC_DINH_THAT_THEO_COT = { TRANG_THAI_PHOI: 'Chưa lấy phôi', TRANG_THAI_VE_FILE: 'Chưa vẽ file' };
+// TRANG_THAI_XUONG (bổ sung 28/09/2026, theo yêu cầu người dùng) — cùng lỗi: từ 18/09 cột này ở SQLite, đơn mới chưa
+// ai thao tác mang '' thay vì 'Chưa in mã' -> không lọc được ở trang Đơn hàng, mọi quy tắc viết cho "Chưa in mã"
+// (orderService.js#kiemTraTinhHopLy, lọc canVeFile ở routes/orders.js...) bị bỏ qua lặng lẽ với đơn mới.
+const MAC_DINH_THAT_THEO_COT = { TRANG_THAI_XUONG: 'Chưa in mã', TRANG_THAI_PHOI: 'Chưa lấy phôi', TRANG_THAI_VE_FILE: 'Chưa vẽ file' };
 function apDungMacDinhThat(row) {
   for (const cot in MAC_DINH_THAT_THEO_COT) {
     if (row[cot] === '') row[cot] = MAC_DINH_THAT_THEO_COT[cot];

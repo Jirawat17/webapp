@@ -116,7 +116,31 @@ async function layDsAnhTrongThuMucDrive(url, { gioiHan, timeoutMs = THOI_GIAN_CH
   }
 }
 
+// Bản ĐẦY ĐỦ cho PDF "THUÊ TEAM KHÁC" (bổ sung 28/09/2026, theo yêu cầu người dùng — "tuyệt đối không thiếu ảnh"):
+// khác layDsAnhTrongThuMucDrive ở trên (IN ĐƠN, giữ nguyên) — đọc HẾT mọi trang (không dừng ở 50 file), lỗi liệt kê
+// thư mục THROW thay vì trả [] (không lẫn với thư mục rỗng), và CHỈ trả danh sách file (KHÔNG tải sẵn) để nơi gọi tải +
+// thu nhỏ từng ít ảnh một — tải hết 1 thư mục lớn vào RAM cùng lúc có thể làm sập container.
+// -> null nếu url không phải thư mục; [{ id, ten, link }] nếu đúng (tải từng file bằng taiFileDriveTheoId).
+async function layChiTietAnhThuMucDrive(url) {
+  const folderId = layFolderIdTuLinkDrive(url);
+  if (!folderId) return null;
+  const drive = await getDriveReadClient();
+  const files = [];
+  let pageToken;
+  do {
+    const res = await drive.files.list({
+      q: `'${folderId}' in parents and mimeType contains 'image/' and trashed = false`,
+      fields: 'nextPageToken, files(id, name)', orderBy: 'name', pageSize: 100, pageToken,
+    }, { timeout: THOI_GIAN_CHO_TOI_DA_MS });
+    files.push(...(res.data.files || []));
+    pageToken = res.data.nextPageToken;
+  } while (pageToken);
+
+  return files.map(f => ({ id: f.id, ten: f.name, link: `https://drive.google.com/file/d/${f.id}/view` }));
+}
+
 module.exports = {
+  layChiTietAnhThuMucDrive,
   layFileIdTuLinkDrive,
   layFolderIdTuLinkDrive,
   taiAnhTuLinkDrive,

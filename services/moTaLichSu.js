@@ -163,6 +163,9 @@ function moTaLichSu(dong, { anXuong = false } = {}) {
         : `CHƯA ghi được vào Sheet Seller — ${sh.lyDo || 'không rõ lý do'}`;
       return kq(`sửa ghi chú xưởng — ${ketQuaSheet}`, [doi('Ghi chú xưởng', c.tu, c.sang)]);
     }
+    case 'XUAT_PDF_THUE_TEAM_KHAC':
+      return kq(`xuất PDF THUÊ TEAM KHÁC (${c.tenFile || '?'}${c.soDon > 1 ? `, cùng ${c.soDon} đơn` : ''})${c.soAnhLoi ? ` — THIẾU ${c.soAnhLoi} ẢNH` : ''}`,
+        (c.anhLoi || []).map(l => doi('Ảnh thiếu', undefined, l)));
     case 'GHI_SHEET_SELLER': {
       const nhan = NHAN_LOAI_SHEET[c.loai] || c.loai || '';
       if (c.ketQua === 'OK') return kq(`ghi ${nhan} vào Sheet Seller (tab "${c.tab}", dòng ${c.dong})`, tuBangThayDoi(c.thayDoi));

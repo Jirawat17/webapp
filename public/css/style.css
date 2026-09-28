@@ -470,6 +470,23 @@ body.trang-dang-nhap {
    nút .nguy-hiem khác dùng chung ở don-hang-loat.html, vốn chỉ đổi màu khi hover chứ không có nền màu
    sẵn) — nhắm thẳng #id thay vì sửa class .nguy-hiem dùng chung, tránh ảnh hưởng các nút khác. */
 #nut-xoa-du-lieu-don { background: #7c3aed; color: #fff; border-color: #7c3aed; }
+
+/* THUÊ TEAM KHÁC ở trang Đơn hàng (28/09/2026) — đỏ, to, nổi bật giữa các nút in viền xanh */
+.btn-hanh-dong.btn-thue-team-khac { background: #dc2626; border-color: #dc2626; color: #fff; font-size: 1.05rem; font-weight: 800; letter-spacing: 0.03em; padding: 12px 22px; }
+.btn-hanh-dong.btn-thue-team-khac:hover:not(:disabled) { background: #b91c1c; border-color: #b91c1c; }
+
+/* 2 nút lớn ở Chi tiết đơn (28/09/2026) — BẮT ĐẦU CHẠY MÁY (xanh) / BÁO LỖI SẢN XUẤT (đỏ): to, dễ bấm trên điện thoại */
+.nut-trang-thai-lon {
+  display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; min-height: 88px;
+  margin-bottom: var(--space-4); padding: 16px; border: 0; border-radius: 14px; color: #fff; cursor: pointer;
+  font: inherit; font-size: 1.5rem; font-weight: 800; letter-spacing: 0.02em; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+.nut-trang-thai-lon.xanh { background: #2563eb; }
+.nut-trang-thai-lon.xanh:hover { background: #1d4ed8; }
+.nut-trang-thai-lon.do { background: #dc2626; }
+.nut-trang-thai-lon.do:hover { background: #b91c1c; }
+.nut-trang-thai-lon:disabled { opacity: 0.6; cursor: wait; }
+.nut-trang-thai-lon:active:not(:disabled) { transform: scale(0.98); }
 #nut-xoa-du-lieu-don:hover { background: #6d28d9; border-color: #6d28d9; }
 
 /* "Chọn tất cả đơn đang hiển thị" + thanh hành động chuyển trạng thái hàng loạt */

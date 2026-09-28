@@ -239,6 +239,21 @@ router.post('/kich-ban/:scenarioId/kiem-tra', async (req, res) => {
     return res.json({ nhom: 'SAI_TRANG_THAI', sttKey, tieuDe, tenKhachHang, trangThaiHienTai: giaTriHienTai, trangThaiYeuCau: scenario.requireStatus, lyDo });
   }
 
+  // Lấy phôi khi đơn "Chưa in mã" (28/09/2026): báo sai NGAY lúc quét — trước đây qua được bước này rồi mới bị
+  // orderService.update() (kiemTraTinhHopLy) từ chối ở bước xác nhận.
+  if (scenario.column === 'TRANG_THAI_PHOI' && scenario.setStatus === 'Đã lấy phôi' && row.TRANG_THAI_XUONG === 'Chưa in mã') {
+    const lyDo = `Đơn ${sttKey} lỗi do đơn chưa được đánh dấu "Đã in mã" — in mã đơn trước rồi mới lấy phôi`;
+    ghiKhongCho(ghiLog({
+      nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_KIEM_TRA_SAI_TRANG_THAI',
+      sttKey, chiTiet: { scenario: scenario.label, cot: 'TRANG_THAI_XUONG', trangThaiHienTai: row.TRANG_THAI_XUONG, lyDo },
+    }));
+    ghiKhongCho(ghiNhatKyQuetHangLoat({
+      nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey,
+      trangThaiCu: row.TRANG_THAI_XUONG, trangThaiMoi: '', ketQua: 'KIEM_TRA_SAI_TRANG_THAI', ghiChu: lyDo,
+    }));
+    return res.json({ nhom: 'SAI_TRANG_THAI', sttKey, tieuDe, tenKhachHang, trangThaiHienTai: row.TRANG_THAI_XUONG, trangThaiYeuCau: 'Đã in mã', lyDo });
+  }
+
   ghiKhongCho(ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_KIEM_TRA_OK', sttKey, chiTiet: { scenario: scenario.label, cot: scenario.column, seChuyenSang: scenario.setStatus } }));
   ghiKhongCho(ghiNhatKyQuetHangLoat({
     nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey,

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=105">
+<link rel="stylesheet" href="/css/style.css?v=106">
 <script src="/js/theme.js?v=104"></script>
 </head>
 <body>
@@ -36,6 +36,8 @@
            tick vào 1 Đơn hàng loạt có sẵn/mới, thay vì phải gõ tay từng mã ở public/don-hang-loat.html. -->
       <button type="button" class="btn-hanh-dong phu" id="btn-them-hang-loat" onclick="themVaoDonHangLoat()" style="display:none"></button>
       <button type="button" class="btn-hanh-dong phu" id="btn-in-hai-quan" onclick="inHaiQuanDangChon(this)" style="display:none"></button>
+      <!-- THUÊ TEAM KHÁC (bổ sung 28/09/2026) — PDF bàn giao đơn đang chọn cho team thêu ngoài; admin/superadmin/ve_file, hiện qua JS. -->
+      <button type="button" class="btn-hanh-dong btn-thue-team-khac" id="btn-thue-team-khac" onclick="xuatThueTeamKhac(this)" style="display:none">THUÊ TEAM KHÁC</button>
       <!-- CHUYỂN TRẠNG THÁI THỦ CÔNG SUPERADMIN (bổ sung 25/09/2026) — CHỈ superadmin, hiện qua JS. -->
       <button type="button" class="btn-hanh-dong phu nguy-hiem" id="btn-mo-superadmin" onclick="batTatPanelSuperadmin()" style="display:none">CHUYỂN TRẠNG THÁI THỦ CÔNG SUPERADMIN</button>
     </div>
@@ -270,7 +272,7 @@
 </div>
 
 <script src="/js/icons.js?v=104"></script>
-<script src="/js/api.js?v=105"></script>
+<script src="/js/api.js?v=106"></script>
 <script>
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
 // settings.html (superadmin), 3/5/7 không còn luôn đúng nên không hard-code vào nhãn hiển thị nữa.
@@ -406,6 +408,7 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   if (laAdmin(user.vaiTro) || user.vaiTro === 've_file') {
     btnInHaiQuan.style.display = '';
     btnInHaiQuan.innerHTML = icon('printer') + ' IN KÊ KHAI HẢI QUAN ĐƠN ĐANG CHỌN';
+    document.getElementById('btn-thue-team-khac').style.display = '';
   }
 
   // Nút "Đã..." (positive) dùng icon check, nút "Chưa..." (negative, đưa trạng thái quay lại) dùng
@@ -1397,6 +1400,56 @@ async function inDonHangLoatCoTienDo(nut, nhanGoc, than, tuyChon = {}) {
   } catch (e) {
     if (baoLoiBangAlert) alert('Lỗi: ' + e.message);
     return { ok: false, loi: e.message };
+  } finally {
+    thanhTienDo.xoa();
+    nut.disabled = false;
+    nut.innerHTML = nhanGoc;
+  }
+}
+
+// "THUÊ TEAM KHÁC" (bổ sung 28/09/2026, theo yêu cầu người dùng) — 1 file PDF cho MỌI đơn đang chọn, theo thứ tự
+// đang hiển thị (routes/reports.js POST /thue-team-khac/bat-dau). Chạy nền + tiến độ + nút Dừng dùng chung 3 route
+// /reports/don-can-in/... với IN ĐƠN. Có ảnh thiếu -> hộp đỏ liệt kê mã đơn + ảnh + lý do TRƯỚC khi tải file.
+async function xuatThueTeamKhac(nut) {
+  if (donDaChonSet.size === 0) { alert('Hãy chọn ít nhất 1 đơn hàng để xuất PDF THUÊ TEAM KHÁC.'); return; }
+  const theoThuTuHienThi = danhSachHienTai.map(o => o.STT_Key).filter(k => donDaChonSet.has(k));
+  const sttKeys = [...theoThuTuHienThi, ...[...donDaChonSet].filter(k => !theoThuTuHienThi.includes(k))];
+  const nhanGoc = nut.innerHTML;
+  nut.disabled = true;
+  let jobId;
+  try {
+    ({ jobId } = await apiFetch('/reports/thue-team-khac/bat-dau', { method: 'POST', body: JSON.stringify({ sttKeys }) }));
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
+    nut.disabled = false;
+    return;
+  }
+  const thanhTienDo = taoThanhTienDo(nut, {
+    onHuy: () => { apiFetch(`/reports/don-can-in/huy/${jobId}`, { method: 'POST' }).catch(() => {}); },
+  });
+  thanhTienDo.capNhat(0, sttKeys.length);
+  try {
+    let tienDo;
+    do {
+      await new Promise(r => setTimeout(r, 1000));
+      tienDo = await apiFetch(`/reports/don-can-in/tien-do/${jobId}`);
+      thanhTienDo.capNhat(tienDo.daXong, tienDo.tongSo);
+      if (tienDo.trangThai === 'loi') throw new Error(tienDo.loi || 'Tạo file thất bại');
+    } while (tienDo.trangThai !== 'xong' && tienDo.trangThai !== 'huy');
+    if (tienDo.trangThai === 'huy') { alert('Đã dừng — chưa tạo file PDF.'); return; }
+
+    if (tienDo.loiAnh.length) {
+      await hienHopDo({
+        tieuDe: [`PDF THIẾU ${tienDo.loiAnh.length} ẢNH`, 'TÀI LIỆU CHƯA ĐẦY ĐỦ'],
+        moTa: 'File vẫn được tải về (ảnh thiếu đánh dấu ĐỎ ngay trong PDF và ở trang đầu). Sửa link trong Sheet Seller rồi xuất lại nếu cần đủ ảnh:',
+        danhSach: tienDo.loiAnh.map(l => `${l.sttKey} — ${l.nhan}: ${l.loi}${l.link ? ` (${l.link})` : ''}`),
+      });
+    }
+    const res = await fetch(`/api/reports/don-can-in/tai-ve/${jobId}`, { credentials: 'include' });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Không tải được file');
+    taiFileTuBlob(await res.blob(), res.headers.get('Content-Disposition'), 'THUE_TEAM_KHAC.pdf');
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
   } finally {
     thanhTienDo.xoa();
     nut.disabled = false;
