@@ -82,18 +82,24 @@ function layNhomHuyConTracking(rows, huyGanDay) {
   return ketQua;
 }
 
-async function layTrungTamHanhDong() {
-  const { rows } = await orderService.getAll();
-  const [huyGanDay, loiTrackingGke] = await Promise.all([layDonHuyGanDay(), layLoiTrackingGanDay()]);
+// Phạm vi Xưởng (29/09/2026, theo yêu cầu người dùng — admin chỉ thấy Xưởng mình phụ trách): mục tính từ đơn chỉ
+// xét đơn trong phạm vi; mục tính từ log chỉ giữ dòng có đơn trong phạm vi; nhóm DonNhieuAo chỉ hiện khi MỌI đơn
+// của nhóm trong phạm vi (cùng quy tắc Đơn hàng loạt). superadmin thấy tất cả.
+async function layTrungTamHanhDong(user) {
+  const { rows: tatCa } = await orderService.getAll();
+  const rows = orderService.locTheoXuong(tatCa, user);
+  const trongPhamVi = orderService.phamViDon(user);
+  const [huyGanDay, loiTrackingGke] = (await Promise.all([layDonHuyGanDay(), layLoiTrackingGanDay()]))
+    .map(ds => ds.filter(d => trongPhamVi(d.sttKey)));
   return {
-    loiDonNhieuAo: donNhieuAoService.danhSachLoiDuLieu(rows),
-    nhomHuyConTracking: layNhomHuyConTracking(rows, huyGanDay),
+    loiDonNhieuAo: donNhieuAoService.danhSachLoiDuLieu(tatCa).filter(n => n.sttKeys.every(trongPhamVi)),
+    nhomHuyConTracking: layNhomHuyConTracking(tatCa, huyGanDay).filter(n => trongPhamVi(n.sttKey)),
     huyGanDay,
     loiSanXuat: layDonLoiSanXuat(rows),
     uuTienChuaXuLy: layDonUuTienChuaXuLy(rows),
     loiTrackingGke,
     // Chưa ghi được sang Sheet Seller (28/09/2026) — lần ghi gần nhất theo (đơn, loại) đang lỗi; Đẩy lại chỉ superadmin.
-    loiSheetSeller: require('./nhatKyDbService').layLoiDongBoDangCho(),
+    loiSheetSeller: require('./nhatKyDbService').layLoiDongBoDangCho().filter(d => trongPhamVi(d.STT_Key)),
   };
 }
 

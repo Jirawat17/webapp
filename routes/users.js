@@ -29,8 +29,10 @@ function matKhauHopLe(mk) {
 // admin/superadmin qua requireRole() (bổ sung 18/09/2026, theo yêu cầu người dùng: superadmin CHỈ mới
 // xem/sửa được thông tin ĐẦY ĐỦ ở Quản lý nhân viên, nhưng KHÔNG được yêu cầu bớt quyền nào khác của
 // admin — vẫn cần đủ tên/vai trò để chỉ định người chạy máy/vẽ file như trước).
+// admin chỉ nhận nhân viên cùng Xưởng mình phụ trách (29/09/2026, taiKhoanService.js#phamViNhanVien).
 router.get('/tom-tat', requireRole(), async (req, res) => {
-  const list = taiKhoanService.layTatCa();
+  const trongPhamVi = taiKhoanService.phamViNhanVien(req.session.user);
+  const list = taiKhoanService.layTatCa().filter(r => trongPhamVi(r.Xuong));
   res.json(list.map(r => ({ Ten: r.Ten, VaiTro: r.VaiTro, KichHoat: r.KichHoat })));
 });
 

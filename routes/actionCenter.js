@@ -7,7 +7,7 @@ const { layTrungTamHanhDong } = require('../services/actionCenterService');
 // trong danh sách truyền vào mới qua, danh sách rỗng nên luôn bị chặn 403).
 router.get('/danh-sach', requireRole(), async (req, res) => {
   try {
-    const ketQua = await layTrungTamHanhDong();
+    const ketQua = await layTrungTamHanhDong(req.session.user);
     res.json(ketQua);
   } catch (err) {
     console.error('[TrungTamHanhDong] Lỗi lấy danh sách:', err.stack || err.message);

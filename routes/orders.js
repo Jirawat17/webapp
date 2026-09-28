@@ -467,10 +467,12 @@ router.post('/chi-dinh-nguoi-chay-may', async (req, res) => {
   // Kiểm tra tên được chỉ định đúng là 1 tài khoản san_xuat đang hoạt động — tránh gõ nhầm tên (khác
   // hẳn nguy cơ chọn nhầm trong 1 dropdown có sẵn). Đọc thẳng SQLite (bổ sung 18/09/2026, xem
   // services/taiKhoanService.js) — không còn qua Google Sheets nữa.
+  // + phải cùng Xưởng với admin (29/09/2026 — admin chỉ thấy/chỉ định nhân viên Xưởng mình phụ trách).
   const dsNhanVien = taiKhoanService.layTatCa();
-  const hopLe = dsNhanVien.some(r => r.Ten === nguoiSanXuat && r.VaiTro === 'san_xuat' && String(r.KichHoat).toUpperCase() === 'TRUE');
+  const trongPhamVi = taiKhoanService.phamViNhanVien(user);
+  const hopLe = dsNhanVien.some(r => r.Ten === nguoiSanXuat && r.VaiTro === 'san_xuat' && String(r.KichHoat).toUpperCase() === 'TRUE' && trongPhamVi(r.Xuong));
   if (!hopLe) {
-    return res.status(400).json({ error: `"${nguoiSanXuat}" không phải tài khoản sản xuất đang hoạt động` });
+    return res.status(400).json({ error: `"${nguoiSanXuat}" không phải tài khoản sản xuất đang hoạt động thuộc Xưởng của bạn` });
   }
 
   const thanhCong = [];
@@ -482,7 +484,7 @@ router.post('/chi-dinh-nguoi-chay-may', async (req, res) => {
   await chayHangLoatSongSong(sttKeys, async (sttKey) => {
     try {
       const row = banDoTheoKey.get(sttKey);
-      if (!row) {
+      if (!row || !orderService.coQuyenTheoXuong(user, row)) {
         loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
         return;
       }
@@ -533,9 +535,10 @@ router.post('/chi-dinh-nguoi-ve-file', async (req, res) => {
   }
 
   const dsNhanVien = taiKhoanService.layTatCa();
-  const hopLe = dsNhanVien.some(r => r.Ten === nguoiVeFile && r.VaiTro === 've_file' && String(r.KichHoat).toUpperCase() === 'TRUE');
+  const trongPhamVi = taiKhoanService.phamViNhanVien(user);
+  const hopLe = dsNhanVien.some(r => r.Ten === nguoiVeFile && r.VaiTro === 've_file' && String(r.KichHoat).toUpperCase() === 'TRUE' && trongPhamVi(r.Xuong));
   if (!hopLe) {
-    return res.status(400).json({ error: `"${nguoiVeFile}" không phải tài khoản vẽ file đang hoạt động` });
+    return res.status(400).json({ error: `"${nguoiVeFile}" không phải tài khoản vẽ file đang hoạt động thuộc Xưởng của bạn` });
   }
 
   const thanhCong = [];
@@ -547,7 +550,7 @@ router.post('/chi-dinh-nguoi-ve-file', async (req, res) => {
   await chayHangLoatSongSong(sttKeys, async (sttKey) => {
     try {
       const row = banDoTheoKey.get(sttKey);
-      if (!row) {
+      if (!row || !orderService.coQuyenTheoXuong(user, row)) {
         loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
         return;
       }

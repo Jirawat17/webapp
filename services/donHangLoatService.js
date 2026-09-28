@@ -9,7 +9,7 @@ const caiDatDbService = require('./caiDatDbService');
 const donHangLoatDbService = require('./donHangLoatDbService');
 const { ghiLog } = require('./logService');
 const { thoiGianVNISOString } = require('./dateUtils');
-const { laAdmin } = require('../middleware/auth');
+const { laSuperAdmin } = require('../middleware/auth');
 
 // Ngưỡng tính theo SỐ BIT KHÁC NHAU tuyệt đối trên tổng 256 bit của hash hiện tại (bổ sung 15/09/2026,
 // xem services/perceptualHashService.js — lưới hash tăng từ 64 lên 256 bit để phân biệt tốt hơn các
@@ -95,12 +95,13 @@ async function layDanhSachNhom(user) {
   }
 
   let nhoms = [...theoNhom.values()];
-  // admin xem hết; vai trò khác CHỈ xem nhóm mà MỌI đơn đều thuộc Xưởng mình — khác trang rà soát gợi
+  // superadmin xem hết; vai trò khác (KỂ CẢ admin từ 29/09/2026 — "admin chỉ thấy Xưởng mình phụ trách" ở mọi
+  // menu) CHỈ xem nhóm mà MỌI đơn đều thuộc Xưởng mình — khác trang rà soát gợi
   // ý (chỉ đọc, có thể lọc bớt từng đơn), trang này có thao tác SỬA/XOÁ nên ẩn HẲN cả nhóm nếu có dù
   // chỉ 1 đơn ngoài Xưởng (an toàn hơn hiện thiếu — tránh sửa/xoá nhầm 1 nhóm tưởng đủ mà thực ra bị
   // ẩn bớt đơn, xem mục 2.1 spec — về lý thuyết không nên xảy ra vì đã chặn khác Xưởng lúc tạo/thêm,
   // đây là phòng hờ dữ liệu bị đổi Xưởng sau đó qua routes/orders.js POST /gan-xuong).
-  if (!laAdmin(user.vaiTro)) {
+  if (!laSuperAdmin(user.vaiTro)) {
     const cacXuong = require('./taiKhoanService').cacXuongCuaNguoiDung(user);
     nhoms = nhoms.filter(n => n.donHang.every(d => d.XUONG && cacXuong.includes(d.XUONG)));
   }
@@ -215,8 +216,8 @@ async function themDonVaoNhom(maDonHangLoat, sttKeys, user) {
 // xoaDonKhoiNhom/doiTenNhom/xoaNhom chỉ kiểm tra nhóm có TỒN TẠI, không kiểm tra Xưởng — router mount
 // requireRole('ve_file') cho phép cả ve_file (vốn bị lọc theo Xưởng như mọi vai trò khác) gọi tới, nên
 // 1 ve_file ở Xưởng này có thể xoá/đổi tên/xoá thành viên nhóm thuộc Xưởng KHÁC nếu biết mã nhóm (mã
-// DHLXX không phải bí mật, xuất hiện công khai trong danh sách nhóm của Xưởng mình). admin/superadmin
-// luôn qua (coQuyenTheoXuong tự cho qua) — cùng triết lý "ẩn/chặn cả nhóm nếu có dù chỉ 1 đơn ngoài
+// DHLXX không phải bí mật, xuất hiện công khai trong danh sách nhóm của Xưởng mình). CHỈ superadmin
+// luôn qua (coQuyenTheoXuong tự cho qua; admin bị giới hạn theo Xưởng như vai trò khác) — cùng triết lý "ẩn/chặn cả nhóm nếu có dù chỉ 1 đơn ngoài
 // Xưởng" đã dùng ở layDanhSachNhom() phía trên, áp dụng thêm cho thao tác GHI, không chỉ ĐỌC.
 async function kiemTraQuyenVoiNhom(maDonHangLoat, user) {
   const sttKeys = donHangLoatDbService.layThanhVienCuaNhom(maDonHangLoat);
