@@ -125,7 +125,60 @@ function xoaLogsTrackingTheoDon(sttKey) {
   cauXoaLogsTrackingTheoDon.run(sttKey);
 }
 
+// ---------- Đồng bộ Sheet Seller (bổ sung 28/09/2026, theo yêu cầu người dùng) ----------
+// MỌI lần app ghi vào Sheet của Seller (ghi chú xưởng / tracking / Delivered — services/sheetSellerService.js),
+// cả thành công lẫn lỗi, kèm giá trị ô TRƯỚC -> SAU. "Lỗi đang chờ" = lần ghi GẦN NHẤT của cặp (STT_Key,
+// Loai) có KetQua = 'LOI' (lần đẩy lại thành công sau đó tự đưa đơn ra khỏi danh sách).
+db.exec(`CREATE TABLE IF NOT EXISTS dong_bo_sheet_seller (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ThoiGian TEXT NOT NULL DEFAULT '',
+  NguoiDung TEXT NOT NULL DEFAULT '',
+  STT_Key TEXT NOT NULL DEFAULT '',
+  Loai TEXT NOT NULL DEFAULT '',
+  SpreadsheetId TEXT NOT NULL DEFAULT '',
+  Tab TEXT NOT NULL DEFAULT '',
+  Dong TEXT NOT NULL DEFAULT '',
+  Cot TEXT NOT NULL DEFAULT '',
+  GiaTriTruoc TEXT NOT NULL DEFAULT '',
+  GiaTriSau TEXT NOT NULL DEFAULT '',
+  KetQua TEXT NOT NULL DEFAULT '',
+  LyDo TEXT NOT NULL DEFAULT ''
+)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_dbss_stt_loai ON dong_bo_sheet_seller(STT_Key, Loai)`);
+const COT_DONG_BO = ['ThoiGian', 'NguoiDung', 'STT_Key', 'Loai', 'SpreadsheetId', 'Tab', 'Dong', 'Cot', 'GiaTriTruoc', 'GiaTriSau', 'KetQua', 'LyDo'];
+const cauGhiDongBo = db.prepare(`INSERT INTO dong_bo_sheet_seller (${COT_DONG_BO.join(', ')}) VALUES (${COT_DONG_BO.map(c => '@' + c).join(', ')})`);
+const ghiNhieuDongBoSheetSeller = db.transaction(dsDong => dsDong.forEach(d =>
+  cauGhiDongBo.run(Object.fromEntries(COT_DONG_BO.map(c => [c, d[c] === undefined || d[c] === null ? '' : String(d[c])])))));
+// Mới nhất trước; loc: { loai, ketQua, sttKey, gioiHan }.
+function layNhatKyDongBoSheetSeller({ loai, ketQua, sttKey, gioiHan = 300 } = {}) {
+  const dk = [], ts = {};
+  if (loai) { dk.push('Loai = @loai'); ts.loai = loai; }
+  if (ketQua) { dk.push('KetQua = @ketQua'); ts.ketQua = ketQua; }
+  if (sttKey) { dk.push('STT_Key = @sttKey'); ts.sttKey = sttKey; }
+  return db.prepare(`SELECT * FROM dong_bo_sheet_seller ${dk.length ? 'WHERE ' + dk.join(' AND ') : ''} ORDER BY id DESC LIMIT ${Math.min(Number(gioiHan) || 300, 2000)}`).all(ts);
+}
+// Lần ghi gần nhất của mỗi (STT_Key, Loai) đang là LỖI, kèm số lần lỗi liên tiếp tới giờ.
+function layLoiDongBoDangCho() {
+  const moiNhat = db.prepare(`
+    SELECT d.* FROM dong_bo_sheet_seller d
+    JOIN (SELECT STT_Key, Loai, MAX(id) AS id FROM dong_bo_sheet_seller GROUP BY STT_Key, Loai) m ON m.id = d.id
+    WHERE d.KetQua = 'LOI' ORDER BY d.id DESC`).all();
+  const demLoi = db.prepare(`SELECT COUNT(*) AS c FROM dong_bo_sheet_seller WHERE STT_Key = ? AND Loai = ? AND KetQua = 'LOI'
+    AND id > COALESCE((SELECT MAX(id) FROM dong_bo_sheet_seller WHERE STT_Key = ? AND Loai = ? AND KetQua = 'OK'), 0)`);
+  return moiNhat.map(d => ({ ...d, SoLanLoi: demLoi.get(d.STT_Key, d.Loai, d.STT_Key, d.Loai).c }));
+}
+// Lần ghi GẦN NHẤT của 1 đơn theo 1 loại (vd ghi chú xưởng) — null nếu chưa từng ghi.
+const cauDongBoGanNhat = db.prepare(`SELECT ThoiGian, KetQua, LyDo, GiaTriSau FROM dong_bo_sheet_seller WHERE STT_Key = ? AND Loai = ? ORDER BY id DESC LIMIT 1`);
+function layDongBoGanNhat(sttKey, loai) {
+  return cauDongBoGanNhat.get(sttKey, loai) || null;
+}
+const cauXoaDongBoTheoDon = db.prepare(`DELETE FROM dong_bo_sheet_seller WHERE STT_Key = ?`);
+function xoaDongBoSheetSellerTheoDon(sttKey) {
+  cauXoaDongBoTheoDon.run(sttKey);
+}
+
 module.exports = {
+  ghiNhieuDongBoSheetSeller, layNhatKyDongBoSheetSeller, layLoiDongBoDangCho, layDongBoGanNhat, xoaDongBoSheetSellerTheoDon,
   ghiLichSuHoatDong, ghiNhieuLichSuHoatDong, layTatCaLichSuHoatDong, xoaLichSuHoatDongTheoDon,
   ghiNhatKyQuetHangLoat, xoaNhatKyQuetHangLoatTheoDon,
   ghiLogsTracking, layTatCaLogsTracking, xoaLogsTrackingTheoDon,

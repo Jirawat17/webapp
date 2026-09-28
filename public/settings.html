@@ -140,6 +140,34 @@
     <p id="thong-bao-gke" style="display:none"></p>
   </details>
 
+  <!-- Đồng bộ Sheet Seller (bổ sung 28/09/2026, theo yêu cầu người dùng) — app ghi ghi chú xưởng / tracking /
+       Delivered vào Sheet của Seller (services/sheetSellerService.js, tra Sheet qua tab CONFIG theo Team). KHÔNG
+       tự thử lại khi lỗi — superadmin theo dõi ở đây (và Trung tâm hành động) rồi bấm Đẩy lại. API:
+       routes/dongBoSheetSeller.js. Tải khi mở khối (đọc CONFIG tốn 1 lượt gọi Google). -->
+  <details id="khoi-dong-bo-seller" style="margin-top:var(--space-6)">
+    <summary class="btn-hanh-dong phu">Đồng bộ Sheet Seller</summary>
+    <p style="color:var(--color-text-muted)">App ghi <strong>GHI_CHU_XUONG</strong> (ghi chú xưởng), <strong>TRACKING_ID2 / HANG_VAN_CHUYEN2</strong> (sau khi mua tracking) và <strong>Delivered</strong> (trạng thái vận chuyển) vào đúng dòng của đơn trong Sheet Seller — tìm Sheet qua tab CONFIG (cột TEAM / Spreadsheet ID / Tab) theo Team trong mã đơn. Lỗi không tự thử lại: sửa nguyên nhân rồi bấm Đẩy lại.</p>
+
+    <h3>Lỗi đang chờ</h3>
+    <div id="ds-loi-seller"></div>
+
+    <h3 style="margin-top:var(--space-5)">Nhật ký mọi lần ghi</h3>
+    <div class="bao-cao-form" style="margin-bottom:var(--space-3)">
+      <div class="truong"><label for="nk-loai">Loại</label>
+        <select id="nk-loai"><option value="">Tất cả</option><option value="GHI_CHU">Ghi chú xưởng</option><option value="TRACKING">Tracking</option><option value="DELIVERED">Delivered</option></select></div>
+      <div class="truong"><label for="nk-ket-qua">Kết quả</label>
+        <select id="nk-ket-qua"><option value="">Tất cả</option><option value="OK">Thành công</option><option value="LOI">Lỗi</option></select></div>
+      <div class="truong"><label for="nk-stt">Mã đơn</label><input id="nk-stt" placeholder="VD: 9LIEM12" style="text-transform:uppercase"></div>
+      <button type="button" class="btn-hanh-dong phu" id="btn-loc-nhat-ky">Lọc</button>
+    </div>
+    <div id="ds-nhat-ky-seller"></div>
+
+    <h3 style="margin-top:var(--space-5)">Tab CONFIG app đọc được</h3>
+    <button type="button" class="btn-hanh-dong phu" id="btn-kiem-tra-config">Kiểm tra từng Sheet</button>
+    <p class="st-ghi-chu-truong">Kiểm tra chỉ ĐỌC thử dòng tiêu đề từng tab (quyền đọc, tên tab, đủ cột STT_Key / GHI_CHU_XUONG / TRACKING_ID2 / HANG_VAN_CHUYEN2 / Delivered). Thiếu quyền GHI chỉ lộ ra ở lần ghi thật — khi đó xem "Lỗi đang chờ".</p>
+    <div id="ds-config-seller"></div>
+  </details>
+
   <!-- "Khôi phục đơn đã xoá dữ liệu" (bổ sung 24/09/2026, theo yêu cầu người dùng) — bản web của
        scripts/khoi-phuc-don-da-xoa.js (script dòng lệnh gốc vẫn giữ nguyên). CHỈ khôi phục đúng các
        STT_Key được nhập tay (không có nút "khôi phục tất cả") — chủ động chọn đúng đơn, tránh khôi phục
@@ -183,7 +211,89 @@
   document.getElementById('btn-khoi-phuc-du-lieu-don').onclick = khoiPhucDuLieuDon;
   document.getElementById('btn-them-xuong').onclick = themXuongMoi;
   document.getElementById('btn-them-team').onclick = themTeamMoi;
+  // Đồng bộ Sheet Seller — tải khi mở khối lần đầu.
+  const khoiSeller = document.getElementById('khoi-dong-bo-seller');
+  khoiSeller.addEventListener('toggle', () => {
+    if (khoiSeller.open && !khoiSeller.dataset.daTai) { khoiSeller.dataset.daTai = '1'; taiDongBoSeller(); }
+  });
+  document.getElementById('btn-loc-nhat-ky').onclick = taiNhatKySeller;
+  document.getElementById('btn-kiem-tra-config').onclick = () => taiConfigSeller(true);
+  datTaiLaiSauDayLai(taiDongBoSeller);
 })();
+
+// ---------- Đồng bộ Sheet Seller (28/09/2026) ----------
+async function taiDongBoSeller() {
+  await Promise.all([taiLoiSeller(), taiNhatKySeller(), taiConfigSeller(false)]);
+}
+
+async function taiLoiSeller() {
+  const el = document.getElementById('ds-loi-seller');
+  try {
+    el.innerHTML = htmlLoiSheetSeller(await apiFetch('/dong-bo-sheet-seller/loi-dang-cho'), true);
+  } catch (e) {
+    el.innerHTML = `<p style="color:var(--color-danger-text)">Không tải được: ${escapeHtml(e.message)}</p>`;
+  }
+}
+
+async function taiNhatKySeller() {
+  const el = document.getElementById('ds-nhat-ky-seller');
+  const qs = new URLSearchParams({ gioiHan: '300' });
+  const giaTri = id => document.getElementById(id).value.trim();
+  if (giaTri('nk-loai')) qs.set('loai', giaTri('nk-loai'));
+  if (giaTri('nk-ket-qua')) qs.set('ketQua', giaTri('nk-ket-qua'));
+  if (giaTri('nk-stt')) qs.set('sttKey', giaTri('nk-stt'));
+  try {
+    const ds = await apiFetch('/dong-bo-sheet-seller/nhat-ky?' + qs.toString());
+    if (!ds.length) { el.innerHTML = '<p style="color:var(--color-text-muted)">Chưa có lần ghi nào khớp bộ lọc.</p>'; return; }
+    el.innerHTML = `<div class="bang-cuon-ngang"><table class="info-table">
+      <tr><th>Thời gian</th><th>Người</th><th>Đơn</th><th>Loại</th><th>Nơi ghi</th><th>Cột</th><th>Trước → Sau</th><th>Kết quả</th></tr>
+      ${ds.map(d => `<tr>
+        <td>${escapeHtml(tgNgan(d.ThoiGian))}</td>
+        <td>${escapeHtml(d.NguoiDung)}</td>
+        <td><a href="/order.html?stt=${encodeURIComponent(d.STT_Key)}">${escapeHtml(d.STT_Key)}</a></td>
+        <td>${escapeHtml(NHAN_LOAI_SHEET_SELLER[d.Loai] || d.Loai)}</td>
+        <td>${d.Tab ? `tab "${escapeHtml(d.Tab)}"${d.Dong ? ` dòng ${escapeHtml(d.Dong)}` : ''}` : '—'}</td>
+        <td>${escapeHtml(d.Cot)}</td>
+        <td>${d.KetQua === 'OK'
+          ? `${escapeHtml(d.GiaTriTruoc || '(trống)')} → <strong>${escapeHtml(d.GiaTriSau || '(trống)')}</strong>`
+          : `định ghi: <strong>${escapeHtml(d.GiaTriSau)}</strong>`}</td>
+        <td>${d.KetQua === 'OK'
+          ? '<span style="color:#16a34a;font-weight:700">Thành công</span>'
+          : `<span style="color:var(--color-danger-text);font-weight:700">Lỗi</span><br><small>${escapeHtml(d.LyDo)}</small>`}</td>
+      </tr>`).join('')}
+    </table></div>`;
+  } catch (e) {
+    el.innerHTML = `<p style="color:var(--color-danger-text)">Không tải được: ${escapeHtml(e.message)}</p>`;
+  }
+}
+
+async function taiConfigSeller(kiemTra) {
+  const el = document.getElementById('ds-config-seller');
+  const nut = document.getElementById('btn-kiem-tra-config');
+  if (kiemTra) { nut.disabled = true; nut.textContent = 'Đang kiểm tra...'; }
+  try {
+    const kq = await apiFetch('/dong-bo-sheet-seller/config' + (kiemTra ? '?kiemTra=1' : ''));
+    const dauEmail = kq.email
+      ? `<p class="st-ghi-chu-truong">Tài khoản dịch vụ cần quyền <strong>Chỉnh sửa</strong> trên mọi Sheet Seller: <strong>${escapeHtml(kq.email)}</strong></p>`
+      : '';
+    if (kq.loi) { el.innerHTML = dauEmail + `<p style="color:var(--color-danger-text)">${escapeHtml(kq.loi)}</p>`; return; }
+    if (!kq.dong.length) { el.innerHTML = dauEmail + '<p style="color:var(--color-text-muted)">Tab CONFIG chưa có dòng nào có TEAM.</p>'; return; }
+    el.innerHTML = dauEmail + `<div class="bang-cuon-ngang"><table class="info-table">
+      <tr><th>Dòng CONFIG</th><th>TEAM</th><th>Tab</th><th>Spreadsheet ID</th>${kiemTra ? '<th>Kiểm tra</th>' : ''}</tr>
+      ${kq.dong.map(d => `<tr>
+        <td>${escapeHtml(d.dongConfig)}</td><td><strong>${escapeHtml(d.team)}</strong></td><td>${escapeHtml(d.tab)}</td>
+        <td><small>${escapeHtml(d.spreadsheetId)}</small></td>
+        ${kiemTra ? `<td>${d.ok
+          ? '<span style="color:#16a34a;font-weight:700">OK</span>'
+          : `<span style="color:var(--color-danger-text);font-weight:700">${escapeHtml(d.loi || 'Lỗi')}</span>`}</td>` : ''}
+      </tr>`).join('')}
+    </table></div>`;
+  } catch (e) {
+    el.innerHTML = `<p style="color:var(--color-danger-text)">Không tải được: ${escapeHtml(e.message)}</p>`;
+  } finally {
+    if (kiemTra) { nut.disabled = false; nut.textContent = 'Kiểm tra từng Sheet'; }
+  }
+}
 
 // "Khôi phục đơn đã xoá dữ liệu" (bổ sung 24/09/2026, theo yêu cầu người dùng) — gọi
 // routes/orders.js POST /khoi-phuc-du-lieu-hang-loat, CHỈ xoá cờ DA_XOA cho đúng các STT_Key nhập tay

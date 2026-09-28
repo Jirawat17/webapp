@@ -38,8 +38,9 @@ async function datNguong(nguongMoi, user) {
   if (!Number.isInteger(so) || so < NGUONG_TOI_THIEU || so > NGUONG_TOI_DA) {
     throw new Error(`Ngưỡng phải là số nguyên từ ${NGUONG_TOI_THIEU} đến ${NGUONG_TOI_DA}.`);
   }
+  const nguongCu = await layNguong();
   caiDatDbService.datCaiDatHangLoat(so);
-  await ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'DOI_NGUONG_HANG_LOAT', chiTiet: { nguong: so } });
+  await ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'DOI_NGUONG_HANG_LOAT', chiTiet: { nguongCu, nguong: so } });
 }
 
 // Bản NHẸ, tìm theo TỪ KHOÁ trong TÊN nhóm (không phân biệt hoa/thường, khớp chuỗi con — KHÔNG cần
@@ -245,17 +246,20 @@ async function doiTenNhom(maDonHangLoat, tenMoi, user) {
   if (!donHangLoatDbService.layNhom(maDonHangLoat)) throw new Error(`Không tìm thấy Đơn hàng loạt: ${maDonHangLoat}`);
   await kiemTraQuyenVoiNhom(maDonHangLoat, user);
   const tenDaCat = tenMoi.trim();
+  const tenCu = (donHangLoatDbService.layNhom(maDonHangLoat) || {}).TenNhom || '';
 
   donHangLoatDbService.doiTenNhom(maDonHangLoat, tenDaCat);
-  await ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'DOI_TEN_HANG_LOAT', chiTiet: { maDonHangLoat, tenMoi: tenDaCat } });
+  await ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'DOI_TEN_HANG_LOAT', chiTiet: { maDonHangLoat, tenCu, tenMoi: tenDaCat } });
 }
 
 async function xoaNhom(maDonHangLoat, user) {
   if (!donHangLoatDbService.layNhom(maDonHangLoat)) throw new Error(`Không tìm thấy Đơn hàng loạt: ${maDonHangLoat}`);
   await kiemTraQuyenVoiNhom(maDonHangLoat, user);
 
+  const tenNhom = (donHangLoatDbService.layNhom(maDonHangLoat) || {}).TenNhom || '';
+  const sttKeys = donHangLoatDbService.layThanhVienCuaNhom(maDonHangLoat); // để hiện trong lịch sử từng đơn
   donHangLoatDbService.xoaNhom(maDonHangLoat);
-  await ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'XOA_NHOM_HANG_LOAT', chiTiet: { maDonHangLoat } });
+  await ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'XOA_NHOM_HANG_LOAT', chiTiet: { maDonHangLoat, tenNhom, sttKeys } });
 }
 
 module.exports = {

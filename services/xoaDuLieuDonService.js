@@ -34,6 +34,7 @@ async function xoaDuLieuDon(sttKey) {
   nhatKyDbService.xoaLichSuHoatDongTheoDon(sttKey);
   nhatKyDbService.xoaNhatKyQuetHangLoatTheoDon(sttKey);
   nhatKyDbService.xoaLogsTrackingTheoDon(sttKey);
+  nhatKyDbService.xoaDongBoSheetSellerTheoDon(sttKey);
 
   trangThaiDbService.ghiDe(sttKey, { ...trangThaiDbService.RONG_MAC_DINH, DA_XOA: 'TRUE' });
 }

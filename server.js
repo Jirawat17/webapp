@@ -45,6 +45,7 @@ app.use('/api/hoat-dong', require('./routes/hoatDong'));
 // routes/tracking.js) — chỉ riêng route quét-QR-để-tạo-vận-đơn là bị xoá.
 app.use('/api/tracking', require('./routes/tracking'));
 app.use('/api/trung-tam-hanh-dong', require('./routes/actionCenter'));
+app.use('/api/dong-bo-sheet-seller', require('./routes/dongBoSheetSeller'));
 app.use('/api/kich-ban', require('./routes/kichBan'));
 app.use('/api/logs', require('./routes/logs'));
 

@@ -53,6 +53,14 @@
 
   <div id="thong-ke-nhanh" class="thong-ke-nhanh">Đang tải...</div>
 
+  <!-- Toàn bộ thao tác (bổ sung 27/09/2026, theo yêu cầu người dùng) — MỌI hành động trong khoảng thời gian,
+       kèm mô tả đầy đủ + giá trị trước/sau (server dựng sẵn, services/moTaLichSu.js — cùng nội dung với
+       lịch sử ở Chi tiết đơn). Các khối bên dưới giữ nguyên để đối soát/đếm chỉ tiêu như cũ. -->
+  <div>
+    <h3>Toàn bộ thao tác</h3>
+    <div id="ds-toan-bo" class="timeline"></div>
+  </div>
+
   <div>
     <h3>Lượt quét QR thành công</h3>
     <div id="ds-quet" class="timeline"></div>
@@ -193,8 +201,8 @@ async function taiHoatDong() {
   document.getElementById('tieu-de-hoat-dong').textContent = dangXemNguoiKhac
     ? `Hoạt động của ${data.nguoiXem.ten}` : 'Hoạt động của tôi';
   document.getElementById('mo-ta-hoat-dong').textContent = dangXemNguoiKhac
-    ? `Nhật ký thao tác của ${data.nguoiXem.ten} — quét QR, đổi trạng thái, upload ảnh.`
-    : 'Nhật ký thao tác của chính bạn — quét QR, đổi trạng thái, upload ảnh — để tự đối soát cuối ngày/tuần.';
+    ? `Nhật ký mọi thao tác của ${data.nguoiXem.ten} — ai làm gì, trên đơn nào, trước và sau thay đổi.`
+    : 'Nhật ký mọi thao tác của chính bạn — làm gì, trên đơn nào, trước và sau thay đổi — để tự đối soát cuối ngày/tuần.';
 
   document.getElementById('thong-ke-nhanh').innerHTML = `
     <div class="the-nhanh"><div class="so">${data.tongSoQuet}</div><div class="nhan">${icon('scan', {size:14})} Lượt quét thành công</div></div>
@@ -203,6 +211,7 @@ async function taiHoatDong() {
   `;
 
   renderChiTieuVaiTro(data.chiTieu, data.nguoiXem ? data.nguoiXem.vaiTro : user.vaiTro);
+  renderDsToanBo(data.toanBo || []);
   renderDsQuet(data.quet);
   renderDsQuetBiTuChoi(data.quetBiTuChoi);
   renderDsDoiTrangThai(data.doiTrangThai);
@@ -250,6 +259,22 @@ function phanTrangTimeline(danhSachDay, soDangHienThi) {
 }
 function nutXemThemTimeline(conLai, goiLai) {
   return conLai > 0 ? `<button type="button" class="btn-hanh-dong phu" onclick="${goiLai}">Xem thêm (còn ${conLai})</button>` : '';
+}
+
+let dsToanBoDay = [], soDangHienThiToanBo = SO_MOI_LUOT_HOAT_DONG;
+function renderDsToanBo(list) {
+  if (list !== undefined) { dsToanBoDay = list; soDangHienThiToanBo = SO_MOI_LUOT_HOAT_DONG; }
+  const el = document.getElementById('ds-toan-bo');
+  if (dsToanBoDay.length === 0) { el.innerHTML = dongRong('Chưa có thao tác nào trong khoảng này.'); return; }
+  const { dsDeRender, conLai } = phanTrangTimeline(dsToanBoDay, soDangHienThiToanBo);
+  el.innerHTML = dsDeRender.map(x => `
+    <div class="timeline-item${x.Mo ? ' lich-su-mo' : ''}">
+      <div class="timeline-info">
+        ${x.STT_Key ? `<strong><a href="/order.html?stt=${encodeURIComponent(x.STT_Key)}">${escapeHtml(x.STT_Key)}</a></strong> · ` : ''}${escapeHtml(x.MoTa || x.HanhDong)}
+        ${htmlThayDoiLichSu(x.ThayDoi)}
+      </div>
+      <div class="timeline-time">${tsDep(x.ThoiGian)}</div>
+    </div>`).join('') + nutXemThemTimeline(conLai, 'soDangHienThiToanBo+=SO_MOI_LUOT_HOAT_DONG;renderDsToanBo()');
 }
 
 let dsQuetDay = [], soDangHienThiQuet = SO_MOI_LUOT_HOAT_DONG;

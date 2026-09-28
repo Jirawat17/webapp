@@ -92,6 +92,8 @@ async function layTrungTamHanhDong() {
     loiSanXuat: layDonLoiSanXuat(rows),
     uuTienChuaXuLy: layDonUuTienChuaXuLy(rows),
     loiTrackingGke,
+    // Chưa ghi được sang Sheet Seller (28/09/2026) — lần ghi gần nhất theo (đơn, loại) đang lỗi; Đẩy lại chỉ superadmin.
+    loiSheetSeller: require('./nhatKyDbService').layLoiDongBoDangCho(),
   };
 }
 

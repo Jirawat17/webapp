@@ -68,9 +68,13 @@ router.put('/:id', async (req, res) => {
   }
 
   kichBanDbService.capNhat(id, dong);
+  // thayDoi (bổ sung 27/09/2026): { truong: { tu, sang } } cho các trường thực sự đổi — lịch sử hiện "trước -> sau".
+  const thayDoi = Object.fromEntries(Object.keys(dong)
+    .filter(k => String(hienCo[k] ?? '') !== String(dong[k] ?? ''))
+    .map(k => [k, { tu: String(hienCo[k] ?? ''), sang: String(dong[k] ?? '') }]));
   await ghiLog({
     nguoiDung: req.session.user.ten, vaiTro: req.session.user.vaiTro, hanhDong: 'SUA_KICH_BAN',
-    chiTiet: { id, tenKichBan: dong.Ten_Kich_Ban },
+    chiTiet: { id, tenKichBan: dong.Ten_Kich_Ban, thayDoi },
   });
   res.json({ ok: true });
 });

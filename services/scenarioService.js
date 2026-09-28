@@ -32,9 +32,19 @@ async function layDanhSachKichBan() {
       requireStatus: r.Trang_Thai_Yeu_Cau || null,
       setStatus: r.Trang_Thai_Sau,
       allowedRoles: r.Nguoi_Thuc_Hien
-        ? r.Nguoi_Thuc_Hien.split(',').map(s => s.trim()).filter(Boolean)
+        ? r.Nguoi_Thuc_Hien.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
         : null, // null = mở cho mọi vai trò
     }));
+}
+
+// Vai trò có được dùng kịch bản không — nơi DUY NHẤT quyết định (Quét QR routes/qr.js + nút "Chuyển sang..."
+// ở Chi tiết đơn routes/orders.js#layKichBanKeTiep). superadmin luôn được. admin được dùng mọi kịch bản, TRỪ
+// kịch bản có ghi "superadmin" trong ô Vai trò được dùng (28/09/2026, theo yêu cầu người dùng — vd 2 kịch bản
+// chuyển sang ĐÃ CHẠY MÁY / ĐÃ DÁN TEM chỉ superadmin): khi đó admin cũng phải có tên trong danh sách.
+function duocPhepDung(scenario, vaiTro) {
+  const ds = scenario.allowedRoles;
+  if (vaiTro === 'superadmin' || !ds || ds.includes(vaiTro)) return true;
+  return vaiTro === 'admin' && !ds.includes('superadmin');
 }
 
 async function timKichBanTheoId(scenarioId) {
@@ -42,4 +52,4 @@ async function timKichBanTheoId(scenarioId) {
   return list.find(s => s.id === scenarioId) || null;
 }
 
-module.exports = { layDanhSachKichBan, timKichBanTheoId, slugHoa };
+module.exports = { layDanhSachKichBan, timKichBanTheoId, slugHoa, duocPhepDung };

@@ -95,11 +95,17 @@ function veKhoiDonNhieuAo(loi, huy) {
   }</div>`;
 }
 
+let nguoiDung; // người đang đăng nhập — nút Đẩy lại chỉ cho superadmin
 async function taiTrungTamHanhDong() {
   const khu = document.getElementById('khu-noi-dung');
   khu.innerHTML = skeletonList(4);
   const kq = await apiFetch('/trung-tam-hanh-dong/danh-sach');
   khu.innerHTML = `
+    <div class="ttha-khoi">
+      <h3>Chưa ghi được sang Sheet Seller <span class="ttha-dem">${kq.loiSheetSeller.length}</span></h3>
+      <p style="color:var(--color-text-muted);margin-top:-4px">Ghi chú xưởng / tracking / Delivered chưa có trên Sheet của Seller. Sửa nguyên nhân (quyền Sheet, CONFIG, cột, mã đơn…) rồi Đẩy lại${laSuperAdmin(nguoiDung.vaiTro) ? '' : ' — chỉ superadmin đẩy lại được'}. Chi tiết và nhật ký: Settings.</p>
+      ${htmlLoiSheetSeller(kq.loiSheetSeller, laSuperAdmin(nguoiDung.vaiTro))}
+    </div>
     <div class="ttha-khoi">
       <h3>DonNhieuAo cần xử lý <span class="ttha-dem">${kq.loiDonNhieuAo.length + kq.nhomHuyConTracking.length}</span></h3>
       ${veKhoiDonNhieuAo(kq.loiDonNhieuAo, kq.nhomHuyConTracking)}
@@ -127,7 +133,9 @@ async function taiTrungTamHanhDong() {
   try {
     const user = await requireLoginOrRedirect();
     if (!user) return;
+    nguoiDung = user;
     renderNav(user, 'trung-tam-hanh-dong');
+    datTaiLaiSauDayLai(taiTrungTamHanhDong);
     await taiTrungTamHanhDong();
   } catch (e) {
     // Bắt lỗi TOÀN TRANG, hiện rõ ngay trên trang (không chỉ Console) — cùng lý do đã áp dụng ở

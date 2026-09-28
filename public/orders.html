@@ -1158,14 +1158,14 @@ async function apDungMuaTrackingThuCong() {
     thongBao += `\n\nKhông mua được ${loiKhac.length} đơn:\n` +
       loiKhac.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
   }
-  // Đẩy tracking sang Sheet khách hàng (bổ sung 21/09/2026, theo yêu cầu người dùng) — TÁCH RIÊNG khỏi
-  // "Không mua được" ở trên vì tracking THẬT đã mua thành công, chỉ bước đồng bộ ra Sheet khách hàng
+  // Ghi tracking sang Sheet Seller (21/09/2026; hộp đỏ từ 28/09/2026) — TÁCH RIÊNG khỏi
+  // "Không mua được" ở trên vì tracking THẬT đã mua thành công, chỉ bước ghi sang Sheet Seller
   // thất bại (thiếu quyền sửa Sheet, sai cấu hình...).
   if (ketQua.loiDaySheetKh.length > 0) {
-    thongBao += `\n\nĐã mua tracking nhưng KHÔNG đẩy được sang Sheet khách hàng cho ${ketQua.loiDaySheetKh.length} đơn:\n` +
-      ketQua.loiDaySheetKh.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
+    thongBao += `\n\nĐã mua tracking nhưng CHƯA ghi được sang Sheet Seller cho ${ketQua.loiDaySheetKh.length} đơn (xem hộp đỏ).`;
   }
   alert(thongBao);
+  await baoLoiSheetSeller(ketQua.loiDaySheetKh);
 
   nutApDung.disabled = false;
   nutApDung.innerHTML = nhanGoc;
@@ -1209,7 +1209,9 @@ async function xuLyInLabel(duongDan, danhSach, idNut, nhanGoc) {
     if (loiKhac.length > 0) {
       thongBao += `\n\nLỗi (${loiKhac.length}):\n` + loiKhac.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
     }
+    if ((ketQua.loiDaySheetKh || []).length) thongBao += `\n\nĐã mua tracking nhưng CHƯA ghi được sang Sheet Seller cho ${ketQua.loiDaySheetKh.length} đơn (xem hộp đỏ).`;
     alert(thongBao);
+    await baoLoiSheetSeller(ketQua.loiDaySheetKh);
     if (ketQua.thanhCong.length > 0) await taiDon();
   } catch (e) {
     alert('Lỗi: ' + e.message);

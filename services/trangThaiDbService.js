@@ -45,6 +45,12 @@ const CAC_COT = [
   // gkeService.js#layCauHinhGkeChoDon) — in lại tem/tra trạng thái luôn dùng đúng tài khoản đó, kể cả khi
   // đơn đổi Xưởng sau khi mua. Rỗng = chưa tạo vận đơn (hoặc tạo trước khi có cột này).
   'TAI_KHOAN_GKE',
+  // GHI_CHU_XUONG_NOI_BO (bổ sung 28/09/2026, theo yêu cầu người dùng) — bản lưu trong app của ô "Ghi chú
+  // xưởng" ở Chi tiết đơn, LUÔN ghi mỗi lần bấm Lưu (kể cả khi ghi sang Sheet Seller lỗi). Bản chính là cột
+  // GHI_CHU_XUONG (cột Q) trong Sheet của Seller — app ghi ngược vào đó (services/sheetSellerService.js) và
+  // đọc lại qua RAW -> Don_Hang_ALL. KHÔNG đặt tên GHI_CHU_XUONG ở đây: cột SQLite cùng tên sẽ ĐÈ giá trị
+  // Sheet khi gộp dữ liệu (orderService.js#getAll), che mất ghi chú Seller đã nhập.
+  'GHI_CHU_XUONG_NOI_BO',
   // CanhBaoDaGui: không nằm trong danh sách 31 cột người dùng liệt kê (có thể chỉ là sót khi liệt kê) —
   // nhưng rà code xác nhận đây CŨNG là cột app tự ghi (services/canhBaoJob.js, cờ chống spam Telegram),
   // không thuộc RAW/A:AM lẫn AN:BR người dùng mô tả. Xếp vào đây theo đúng tiêu chí "app tự ghi" đã

@@ -1,5 +1,6 @@
 const nhatKyDbService = require('./nhatKyDbService');
 const { thoiGianVNISOString, bienGioiNgayVN } = require('./dateUtils');
+const { moTaLichSu, docChiTiet } = require('./moTaLichSu');
 
 // Ghi 1 dòng log — luôn ghi lại AI làm, vai trò gì, lúc nào, làm gì, trên đơn nào. Chuyển sang SQLite
 // (bổ sung 19/09/2026, theo yêu cầu người dùng — xem
@@ -25,11 +26,26 @@ function ghiLogNhieu(dsLog) {
   })));
 }
 
-// Lấy lịch sử của 1 đơn hàng, sắp theo thời gian tăng dần (dùng cho timeline chi tiết đơn).
-async function layLichSuTheoDon(sttKey) {
+// Gắn mô tả dễ đọc (services/moTaLichSu.js) vào từng dòng log: MoTa, ThayDoi [{nhan, tu, sang}], Mo.
+// vaiTroNguoiXem = 'admin' -> ẩn tên Xưởng (orderService.js#anXuongVoiAdmin).
+function ganMoTa(rows, vaiTroNguoiXem) {
+  const anXuong = vaiTroNguoiXem === 'admin';
+  return rows.map(r => {
+    const { moTa, thayDoi, mo } = moTaLichSu(r, { anXuong });
+    // Admin: bỏ ChiTiet thô (có thể chứa tên Xưởng, vd GAN_XUONG) — giao diện chỉ dùng MoTa/ThayDoi.
+    const { ChiTiet, ...conLai } = r;
+    return { ...(anXuong ? conLai : r), MoTa: moTa, ThayDoi: thayDoi, Mo: mo };
+  });
+}
+
+// Lấy lịch sử của 1 đơn hàng, sắp theo thời gian tăng dần (dùng cho timeline chi tiết đơn). Gồm cả thao tác
+// trên NHIỀU đơn cùng lúc (tạo/thêm/xoá Đơn hàng loạt, xoá/khôi phục dữ liệu — STT_Key rỗng, danh sách đơn
+// nằm trong ChiTiet.sttKeys) có đơn này (bổ sung 27/09/2026).
+async function layLichSuTheoDon(sttKey, vaiTroNguoiXem) {
   const rows = nhatKyDbService.layTatCaLichSuHoatDong();
-  return rows
-    .filter(r => r.STT_Key === sttKey)
+  const coDon = r => r.STT_Key === sttKey
+    || (!r.STT_Key && r.ChiTiet.includes(JSON.stringify(sttKey)) && (docChiTiet(r.ChiTiet).sttKeys || []).includes(sttKey));
+  return ganMoTa(rows.filter(coDon), vaiTroNguoiXem)
     .sort((a, b) => new Date(a.ThoiGian) - new Date(b.ThoiGian));
 }
 
@@ -138,7 +154,7 @@ function trongKhoangThoiGian(isoThoiGian, tuNgay, denNgay) {
   return true;
 }
 
-async function layHoatDongCuaToi({ nguoiDung, tuNgay, denNgay }) {
+async function layHoatDongCuaToi({ nguoiDung, tuNgay, denNgay, vaiTroNguoiXem }) {
   const rows = nhatKyDbService.layTatCaLichSuHoatDong();
   const cuaToi = rows.filter(r => r.NguoiDung === nguoiDung && trongKhoangThoiGian(r.ThoiGian, tuNgay, denNgay));
 
@@ -211,7 +227,12 @@ async function layHoatDongCuaToi({ nguoiDung, tuNgay, denNgay }) {
   truKhoPhoi.sort(moiNhatTruoc);
   quetBiTuChoi.sort(moiNhatTruoc);
 
+  // Toàn bộ thao tác (bổ sung 27/09/2026, theo yêu cầu người dùng) — MỌI hành động của người này trong khoảng
+  // thời gian, mới nhất trước, kèm mô tả đầy đủ "trước -> sau" (menu "Lịch sử", phần "Toàn bộ thao tác").
+  const toanBo = ganMoTa(cuaToi, vaiTroNguoiXem).sort((a, b) => new Date(b.ThoiGian) - new Date(a.ThoiGian));
+
   return {
+    toanBo,
     tongSoQuet: quet.length,
     tongSoDoiTrangThai: doiTrangThai.length,
     tongSoUpload: uploadAnh.length,

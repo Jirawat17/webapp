@@ -6,7 +6,7 @@ const alertService = require('../services/alertService');
 const scenarioService = require('../services/scenarioService');
 const { layBanDoTenKhachHang } = require('../services/khachHangService');
 const { ghiLog, layLichSuTheoDon, ghiNhatKyQuetHangLoat } = require('../services/logService');
-const { requireLogin, laAdmin } = require('../middleware/auth');
+const { requireLogin } = require('../middleware/auth');
 
 router.use(requireLogin);
 
@@ -17,12 +17,10 @@ function ghiKhongCho(promise) {
   promise.catch(err => console.error('[QR] Lỗi ghi log nền:', err.message));
 }
 
-// Kịch bản này người đang đăng nhập có được phép dùng không — allowedRoles=null nghĩa là mở cho mọi
-// vai trò (xem services/scenarioService.js, cột Nguoi_Thuc_Hien trong CauHinhKichBan). admin LUÔN
-// được phép dùng mọi kịch bản bất kể Nguoi_Thuc_Hien ghi gì — admin là superuser, không cần liệt kê
-// riêng trong từng dòng Sheet.
+// Kịch bản này người đang đăng nhập có được phép dùng không — quy tắc ở services/scenarioService.js#duocPhepDung
+// (dùng chung với nút "Chuyển sang..." ở Chi tiết đơn).
 function duocPhepDungKichBan(scenario, user) {
-  return laAdmin(user.vaiTro) || !scenario.allowedRoles || scenario.allowedRoles.includes(user.vaiTro);
+  return scenarioService.duocPhepDung(scenario, user.vaiTro);
 }
 
 // "Van an toàn" chung (bổ sung 26/08/2026, theo Prompt_Ver_25.docx): trước đây mỗi kịch bản chỉ tự
@@ -50,7 +48,7 @@ router.get('/tra-cuu/:sttKey', async (req, res) => {
 
   const [{ row }, lichSu] = await Promise.all([
     orderService.getByKey(sttKey),
-    layLichSuTheoDon(sttKey),
+    layLichSuTheoDon(sttKey, user.vaiTro),
   ]);
 
   // Đơn khác Xưởng coi như không tồn tại (bổ sung 13/09/2026) — cùng thông báo/hanhDong với "không

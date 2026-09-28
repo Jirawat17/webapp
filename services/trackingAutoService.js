@@ -6,8 +6,7 @@ const orderService = require('./orderService');
 const gkeService = require('./gkeService');
 const nhatKyDbService = require('./nhatKyDbService');
 const caiDatDbService = require('./caiDatDbService');
-const khachHangService = require('./khachHangService');
-const customerSheetService = require('./customerSheetService');
+const sheetSellerService = require('./sheetSellerService');
 const telegramService = require('./telegramService');
 const { ghiLog } = require('./logService');
 const { dinhDangNgayGioNgan } = require('./dateUtils');
@@ -178,21 +177,48 @@ async function saoTrackingXuongNhom(nhom, tracking, user) {
       TAI_KHOAN_GKE: tracking.taiKhoanGke || '',
     }, user);
     daSao.push(con.STT_Key);
+    ghiLog({
+      nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'DUNG_CHUNG_TRACKING', sttKey: con.STT_Key,
+      chiTiet: { trackingNum: tracking.trackingId, hangVanChuyen: tracking.hangVanChuyen, donMua: nhom.donMua.STT_Key, nhom: nhom.goc },
+    }).catch(err => console.error('[TrackingTuDong] Lỗi ghi log nền:', err.message));
     ghiLogTrackingVaoDb({
       sttKey: con.STT_Key, nguon: 'DonNhieuAo', nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: 'Dùng chung',
       trackingId: tracking.trackingId, hangVanChuyen: tracking.hangVanChuyen,
       chiTiet: `Dùng chung tracking của ${nhom.donMua.STT_Key} (nhóm DonNhieuAo ${nhom.goc}) — không mua riêng.`,
     });
-    const thongTinSheetKh = con.MA_KHACH_HANG
-      ? await khachHangService.layThongTinSheetKhachHang(con.MA_KHACH_HANG).catch(() => null)
-      : null;
-    if (thongTinSheetKh) {
-      await customerSheetService.dayTrackingSangSheetKhachHang({
-        ...thongTinSheetKh, sttKey: con.STT_Key, trackingId: tracking.trackingId, hangVanChuyen: tracking.hangVanChuyen,
-      }).catch(err => console.error(`[DonNhieuAo] Lỗi đẩy tracking sang Sheet khách hàng cho ${con.STT_Key}:`, err.message));
-    }
   }
-  return daSao;
+  // Ghi tracking chung (+ Delivered nếu nhóm ĐÃ có trạng thái vận chuyển — đơn con thêm vào sau) vào dòng của
+  // TỪNG đơn con trong Sheet Seller (28/09/2026, sheetSellerService.js). Lỗi KHÔNG bỏ qua im lặng: vào danh sách
+  // theo dõi + trả loiSheet để nơi gọi (mua tay) hiện hộp đỏ cả cho đơn con.
+  let loiSheet = [];
+  if (daSao.length) {
+    const ketQua = await sheetSellerService.ghiHangLoat(daSao.flatMap(sttKey => [
+      { sttKey, loai: 'TRACKING', giaTri: { TRACKING_ID2: tracking.trackingId, HANG_VAN_CHUYEN2: tracking.hangVanChuyen } },
+      ...(tracking.trangThaiTracking ? [{ sttKey, loai: 'DELIVERED', giaTri: { Delivered: tracking.trangThaiTracking } }] : []),
+    ]), user);
+    baoLoiSheetSeller(ketQua, user, 'tracking DonNhieuAo');
+    loiSheet = ketQua.filter(k => !k.ok).map(k => ({ sttKey: k.sttKey, lyDo: `${k.loai === 'DELIVERED' ? 'Delivered' : 'Tracking'} (đơn con): ${k.lyDo}` }));
+  }
+  return { daSao, loiSheet };
+}
+
+// Lỗi ghi Sheet Seller: in console; luồng TỰ ĐỘNG (không ai đứng xem) báo thêm 1 tin Telegram tổng hợp.
+// Luồng thủ công đã có hộp đỏ trên giao diện. Mọi lỗi đều đã nằm trong danh sách theo dõi.
+function baoLoiSheetSeller(ketQua, user, viec) {
+  const loi = ketQua.filter(k => !k.ok);
+  if (!loi.length) return;
+  loi.forEach(k => console.error(`[SheetSeller] Lỗi ghi ${viec} cho ${k.sttKey}: ${k.lyDo}`));
+  if (user === NGUOI_HE_THONG) {
+    telegramService.guiTinNhan(
+      process.env.TELEGRAM_CHATID_TRACKING_KH,
+      [
+        `⚠️ Ghi ${viec} sang Sheet Seller THẤT BẠI (tự động) — ${loi.length} đơn`,
+        ...loi.slice(0, 20).map(k => `${k.sttKey}: ${k.lyDo}`),
+        ...(loi.length > 20 ? [`... và ${loi.length - 20} đơn khác`] : []),
+        'Xem/đẩy lại ở Trung tâm hành động hoặc Settings.',
+      ].join('\n')
+    ).catch(() => {});
+  }
 }
 
 const trackingCuaDon = r => ({
@@ -258,8 +284,8 @@ async function _muaTrackingChoDonThat(sttKey, user) {
       if (!nhom.donMua.TRACKING_ID) {
         throw new Error(`Đơn thuộc nhóm DonNhieuAo ${nhom.goc} — chỉ mua tracking ở đơn ${nhom.donMua.STT_Key}, các đơn còn lại dùng chung.`);
       }
-      await saoTrackingXuongNhom(nhom, trackingCuaDon(nhom.donMua), user);
-      return { dungChung: true, donMua: nhom.donMua.STT_Key, tracking_num: nhom.donMua.TRACKING_ID };
+      const { loiSheet } = await saoTrackingXuongNhom(nhom, trackingCuaDon(nhom.donMua), user);
+      return { dungChung: true, donMua: nhom.donMua.STT_Key, tracking_num: nhom.donMua.TRACKING_ID, loiSheetCon: loiSheet };
     }
     // CHỈ mua cho đơn giao tới US/UK (bổ sung 27/09/2026, theo yêu cầu người dùng) — xét DIA_CHI_NUOC của
     // đơn mua (đơn ".1" nếu là DonNhieuAo). Chặn ở ĐÂY nên áp dụng cho mọi lối mua.
@@ -296,43 +322,26 @@ async function _muaTrackingChoDonThat(sttKey, user) {
       TAI_KHOAN_GKE: cauHinhGke.id,
     }, user);
 
+    let loiSheetCon = [];
     if (nhom) {
-      const daSao = await saoTrackingXuongNhom(nhom, { trackingId: ketQuaTem.tracking_num, hangVanChuyen: ketQuaTem.delivery_carrier, taiKhoanGke: cauHinhGke.id }, user);
+      const { daSao, loiSheet } = await saoTrackingXuongNhom(nhom, { trackingId: ketQuaTem.tracking_num, hangVanChuyen: ketQuaTem.delivery_carrier, taiKhoanGke: cauHinhGke.id }, user);
+      loiSheetCon = loiSheet;
       nhatKy.push(`[DonNhieuAo] Đã sao tracking xuống: ${daSao.join(', ') || '(không có đơn nào cần sao)'}.`);
     }
 
-    // Đẩy sang Sheet RIÊNG của khách hàng (bổ sung 21/09/2026, theo yêu cầu người dùng — xem
-    // services/customerSheetService.js) — BEST-EFFORT, KHÔNG được chặn/rollback việc mua tracking THẬT
-    // đã xảy ra dù bước này lỗi (tracking đã mua thật, không thể "huỷ" chỉ vì đẩy sang sheet ngoài thất
-    // bại). Bỏ qua hoàn toàn, không coi là lỗi, nếu khách hàng của đơn này chưa cấu hình Sheet ID + tên
-    // tab trong tab Khach_Hang — đa số khách hàng sẽ ở tình trạng này.
-    let dayCheKhachHang = null;
-    const thongTinSheetKh = row.MA_KHACH_HANG
-      ? await khachHangService.layThongTinSheetKhachHang(row.MA_KHACH_HANG).catch(() => null)
-      : null;
-    if (thongTinSheetKh) {
-      try {
-        await customerSheetService.dayTrackingSangSheetKhachHang({
-          ...thongTinSheetKh, sttKey,
-          trackingId: ketQuaTem.tracking_num, hangVanChuyen: ketQuaTem.delivery_carrier,
-        });
-        dayCheKhachHang = { ok: true };
-        nhatKy.push(`Đã đẩy tracking sang Sheet khách hàng (tab "${thongTinSheetKh.tenTab}").`);
-      } catch (err) {
-        dayCheKhachHang = { ok: false, lyDo: err.message };
-        nhatKy.push(`LỖI đẩy tracking sang Sheet khách hàng: ${err.message}`);
-        console.error(`[TrackingTuDong] Lỗi đẩy tracking sang Sheet khách hàng cho ${sttKey}:`, err.message);
-        // CHỈ luồng tự động (cron, không ai đứng canh màn hình) mới cần báo Telegram, CHỈ khi LỖI
-        // (tránh spam liên tục mỗi 2 phút nếu báo cả lúc thành công) — luồng thủ công đã có người bấm
-        // nút thấy ngay kết quả qua response trả về (xem routes/tracking.js POST /mua-thu-cong).
-        if (!laThuCong) {
-          telegramService.guiTinNhan(
-            process.env.TELEGRAM_CHATID_TRACKING_KH,
-            `⚠️ Đẩy tracking sang Sheet khách hàng THẤT BẠI (tự động)\nĐơn: ${sttKey}\nKhách hàng: ${row.MA_KHACH_HANG}\nLỗi: ${err.message}`
-          ).catch(() => {});
-        }
-      }
-    }
+    // Ghi TRACKING_ID2/HANG_VAN_CHUYEN2 vào Sheet của Seller (sửa 28/09/2026, theo yêu cầu người dùng —
+    // services/sheetSellerService.js, tra Sheet qua tab CONFIG theo Team; trước đây tra theo MA_KHACH_HANG
+    // vốn luôn trống với đơn mới nên bị BỎ QUA IM LẶNG). Không chặn/rollback việc mua tracking THẬT đã xảy
+    // ra; lỗi -> vào danh sách theo dõi + trả dayCheKhachHang để giao diện hiện hộp đỏ (mua tay) / Telegram
+    // (tự động, baoLoiSheetSeller).
+    const [kqDay] = await sheetSellerService.ghiHangLoat([{
+      sttKey, loai: 'TRACKING', giaTri: { TRACKING_ID2: ketQuaTem.tracking_num, HANG_VAN_CHUYEN2: ketQuaTem.delivery_carrier },
+    }], user);
+    const dayCheKhachHang = kqDay.ok ? { ok: true } : { ok: false, lyDo: kqDay.lyDo };
+    nhatKy.push(kqDay.ok
+      ? `Đã ghi tracking vào Sheet Seller (tab "${kqDay.tab}", dòng ${kqDay.dong}).`
+      : `LỖI ghi tracking vào Sheet Seller: ${kqDay.lyDo}`);
+    baoLoiSheetSeller([kqDay], user, 'tracking');
 
     ghiLogTracking(`${nhanNguon} ${sttKey}: đã mua tracking ${ketQuaTem.tracking_num} (${ketQuaTem.delivery_carrier})`);
     ghiLog({
@@ -344,7 +353,7 @@ async function _muaTrackingChoDonThat(sttKey, user) {
       trackingId: ketQuaTem.tracking_num, hangVanChuyen: ketQuaTem.delivery_carrier, chiTiet: nhatKy.join('\n'),
     });
 
-    return { ...ketQuaTem, dayCheKhachHang };
+    return { ...ketQuaTem, dayCheKhachHang, loiSheetCon };
   } catch (err) {
     ghiLogTracking(`${nhanNguon} ${sttKey}: LỖI — ${err.message}`);
     ghiLogTrackingVaoDb({
@@ -401,6 +410,11 @@ async function ghiChuNhomLenTem(ketQuaTem, nhom) {
 async function ghiDaInLabel(sttKey, user) {
   const { headers, row } = await orderService.getByKey(sttKey, { fresh: true });
   if (!row) return;
+  // Lịch sử đơn (bổ sung 27/09/2026) — trước đây in label chỉ có ở nhật ký trang Tracking.
+  ghiLog({
+    nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'IN_LABEL', sttKey,
+    chiTiet: { trackingNum: row.TRACKING_ID || '', hangVanChuyen: row.HANG_VAN_CHUYEN || '' },
+  }).catch(err => console.error('[TrackingTuDong] Lỗi ghi log nền:', err.message));
   const capNhat = {
     ...(headers.includes('IN_LABEL') ? { IN_LABEL: 'YES' } : {}),
     ...(headers.includes('THOI_GIAN_IN_LABEL') ? { THOI_GIAN_IN_LABEL: dinhDangNgayGioNgan(new Date()) } : {}),
@@ -587,7 +601,9 @@ function daGiaoThanhCongGke(maNode, maTrangThaiNode) {
 // Trả {ok:true, suKien} khi ghi thành công — `lyDo` (bổ sung 14/09/2026, theo yêu cầu người dùng, cho
 // nút "Tracking thủ công" ở routes/tracking.js hiện rõ LÝ DO thay vì chỉ biết chung chung "không có gì
 // mới") dùng ĐƯỢC cho cả job tự động (chỉ cần `.ok`, bỏ qua `.lyDo`) lẫn route thủ công (cần cả 2).
-async function capNhatTrangThaiTrackingChoDon(sttKey) {
+// gomDelivered (bổ sung 28/09/2026): mảng để GOM các ô Delivered cần ghi sang Sheet Seller (nơi gọi tự ghi
+// 1 lần cho cả lượt — job/nút cập nhật nhiều đơn). Không truyền -> ghi ngay cho đơn này (Hệ thống).
+async function capNhatTrangThaiTrackingChoDon(sttKey, { gomDelivered } = {}) {
   const { headers, rows } = await orderService.getAll({ fresh: true });
   const row = rows.find(r => r.STT_Key === sttKey);
   if (!row) return { ok: false, lyDo: 'Không tìm thấy đơn: ' + sttKey };
@@ -612,8 +628,17 @@ async function capNhatTrangThaiTrackingChoDon(sttKey) {
     MA_NODE_TRACKING: suKienMoiNhat.order_node || '',
     MA_TRANG_THAI_NODE_TRACKING: suKienMoiNhat.node_status || '',
   };
+  // Delivered (bổ sung 28/09/2026, theo yêu cầu người dùng): trạng thái ĐỔI -> ghi nguyên văn vào ô Delivered
+  // trong Sheet Seller của TỪNG đơn dùng tracking này (cả đơn con DonNhieuAo) để Seller thấy trạng thái thật.
+  const canGhiDelivered = cacDonGhi
+    .filter(don => capNhat.TRANG_THAI_TRACKING && (don.TRANG_THAI_TRACKING || '') !== capNhat.TRANG_THAI_TRACKING)
+    .map(don => ({ sttKey: don.STT_Key, loai: 'DELIVERED', giaTri: { Delivered: capNhat.TRANG_THAI_TRACKING } }));
   for (const don of cacDonGhi) {
     await orderService.update(don.STT_Key, capNhat, NGUOI_HE_THONG, { donDaDoc: { headers, row: don } });
+  }
+  if (canGhiDelivered.length) {
+    if (gomDelivered) gomDelivered.push(...canGhiDelivered);
+    else baoLoiSheetSeller(await sheetSellerService.ghiHangLoat(canGhiDelivered, NGUOI_HE_THONG), NGUOI_HE_THONG, 'Delivered');
   }
   return { ok: true, suKien: suKienMoiNhat };
 }
@@ -629,14 +654,17 @@ async function chayQuetCapNhatTrangThaiTracking() {
   const donCanQuet = donCoTracking.filter(r => !daGiaoThanhCongGke(r.MA_NODE_TRACKING, r.MA_TRANG_THAI_NODE_TRACKING));
 
   let soDaCapNhat = 0;
+  const gomDelivered = [];
   for (const don of donCanQuet) {
     try {
-      const ketQua = await capNhatTrangThaiTrackingChoDon(don.STT_Key);
+      const ketQua = await capNhatTrangThaiTrackingChoDon(don.STT_Key, { gomDelivered });
       if (ketQua.ok) soDaCapNhat++;
     } catch (err) {
       console.error(`[TrackingTuDong] Lỗi tra cứu trạng thái tracking cho ${don.STT_Key}:`, err.message);
     }
   }
+  // Ghi Delivered 1 lần cho cả lượt (mỗi Sheet Seller 1 lệnh ghi); lỗi -> 1 tin Telegram tổng hợp.
+  if (gomDelivered.length) baoLoiSheetSeller(await sheetSellerService.ghiHangLoat(gomDelivered, NGUOI_HE_THONG), NGUOI_HE_THONG, 'Delivered');
 
   return {
     daQuet: true, soDaCapNhat, tongSoCoTracking: donCoTracking.length,

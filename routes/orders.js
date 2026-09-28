@@ -16,6 +16,7 @@ const { taiDsAnh } = require('../services/anhNguonService');
 const { tinhHashAnh, khoangCachHamming } = require('../services/perceptualHashService');
 const { requireLogin, laAdmin, laSuperAdmin } = require('../middleware/auth');
 const { xoaDuLieuDon } = require('../services/xoaDuLieuDonService');
+const sheetSellerService = require('../services/sheetSellerService');
 const { layMauTheoXuong, datMauXuong, themXuong, xoaXuong, doiTenXuong, layTeamXuongMacDinh, ganTeamXuongMacDinh } = require('../services/caiDatDbService');
 
 router.use(requireLogin);
@@ -266,6 +267,19 @@ router.get('/thong-ke-nhanh', async (req, res) => {
 // Mở cho MỌI vai trò có quyền vào trang Đơn hàng (admin/ve_file toàn bộ, san_xuat theo phạm vi đã
 // lọc), không theo giới hạn cột TRUONG_DUOC_SUA phía dưới (vốn chỉ áp dụng cho sửa từng đơn lẻ).
 // Danh sách giá trị hợp lệ theo từng cột — dùng để validate tham số 'cot'/'trangThaiMoi' bên dưới
+// { cot: { tu, sang } } cho các cột trong `cacCot` mà `updates` đổi KHÁC giá trị đang có trong `row` (so dạng
+// chuỗi — body JSON có thể gửi số) — dùng ghi lịch sử "trước -> sau" (bổ sung 27/09/2026).
+function thayDoiCot(row, updates, cacCot) {
+  const kq = {};
+  for (const cot of cacCot) {
+    if (updates[cot] === undefined) continue;
+    const tu = row[cot] === undefined || row[cot] === null ? '' : String(row[cot]);
+    const sang = updates[cot] === null ? '' : String(updates[cot]);
+    if (tu !== sang) kq[cot] = { tu, sang };
+  }
+  return kq;
+}
+
 const GIA_TRI_HOP_LE_THEO_COT = {
   TRANG_THAI_XUONG: DANH_SACH_TRANG_THAI_BAO_CAO,
   TRANG_THAI_PHOI: TRANG_THAI_PHOI_VALUES,
@@ -415,7 +429,7 @@ router.post('/chuyen-trang-thai-superadmin', async (req, res) => {
       thanhCong.push(sttKey);
       ghiLog({
         nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'CHUYEN_TRANG_THAI_HANG_LOAT',
-        sttKey, chiTiet: { cot: 'TRANG_THAI_XUONG', tu: row.TRANG_THAI_XUONG, sang: trangThaiMoi, superadminBoQuaRangBuoc: true },
+        sttKey, chiTiet: { cot: 'TRANG_THAI_XUONG', tu: row.TRANG_THAI_XUONG, sang: trangThaiMoi, superadminBoQuaRangBuoc: true, thayDoiKem: thayDoiCot(row, updates, ['TRANG_THAI_PHOI', 'TRANG_THAI_VE_FILE']) },
       }).catch(err => console.error('[Orders] Lỗi ghi log nền:', err.message));
     } catch (err) {
       loi.push({ sttKey, lyDo: err.message });
@@ -489,7 +503,7 @@ router.post('/chi-dinh-nguoi-chay-may', async (req, res) => {
         // orderService.update() ngay trên (TRANG_THAI_XUONG: 'Đang chạy máy'). Thiếu trường này khiến
         // layLichSuChuyenSangTrangThai() (services/logService.js) không nhận diện được lượt chuyển
         // trạng thái này dù đã whitelist đúng HanhDong — hàm đó đọc chiTiet.sang/chiTiet.TRANG_THAI_XUONG.
-        sttKey, chiTiet: { nguoiDuocChiDinh: nguoiSanXuat, tuTrangThai: row.TRANG_THAI_XUONG, sang: 'Đang chạy máy' },
+        sttKey, chiTiet: { nguoiDuocChiDinh: nguoiSanXuat, nguoiCu: row.NGUOI_CHAY_MAY || '', tuTrangThai: row.TRANG_THAI_XUONG, sang: 'Đang chạy máy' },
       }).catch(err => console.error('[Orders] Lỗi ghi log nền:', err.message));
     } catch (err) {
       loi.push({ sttKey, lyDo: err.message });
@@ -553,7 +567,7 @@ router.post('/chi-dinh-nguoi-ve-file', async (req, res) => {
         // sang (bổ sung 22/09/2026, theo yêu cầu người dùng) — cùng lý do CHI_DINH_NGUOI_CHAY_MAY ở
         // trên: trạng thái MỚI thật sự set ở orderService.update() ngay trên (TRANG_THAI_VE_FILE:
         // 'Đang vẽ file').
-        sttKey, chiTiet: { nguoiDuocChiDinh: nguoiVeFile, sang: 'Đang vẽ file' },
+        sttKey, chiTiet: { nguoiDuocChiDinh: nguoiVeFile, nguoiCu: row.NGUOI_VE_FILE || '', tuTrangThai: row.TRANG_THAI_VE_FILE, sang: 'Đang vẽ file' },
       }).catch(err => console.error('[Orders] Lỗi ghi log nền:', err.message));
     } catch (err) {
       loi.push({ sttKey, lyDo: err.message });
@@ -663,8 +677,9 @@ router.post('/team-xuong', async (req, res) => {
   if (xuong && !orderService.layDanhSachXuong().includes(xuong)) {
     return res.status(400).json({ error: `Xưởng không hợp lệ: "${xuong}" — chỉ chấp nhận: ${orderService.layDanhSachXuong().join(', ')}` });
   }
+  const xuongCu = layTeamXuongMacDinh()[team] || '';
   ganTeamXuongMacDinh(team, xuong);
-  ghiLog({ nguoiDung: req.session.user.ten, vaiTro: req.session.user.vaiTro, hanhDong: 'CAU_HINH_TEAM_XUONG', chiTiet: { team, xuong } })
+  ghiLog({ nguoiDung: req.session.user.ten, vaiTro: req.session.user.vaiTro, hanhDong: 'CAU_HINH_TEAM_XUONG', chiTiet: { team, tu: xuongCu, xuong } })
     .catch(err => console.error('[Orders] Lỗi ghi log nền:', err.message));
   await orderService.getAll(); // gán ngay các đơn đang chưa gán của Team này
   res.json({ ok: true });
@@ -803,7 +818,7 @@ router.post('/danh-dau-uu-tien', async (req, res) => {
       thanhCong.push(sttKey);
       ghiLog({
         nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'DANH_DAU_UU_TIEN',
-        sttKey, chiTiet: { uuTien },
+        sttKey, chiTiet: { uuTien, truoc: orderService.laUuTien(row) },
       }).catch(err => console.error('[Orders] Lỗi ghi log nền:', err.message));
     } catch (err) {
       loi.push({ sttKey, lyDo: err.message });
@@ -927,7 +942,7 @@ async function layKichBanKeTiep(row, user) {
   const list = await scenarioService.layDanhSachKichBan();
   return list.filter(s =>
     (!s.requireStatus || s.requireStatus === row[s.column]) &&
-    (laAdmin(user.vaiTro) || !s.allowedRoles || s.allowedRoles.includes(user.vaiTro))
+    scenarioService.duocPhepDung(s, user.vaiTro)
   );
 }
 
@@ -944,7 +959,7 @@ router.get('/:sttKey', async (req, res) => {
   }
 
   const [lichSu, [donDaLamGiau], kichBanKeTiep] = await Promise.all([
-    layLichSuTheoDon(req.params.sttKey),
+    layLichSuTheoDon(req.params.sttKey, user.vaiTro),
     lamGiauDon([row], donNhieuAoService.xayDungBanDoNhom(rows)),
     layKichBanKeTiep(row, user),
   ]);
@@ -956,7 +971,9 @@ router.get('/:sttKey', async (req, res) => {
     return res.status(404).json({ error: 'Không tìm thấy đơn hàng' });
   }
 
-  res.json(orderService.anXuongVoiAdmin({ ...donDaLamGiau, lichSu, kichBanKeTiep }, user.vaiTro));
+  // Lần ghi ghi chú xưởng gần nhất sang Sheet Seller — order.html dùng để quyết định hiện bản trong app hay bản Sheet.
+  const DongBoGhiChuXuong = require('../services/nhatKyDbService').layDongBoGanNhat(req.params.sttKey, 'GHI_CHU');
+  res.json(orderService.anXuongVoiAdmin({ ...donDaLamGiau, lichSu, kichBanKeTiep, DongBoGhiChuXuong }, user.vaiTro));
 });
 
 // CHÍNH SÁCH PHÂN QUYỀN (cập nhật 26/08/2026 — nguoi_lay_phoi KHÔNG được set tay bất kỳ trường nào
@@ -969,7 +986,7 @@ router.get('/:sttKey', async (req, res) => {
 //   - nguoi_lay_phoi: mảng rỗng = không sửa được trường nào qua route này (chỉ được thao tác qua
 //     quét QR đúng kịch bản của mình — xem routes/qr.js).
 const TRUONG_DUOC_SUA = {
-  san_xuat: ['GHI_CHU', 'TRANG_THAI_XUONG', 'TRANG_THAI_PHOI', 'TRANG_THAI_VE_FILE'],
+  san_xuat: ['TRANG_THAI_XUONG', 'TRANG_THAI_PHOI', 'TRANG_THAI_VE_FILE'],
   nguoi_lay_phoi: [],
 };
 
@@ -983,7 +1000,33 @@ const TRUONG_DUOC_SUA = {
 // services/xoaDuLieuDonService.js) — thiếu nó ở đây, admin/ve_file (không có allowlist TRUONG_DUOC_SUA
 // riêng) có thể set thẳng DA_XOA=TRUE qua route sửa 1 đơn này, ẩn vĩnh viễn đơn khỏi app mà KHÔNG dọn
 // dẹp log/nhóm Đơn hàng loạt/ảnh MinIO và KHÔNG có log audit — lách hoàn toàn giới hạn "chỉ superadmin".
-const TRUONG_CAM_SUA = ['STT_Key', '_row', 'NguoiCapNhatCuoi', 'ThoiGianCapNhatCuoi', 'TenKhachHang', 'TieuDeSanPham', 'ViTriTheu', 'CanhBao', 'XUONG', 'DON_UU_TIEN', 'DA_XOA'];
+// GHI_CHU_XUONG/GHI_CHU_XUONG_NOI_BO (28/09/2026) — CHỈ qua POST /:sttKey/ghi-chu-xuong (ghi cả Sheet Seller);
+// GHI_CHU_XUONG là cột Sheet (app không ghi được qua đây), sửa qua route này sẽ "lưu" giả mà không đi đâu.
+const TRUONG_CAM_SUA = ['STT_Key', '_row', 'NguoiCapNhatCuoi', 'ThoiGianCapNhatCuoi', 'TenKhachHang', 'TieuDeSanPham', 'ViTriTheu', 'CanhBao', 'XUONG', 'DON_UU_TIEN', 'DA_XOA', 'GHI_CHU_XUONG', 'GHI_CHU_XUONG_NOI_BO'];
+
+// Ghi chú xưởng (28/09/2026, theo yêu cầu người dùng): LUÔN lưu bản trong app (GHI_CHU_XUONG_NOI_BO) rồi ghi vào
+// ô GHI_CHU_XUONG trong Sheet Seller (bản chính — app đọc lại qua RAW -> Don_Hang_ALL). Ghi Sheet lỗi vẫn trả
+// 200 kèm sheet.ok=false: bản trong app đã lưu, giao diện hiện hộp đỏ, đơn vào danh sách theo dõi (Đẩy lại).
+router.post('/:sttKey/ghi-chu-xuong', async (req, res) => {
+  const user = req.session.user;
+  // Vai trò có allowlist riêng (san_xuat, nguoi_lay_phoi) không có ghi chú trong đó — order.html cũng ẩn ô này với họ.
+  if (TRUONG_DUOC_SUA[user.vaiTro]) return res.status(403).json({ error: 'Vai trò này không được sửa ghi chú xưởng' });
+  const sttKey = req.params.sttKey;
+  const ghiChu = String(req.body.ghiChu ?? '');
+  const { headers, row } = await orderService.getByKey(sttKey, { fresh: true });
+  if (!row || !orderService.coQuyenTheoXuong(user, row)) return res.status(404).json({ error: 'Không tìm thấy đơn hàng: ' + sttKey });
+
+  await orderService.update(sttKey, {
+    GHI_CHU_XUONG_NOI_BO: ghiChu, NguoiCapNhatCuoi: user.ten, ThoiGianCapNhatCuoi: new Date().toISOString(),
+  }, user, { donDaDoc: { headers, row } });
+  const [kq] = await sheetSellerService.ghiHangLoat([{ sttKey, loai: 'GHI_CHU', giaTri: { GHI_CHU_XUONG: ghiChu } }], user, { ghiLichSu: false });
+  await ghiLog({
+    nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'SUA_GHI_CHU_XUONG', sttKey,
+    // "trước" = ô trong Sheet Seller ngay trước khi ghi (tìm được ô), không thì bản đang thấy trong app.
+    chiTiet: { tu: kq.thayDoi.length ? kq.thayDoi[0].tu : (row.GHI_CHU_XUONG_NOI_BO || row.GHI_CHU_XUONG || ''), sang: ghiChu, sheet: sheetSellerService.chiTietLichSu(kq) },
+  });
+  res.json({ ok: true, sheet: { ok: kq.ok, lyDo: kq.lyDo, tab: kq.tab, dong: kq.dong } });
+});
 
 router.put('/:sttKey', async (req, res) => {
   const user = req.session.user;
@@ -1020,20 +1063,22 @@ router.put('/:sttKey', async (req, res) => {
     return res.status(400).json({ error: err.message });
   }
 
-  const truocKhiSua = {};
-  Object.keys(GIA_TRI_HOP_LE_THEO_COT).forEach(cot => {
-    if (updates[cot] !== undefined && updates[cot] !== row[cot]) truocKhiSua[cot] = row[cot] || '';
-  });
-
-  await ghiLog({
-    nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'CAP_NHAT_DON',
-    sttKey: req.params.sttKey,
-    chiTiet: {
-      ...updates,
-      ...(Object.keys(truocKhiSua).length ? { _truocKhiSua: truocKhiSua } : {}),
-      ...(updated._daTuDongChuyenTinhTrang ? { tuDongChuyenTinhTrangSang: updated._tinhTrangTuDongMoi } : {}),
-    },
-  });
+  // Lịch sử (sửa 27/09/2026, theo yêu cầu người dùng): CHỈ ghi các trường THỰC SỰ đổi giá trị, kèm giá trị
+  // TRƯỚC của mọi trường đó trong _truocKhiSua (trước đây chỉ có cho 3 cột trạng thái, và ghi cả trường không
+  // đổi — trang Chi tiết đơn luôn gửi đủ 3 cột trạng thái — khiến 1 lần sửa ghi chú bị đếm thành 3 lần đổi
+  // trạng thái ở services/logService.js#layHoatDongCuaToi). _truocKhiSua LUÔN có mặt ở log mới.
+  const thayDoi = thayDoiCot(row, updates, Object.keys(updates).filter(c => !['NguoiCapNhatCuoi', 'ThoiGianCapNhatCuoi'].includes(c)));
+  if (Object.keys(thayDoi).length || updated._daTuDongChuyenTinhTrang) {
+    await ghiLog({
+      nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'CAP_NHAT_DON',
+      sttKey: req.params.sttKey,
+      chiTiet: {
+        ...Object.fromEntries(Object.entries(thayDoi).map(([cot, { sang }]) => [cot, sang])),
+        _truocKhiSua: Object.fromEntries(Object.entries(thayDoi).map(([cot, { tu }]) => [cot, tu])),
+        ...(updated._daTuDongChuyenTinhTrang ? { tuDongChuyenTinhTrangSang: updated._tinhTrangTuDongMoi } : {}),
+      },
+    });
+  }
   res.json(updated);
 });
 

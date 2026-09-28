@@ -24,7 +24,7 @@ router.get('/cua-toi', async (req, res) => {
     nguoiXem = { ten: nv.Ten, vaiTro: nv.VaiTro };
   }
 
-  const ketQua = await layHoatDongCuaToi({ nguoiDung: nguoiXem.ten, tuNgay, denNgay });
+  const ketQua = await layHoatDongCuaToi({ nguoiDung: nguoiXem.ten, tuNgay, denNgay, vaiTroNguoiXem: nguoiGoi.vaiTro });
   ketQua.nguoiXem = nguoiXem; // frontend dùng để hiện đúng tiêu đề + đúng nhóm chỉ tiêu công việc
 
   // Chỉ tiêu công việc theo vai trò (bổ sung 08/09/2026, xem

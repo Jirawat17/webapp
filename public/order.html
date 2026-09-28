@@ -75,12 +75,37 @@ function dongDiaChi(don) {
 // Ngày lên đơn, Ghi chú — bôi đậm) thay vì đủ 14 trường như trước — hạn chế thông tin khách hàng/địa
 // chỉ/tracking/IOSS... không cần thiết cho việc chạy máy, dễ gây nhiễu hoặc bỏ sót thông tin quan
 // trọng. admin/ve_file vẫn thấy đủ như cũ.
+// Ghi chú xưởng (28/09/2026): bản chính là cột GHI_CHU_XUONG trong Sheet Seller (app ghi ngược vào đó, đọc lại
+// qua RAW -> Don_Hang_ALL). Bản lưu trong app (GHI_CHU_XUONG_NOI_BO) KHÁC bản Sheet = chưa ghi được sang Sheet
+// hoặc Sheet chưa cập nhật lại -> hiện thêm 1 dòng màu cam để không ai tưởng đã có trên Sheet Seller.
+// Bản trong app chỉ được ưu tiên hơn bản Sheet khi (a) lần ghi gần nhất sang Sheet BỊ LỖI, hoặc (b) vừa ghi thành
+// công < 15 phút (IMPORTRANGE/QUERY chưa kịp cập nhật). Ngoài 2 trường hợp đó Sheet là bản chính — Seller có thể
+// đã sửa cột Q SAU lần lưu gần nhất; điền bản app cũ vào ô sửa sẽ khiến bấm Lưu GHI ĐÈ mất ghi chú mới của Seller.
+function trangThaiGhiChuXuong(don) {
+  const noiBo = don.GHI_CHU_XUONG_NOI_BO || '';
+  const sheet = don.GHI_CHU_XUONG || '';
+  const gan = don.DongBoGhiChuXuong;
+  if (!gan || noiBo === sheet) return { oSua: sheet, canhBao: '' };
+  if (gan.KetQua === 'LOI') return { oSua: noiBo, canhBao: `CHƯA ghi được sang Sheet Seller — ${gan.LyDo}` };
+  if (Date.now() - new Date(gan.ThoiGian).getTime() < 15 * 60 * 1000) {
+    return { oSua: noiBo, canhBao: `Đã ghi sang Sheet Seller lúc ${tsDep(gan.ThoiGian)} — đang chờ Sheet cập nhật lại.` };
+  }
+  return { oSua: sheet, canhBao: '' };
+}
+function dongGhiChuNoiBo(don) {
+  const { canhBao } = trangThaiGhiChuXuong(don);
+  if (!canhBao) return '';
+  return `<tr><td>Ghi chú xưởng<br><small>(bản lưu trong app)</small></td><td style="color:var(--color-warning-text)"><strong>${escapeHtml(don.GHI_CHU_XUONG_NOI_BO)}</strong><br><small>${escapeHtml(canhBao)}</small></td></tr>`;
+}
+
 function renderBangThongTin(don, viTri) {
   if (user.vaiTro === 'san_xuat') {
     return `
       <tr><td>Số lượng</td><td>${escapeHtml(don.SO_LUONG || '')} ${don.SO_LUONG_AO_TREN_DON ? `(áo trên đơn: ${escapeHtml(don.SO_LUONG_AO_TREN_DON)})` : ''}</td></tr>
       <tr><td>Ngày lên đơn</td><td>${don.NGAY_LEN_DON ? dinhDangNgay(don.NGAY_LEN_DON) : ''}</td></tr>
-      <tr><td>Ghi chú</td><td><strong>${escapeHtml(don.GHI_CHU || '')}</strong></td></tr>`;
+      <tr><td>Ghi chú</td><td><strong>${escapeHtml(don.GHI_CHU || '')}</strong></td></tr>
+      ${don.GHI_CHU_XUONG ? `<tr><td>Ghi chú xưởng</td><td><strong>${escapeHtml(don.GHI_CHU_XUONG)}</strong></td></tr>` : ''}
+      ${dongGhiChuNoiBo(don)}`;
   }
   return `
     <tr><td>Mã đơn</td><td>${escapeHtml(don.STT_Key)}</td></tr>
@@ -99,6 +124,8 @@ function renderBangThongTin(don, viTri) {
     <tr><td>Địa chỉ giao hàng</td><td>${escapeHtml(dongDiaChi(don))}</td></tr>
     <tr><td>Mã IOSS</td><td>${escapeHtml(don.MA_IOSS || '')}</td></tr>
     <tr><td>Ghi chú</td><td>${escapeHtml(don.GHI_CHU || '')}</td></tr>
+    <tr><td>Ghi chú xưởng</td><td>${escapeHtml(don.GHI_CHU_XUONG || '')}</td></tr>
+    ${dongGhiChuNoiBo(don)}
     ${user.vaiTro !== 'admin' ? `<tr><td>Xưởng</td><td>${escapeHtml(don.XUONG || '(chưa gán)')}</td></tr>` : ''}
     <tr><td>Cập nhật lần cuối</td><td>${escapeHtml(don.NguoiCapNhatCuoi || '')}${don.ThoiGianCapNhatCuoi ? ' · ' + tsDep(don.ThoiGianCapNhatCuoi) : ''}</td></tr>`;
 }
@@ -171,10 +198,11 @@ async function taiChiTiet() {
         <h3>Lịch sử thay đổi</h3>
         <div class="timeline">
           ${(don.lichSu || []).map(l => `
-            <div class="timeline-item">
+            <div class="timeline-item${l.Mo ? ' lich-su-mo' : ''}">
               <div class="timeline-info">
-                <strong>${escapeHtml(l.NguoiDung)}</strong> <span style="font-size:0.85rem;color:var(--color-text-muted)">(${escapeHtml(NHAN_VAI_TRO[l.VaiTro] || l.VaiTro)})</span>
-                <div style="font-size:0.85rem;color:var(--color-text-muted);margin-top:2px">${escapeHtml(l.HanhDong)}</div>
+                <strong>${escapeHtml(l.NguoiDung)}</strong>${l.VaiTro ? ` <span style="font-size:0.85rem;color:var(--color-text-muted)">(${escapeHtml(NHAN_VAI_TRO[l.VaiTro] || l.VaiTro)})</span>` : ''}
+                <div style="margin-top:2px">${escapeHtml(l.MoTa || l.HanhDong)}</div>
+                ${htmlThayDoiLichSu(l.ThayDoi)}
               </div>
               <div class="timeline-time">${tsDep(l.ThoiGian)}</div>
             </div>`).join('') || '<p>Chưa có lịch sử.</p>'}
@@ -218,7 +246,7 @@ function renderKhuVucThaoTac(don) {
     html += `
       <div class="upload-box">
         <label for="ghi-chu-moi">Ghi chú xưởng</label>
-        <textarea id="ghi-chu-moi" rows="3" style="padding:10px;border-radius:8px;border:1px solid var(--color-border);font:inherit">${escapeHtml(don.GHI_CHU || '')}</textarea>
+        <textarea id="ghi-chu-moi" rows="3" style="padding:10px;border-radius:8px;border:1px solid var(--color-border);font:inherit">${escapeHtml(trangThaiGhiChuXuong(don).oSua)}</textarea>
         <button class="btn-hanh-dong phu" onclick="luuGhiChu()">${icon('check')} Lưu ghi chú</button>
       </div>`;
   }
@@ -505,9 +533,7 @@ async function muaTrackingThuCongChiTiet(btn) {
     } else {
       // Đẩy tracking sang Sheet khách hàng (bổ sung 21/09/2026, theo yêu cầu người dùng) — tracking
       // THẬT đã mua thành công, chỉ báo riêng nếu bước đồng bộ ra Sheet khách hàng thất bại.
-      if (ketQua.loiDaySheetKh && ketQua.loiDaySheetKh.length > 0) {
-        alert('Đã mua tracking thành công, nhưng KHÔNG đẩy được sang Sheet khách hàng: ' + ketQua.loiDaySheetKh[0].lyDo);
-      }
+      await baoLoiSheetSeller(ketQua.loiDaySheetKh);
       await taiChiTiet();
     }
   } catch (e) {
@@ -550,6 +576,7 @@ async function xuLyInLabelChiTiet(btn, duongDan) {
       const goiIn = moHopThoaiInPdf(ketQua.labelBase64);
       if (goiIn) goiIn();
     }
+    await baoLoiSheetSeller(ketQua.loiDaySheetKh);
     await taiChiTiet();
   } catch (e) {
     alert('Lỗi: ' + e.message);
@@ -569,11 +596,22 @@ async function chuyenGiaiDoan(scenarioId, btn) {
   }
 }
 
+// Ghi chú xưởng (28/09/2026): server LUÔN lưu bản trong app rồi ghi vào ô GHI_CHU_XUONG của Sheet Seller
+// (routes/orders.js POST /:sttKey/ghi-chu-xuong). Ghi Sheet lỗi -> hộp đỏ; nội dung vẫn còn trong ô (tải lại
+// trang điền sẵn bản trong app) để sửa nguyên nhân rồi Lưu lại / superadmin Đẩy lại.
 async function luuGhiChu() {
   const ghiChu = document.getElementById('ghi-chu-moi').value;
   try {
-    await apiFetch('/orders/' + encodeURIComponent(sttKey), { method: 'PUT', body: JSON.stringify({ GHI_CHU: ghiChu }) });
-    alert('Đã lưu ghi chú!');
+    const kq = await apiFetch('/orders/' + encodeURIComponent(sttKey) + '/ghi-chu-xuong', { method: 'POST', body: JSON.stringify({ ghiChu }) });
+    if (kq.sheet.ok) {
+      alert(`Đã lưu ghi chú vào Sheet Seller (tab "${kq.sheet.tab}", dòng ${kq.sheet.dong}). Ghi chú sẽ hiện lại ở đây sau khi Sheet cập nhật (vài giây tới vài phút).`);
+    } else {
+      await hienHopDo({
+        tieuDe: ['CHƯA GHI ĐƯỢC GHI CHÚ', 'VÀO SHEET SELLER'],
+        moTa: 'Ghi chú đã lưu trong app nhưng CHƯA có trên Sheet Seller. Đơn đã vào danh sách "Chưa ghi được sang Sheet Seller" (Trung tâm hành động / Settings). Lý do:',
+        danhSach: [kq.sheet.lyDo],
+      });
+    }
     await taiChiTiet();
   } catch (e) { alert(e.message); }
 }

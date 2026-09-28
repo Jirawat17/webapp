@@ -342,11 +342,29 @@ function base64ThanhBlob(base64, kieuMime) {
   return new Blob([mang], { type: kieuMime });
 }
 
+// Lịch sử (bổ sung 27/09/2026): danh sách "Nhãn: trước → sau" từ ThayDoi do server dựng (services/moTaLichSu.js).
+// tu === null = log cũ không lưu giá trị trước -> chỉ hiện giá trị sau, không suy đoán.
+function htmlThayDoiLichSu(thayDoi) {
+  if (!thayDoi || !thayDoi.length) return '';
+  return `<ul class="lich-su-thay-doi">${thayDoi.map(t =>
+    `<li>${escapeHtml(t.nhan)}: ${t.tu !== null ? `${escapeHtml(t.tu)} → ` : ''}<strong>${escapeHtml(t.sang)}</strong></li>`).join('')}</ul>`;
+}
+
 // Đơn đã huỷ KHÔNG được mua tracking (bổ sung 27/09/2026, theo yêu cầu người dùng) — hộp đỏ lớn phủ
 // màn hình, chỉ tắt khi bấm "Đã hiểu" (Promise xong lúc đó). Server trả lỗi maLoi 'DON_DA_HUY' ở
 // /tracking/mua-thu-cong và /tracking/mua-va-in-label (services/trackingAutoService.js#chanMuaDonDaHuy).
 const TRANG_THAI_DON_DA_HUY = 'CANCELLED_Đã hủy';
 function hienThongBaoDonDaHuy(dsStt) {
+  return hienHopDo({
+    tieuDe: ['ĐƠN ĐÃ HỦY', '(KHÔNG MUA TRACKING)'],
+    moTa: `${dsStt.length > 1 ? dsStt.length + ' đơn dưới đây đang' : 'Đơn này đang'} ở trạng thái "${TRANG_THAI_DON_DA_HUY}" nên hệ thống không mua tracking:`,
+    ma: dsStt,
+  });
+}
+
+// Hộp đỏ lớn dùng chung (28/09/2026) — tieuDe: các dòng tiêu đề; moTa: 1 câu; ma: mã đơn (in đậm đỏ);
+// danhSach: các dòng chi tiết (vd "9LIEM12: lý do"). Chỉ tắt khi bấm "Đã hiểu"; Promise xong lúc đó.
+function hienHopDo({ tieuDe = [], moTa = '', ma = [], danhSach = [] }) {
   return new Promise(xong => {
     const nen = document.createElement('div');
     nen.className = 'hop-don-da-huy';
@@ -354,16 +372,77 @@ function hienThongBaoDonDaHuy(dsStt) {
     nen.setAttribute('aria-modal', 'true');
     nen.innerHTML = `
       <div class="hop-don-da-huy__khung">
-        <div class="hop-don-da-huy__tieu-de">${icon('alert', { size: 44 })}<div>ĐƠN ĐÃ HỦY</div><div>(KHÔNG MUA TRACKING)</div></div>
+        <div class="hop-don-da-huy__tieu-de">${icon('alert', { size: 44 })}${tieuDe.map(t => `<div>${escapeHtml(t)}</div>`).join('')}</div>
         <div class="hop-don-da-huy__noi-dung">
-          <p>${dsStt.length > 1 ? dsStt.length + ' đơn dưới đây đang' : 'Đơn này đang'} ở trạng thái "${TRANG_THAI_DON_DA_HUY}" nên hệ thống không mua tracking:</p>
-          <p class="hop-don-da-huy__ma">${dsStt.map(escapeHtml).join(', ')}</p>
+          ${moTa ? `<p>${escapeHtml(moTa)}</p>` : ''}
+          ${ma.length ? `<p class="hop-don-da-huy__ma">${ma.map(escapeHtml).join(', ')}</p>` : ''}
+          ${danhSach.length ? `<ul class="hop-don-da-huy__ds">${danhSach.map(d => `<li>${escapeHtml(d)}</li>`).join('')}</ul>` : ''}
           <button type="button" class="btn-hanh-dong">Đã hiểu</button>
         </div>
       </div>`;
     nen.querySelector('button').onclick = () => { nen.remove(); xong(); };
     document.body.appendChild(nen);
     nen.querySelector('button').focus();
+  });
+}
+
+// Danh sách "Chưa ghi được sang Sheet Seller" (28/09/2026) — dùng CHUNG ở Trung tâm hành động và Settings.
+// ds: từ /api/dong-bo-sheet-seller/loi-dang-cho (hoặc Trung tâm hành động .loiSheetSeller). choDayLai: chỉ
+// superadmin (server cũng chặn). Sau khi đẩy lại, gọi taiLai() do trang truyền vào để vẽ lại.
+const NHAN_LOAI_SHEET_SELLER = { GHI_CHU: 'Ghi chú xưởng', TRACKING: 'Tracking', DELIVERED: 'Delivered' };
+const tgNgan = iso => { const d = new Date(iso); return isNaN(d) ? String(iso || '') : d.toLocaleString('vi-VN'); };
+function htmlLoiSheetSeller(ds, choDayLai) {
+  if (!ds || !ds.length) return '<p style="color:var(--color-text-muted)">Không có lần ghi nào sang Sheet Seller đang lỗi.</p>';
+  return `${choDayLai ? `<button type="button" class="btn-hanh-dong" onclick="dayLaiSheetSeller(null, this)">Đẩy lại tất cả (${ds.length})</button>` : ''}
+    <div class="bang-cuon-ngang"><table class="info-table">
+      <tr><th>Đơn</th><th>Loại</th><th>Nơi ghi</th><th>Giá trị định ghi</th><th>Lý do</th><th>Lần lỗi gần nhất</th>${choDayLai ? '<th></th>' : ''}</tr>
+      ${ds.map(d => `<tr>
+        <td><a href="/order.html?stt=${encodeURIComponent(d.STT_Key)}">${escapeHtml(d.STT_Key)}</a></td>
+        <td>${escapeHtml(NHAN_LOAI_SHEET_SELLER[d.Loai] || d.Loai)}</td>
+        <td>${d.Tab ? `tab "${escapeHtml(d.Tab)}"${d.Dong ? ` dòng ${escapeHtml(d.Dong)}` : ''}<br><small>${escapeHtml(d.SpreadsheetId)}</small>` : '—'}</td>
+        <td>${escapeHtml(d.Cot)}: <strong>${escapeHtml(d.GiaTriSau)}</strong></td>
+        <td style="color:var(--color-danger-text)">${escapeHtml(d.LyDo)}</td>
+        <td>${escapeHtml(tgNgan(d.ThoiGian))}<br><small>${d.SoLanLoi} lần lỗi · ${escapeHtml(d.NguoiDung)}</small></td>
+        ${choDayLai ? `<td><button type="button" class="btn-hanh-dong phu" data-stt="${escapeHtml(d.STT_Key)}" data-loai="${escapeHtml(d.Loai)}"
+          onclick="dayLaiSheetSeller([{ sttKey: this.dataset.stt, loai: this.dataset.loai }], this)">Đẩy lại</button></td>` : ''}
+      </tr>`).join('')}
+    </table></div>`;
+}
+let _taiLaiSauDayLai = null; // trang đăng ký hàm vẽ lại (datTaiLaiSauDayLai)
+function datTaiLaiSauDayLai(fn) { _taiLaiSauDayLai = fn; }
+// items: [{ sttKey, loai }] hoặc null = đẩy lại TẤT CẢ lỗi đang chờ. Đẩy lại dùng giá trị HIỆN TẠI trong app.
+async function dayLaiSheetSeller(items, btn) {
+  const nhan = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Đang đẩy...';
+  try {
+    const kq = await apiFetch('/dong-bo-sheet-seller/day-lai', { method: 'POST', body: JSON.stringify(items ? { items } : { tatCa: true }) });
+    const loi = kq.ketQua.filter(k => !k.ok);
+    const ok = kq.ketQua.length - loi.length;
+    if (loi.length) {
+      await hienHopDo({
+        tieuDe: ['ĐẨY LẠI CHƯA THÀNH CÔNG'], moTa: `Thành công ${ok}/${kq.ketQua.length}. Còn lỗi:`,
+        danhSach: loi.map(k => `${k.sttKey} (${NHAN_LOAI_SHEET_SELLER[k.loai] || k.loai}): ${k.lyDo}`),
+      });
+    } else {
+      alert(`Đã ghi lại sang Sheet Seller thành công ${ok} mục.`);
+    }
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
+  }
+  btn.disabled = false;
+  btn.textContent = nhan;
+  if (_taiLaiSauDayLai) await _taiLaiSauDayLai();
+}
+
+// Lỗi ghi sang Sheet Seller trả về từ server (loiDaySheetKh: [{ sttKey, lyDo }]) -> hộp đỏ (28/09/2026).
+// Đơn đã nằm trong danh sách theo dõi (Trung tâm hành động / Settings) — superadmin bấm Đẩy lại sau khi sửa nguyên nhân.
+function baoLoiSheetSeller(loiDaySheetKh, tieuDe = ['ĐÃ MUA TRACKING', 'NHƯNG CHƯA GHI ĐƯỢC SANG SHEET SELLER']) {
+  if (!loiDaySheetKh || !loiDaySheetKh.length) return Promise.resolve();
+  return hienHopDo({
+    tieuDe,
+    moTa: 'Đơn đã được đưa vào danh sách "Chưa ghi được sang Sheet Seller" ở Trung tâm hành động và Settings — sửa nguyên nhân rồi bấm Đẩy lại (superadmin).',
+    danhSach: loiDaySheetKh.map(l => `${l.sttKey}: ${l.lyDo}`),
   });
 }
 // Tách lỗi "đơn đã huỷ" khỏi loi[] server trả về: hiện hộp đỏ cho các đơn đó, trả lại các lỗi còn lại.
@@ -516,7 +595,7 @@ async function chayHangLoatCoTienDo(danhSach, xuLyMotPhanTu, { onTienDo, kiemTra
   const thanhCong = [];
   const loi = [];
   // loiDaySheetKh (bổ sung 21/09/2026, theo yêu cầu người dùng) — POST /tracking/mua-thu-cong trả
-  // thêm mảng này (đơn mua tracking THÀNH CÔNG nhưng đẩy sang Sheet khách hàng thất bại, xem
+  // thêm mảng này (đơn mua tracking THÀNH CÔNG nhưng ghi sang Sheet Seller thất bại, xem
   // routes/tracking.js) — gộp CHUNG CHUNG như thanhCong/loi để dùng lại được, không ảnh hưởng các nơi
   // gọi khác không có field này (mảng rỗng, vô hại).
   const loiDaySheetKh = [];

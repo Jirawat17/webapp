@@ -9,6 +9,7 @@ const {
   gopCacTemPdf, layDanhSachTaiKhoanGke, luuTaiKhoanGke, xoaTaiKhoanGke, ganTaiKhoanGkeChoXuong,
 } = require('../services/gkeService');
 const orderService = require('../services/orderService');
+const sheetSellerService = require('../services/sheetSellerService');
 const { requireLogin, requireExactRole } = require('../middleware/auth');
 
 router.use(requireLogin);
@@ -111,11 +112,9 @@ router.post('/mua-thu-cong', async (req, res) => {
 
   const thanhCong = [];
   const loi = [];
-  // Đơn đã MUA TRACKING THẬT thành công nhưng KHÔNG đẩy được sang Sheet khách hàng (bổ sung
-  // 21/09/2026, theo yêu cầu người dùng) — TÁCH RIÊNG khỏi `loi` (vốn nghĩa là "không mua được tracking
-  // gì cả") để không gây hiểu nhầm, vì ở đây tracking đã mua thành công, chỉ bước đồng bộ ra ngoài thất
-  // bại. Rỗng cho đơn không cấu hình Sheet khách hàng (không phải lỗi, xem
-  // services/khachHangService.js#layThongTinSheetKhachHang) hoặc đẩy thành công.
+  // Đơn đã MUA TRACKING THẬT thành công nhưng KHÔNG ghi được sang Sheet Seller (bổ sung 21/09/2026; từ
+  // 28/09/2026 qua services/sheetSellerService.js, không còn bỏ qua im lặng) — TÁCH RIÊNG khỏi `loi` (vốn
+  // nghĩa là "không mua được tracking gì cả") vì tracking đã mua thành công, chỉ bước ghi sang Seller lỗi.
   const loiDaySheetKh = [];
 
   for (const sttKey of sttKeys) {
@@ -129,6 +128,7 @@ router.post('/mua-thu-cong', async (req, res) => {
       }
       const ketQua = await muaTrackingChoDon(sttKey, user);
       if (!ketQua) { loi.push({ sttKey, lyDo: 'Đơn này đã có mã tracking thật rồi — không mua lại.' }); continue; }
+      loiDaySheetKh.push(...(ketQua.loiSheetCon || [])); // đơn con DonNhieuAo chưa ghi được sang Sheet Seller
       if (ketQua.dungChung) {
         loi.push({ sttKey, lyDo: `Không mua — đơn DonNhieuAo dùng chung tracking ${ketQua.tracking_num} của ${ketQua.donMua} (đã gán).` });
         continue;
@@ -160,6 +160,7 @@ async function xuLyInLabelHangLoat(req, res, hamXuLy) {
 
   const thanhCong = [];
   const loi = [];
+  const loiDaySheetKh = []; // "MUA TRACKING và IN LABEL": đã mua nhưng chưa ghi được sang Sheet Seller
   const cacLabelBase64 = [];
 
   for (const sttKey of sttKeys) {
@@ -172,6 +173,8 @@ async function xuLyInLabelHangLoat(req, res, hamXuLy) {
       }
       const ketQua = await hamXuLy(sttKey, user);
       thanhCong.push(sttKey);
+      if (ketQua && ketQua.dayCheKhachHang && !ketQua.dayCheKhachHang.ok) loiDaySheetKh.push({ sttKey, lyDo: ketQua.dayCheKhachHang.lyDo });
+      if (ketQua && ketQua.loiSheetCon) loiDaySheetKh.push(...ketQua.loiSheetCon);
       if (ketQua && ketQua.label_base64) cacLabelBase64.push(ketQua.label_base64);
     } catch (err) {
       loi.push({ sttKey, lyDo: err.message, maLoi: err.maLoi });
@@ -179,7 +182,7 @@ async function xuLyInLabelHangLoat(req, res, hamXuLy) {
   }
 
   const labelBase64 = cacLabelBase64.length > 0 ? await gopCacTemPdf(cacLabelBase64) : null;
-  res.json({ ok: true, thanhCong, loi, labelBase64 });
+  res.json({ ok: true, thanhCong, loi, loiDaySheetKh, labelBase64 });
 }
 
 // "IN LABEL" — chỉ in lại tem cho đơn ĐÃ có tracking thật, không mua gì thêm. Dùng tại menu Đơn hàng
@@ -206,6 +209,7 @@ router.post('/cap-nhat-trang-thai-thu-cong', async (req, res) => {
 
   const thanhCong = [];
   const loi = [];
+  const gomDelivered = []; // ô Delivered cần ghi sang Sheet Seller — ghi 1 lần sau vòng lặp (28/09/2026)
 
   for (const sttKey of sttKeys) {
     try {
@@ -218,7 +222,7 @@ router.post('/cap-nhat-trang-thai-thu-cong', async (req, res) => {
         loi.push({ sttKey, lyDo: 'Đơn chưa có mã tracking thật — chưa có gì để tra cứu.' });
         continue;
       }
-      const ketQua = await capNhatTrangThaiTrackingChoDon(sttKey);
+      const ketQua = await capNhatTrangThaiTrackingChoDon(sttKey, { gomDelivered });
       if (!ketQua.ok) { loi.push({ sttKey, lyDo: ketQua.lyDo }); continue; }
       thanhCong.push({
         sttKey,
@@ -232,7 +236,9 @@ router.post('/cap-nhat-trang-thai-thu-cong', async (req, res) => {
     }
   }
 
-  res.json({ ok: true, thanhCong, loi });
+  const loiDaySheetKh = (await sheetSellerService.ghiHangLoat(gomDelivered, user))
+    .filter(k => !k.ok).map(k => ({ sttKey: k.sttKey, lyDo: `Delivered: ${k.lyDo}` }));
+  res.json({ ok: true, thanhCong, loi, loiDaySheetKh });
 });
 
 module.exports = router;

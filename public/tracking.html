@@ -307,6 +307,7 @@ document.getElementById('o-tracking-thu-cong').addEventListener('keydown', async
       const kq = ketQua.thanhCong[0];
       const chiTietPhu = [kq.thoiGian, kq.diaDiem].filter(Boolean).join(' · ');
       hienThongBaoTrackingThuCong('ok', `${kq.sttKey}: ${kq.trangThai}${chiTietPhu ? ' (' + chiTietPhu + ')' : ''}`);
+      await baoLoiSheetSeller(ketQua.loiDaySheetKh, ['ĐÃ CẬP NHẬT TRẠNG THÁI', 'NHƯNG CHƯA GHI ĐƯỢC DELIVERED SANG SHEET SELLER']);
       await taiDanhSach();
     }
   } catch (err) {
@@ -504,12 +505,10 @@ async function muaThuCongTuBang(btn, sttKey, trangThai) {
       btn.innerHTML = nhanGoc;
       return;
     }
-    // Đẩy tracking sang Sheet khách hàng (bổ sung 21/09/2026, theo yêu cầu người dùng) — tracking THẬT
-    // đã mua thành công (đã qua nhánh loi[] ở trên), chỉ báo riêng nếu bước đồng bộ ra Sheet khách hàng
+    // Ghi tracking sang Sheet Seller (21/09/2026; hộp đỏ từ 28/09/2026) — tracking THẬT
+    // đã mua thành công (đã qua nhánh loi[] ở trên), chỉ báo riêng nếu bước ghi sang Sheet Seller
     // thất bại (xem routes/tracking.js).
-    if (ketQua.loiDaySheetKh && ketQua.loiDaySheetKh.length > 0) {
-      alert('Đã mua tracking thành công, nhưng KHÔNG đẩy được sang Sheet khách hàng: ' + ketQua.loiDaySheetKh[0].lyDo);
-    }
+    await baoLoiSheetSeller(ketQua.loiDaySheetKh);
     await taiDanhSach();
     await taiLogs();
   } catch (e) {
@@ -551,6 +550,7 @@ async function xuLyInLabelTuBang(btn, sttKey, duongDan) {
       const goiIn = moHopThoaiInPdf(ketQua.labelBase64);
       if (goiIn) goiIn();
     }
+    await baoLoiSheetSeller(ketQua.loiDaySheetKh);
     await taiDanhSach();
     await taiLogs();
   } catch (e) {

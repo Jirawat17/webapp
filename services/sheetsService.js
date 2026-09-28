@@ -288,7 +288,7 @@ module.exports = {
   readTab, readTabCached, getHeadersCached, appendRow, appendRows, updateCells, updateCellsManyRows,
   colToLetter, xoaCacheBang,
   // getSheetsClient/goiApiCoThuLai (bổ sung 21/09/2026, theo yêu cầu người dùng) — cho phép
-  // services/customerSheetService.js tái dùng ĐÚNG xác thực Google + cơ chế retry đã có ở đây, khi ghi
-  // vào spreadsheet KHÁC (Sheet riêng của khách hàng, không phải SHEET_ID cố định của file này).
+  // services/sheetSellerService.js tái dùng ĐÚNG xác thực Google + cơ chế retry đã có ở đây, khi ghi
+  // vào spreadsheet KHÁC (Sheet của Seller, không phải SHEET_ID cố định của file này).
   getSheetsClient, goiApiCoThuLai,
 };
