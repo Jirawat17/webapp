@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn của tôi — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=106">
+<link rel="stylesheet" href="/css/style.css?v=107">
 <script src="/js/theme.js?v=104"></script>
 </head>
 <body>
@@ -197,7 +197,7 @@
 </div>
 
 <script src="/js/icons.js?v=104"></script>
-<script src="/js/api.js?v=106"></script>
+<script src="/js/api.js?v=107"></script>
 <script>
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
 // settings.html (superadmin), 3/5/7 không còn luôn đúng nên không hard-code vào nhãn hiển thị nữa.
@@ -425,7 +425,7 @@ function renderDanhSachSanSang() {
         ? `<div class="nhom-anh-dai-dien">${urlAnhHienThiList(o.DUONG_DAN_URL || o.MOCKUP).map(src => `<img src="${escapeHtml(src)}" alt="" loading="lazy" onerror="this.remove()">`).join('')}</div>`
         : ''}
       <div class="thong-tin">
-        <strong class="tieu-de-the ${o.DonUuTien ? 'uu-tien' : ''}">${escapeHtml(o.TieuDeSanPham || o.STT_Key)}</strong>
+        ${htmlTieuDeThe(o)}
         <div class="meta">${escapeHtml(o.TenKhachHang || '')} · Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgayNgan(o.NGAY_LEN_DON) : '—')} · SL: <strong>${escapeHtml(o.SO_LUONG || '')}</strong></div>
         <div class="badge-row">
           ${o.DonUuTien ? `<span class="badge trang-thai-danger">${icon('star', {size:14})} Ưu tiên</span>` : ''}
@@ -674,7 +674,7 @@ function renderDanhSachDangChay(coLocNaoDangChon) {
         ? `<div class="nhom-anh-dai-dien">${urlAnhHienThiList(o.DUONG_DAN_URL || o.MOCKUP).map(src => `<img src="${escapeHtml(src)}" alt="" loading="lazy" onerror="this.remove()">`).join('')}</div>`
         : ''}
       <div class="thong-tin">
-        <strong class="tieu-de-the ${o.DonUuTien ? 'uu-tien' : ''}">${escapeHtml(o.TieuDeSanPham || o.STT_Key)}</strong>
+        ${htmlTieuDeThe(o)}
         <div class="meta">${escapeHtml(o.TenKhachHang || '')} · Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgayNgan(o.NGAY_LEN_DON) : '—')} · SL: <strong>${escapeHtml(o.SO_LUONG || '')}</strong></div>
         <div class="badge-row">
           ${o.DonUuTien ? `<span class="badge trang-thai-danger">${icon('star', {size:14})} Ưu tiên</span>` : ''}

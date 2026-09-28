@@ -114,6 +114,17 @@ async function taiMauTheoXuong() {
 }
 // o.XUONG rỗng/undefined (admin bị ẩn giá trị này, hoặc đơn/Xưởng chưa được gán màu) → không có class/
 // style gì, giữ nguyên nền mặc định — đúng hành vi 2 màu hard-code cũ trước khi có tính năng này.
+// Tiêu đề thẻ đơn 2 dòng (28/09/2026, theo yêu cầu người dùng — trước đây 1 dòng "Mã · Loại · Size · Màu" bị cắt "…"
+// mất Size/Màu khi Loại dài): dòng 1 "Mã đơn · Loại" (vẫn 1 dòng, cắt "…"), dòng 2 "Size · Màu" in đậm, luôn hiện đủ.
+// Dùng ở orders.html, my-orders.html, my-orders-ve-file.html.
+function htmlTieuDeThe(o) {
+  const ghep = (...ds) => ds.map(v => String(v ?? '').trim()).filter(Boolean).join(' · '); // ô chỉ có dấu cách = trống
+  const dong1 = ghep(o.STT_Key, o.LOAI) || o.MA_DON_HANG_ORDERID || '';
+  const dong2 = ghep(o.KICH_THUOC, o.MAU_SAC);
+  return `<strong class="tieu-de-the ${o.DonUuTien ? 'uu-tien' : ''}">${escapeHtml(dong1)}</strong>` +
+    (dong2 ? `<strong class="size-mau-the">${escapeHtml(dong2)}</strong>` : '');
+}
+
 function lopVaStyleXuong(xuong, mauTheoXuong) {
   const mau = mauTheoXuong && mauTheoXuong[xuong];
   return mau ? { lop: 'co-mau-xuong', style: `--mau-xuong:${escapeHtml(mau)}` } : { lop: '', style: '' };

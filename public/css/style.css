@@ -411,6 +411,8 @@ body.trang-dang-nhap {
 /* Cỡ chữ tiêu đề/meta GIẢM DẦN (16px->14px->13px, 0.85rem->0.78rem->0.72rem, bổ sung 13/09/2026, theo
    yêu cầu người dùng) — nhường thêm không gian cho ảnh đại diện lớn hơn ở trên, "dễ nhìn ảnh hơn". */
 .order-card .tieu-de-the { display: block; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Dòng 2 tiêu đề thẻ: "Size · Màu" in đậm, xuống dòng khi dài — không cắt (public/js/api.js#htmlTieuDeThe, 28/09/2026). */
+.order-card .size-mau-the { display: block; font-size: 13px; font-weight: 800; overflow-wrap: anywhere; } /* màu chữ kế thừa như dòng 1 */
 .order-card .meta { font-size: 0.72rem; color: var(--color-text-muted); margin: 2px 0; }
 .order-card .badge-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 
@@ -471,9 +473,9 @@ body.trang-dang-nhap {
    sẵn) — nhắm thẳng #id thay vì sửa class .nguy-hiem dùng chung, tránh ảnh hưởng các nút khác. */
 #nut-xoa-du-lieu-don { background: #7c3aed; color: #fff; border-color: #7c3aed; }
 
-/* THUÊ TEAM KHÁC ở trang Đơn hàng (28/09/2026) — đỏ, to, nổi bật giữa các nút in viền xanh */
-.btn-hanh-dong.btn-thue-team-khac { background: #dc2626; border-color: #dc2626; color: #fff; font-size: 1.05rem; font-weight: 800; letter-spacing: 0.03em; padding: 12px 22px; }
-.btn-hanh-dong.btn-thue-team-khac:hover:not(:disabled) { background: #b91c1c; border-color: #b91c1c; }
+/* THUÊ TEAM KHÁC ở trang Đơn hàng (28/09/2026) — tím dịu (đổi từ đỏ theo yêu cầu người dùng), to, nổi bật giữa các nút in viền xanh; nhạt hơn tím #7c3aed của "Xoá dữ liệu đơn" để không lẫn */
+.btn-hanh-dong.btn-thue-team-khac { background: #8b5cf6; border-color: #8b5cf6; color: #fff; font-size: 1.05rem; font-weight: 800; letter-spacing: 0.03em; padding: 12px 22px; }
+.btn-hanh-dong.btn-thue-team-khac:hover:not(:disabled) { background: #7c3aed; border-color: #7c3aed; }
 
 /* 2 nút lớn ở Chi tiết đơn (28/09/2026) — BẮT ĐẦU CHẠY MÁY (xanh) / BÁO LỖI SẢN XUẤT (đỏ): to, dễ bấm trên điện thoại */
 .nut-trang-thai-lon {
