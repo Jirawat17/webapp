@@ -536,6 +536,8 @@ function filterForRole(rows, user) {
 
 // Nhân viên thuộc được nhiều Xưởng (27/09/2026) — xem đơn của MỌI Xưởng mình thuộc, đọc Xưởng hiện tại
 // từ DB mỗi lần (taiKhoanService.js#cacXuongCuaNguoiDung).
+// Áp dụng cho MỌI vai trò trừ superadmin, KỂ CẢ admin (admin chỉ thấy các Xưởng được phân công — 29/09/2026 xác nhận
+// áp dụng cho mọi menu).
 function locTheoXuong(rows, user) {
   if (laSuperAdmin(user.vaiTro)) return rows;
   const cacXuong = taiKhoanService.cacXuongCuaNguoiDung(user);
@@ -548,19 +550,16 @@ function coQuyenTheoXuong(user, row) {
   return !!row.XUONG && taiKhoanService.cacXuongCuaNguoiDung(user).includes(row.XUONG);
 }
 
-// ẨN thông tin Xưởng của ĐƠN HÀNG với riêng vai trò admin (bổ sung 18/09/2026, theo yêu cầu người dùng).
-// Từ 29/09/2026 Danh sách đơn/Chi tiết đơn KHÔNG còn dùng hàm này (admin đã bị locTheoXuong giới hạn còn đúng
-// Xưởng mình phụ trách, nay được xem Xưởng đó) — CHỈ còn dùng ở trang Đơn hàng loạt (routes/donHangLoat.js), nơi
-// admin vẫn thấy nhóm có đơn của Xưởng khác. Trả về BẢN SAO (không mutate row gốc — row có thể là object đang được
-// cache/dùng lại ở nơi khác trong cùng request).
-function anXuongVoiAdmin(row, vaiTro) {
-  if (vaiTro !== 'admin') return row;
-  const { XUONG, ...conLai } = row;
-  return conLai;
-}
-function anXuongNhieuDonVoiAdmin(rows, vaiTro) {
-  if (vaiTro !== 'admin') return rows;
-  return rows.map(r => anXuongVoiAdmin(r, vaiTro));
+// Phạm vi Xưởng theo MÃ ĐƠN (29/09/2026, theo yêu cầu người dùng — "admin chỉ thấy Xưởng mình phụ trách" ở MỌI
+// menu): dùng lọc log/nhật ký/lỗi/ảnh chỉ có STT_Key. Đọc Xưởng của đơn từ SQLite (không đọc Sheets), đọc Xưởng
+// người xem 1 lần cho cả danh sách. superadmin thấy tất cả; đơn chưa gán Xưởng/không rõ -> không thấy.
+function phamViDon(user) {
+  if (laSuperAdmin(user.vaiTro)) return () => true;
+  const cacXuong = taiKhoanService.cacXuongCuaNguoiDung(user);
+  return sttKey => {
+    const xuong = sttKey ? trangThaiDbService.layTheoKey(sttKey).XUONG : '';
+    return !!xuong && cacXuong.includes(xuong);
+  };
 }
 
 // "Đơn ưu tiên" (bổ sung 13/09/2026, theo yêu cầu người dùng — cột DON_UU_TIEN người dùng tự thêm vào
@@ -593,5 +592,5 @@ function suaDonKetSanSang() {
 module.exports = {
   suaDonKetSanSang,
   TAB, KEY_COL, getAll, getByKey, getManyByKeys, update, filterForRole, ganTenKhachHang, tieuDeSanPham, danhSachViTriTheu,
-  layDanhSachXuong, locTheoXuong, coQuyenTheoXuong, laUuTien, anXuongVoiAdmin, anXuongNhieuDonVoiAdmin,
+  layDanhSachXuong, locTheoXuong, coQuyenTheoXuong, phamViDon, laUuTien,
 };
