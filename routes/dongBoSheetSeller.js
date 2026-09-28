@@ -11,7 +11,8 @@ const orderService = require('../services/orderService');
 router.use(requireLogin);
 
 router.get('/loi-dang-cho', requireRole(), (req, res) => {
-  res.json(nhatKyDbService.layLoiDongBoDangCho());
+  const trongPhamVi = orderService.phamViDon(req.session.user); // admin: chỉ đơn Xưởng mình (29/09/2026)
+  res.json(nhatKyDbService.layLoiDongBoDangCho().filter(d => trongPhamVi(d.STT_Key)));
 });
 
 // Giá trị HIỆN TẠI trong app để đẩy lại (không dùng lại giá trị cũ lúc lỗi).

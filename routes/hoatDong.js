@@ -17,14 +17,18 @@ router.get('/cua-toi', async (req, res) => {
   const nguoiGoi = req.session.user;
 
   let nguoiXem = { ten: nguoiGoi.ten, vaiTro: nguoiGoi.vaiTro };
+  let locDon = null;
   if (laAdmin(nguoiGoi.vaiTro) && nguoiDung) {
+    // admin chỉ xem được nhân viên cùng Xưởng, và chỉ các việc trên đơn thuộc Xưởng mình (29/09/2026).
+    const trongPhamVi = taiKhoanService.phamViNhanVien(nguoiGoi);
     const dsNhanVien = taiKhoanService.layTatCa();
-    const nv = dsNhanVien.find(r => r.Ten === nguoiDung && String(r.KichHoat).toUpperCase() === 'TRUE');
-    if (!nv) return res.status(400).json({ error: `"${nguoiDung}" không phải tài khoản đang hoạt động` });
+    const nv = dsNhanVien.find(r => r.Ten === nguoiDung && String(r.KichHoat).toUpperCase() === 'TRUE' && trongPhamVi(r.Xuong));
+    if (!nv) return res.status(400).json({ error: `"${nguoiDung}" không phải tài khoản đang hoạt động thuộc Xưởng của bạn` });
     nguoiXem = { ten: nv.Ten, vaiTro: nv.VaiTro };
+    if (nv.Ten !== nguoiGoi.ten) locDon = orderService.phamViDon(nguoiGoi);
   }
 
-  const ketQua = await layHoatDongCuaToi({ nguoiDung: nguoiXem.ten, tuNgay, denNgay, vaiTroNguoiXem: nguoiGoi.vaiTro });
+  const ketQua = await layHoatDongCuaToi({ nguoiDung: nguoiXem.ten, tuNgay, denNgay, vaiTroNguoiXem: nguoiGoi.vaiTro, locDon });
   ketQua.nguoiXem = nguoiXem; // frontend dùng để hiện đúng tiêu đề + đúng nhóm chỉ tiêu công việc
 
   // Chỉ tiêu công việc theo vai trò (bổ sung 08/09/2026, xem

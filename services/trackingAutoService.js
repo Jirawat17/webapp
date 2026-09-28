@@ -46,10 +46,10 @@ function xepHangMuaTracking(sttKey, congViec) {
 // server — cùng đánh đổi chấp nhận được như services/presenceService.js. Giới hạn số dòng để không
 // phình bộ nhớ vô hạn qua thời gian dài chạy.
 const SO_DONG_LOG_TOI_DA = 300;
-const _logs = []; // { luc: ISOString, dong: string }
+const _logs = []; // { luc: ISOString, dong: string, sttKey } — sttKey để lọc theo Xưởng người xem (29/09/2026)
 
-function ghiLogTracking(dong) {
-  _logs.push({ luc: new Date().toISOString(), dong });
+function ghiLogTracking(dong, sttKey) {
+  _logs.push({ luc: new Date().toISOString(), dong, sttKey });
   if (_logs.length > SO_DONG_LOG_TOI_DA) _logs.shift();
 }
 
@@ -343,7 +343,7 @@ async function _muaTrackingChoDonThat(sttKey, user) {
       : `LỖI ghi tracking vào Sheet Seller: ${kqDay.lyDo}`);
     baoLoiSheetSeller([kqDay], user, 'tracking');
 
-    ghiLogTracking(`${nhanNguon} ${sttKey}: đã mua tracking ${ketQuaTem.tracking_num} (${ketQuaTem.delivery_carrier})`);
+    ghiLogTracking(`${nhanNguon} ${sttKey}: đã mua tracking ${ketQuaTem.tracking_num} (${ketQuaTem.delivery_carrier})`, sttKey);
     ghiLog({
       nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: laThuCong ? 'MUA_TRACKING_THU_CONG' : 'TU_DONG_MUA_TRACKING',
       sttKey, chiTiet: { trackingNum: ketQuaTem.tracking_num, hangVanChuyen: ketQuaTem.delivery_carrier },
@@ -355,7 +355,7 @@ async function _muaTrackingChoDonThat(sttKey, user) {
 
     return { ...ketQuaTem, dayCheKhachHang, loiSheetCon };
   } catch (err) {
-    ghiLogTracking(`${nhanNguon} ${sttKey}: LỖI — ${err.message}`);
+    ghiLogTracking(`${nhanNguon} ${sttKey}: LỖI — ${err.message}`, sttKey);
     ghiLogTrackingVaoDb({
       sttKey, nguon: nguonSheet, nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: 'Lỗi',
       chiTiet: nhatKy.concat(`LỖI: ${err.message}`).join('\n'),

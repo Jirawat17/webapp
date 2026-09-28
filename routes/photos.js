@@ -225,6 +225,11 @@ router.get('/file/*', async (req, res) => {
   if (!objectKey.startsWith('orders/') || objectKey.includes('..')) {
     return res.status(400).json({ error: 'Đường dẫn ảnh không hợp lệ' });
   }
+  // Ảnh của đơn ngoài Xưởng người xem -> coi như không có (29/09/2026, admin chỉ thấy Xưởng mình phụ trách).
+  // Key dạng orders/{sttKey}/{uuid}-{tên} (storageService.js#taoObjectKeyDonHang).
+  if (!orderService.phamViDon(req.session.user)(objectKey.split('/')[1])) {
+    return res.status(404).json({ error: 'Không tìm thấy ảnh' });
+  }
 
   let result;
   try {

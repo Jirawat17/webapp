@@ -556,9 +556,11 @@ function coQuyenTheoXuong(user, row) {
 function phamViDon(user) {
   if (laSuperAdmin(user.vaiTro)) return () => true;
   const cacXuong = taiKhoanService.cacXuongCuaNguoiDung(user);
+  const daXet = new Map(); // log lặp lại cùng 1 đơn rất nhiều lần — mỗi mã chỉ đọc SQLite 1 lần
   return sttKey => {
-    const xuong = sttKey ? trangThaiDbService.layTheoKey(sttKey).XUONG : '';
-    return !!xuong && cacXuong.includes(xuong);
+    if (!sttKey) return false;
+    if (!daXet.has(sttKey)) daXet.set(sttKey, cacXuong.includes(trangThaiDbService.layTheoKey(sttKey).XUONG));
+    return daXet.get(sttKey);
   };
 }
 

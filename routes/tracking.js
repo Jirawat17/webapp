@@ -88,7 +88,8 @@ router.post('/gan-tai-khoan-gke', requireExactRole('superadmin'), (req, res) => 
 });
 
 router.get('/logs', (req, res) => {
-  res.json(layLogTracking());
+  const trongPhamVi = orderService.phamViDon(req.session.user); // chỉ đơn Xưởng mình (29/09/2026)
+  res.json(layLogTracking().filter(l => trongPhamVi(l.sttKey)));
 });
 
 // Mua tracking THỦ CÔNG cho 1 hoặc nhiều đơn — bổ sung 09/09/2026, theo yêu cầu người dùng. Dùng

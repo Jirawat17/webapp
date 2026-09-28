@@ -68,11 +68,13 @@ async function ghiNhatKyQuetHangLoat({ nguoiQuet, tenKichBan, sttKey, trangThaiC
 // Lấy N hoạt động gần nhất trong toàn hệ thống, lọc tuỳ chọn theo người dùng/loại hành động —
 // dùng cho chatbot (tool tra_cuu_lich_su_gan_day, chỉ mở cho admin/quan_ly, xem routes/chatbot.js).
 // gioiHan chặn trần 50 để không dội quá nhiều dữ liệu vào 1 câu trả lời.
-async function layHoatDongGanDay({ nguoiDung, hanhDong, gioiHan = 20 } = {}) {
+// locDon: như layHoatDongCuaToi — chỉ giữ dòng gắn với đơn trong phạm vi Xưởng người hỏi (29/09/2026).
+async function layHoatDongGanDay({ nguoiDung, hanhDong, gioiHan = 20, locDon = null } = {}) {
   const rows = nhatKyDbService.layTatCaLichSuHoatDong();
   let list = rows;
   if (nguoiDung) list = list.filter(r => r.NguoiDung === nguoiDung);
   if (hanhDong) list = list.filter(r => r.HanhDong === hanhDong);
+  if (locDon) list = list.filter(r => locDon(r.STT_Key));
   return list
     .sort((a, b) => new Date(b.ThoiGian) - new Date(a.ThoiGian))
     .slice(0, Math.min(Number(gioiHan) || 20, 50));
@@ -154,9 +156,12 @@ function trongKhoangThoiGian(isoThoiGian, tuNgay, denNgay) {
   return true;
 }
 
-async function layHoatDongCuaToi({ nguoiDung, tuNgay, denNgay, vaiTroNguoiXem }) {
+// locDon (tuỳ chọn, 29/09/2026): hàm (sttKey) -> boolean — admin xem hoạt động người KHÁC chỉ thấy việc trên đơn
+// thuộc Xưởng mình (orderService.phamViDon); dòng không gắn đơn nào cũng bị ẩn khi có locDon.
+async function layHoatDongCuaToi({ nguoiDung, tuNgay, denNgay, vaiTroNguoiXem, locDon = null }) {
   const rows = nhatKyDbService.layTatCaLichSuHoatDong();
-  const cuaToi = rows.filter(r => r.NguoiDung === nguoiDung && trongKhoangThoiGian(r.ThoiGian, tuNgay, denNgay));
+  const cuaToi = rows.filter(r => r.NguoiDung === nguoiDung && trongKhoangThoiGian(r.ThoiGian, tuNgay, denNgay)
+    && (!locDon || locDon(r.STT_Key)));
 
   const quet = [];
   const doiTrangThai = [];

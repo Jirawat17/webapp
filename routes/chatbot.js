@@ -228,7 +228,8 @@ async function thucThiTool(tenHam, thamSo, ctx) {
       // quay lại phân quyền theo vai trò. Không gửi định nghĩa công cụ này cho vai trò khác admin
       // (xem TOOLS_QUAN_LY phía dưới) — kiểm tra lại 1 lần nữa ở đây phòng model tự bịa tên công cụ.
       if (!laAdmin(ctx.user.vaiTro)) return { loi: 'Không có quyền tra cứu danh sách nhân viên.' };
-      const rows = taiKhoanService.layTatCa();
+      const trongPhamVi = taiKhoanService.phamViNhanVien(ctx.user); // admin: chỉ nhân viên Xưởng mình (29/09/2026)
+      const rows = taiKhoanService.layTatCa().filter(r => trongPhamVi(r.Xuong));
       let list = rows.map(r => ({ ten: r.Ten, vaiTro: r.VaiTro, kichHoat: r.KichHoat }));
       if (thamSo.vaiTro) list = list.filter(nv => nv.vaiTro === thamSo.vaiTro);
       return list;
@@ -237,7 +238,7 @@ async function thucThiTool(tenHam, thamSo, ctx) {
     case 'tra_cuu_lich_su_gan_day': {
       // CHỈ admin — cùng lý do như tra_cuu_nhan_vien ở trên.
       if (!laAdmin(ctx.user.vaiTro)) return { loi: 'Không có quyền tra cứu lịch sử hoạt động chung.' };
-      return await layHoatDongGanDay(thamSo);
+      return await layHoatDongGanDay({ ...thamSo, locDon: orderService.phamViDon(ctx.user) }); // admin: chỉ đơn Xưởng mình
     }
 
     default:
