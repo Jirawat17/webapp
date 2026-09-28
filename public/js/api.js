@@ -209,9 +209,9 @@ function renderNav(user, active) {
       // index 4 lên 5, TK từ 5 lên 6, nên chèn TRƯỚC index 6 (đã tăng từ 5, đổi theo, xem 13/09/2026).
       links.splice(6, 0, { href: '/tracking.html', label: 'Tracking', icon: 'navTracking', key: 'tracking' });
       // "Kịch bản quét" (bổ sung 19/09/2026, theo yêu cầu người dùng — trang quản lý mới thay cho sửa
-      // tay tab Sheet CauHinhKichBan cũ, xem routes/kichBan.js). CHỈ admin/superadmin — ảnh hưởng toàn
-      // bộ luồng quét QR hệ thống, không mở rộng cho ve_file như Tracking/Đơn hàng loạt.
-      links.push({ href: '/kich-ban.html', label: 'Kịch bản quét', icon: 'navScan', key: 'kich-ban' });
+      // tay tab Sheet CauHinhKichBan cũ, xem routes/kichBan.js). Ảnh hưởng toàn bộ luồng quét QR hệ thống —
+      // CHỈ superadmin từ 29/09/2026 (ẩn với admin theo yêu cầu người dùng; trang + API cũng chặn admin).
+      if (user.vaiTro === 'superadmin') links.push({ href: '/kich-ban.html', label: 'Kịch bản quét', icon: 'navScan', key: 'kich-ban' });
     }
     // "Nhân viên" (bổ sung 18/09/2026, theo yêu cầu người dùng) — thu hẹp từ admin+superadmin xuống
     // CHỈ superadmin — KHÁC mọi nhánh khác trong hàm này (đều dùng laAdmin(), coi admin/superadmin

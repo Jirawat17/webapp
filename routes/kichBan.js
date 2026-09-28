@@ -2,13 +2,14 @@ const express = require('express');
 const router = express.Router();
 const kichBanDbService = require('../services/kichBanDbService');
 const { ghiLog } = require('../services/logService');
-const { requireRole } = require('../middleware/auth');
+const { requireExactRole } = require('../middleware/auth');
 
 // Quản lý "Kịch bản" quét QR — bổ sung 19/09/2026, theo yêu cầu người dùng (xây trang riêng thay cho
 // sửa tay tab Sheet CauHinhKichBan cũ, xem docs/superpowers/specs/2026-09-19-kich-ban-sqlite-design.md).
-// CHỈ admin/superadmin — kịch bản ảnh hưởng TOÀN BỘ luồng quét QR hệ thống (mọi vai trò dùng), không
-// phải cấu hình cá nhân, nên không mở rộng cho ve_file như "Đơn hàng loạt"/"Tracking".
-router.use(requireRole());
+// Kịch bản ảnh hưởng TOÀN BỘ luồng quét QR hệ thống (mọi vai trò dùng), không phải cấu hình cá nhân — CHỈ
+// superadmin (thu hẹp từ admin+superadmin 29/09/2026, theo yêu cầu người dùng). Danh sách kịch bản để QUÉT vẫn
+// qua routes/qr.js GET /kich-ban (không đổi) — route này chỉ là trang quản lý thêm/sửa/xoá.
+router.use(requireExactRole('superadmin'));
 
 const COT_HOP_LE = ['', 'TRANG_THAI_XUONG', 'TRANG_THAI_PHOI', 'TRANG_THAI_VE_FILE'];
 

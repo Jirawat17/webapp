@@ -25,7 +25,7 @@ function maKhachTuSttKey(sttKey) {
   return m ? m[1].toUpperCase() : KHACH_KHONG_RO;
 }
 
-// Bảng thống kê theo nhóm (khách hàng / Xưởng) — xem
+// Bảng thống kê theo nhóm (khách hàng; bảng theo Xưởng đã xoá 29/09/2026) — xem
 // docs/superpowers/specs/2026-09-15-thong-ke-khach-hang-va-an-menu-san-xuat-design.md. "Có file, chưa
 // chạy máy" tính JOIN thật trên từng đơn (không suy ra từ hiệu daVeFile - daChayMay) vì dữ liệu Sheet
 // có thể bị sửa tay lệch khỏi luồng app (đơn "đã chạy máy" chưa chắc "đã vẽ file"). Nhóm `nhomCuoi`
@@ -116,7 +116,6 @@ router.get('/thong-ke', async (req, res) => {
     danhSachKhachHang,
     theoTrangThai: demTheo(rows, layTrangThai),
     theoKhachHangChiTiet: thongKeTheoNhom(rows, r => maKhachTuSttKey(r.STT_Key), KHACH_KHONG_RO),
-    theoXuongChiTiet: thongKeTheoNhom(rows, r => r.XUONG || '(chưa gán)', '(chưa gán)'),
     theoLoaiSanPham: demTheo(rows, layLoai),
     theoTuan: demTheo(rows, tuanCuaDon),
     chongTheoKhach: {

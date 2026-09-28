@@ -58,23 +58,9 @@
     </div>
   </div>
 
-  <!-- Bảng theo Xưởng (bổ sung 25/09/2026) — cùng cột với bảng khách hàng ở trên. -->
-  <div class="chart-card" style="margin-bottom:var(--space-4)">
-    <h3 style="margin-top:0">Theo Xưởng</h3>
-    <div class="bang-cuon-ngang">
-      <table class="bang-xem-truoc">
-        <thead><tr>
-          <th>Xưởng</th><th>Tổng đơn</th><th>Đã DÁN TEM</th><th>Chưa DÁN TEM</th>
-          <th>Đã vẽ file</th><th>Đã chạy máy</th><th>Có file, chưa chạy máy</th><th>Chưa có file vẽ</th>
-        </tr></thead>
-        <tbody id="bang-theo-xuong-body"></tbody>
-      </table>
-    </div>
-  </div>
-
+  <!-- Bảng + biểu đồ "theo Xưởng" ĐÃ XOÁ 29/09/2026, theo yêu cầu người dùng. -->
   <div class="chart-grid">
     <div class="chart-card"><canvas id="chart-khach-hang"></canvas></div>
-    <div class="chart-card"><canvas id="chart-xuong"></canvas></div>
     <div class="chart-card"><canvas id="chart-trangthai"></canvas></div>
     <div class="chart-card"><canvas id="chart-loai"></canvas></div>
     <div class="chart-card"><canvas id="chart-tuan"></canvas></div>
@@ -84,7 +70,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
 <script src="/js/icons.js?v=104"></script>
-<script src="/js/api.js?v=107"></script>
+<script src="/js/api.js?v=108"></script>
 <script>
 let kyHienTai = 'toan_bo';
 const cacBieuDo = {};
@@ -183,12 +169,10 @@ async function taiThongKe() {
 
   const tongDonTheoNhom = list => Object.fromEntries(list.map(n => [n.khachHang, n.tongDon]));
   veBieuDoCot('chart-khach-hang', 'Số đơn theo khách hàng', tongDonTheoNhom(stats.theoKhachHangChiTiet));
-  veBieuDoCot('chart-xuong', 'Số đơn theo Xưởng', tongDonTheoNhom(stats.theoXuongChiTiet));
   veBieuDoChong('chart-trangthai', 'Theo trạng thái (chia theo khách hàng)', stats.chongTheoKhach.trangThai);
   veBieuDoChong('chart-loai', 'Theo loại sản phẩm (chia theo khách hàng)', stats.chongTheoKhach.loai);
   veBieuDoChong('chart-tuan', 'Đơn theo tuần — ngày lên đơn (chia theo khách hàng)', stats.chongTheoKhach.tuan, soSanhTuan);
   veBangTheoNhom('bang-theo-khach-hang-body', stats.theoKhachHangChiTiet);
-  veBangTheoNhom('bang-theo-xuong-body', stats.theoXuongChiTiet);
 }
 
 let mauTheoKhach = {};
