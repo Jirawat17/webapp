@@ -426,7 +426,8 @@ function renderDanhSachSanSang() {
         : ''}
       <div class="thong-tin">
         ${htmlTieuDeThe(o)}
-        <div class="meta">${escapeHtml(o.TenKhachHang || '')} · Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgayNgan(o.NGAY_LEN_DON) : '—')} · SL: <strong>${escapeHtml(o.SO_LUONG || '')}</strong></div>
+        <div style="font-size:3.6rem;font-weight:700;line-height:1.1;margin:2px 0;color:var(--color-text)" title="Số lượng áo">SL: ${escapeHtml(o.SO_LUONG || '—')}</div>
+        <div class="meta">${escapeHtml(o.TenKhachHang || '')} · Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgayNgan(o.NGAY_LEN_DON) : '—')}</div>
         <div class="badge-row">
           ${o.DonUuTien ? `<span class="badge trang-thai-danger">${icon('star', {size:14})} Ưu tiên</span>` : ''}
           <span class="badge ${lopTrangThai(o.TRANG_THAI_XUONG)}">${escapeHtml(o.TRANG_THAI_XUONG || '')}</span>
@@ -675,7 +676,8 @@ function renderDanhSachDangChay(coLocNaoDangChon) {
         : ''}
       <div class="thong-tin">
         ${htmlTieuDeThe(o)}
-        <div class="meta">${escapeHtml(o.TenKhachHang || '')} · Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgayNgan(o.NGAY_LEN_DON) : '—')} · SL: <strong>${escapeHtml(o.SO_LUONG || '')}</strong></div>
+        <div style="font-size:3.6rem;font-weight:700;line-height:1.1;margin:2px 0;color:var(--color-text)" title="Số lượng áo">SL: ${escapeHtml(o.SO_LUONG || '—')}</div>
+        <div class="meta">${escapeHtml(o.TenKhachHang || '')} · Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgayNgan(o.NGAY_LEN_DON) : '—')}</div>
         <div class="badge-row">
           ${o.DonUuTien ? `<span class="badge trang-thai-danger">${icon('star', {size:14})} Ưu tiên</span>` : ''}
           <span class="badge ${lopTrangThai(o.TRANG_THAI_XUONG)}">${escapeHtml(o.TRANG_THAI_XUONG || '')}</span>

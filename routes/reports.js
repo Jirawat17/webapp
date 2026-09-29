@@ -619,77 +619,59 @@ function veOTrongPdf(doc, x, y, kichThuoc, chuThich) {
   doc.fillColor('#000000');
 }
 
-// Băng chữ nổi bật (bổ sung 14/09/2026, theo yêu cầu người dùng — xem
-// docs/superpowers/specs/2026-09-14-bang-uu-tien-hang-loat-tren-the-in-design.md) — dùng cho "ĐƠN ƯU
-// TIÊN"/"ĐƠN HÀNG LOẠT" trên thẻ in. Nền đen full chiều ngang thẻ, chữ trắng đậm căn giữa — cùng kỹ
-// thuật hình chữ nhật PDFKit thuần vector đã dùng cho khung đen quanh QR (không raster, luôn nhanh).
-// Đo CHIỀU CAO THẬT của chữ qua doc.heightOfString() (cùng kỹ thuật đã dùng cho khối "ảnh dư" bên
-// dưới) thay vì đoán cố định — trả về tổng chiều cao đã dùng để hàm gọi cộng dồn y tiếp.
-const CO_CHU_BANG_NOI_BAT = 18;
-const DEM_BANG_NOI_BAT = 4; // khoảng đệm trên/dưới chữ trong băng
-function veBangDenNoiBat(doc, chu, x0, y, rongTrong) {
-  doc.font('NotoSans-Bold').fontSize(CO_CHU_BANG_NOI_BAT);
-  const caoChu = doc.heightOfString(chu, { width: rongTrong, align: 'center' });
-  const caoBang = caoChu + DEM_BANG_NOI_BAT * 2;
-  doc.rect(x0, y, rongTrong, caoBang).fill('#000000');
-  doc.fillColor('#ffffff').text(chu, x0, y + DEM_BANG_NOI_BAT, { width: rongTrong, align: 'center' });
+// Nhãn "ƯU TIÊN"/"HÀNG LOẠT" (bổ sung 14/09/2026 — xem docs/superpowers/specs/2026-09-14-bang-uu-tien-hang-loat-tren-the-in-
+// design.md; vẽ hình chữ nhật PDFKit thuần vector). Từ 30/09/2026 (theo hình mẫu + xác nhận của người dùng): nhãn đen NHỎ ở
+// GÓC DƯỚI PHẢI thẻ, chữ trắng đậm 10pt; đơn vừa ưu tiên vừa hàng loạt thì gộp 1 nhãn "ƯU TIÊN · HÀNG LOẠT". Trả chiều cao.
+const CO_CHU_NHAN_NHO = 10;
+const DEM_NHAN_NHO = 3;
+function caoNhanNho(doc) {
+  doc.font('NotoSans-Bold').fontSize(CO_CHU_NHAN_NHO);
+  return doc.currentLineHeight(true) + DEM_NHAN_NHO * 2;
+}
+function veNhanNho(doc, chu, xPhai, yDay) {
+  const cao = caoNhanNho(doc);
+  const rong = doc.widthOfString(chu) + 12;
+  doc.rect(xPhai - rong, yDay - cao, rong, cao).fill('#000000');
+  doc.fillColor('#ffffff').text(chu, xPhai - rong + 6, yDay - cao + DEM_NHAN_NHO, { lineBreak: false });
   doc.fillColor('#000000'); // .fill() đổi fillColor hiện tại của doc — phải trả lại màu chữ mặc định
-  return caoBang;
+  return cao;
 }
 
+// Vẽ chữ 1 dòng sao cho ĐỈNH chữ hoa/số nằm đúng yDinh (bỏ khoảng trống phía trên chữ hoa của khung dòng) — trả về
+// đường chân chữ (baseline). Dùng cho số to (SL) để khối gọn, không chừa khoảng trắng thừa.
+function veChuTheoDinh(doc, chu, x, yDinh) {
+  const f = doc._font;
+  const co = doc._fontSize;
+  doc.text(chu, x, yDinh - (f.ascender - f.capHeight) / 1000 * co, { lineBreak: false });
+  return yDinh + f.capHeight / 1000 * co;
+}
+// Vẽ chữ 1 dòng có đường chân chữ đúng `chanChu` — căn thẳng hàng các cỡ chữ khác nhau trên cùng 1 hàng.
+function veChuTheoChanChu(doc, chu, x, chanChu) {
+  doc.text(chu, x, chanChu - doc._font.ascender / 1000 * doc._fontSize, { lineBreak: false });
+}
+
+// Thẻ in 1 đơn (khổ 100x150mm, KHÔNG còn dòng chân trang) — bố cục theo HÌNH MẪU người dùng gửi 30/09/2026 (lần 2):
+//   MÃ ĐƠN (26pt đậm)                                             [ QR ]
+//   Tên người nhận (9pt đậm, 1 dòng, dài thì "…")                  [ QR ]
+//   Loại · Size · Màu (14pt)                                      [ QR ]
+//   SL: n (30pt đậm)              dd/mm (ngày lên đơn, 10pt)      [ QR ]
+//   [ Ảnh mẫu ] [ Ảnh mockup ]
+//   Vị trí thêu (chỉ giá trị, 10pt)
+//   (Còn ảnh chưa hiển thị hết ...) — chỉ khi có ảnh dư
+//   Áo/đơn: n (số 30pt đậm)   Ghi chú: ... (15pt đậm, chảy tiếp xuống các dòng dưới, hết chỗ thì "…")
+//                                                   [ ƯU TIÊN · HÀNG LOẠT ] — nhãn nhỏ góc dưới phải, chỉ khi có
+// Dữ liệu giữ nguyên như trước: SL = SO_LUONG (trống -> "—"), Áo/đơn = SO_LUONG_AO_TREN_DON (trống -> để trống), tên = TEN
+// (cột "Người nhận" dùng tạo vận đơn GKE, KHÁC TenKhachHang), vị trí = VI_TRI_1, ghi chú = GHI_CHU, ngày = NGAY_LEN_DON.
+const CO_CHU_GHI_CHU = 15;
 function veTheDonPdf(doc, don, anh, offsetY, caoThe) {
   const rong = mmToPt(KHO_GIAY_MM.rong);
   const leTrong = 5;
   const x0 = leTrong;
   const rongTrong = rong - leTrong * 2;
-  let y = offsetY + leTrong;
+  const yDau = offsetY + leTrong;
+  const yGioiHanDuoi = offsetY + caoThe - leTrong;
 
-  // Dòng tiêu đề — cỡ chữ lớn hơn để dễ nhìn khi dán lên áo
-  doc.font('NotoSans-Bold').fontSize(13).text(don.STT_Key || '', x0, y, { width: rongTrong });
-  y += 18;
-
-  // Tên người nhận (bổ sung 20/09/2026, sửa 21/09/2026 bỏ nhãn "Người nhận: " theo yêu cầu người dùng
-  // — CHỈ trên PDF in, bản Excel vẫn giữ nhãn) — don.TEN là cột "Người nhận" đã có sẵn từ trước (dùng
-  // để tạo vận đơn GKE thật, xem services/gkeService.js#thongTinNguoiNhan; cùng dữ liệu đang hiển thị ở
-  // public/order.html dòng "Người nhận"), KHÁC don.TenKhachHang (khách hàng/đại lý đặt đơn) — chỉ chưa
-  // từng được vẽ lên thẻ in. Đặt NGAY DƯỚI mã đơn, trên cùng thẻ, theo đúng vị trí đã chốt với người
-  // dùng. Bỏ qua nếu trống (đơn chưa điền cột này) — không vẽ dòng trống vô nghĩa.
-  if (don.TEN) {
-    doc.font('NotoSans').fontSize(10).text(don.TEN, x0, y, { width: rongTrong });
-    y += 13;
-  }
-
-  doc.font('NotoSans').fontSize(10).text(`${don.LOAI || ''} · ${don.KICH_THUOC || ''} · ${don.MAU_SAC || ''}`, x0, y, { width: rongTrong });
-  y += 14;
-
-  // Băng "ĐƠN ƯU TIÊN"/"ĐƠN HÀNG LOẠT" (bổ sung 14/09/2026) — TRƯỚC khối ảnh, theo đúng vị trí đã chốt
-  // với người dùng. Đơn thường (không ưu tiên, không hàng loạt) thì KHÔNG vẽ gì thêm — layout giữ
-  // NGUYÊN như trước, không đổi hành vi. Đơn vừa ưu tiên vừa hàng loạt thì xếp CHỒNG 2 băng.
-  if (orderService.laUuTien(don)) y += veBangDenNoiBat(doc, 'ĐƠN ƯU TIÊN', x0, y, rongTrong) + 4;
-  if (don.NHOM_HANG_LOAT) y += veBangDenNoiBat(doc, 'ĐƠN HÀNG LOẠT', x0, y, rongTrong) + 4;
-
-  // KHỐI ẢNH (ưu tiên): 2 ảnh to xếp cạnh nhau, chiếm hết chiều ngang thẻ — to gấp đôi bố cục cũ
-  const khoangCachAnh = 4;
-  const anhKichThuoc = (rongTrong - khoangCachAnh) / 2; // mỗi ảnh ~65mm — to gần gấp đôi khổ thẻ, hết chiều rộng
-  const anhY = y;
-  // Ảnh mẫu (bên trái)
-  if (anh.mau) {
-    try { doc.image(anh.mau, x0, anhY, { fit: [anhKichThuoc, anhKichThuoc] }); }
-    catch (e) { veOTrongPdf(doc, x0, anhY, anhKichThuoc, 'Không tải được ảnh mẫu'); }
-  } else {
-    veOTrongPdf(doc, x0, anhY, anhKichThuoc, 'Không có ảnh mẫu');
-  }
-  // Ảnh mockup (bên phải)
-  const anhX2 = x0 + anhKichThuoc + khoangCachAnh;
-  if (anh.mockup) {
-    try { doc.image(anh.mockup, anhX2, anhY, { fit: [anhKichThuoc, anhKichThuoc] }); }
-    catch (e) { veOTrongPdf(doc, anhX2, anhY, anhKichThuoc, 'Không tải được ảnh mockup'); }
-  } else {
-    veOTrongPdf(doc, anhX2, anhY, anhKichThuoc, 'Không có ảnh mockup');
-  }
-  y = anhY + anhKichThuoc + 6;
-
-  // KHỐI DƯỚI: QR nhỏ (~26.3mm, vẫn đủ quét bằng điện thoại/máy QR) + thông tin bên phải
+  // QR (~26.3mm, vẫn đủ quét bằng điện thoại/máy QR) — góc trên phải thẻ
   // Viền trắng + khung đen quanh mã VẼ BẰNG HÌNH CHỮ NHẬT PDFKit (vector, cực nhanh, không qua ảnh
   // raster) — KHÔNG dùng sharp nữa (từng gây treo/rất chậm thật trên production khi raster hoá qua
   // sharp, xem docs/superpowers/specs/2026-09-07-khung-den-qr-code-design.md). Mã QR thật dùng đúng
@@ -700,56 +682,120 @@ function veTheDonPdf(doc, don, anh, offsetY, caoThe) {
   const doDayVienTrang = qrThatKichThuoc * 0.10;
   const doDayKhungDen = qrThatKichThuoc * 0.08;
   const qrKichThuoc = qrThatKichThuoc + 2 * (doDayVienTrang + doDayKhungDen); // tổng cả viền + khung
-  const qrY = y;
+  const qrY = yDau;
+  const qrX = x0 + rongTrong - qrKichThuoc; // góc trên PHẢI (hình mẫu 30/09/2026)
   if (anh.qr) {
-    doc.rect(x0, qrY, qrKichThuoc, qrKichThuoc).fill('#000000'); // khung đen ngoài cùng
-    doc.rect(x0 + doDayKhungDen, qrY + doDayKhungDen, qrKichThuoc - doDayKhungDen * 2, qrKichThuoc - doDayKhungDen * 2).fill('#ffffff'); // viền trắng
-    doc.image(anh.qr, x0 + doDayKhungDen + doDayVienTrang, qrY + doDayKhungDen + doDayVienTrang, { width: qrThatKichThuoc, height: qrThatKichThuoc });
+    doc.rect(qrX, qrY, qrKichThuoc, qrKichThuoc).fill('#000000'); // khung đen ngoài cùng
+    doc.rect(qrX + doDayKhungDen, qrY + doDayKhungDen, qrKichThuoc - doDayKhungDen * 2, qrKichThuoc - doDayKhungDen * 2).fill('#ffffff'); // viền trắng
+    doc.image(anh.qr, qrX + doDayKhungDen + doDayVienTrang, qrY + doDayKhungDen + doDayVienTrang, { width: qrThatKichThuoc, height: qrThatKichThuoc });
     doc.fillColor('#000000'); // .fill() đổi fillColor hiện tại của doc — phải trả lại màu chữ mặc định trước khi vẽ chữ tiếp theo
   } else {
-    veOTrongPdf(doc, x0, qrY, qrKichThuoc, 'Không có QR');
+    veOTrongPdf(doc, qrX, qrY, qrKichThuoc, 'Không có QR');
   }
 
-  const infoX = x0 + qrKichThuoc + 5;
-  const infoRong = rongTrong - qrKichThuoc - 5;
-  let yInfo = qrY;
-  const viTri = don.VI_TRI_1 || '';
-  doc.font('NotoSans-Bold').fontSize(9).text('Vị trí thêu: ', infoX, yInfo, { continued: true, width: infoRong });
-  doc.font('NotoSans').text(viTri || '—');
-  yInfo += 13;
-  doc.font('NotoSans').fontSize(9).text(`SL: ${don.SO_LUONG ?? ''} · Áo/đơn: ${don.SO_LUONG_AO_TREN_DON ?? ''}`, infoX, yInfo, { width: infoRong });
-  yInfo += 13;
-  doc.font('NotoSans').fontSize(9).text(`Ngày: ${dinhDangNgay(don.NGAY_LEN_DON)}`, infoX, yInfo, { width: infoRong });
-  yInfo += 13;
+  // KHỐI TRÊN TRÁI (cạnh QR): mã đơn / tên người nhận / loại·size·màu / SL + ngày.
+  const rongTrai = qrX - x0 - 6;
+  let y = yDau;
+  const maDon = don.STT_Key || '';
+  doc.font('NotoSans-Bold').fontSize(26);
+  doc.fontSize(Math.min(26, 26 * rongTrai / (doc.widthOfString(maDon) || 1))); // mã dài tự thu nhỏ, không lấn sang QR
+  y = veChuTheoDinh(doc, maDon, x0, y) + 5;
+  if (don.TEN) { // trống thì không vẽ dòng trống
+    doc.font('NotoSans-Bold').fontSize(9);
+    const caoDong = doc.currentLineHeight(true);
+    doc.text(don.TEN, x0, y, { width: rongTrai, height: caoDong + 0.5, ellipsis: true }); // đúng 1 dòng, dài thì "…"
+    y += caoDong;
+  }
+  const chuLoai = `${don.LOAI || ''} · ${don.KICH_THUOC || ''} · ${don.MAU_SAC || ''}`;
+  doc.font('NotoSans').fontSize(14);
+  const caoLoai = doc.heightOfString(chuLoai, { width: rongTrai });
+  doc.text(chuLoai, x0, y, { width: rongTrai });
+  y += caoLoai + 3;
+  // SL 30pt đậm + ngày dd/mm (10pt) sát mép phải khối, cùng đường chân chữ; SL dài bất thường tự thu nhỏ cho khỏi đè ngày.
+  const ngayDay = dinhDangNgay(don.NGAY_LEN_DON);
+  const ngayNgan = /^\d{2}\/\d{2}\/\d{4}$/.test(ngayDay) ? ngayDay.slice(0, 5) : ngayDay;
+  doc.font('NotoSans').fontSize(10);
+  const rongNgay = ngayNgan ? doc.widthOfString(ngayNgan) : 0;
+  const chuSl = `SL: ${don.SO_LUONG || '—'}`;
+  doc.font('NotoSans-Bold').fontSize(30);
+  doc.fontSize(Math.min(30, 30 * (rongTrai - rongNgay - 8) / doc.widthOfString(chuSl)));
+  const chanChuSl = veChuTheoDinh(doc, chuSl, x0, y);
+  if (ngayNgan) {
+    doc.font('NotoSans').fontSize(10);
+    veChuTheoChanChu(doc, ngayNgan, x0 + rongTrai - rongNgay, chanChuSl);
+  }
+  y = Math.max(chanChuSl + 4, qrY + qrKichThuoc) + 6;
 
-  // Đơn có ẢNH DƯ (nguồn ảnh là thư mục Drive nhiều hơn 1 ảnh, ảnh đầu đã dùng cho 2 ô ảnh chính ở
-  // trên, các ảnh còn lại KHÔNG có chỗ trên thẻ) — bổ sung 05/09/2026, theo yêu cầu người dùng. Trước
-  // đó gộp in bổ sung ở 1 trang A4 riêng cuối file (đã bỏ hẳn trang đó), giờ ghi thẳng 1 dòng nhắc lên
-  // chính thẻ đơn để người vận hành biết cần xem thêm ở đâu, không đi kèm link URL (thẻ in giấy khổ
-  // nhỏ 100x150mm, không bấm được) — dùng doc.heightOfString() đo đúng chiều cao THẬT SỰ (có thể xuống
-  // dòng) để trừ đúng vào chỗ còn lại cho Ghi chú bên dưới, tránh đè chữ lên nhau.
+  // 2 ẢNH to xếp cạnh nhau, hết chiều ngang thẻ.
+  const khoangCachAnh = 4;
+  const anhKichThuoc = (rongTrong - khoangCachAnh) / 2;
+  const anhY = y;
+  if (anh.mau) {
+    try { doc.image(anh.mau, x0, anhY, { fit: [anhKichThuoc, anhKichThuoc] }); }
+    catch (e) { veOTrongPdf(doc, x0, anhY, anhKichThuoc, 'Không tải được ảnh mẫu'); }
+  } else {
+    veOTrongPdf(doc, x0, anhY, anhKichThuoc, 'Không có ảnh mẫu');
+  }
+  const anhX2 = x0 + anhKichThuoc + khoangCachAnh;
+  if (anh.mockup) {
+    try { doc.image(anh.mockup, anhX2, anhY, { fit: [anhKichThuoc, anhKichThuoc] }); }
+    catch (e) { veOTrongPdf(doc, anhX2, anhY, anhKichThuoc, 'Không tải được ảnh mockup'); }
+  } else {
+    veOTrongPdf(doc, anhX2, anhY, anhKichThuoc, 'Không có ảnh mockup');
+  }
+  y = anhY + anhKichThuoc + 6;
+
+  // Vị trí thêu — chỉ giá trị (hình mẫu bỏ nhãn "Vị trí thêu:").
+  doc.font('NotoSans').fontSize(10).text(don.VI_TRI_1 || '—', x0, y, { width: rongTrong });
+  y = doc.y + 3;
+
+  // Đơn có ẢNH DƯ (nguồn ảnh là thư mục Drive nhiều hơn 1 ảnh — bổ sung 05/09/2026): 1 dòng nhắc xem thêm ở trang chi tiết.
   if (anh.anhDu && anh.anhDu.length > 0) {
-    const CO_CHU_ANH_DU = 7.5;
     const NOI_DUNG_ANH_DU = 'Còn ảnh chưa hiển thị hết, xem thêm tại trang chi tiết đơn (quét QR hoặc tìm theo mã đơn).';
-    doc.font('NotoSans-Bold').fontSize(CO_CHU_ANH_DU);
-    const caoAnhDu = doc.heightOfString(NOI_DUNG_ANH_DU, { width: infoRong });
-    doc.text(NOI_DUNG_ANH_DU, infoX, yInfo, { width: infoRong });
-    yInfo += caoAnhDu + 3;
+    doc.font('NotoSans-Bold').fontSize(7.5);
+    const caoAnhDu = doc.heightOfString(NOI_DUNG_ANH_DU, { width: rongTrong });
+    doc.text(NOI_DUNG_ANH_DU, x0, y, { width: rongTrong });
+    y += caoAnhDu + 3;
   }
 
+  // Hàng Áo/đơn: nhãn 13pt + số 30pt đậm, chung 1 đường chân chữ; GHI CHÚ bắt đầu ngay bên phải trên cùng hàng.
+  doc.font('NotoSans-Bold').fontSize(30);
+  const chanChu = y + doc._font.capHeight / 1000 * 30;
+  const nhanAoDon = 'Áo/đơn: ';
+  doc.font('NotoSans').fontSize(13);
+  const rongNhanAoDon = doc.widthOfString(nhanAoDon);
+  veChuTheoChanChu(doc, nhanAoDon, x0, chanChu);
+  doc.font('NotoSans-Bold').fontSize(30);
+  const soAoTrenDon = String(don.SO_LUONG_AO_TREN_DON ?? '').trim(); // trống -> để trống như trước
+  const rongSoAo = soAoTrenDon ? doc.widthOfString(soAoTrenDon) : 0;
+  if (soAoTrenDon) veChuTheoChanChu(doc, soAoTrenDon, x0 + rongNhanAoDon, chanChu);
+  y = chanChu + 8;
+
+  // Nhãn ƯU TIÊN / HÀNG LOẠT góc dưới phải — giữ chỗ TRƯỚC để Ghi chú không bao giờ đè lên.
+  const nhanNoiBat = [orderService.laUuTien(don) && 'ƯU TIÊN', don.NHOM_HANG_LOAT && 'HÀNG LOẠT'].filter(Boolean).join(' · ');
+  const yDayGhiChu = nhanNoiBat ? yGioiHanDuoi - caoNhanNho(doc) - 3 : yGioiHanDuoi;
+
+  // Ghi chú 15pt đậm: dòng ĐẦU nằm bên phải Áo/đơn (cùng đường chân chữ), phần còn lại chảy xuống các dòng dưới trải cả
+  // chiều ngang; hết chỗ thì cắt "…" — không bao giờ tràn xuống nhãn/khổ giấy.
   if (don.GHI_CHU) {
-    // In đậm + cỡ chữ lớn hẳn (15, so với 9 của các dòng khác) để nổi bật, dễ nhìn hơn hẳn — theo
-    // đúng yêu cầu người dùng. Giới hạn CHIỀU CAO còn lại tới trước dòng chú thích cuối trang
-    // (dongNguoiXuat, vẽ bởi veTrangDonCanInPdf) + ellipsis: true để pdfkit tự cắt bớt nếu ghi chú
-    // quá dài, tuyệt đối không vẽ đè/tràn lên dòng chú thích đó dù cỡ chữ đã tăng nhiều.
-    const CO_CHU_GHI_CHU = 15;
-    const yGioiHanDuoi = offsetY + caoThe - leTrong;
-    const chieuCaoConLai = yGioiHanDuoi - yInfo;
-    if (chieuCaoConLai >= CO_CHU_GHI_CHU) {
-      doc.font('NotoSans-Bold').fontSize(CO_CHU_GHI_CHU)
-        .text(`Ghi chú: ${don.GHI_CHU}`, infoX, yInfo, { width: infoRong, height: chieuCaoConLai, ellipsis: true });
+    doc.font('NotoSans-Bold').fontSize(CO_CHU_GHI_CHU);
+    const caoDong = doc.currentLineHeight(true);
+    const xDau = x0 + rongNhanAoDon + rongSoAo + 10;
+    const rongDau = x0 + rongTrong - xDau;
+    const cacTu = `Ghi chú: ${don.GHI_CHU}`.split(/\s+/).filter(Boolean);
+    let soTuDau = 0;
+    while (soTuDau < cacTu.length && doc.widthOfString(cacTu.slice(0, soTuDau + 1).join(' ')) <= rongDau) soTuDau++;
+    let dongDau = cacTu.slice(0, soTuDau).join(' ');
+    const phanCon = cacTu.slice(soTuDau).join(' ');
+    const conCho = yDayGhiChu - y >= caoDong;
+    if (phanCon && !conCho && dongDau) { // hết chỗ cho phần sau -> cắt ngay dòng đầu bằng "…"
+      while (dongDau && doc.widthOfString(dongDau + '…') > rongDau) dongDau = dongDau.replace(/\s*\S+$/, '');
+      dongDau += '…';
     }
+    if (dongDau) veChuTheoChanChu(doc, dongDau, xDau, chanChu);
+    if (phanCon && conCho) doc.text(phanCon, x0, y, { width: rongTrong, height: yDayGhiChu - y, ellipsis: true });
   }
+  if (nhanNoiBat) veNhanNho(doc, nhanNoiBat, x0 + rongTrong, yGioiHanDuoi);
 }
 
 // onTienDo (tuỳ chọn) — gọi lại SAU MỖI đơn đã xử lý xong (đã tải ảnh xong), dùng để báo tiến độ ra
@@ -757,23 +803,17 @@ function veTheDonPdf(doc, don, anh, offsetY, caoThe) {
 // kiemTraHuy (tuỳ chọn) — gọi TRƯỚC MỖI đơn, trả true thì dừng ngay (không xử lý tiếp các đơn còn
 // lại) — cùng cơ chế 'kiemTraHuy' đã dùng ở chayHangLoatCoTienDo() bên public/js/api.js: đơn đang xử
 // lý dở vẫn hoàn tất bình thường, chỉ không bắt đầu đơn kế tiếp.
+// dongNguoiXuat: KHÔNG còn in (bỏ dòng chân trang 30/09/2026, theo hình mẫu người dùng) — giữ tham số cho nơi gọi.
 async function veTrangDonCanInPdf(doc, list, dongNguoiXuat, onTienDo, kiemTraHuy) {
   const rong = mmToPt(KHO_GIAY_MM.rong);
   const cao = mmToPt(KHO_GIAY_MM.cao);
-  const caoFooter = 9;
-  // 1 đơn 1 trang — ảnh to hơn hẳn, dễ đối chiếu khi dán lên áo (trước đây 2 đơn/trang, ảnh nhỏ)
-  const caoThe = cao - caoFooter;
 
   for (let i = 0; i < list.length; i++) {
     if (kiemTraHuy && kiemTraHuy()) break;
-    if (i > 0) doc.addPage({ size: [rong, cao], margin: 0 });
+    if (i > 0) doc.addPage({ size: [rong, cao], margin: 0 }); // 1 đơn 1 trang
 
     const anh = await taiAnhChoDon(list[i]);
-    veTheDonPdf(doc, list[i], anh, 0, caoThe);
-
-    doc.font('NotoSans').fontSize(5).fillColor('#9ca3af')
-      .text(dongNguoiXuat, 4, cao - caoFooter + 1, { width: rong - 8, align: 'center' });
-    doc.fillColor('#000000');
+    veTheDonPdf(doc, list[i], anh, 0, cao);
 
     if (onTienDo) onTienDo();
   }
