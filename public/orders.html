@@ -19,13 +19,13 @@
       <button type="button" class="btn-hanh-dong phu" id="btn-mo-loc" onclick="batTatPanel('panel-loc')"></button>
       <button type="button" class="btn-hanh-dong phu" id="btn-mo-sap-xep" onclick="batTatPanel('panel-sap-xep')"></button>
       <!-- "IN DANH SÁCH PHÔI CỦA ĐƠN ĐANG CHỌN" hiện LẠI 23/09/2026, theo yêu cầu người dùng — đã tạm
-           ẩn cùng nút dưới đây từ 07/09/2026, giờ chỉ hiện lại đúng nút này (nút dưới vẫn TẠM ẨN,
-           CHỈ ẩn qua style="display:none", KHÔNG xoá code/JS — bỏ thuộc tính style để hiện lại khi cần). -->
+           ẩn cùng nút IN ĐƠN từ 07/09/2026 (IN ĐƠN hiện lại 29/09/2026). Nhãn rút gọn "IN DANH SÁCH PHÔI" 29/09/2026. -->
       <button type="button" class="btn-hanh-dong phu" id="btn-in-phoi-ao" onclick="inPhoiDangChon(this)"></button>
       <!-- IN ĐƠN TỪ FILE PHÔI (29/09/2026) — chọn file DSPhoiAoTongHop.pdf -> in DonCanIn các đơn trong file (inDonTuFilePhoi). -->
       <button type="button" class="btn-hanh-dong phu" id="btn-in-don-tu-file-phoi" onclick="document.getElementById('file-phoi-ao').click()"></button>
       <input type="file" id="file-phoi-ao" accept="application/pdf,.pdf" hidden onchange="inDonTuFilePhoi(this)">
-      <button type="button" class="btn-hanh-dong phu" id="btn-in-don-dang-chon" onclick="inDonDangChon(this)" style="display:none"></button>
+      <!-- IN ĐƠN (hiện lại 29/09/2026, theo yêu cầu người dùng) — DonCanIn các đơn đang tick, mọi vai trò như IN DANH SÁCH PHÔI. -->
+      <button type="button" class="btn-hanh-dong phu" id="btn-in-don-dang-chon" onclick="inDonDangChon(this)"></button>
       <button type="button" class="btn-hanh-dong phu" id="btn-in-ma-phoi-don" onclick="inMaPhoiDonDangChon(this)"></button>
       <!-- btn-quet-hang-loat: hiện lại 13/09/2026 theo yêu cầu người dùng (để thử đánh giá độ chính
            xác gộp nhóm) — style="display:none" gốc bỏ đi, chuyển sang ẩn/hiện theo vai trò bằng JS
@@ -67,16 +67,6 @@
 
   <div id="panel-loc" class="panel-dieu-khien" style="display:none">
     <div class="inline-form">
-      <!-- Lọc tổng quát (29/09/2026, theo yêu cầu người dùng) — 3 nhóm trạng thái, lọc ở server (routes/orders.js#NHOM_LOC_TONG_QUAT). -->
-      <div class="truong">
-        <label for="loc-tong-quat">Lọc tổng quát</label>
-        <select id="loc-tong-quat">
-          <option value="">Tất cả</option>
-          <option value="DA_SAN_XUAT">Đơn đã sản xuất</option>
-          <option value="CHUA_SAN_XUAT">Đơn chưa sản xuất</option>
-          <option value="GIAO_HOAN_HUY">Đơn đã giao/hoàn/hủy</option>
-        </select>
-      </div>
       <div class="truong">
         <label for="loc-trang-thai">Trạng thái</label>
         <select id="loc-trang-thai"><option value="">Tất cả trạng thái</option></select>
@@ -104,10 +94,6 @@
         <label for="loc-kh">Tìm theo đơn / mã KH</label>
         <input id="loc-kh" placeholder="STT_Key hoặc mã khách hàng">
       </div>
-      <div class="truong truong-rong">
-        <label for="loc-ma-tracking">Tìm theo Mã Tracking</label>
-        <input id="loc-ma-tracking" placeholder="Mã Tracking">
-      </div>
       <div class="truong truong-ngay">
         <label for="loc-tu-ngay">Từ ngày</label>
         <input type="date" id="loc-tu-ngay">
@@ -127,25 +113,6 @@
         <select id="loc-xuong">
           <option value="">Tất cả Xưởng</option>
           <option value="__CHUA_GAN__">(chưa gán)</option>
-        </select>
-      </div>
-      <!-- DonNhieuAo (bổ sung 26/09/2026) — nhiều đơn cùng OrderID dùng chung 1 tracking, xem
-           services/donNhieuAoService.js. -->
-      <div class="truong">
-        <label for="loc-don-nhieu-ao">DonNhieuAo</label>
-        <select id="loc-don-nhieu-ao">
-          <option value="">Tất cả đơn</option>
-          <option value="1">Chỉ DonNhieuAo</option>
-          <option value="0">Đơn lẻ</option>
-        </select>
-      </div>
-      <!-- Đã mua Tracking (29/09/2026) — cột DA_MUA_TRACKING, quy tắc YES/NO ở services/orderService.js#tinhDaMuaTracking. -->
-      <div class="truong">
-        <label for="loc-da-mua-tracking">Đã mua Tracking</label>
-        <select id="loc-da-mua-tracking">
-          <option value="">Tất cả</option>
-          <option value="YES">YES – Đã mua Tracking</option>
-          <option value="NO">NO – Chưa mua Tracking</option>
         </select>
       </div>
       <!-- Nhóm hàng (29/09/2026) — phân nhóm theo LOAI + danh sách keyword, xem services/nhomHangService.js. -->
@@ -177,9 +144,42 @@
       <button type="button" class="btn-hanh-dong phu" id="btn-loc-nang-cao" onclick="batTatLocNangCao()" aria-expanded="false" style="flex:0 0 auto;white-space:nowrap">Nâng cao ▾</button>
       <button type="button" class="btn-hanh-dong phu" id="btn-xoa-loc" onclick="xoaTatCaLoc()">Xoá bộ lọc</button>
     </div>
-    <!-- Lọc "Nâng cao" (29/09/2026, theo yêu cầu người dùng) — 8 ô ít dùng gộp sau nút "Nâng cao", ẩn mặc định;
+    <!-- Lọc "Nâng cao" (29/09/2026, theo yêu cầu người dùng) — 12 ô ít dùng gộp sau nút "Nâng cao", ẩn mặc định (thêm Lọc tổng quát/Mã Tracking/Đã mua Tracking/DonNhieuAo 29/09/2026);
          nút tự hiện số ô nâng cao đang có giá trị (capNhatNhanNutLoc) để không quên lọc đang áp dụng khi khối đóng. -->
     <div class="inline-form" id="khoi-loc-nang-cao" style="display:none">
+      <!-- Lọc tổng quát (29/09/2026, theo yêu cầu người dùng) — 3 nhóm trạng thái, lọc ở server (routes/orders.js#NHOM_LOC_TONG_QUAT). -->
+      <div class="truong">
+        <label for="loc-tong-quat">Lọc tổng quát</label>
+        <select id="loc-tong-quat">
+          <option value="">Tất cả</option>
+          <option value="DA_SAN_XUAT">Đơn đã sản xuất</option>
+          <option value="CHUA_SAN_XUAT">Đơn chưa sản xuất</option>
+          <option value="GIAO_HOAN_HUY">Đơn đã giao/hoàn/hủy</option>
+        </select>
+      </div>
+      <div class="truong truong-rong">
+        <label for="loc-ma-tracking">Tìm theo Mã Tracking</label>
+        <input id="loc-ma-tracking" placeholder="Mã Tracking">
+      </div>
+      <!-- Đã mua Tracking (29/09/2026) — cột DA_MUA_TRACKING, quy tắc YES/NO ở services/orderService.js#tinhDaMuaTracking. -->
+      <div class="truong">
+        <label for="loc-da-mua-tracking">Đã mua Tracking</label>
+        <select id="loc-da-mua-tracking">
+          <option value="">Tất cả</option>
+          <option value="YES">YES – Đã mua Tracking</option>
+          <option value="NO">NO – Chưa mua Tracking</option>
+        </select>
+      </div>
+      <!-- DonNhieuAo (bổ sung 26/09/2026) — nhiều đơn cùng OrderID dùng chung 1 tracking, xem
+           services/donNhieuAoService.js. -->
+      <div class="truong">
+        <label for="loc-don-nhieu-ao">DonNhieuAo</label>
+        <select id="loc-don-nhieu-ao">
+          <option value="">Tất cả đơn</option>
+          <option value="1">Chỉ DonNhieuAo</option>
+          <option value="0">Đơn lẻ</option>
+        </select>
+      </div>
       <div class="truong">
         <label for="loc-loai">Loại</label>
         <select id="loc-loai"><option value="">Tất cả loại</option></select>
@@ -396,8 +396,8 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   document.getElementById('btn-mo-loc').innerHTML = icon('filter', { size: 16 }) + ' Lọc';
   document.getElementById('btn-mo-sap-xep').innerHTML = icon('sort', { size: 16 }) + ' Sắp xếp';
 
-  document.getElementById('btn-in-phoi-ao').innerHTML = icon('printer') + ' IN DANH SÁCH PHÔI CỦA ĐƠN ĐANG CHỌN';
-  document.getElementById('btn-in-don-dang-chon').innerHTML = icon('printer') + ' IN ĐƠN ĐANG CHỌN';
+  document.getElementById('btn-in-phoi-ao').innerHTML = icon('printer') + ' IN DANH SÁCH PHÔI';
+  document.getElementById('btn-in-don-dang-chon').innerHTML = icon('printer') + ' IN ĐƠN';
   document.getElementById('btn-in-don-tu-file-phoi').innerHTML = icon('printer') + ' IN ĐƠN TỪ FILE PHÔI (PDF)';
 
   // Nút gộp 3 việc (đổi trạng thái "Đã in mã" + in 2 file PDF) — chỉ dành cho admin/ve_file theo
@@ -405,7 +405,7 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   // vì chỉ dựa vào việc backend chặn đổi trạng thái (xem spec 2026-09-05).
   const btnInMaPhoiDon = document.getElementById('btn-in-ma-phoi-don');
   if (laAdmin(user.vaiTro) || user.vaiTro === 've_file') {
-    btnInMaPhoiDon.innerHTML = icon('printer') + ' IN MÃ + IN DANH SÁCH PHÔI ĐƠN ĐANG CHỌN + IN ĐƠN ĐANG CHỌN';
+    btnInMaPhoiDon.innerHTML = icon('printer') + ' IN DANH SÁCH PHÔI + IN ĐƠN';
   } else {
     btnInMaPhoiDon.style.display = 'none';
   }
@@ -647,8 +647,8 @@ function capNhatNutNangCao() {
   document.getElementById('btn-loc-nang-cao').textContent = `Nâng cao${soNangCao ? ` (${soNangCao})` : ''} ${dangMo ? '▴' : '▾'}`;
 }
 
-// Khối lọc "Nâng cao" (29/09/2026) — bấm để hiện/ẩn 8 ô lọc ít dùng.
-const CAC_O_LOC_NANG_CAO = ['loc-loai', 'loc-kich-thuoc', 'loc-mau-sac', 'loc-hang-van-chuyen', 'loc-quoc-gia-tracking', 'loc-tinh-trang', 'loc-uu-tien', 'loc-canh-bao'];
+// Khối lọc "Nâng cao" (29/09/2026) — bấm để hiện/ẩn 12 ô lọc ít dùng.
+const CAC_O_LOC_NANG_CAO = ['loc-tong-quat', 'loc-ma-tracking', 'loc-da-mua-tracking', 'loc-don-nhieu-ao', 'loc-loai', 'loc-kich-thuoc', 'loc-mau-sac', 'loc-hang-van-chuyen', 'loc-quoc-gia-tracking', 'loc-tinh-trang', 'loc-uu-tien', 'loc-canh-bao'];
 function batTatLocNangCao() {
   const khoi = document.getElementById('khoi-loc-nang-cao');
   const mo = khoi.style.display === 'none';
@@ -805,7 +805,7 @@ function renderDanhSachDon() {
         : ''}
       <div class="thong-tin">
         ${htmlTieuDeThe(o)}
-        <div style="font-size:3.6rem;font-weight:700;line-height:1.1;margin:2px 0;color:var(--color-text)" title="Số lượng áo">SL: ${escapeHtml(o.SO_LUONG || '—')}</div>
+        <div style="font-size:1.8rem;font-weight:700;line-height:1.1;margin:2px 0;color:var(--color-text)" title="Số lượng áo">SL: ${escapeHtml(o.SO_LUONG || '—')}</div>
         <div class="meta">${escapeHtml(o.TenKhachHang || '')} · Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgayNgan(o.NGAY_LEN_DON) : '—')}</div>
         <div class="badge-row">
           ${o.DonUuTien ? `<span class="badge trang-thai-danger">${icon('star', {size:14})} Ưu tiên</span>` : ''}
@@ -1673,7 +1673,7 @@ async function themVaoDonHangLoat() {
   await taiDon();
 }
 
-// Nút "IN ĐƠN ĐANG CHỌN" — in ĐÚNG các đơn đang tick chọn (donDaChonSet), bỏ qua mọi ô lọc đang hiển
+// Nút "IN ĐƠN" (trước 29/09/2026: "IN ĐƠN ĐANG CHỌN") — in ĐÚNG các đơn đang tick chọn (donDaChonSet), bỏ qua mọi ô lọc đang hiển
 // thị trên trang.
 async function inDonDangChon(nut) {
   if (donDaChonSet.size === 0) { alert('Hãy chọn ít nhất 1 đơn muốn in.'); return; }
@@ -1724,7 +1724,7 @@ async function inDonTuFilePhoi(input) {
   await inDonHangLoatCoTienDo(nut, nhanGoc, { sttKeys: kq.sttKeys, giuThuTu: true });
 }
 
-// Nút gộp "IN MÃ + IN DANH SÁCH PHÔI ĐƠN ĐANG CHỌN + IN ĐƠN ĐANG CHỌN" — làm 1 lần cả 3 việc:
+// Nút gộp "IN DANH SÁCH PHÔI + IN ĐƠN" (nhãn rút gọn 29/09/2026, chức năng giữ nguyên) — làm 1 lần cả 3 việc:
 // (1) đổi TRANG_THAI_XUONG các đơn đã chọn sang "Đã in mã", (2) in PDF thẻ đơn, (3) in PDF danh sách
 // phôi gộp. Chụp lại `danhSach` NGAY khi bấm — cả 3 bước dùng chung danh sách này, không phụ thuộc
 // donDaChonSet có bị đổi giữa chừng hay không (xem spec 2026-09-05). 3 bước ĐỘC LẬP: lỗi (hoặc lỗi 1
@@ -1777,8 +1777,8 @@ async function inMaPhoiDonDangChon(nut) {
   if (ketQuaTrangThai.daHuy) {
     thongBao += `\n   (Đã HỦY giữa chừng bước đổi trạng thái — các đơn còn lại chưa được xử lý.)`;
   }
-  thongBao += `\n\n2) File PDF đơn (IN ĐƠN ĐANG CHỌN):\n   ${ketQuaInDon.ok ? '✔ Đã tạo và tải về thành công' : '✘ Lỗi: ' + ketQuaInDon.loi}`;
-  thongBao += `\n\n3) File PDF phôi (IN DANH SÁCH PHÔI CỦA ĐƠN ĐANG CHỌN):\n   ${ketQuaInPhoi.ok ? '✔ Đã tạo và tải về thành công' : '✘ Lỗi: ' + ketQuaInPhoi.loi}`;
+  thongBao += `\n\n2) File PDF đơn (IN ĐƠN):\n   ${ketQuaInDon.ok ? '✔ Đã tạo và tải về thành công' : '✘ Lỗi: ' + ketQuaInDon.loi}`;
+  thongBao += `\n\n3) File PDF phôi (IN DANH SÁCH PHÔI):\n   ${ketQuaInPhoi.ok ? '✔ Đã tạo và tải về thành công' : '✘ Lỗi: ' + ketQuaInPhoi.loi}`;
   alert(thongBao);
 
   document.querySelectorAll('.nhanh-phoi-ve-file, #nut-ap-dung').forEach(b => b.disabled = false);
