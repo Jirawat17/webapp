@@ -1012,9 +1012,9 @@ const TRUONG_DUOC_SUA = {
 // dẹp log/nhóm Đơn hàng loạt/ảnh MinIO và KHÔNG có log audit — lách hoàn toàn giới hạn "chỉ superadmin".
 // GHI_CHU_XUONG/GHI_CHU_XUONG_NOI_BO (28/09/2026) — CHỈ qua POST /:sttKey/ghi-chu-xuong (ghi cả Sheet Seller);
 // GHI_CHU_XUONG là cột Sheet (app không ghi được qua đây), sửa qua route này sẽ "lưu" giả mà không đi đâu.
-// THOI_GIAN_CHAY_MAY (29/09/2026) — mốc tính giờ TỰ ĐỘNG MUA TRACKING (tốn tiền thật), chỉ orderService tự ghi khi
-// đơn chuyển sang "Đang chạy máy"; cho sửa tay qua đây là cho phép ép hệ thống mua sớm.
-const TRUONG_CAM_SUA = ['STT_Key', '_row', 'NguoiCapNhatCuoi', 'ThoiGianCapNhatCuoi', 'TenKhachHang', 'TieuDeSanPham', 'ViTriTheu', 'CanhBao', 'XUONG', 'DON_UU_TIEN', 'DA_XOA', 'GHI_CHU_XUONG', 'GHI_CHU_XUONG_NOI_BO', 'THOI_GIAN_CHAY_MAY'];
+// THOI_GIAN_SAN_XUAT (29/09/2026) — mốc tính giờ TỰ ĐỘNG MUA TRACKING (tốn tiền thật), chỉ orderService tự ghi khi
+// đơn chuyển sang "Đã sản xuất"; cho sửa tay qua đây là cho phép ép hệ thống mua sớm.
+const TRUONG_CAM_SUA = ['STT_Key', '_row', 'NguoiCapNhatCuoi', 'ThoiGianCapNhatCuoi', 'TenKhachHang', 'TieuDeSanPham', 'ViTriTheu', 'CanhBao', 'XUONG', 'DON_UU_TIEN', 'DA_XOA', 'GHI_CHU_XUONG', 'GHI_CHU_XUONG_NOI_BO', 'THOI_GIAN_SAN_XUAT'];
 
 // Ghi chú xưởng (28/09/2026, theo yêu cầu người dùng): LUÔN lưu bản trong app (GHI_CHU_XUONG_NOI_BO) rồi ghi vào
 // ô GHI_CHU_XUONG trong Sheet Seller (bản chính — app đọc lại qua RAW -> Don_Hang_ALL). Ghi Sheet lỗi vẫn trả

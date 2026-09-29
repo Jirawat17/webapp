@@ -378,7 +378,7 @@ async function capNhatThat(sttKey, updates, user, tuyChon) {
   }
 
   // Đơn VỪA chuyển sang "Đã in mã" (từ 1 giá trị KHÁC) — ghi lại THỜI ĐIỂM này (bổ sung 09/09/2026). Từng là
-  // mốc tính giờ của job tự động mua tracking; từ 29/09/2026 job dùng THOI_GIAN_CHAY_MAY bên dưới, mốc này chỉ
+  // mốc tính giờ của job tự động mua tracking; từ 29/09/2026 job dùng THOI_GIAN_SAN_XUAT bên dưới, mốc này chỉ
   // còn lưu để tra cứu.
   if (
     updatesDaTinh.TRANG_THAI_XUONG === 'Đã in mã' &&
@@ -386,13 +386,13 @@ async function capNhatThat(sttKey, updates, user, tuyChon) {
   ) {
     updatesDaTinh.THOI_GIAN_IN_MA = thoiGianVNISOString();
   }
-  // Tương tự cho "Đang chạy máy" (29/09/2026) — mốc tính giờ chờ TỰ ĐỘNG MUA TRACKING (thay cho "Đã in mã").
-  // Mọi đường chuyển sang "Đang chạy máy" (tự nhận, admin chỉ định, quét QR, sửa tay, nút lớn) đều qua đây.
+  // Tương tự cho "Đã sản xuất" (29/09/2026, theo yêu cầu người dùng) — mốc tính giờ chờ TỰ ĐỘNG MUA TRACKING.
+  // Mọi đường chuyển sang "Đã sản xuất" (chụp ảnh đã sản xuất, sửa tay, nút superadmin) đều qua đây.
   if (
-    updatesDaTinh.TRANG_THAI_XUONG === 'Đang chạy máy' &&
-    row.TRANG_THAI_XUONG !== 'Đang chạy máy'
+    updatesDaTinh.TRANG_THAI_XUONG === 'Đã sản xuất' &&
+    row.TRANG_THAI_XUONG !== 'Đã sản xuất'
   ) {
-    updatesDaTinh.THOI_GIAN_CHAY_MAY = thoiGianVNISOString();
+    updatesDaTinh.THOI_GIAN_SAN_XUAT = thoiGianVNISOString();
   }
 
   // DonNhieuAo — huỷ 1 đơn = huỷ CẢ nhóm (bổ sung 26/09/2026, theo yêu cầu người dùng). Chặn nếu trong

@@ -3,7 +3,7 @@
 // ngắn — quét dày hơn để độ trễ thực tế sát với x đã chọn hơn (lệch tối đa ~2 phút thay vì tối đa 30
 // phút nếu dùng chung lịch với cảnh báo).
 const cron = require('node-cron');
-const { chayQuetTuDongMuaTracking, chayQuetTrangThaiNeuDenLuot, buMocChayMayTuLichSu } = require('./trackingAutoService');
+const { chayQuetTuDongMuaTracking, chayQuetTrangThaiNeuDenLuot } = require('./trackingAutoService');
 
 // Chặn 2 lượt chồng nhau (bổ sung 22/09/2026, theo yêu cầu người dùng cải thiện hiệu năng) — lịch chạy
 // mỗi 2 phút, mỗi đơn đủ điều kiện gọi GKE thật (tạo vận đơn/lấy tem, có thể mất vài giây/đơn, xem
@@ -61,9 +61,6 @@ async function chayCapNhatTrangThaiTracking() {
 }
 
 function batDauLichTracking() {
-  // Bù mốc "Đang chạy máy" cho đơn đang chạy máy từ trước khi có cột THOI_GIAN_CHAY_MAY (29/09/2026). Hàm chỉ đọc/
-  // ghi SQLite đồng bộ (await bên trong đã resolve sẵn) nên xong ngay trong lượt khởi động, TRƯỚC tick cron đầu tiên.
-  buMocChayMayTuLichSu().catch(err => console.error('[TrackingTuDong] Lỗi bù mốc chạy máy:', err.message));
   cron.schedule('*/2 * * * *', chayKiemTraTracking);
   console.log('[TrackingTuDong] Đã bật lịch quét tự động mua tracking (mỗi 2 phút).');
   cron.schedule('*/5 * * * *', chayCapNhatTrangThaiTracking);
