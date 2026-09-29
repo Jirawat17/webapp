@@ -3,7 +3,7 @@
 // nhom_hang_loai — nạp sẵn danh sách mặc định services/nhomHangMacDinh.js), superadmin thêm/sửa/xoá ở Settings.
 // So khớp NGUYÊN giá trị sau chuẩn hoá (chữ thường, bỏ dấu — gkeService.chuanHoa — rồi bỏ mọi ký tự không phải
 // chữ/số): "T-Shirt" = "t shirt" = "tshirt"; KHÔNG so kiểu "chứa" ("sw" không được bắt "Swimwear"). Không khớp
-// keyword nào (kể cả LOAI trống) -> "Chưa phân loại", không tự đoán nhóm. 1 keyword chỉ thuộc 1 loại (chặn khi lưu).
+// keyword nào -> "Chưa phân loại", không tự đoán nhóm (LOAI trống: theo thiết lập riêng ở Settings, mặc định cũng Chưa phân loại). 1 keyword chỉ thuộc 1 loại (chặn khi lưu).
 const caiDat = require('./caiDatDbService');
 const { chuanHoa } = require('./gkeService');
 
@@ -34,14 +34,24 @@ function banDoKhoa() {
 }
 function lamMoi() { _theoKhoa = null; _daTinh.clear(); }
 
-// -> '1' | '2' | 'CHUA'
+// -> '1' | '2' | 'CHUA'. LOAI trống (rỗng/chỉ khoảng trắng) theo thiết lập ở Settings (30/09/2026), mặc định Chưa phân loại.
 function nhomHangCuaLoai(loai) {
   const goc = String(loai ?? '');
   if (!_daTinh.has(goc)) {
     const k = khoa(goc);
-    _daTinh.set(goc, (k && banDoKhoa().get(k)?.nhom) || CHUA_PHAN_LOAI);
+    _daTinh.set(goc, (goc.trim() === '' ? caiDat.layNhomLoaiTrong() : k && banDoKhoa().get(k)?.nhom) || CHUA_PHAN_LOAI);
   }
   return _daTinh.get(goc);
+}
+
+// nhom: '' (Chưa phân loại) | '1' | '2' -> { truoc, sau }
+function datNhomLoaiTrong(nhom) {
+  const sau = String(nhom ?? '');
+  if (!['', '1', '2'].includes(sau)) throw new Error('Nhóm không hợp lệ — chỉ Chưa phân loại, Nhóm 1 hoặc Nhóm 2.');
+  const truoc = caiDat.layNhomLoaiTrong();
+  caiDat.datNhomLoaiTrong(sau);
+  lamMoi();
+  return { truoc, sau };
 }
 
 // Kiểm tra 1 loại trước khi thêm/sửa (idDangSua = null khi thêm) -> dữ liệu đã chuẩn hoá, hoặc throw lỗi tiếng Việt.
@@ -50,7 +60,7 @@ function kiemTraLoai({ Ten, Nhom, TuKhoa }, idDangSua) {
   const nhom = String(Nhom ?? '');
   const dsTuKhoa = tachTuKhoa(TuKhoa);
   if (!ten) throw new Error('Chưa nhập tên loại.');
-  if (!TEN_NHOM[nhom]) throw new Error('Nhóm không hợp lệ — chỉ Nhóm 1 hoặc Nhóm 2.');
+  if (!Object.hasOwn(TEN_NHOM, nhom)) throw new Error('Nhóm không hợp lệ — chỉ Nhóm 1 hoặc Nhóm 2.');
   if (!dsTuKhoa.length) throw new Error(`Loại "${ten}" chưa có keyword nào.`);
   const rong = dsTuKhoa.filter(kw => !khoa(kw));
   if (rong.length) throw new Error(`Keyword không có chữ/số nào: ${rong.map(kw => `"${kw}"`).join(', ')}.`);
@@ -95,4 +105,5 @@ function xoaLoai(id) {
 module.exports = {
   TEN_NHOM, CHUA_PHAN_LOAI, nhomHangCuaLoai,
   layDanhSachLoai: caiDat.layDanhSachLoaiHang, themLoai, suaLoai, xoaLoai,
+  layNhomLoaiTrong: caiDat.layNhomLoaiTrong, datNhomLoaiTrong,
 };

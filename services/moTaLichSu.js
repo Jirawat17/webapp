@@ -165,6 +165,7 @@ function moTaLichSu(dong, { anXuong = false, xuongDuocThay = [] } = {}) {
       const tenNhom = n => (n ? `Nhóm ${n}` : undefined);
       if (c.thaoTac === 'them') return kq(`thêm loại "${c.ten || ''}" vào Nhóm ${c.nhom || '?'} (Nhóm hàng)`, [doi('Keyword', undefined, c.tuKhoa || '')]);
       if (c.thaoTac === 'xoa') return kq(`xoá loại "${c.ten || ''}" khỏi Nhóm ${c.nhom || '?'} (Nhóm hàng)`, [doi('Keyword', c.tuKhoa || '', undefined)]);
+      if (c.thaoTac === 'loai_trong') return kq('đổi nhóm của đơn có LOAI trống (Nhóm hàng)', [doi('Nhóm', tenNhom(c.truoc) || 'Chưa phân loại', tenNhom(c.nhom) || 'Chưa phân loại')]);
       const t = c.truoc || {};
       return kq(`sửa loại "${c.ten || ''}" (Nhóm hàng)`, [
         t.ten !== c.ten && doi('Tên loại', t.ten, c.ten),

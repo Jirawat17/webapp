@@ -283,6 +283,17 @@ function suaLoaiHang(id, { Ten, Nhom, TuKhoa }) {
 function xoaLoaiHang(id) {
   db.prepare(`DELETE FROM nhom_hang_loai WHERE id = ?`).run(Number(id));
 }
+// Nhóm của đơn có LOAI TRỐNG (30/09/2026, theo yêu cầu người dùng) — '' Chưa phân loại (mặc định) / '1' / '2'.
+db.exec(`CREATE TABLE IF NOT EXISTS cai_dat_nhom_hang (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  NhomLoaiTrong TEXT NOT NULL DEFAULT ''
+)`);
+function layNhomLoaiTrong() {
+  return (db.prepare(`SELECT NhomLoaiTrong FROM cai_dat_nhom_hang WHERE id = 1`).get() || {}).NhomLoaiTrong || '';
+}
+function datNhomLoaiTrong(nhom) {
+  db.prepare(`INSERT INTO cai_dat_nhom_hang (id, NhomLoaiTrong) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET NhomLoaiTrong = excluded.NhomLoaiTrong`).run(nhom);
+}
 
 module.exports = {
   CAC_COT_TAI_KHOAN_GKE, layDanhSachTaiKhoanGke, layTaiKhoanGke, ghiTaiKhoanGke, xoaTaiKhoanGke,
@@ -295,4 +306,5 @@ module.exports = {
   layDanhSachXuong, themXuong, xoaXuong, doiTenXuong,
   layTeamXuongMacDinh, ganTeamXuongMacDinh,
   layDanhSachLoaiHang, themLoaiHang, suaLoaiHang, xoaLoaiHang,
+  layNhomLoaiTrong, datNhomLoaiTrong,
 };

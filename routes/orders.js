@@ -721,6 +721,7 @@ router.get('/nhom-hang', async (req, res) => {
   }
   res.json({
     loai: nhomHangService.layDanhSachLoai(),
+    nhomLoaiTrong: nhomHangService.layNhomLoaiTrong(),
     chuaPhanLoai: [...dem].map(([loai, soDon]) => ({ loai, soDon })).sort((a, b) => b.soDon - a.soDon || a.loai.localeCompare(b.loai)),
   });
 });
@@ -735,6 +736,15 @@ router.post('/nhom-hang', (req, res) => {
   try { moi = nhomHangService.themLoai(req.body); } catch (err) { return res.status(400).json({ error: err.message }); }
   ghiLogNhomHang(req, { thaoTac: 'them', ...tomTatLoai(moi) });
   res.json({ ok: true, id: moi.id });
+});
+
+// Nhóm của đơn có LOAI trống (30/09/2026): body { nhom: '' | '1' | '2' }.
+router.put('/nhom-hang-loai-trong', (req, res) => {
+  if (!laSuperAdmin(req.session.user.vaiTro)) return res.status(403).json({ error: 'Chỉ superadmin' });
+  let kq;
+  try { kq = nhomHangService.datNhomLoaiTrong(req.body.nhom); } catch (err) { return res.status(400).json({ error: err.message }); }
+  if (kq.truoc !== kq.sau) ghiLogNhomHang(req, { thaoTac: 'loai_trong', truoc: kq.truoc, nhom: kq.sau });
+  res.json({ ok: true });
 });
 
 router.put('/nhom-hang/:id', (req, res) => {

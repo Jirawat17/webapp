@@ -151,6 +151,17 @@
     <button type="button" class="btn-hanh-dong phu" id="btn-them-loai-hang">Thêm loại</button>
   </div>
   <p id="thong-bao-nhom-hang" style="display:none"></p>
+  <!-- LOAI trống (30/09/2026) — không đặt được keyword cho ô trống nên có thiết lập riêng: PUT /orders/nhom-hang-loai-trong. -->
+  <div class="inline-form" style="margin-top:var(--space-3)">
+    <div class="truong">
+      <label for="nhom-loai-trong">Đơn có LOAI trống thuộc</label>
+      <select id="nhom-loai-trong" onchange="luuNhomLoaiTrong(this.value)">
+        <option value="">Chưa phân loại</option>
+        <option value="1">Nhóm 1 - Quần áo</option>
+        <option value="2">Nhóm 2 - Không phải quần áo</option>
+      </select>
+    </div>
+  </div>
   <h4 style="margin:var(--space-4) 0 var(--space-2)">LOAI đang chưa phân loại</h4>
   <div id="khoi-loai-chua-phan-loai"></div>
 
@@ -510,6 +521,7 @@ async function taiNhomHang() {
     return;
   }
   dsLoaiHang = kq.loai;
+  document.getElementById('nhom-loai-trong').value = kq.nhomLoaiTrong;
   const oNhom = nhom => ['1', '2'].map(n => `<option value="${n}" ${n === nhom ? 'selected' : ''}>Nhóm ${n}</option>`).join('');
   const dong = l => `
     <div class="st-dong-xuong st-dong-nhom-hang">
@@ -542,6 +554,14 @@ async function luuLoaiHang(id) {
     thongBaoGke(`Đã lưu loại "${duLieu.Ten.trim()}".`, false, 'thong-bao-nhom-hang');
     await taiNhomHang();
   } catch (e) { thongBaoGke('Chưa lưu: ' + e.message, true, 'thong-bao-nhom-hang'); } // giữ nguyên nội dung đang gõ để sửa tiếp
+}
+
+async function luuNhomLoaiTrong(nhom) {
+  try {
+    await apiFetch('/orders/nhom-hang-loai-trong', { method: 'PUT', body: JSON.stringify({ nhom }) });
+    thongBaoGke(`Đơn có LOAI trống giờ thuộc: ${nhom ? `Nhóm ${nhom}` : 'Chưa phân loại'}.`, false, 'thong-bao-nhom-hang');
+  } catch (e) { thongBaoGke('Chưa lưu: ' + e.message, true, 'thong-bao-nhom-hang'); }
+  await taiNhomHang();
 }
 
 async function xoaLoaiHang(id) {
