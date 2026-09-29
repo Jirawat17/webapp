@@ -220,7 +220,7 @@ async function thucThiTool(tenHam, thamSo, ctx) {
       // không đi qua ctx.duLieuTheoQuyen.
       const { row } = await orderService.getByKey(thamSo.maDon || '');
       if (!row || !orderService.coQuyenTheoXuong(ctx.user, row)) return { loi: `Không tìm thấy đơn có mã "${thamSo.maDon}"` };
-      return await layLichSuTheoDon(thamSo.maDon || '', ctx.user.vaiTro);
+      return await layLichSuTheoDon(thamSo.maDon || '', ctx.user);
     }
 
     case 'tra_cuu_nhan_vien': {

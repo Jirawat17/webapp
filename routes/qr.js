@@ -48,7 +48,7 @@ router.get('/tra-cuu/:sttKey', async (req, res) => {
 
   const [{ row }, lichSu] = await Promise.all([
     orderService.getByKey(sttKey),
-    layLichSuTheoDon(sttKey, user.vaiTro),
+    layLichSuTheoDon(sttKey, user),
   ]);
 
   // Đơn khác Xưởng coi như không tồn tại (bổ sung 13/09/2026) — cùng thông báo/hanhDong với "không

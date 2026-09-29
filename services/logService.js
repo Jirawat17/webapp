@@ -1,6 +1,7 @@
 const nhatKyDbService = require('./nhatKyDbService');
 const { thoiGianVNISOString, bienGioiNgayVN } = require('./dateUtils');
 const { moTaLichSu, docChiTiet } = require('./moTaLichSu');
+const taiKhoanService = require('./taiKhoanService');
 
 // Ghi 1 dòng log — luôn ghi lại AI làm, vai trò gì, lúc nào, làm gì, trên đơn nào. Chuyển sang SQLite
 // (bổ sung 19/09/2026, theo yêu cầu người dùng — xem
@@ -27,11 +28,14 @@ function ghiLogNhieu(dsLog) {
 }
 
 // Gắn mô tả dễ đọc (services/moTaLichSu.js) vào từng dòng log: MoTa, ThayDoi [{nhan, tu, sang}], Mo.
-// vaiTroNguoiXem = 'admin' -> ẩn tên Xưởng (orderService.js#anXuongVoiAdmin).
-function ganMoTa(rows, vaiTroNguoiXem) {
-  const anXuong = vaiTroNguoiXem === 'admin';
+// nguoiXem = user đang xem (hoặc chuỗi vai trò — cách gọi cũ). Admin -> ẩn tên Xưởng (orderService.js#anXuongVoiAdmin),
+// TRỪ lịch sử chuyển Xưởng mà cả 2 bên đều là Xưởng admin đó phụ trách (29/09/2026, xem moTaLichSu.js GAN_XUONG).
+function ganMoTa(rows, nguoiXem) {
+  const vaiTro = typeof nguoiXem === 'string' ? nguoiXem : nguoiXem?.vaiTro;
+  const anXuong = vaiTro === 'admin';
+  const xuongDuocThay = anXuong && typeof nguoiXem === 'object' ? taiKhoanService.cacXuongCuaNguoiDung(nguoiXem) : [];
   return rows.map(r => {
-    const { moTa, thayDoi, mo } = moTaLichSu(r, { anXuong });
+    const { moTa, thayDoi, mo } = moTaLichSu(r, { anXuong, xuongDuocThay });
     // Admin: bỏ ChiTiet thô (có thể chứa tên Xưởng, vd GAN_XUONG) — giao diện chỉ dùng MoTa/ThayDoi.
     const { ChiTiet, ...conLai } = r;
     return { ...(anXuong ? conLai : r), MoTa: moTa, ThayDoi: thayDoi, Mo: mo };
@@ -41,11 +45,11 @@ function ganMoTa(rows, vaiTroNguoiXem) {
 // Lấy lịch sử của 1 đơn hàng, sắp theo thời gian tăng dần (dùng cho timeline chi tiết đơn). Gồm cả thao tác
 // trên NHIỀU đơn cùng lúc (tạo/thêm/xoá Đơn hàng loạt, xoá/khôi phục dữ liệu — STT_Key rỗng, danh sách đơn
 // nằm trong ChiTiet.sttKeys) có đơn này (bổ sung 27/09/2026).
-async function layLichSuTheoDon(sttKey, vaiTroNguoiXem) {
+async function layLichSuTheoDon(sttKey, nguoiXem) {
   const rows = nhatKyDbService.layTatCaLichSuHoatDong();
   const coDon = r => r.STT_Key === sttKey
     || (!r.STT_Key && r.ChiTiet.includes(JSON.stringify(sttKey)) && (docChiTiet(r.ChiTiet).sttKeys || []).includes(sttKey));
-  return ganMoTa(rows.filter(coDon), vaiTroNguoiXem)
+  return ganMoTa(rows.filter(coDon), nguoiXem)
     .sort((a, b) => new Date(a.ThoiGian) - new Date(b.ThoiGian));
 }
 
@@ -158,7 +162,7 @@ function trongKhoangThoiGian(isoThoiGian, tuNgay, denNgay) {
 
 // locDon (tuỳ chọn, 29/09/2026): hàm (sttKey) -> boolean — admin xem hoạt động người KHÁC chỉ thấy việc trên đơn
 // thuộc Xưởng mình (orderService.phamViDon); dòng không gắn đơn nào cũng bị ẩn khi có locDon.
-async function layHoatDongCuaToi({ nguoiDung, tuNgay, denNgay, vaiTroNguoiXem, locDon = null }) {
+async function layHoatDongCuaToi({ nguoiDung, tuNgay, denNgay, nguoiXem, locDon = null }) {
   const rows = nhatKyDbService.layTatCaLichSuHoatDong();
   const cuaToi = rows.filter(r => r.NguoiDung === nguoiDung && trongKhoangThoiGian(r.ThoiGian, tuNgay, denNgay)
     && (!locDon || locDon(r.STT_Key)));
@@ -234,7 +238,7 @@ async function layHoatDongCuaToi({ nguoiDung, tuNgay, denNgay, vaiTroNguoiXem, l
 
   // Toàn bộ thao tác (bổ sung 27/09/2026, theo yêu cầu người dùng) — MỌI hành động của người này trong khoảng
   // thời gian, mới nhất trước, kèm mô tả đầy đủ "trước -> sau" (menu "Lịch sử", phần "Toàn bộ thao tác").
-  const toanBo = ganMoTa(cuaToi, vaiTroNguoiXem).sort((a, b) => new Date(b.ThoiGian) - new Date(a.ThoiGian));
+  const toanBo = ganMoTa(cuaToi, nguoiXem).sort((a, b) => new Date(b.ThoiGian) - new Date(a.ThoiGian));
 
   return {
     toanBo,

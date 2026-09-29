@@ -3,18 +3,8 @@ const router = express.Router();
 const orderService = require('../services/orderService');
 const { parseNgay } = require('../services/dateUtils');
 const { requireLogin } = require('../middleware/auth');
-const { chiSoTinhTrang } = require('../data/pipelineTinhTrang');
 
 router.use(requireLogin);
-
-// Đơn đã đi tới mốc `tenMoc` trở đi trên đường chính (vd "Đã sản xuất" -> gồm cả "ĐÃ DÁN TEM",
-// DELIVERED). Trạng thái rẽ nhánh (LỖI SẢN XUẤT/CANCELLED/REFUNDED) trả null ở chiSoTinhTrang() nên
-// luôn coi là CHƯA tới mốc — đúng ý nghĩa "làm lại" (xem data/pipelineTinhTrang.js).
-function daQuaMoc(trangThaiXuong, tenMoc) {
-  const idx = chiSoTinhTrang(trangThaiXuong);
-  const idxMoc = chiSoTinhTrang(tenMoc);
-  return idx !== null && idx >= idxMoc;
-}
 
 // Mã khách hàng tách từ STT_Key (bổ sung 25/09/2026, theo yêu cầu người dùng — cột KHACH_HANG trống):
 // STT_Key = <số tháng 1-2 chữ số><mã khách CHỈ chữ cái><số thứ tự>, vd 9LH471 -> LH, 09T06 -> T,
@@ -25,32 +15,25 @@ function maKhachTuSttKey(sttKey) {
   return m ? m[1].toUpperCase() : KHACH_KHONG_RO;
 }
 
-// Bảng thống kê theo nhóm (khách hàng; bảng theo Xưởng đã xoá 29/09/2026) — xem
-// docs/superpowers/specs/2026-09-15-thong-ke-khach-hang-va-an-menu-san-xuat-design.md. "Có file, chưa
-// chạy máy" tính JOIN thật trên từng đơn (không suy ra từ hiệu daVeFile - daChayMay) vì dữ liệu Sheet
-// có thể bị sửa tay lệch khỏi luồng app (đơn "đã chạy máy" chưa chắc "đã vẽ file"). Nhóm `nhomCuoi`
-// (không xác định/chưa gán) luôn xếp cuối, còn lại theo tổng đơn giảm dần. Trường tên nhóm giữ là
-// `khachHang` cho cả bảng Xưởng — bang-dieu-khien.html đọc sẵn tên trường này.
+// Bảng thống kê theo nhóm (khách hàng; bảng theo Xưởng đã xoá 29/09/2026). Từ 29/09/2026 (theo yêu cầu người dùng) chỉ
+// còn Tổng đơn + 3 nhóm của LỌC TỔNG QUÁT (orderService.NHOM_LOC_TONG_QUAT — cùng định nghĩa với bộ lọc ở Danh sách đơn
+// hàng), thay 6 cột cũ (Đã/Chưa DÁN TEM, Đã vẽ file, Đã chạy máy, Có file chưa chạy máy, Chưa có file vẽ). Nhóm `nhomCuoi`
+// (không xác định) luôn xếp cuối, còn lại theo tổng đơn giảm dần. Trường tên nhóm giữ là `khachHang` —
+// bang-dieu-khien.html đọc sẵn tên trường này (cùng tongDon).
+const { NHOM_LOC_TONG_QUAT } = orderService;
 function thongKeTheoNhom(rows, layNhom, nhomCuoi) {
   const theoNhom = new Map();
   for (const r of rows) {
     const ten = layNhom(r);
-    if (!theoNhom.has(ten)) {
-      theoNhom.set(ten, { khachHang: ten, tongDon: 0, daDanTem: 0, daVeFile: 0, daChayMay: 0, coFileChuaChayMay: 0 });
-    }
+    if (!theoNhom.has(ten)) theoNhom.set(ten, { khachHang: ten, tongDon: 0, daSanXuat: 0, chuaSanXuat: 0, giaoHoanHuy: 0 });
     const nhom = theoNhom.get(ten);
-    const daVeFileXong = r.TRANG_THAI_VE_FILE === 'Đã vẽ file';
-    const daChayMayXong = daQuaMoc(r.TRANG_THAI_XUONG, 'Đã sản xuất');
-
     nhom.tongDon++;
-    if (daQuaMoc(r.TRANG_THAI_XUONG, 'ĐÃ DÁN TEM')) nhom.daDanTem++;
-    if (daVeFileXong) nhom.daVeFile++;
-    if (daChayMayXong) nhom.daChayMay++;
-    if (daVeFileXong && !daChayMayXong) nhom.coFileChuaChayMay++;
+    if (NHOM_LOC_TONG_QUAT.DA_SAN_XUAT.includes(r.TRANG_THAI_XUONG)) nhom.daSanXuat++;
+    else if (NHOM_LOC_TONG_QUAT.CHUA_SAN_XUAT.includes(r.TRANG_THAI_XUONG)) nhom.chuaSanXuat++;
+    else if (NHOM_LOC_TONG_QUAT.GIAO_HOAN_HUY.includes(r.TRANG_THAI_XUONG)) nhom.giaoHoanHuy++;
   }
 
   return [...theoNhom.values()]
-    .map(n => ({ ...n, chuaDanTem: n.tongDon - n.daDanTem, chuaCoFileVe: n.tongDon - n.daVeFile }))
     .sort((a, b) => {
       if (a.khachHang === nhomCuoi) return 1;
       if (b.khachHang === nhomCuoi) return -1;

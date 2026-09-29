@@ -508,10 +508,17 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
     document.getElementById('truong-loc-xuong').style.display = 'flex';
     document.getElementById('loc-xuong').innerHTML = '<option value="">Tất cả Xưởng của tôi</option>' +
       danhSachXuong.map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
+    // Gán Xưởng cho admin (29/09/2026, theo yêu cầu người dùng) — CHỈ chuyển giữa các Xưởng mình phụ trách, KHÔNG gỡ gán
+    // (server kiểm tra lại, routes/orders.js POST /gan-xuong). Phụ trách < 2 Xưởng thì không có chỗ chuyển -> ẩn.
+    if (danhSachXuong.length >= 2) {
+      document.getElementById('khoi-gan-xuong').style.display = 'contents';
+      document.getElementById('xuong-dich').innerHTML = '<option value="">Gán Xưởng...</option>' +
+        danhSachXuong.map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
+    }
   }
 
-  // Lọc theo Xưởng (mọi Xưởng + "(chưa gán)") + "Gán Xưởng" — CHỈ superadmin (thu hẹp từ admin 18/09/2026, xem
-  // routes/orders.js POST /gan-xuong). Gán Xưởng là điểm admin/superadmin KHÔNG ngang quyền nhau.
+  // Lọc theo Xưởng (mọi Xưởng + "(chưa gán)") + "Gán Xưởng" mọi Xưởng/gỡ gán — superadmin (admin: chỉ giữa các Xưởng
+  // của mình, xem khối admin ở trên; routes/orders.js POST /gan-xuong).
   if (laSuperAdmin(user.vaiTro)) {
     document.getElementById('truong-loc-xuong').style.display = 'flex';
     document.getElementById('khoi-gan-xuong').style.display = 'contents';
@@ -995,8 +1002,8 @@ async function apDungChiDinhNguoiChayMay() {
   await taiDon();
 }
 
-// Superadmin GÁN XƯỞNG (HN/BN...) cho toàn bộ đơn đang chọn — bổ sung 13/09/2026, thu hẹp từ admin
-// xuống CHỈ superadmin 18/09/2026 (theo yêu cầu người dùng, phân loại đơn theo xưởng vật lý, mỗi xưởng
+// GÁN XƯỞNG (HN/BN...) cho toàn bộ đơn đang chọn — bổ sung 13/09/2026, CHỈ superadmin từ 18/09/2026; admin dùng lại
+// từ 29/09/2026 nhưng CHỈ giữa các Xưởng mình phụ trách, không gỡ gán (theo yêu cầu người dùng, phân loại đơn theo xưởng vật lý, mỗi xưởng
 // chỉ thành viên cùng Xưởng mới xem/thao tác được — xem services/orderService.js#locTheoXuong/
 // coQuyenTheoXuong, routes/orders.js POST /gan-xuong). "(Gỡ gán Xưởng)" gửi chuỗi rỗng — đưa đơn về
 // "chưa có xưởng" (ẩn với người thường, theo đúng lựa chọn của người dùng).

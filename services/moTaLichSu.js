@@ -5,7 +5,8 @@
 // - moTa: vế hành động, KHÔNG gồm tên người làm (giao diện tự ghép "Nguyễn Văn A — ...").
 // - thayDoi: từng giá trị "trước -> sau"; tu === null = log cũ không lưu giá trị trước (KHÔNG suy đoán).
 // - mo: lượt quét chỉ để xem / bị từ chối / lỗi — không đổi gì ở đơn, giao diện hiện mờ.
-// anXuong = người xem là admin -> ẩn MỌI tên Xưởng (cùng quy tắc orderService.js#anXuongVoiAdmin).
+// anXuong = người xem là admin -> ẩn tên Xưởng (cùng quy tắc orderService.js#anXuongVoiAdmin); riêng GAN_XUONG hiện tên khi
+// cả 2 bên đều thuộc xuongDuocThay (Xưởng admin đó phụ trách, 29/09/2026).
 
 const NHAN_COT = {
   TRANG_THAI_XUONG: 'Trạng thái chung', TRANG_THAI_PHOI: 'Phôi', TRANG_THAI_VE_FILE: 'Vẽ file',
@@ -51,7 +52,7 @@ const tuChuyen = c => (c.tuDongChuyenTinhTrangSang ? [doi('Trạng thái chung (
 // { cot: { tu, sang } } -> thayDoi (thayDoiKem của nút superadmin, thayDoi của sửa kịch bản).
 const tuBangThayDoi = bang => Object.entries(bang || {}).map(([cot, v]) => doi(nhanCot(cot), v.tu, v.sang));
 
-function moTaLichSu(dong, { anXuong = false } = {}) {
+function moTaLichSu(dong, { anXuong = false, xuongDuocThay = [] } = {}) {
   const c = docChiTiet(dong.ChiTiet);
   const hd = dong.HanhDong;
   const kq = (moTa, thayDoi = []) => ({ moTa, thayDoi, mo: HANH_DONG_MO.has(hd) });
@@ -83,7 +84,11 @@ function moTaLichSu(dong, { anXuong = false } = {}) {
     case 'GAN_XUONG': {
       const tuDong = LA_HE_THONG(dong.NguoiDung);
       const lyDo = c.lyDo ? ` (${c.lyDo})` : '';
-      if (anXuong) return kq(`${tuDong ? 'tự ' : ''}${c.sangXuong ? 'gán Xưởng cho đơn' : 'gỡ Xưởng của đơn'}${lyDo}`);
+      // Admin (29/09/2026): hiện tên khi CẢ 2 bên đều là Xưởng mình phụ trách (hoặc "chưa gán"); 1 bên là Xưởng khác -> ẩn.
+      const trongPhamVi = x => !x || xuongDuocThay.includes(x);
+      if (anXuong && !(trongPhamVi(c.tuXuong) && trongPhamVi(c.sangXuong))) {
+        return kq(`${tuDong ? 'tự ' : ''}${c.sangXuong ? 'gán Xưởng cho đơn' : 'gỡ Xưởng của đơn'}${lyDo}`);
+      }
       const moTa = c.sangXuong ? `${tuDong ? 'tự ' : ''}gán đơn vào Xưởng ${c.sangXuong}${lyDo}` : `gỡ đơn khỏi Xưởng ${c.tuXuong || '?'}${lyDo}`;
       return kq(moTa, [doi('Xưởng', xuongHoacChuaGan(c.tuXuong), xuongHoacChuaGan(c.sangXuong))]);
     }

@@ -43,15 +43,14 @@
 
   <!-- Bảng theo khách hàng (bổ sung 15/09/2026, xem
        docs/superpowers/specs/2026-09-15-thong-ke-khach-hang-va-an-menu-san-xuat-design.md) — tách
-       riêng full-width thay vì nằm trong .chart-grid (2 cột ở desktop), vì 8 cột dữ liệu quá chật
-       nếu chỉ chiếm nửa chiều rộng. -->
+       riêng full-width thay vì nằm trong .chart-grid (2 cột ở desktop). Từ 29/09/2026 (theo yêu cầu người dùng)
+       chỉ còn Tổng đơn + 3 nhóm của LỌC TỔNG QUÁT (routes/dashboard.js#thongKeTheoNhom), số in đậm cho dễ nhìn. -->
   <div class="chart-card" style="margin-bottom:var(--space-4)">
     <h3 style="margin-top:0">Theo khách hàng</h3>
     <div class="bang-cuon-ngang">
       <table class="bang-xem-truoc" id="bang-theo-khach-hang">
         <thead><tr>
-          <th>Khách hàng</th><th>Tổng đơn</th><th>Đã DÁN TEM</th><th>Chưa DÁN TEM</th>
-          <th>Đã vẽ file</th><th>Đã chạy máy</th><th>Có file, chưa chạy máy</th><th>Chưa có file vẽ</th>
+          <th>Khách hàng</th><th>Tổng đơn</th><th>Đơn đã sản xuất</th><th>Đơn chưa sản xuất</th><th>Đơn đã giao/hoàn/hủy</th>
         </tr></thead>
         <tbody id="bang-theo-khach-hang-body"></tbody>
       </table>
@@ -187,19 +186,16 @@ function soSanhTuan(a, b) {
 function veBangTheoNhom(tbodyId, danhSach) {
   const tbody = document.getElementById(tbodyId);
   if (!danhSach || danhSach.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8">Không có dữ liệu.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5">Không có dữ liệu.</td></tr>';
     return;
   }
   tbody.innerHTML = danhSach.map(n => `
     <tr>
       <td>${escapeHtml(n.khachHang)}</td>
-      <td>${n.tongDon}</td>
-      <td>${n.daDanTem}</td>
-      <td>${n.chuaDanTem}</td>
-      <td>${n.daVeFile}</td>
-      <td>${n.daChayMay}</td>
-      <td>${n.coFileChuaChayMay}</td>
-      <td>${n.chuaCoFileVe}</td>
+      <td><strong>${n.tongDon}</strong></td>
+      <td><strong>${n.daSanXuat}</strong></td>
+      <td><strong>${n.chuaSanXuat}</strong></td>
+      <td><strong>${n.giaoHoanHuy}</strong></td>
     </tr>`).join('');
 }
 

@@ -36,13 +36,7 @@ function khongPhaiNguoiLayPhoi(req, res, next) {
 router.use(khongPhaiNguoiLayPhoi);
 
 const TRANG_THAI_DANG_CHAY_MAY = 'Đang chạy máy';
-// LỌC TỔNG QUÁT (29/09/2026, theo yêu cầu người dùng) — 3 nhóm trạng thái do người dùng quy định, phủ ĐÚNG đủ 10 giá trị
-// TINH_TRANG_VALUES (data/pipelineTinhTrang.js). Thêm trạng thái mới vào hệ thống thì phải hỏi người dùng xếp vào nhóm nào.
-const NHOM_LOC_TONG_QUAT = {
-  DA_SAN_XUAT: ['Đã sản xuất', 'ĐÃ DÁN TEM'],
-  CHUA_SAN_XUAT: ['Chưa in mã', 'Đã in mã', 'LỖI SẢN XUẤT CẦN LÀM LẠI', 'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đang chạy máy'],
-  GIAO_HOAN_HUY: ['DELIVERED_Đã giao đến khách', 'CANCELLED_Đã hủy', 'REFUNDED_Hoàn đơn'],
-};
+const { NHOM_LOC_TONG_QUAT } = orderService; // LỌC TỔNG QUÁT — 3 nhóm trạng thái, xem services/orderService.js
 
 // Gắn thêm các trường tính toán (không phải cột thật trong Sheet) để hiển thị — dùng chung cho list/detail
 // "Người vận hành máy" (bổ sung 07/09/2026): đọc THẲNG cột NGUOI_CHAY_MAY (ghi trực tiếp bởi
@@ -789,12 +783,15 @@ router.post('/mau-xuong', (req, res) => {
 // superadmin xuống CHỈ superadmin — bổ sung 18/09/2026, theo yêu cầu người dùng: admin không còn được
 // thấy/thao tác thông tin Xưởng của đơn hàng nữa, xem orderService.js#anXuongVoiAdmin) — cùng khuôn
 // /chi-dinh-nguoi-chay-may/-ve-file (chọn hàng loạt ở trang Đơn hàng), KHÔNG có điều khiển riêng ở
-// trang chi tiết 1 đơn (đã xác nhận với người dùng). Không kiểm tra coQuyenTheoXuong ở đây — superadmin
-// luôn được xem/gán MỌI đơn bất kể Xưởng hiện tại (cùng quyền admin trước đây, qua laAdmin()).
+// trang chi tiết 1 đơn (đã xác nhận với người dùng). superadmin gán MỌI đơn, mọi Xưởng, được gỡ gán.
+// ADMIN (mở lại 29/09/2026, theo yêu cầu người dùng): CHỈ chuyển đơn đang thuộc Xưởng mình phụ trách sang 1 Xưởng mình
+// phụ trách khác — KHÔNG gỡ gán (đơn sẽ ra khỏi phạm vi admin), KHÔNG gán sang Xưởng ngoài phạm vi; đơn ngoài phạm vi báo
+// "Không tìm thấy" như mọi route khác. Kiểm tra ở ĐÂY (server), giao diện chỉ ẩn/hiện nút.
 router.post('/gan-xuong', async (req, res) => {
   const user = req.session.user;
-  if (!laSuperAdmin(user.vaiTro)) {
-    return res.status(403).json({ error: 'Chỉ superadmin mới được gán Xưởng cho đơn' });
+  const laSA = laSuperAdmin(user.vaiTro);
+  if (!laSA && user.vaiTro !== 'admin') {
+    return res.status(403).json({ error: 'Chỉ superadmin/admin mới được gán Xưởng cho đơn' });
   }
 
   const { sttKeys, xuong } = req.body;
@@ -804,6 +801,12 @@ router.post('/gan-xuong', async (req, res) => {
   // xuong = '' hợp lệ (gỡ gán, đưa đơn về "chưa có xưởng") — chỉ chặn giá trị SAI, không chặn rỗng.
   if (xuong && !orderService.layDanhSachXuong().includes(xuong)) {
     return res.status(400).json({ error: `Xưởng không hợp lệ: "${xuong}" — chỉ chấp nhận: ${orderService.layDanhSachXuong().join(', ')}` });
+  }
+  if (!laSA) {
+    if (!xuong) return res.status(403).json({ error: 'Admin không được gỡ gán Xưởng — chỉ chuyển đơn giữa các Xưởng mình phụ trách.' });
+    if (!taiKhoanService.cacXuongCuaNguoiDung(user).includes(xuong)) {
+      return res.status(403).json({ error: `Xưởng "${xuong}" không thuộc phạm vi bạn phụ trách.` });
+    }
   }
 
   const thanhCong = [];
@@ -816,7 +819,7 @@ router.post('/gan-xuong', async (req, res) => {
   await chayHangLoatSongSong(sttKeys, async (sttKey) => {
     try {
       const row = banDoTheoKey.get(sttKey);
-      if (!row) {
+      if (!row || !orderService.coQuyenTheoXuong(user, row)) {
         loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng (có thể vừa bị xoá/sửa ở nơi khác)' });
         return;
       }
@@ -1036,7 +1039,7 @@ router.get('/:sttKey', async (req, res) => {
   }
 
   const [lichSu, [donDaLamGiau], kichBanKeTiep] = await Promise.all([
-    layLichSuTheoDon(req.params.sttKey, user.vaiTro),
+    layLichSuTheoDon(req.params.sttKey, user),
     lamGiauDon([row], donNhieuAoService.xayDungBanDoNhom(rows)),
     layKichBanKeTiep(row, user),
   ]);

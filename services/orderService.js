@@ -10,6 +10,14 @@ const donNhieuAoService = require('./donNhieuAoService');
 const taiKhoanService = require('./taiKhoanService');
 const TRANG_THAI_HUY = donNhieuAoService.TRANG_THAI_HUY;
 const TRANG_THAI_DA_GUI_DI = ['ĐÃ DÁN TEM', 'DELIVERED_Đã giao đến khách'];
+// LỌC TỔNG QUÁT (29/09/2026, theo yêu cầu người dùng) — 3 nhóm trạng thái do người dùng quy định, phủ ĐÚNG đủ 10 giá trị
+// TINH_TRANG_VALUES (data/pipelineTinhTrang.js). Dùng chung: bộ lọc Danh sách đơn hàng (routes/orders.js) + bảng "Theo
+// khách hàng" ở Thống kê (routes/dashboard.js). Thêm trạng thái mới vào hệ thống thì phải hỏi người dùng xếp vào nhóm nào.
+const NHOM_LOC_TONG_QUAT = {
+  DA_SAN_XUAT: ['Đã sản xuất', 'ĐÃ DÁN TEM'],
+  CHUA_SAN_XUAT: ['Chưa in mã', 'Đã in mã', 'LỖI SẢN XUẤT CẦN LÀM LẠI', 'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đang chạy máy'],
+  GIAO_HOAN_HUY: ['DELIVERED_Đã giao đến khách', 'CANCELLED_Đã hủy', 'REFUNDED_Hoàn đơn'],
+};
 
 const TAB = 'Don_Hang_ALL';
 const KEY_COL = 'STT_Key';
@@ -653,5 +661,5 @@ function suaDonKetSanSang() {
 module.exports = {
   suaDonKetSanSang,
   TAB, KEY_COL, getAll, getByKey, getManyByKeys, update, filterForRole, ganTenKhachHang, tieuDeSanPham, danhSachViTriTheu,
-  layDanhSachXuong, locTheoXuong, coQuyenTheoXuong, phamViDon, laUuTien, lyDoDaMuaTracking,
+  layDanhSachXuong, locTheoXuong, coQuyenTheoXuong, phamViDon, laUuTien, lyDoDaMuaTracking, NHOM_LOC_TONG_QUAT,
 };
