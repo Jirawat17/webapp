@@ -523,4 +523,5 @@ async function ghiChuLenTem(base64, chu) {
 module.exports = {
   duocMuaTrackingTheoQuocGia,
   layCauHinhGkeChoDon, layDanhSachTaiKhoanGke, luuTaiKhoanGke, xoaTaiKhoanGke, ganTaiKhoanGkeChoXuong,
-  ghiChuLenTem, tinhCanNangKg, taoDonGke, layTemIn, layLichSuTrackingGke, maQuocGia, MA_DANG_CHO_TEM, gopCacTemPdf };
+  ghiChuLenTem, tinhCanNangKg, taoDonGke, layTemIn, layLichSuTrackingGke, maQuocGia, MA_DANG_CHO_TEM, gopCacTemPdf,
+  chuanHoa };

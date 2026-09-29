@@ -3,6 +3,7 @@ const router = express.Router();
 const crypto = require('crypto');
 const orderService = require('../services/orderService');
 const donNhieuAoService = require('../services/donNhieuAoService');
+const nhomHangService = require('../services/nhomHangService');
 const taiKhoanService = require('../services/taiKhoanService');
 const trangThaiDbService = require('../services/trangThaiDbService');
 const donHangLoatService = require('../services/donHangLoatService');
@@ -60,6 +61,7 @@ async function lamGiauDon(rows, banDoNhom) {
     NguoiVeFile: r.TRANG_THAI_VE_FILE === 'Đang vẽ file' ? (r.NGUOI_VE_FILE || null) : null,
     DonUuTien: orderService.laUuTien(r),
     NhomNhieuAo: banDoNhom ? donNhieuAoService.tomTatChoDon(r.STT_Key, banDoNhom.get(r.STT_Key)) : null,
+    LyDoDaMuaTracking: orderService.lyDoDaMuaTracking(r, banDoNhom ? banDoNhom.get(r.STT_Key) : null),
   }));
 }
 
@@ -156,6 +158,8 @@ router.get('/', async (req, res) => {
   list = await lamGiauDon(list, donNhieuAoService.xayDungBanDoNhom(rows));
   // Lọc DonNhieuAo (bổ sung 26/09/2026): '1' = chỉ đơn thuộc nhóm, '0' = chỉ đơn lẻ.
   if (req.query.donNhieuAo === '1' || req.query.donNhieuAo === '0') list = list.filter(r => !!r.NhomNhieuAo === (req.query.donNhieuAo === '1'));
+  // Đã mua Tracking (29/09/2026): 'YES'/'NO' — cột DA_MUA_TRACKING (quy tắc ở orderService.js#tinhDaMuaTracking).
+  if (req.query.daMuaTracking === 'YES' || req.query.daMuaTracking === 'NO') list = list.filter(r => r.DA_MUA_TRACKING === req.query.daMuaTracking);
 
   const {
     trangThai, trangThaiPhoi, trangThaiVeFile, kh, tuNgay, denNgay,
@@ -177,6 +181,8 @@ router.get('/', async (req, res) => {
   if (canVeFile) list = list.filter(r => r.TRANG_THAI_VE_FILE === 'Chưa vẽ file');
   if (nguoiVeFile) list = list.filter(r => r.NguoiVeFile === nguoiVeFile);
   if (loai) list = list.filter(r => r.LOAI === loai);
+  // Nhóm hàng (29/09/2026): '1' Quần áo / '2' Không phải quần áo / 'CHUA' Chưa phân loại — xem services/nhomHangService.js.
+  if (['1', '2', 'CHUA'].includes(req.query.nhomHang)) list = list.filter(r => nhomHangService.nhomHangCuaLoai(r.LOAI) === req.query.nhomHang);
   if (kichThuoc) list = list.filter(r => r.KICH_THUOC === kichThuoc);
   if (mauSac) list = list.filter(r => r.MAU_SAC === mauSac);
   if (hangVanChuyen) list = list.filter(r => r.HANG_VAN_CHUYEN === hangVanChuyen);
@@ -207,14 +213,22 @@ router.get('/', async (req, res) => {
     const sttKeyTrongNhom = await donHangLoatService.layDanhSachSttKeyTheoTenNhom(timDonHangLoat);
     list = list.filter(r => sttKeyTrongNhom.has(r.STT_Key));
   }
+  // Tìm kiếm tách 2 ô (29/09/2026, theo yêu cầu người dùng) — trước đó 1 ô `kh` khớp cả mã tracking (TRACKING_ID2, từ
+  // 18/09/2026). Giờ `kh` CHỈ mã đơn/mã KH (áp dụng cho mọi trang gọi route này — Đơn của tôi/Đơn vẽ file cũng vậy,
+  // đúng nhãn ô ở đó), `maTracking` CHỈ mã tracking: TRACKING_ID2 (Sheet Seller) hoặc TRACKING_ID (app mua — vẫn tìm
+  // ra khi ghi Sheet Seller lỗi/chưa đồng bộ). Cùng cách khớp chuỗi con, không phân biệt hoa thường; có cả 2 = khớp cả 2.
   if (kh) {
     const tuKhoa = kh.toLowerCase();
     list = list.filter(r =>
       (r.MA_KHACH_HANG || '').toLowerCase().includes(tuKhoa) ||
-      (r.STT_Key || '').toLowerCase().includes(tuKhoa) ||
-      // Cho tìm theo mã Tracking (cột RAW TRACKING_ID2 — khác TRACKING_ID app tự ghi) — bổ sung
-      // 18/09/2026, theo yêu cầu người dùng.
-      (r.TRACKING_ID2 || '').toLowerCase().includes(tuKhoa)
+      (r.STT_Key || '').toLowerCase().includes(tuKhoa)
+    );
+  }
+  if (req.query.maTracking) {
+    const ma = String(req.query.maTracking).toLowerCase();
+    list = list.filter(r =>
+      (r.TRACKING_ID2 || '').toLowerCase().includes(ma) ||
+      (r.TRACKING_ID || '').toLowerCase().includes(ma)
     );
   }
   if (tuNgay || denNgay) {
@@ -691,6 +705,52 @@ router.post('/team-xuong', async (req, res) => {
   res.json({ ok: true });
 });
 
+// Nhóm hàng — loại/keyword phân loại LOAI (29/09/2026, theo yêu cầu người dùng) — Settings, CHỈ superadmin. GET kèm
+// các giá trị LOAI đang Chưa phân loại (+ số đơn) để biết cần thêm keyword gì. Kiểm tra/trùng: services/nhomHangService.js.
+router.get('/nhom-hang', async (req, res) => {
+  if (!laSuperAdmin(req.session.user.vaiTro)) return res.status(403).json({ error: 'Chỉ superadmin' });
+  const { rows } = await orderService.getAll();
+  const dem = new Map();
+  for (const r of rows) {
+    if (nhomHangService.nhomHangCuaLoai(r.LOAI) !== nhomHangService.CHUA_PHAN_LOAI) continue;
+    const loai = String(r.LOAI ?? '').trim();
+    dem.set(loai, (dem.get(loai) || 0) + 1);
+  }
+  res.json({
+    loai: nhomHangService.layDanhSachLoai(),
+    chuaPhanLoai: [...dem].map(([loai, soDon]) => ({ loai, soDon })).sort((a, b) => b.soDon - a.soDon || a.loai.localeCompare(b.loai)),
+  });
+});
+
+const ghiLogNhomHang = (req, chiTiet) => ghiLog({ nguoiDung: req.session.user.ten, vaiTro: req.session.user.vaiTro, hanhDong: 'CAU_HINH_NHOM_HANG', chiTiet })
+  .catch(err => console.error('[Orders] Lỗi ghi log nền:', err.message));
+const tomTatLoai = l => ({ ten: l.Ten, nhom: l.Nhom, tuKhoa: l.TuKhoa });
+
+router.post('/nhom-hang', (req, res) => {
+  if (!laSuperAdmin(req.session.user.vaiTro)) return res.status(403).json({ error: 'Chỉ superadmin' });
+  let moi;
+  try { moi = nhomHangService.themLoai(req.body); } catch (err) { return res.status(400).json({ error: err.message }); }
+  ghiLogNhomHang(req, { thaoTac: 'them', ...tomTatLoai(moi) });
+  res.json({ ok: true, id: moi.id });
+});
+
+router.put('/nhom-hang/:id', (req, res) => {
+  if (!laSuperAdmin(req.session.user.vaiTro)) return res.status(403).json({ error: 'Chỉ superadmin' });
+  let kq;
+  try { kq = nhomHangService.suaLoai(req.params.id, req.body); } catch (err) { return res.status(400).json({ error: err.message }); }
+  const [truoc, sau] = [tomTatLoai(kq.truoc), tomTatLoai(kq.sau)];
+  if (JSON.stringify(truoc) !== JSON.stringify(sau)) ghiLogNhomHang(req, { thaoTac: 'sua', ...sau, truoc }); // bấm Lưu mà không đổi gì -> không ghi lịch sử
+  res.json({ ok: true });
+});
+
+router.delete('/nhom-hang/:id', (req, res) => {
+  if (!laSuperAdmin(req.session.user.vaiTro)) return res.status(403).json({ error: 'Chỉ superadmin' });
+  let daXoa;
+  try { daXoa = nhomHangService.xoaLoai(req.params.id); } catch (err) { return res.status(400).json({ error: err.message }); }
+  ghiLogNhomHang(req, { thaoTac: 'xoa', ...tomTatLoai(daXoa) });
+  res.json({ ok: true });
+});
+
 router.get('/mau-xuong', (req, res) => {
   const duocThay = xuongDuocThay(req.session.user);
   const mau = layMauTheoXuong();
@@ -1014,7 +1074,7 @@ const TRUONG_DUOC_SUA = {
 // GHI_CHU_XUONG là cột Sheet (app không ghi được qua đây), sửa qua route này sẽ "lưu" giả mà không đi đâu.
 // THOI_GIAN_SAN_XUAT (29/09/2026) — mốc tính giờ TỰ ĐỘNG MUA TRACKING (tốn tiền thật), chỉ orderService tự ghi khi
 // đơn chuyển sang "Đã sản xuất"; cho sửa tay qua đây là cho phép ép hệ thống mua sớm.
-const TRUONG_CAM_SUA = ['STT_Key', '_row', 'NguoiCapNhatCuoi', 'ThoiGianCapNhatCuoi', 'TenKhachHang', 'TieuDeSanPham', 'ViTriTheu', 'CanhBao', 'XUONG', 'DON_UU_TIEN', 'DA_XOA', 'GHI_CHU_XUONG', 'GHI_CHU_XUONG_NOI_BO', 'THOI_GIAN_SAN_XUAT'];
+const TRUONG_CAM_SUA = ['STT_Key', '_row', 'NguoiCapNhatCuoi', 'ThoiGianCapNhatCuoi', 'TenKhachHang', 'TieuDeSanPham', 'ViTriTheu', 'CanhBao', 'XUONG', 'DON_UU_TIEN', 'DA_XOA', 'GHI_CHU_XUONG', 'GHI_CHU_XUONG_NOI_BO', 'THOI_GIAN_SAN_XUAT', 'DA_MUA_TRACKING'];
 
 // Ghi chú xưởng (28/09/2026, theo yêu cầu người dùng): LUÔN lưu bản trong app (GHI_CHU_XUONG_NOI_BO) rồi ghi vào
 // ô GHI_CHU_XUONG trong Sheet Seller (bản chính — app đọc lại qua RAW -> Don_Hang_ALL). Ghi Sheet lỗi vẫn trả

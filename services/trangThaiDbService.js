@@ -45,6 +45,10 @@ const CAC_COT = [
   // TRACKING_CHUNG_CUA (bổ sung 26/09/2026, DonNhieuAo — xem services/donNhieuAoService.js): STT_Key của
   // đơn ".1" đã mua tracking, khi TRACKING_ID của đơn này là bản SAO từ đơn đó. Rỗng = tracking của chính đơn.
   'TRACKING_CHUNG_CUA',
+  // DA_MUA_TRACKING (bổ sung 29/09/2026, theo yêu cầu người dùng — lọc "Đã mua Tracking" ở Danh sách đơn hàng):
+  // 'YES'/'NO', TÍNH từ TRACKING_ID/TRACKING_CHUNG_CUA/TRACKING_ID2 (orderService.js#tinhDaMuaTracking) — không
+  // ai ghi tay; getAll() tự đồng bộ lại mỗi lần đọc, update() ghi ngay khi tracking đổi.
+  'DA_MUA_TRACKING',
   // TAI_KHOAN_GKE (bổ sung 27/09/2026) — id tài khoản GKE đã TẠO vận đơn cho đơn này (xem
   // gkeService.js#layCauHinhGkeChoDon) — in lại tem/tra trạng thái luôn dùng đúng tài khoản đó, kể cả khi
   // đơn đổi Xưởng sau khi mua. Rỗng = chưa tạo vận đơn (hoặc tạo trước khi có cột này).

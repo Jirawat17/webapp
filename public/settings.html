@@ -23,6 +23,14 @@
   border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 8px 12px;
 }
 .st-dong-xuong .ten-xuong { flex: 1; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Nhóm hàng (29/09/2026) — dòng loại tự xuống hàng trên màn hẹp; ô keyword chiếm phần còn lại. */
+.st-dong-nhom-hang { flex-wrap: wrap; }
+.st-dong-nhom-hang .st-ten-loai { flex: 0 1 150px; min-width: 110px; }
+.st-dong-nhom-hang textarea { flex: 1 1 260px; min-width: 0; resize: vertical; }
+.st-dong-xuong.st-dong-nhom-hang :is(input, select, textarea) {
+  padding: 8px 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-border); font-family: inherit; font-size: 0.9rem;
+  background: var(--color-surface); color: var(--color-text);
+}
 </style>
 </head>
 <body>
@@ -122,6 +130,30 @@
   </div>
   <p id="thong-bao-team-xuong" style="display:none"></p>
 
+  <!-- Nhóm hàng (29/09/2026, theo yêu cầu người dùng) — loại/keyword phân loại LOAI cho bộ lọc "Nhóm hàng" ở Danh
+       sách đơn hàng. API routes/orders.js /nhom-hang, kiểm tra/trùng ở services/nhomHangService.js. -->
+  <h3 style="margin-top:var(--space-6)">Nhóm hàng (phân loại theo LOAI)</h3>
+  <p style="color:var(--color-text-muted)">Mỗi loại 1 dòng: tên loại, nhóm, các keyword cách nhau dấu phẩy (hoặc xuống dòng). Đơn thuộc loại khi LOAI của đơn <strong>trùng nguyên</strong> 1 keyword — không phân biệt hoa/thường, dấu tiếng Việt, khoảng trắng, dấu "-" (vd "T-Shirt" = "t shirt" = "tshirt"). Mỗi keyword chỉ được thuộc 1 loại. Lưu xong áp dụng ngay cho bộ lọc Nhóm hàng.</p>
+  <div id="khoi-nhom-hang"></div>
+  <div class="inline-form st-dong-nhom-hang" style="margin-top:var(--space-3)">
+    <div class="truong">
+      <label for="loai-hang-moi-ten">Tên loại mới</label>
+      <input type="text" id="loai-hang-moi-ten" placeholder="VD: Mug">
+    </div>
+    <div class="truong">
+      <label for="loai-hang-moi-nhom">Nhóm</label>
+      <select id="loai-hang-moi-nhom"><option value="1">Nhóm 1 - Quần áo</option><option value="2">Nhóm 2 - Không phải quần áo</option></select>
+    </div>
+    <div class="truong" style="flex:1 1 260px">
+      <label for="loai-hang-moi-tu-khoa">Keyword (cách nhau dấu phẩy hoặc xuống dòng)</label>
+      <input type="text" id="loai-hang-moi-tu-khoa" placeholder="VD: mug, ly su, coc">
+    </div>
+    <button type="button" class="btn-hanh-dong phu" id="btn-them-loai-hang">Thêm loại</button>
+  </div>
+  <p id="thong-bao-nhom-hang" style="display:none"></p>
+  <h4 style="margin:var(--space-4) 0 var(--space-2)">LOAI đang chưa phân loại</h4>
+  <div id="khoi-loai-chua-phan-loai"></div>
+
   <!-- Cấu hình GKE — CHUYỂN từ menu Tracking sang đây (bổ sung 23/09/2026, theo yêu cầu người dùng —
        hạn chế người không phải superadmin đổi được, gồm cả username/password API GKE THẬT + thông tin
        khai báo hải quan, có thể phát sinh chi phí thật nếu cấu hình sai). Trước đây mở cho admin/
@@ -204,7 +236,8 @@
   renderCongTacCheDoToi();
   await taiNguongCanhBao();
   await taiCauHinhNenAnh();
-  await taiMauXuong(); await taiTaiKhoanGke(); await taiTeamXuong();
+  await taiMauXuong(); await taiTaiKhoanGke(); await taiTeamXuong(); await taiNhomHang();
+  document.getElementById('btn-them-loai-hang').onclick = themLoaiHangMoi;
   document.getElementById('btn-luu-canh-bao').onclick = luuNguongCanhBao;
   document.getElementById('btn-luu-nen-anh').onclick = luuCauHinhNenAnh;
   document.getElementById('btn-them-tk-gke').onclick = themTheTaiKhoanGke;
@@ -463,6 +496,73 @@ async function ganTeamXuong(team, xuong) {
     thongBaoGke(xuong ? `Team ${team} → Xưởng ${xuong}: đã lưu, các đơn Chưa gán của Team đã được gán.` : `Đã bỏ Xưởng mặc định của Team ${team}.`, false, 'thong-bao-team-xuong');
   } catch (e) { thongBaoGke('Lỗi khi lưu: ' + e.message, true, 'thong-bao-team-xuong'); }
   await taiTeamXuong();
+}
+
+// Nhóm hàng (29/09/2026, theo yêu cầu người dùng) — API routes/orders.js /nhom-hang (CHỈ superadmin). Lỗi (trùng keyword,
+// thiếu tên...) do server kiểm tra và trả về nguyên văn trong dòng thông báo.
+const TEN_NHOM_HANG = { 1: 'NHÓM 1 - QUẦN ÁO', 2: 'NHÓM 2 - KHÔNG PHẢI QUẦN ÁO' };
+let dsLoaiHang = [];
+
+async function taiNhomHang() {
+  let kq;
+  try { kq = await apiFetch('/orders/nhom-hang'); } catch (e) {
+    thongBaoGke('Không tải được Nhóm hàng: ' + e.message, true, 'thong-bao-nhom-hang');
+    return;
+  }
+  dsLoaiHang = kq.loai;
+  const oNhom = nhom => ['1', '2'].map(n => `<option value="${n}" ${n === nhom ? 'selected' : ''}>Nhóm ${n}</option>`).join('');
+  const dong = l => `
+    <div class="st-dong-xuong st-dong-nhom-hang">
+      <input type="text" class="st-ten-loai" id="lh-ten-${l.id}" value="${escapeHtml(l.Ten)}" aria-label="Tên loại">
+      <select id="lh-nhom-${l.id}" aria-label="Nhóm">${oNhom(l.Nhom)}</select>
+      <textarea id="lh-tu-khoa-${l.id}" rows="2" aria-label="Keyword của ${escapeHtml(l.Ten)}">${escapeHtml(l.TuKhoa)}</textarea>
+      <button type="button" class="btn-hanh-dong phu" onclick="luuLoaiHang(${l.id})">Lưu</button>
+      <button type="button" class="btn-hanh-dong phu nguy-hiem" onclick="xoaLoaiHang(${l.id})">Xoá</button>
+    </div>`;
+  document.getElementById('khoi-nhom-hang').innerHTML = ['1', '2'].map(n => {
+    const cacDong = kq.loai.filter(l => l.Nhom === n);
+    return `<h4 style="margin:var(--space-4) 0 var(--space-2)">${TEN_NHOM_HANG[n]} <span class="st-ghi-chu-truong">(${cacDong.length} loại)</span></h4>
+      <div class="st-danh-sach-xuong">${cacDong.map(dong).join('') || '<p style="color:var(--color-text-muted)">Chưa có loại nào.</p>'}</div>`;
+  }).join('');
+  document.getElementById('khoi-loai-chua-phan-loai').innerHTML = kq.chuaPhanLoai.length
+    ? `<p class="st-ghi-chu-truong" style="margin-bottom:var(--space-2)">Thêm keyword trùng đúng giá trị này vào loại phù hợp (hoặc thêm loại mới) để đơn được phân nhóm.</p>
+       <div class="st-danh-sach-xuong">${kq.chuaPhanLoai.map(c => `
+        <div class="st-dong-xuong"><span class="ten-xuong">${c.loai ? escapeHtml(c.loai) : '<em>(LOAI trống)</em>'}</span><span class="st-ghi-chu-truong" style="margin:0">${c.soDon} đơn</span></div>`).join('')}</div>`
+    : '<p style="color:var(--color-text-muted)">Không có — mọi đơn đều đã thuộc Nhóm 1 hoặc Nhóm 2.</p>';
+}
+
+async function luuLoaiHang(id) {
+  const duLieu = {
+    Ten: document.getElementById('lh-ten-' + id).value,
+    Nhom: document.getElementById('lh-nhom-' + id).value,
+    TuKhoa: document.getElementById('lh-tu-khoa-' + id).value,
+  };
+  try {
+    await apiFetch('/orders/nhom-hang/' + id, { method: 'PUT', body: JSON.stringify(duLieu) });
+    thongBaoGke(`Đã lưu loại "${duLieu.Ten.trim()}".`, false, 'thong-bao-nhom-hang');
+    await taiNhomHang();
+  } catch (e) { thongBaoGke('Chưa lưu: ' + e.message, true, 'thong-bao-nhom-hang'); } // giữ nguyên nội dung đang gõ để sửa tiếp
+}
+
+async function xoaLoaiHang(id) {
+  const l = dsLoaiHang.find(x => x.id === id);
+  if (!l || !confirm(`Xoá loại "${l.Ten}" (Nhóm ${l.Nhom})?\n\nĐơn có LOAI khớp keyword của loại này sẽ thành CHƯA PHÂN LOẠI.`)) return;
+  try {
+    await apiFetch('/orders/nhom-hang/' + id, { method: 'DELETE' });
+    thongBaoGke(`Đã xoá loại "${l.Ten}".`, false, 'thong-bao-nhom-hang');
+  } catch (e) { thongBaoGke('Lỗi khi xoá: ' + e.message, true, 'thong-bao-nhom-hang'); }
+  await taiNhomHang();
+}
+
+async function themLoaiHangMoi() {
+  const o = id => document.getElementById(id);
+  const duLieu = { Ten: o('loai-hang-moi-ten').value, Nhom: o('loai-hang-moi-nhom').value, TuKhoa: o('loai-hang-moi-tu-khoa').value };
+  try {
+    await apiFetch('/orders/nhom-hang', { method: 'POST', body: JSON.stringify(duLieu) });
+    thongBaoGke(`Đã thêm loại "${duLieu.Ten.trim()}" vào Nhóm ${duLieu.Nhom}.`, false, 'thong-bao-nhom-hang');
+    o('loai-hang-moi-ten').value = ''; o('loai-hang-moi-tu-khoa').value = '';
+    await taiNhomHang();
+  } catch (e) { thongBaoGke('Chưa thêm: ' + e.message, true, 'thong-bao-nhom-hang'); }
 }
 
 // Tài khoản GKE theo Xưởng (bổ sung 27/09/2026, theo yêu cầu người dùng — thay form "Cấu hình GKE" 1 bộ

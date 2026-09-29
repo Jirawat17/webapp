@@ -88,9 +88,15 @@
           <option value="Đã vẽ file">Đã vẽ file</option>
         </select>
       </div>
+      <!-- Tách 2 ô tìm (29/09/2026, theo yêu cầu người dùng): loc-kh CHỈ mã đơn/mã KH (tham số kh), loc-ma-tracking CHỈ
+           mã Tracking (tham số maTracking — TRACKING_ID2 Sheet Seller + TRACKING_ID app mua). Nhập cả 2 = phải khớp cả 2. -->
       <div class="truong truong-rong">
-        <label for="loc-kh">Tìm theo tên đơn / mã KH / mã Tracking</label>
-        <input id="loc-kh" placeholder="STT_Key, mã khách hàng hoặc mã Tracking">
+        <label for="loc-kh">Tìm theo đơn / mã KH</label>
+        <input id="loc-kh" placeholder="STT_Key hoặc mã khách hàng">
+      </div>
+      <div class="truong truong-rong">
+        <label for="loc-ma-tracking">Tìm theo Mã Tracking</label>
+        <input id="loc-ma-tracking" placeholder="Mã Tracking">
       </div>
       <div class="truong truong-ngay">
         <label for="loc-tu-ngay">Từ ngày</label>
@@ -121,6 +127,25 @@
           <option value="">Tất cả đơn</option>
           <option value="1">Chỉ DonNhieuAo</option>
           <option value="0">Đơn lẻ</option>
+        </select>
+      </div>
+      <!-- Đã mua Tracking (29/09/2026) — cột DA_MUA_TRACKING, quy tắc YES/NO ở services/orderService.js#tinhDaMuaTracking. -->
+      <div class="truong">
+        <label for="loc-da-mua-tracking">Đã mua Tracking</label>
+        <select id="loc-da-mua-tracking">
+          <option value="">Tất cả</option>
+          <option value="YES">YES – Đã mua Tracking</option>
+          <option value="NO">NO – Chưa mua Tracking</option>
+        </select>
+      </div>
+      <!-- Nhóm hàng (29/09/2026) — phân nhóm theo LOAI + danh sách keyword, xem services/nhomHangService.js. -->
+      <div class="truong">
+        <label for="loc-nhom-hang">Nhóm hàng</label>
+        <select id="loc-nhom-hang">
+          <option value="">Tất cả</option>
+          <option value="1">NHÓM 1 - QUẦN ÁO</option>
+          <option value="2">NHÓM 2 - KHÔNG PHẢI QUẦN ÁO</option>
+          <option value="CHUA">CHƯA PHÂN LOẠI</option>
         </select>
       </div>
       <!-- Bỏ checkbox "Chỉ đơn hàng loạt" (nhóm TỰ ĐỘNG đề xuất, cột NHOM_HANG_LOAT) — 13/09/2026,
@@ -336,6 +361,8 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   document.getElementById('loc-xuong').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-uu-tien').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-don-nhieu-ao').onchange = () => { boChonTatCaDon(); taiDon(); };
+  document.getElementById('loc-da-mua-tracking').onchange = () => { boChonTatCaDon(); taiDon(); };
+  document.getElementById('loc-nhom-hang').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-don-hang-loat').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-loai').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-kich-thuoc').onchange = () => { boChonTatCaDon(); taiDon(); };
@@ -344,6 +371,7 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   document.getElementById('loc-quoc-gia-tracking').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-tinh-trang').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-kh').oninput = debounce(() => { boChonTatCaDon(); taiDon(); }, 400);
+  document.getElementById('loc-ma-tracking').oninput = debounce(() => { boChonTatCaDon(); taiDon(); }, 400);
   document.getElementById('loc-tu-ngay').onchange = () => {
     const denNgay = document.getElementById('loc-den-ngay');
     if (document.getElementById('loc-tu-ngay').value && !denNgay.value) denNgay.value = ngayHomNayYYYYMMDD();
@@ -580,7 +608,7 @@ async function apDungChuyenSuperadmin(btn) {
   finally { btn.disabled = false; }
 }
 
-const CAC_O_LOC = ['loc-trang-thai', 'loc-phoi', 'loc-ve-file', 'loc-canh-bao', 'loc-xuong', 'loc-uu-tien', 'loc-don-nhieu-ao', 'loc-don-hang-loat', 'loc-loai', 'loc-kich-thuoc', 'loc-hang-van-chuyen', 'loc-mau-sac', 'loc-quoc-gia-tracking', 'loc-tinh-trang', 'loc-kh', 'loc-tu-ngay', 'loc-den-ngay'];
+const CAC_O_LOC = ['loc-trang-thai', 'loc-phoi', 'loc-ve-file', 'loc-canh-bao', 'loc-xuong', 'loc-uu-tien', 'loc-don-nhieu-ao', 'loc-da-mua-tracking', 'loc-nhom-hang', 'loc-don-hang-loat', 'loc-loai', 'loc-kich-thuoc', 'loc-hang-van-chuyen', 'loc-mau-sac', 'loc-quoc-gia-tracking', 'loc-tinh-trang', 'loc-kh', 'loc-ma-tracking', 'loc-tu-ngay', 'loc-den-ngay'];
 
 function xoaTatCaLoc() {
   CAC_O_LOC.forEach(id => { document.getElementById(id).value = ''; });
@@ -653,6 +681,7 @@ async function taiDon() {
   const quocGiaTracking = document.getElementById('loc-quoc-gia-tracking').value;
   const tinhTrang = document.getElementById('loc-tinh-trang').value;
   const kh = document.getElementById('loc-kh').value;
+  const maTracking = document.getElementById('loc-ma-tracking').value;
   const tuNgay = document.getElementById('loc-tu-ngay').value;
   const denNgay = document.getElementById('loc-den-ngay').value;
   const sapXep = document.getElementById('sap-xep').value;
@@ -666,6 +695,10 @@ async function taiDon() {
   if (uuTien) qs.set('uuTien', uuTien);
   const donNhieuAo = document.getElementById('loc-don-nhieu-ao').value;
   if (donNhieuAo) qs.set('donNhieuAo', donNhieuAo);
+  const daMuaTracking = document.getElementById('loc-da-mua-tracking').value;
+  if (daMuaTracking) qs.set('daMuaTracking', daMuaTracking);
+  const nhomHang = document.getElementById('loc-nhom-hang').value;
+  if (nhomHang) qs.set('nhomHang', nhomHang);
   if (timDonHangLoat) qs.set('timDonHangLoat', timDonHangLoat);
   if (loai) qs.set('loai', loai);
   if (kichThuoc) qs.set('kichThuoc', kichThuoc);
@@ -674,6 +707,7 @@ async function taiDon() {
   if (quocGiaTracking) qs.set('quocGiaTracking', quocGiaTracking);
   if (tinhTrang) qs.set('tinhTrang', tinhTrang);
   if (kh) qs.set('kh', kh);
+  if (maTracking) qs.set('maTracking', maTracking);
   if (tuNgay) qs.set('tuNgay', tuNgay);
   if (denNgay) qs.set('denNgay', denNgay);
   if (sapXep) qs.set('sapXep', sapXep);
@@ -699,7 +733,7 @@ async function taiDon() {
   const sttKeyHienTai = new Set(list.map(o => o.STT_Key));
   donDaChonSet.forEach(stt => { if (!sttKeyHienTai.has(stt)) donDaChonSet.delete(stt); });
 
-  const coLocNaoDangChon = trangThai || trangThaiPhoi || trangThaiVeFile || canhBao || xuong || uuTien || donNhieuAo || loai || kichThuoc || mauSac || hangVanChuyen || quocGiaTracking || tinhTrang || kh || tuNgay || denNgay;
+  const coLocNaoDangChon = trangThai || trangThaiPhoi || trangThaiVeFile || canhBao || xuong || uuTien || donNhieuAo || daMuaTracking || nhomHang || loai || kichThuoc || mauSac || hangVanChuyen || quocGiaTracking || tinhTrang || kh || maTracking || tuNgay || denNgay;
   if (!coLocNaoDangChon) capNhatCacBoLocDong(list);
   capNhatNhanNutLoc();
 
@@ -770,6 +804,8 @@ function renderDanhSachDon() {
           ${laAdmin(user.vaiTro) ? `
             <span class="badge trang-thai-info">${icon('package', {size:14})} Xưởng: <strong>${escapeHtml(o.XUONG || '(chưa gán)')}</strong></span>` : ''}
         </div>
+        ${o.NhomNhieuAo && !o.NhomNhieuAo.donMua ? `
+          <div class="meta" style="color:var(--color-danger-text)">Đã mua Tracking: <strong>${escapeHtml(o.DA_MUA_TRACKING)}</strong> — ${escapeHtml(o.LyDoDaMuaTracking)}</div>` : ''}
       </div>
     </div>`;
   }).join('') + (conLai > 0
@@ -1296,9 +1332,10 @@ function layBoLocDangDung() {
     tuNgay: doc('loc-tu-ngay'), denNgay: doc('loc-den-ngay'),
     trangThai: doc('loc-trang-thai'), trangThaiPhoi: doc('loc-phoi'), trangThaiVeFile: doc('loc-ve-file'),
     canhBao: doc('loc-canh-bao'), xuong: doc('loc-xuong'), uuTien: doc('loc-uu-tien'), donNhieuAo: doc('loc-don-nhieu-ao'),
-    timDonHangLoat: doc('loc-don-hang-loat'), loai: doc('loc-loai'), kichThuoc: doc('loc-kich-thuoc'),
+    daMuaTracking: doc('loc-da-mua-tracking'), nhomHang: doc('loc-nhom-hang'), timDonHangLoat: doc('loc-don-hang-loat'), loai: doc('loc-loai'), kichThuoc: doc('loc-kich-thuoc'),
     mauSac: doc('loc-mau-sac'), hangVanChuyen: doc('loc-hang-van-chuyen'),
     quocGiaTracking: doc('loc-quoc-gia-tracking'), tinhTrang: doc('loc-tinh-trang'), tuKhoa: doc('loc-kh'),
+    maTracking: doc('loc-ma-tracking'),
   };
   const ketQua = {};
   Object.entries(cacTruong).forEach(([k, v]) => { if (v) ketQua[k] = v; });

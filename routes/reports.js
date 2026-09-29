@@ -115,6 +115,9 @@ const NHAN_LOC_PHU = [
   ['xuong', 'Xưởng'],
   ['uuTien', 'Ưu tiên'],
   ['donNhieuAo', 'DonNhieuAo'],
+  ['daMuaTracking', 'Đã mua Tracking'],
+  ['maTracking', 'Mã Tracking'],
+  ['nhomHang', 'Nhóm hàng'],
   ['timDonHangLoat', 'Đơn hàng loạt'],
   ['loai', 'Loại'],
   ['kichThuoc', 'Kích thước'],
@@ -128,6 +131,7 @@ const NHAN_LOC_PHU = [
 const GIA_TRI_HIEN_THI_LOC = {
   uuTien: { 1: 'Đơn ưu tiên', 0: 'Đơn thường' },
   donNhieuAo: { 1: 'Chỉ DonNhieuAo', 0: 'Đơn lẻ' },
+  nhomHang: { 1: 'NHÓM 1 - QUẦN ÁO', 2: 'NHÓM 2 - KHÔNG PHẢI QUẦN ÁO', CHUA: 'CHƯA PHÂN LOẠI' },
 };
 
 function dongThongTinLoc(query, kieu) {

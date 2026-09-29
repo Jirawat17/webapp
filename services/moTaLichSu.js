@@ -156,6 +156,17 @@ function moTaLichSu(dong, { anXuong = false } = {}) {
     case 'CAU_HINH_TEAM_XUONG':
       if (anXuong) return kq(`đổi Xưởng mặc định của Team ${c.team || ''}`);
       return kq(`đặt Xưởng mặc định cho Team ${c.team || ''}`, [doi('Xưởng', c.tu === undefined ? undefined : (c.tu || '(không tự gán)'), c.xuong || '(không tự gán)')]);
+    case 'CAU_HINH_NHOM_HANG': {
+      const tenNhom = n => (n ? `Nhóm ${n}` : undefined);
+      if (c.thaoTac === 'them') return kq(`thêm loại "${c.ten || ''}" vào Nhóm ${c.nhom || '?'} (Nhóm hàng)`, [doi('Keyword', undefined, c.tuKhoa || '')]);
+      if (c.thaoTac === 'xoa') return kq(`xoá loại "${c.ten || ''}" khỏi Nhóm ${c.nhom || '?'} (Nhóm hàng)`, [doi('Keyword', c.tuKhoa || '', undefined)]);
+      const t = c.truoc || {};
+      return kq(`sửa loại "${c.ten || ''}" (Nhóm hàng)`, [
+        t.ten !== c.ten && doi('Tên loại', t.ten, c.ten),
+        t.nhom !== c.nhom && doi('Nhóm', tenNhom(t.nhom), tenNhom(c.nhom)),
+        t.tuKhoa !== c.tuKhoa && doi('Keyword', t.tuKhoa, c.tuKhoa),
+      ].filter(Boolean));
+    }
     case 'SUA_GHI_CHU_XUONG': {
       const sh = c.sheet || {};
       const ketQuaSheet = sh.ketQua === 'OK'

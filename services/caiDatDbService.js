@@ -253,6 +253,37 @@ function ganTaiKhoanGkeChoXuong(xuong, id) {
   db.prepare(`UPDATE danh_sach_xuong SET TaiKhoanGke = ? WHERE Ten = ?`).run(id ? String(id) : '', xuong);
 }
 
+// Nhóm hàng theo LOAI (29/09/2026, theo yêu cầu người dùng — sửa ở Settings thay vì trong code): mỗi dòng 1 loại
+// (Tshirt, HoodieKID...), Nhom '1' Quần áo / '2' Không phải quần áo, TuKhoa phân cách dấu phẩy. Kiểm tra hợp lệ/trùng
+// ở services/nhomHangService.js. Bảng VỪA tạo -> nạp danh sách mặc định (services/nhomHangMacDinh.js) đúng 1 lần, CÙNG
+// transaction với lệnh tạo bảng (nạp lỗi = chưa có bảng, lần khởi động sau thử lại). Xoá hết loại sau đó KHÔNG tự nạp
+// lại. Danh sách mặc định KHÔNG đặt trong data/: thư mục đó là volume Docker (./data:/app/data) và bị .gitignore.
+db.transaction(() => {
+  const bangMoi = !db.prepare(`SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'nhom_hang_loai'`).get();
+  db.exec(`CREATE TABLE IF NOT EXISTS nhom_hang_loai (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    Ten TEXT NOT NULL UNIQUE,
+    Nhom TEXT NOT NULL,
+    TuKhoa TEXT NOT NULL DEFAULT ''
+  )`);
+  if (!bangMoi) return;
+  for (const [Nhom, dsLoai] of Object.entries(require('./nhomHangMacDinh'))) {
+    for (const [Ten, TuKhoa] of Object.entries(dsLoai)) themLoaiHang({ Ten, Nhom, TuKhoa });
+  }
+})();
+function layDanhSachLoaiHang() {
+  return db.prepare(`SELECT id, Ten, Nhom, TuKhoa FROM nhom_hang_loai ORDER BY Nhom, id`).all();
+}
+function themLoaiHang({ Ten, Nhom, TuKhoa }) {
+  return Number(db.prepare(`INSERT INTO nhom_hang_loai (Ten, Nhom, TuKhoa) VALUES (?, ?, ?)`).run(Ten, Nhom, TuKhoa).lastInsertRowid);
+}
+function suaLoaiHang(id, { Ten, Nhom, TuKhoa }) {
+  db.prepare(`UPDATE nhom_hang_loai SET Ten = ?, Nhom = ?, TuKhoa = ? WHERE id = ?`).run(Ten, Nhom, TuKhoa, Number(id));
+}
+function xoaLoaiHang(id) {
+  db.prepare(`DELETE FROM nhom_hang_loai WHERE id = ?`).run(Number(id));
+}
+
 module.exports = {
   CAC_COT_TAI_KHOAN_GKE, layDanhSachTaiKhoanGke, layTaiKhoanGke, ghiTaiKhoanGke, xoaTaiKhoanGke,
   layGanTaiKhoanGke, ganTaiKhoanGkeChoXuong,
@@ -263,4 +294,5 @@ module.exports = {
   layMauTheoXuong, datMauXuong,
   layDanhSachXuong, themXuong, xoaXuong, doiTenXuong,
   layTeamXuongMacDinh, ganTeamXuongMacDinh,
+  layDanhSachLoaiHang, themLoaiHang, suaLoaiHang, xoaLoaiHang,
 };

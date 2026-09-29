@@ -46,7 +46,53 @@ async function getAll({ fresh = false, ttlMs = 10000 } = {}) {
     // trong file trên) nhưng với TOÀN BỘ app (danh sách, dashboard, báo cáo...) coi như đã biến mất.
     .filter(r => r.DA_XOA !== 'TRUE');
   tuGanXuongTheoTeam(rowsGop);
+  dongBoDaMuaTracking(rowsGop);
   return { headers, rows: rowsGop };
+}
+
+// DA_MUA_TRACKING (29/09/2026, quy tắc đã xác nhận với người dùng):
+//   YES = chính đơn này mua tracking qua hệ thống (TRACKING_ID có, KHÔNG phải bản sao DonNhieuAo), hoặc app
+//         chưa mua nhưng Sheet Seller đã có mã (TRACKING_ID2 — Seller tự điền / đơn cũ).
+//   NO  = còn lại, gồm: đơn con DonNhieuAo dùng chung tracking của đơn mua (TRACKING_CHUNG_CUA), đơn đang chờ
+//         tem GKE (chưa có mã thật — TAM_THOI).
+//   DonNhieuAo: đơn con có mã Seller nhưng app CHƯA sao tracking xuống vẫn YES (theo mã của chính nó) — sao xuống
+//   rồi (TRACKING_CHUNG_CUA) thì NO. Nhóm không xác định được đơn ".1" cũng tính riêng từng đơn (có ghi chú, bên dưới).
+function tinhDaMuaTracking(r) {
+  const daMua = r.TRACKING_ID ? !r.TRACKING_CHUNG_CUA : !!String(r.TRACKING_ID2 || '').trim();
+  return daMua ? 'YES' : 'NO';
+}
+
+// Lý do của giá trị DA_MUA_TRACKING — hiện ở Chi tiết đơn, và ở Danh sách đơn hàng cho đơn thuộc nhóm lỗi.
+// `nhom`: nhóm DonNhieuAo của đơn (donNhieuAoService.xayDungBanDoNhom), null nếu đơn lẻ.
+function lyDoDaMuaTracking(r, nhom) {
+  let lyDo;
+  if (r.TRACKING_ID && r.TRACKING_CHUNG_CUA) lyDo = `Dùng chung tracking của đơn ${r.TRACKING_CHUNG_CUA} (DonNhieuAo) — đơn này không mua riêng.`;
+  else if (r.TRACKING_ID) lyDo = 'Đơn có mã tracking riêng trong hệ thống (TRACKING_ID).';
+  else if (String(r.TRACKING_ID2 || '').trim()) lyDo = 'Theo mã tracking Seller điền trong Sheet (TRACKING_ID2) — hệ thống không mua.';
+  else if (r.TAM_THOI) lyDo = 'Đã tạo vận đơn GKE nhưng đang chờ tem — chưa có mã tracking.';
+  else lyDo = 'Chưa có mã tracking.';
+  if (nhom && !nhom.donMua) {
+    lyDo += ` Nhóm cùng OrderID ${nhom.orderId} chưa xác định được đơn ".1" (${nhom.loiChan.join(' ')}) nên mỗi đơn tính riêng theo mã của chính nó.`;
+  }
+  return lyDo;
+}
+
+// Ghi lại DA_MUA_TRACKING cho đơn nào đang lệch — cùng khuôn tuGanXuongTheoTeam: bắt được cả thay đổi phía Sheet
+// Seller (TRACKING_ID2, app không có lượt ghi nào để móc vào) và tự điền cho đơn cũ ở lần đọc đầu sau deploy.
+// Không ghi lịch sử: việc mua/sao tracking gốc đã có log riêng. Lỗi ghi không làm hỏng việc đọc — lượt sau thử lại.
+function dongBoDaMuaTracking(rows) {
+  const canGhi = new Map();
+  for (const r of rows) {
+    const giaTri = tinhDaMuaTracking(r);
+    if (r.DA_MUA_TRACKING !== giaTri) canGhi.set(String(r[KEY_COL]).trim(), giaTri);
+    r.DA_MUA_TRACKING = giaTri;
+  }
+  if (canGhi.size === 0) return;
+  try {
+    trangThaiDbService.ghiDeNhieu([...canGhi].map(([sttKey, giaTri]) => [sttKey, { DA_MUA_TRACKING: giaTri }]));
+  } catch (err) {
+    console.error('[Orders] Lỗi đồng bộ DA_MUA_TRACKING:', err.message);
+  }
 }
 
 // Tự gán Xưởng theo Team (bổ sung 27/09/2026, theo yêu cầu người dùng): MỌI đơn đang "chưa gán" (XUONG
@@ -412,6 +458,12 @@ async function capNhatThat(sttKey, updates, user, tuyChon) {
 
   if (!boQua) kiemTraTinhHopLy(row, updatesDaTinh); // kiểm tra SAU khi đã tính tự động, để không báo nhầm khi chính việc tự động hoá làm cho tổ hợp trở nên hợp lệ
 
+  // DA_MUA_TRACKING ghi CÙNG lượt với TRACKING_ID/TRACKING_CHUNG_CUA (mua, sao DonNhieuAo, sửa tay) — không phải đợi
+  // lượt getAll() kế tiếp. Không nhận giá trị truyền vào: luôn tính lại từ dữ liệu sau khi ghi.
+  delete updatesDaTinh.DA_MUA_TRACKING;
+  const daMuaTracking = tinhDaMuaTracking({ ...row, ...updatesDaTinh });
+  if (daMuaTracking !== row.DA_MUA_TRACKING) updatesDaTinh.DA_MUA_TRACKING = daMuaTracking;
+
   // Ghi theo STT_Key (khoá), không phải số dòng vật lý — xem trangThaiDbService.js. Không còn khái
   // niệm "đọc lại số dòng mới nhất trước khi ghi cả lô" nữa (bỏ hẳn layLaiSoDongMoiNhat/soDongMoiNhat,
   // xem docs/superpowers/specs/2026-09-18-chuyen-cot-app-ghi-sang-sqlite-design.md) — SQLite ghi đúng
@@ -601,5 +653,5 @@ function suaDonKetSanSang() {
 module.exports = {
   suaDonKetSanSang,
   TAB, KEY_COL, getAll, getByKey, getManyByKeys, update, filterForRole, ganTenKhachHang, tieuDeSanPham, danhSachViTriTheu,
-  layDanhSachXuong, locTheoXuong, coQuyenTheoXuong, phamViDon, laUuTien,
+  layDanhSachXuong, locTheoXuong, coQuyenTheoXuong, phamViDon, laUuTien, lyDoDaMuaTracking,
 };
