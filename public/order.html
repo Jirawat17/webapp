@@ -308,9 +308,9 @@ function renderKhuVucThaoTac(don) {
       </div>`;
 
     // Mua tracking GKE THỦ CÔNG (bổ sung 09/09/2026) — chỉ hiện khi đơn CHƯA có tracking thật. Không
-    // cần AUTO_TRACKING="YES", không cần đợi x phút hay đúng TRANG_THAI_XUONG như quét QR — bấm là mua
+    // cần đợi đủ giờ sau "Đang chạy máy" như job tự động — bấm là mua
     // ngay cho đơn ĐANG XEM. Dùng chung API /tracking/mua-thu-cong với nút tương tự ở tracking.html
-    // (trang danh sách đơn AUTO_TRACKING). Từ 12/09/2026 lần 14, TRACKING_ID không còn khi nào mang giá
+    // (danh sách đơn tự động mua tracking). Từ 12/09/2026 lần 14, TRACKING_ID không còn khi nào mang giá
     // trị placeholder "chờ tem" nữa (chuyển sang cột TAM_THOI) nên chỉ cần kiểm tra rỗng/không rỗng.
     if (!don.TRACKING_ID && laDonConNhieuAo(don)) {
       html += `

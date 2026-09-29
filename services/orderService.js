@@ -377,15 +377,22 @@ async function capNhatThat(sttKey, updates, user, tuyChon) {
     updatesDaTinh.GHI_CHU_VE_FILE = '';
   }
 
-  // Đơn VỪA chuyển sang "Đã in mã" (từ 1 giá trị KHÁC) — ghi lại THỜI ĐIỂM này để job tự động mua
-  // tracking (services/trackingAutoService.js) biết đơn đã "đủ tuổi" bao lâu, không phụ thuộc
-  // ThoiGianCapNhatCuoi (bị ghi đè bởi MỌI lần sửa sau đó, không chỉ riêng lần chuyển "Đã in mã") —
-  // bổ sung 09/09/2026, theo yêu cầu người dùng, cột THOI_GIAN_IN_MA người dùng đã tự thêm vào Sheet.
+  // Đơn VỪA chuyển sang "Đã in mã" (từ 1 giá trị KHÁC) — ghi lại THỜI ĐIỂM này (bổ sung 09/09/2026). Từng là
+  // mốc tính giờ của job tự động mua tracking; từ 29/09/2026 job dùng THOI_GIAN_CHAY_MAY bên dưới, mốc này chỉ
+  // còn lưu để tra cứu.
   if (
     updatesDaTinh.TRANG_THAI_XUONG === 'Đã in mã' &&
     row.TRANG_THAI_XUONG !== 'Đã in mã'
   ) {
     updatesDaTinh.THOI_GIAN_IN_MA = thoiGianVNISOString();
+  }
+  // Tương tự cho "Đang chạy máy" (29/09/2026) — mốc tính giờ chờ TỰ ĐỘNG MUA TRACKING (thay cho "Đã in mã").
+  // Mọi đường chuyển sang "Đang chạy máy" (tự nhận, admin chỉ định, quét QR, sửa tay, nút lớn) đều qua đây.
+  if (
+    updatesDaTinh.TRANG_THAI_XUONG === 'Đang chạy máy' &&
+    row.TRANG_THAI_XUONG !== 'Đang chạy máy'
+  ) {
+    updatesDaTinh.THOI_GIAN_CHAY_MAY = thoiGianVNISOString();
   }
 
   // DonNhieuAo — huỷ 1 đơn = huỷ CẢ nhóm (bổ sung 26/09/2026, theo yêu cầu người dùng). Chặn nếu trong

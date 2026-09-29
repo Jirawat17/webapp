@@ -1,18 +1,28 @@
-// Tự động mua tracking GKE cho đơn đánh dấu AUTO_TRACKING="YES", sau khi đã trôi qua đủ số phút chờ
-// tính từ THOI_GIAN_IN_MA (thời điểm chuyển "Đã in mã") — bổ sung 09/09/2026, theo yêu cầu người
-// dùng. Xem đầy đủ lý do thiết kế ở
-// docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md.
+// Tự động mua tracking GKE — bổ sung 09/09/2026, theo yêu cầu người dùng (thiết kế gốc ở
+// docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md). ĐỔI 29/09/2026, theo yêu cầu người dùng:
+// bỏ điều kiện AUTO_TRACKING="YES" (từ khi chuyển sang SQLite 18/09 không còn chỗ nào đặt cờ này -> job không
+// bao giờ tìm thấy đơn), mốc tính giờ chờ đổi từ "Đã in mã" (THOI_GIAN_IN_MA) sang "Đang chạy máy"
+// (THOI_GIAN_CHAY_MAY, orderService.js tự ghi) — mua cho mọi đơn đang/đã qua "Đang chạy máy" đủ giờ chờ.
 const orderService = require('./orderService');
 const gkeService = require('./gkeService');
 const nhatKyDbService = require('./nhatKyDbService');
 const caiDatDbService = require('./caiDatDbService');
 const sheetSellerService = require('./sheetSellerService');
 const telegramService = require('./telegramService');
-const { ghiLog } = require('./logService');
+const { ghiLog, layLichSuChuyenSangTrangThai } = require('./logService');
 const { dinhDangNgayGioNgan } = require('./dateUtils');
 const donNhieuAoService = require('./donNhieuAoService');
+const trangThaiDbService = require('./trangThaiDbService');
 
 const SO_PHUT_MAC_DINH = 10;
+
+// Trạng thái được tự mua (29/09/2026, đã xác nhận với người dùng): "Đang chạy máy" hoặc đã qua trên đường chính,
+// trước khi giao — KHÔNG mua đơn LỖI SẢN XUẤT CẦN LÀM LẠI / huỷ / hoàn (nhánh rẽ) và đơn đã DELIVERED.
+const TRANG_THAI_TU_MUA = ['Đang chạy máy', 'Đã sản xuất', 'ĐÃ DÁN TEM'];
+const thoiDiemChayMay = r => {
+  const t = new Date(r.THOI_GIAN_CHAY_MAY || '').getTime();
+  return isNaN(t) ? null : t;
+};
 
 // "Người dùng" hệ thống — dùng khi ghi qua orderService.update()/ghiLog() từ job chạy nền, không có
 // ai thật đang đăng nhập. Chưa có tiền lệ nào khác trong dự án (job cảnh báo hiện có ghi thẳng
@@ -530,16 +540,14 @@ async function chayQuetTuDongMuaTracking() {
   const banDoNhom = donNhieuAoService.xayDungBanDoNhom(rows);
 
   const donDuDieuKien = rows.filter(r => {
-    if (String(r.AUTO_TRACKING).toUpperCase() !== 'YES') return false;
-    if (r.TRANG_THAI_XUONG === donNhieuAoService.TRANG_THAI_HUY) return false; // đơn đã huỷ — không mua tem (27/09/2026)
+    if (!TRANG_THAI_TU_MUA.includes(r.TRANG_THAI_XUONG)) return false; // gồm cả loại đơn huỷ/lỗi/đã giao
     if (r.TRACKING_ID) return false; // đã có tracking thật
+    // DonNhieuAo: chỉ đơn mua (".1") — tính giờ theo mốc chạy máy của CHÍNH đơn đó.
     const nhom = banDoNhom.get(r.STT_Key);
     if (nhom && (nhom.loiChan.length || nhom.donMua.STT_Key !== r.STT_Key)) return false;
     if (!gkeService.duocMuaTrackingTheoQuocGia(r)) return false; // chỉ US/UK — trang Tracking hiện rõ lý do
-    if (!r.THOI_GIAN_IN_MA) return false;
-    const thoiDiem = new Date(r.THOI_GIAN_IN_MA).getTime();
-    if (isNaN(thoiDiem)) return false;
-    return (bayGio - thoiDiem) >= nguongMs;
+    const thoiDiem = thoiDiemChayMay(r);
+    return thoiDiem !== null && (bayGio - thoiDiem) >= nguongMs;
   });
 
   // Tài khoản GKE theo Xưởng (bổ sung 27/09/2026): đơn không xác định được tài khoản (chưa gán Xưởng,
@@ -691,12 +699,12 @@ async function chayQuetTrangThaiNeuDenLuot() {
   return { daChayLuotNay: true, ...ketQua };
 }
 
-// Danh sách MỌI đơn AUTO_TRACKING="YES" kèm trạng thái — dùng cho trang public/tracking.html. Lọc
-// theo Xưởng của `user` (bổ sung 13/09/2026, theo yêu cầu người dùng — admin xem hết, vai trò khác
-// chỉ thấy đơn cùng Xưởng, xem orderService.js#locTheoXuong) — hàm này CHỈ dùng cho route GET
-// /tracking/danh-sach (không dùng bởi job tự động chayQuetTuDongMuaTracking(), vốn phải xử lý MỌI
-// xưởng), nên lọc thẳng ở đây an toàn, không ảnh hưởng job nền.
+// Danh sách đơn cho bảng ở trang public/tracking.html, kèm trạng thái. Từ 29/09/2026 (theo yêu cầu người dùng,
+// thay cho lọc AUTO_TRACKING="YES"): đơn CHỜ tự động mua (đang/đã qua "Đang chạy máy", chưa có tracking) + đơn
+// ĐÃ có tracking mà vào chạy máy trong 7 ngày gần đây (bảng không dài vô hạn). Lọc theo Xưởng của `user`
+// (orderService.js#locTheoXuong) — hàm này CHỈ dùng cho route GET /tracking/danh-sach, không dùng bởi job nền.
 const coTaiKhoanGke = r => { try { gkeService.layCauHinhGkeChoDon(r); return true; } catch { return false; } };
+const SO_MS_GIU_DON_DA_MUA = 7 * 24 * 60 * 60 * 1000;
 
 async function layDanhSachDonAutoTracking(user) {
   const [{ rows: tatCaDon }, cauHinh] = await Promise.all([orderService.getAll(), layCauHinh()]);
@@ -706,24 +714,29 @@ async function layDanhSachDonAutoTracking(user) {
   const nguongMs = cauHinh.soPhutCho * 60 * 1000;
 
   return rows
-    .filter(r => String(r.AUTO_TRACKING).toUpperCase() === 'YES')
+    .filter(r => {
+      const t = thoiDiemChayMay(r);
+      if (r.TRACKING_ID) return t !== null && bayGio - t <= SO_MS_GIU_DON_DA_MUA;
+      // Chờ mua: phải có mốc chạy máy — riêng đơn ĐANG chạy máy mà thiếu mốc vẫn hiện ("không rõ, mua tay").
+      // Đơn cũ đã qua chạy máy từ trước khi có mốc (vd "Đã sản xuất" chưa tracking) KHÔNG hiện — không tự mua,
+      // hiện ra chỉ làm ngập bảng.
+      return TRANG_THAI_TU_MUA.includes(r.TRANG_THAI_XUONG) && (t !== null || r.TRANG_THAI_XUONG === 'Đang chạy máy');
+    })
     .map(r => {
       const daCoTrackingThat = !!r.TRACKING_ID;
       const dangChoTem = !r.TRACKING_ID && r.TAM_THOI === gkeService.MA_DANG_CHO_TEM;
-      const thoiDiemInMa = r.THOI_GIAN_IN_MA ? new Date(r.THOI_GIAN_IN_MA).getTime() : null;
-      const daDuGio = thoiDiemInMa && !isNaN(thoiDiemInMa) ? (bayGio - thoiDiemInMa) >= nguongMs : false;
+      const thoiDiem = thoiDiemChayMay(r);
 
       const nhom = banDoNhom.get(r.STT_Key);
       let trangThai;
       if (daCoTrackingThat) trangThai = 'DA_MUA';
-      else if (r.TRANG_THAI_XUONG === donNhieuAoService.TRANG_THAI_HUY) trangThai = 'DA_HUY';
       else if (nhom && nhom.loiChan.length) trangThai = 'LOI_NHOM';
       else if (nhom && nhom.donMua.STT_Key !== r.STT_Key) trangThai = 'CHO_DON_MUA_NHOM';
       else if (!gkeService.duocMuaTrackingTheoQuocGia(r)) trangThai = 'KHONG_THUOC_US_UK';
       else if (!coTaiKhoanGke(r)) trangThai = 'THIEU_TAI_KHOAN_GKE';
       else if (dangChoTem) trangThai = 'DANG_CHO_TEM';
-      else if (!thoiDiemInMa || isNaN(thoiDiemInMa)) trangThai = 'THIEU_THOI_GIAN_IN_MA';
-      else if (daDuGio) trangThai = 'DEN_HAN_CHO_XU_LY';
+      else if (thoiDiem === null) trangThai = 'THIEU_THOI_GIAN_CHAY_MAY';
+      else if (bayGio - thoiDiem >= nguongMs) trangThai = 'DEN_HAN_CHO_XU_LY';
       else trangThai = 'DANG_CHO';
 
       return {
@@ -731,15 +744,35 @@ async function layDanhSachDonAutoTracking(user) {
         trangThai,
         trackingId: daCoTrackingThat ? r.TRACKING_ID : '',
         hangVanChuyen: daCoTrackingThat ? (r.HANG_VAN_CHUYEN || '') : '',
-        thoiGianInMa: r.THOI_GIAN_IN_MA || '',
+        thoiGianChayMay: r.THOI_GIAN_CHAY_MAY || '',
         thoiGianCapNhatCuoi: r.ThoiGianCapNhatCuoi || '',
       };
     })
     .sort((a, b) => new Date(b.thoiGianCapNhatCuoi || 0) - new Date(a.thoiGianCapNhatCuoi || 0));
 }
 
+// Bù mốc THOI_GIAN_CHAY_MAY cho đơn ĐANG "Đang chạy máy" từ trước khi có cột này (29/09/2026, đã xác nhận với người
+// dùng): lấy lần chuyển sang "Đang chạy máy" GẦN NHẤT trong lịch sử đơn. Không thấy trong lịch sử -> để trống (trang
+// Tracking báo "Không rõ lúc chạy máy", mua tay). Gọi lúc khởi động (trackingJob.js); chỉ đụng đơn đang chạy máy
+// mà mốc còn trống, ghi thẳng SQLite (không qua update(), không đổi gì khác) — chạy lại nhiều lần vô hại.
+async function buMocChayMayTuLichSu() {
+  const canBu = new Set([...trangThaiDbService.layTatCa()]
+    .filter(([, r]) => r.TRANG_THAI_XUONG === 'Đang chạy máy' && !r.THOI_GIAN_CHAY_MAY)
+    .map(([sttKey]) => sttKey));
+  if (canBu.size === 0) return 0;
+  const ganNhat = new Map();
+  for (const l of await layLichSuChuyenSangTrangThai('Đang chạy máy')) {
+    if (!canBu.has(l.sttKey) || isNaN(new Date(l.thoiGian))) continue;
+    if (!ganNhat.has(l.sttKey) || new Date(l.thoiGian) > new Date(ganNhat.get(l.sttKey))) ganNhat.set(l.sttKey, l.thoiGian);
+  }
+  trangThaiDbService.ghiDeNhieu([...ganNhat].map(([sttKey, thoiGian]) => [sttKey, { THOI_GIAN_CHAY_MAY: thoiGian }]));
+  console.log(`[TrackingTuDong] Bù mốc "Đang chạy máy" từ lịch sử: ${ganNhat.size}/${canBu.size} đơn` +
+    (canBu.size > ganNhat.size ? ` (${canBu.size - ganNhat.size} đơn không có trong lịch sử — mua tay)` : ''));
+  return ganNhat.size;
+}
+
 module.exports = {
-  layCauHinh, luuCauHinh, chayQuetTuDongMuaTracking, layDanhSachDonAutoTracking, layLogTracking,
+  layCauHinh, luuCauHinh, chayQuetTuDongMuaTracking, layDanhSachDonAutoTracking, layLogTracking, buMocChayMayTuLichSu,
   muaTrackingChoDon, inLabelChoDon, muaTrackingVaInLabelChoDon,
   capNhatTrangThaiTrackingChoDon, chayQuetCapNhatTrangThaiTracking, chayQuetTrangThaiNeuDenLuot,
   layCauHinhQuetTrangThai, luuCauHinhQuetTrangThai, SO_PHUT_QUET_TRANG_THAI_TOI_THIEU,

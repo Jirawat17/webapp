@@ -118,7 +118,7 @@
         <span class="cong-tac-slider"></span>
       </span>
     </span>
-    <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap" title="Chờ bao lâu kể từ lúc &quot;Đã in mã&quot; thì mua (giờ + phút cộng dồn)">
+    <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap" title="Chờ bao lâu kể từ lúc đơn chuyển &quot;Đang chạy máy&quot; thì mua (giờ + phút cộng dồn)">
       <span style="font-size:0.85rem;color:var(--color-text-muted)">Chờ</span>
       <input type="number" id="so-gio-cho" min="0" step="1" style="width:56px" aria-label="Số giờ">
       <span style="font-size:0.85rem">giờ</span>
@@ -147,13 +147,14 @@
   <p id="thong-bao-luu-quet-trang-thai" style="display:none;margin-top:8px"></p>
   <!-- Chuyển xuống đây (bổ sung 13/09/2026, theo yêu cầu người dùng) — trước đó nằm ngay dưới <h2>, đứng
        TRƯỚC cả ô quét/Cấu hình. Nội dung không đổi, chỉ đổi vị trí. -->
-  <p style="color:var(--color-text-muted);margin:8px 0 0">Tự động mua tracking GKE cho đơn đánh dấu <code>AUTO_TRACKING = "YES"</code>, sau khi đủ thời gian chờ kể từ lúc đơn chuyển "Đã in mã".</p>
+  <p style="color:var(--color-text-muted);margin:8px 0 0">Tự động mua tracking GKE cho đơn đang ở "Đang chạy máy" hoặc đã qua (Đã sản xuất...), sau khi đủ thời gian chờ kể từ lúc đơn chuyển "Đang chạy máy". Chỉ đơn giao tới US/UK; không mua đơn lỗi sản xuất/huỷ/hoàn/đã giao.</p>
 
   <!-- Cấu hình GKE ĐÃ CHUYỂN sang Settings (bổ sung 23/09/2026, theo yêu cầu người dùng — hạn chế
        người không phải superadmin đổi được thông tin này, kể cả username/password API GKE thật). Xem
        public/settings.html + routes/tracking.js (tài khoản GKE theo Xưởng, /tai-khoan-gke — CHỈ superadmin). -->
 
-  <h3 style="margin-top:var(--space-5)">Danh sách đơn AUTO_TRACKING</h3>
+  <h3 style="margin-top:var(--space-5)">Danh sách đơn tự động mua tracking</h3>
+  <p style="color:var(--color-text-muted);margin:-8px 0 12px">Đơn đang chờ mua + đơn đã có tracking bắt đầu chạy máy trong 7 ngày gần đây.</p>
   <div id="bang-danh-sach">Đang tải...</div>
 
   <h3 style="margin-top:var(--space-5)">Logs</h3>
@@ -179,7 +180,7 @@ const NHAN_TRANG_THAI = {
   DANG_CHO_TEM: { nhan: 'Đang chờ tem GKE', lop: 'dang-cho-tem' },
   DEN_HAN_CHO_XU_LY: { nhan: 'Đến hạn, chờ xử lý', lop: 'den-han' },
   DANG_CHO: { nhan: 'Đang chờ đủ giờ', lop: 'dang-cho' },
-  THIEU_THOI_GIAN_IN_MA: { nhan: 'Thiếu THOI_GIAN_IN_MA', lop: 'thieu-du-lieu' },
+  THIEU_THOI_GIAN_CHAY_MAY: { nhan: 'Không rõ lúc chạy máy — mua tay', lop: 'thieu-du-lieu' },
   // DonNhieuAo (bổ sung 26/09/2026): đơn con chưa có tracking — chờ đơn ".1" mua rồi tự gán.
   CHO_DON_MUA_NHOM: { nhan: 'Chờ đơn .1 của nhóm mua', lop: 'dang-cho' },
   LOI_NHOM: { nhan: 'Lỗi dữ liệu DonNhieuAo', lop: 'thieu-du-lieu' },
@@ -457,11 +458,11 @@ async function taiDanhSach() {
   }
 
   if (ds.length === 0) {
-    el.innerHTML = '<p style="color:var(--color-text-muted)">Chưa có đơn nào đánh dấu AUTO_TRACKING = "YES".</p>';
+    el.innerHTML = '<p style="color:var(--color-text-muted)">Chưa có đơn nào đang chờ mua hoặc vừa mua trong 7 ngày.</p>';
   } else {
     el.innerHTML = `
       <table class="bang-xem-truoc">
-        <thead><tr><th>Mã đơn</th><th>Trạng thái</th><th>Mã tracking</th><th>Hãng vận chuyển</th><th>Thời gian in mã</th><th>Hành động</th></tr></thead>
+        <thead><tr><th>Mã đơn</th><th>Trạng thái</th><th>Mã tracking</th><th>Hãng vận chuyển</th><th>Bắt đầu chạy máy</th><th>Hành động</th></tr></thead>
         <tbody>
           ${ds.map(d => {
             const tt = NHAN_TRANG_THAI[d.trangThai] || { nhan: d.trangThai, lop: 'dang-cho' };
@@ -470,7 +471,7 @@ async function taiDanhSach() {
               <td><span class="tk-trang-thai ${tt.lop}">${escapeHtml(tt.nhan)}</span></td>
               <td>${escapeHtml(d.trackingId || '—')}</td>
               <td>${escapeHtml(d.hangVanChuyen || '—')}</td>
-              <td>${d.thoiGianInMa ? dinhDangNgayGioNganAnToan(d.thoiGianInMa) : '—'}</td>
+              <td>${d.thoiGianChayMay ? dinhDangNgayGioNganAnToan(d.thoiGianChayMay) : '—'}</td>
               <td style="display:flex;gap:6px;flex-wrap:wrap">
                 ${d.trangThai === 'DA_MUA' ? '' : `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="muaThuCongTuBang(this, '${escapeJsChuoi(d.sttKey)}', '${d.trangThai}')">Mua ngay</button>`}
                 ${d.trangThai === 'DA_MUA' ? `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="apDungInLabelTuBang(this, '${escapeJsChuoi(d.sttKey)}')">IN LABEL</button>` : ''}

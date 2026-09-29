@@ -30,6 +30,9 @@ const CAC_COT = [
   'Anh_File_Theu_URL', 'Anh_File_Theu_URL_2', 'Anh_File_Theu_URL_3', 'Anh_Da_San_Xuat_URL', 'TRONG_LUONG', 'TRANG_THAI_XUONG', 'Anh_Da_Dan_Tem_URL',
   'NGUOI_VE_FILE', 'GHI_CHU_VE_FILE', 'NGUOI_CHAY_MAY', 'GHI_CHU_CHAY_MAY', 'HASH_ANH_MAU', 'NHOM_HANG_LOAT',
   'AUTO_TRACKING', 'THOI_GIAN_IN_MA', 'IN_LABEL', 'THOI_GIAN_IN_LABEL', 'DON_UU_TIEN', 'TAM_THOI',
+  // THOI_GIAN_CHAY_MAY (29/09/2026) — lần gần nhất đơn chuyển sang "Đang chạy máy"; mốc tính giờ tự động mua
+  // tracking (services/trackingAutoService.js). AUTO_TRACKING giữ cột cũ nhưng không còn dùng trong logic.
+  'THOI_GIAN_CHAY_MAY',
   'HANG_VAN_CHUYEN', 'TRACKING_ID', 'TRANG_THAI_TRACKING', 'THOI_GIAN_CAP_NHAT_TRACKING',
   // MA_NODE_TRACKING/MA_TRANG_THAI_NODE_TRACKING (bổ sung 21/09/2026, theo yêu cầu người dùng — xem
   // services/trackingAutoService.js#daGiaoThanhCongGke): lưu song song mã "order_node"/"node_status"
