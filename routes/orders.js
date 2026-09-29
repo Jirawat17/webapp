@@ -36,6 +36,13 @@ function khongPhaiNguoiLayPhoi(req, res, next) {
 router.use(khongPhaiNguoiLayPhoi);
 
 const TRANG_THAI_DANG_CHAY_MAY = 'Đang chạy máy';
+// LỌC TỔNG QUÁT (29/09/2026, theo yêu cầu người dùng) — 3 nhóm trạng thái do người dùng quy định, phủ ĐÚNG đủ 10 giá trị
+// TINH_TRANG_VALUES (data/pipelineTinhTrang.js). Thêm trạng thái mới vào hệ thống thì phải hỏi người dùng xếp vào nhóm nào.
+const NHOM_LOC_TONG_QUAT = {
+  DA_SAN_XUAT: ['Đã sản xuất', 'ĐÃ DÁN TEM'],
+  CHUA_SAN_XUAT: ['Chưa in mã', 'Đã in mã', 'LỖI SẢN XUẤT CẦN LÀM LẠI', 'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đang chạy máy'],
+  GIAO_HOAN_HUY: ['DELIVERED_Đã giao đến khách', 'CANCELLED_Đã hủy', 'REFUNDED_Hoàn đơn'],
+};
 
 // Gắn thêm các trường tính toán (không phải cột thật trong Sheet) để hiển thị — dùng chung cho list/detail
 // "Người vận hành máy" (bổ sung 07/09/2026): đọc THẲNG cột NGUOI_CHAY_MAY (ghi trực tiếp bởi
@@ -167,6 +174,8 @@ router.get('/', async (req, res) => {
     canVeFile, nguoiVeFile, timDonHangLoat,
   } = req.query;
   if (trangThai) list = list.filter(r => khopGiaTriLoc(r.TRANG_THAI_XUONG, trangThai));
+  const nhomTongQuat = Object.hasOwn(NHOM_LOC_TONG_QUAT, req.query.tongQuat) && NHOM_LOC_TONG_QUAT[req.query.tongQuat];
+  if (nhomTongQuat) list = list.filter(r => nhomTongQuat.includes(r.TRANG_THAI_XUONG));
   if (trangThaiPhoi) list = list.filter(r => khopGiaTriLoc(r.TRANG_THAI_PHOI, trangThaiPhoi));
   if (trangThaiVeFile) list = list.filter(r => khopGiaTriLoc(r.TRANG_THAI_VE_FILE, trangThaiVeFile));
   // "Đơn của tôi" (admin) — lọc còn đúng 1 người sản xuất đang vận hành. NguoiVanHanh là trường TÍNH

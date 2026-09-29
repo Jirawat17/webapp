@@ -67,6 +67,16 @@
 
   <div id="panel-loc" class="panel-dieu-khien" style="display:none">
     <div class="inline-form">
+      <!-- Lọc tổng quát (29/09/2026, theo yêu cầu người dùng) — 3 nhóm trạng thái, lọc ở server (routes/orders.js#NHOM_LOC_TONG_QUAT). -->
+      <div class="truong">
+        <label for="loc-tong-quat">Lọc tổng quát</label>
+        <select id="loc-tong-quat">
+          <option value="">Tất cả</option>
+          <option value="DA_SAN_XUAT">Đơn đã sản xuất</option>
+          <option value="CHUA_SAN_XUAT">Đơn chưa sản xuất</option>
+          <option value="GIAO_HOAN_HUY">Đơn đã giao/hoàn/hủy</option>
+        </select>
+      </div>
       <div class="truong">
         <label for="loc-trang-thai">Trạng thái</label>
         <select id="loc-trang-thai"><option value="">Tất cả trạng thái</option></select>
@@ -355,6 +365,7 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   try { danhSachXuong = await apiFetch('/orders/danh-sach-xuong'); } catch (e) { danhSachXuong = []; }
 
   document.getElementById('loc-trang-thai').onchange = () => { boChonTatCaDon(); taiDon(); };
+  document.getElementById('loc-tong-quat').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-phoi').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-ve-file').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-canh-bao').onchange = () => { boChonTatCaDon(); taiDon(); };
@@ -608,7 +619,7 @@ async function apDungChuyenSuperadmin(btn) {
   finally { btn.disabled = false; }
 }
 
-const CAC_O_LOC = ['loc-trang-thai', 'loc-phoi', 'loc-ve-file', 'loc-canh-bao', 'loc-xuong', 'loc-uu-tien', 'loc-don-nhieu-ao', 'loc-da-mua-tracking', 'loc-nhom-hang', 'loc-don-hang-loat', 'loc-loai', 'loc-kich-thuoc', 'loc-hang-van-chuyen', 'loc-mau-sac', 'loc-quoc-gia-tracking', 'loc-tinh-trang', 'loc-kh', 'loc-ma-tracking', 'loc-tu-ngay', 'loc-den-ngay'];
+const CAC_O_LOC = ['loc-tong-quat', 'loc-trang-thai', 'loc-phoi', 'loc-ve-file', 'loc-canh-bao', 'loc-xuong', 'loc-uu-tien', 'loc-don-nhieu-ao', 'loc-da-mua-tracking', 'loc-nhom-hang', 'loc-don-hang-loat', 'loc-loai', 'loc-kich-thuoc', 'loc-hang-van-chuyen', 'loc-mau-sac', 'loc-quoc-gia-tracking', 'loc-tinh-trang', 'loc-kh', 'loc-ma-tracking', 'loc-tu-ngay', 'loc-den-ngay'];
 
 function xoaTatCaLoc() {
   CAC_O_LOC.forEach(id => { document.getElementById(id).value = ''; });
@@ -667,6 +678,7 @@ async function taiDon() {
   const el = document.getElementById('danh-sach-don');
   el.innerHTML = skeletonList(6);
 
+  const tongQuat = document.getElementById('loc-tong-quat').value;
   const trangThai = document.getElementById('loc-trang-thai').value;
   const trangThaiPhoi = document.getElementById('loc-phoi').value;
   const trangThaiVeFile = document.getElementById('loc-ve-file').value;
@@ -687,6 +699,7 @@ async function taiDon() {
   const sapXep = document.getElementById('sap-xep').value;
 
   const qs = new URLSearchParams();
+  if (tongQuat) qs.set('tongQuat', tongQuat);
   if (trangThai) qs.set('trangThai', trangThai);
   if (trangThaiPhoi) qs.set('trangThaiPhoi', trangThaiPhoi);
   if (trangThaiVeFile) qs.set('trangThaiVeFile', trangThaiVeFile);
@@ -733,7 +746,7 @@ async function taiDon() {
   const sttKeyHienTai = new Set(list.map(o => o.STT_Key));
   donDaChonSet.forEach(stt => { if (!sttKeyHienTai.has(stt)) donDaChonSet.delete(stt); });
 
-  const coLocNaoDangChon = trangThai || trangThaiPhoi || trangThaiVeFile || canhBao || xuong || uuTien || donNhieuAo || daMuaTracking || nhomHang || loai || kichThuoc || mauSac || hangVanChuyen || quocGiaTracking || tinhTrang || kh || maTracking || tuNgay || denNgay;
+  const coLocNaoDangChon = tongQuat || trangThai || trangThaiPhoi || trangThaiVeFile || canhBao || xuong || uuTien || donNhieuAo || daMuaTracking || nhomHang || loai || kichThuoc || mauSac || hangVanChuyen || quocGiaTracking || tinhTrang || kh || maTracking || tuNgay || denNgay;
   if (!coLocNaoDangChon) capNhatCacBoLocDong(list);
   capNhatNhanNutLoc();
 
@@ -1330,7 +1343,7 @@ function layBoLocDangDung() {
   const doc = (id) => document.getElementById(id).value;
   const cacTruong = {
     tuNgay: doc('loc-tu-ngay'), denNgay: doc('loc-den-ngay'),
-    trangThai: doc('loc-trang-thai'), trangThaiPhoi: doc('loc-phoi'), trangThaiVeFile: doc('loc-ve-file'),
+    tongQuat: doc('loc-tong-quat'), trangThai: doc('loc-trang-thai'), trangThaiPhoi: doc('loc-phoi'), trangThaiVeFile: doc('loc-ve-file'),
     canhBao: doc('loc-canh-bao'), xuong: doc('loc-xuong'), uuTien: doc('loc-uu-tien'), donNhieuAo: doc('loc-don-nhieu-ao'),
     daMuaTracking: doc('loc-da-mua-tracking'), nhomHang: doc('loc-nhom-hang'), timDonHangLoat: doc('loc-don-hang-loat'), loai: doc('loc-loai'), kichThuoc: doc('loc-kich-thuoc'),
     mauSac: doc('loc-mau-sac'), hangVanChuyen: doc('loc-hang-van-chuyen'),
