@@ -115,10 +115,10 @@ function tuGanXuongTheoTeam(rows) {
   const canGan = new Map(); // sttKey -> { xuong, team } — Sheet lỡ trùng STT_Key vẫn chỉ ghi/log 1 lần
   for (const r of rows) {
     if (r.XUONG) continue;
-    const p = donNhieuAoService.phanTichStt(r[KEY_COL]);
-    if (!p || !banDo[p.team]) continue;
-    donCanGan.push([r, banDo[p.team]]);
-    canGan.set(String(r[KEY_COL]).trim(), { xuong: banDo[p.team], team: p.team });
+    const team = donNhieuAoService.layTeam(r[KEY_COL]);
+    if (!team || !banDo[team]) continue;
+    donCanGan.push([r, banDo[team]]);
+    canGan.set(String(r[KEY_COL]).trim(), { xuong: banDo[team], team });
   }
   if (canGan.size === 0) return;
   // Lỗi ghi ở đây KHÔNG được làm hỏng việc đọc đơn của cả app — đơn giữ "chưa gán", lượt đọc sau thử lại.

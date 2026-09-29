@@ -17,6 +17,15 @@ function phanTichStt(sttKey) {
   return { team: m[2].toUpperCase(), goc: `${m[1]}${m[2].toUpperCase()}${m[3]}`, thuTu: m[4] ? Number(m[4]) : null };
 }
 
+// CHỈ lấy Team (30/09/2026, theo yêu cầu người dùng) — <tháng 1-2 số><Team chữ cái><ít nhất 1 số><ký tự bất kỳ>:
+// 10TRA5332sdafn -> TRA. Dùng cho Xưởng mặc định theo Team + ghi Sheet Seller. DonNhieuAo KHÔNG dùng hàm này (giữ
+// phanTichStt chặt ở trên — mã có hậu tố lạ không được gom nhóm dùng chung tracking). -> 'TRA' | null
+const MAU_TEAM = /^\d{1,2}([A-Za-z]+)\d/;
+function layTeam(sttKey) {
+  const m = MAU_TEAM.exec(String(sttKey || '').trim());
+  return m ? m[1].toUpperCase() : null;
+}
+
 function khoaNhom(row) {
   const p = phanTichStt(row.STT_Key);
   const orderId = String(row.MA_DON_HANG_ORDERID || '').trim();
@@ -171,5 +180,5 @@ function danhSachLoiDuLieu(rows) {
 }
 
 module.exports = {
-  TRANG_THAI_HUY, cacDonChuaSanXuat, phanTichStt, khoaNhom, xayDungBanDoNhom, layNhomCuaDon, tomTatChoDon, danhSachLoiDuLieu,
+  TRANG_THAI_HUY, cacDonChuaSanXuat, phanTichStt, layTeam, khoaNhom, xayDungBanDoNhom, layNhomCuaDon, tomTatChoDon, danhSachLoiDuLieu,
 };

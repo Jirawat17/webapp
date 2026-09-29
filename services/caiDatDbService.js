@@ -197,7 +197,7 @@ function doiTenXuong(tenCu, tenMoi) {
 }
 
 // ---------- Team -> Xưởng mặc định (bổ sung 27/09/2026, theo yêu cầu người dùng) ----------
-// Team = chữ cái trong STT_Key (9TRA471 -> TRA, xem donNhieuAoService.js#phanTichStt). Đơn đang "chưa
+// Team = chữ cái trong STT_Key (9TRA471 / 10TRA5332sdafn -> TRA, xem donNhieuAoService.js#layTeam). Đơn đang "chưa
 // gán" (XUONG rỗng) thuộc Team có cấu hình được tự gán lúc đọc — xem orderService.js#tuGanXuongTheoTeam.
 // Đổi tên/xoá Xưởng (2 hàm trên) tự mang theo/xoá cấu hình tương ứng.
 db.exec(`CREATE TABLE IF NOT EXISTS team_xuong_mac_dinh (

@@ -3,7 +3,7 @@
 // RAW/Don_Hang_ALL (kết quả công thức) nên mọi thứ muốn Seller thấy phải ghi thẳng vào Sheet Seller:
 //   GHI_CHU -> GHI_CHU_XUONG | TRACKING -> TRACKING_ID2 + HANG_VAN_CHUYEN2 | DELIVERED -> Delivered
 // Tìm đúng ô:
-//   1. Team = phần chữ trong mã đơn (9LIEM12 -> LIEM, donNhieuAoService.js#phanTichStt).
+//   1. Team = phần chữ trong mã đơn (9LIEM12 -> LIEM, 10TRA5332sdafn -> TRA — donNhieuAoService.js#layTeam).
 //   2. Tab CONFIG của Sheet chính (cùng nơi công thức IMPORTRANGE của RAW đang dùng) — cột tìm THEO TÊN
 //      (TEAM, Spreadsheet ID, Tab), tiêu đề dòng 1. 1 team có thể nhiều dòng (mỗi tháng 1 tab).
 //   3. Đọc MỌI tab của team (tab cùng tháng với mã đơn đọc trước), tìm mã đơn ở cột STT_Key (tiêu đề dòng 1):
@@ -18,7 +18,7 @@ const path = require('path');
 const sheetsService = require('./sheetsService');
 const nhatKyDbService = require('./nhatKyDbService');
 const { thoiGianVNISOString } = require('./dateUtils');
-const { phanTichStt } = require('./donNhieuAoService');
+const { layTeam } = require('./donNhieuAoService');
 
 const TAB_CONFIG = 'CONFIG';
 const COT_CONFIG = { team: 'TEAM', sheet: 'Spreadsheet ID', tab: 'Tab' };
@@ -69,15 +69,15 @@ async function docConfig() {
 
 // Các (Sheet, tab) có thể chứa đơn — tab cùng tháng với mã đơn (9... -> "T9.") lên trước.
 function nguonCuaDon(sttKey, config) {
-  const p = phanTichStt(sttKey);
-  if (!p) throw new Error(`Mã đơn "${sttKey}" không đúng dạng <tháng><team><số> — không xác định được Team.`);
+  const team = layTeam(sttKey);
+  if (!team) throw new Error(`Mã đơn "${sttKey}" không đúng dạng <tháng><team><số> — không xác định được Team.`);
   const thang = Number(/^\d+/.exec(String(sttKey).trim())[0]);
   const daCo = new Set();
-  const ds = config.filter(c => c.team === p.team && c.spreadsheetId && c.tab)
+  const ds = config.filter(c => c.team === team && c.spreadsheetId && c.tab)
     .filter(c => !daCo.has(c.spreadsheetId + '|' + c.tab) && daCo.add(c.spreadsheetId + '|' + c.tab));
-  if (ds.length === 0) throw new Error(`Tab ${TAB_CONFIG} không có dòng nào TEAM = ${p.team} (đủ Spreadsheet ID và Tab).`);
+  if (ds.length === 0) throw new Error(`Tab ${TAB_CONFIG} không có dòng nào TEAM = ${team} (đủ Spreadsheet ID và Tab).`);
   const cungThang = c => c.tab.toUpperCase().startsWith(`T${thang}.`);
-  return { team: p.team, ds: [...ds.filter(cungThang), ...ds.filter(c => !cungThang(c))] };
+  return { team, ds: [...ds.filter(cungThang), ...ds.filter(c => !cungThang(c))] };
 }
 
 async function docTab(client, spreadsheetId, tab, range = '') {

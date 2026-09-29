@@ -104,7 +104,7 @@ function renderBangThongTin(don, viTri) {
       <tr><td>Số lượng</td><td>${escapeHtml(don.SO_LUONG || '')} ${don.SO_LUONG_AO_TREN_DON ? `(áo trên đơn: ${escapeHtml(don.SO_LUONG_AO_TREN_DON)})` : ''}</td></tr>
       <tr><td>Ngày lên đơn</td><td>${don.NGAY_LEN_DON ? dinhDangNgay(don.NGAY_LEN_DON) : ''}</td></tr>
       <tr><td>Ghi chú</td><td><strong>${escapeHtml(don.GHI_CHU || '')}</strong></td></tr>
-      ${don.GHI_CHU_XUONG ? `<tr><td>Ghi chú xưởng</td><td><strong>${escapeHtml(don.GHI_CHU_XUONG)}</strong></td></tr>` : ''}
+      <tr><td>Ghi chú xưởng</td><td><strong>${escapeHtml(don.GHI_CHU_XUONG || '')}</strong></td></tr>
       ${dongGhiChuNoiBo(don)}`;
   }
   return `

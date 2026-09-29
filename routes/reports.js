@@ -7,7 +7,7 @@ const PDFDocument = require('pdfkit');
 const orderService = require('../services/orderService');
 const { layDanhSachKhachHang, layBanDoTenKhachHang } = require('../services/khachHangService');
 const { layLichSuChuyenSangTrangThai, tinhChiTieuCongViec, trongKhoangThoiGian, ghiLogNhieu } = require('../services/logService');
-const { taoPdfThueTeamKhac } = require('../services/thueTeamKhacService');
+const { taoPdfThueTeamKhac, ghiChuXuongHienThi } = require('../services/thueTeamKhacService');
 const { docMaDonTuPdf } = require('../services/docMaDonTuPdf');
 const multer = require('multer');
 const taiKhoanService = require('../services/taiKhoanService');
@@ -659,6 +659,7 @@ function veChuTheoChanChu(doc, chu, x, chanChu) {
 //   Vị trí thêu (chỉ giá trị, 10pt)
 //   (Còn ảnh chưa hiển thị hết ...) — chỉ khi có ảnh dư
 //   Áo/đơn: n (số 30pt đậm)   Ghi chú: ... (15pt đậm, chảy tiếp xuống các dòng dưới, hết chỗ thì "…")
+//   Ghi chú xưởng: ... (dòng mới ngay sau Ghi chú, cùng cỡ — thêm 30/09/2026, luôn giữ ít nhất 1 dòng)
 //                                                   [ ƯU TIÊN · HÀNG LOẠT ] — nhãn nhỏ góc dưới phải, chỉ khi có
 // Dữ liệu giữ nguyên như trước: SL = SO_LUONG (trống -> "—"), Áo/đơn = SO_LUONG_AO_TREN_DON (trống -> để trống), tên = TEN
 // (cột "Người nhận" dùng tạo vận đơn GKE, KHÁC TenKhachHang), vị trí = VI_TRI_1, ghi chú = GHI_CHU, ngày = NGAY_LEN_DON.
@@ -775,25 +776,35 @@ function veTheDonPdf(doc, don, anh, offsetY, caoThe) {
   const nhanNoiBat = [orderService.laUuTien(don) && 'ƯU TIÊN', don.NHOM_HANG_LOAT && 'HÀNG LOẠT'].filter(Boolean).join(' · ');
   const yDayGhiChu = nhanNoiBat ? yGioiHanDuoi - caoNhanNho(doc) - 3 : yGioiHanDuoi;
 
-  // Ghi chú 15pt đậm: dòng ĐẦU nằm bên phải Áo/đơn (cùng đường chân chữ), phần còn lại chảy xuống các dòng dưới trải cả
-  // chiều ngang; hết chỗ thì cắt "…" — không bao giờ tràn xuống nhãn/khổ giấy.
-  if (don.GHI_CHU) {
+  // Ghi chú rồi Ghi chú xưởng (30/09/2026 — cùng giá trị trang Chi tiết đơn đang hiện), 15pt đậm: đoạn ĐẦU bắt đầu bên
+  // phải Áo/đơn (cùng đường chân chữ), phần còn lại chảy xuống các dòng dưới trải cả chiều ngang; đoạn sau xuống dòng
+  // mới. Có cả 2 -> đoạn đầu chừa lại ít nhất 1 dòng cho Ghi chú xưởng. Hết chỗ thì cắt "…" — không tràn xuống nhãn/khổ giấy.
+  const doanGhiChu = [don.GHI_CHU && `Ghi chú: ${don.GHI_CHU}`, ghiChuXuongHienThi(don) && `Ghi chú xưởng: ${ghiChuXuongHienThi(don)}`].filter(Boolean);
+  if (doanGhiChu.length) {
     doc.font('NotoSans-Bold').fontSize(CO_CHU_GHI_CHU);
     const caoDong = doc.currentLineHeight(true);
     const xDau = x0 + rongNhanAoDon + rongSoAo + 10;
     const rongDau = x0 + rongTrong - xDau;
-    const cacTu = `Ghi chú: ${don.GHI_CHU}`.split(/\s+/).filter(Boolean);
+    const cacTu = doanGhiChu[0].split(/\s+/).filter(Boolean);
     let soTuDau = 0;
     while (soTuDau < cacTu.length && doc.widthOfString(cacTu.slice(0, soTuDau + 1).join(' ')) <= rongDau) soTuDau++;
     let dongDau = cacTu.slice(0, soTuDau).join(' ');
     const phanCon = cacTu.slice(soTuDau).join(' ');
-    const conCho = yDayGhiChu - y >= caoDong;
+    const yDayDoanDau = yDayGhiChu - (doanGhiChu.length > 1 ? caoDong : 0);
+    const conCho = yDayDoanDau - y >= caoDong;
     if (phanCon && !conCho && dongDau) { // hết chỗ cho phần sau -> cắt ngay dòng đầu bằng "…"
       while (dongDau && doc.widthOfString(dongDau + '…') > rongDau) dongDau = dongDau.replace(/\s*\S+$/, '');
       dongDau += '…';
     }
     if (dongDau) veChuTheoChanChu(doc, dongDau, xDau, chanChu);
-    if (phanCon && conCho) doc.text(phanCon, x0, y, { width: rongTrong, height: yDayGhiChu - y, ellipsis: true });
+    let yTiep = y;
+    if (phanCon && conCho) {
+      doc.text(phanCon, x0, y, { width: rongTrong, height: yDayDoanDau - y, ellipsis: true });
+      yTiep = doc.y;
+    }
+    if (doanGhiChu[1] && yDayGhiChu - yTiep >= caoDong) {
+      doc.text(doanGhiChu[1], x0, yTiep, { width: rongTrong, height: yDayGhiChu - yTiep, ellipsis: true });
+    }
   }
   if (nhanNoiBat) veNhanNho(doc, nhanNoiBat, x0 + rongTrong, yGioiHanDuoi);
 }

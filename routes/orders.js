@@ -683,9 +683,9 @@ router.get('/team-xuong', async (req, res) => {
   const { rows } = await orderService.getAll();
   const demTeam = {};
   for (const r of rows) {
-    const p = donNhieuAoService.phanTichStt(r.STT_Key);
-    if (!p) continue;
-    const d = demTeam[p.team] || (demTeam[p.team] = { tong: 0, chuaGan: 0 });
+    const team = donNhieuAoService.layTeam(r.STT_Key);
+    if (!team) continue;
+    const d = demTeam[team] || (demTeam[team] = { tong: 0, chuaGan: 0 });
     d.tong++;
     if (!r.XUONG) d.chuaGan++;
   }
@@ -834,7 +834,7 @@ router.post('/gan-xuong', async (req, res) => {
         return;
       }
       // Gỡ gán đơn thuộc Team có Xưởng mặc định -> lần đọc kế tiếp tự gán lại ngay (orderService.js#tuGanXuongTheoTeam), báo rõ thay vì "thành công" giả.
-      const team = xuong ? null : (donNhieuAoService.phanTichStt(sttKey) || {}).team;
+      const team = xuong ? null : donNhieuAoService.layTeam(sttKey);
       if (team && teamXuong[team]) {
         loi.push({ sttKey, lyDo: `Team ${team} đang có Xưởng mặc định ${teamXuong[team]} — gỡ gán sẽ bị tự gán lại. Hãy gán sang Xưởng khác, hoặc bỏ cấu hình Team ${team} ở Settings.` });
         return;
