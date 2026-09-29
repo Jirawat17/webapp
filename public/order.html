@@ -231,7 +231,8 @@ function renderKhuVucThaoTac(don) {
   if (user.vaiTro === 'san_xuat' && don.TRANG_THAI_XUONG === 'ĐÃ SẴN SÀNG CHẠY MÁY') {
     html += `<button type="button" class="nut-trang-thai-lon xanh" onclick="bamNutTrangThai('BAT_DAU_CHAY_MAY', this)">${icon('arrowRight', { size: 28 })} BẮT ĐẦU CHẠY MÁY</button>`;
   }
-  if (don.TRANG_THAI_XUONG === 'Đang chạy máy') {
+  // san_xuat: nút BÁO LỖI nằm CUỐI trang, cỡ thường (xem cuối hàm) — tránh bấm nhầm (29/09/2026).
+  if (don.TRANG_THAI_XUONG === 'Đang chạy máy' && user.vaiTro !== 'san_xuat') {
     html += `<button type="button" class="nut-trang-thai-lon do" onclick="bamNutTrangThai('BAO_LOI_SAN_XUAT', this)">${icon('alert', { size: 28 })} BÁO LỖI SẢN XUẤT – CẦN LÀM LẠI</button>`;
   }
 
@@ -399,6 +400,14 @@ function renderKhuVucThaoTac(don) {
       </div>`;
     // Khối "Ảnh đóng gói" (Anh_Dong_Goi_URL) ĐÃ XOÁ 09/09/2026 lần 3 cùng lúc xoá trạng thái "Đã đóng
     // gói" (theo yêu cầu người dùng).
+  }
+
+  // Nút BÁO LỖI cho san_xuat (29/09/2026, theo yêu cầu người dùng — hạn chế bấm nhầm): CUỐI trang, cỡ nút thường
+  // (không còn nút lớn), bấm phải nhập mật khẩu xác nhận (kiểm tra ở server, xem bamNutTrangThai).
+  if (don.TRANG_THAI_XUONG === 'Đang chạy máy' && user.vaiTro === 'san_xuat') {
+    html += `<div style="margin-top:var(--space-6);padding-top:var(--space-4);border-top:1px dashed var(--color-border);text-align:center">
+      <button type="button" class="btn-hanh-dong phu nguy-hiem" onclick="bamNutTrangThai('BAO_LOI_SAN_XUAT', this)">${icon('alert', { size: 16 })} Báo lỗi sản xuất – cần làm lại</button>
+    </div>`;
   }
 
   el.innerHTML = html;
@@ -610,10 +619,17 @@ async function chuyenGiaiDoan(scenarioId, btn) {
 // (routes/orders.js POST /:sttKey/ghi-chu-xuong). Ghi Sheet lỗi -> hộp đỏ; nội dung vẫn còn trong ô (tải lại
 // trang điền sẵn bản trong app) để sửa nguyên nhân rồi Lưu lại / superadmin Đẩy lại.
 async function bamNutTrangThai(nut, btn) {
-  if (nut === 'BAO_LOI_SAN_XUAT' && !confirm(`Báo lỗi sản xuất đơn ${sttKey}?\n\n"Đang chạy máy" → "LỖI SẢN XUẤT CẦN LÀM LẠI"`)) return;
+  let matKhau;
+  if (nut === 'BAO_LOI_SAN_XUAT') {
+    // san_xuat: nhập mật khẩu xác nhận (29/09/2026) — so ở SERVER (routes/orders.js), không lộ giá trị đúng ở đây.
+    if (user.vaiTro === 'san_xuat') {
+      matKhau = prompt(`Báo lỗi sản xuất đơn ${sttKey}?\n"Đang chạy máy" → "LỖI SẢN XUẤT CẦN LÀM LẠI"\n\nNhập mật khẩu xác nhận:`);
+      if (matKhau === null) return;
+    } else if (!confirm(`Báo lỗi sản xuất đơn ${sttKey}?\n\n"Đang chạy máy" → "LỖI SẢN XUẤT CẦN LÀM LẠI"`)) return;
+  }
   btn.disabled = true;
   try {
-    await apiFetch('/orders/' + encodeURIComponent(sttKey) + '/nut-trang-thai', { method: 'POST', body: JSON.stringify({ nut }) });
+    await apiFetch('/orders/' + encodeURIComponent(sttKey) + '/nut-trang-thai', { method: 'POST', body: JSON.stringify({ nut, matKhau }) });
   } catch (e) {
     alert(e.message);
   }

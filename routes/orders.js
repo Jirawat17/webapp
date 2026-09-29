@@ -1045,6 +1045,7 @@ router.post('/:sttKey/ghi-chu-xuong', async (req, res) => {
 //   BAO_LOI_SAN_XUAT: mọi vai trò xem được đơn — CHỈ đổi trạng thái chung (phôi/vẽ file/kho giữ nguyên, như chọn
 //   LỖI ở ô "Sửa trạng thái thủ công").
 // Chỉ ghi khi đơn VẪN ở trạng thái nguồn (yeuCauDangLa). Lịch sử cùng loại với nút nhận chạy máy ở my-orders.html.
+const MAT_KHAU_BAO_LOI_SAN_XUAT = '0';
 const NUT_TRANG_THAI = {
   BAT_DAU_CHAY_MAY: { tu: 'ĐÃ SẴN SÀNG CHẠY MÁY', sang: 'Đang chạy máy', nhan: 'BẮT ĐẦU CHẠY MÁY', vaiTro: ['san_xuat'] },
   BAO_LOI_SAN_XUAT: { tu: 'Đang chạy máy', sang: 'LỖI SẢN XUẤT CẦN LÀM LẠI', nhan: 'BÁO LỖI SẢN XUẤT – CẦN LÀM LẠI' },
@@ -1054,6 +1055,11 @@ router.post('/:sttKey/nut-trang-thai', async (req, res) => {
   const nut = NUT_TRANG_THAI[req.body.nut];
   if (!nut) return res.status(400).json({ error: 'Nút không hợp lệ' });
   if (nut.vaiTro && !nut.vaiTro.includes(user.vaiTro)) return res.status(403).json({ error: `Vai trò này không dùng nút "${nut.nhan}"` });
+  // san_xuat bấm BÁO LỖI phải nhập mật khẩu xác nhận (29/09/2026, theo yêu cầu người dùng) — chống bấm nhầm, không
+  // phải lớp bảo mật (cùng tinh thần MAT_KHAU_THAO_TAC_DU_LIEU_DON); kiểm tra ở server để không lách qua giao diện.
+  if (req.body.nut === 'BAO_LOI_SAN_XUAT' && user.vaiTro === 'san_xuat' && String(req.body.matKhau ?? '') !== MAT_KHAU_BAO_LOI_SAN_XUAT) {
+    return res.status(400).json({ error: 'Sai mật khẩu xác nhận — chưa báo lỗi.' });
+  }
   const sttKey = req.params.sttKey;
   const { headers, row } = await orderService.getByKey(sttKey, { fresh: true });
   // Cùng quyền xem với GET /:sttKey: khác Xưởng, hoặc san_xuat với đơn người KHÁC đang chạy -> coi như không có.

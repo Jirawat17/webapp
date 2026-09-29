@@ -8,6 +8,8 @@ const orderService = require('../services/orderService');
 const { layDanhSachKhachHang, layBanDoTenKhachHang } = require('../services/khachHangService');
 const { layLichSuChuyenSangTrangThai, tinhChiTieuCongViec, trongKhoangThoiGian, ghiLogNhieu } = require('../services/logService');
 const { taoPdfThueTeamKhac } = require('../services/thueTeamKhacService');
+const { docMaDonTuPdf } = require('../services/docMaDonTuPdf');
+const multer = require('multer');
 const taiKhoanService = require('../services/taiKhoanService');
 const nhatKyDbService = require('../services/nhatKyDbService');
 const { laAdmin, laSuperAdmin } = require('../middleware/auth');
@@ -35,7 +37,7 @@ const FONT_BOLD = path.join(__dirname, '..', 'fonts', 'NotoSans-Bold.ttf');
 // dùng để suy mẫu — không liên quan gì tới việc "ĐÃ DÁN TEM" đạt được bằng cách nào, xem routes/photos.js).
 const TRANG_THAI_TRACKING = 'Đã sản xuất'; // chỉ còn dùng để TỰ SUY mẫu 'tracking' khi không truyền 'mau' (xem xacDinhMau)
 
-function locDon(rows, { stt, sttKeys, tuNgay, denNgay, khachHang, trangThai, trangThaiPhoi, trangThaiVeFile, tuKhoa }) {
+function locDon(rows, { stt, sttKeys, giuThuTu, tuNgay, denNgay, khachHang, trangThai, trangThaiPhoi, trangThaiVeFile, tuKhoa }) {
   // 'stt' — dùng riêng cho nút "IN ĐƠN" ở trang chi tiết 1 đơn (order.html): khớp CHÍNH XÁC theo
   // STT_Key, bỏ qua mọi điều kiện lọc khác kể cả yêu cầu phải có ngày lên đơn hợp lệ ở nhánh dưới.
   // Không dùng lại 'tuKhoa' (so khớp CHUỖI CON) vì có thể khớp nhầm sang đơn khác có STT_Key
@@ -50,6 +52,11 @@ function locDon(rows, { stt, sttKeys, tuNgay, denNgay, khachHang, trangThai, tra
   if (sttKeys) {
     const ds = Array.isArray(sttKeys) ? sttKeys : [sttKeys];
     if (ds.length > 0) {
+      // giuThuTu (29/09/2026) — "IN ĐƠN TỪ FILE PHÔI": in đúng thứ tự mã trong file DSPhoiAoTongHop thay vì thứ tự Sheet.
+      if (giuThuTu) {
+        const theoKey = new Map(rows.map(r => [r.STT_Key, r]));
+        return [...new Set(ds)].map(k => theoKey.get(k)).filter(Boolean);
+      }
       const set = new Set(ds);
       return rows.filter(r => set.has(r.STT_Key));
     }
@@ -1334,6 +1341,33 @@ router.post('/don-can-in/bat-dau', async (req, res) => {
     }
     job.capNhatLucNao = Date.now();
   })();
+});
+
+// "IN ĐƠN TỪ FILE PHÔI" (29/09/2026, theo yêu cầu người dùng) — nhận file DSPhoiAoTongHop.pdf, đọc các mã đơn trong
+// đó (services/docMaDonTuPdf.js) và trả về: sttKeys = mã tìm được trong phạm vi Xưởng người dùng (ĐÚNG thứ tự trong
+// file), khongThay = mã không có / ngoài Xưởng. Giao diện báo khongThay rồi gọi /don-can-in/bat-dau (giuThuTu) như IN
+// ĐƠN ĐANG CHỌN — cùng file DonCanIn, không đổi trạng thái đơn nào.
+// 5MB: file phôi thật chỉ vài chục KB — giới hạn chặt để 1 PDF nén bất thường không làm phình bộ nhớ máy chủ.
+const nhanFilePdf = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1 } }).single('file');
+router.post('/don-can-in/doc-file-phoi', (req, res, next) => nhanFilePdf(req, res, err => {
+  if (!err) return next();
+  res.status(400).json({ error: err.code === 'LIMIT_FILE_SIZE' ? 'File quá lớn (tối đa 5MB) — hãy dùng file DSPhoiAoTongHop.pdf do hệ thống xuất.' : `Không nhận được file (${err.message}).` });
+}), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Chưa chọn file PDF.' });
+  if (!req.file.buffer.subarray(0, 1024).toString('latin1').includes('%PDF')) return res.status(400).json({ error: 'File tải lên không phải PDF.' });
+  const { rows } = await orderService.getAll();
+  const tatCa = new Set(rows.map(r => r.STT_Key));
+  const trongPhamVi = new Set(orderService.locTheoXuong(rows, req.session.user).map(r => r.STT_Key));
+  let dsMa;
+  try {
+    dsMa = await docMaDonTuPdf(req.file.buffer, ma => tatCa.has(ma));
+  } catch (err) {
+    return res.status(400).json({ error: `Không đọc được file PDF (${err.message}).` });
+  }
+  if (dsMa.length === 0) {
+    return res.status(400).json({ error: 'Không tìm thấy mã đơn nào trong bảng của file — hãy dùng đúng file DSPhoiAoTongHop.pdf do hệ thống xuất (file scan/ảnh chụp không đọc được chữ).' });
+  }
+  res.json({ sttKeys: dsMa.filter(k => trongPhamVi.has(k)), khongThay: dsMa.filter(k => !trongPhamVi.has(k)) });
 });
 
 router.get('/don-can-in/tien-do/:jobId', (req, res) => {
