@@ -13,10 +13,11 @@ const CHAT_ID_THEO_MUC = {
 const NHAN_MUC = { VANG: '🟡 VÀNG', CAM: '🟠 CAM', DO: '🔴 ĐỎ', NHAC_SHIP: '📦 NHẮC SHIP' };
 
 // Luôn resolve (không reject) -> { ok, loi } — nơi cần biết kết quả (nút "Gửi thử" ở menu QC) đọc, nơi khác bỏ qua.
-function guiTinNhan(chatId, text) {
-  if (!BOT_TOKEN || !chatId) {
+// botToken: mặc định TELEGRAM_BOT_TOKEN (.env); cảnh báo AI QC truyền token riêng nhập ở menu QC nếu có.
+function guiTinNhan(chatId, text, botToken = BOT_TOKEN) {
+  if (!botToken || !chatId) {
     console.log('[Telegram] Bỏ qua gửi tin — thiếu BOT_TOKEN hoặc chat_id.');
-    return Promise.resolve({ ok: false, loi: !BOT_TOKEN ? 'Server chưa cấu hình TELEGRAM_BOT_TOKEN trong .env.' : 'Chưa có Chat ID.' });
+    return Promise.resolve({ ok: false, loi: !botToken ? 'Chưa có Bot Token Telegram (nhập ở menu QC hoặc TELEGRAM_BOT_TOKEN trong .env).' : 'Chưa có Chat ID.' });
   }
 
   const body = JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' });
@@ -24,7 +25,7 @@ function guiTinNhan(chatId, text) {
   return new Promise((resolve) => {
     const req = https.request({
       hostname: 'api.telegram.org',
-      path: `/bot${BOT_TOKEN}/sendMessage`,
+      path: `/bot${botToken}/sendMessage`,
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
     }, (res) => {

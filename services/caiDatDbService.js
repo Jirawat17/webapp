@@ -326,15 +326,23 @@ function datCauHinhQc(loai, thayDoi) {
 
 // Cảnh báo Telegram cho AI QC (01/10/2026): 1 Chat ID chung cho cả 3 QC, bot dùng TELEGRAM_BOT_TOKEN sẵn có. Trống = tắt.
 db.exec(`CREATE TABLE IF NOT EXISTS qc_canh_bao_telegram (id INTEGER PRIMARY KEY CHECK (id = 1), ChatId TEXT NOT NULL DEFAULT '')`);
-function layChatIdQc() {
-  return (db.prepare(`SELECT ChatId FROM qc_canh_bao_telegram WHERE id = 1`).get() || {}).ChatId || '';
+// BotToken (01/10/2026): nhập ở menu QC, CHỈ dùng cho cảnh báo QC; trống = dùng TELEGRAM_BOT_TOKEN trong .env.
+if (!db.prepare(`PRAGMA table_info(qc_canh_bao_telegram)`).all().some(c => c.name === 'BotToken')) {
+  db.exec(`ALTER TABLE qc_canh_bao_telegram ADD COLUMN BotToken TEXT NOT NULL DEFAULT ''`);
 }
-function datChatIdQc(chatId) {
-  db.prepare(`INSERT INTO qc_canh_bao_telegram (id, ChatId) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET ChatId = excluded.ChatId`).run(chatId);
+function layTelegramQc() {
+  const r = db.prepare(`SELECT ChatId, BotToken FROM qc_canh_bao_telegram WHERE id = 1`).get() || {};
+  return { chatId: r.ChatId || '', botToken: r.BotToken || '' };
+}
+// Ghi 1 phần: trường undefined giữ nguyên.
+function datTelegramQc({ chatId, botToken }) {
+  const cu = layTelegramQc();
+  db.prepare(`INSERT INTO qc_canh_bao_telegram (id, ChatId, BotToken) VALUES (1, ?, ?) ON CONFLICT(id) DO UPDATE SET ChatId = excluded.ChatId, BotToken = excluded.BotToken`)
+    .run(chatId === undefined ? cu.chatId : chatId, botToken === undefined ? cu.botToken : botToken);
 }
 
 module.exports = {
-  layCauHinhQc, datCauHinhQc, layChatIdQc, datChatIdQc,
+  layCauHinhQc, datCauHinhQc, layTelegramQc, datTelegramQc,
   CAC_COT_TAI_KHOAN_GKE, layDanhSachTaiKhoanGke, layTaiKhoanGke, ghiTaiKhoanGke, xoaTaiKhoanGke,
   layGanTaiKhoanGke, ganTaiKhoanGkeChoXuong,
   layCaiDatHangLoat, datCaiDatHangLoat,

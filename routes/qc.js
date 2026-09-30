@@ -49,14 +49,19 @@ router.post('/thu-ket-noi', async (req, res) => {
   }
 });
 
-// Cảnh báo Telegram (01/10/2026) — 1 Chat ID chung cho cả 3 QC; trống = tắt. Bot token nằm ở .env (TELEGRAM_BOT_TOKEN).
+// Cảnh báo Telegram (01/10/2026) — 1 Chat ID chung cho cả 3 QC; trống = tắt. Bot Token nhập ở đây (chỉ trả dạng che),
+// trống = dùng TELEGRAM_BOT_TOKEN trong .env.
 router.get('/telegram', (req, res) => {
-  res.json({ chatId: caiDatDbService.layChatIdQc(), coBotToken: !!process.env.TELEGRAM_BOT_TOKEN });
+  const { chatId, botToken } = caiDatDbService.layTelegramQc();
+  res.json({ chatId, nguonToken: botToken ? 'app' : process.env.TELEGRAM_BOT_TOKEN ? 'env' : '', tokenChe: cheKey(botToken) });
 });
+// body: { chatId, botToken?, xoaToken? } — botToken trống = giữ token cũ.
 router.post('/telegram', (req, res) => {
   const chatId = String(req.body.chatId || '').trim();
+  const botToken = String(req.body.botToken || '').trim();
   if (chatId && !/^(-?\d{3,20}|@[A-Za-z0-9_]{5,32})$/.test(chatId)) return res.status(400).json({ error: 'Chat ID không hợp lệ (vd -1001234567890 hoặc @tenkenh).' });
-  caiDatDbService.datChatIdQc(chatId);
+  if (botToken && !/^\d{5,15}:[A-Za-z0-9_-]{30,60}$/.test(botToken)) return res.status(400).json({ error: 'Bot Token không hợp lệ (dạng 123456789:AAE..., lấy từ @BotFather).' });
+  caiDatDbService.datTelegramQc({ chatId, ...(req.body.xoaToken ? { botToken: '' } : botToken ? { botToken } : {}) });
   res.json({ ok: true });
 });
 router.post('/telegram/gui-thu', async (req, res) => {

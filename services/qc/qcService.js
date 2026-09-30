@@ -436,15 +436,20 @@ function taoTinCanhBao({ loai, sttKey, model, nguoiChay, ketQua, loi }) {
   dong.push(`${model ? `Model: ${escTg(model)} · ` : 'Không gọi AI · '}Người chạy: ${escTg(nguoiChay)}`);
   return dong.join('\n');
 }
+// Token nhập ở menu QC; trống = TELEGRAM_BOT_TOKEN (.env).
+function layTelegram() {
+  const { chatId, botToken } = caiDatDbService.layTelegramQc();
+  return { chatId, botToken: botToken || process.env.TELEGRAM_BOT_TOKEN || '' };
+}
 function canhBaoTelegram(thongTin) {
-  const chatId = caiDatDbService.layChatIdQc();
+  const { chatId, botToken } = layTelegram();
   if (!chatId) return;
-  telegramService.guiTinNhan(chatId, taoTinCanhBao(thongTin)).catch(() => {});
+  telegramService.guiTinNhan(chatId, taoTinCanhBao(thongTin), botToken).catch(() => {});
 }
 async function guiThuTelegram() {
-  const chatId = caiDatDbService.layChatIdQc();
+  const { chatId, botToken } = layTelegram();
   if (!chatId) throw loiNghiepVu('Chưa lưu Chat ID Telegram.');
-  const kq = await telegramService.guiTinNhan(chatId, '✅ Thử cảnh báo AI QC — Chat ID này sẽ nhận cảnh báo FAIL / CẦN CHECK LẠI / LỖI API.');
+  const kq = await telegramService.guiTinNhan(chatId, '✅ Thử cảnh báo AI QC — Chat ID này sẽ nhận cảnh báo FAIL / CẦN CHECK LẠI / LỖI API.', botToken);
   if (!kq || !kq.ok) throw loiNghiepVu((kq && kq.loi) || 'Gửi Telegram thất bại.');
 }
 
