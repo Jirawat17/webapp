@@ -45,6 +45,18 @@
   </div>
 
   <div class="qc-khoi">
+    <h3>Cảnh báo Telegram</h3>
+    <p style="color:var(--color-text-muted);margin-top:0">Tự gửi tin khi QC ra <strong>FAIL</strong>, <strong>CẦN CHECK LẠI</strong> hoặc <strong>lỗi API</strong> (cả 3 QC, cùng 1 Chat ID). Dùng bot Telegram đang có của hệ thống — nhớ thêm bot vào group nhận tin. Để trống Chat ID = tắt cảnh báo.</p>
+    <div class="qc-dong-cau-hinh">
+      <div class="ten">Chat ID<small id="tg-trang-thai">Đang tải...</small></div>
+      <div class="truong"><label for="tg-chat-id">Chat ID nhận cảnh báo</label><input id="tg-chat-id" placeholder="vd -1001234567890"></div>
+      <button type="button" class="btn-hanh-dong phu" onclick="luuTelegram()">Lưu</button>
+      <button type="button" class="btn-hanh-dong phu" onclick="guiThuTelegram(this)">Gửi thử</button>
+    </div>
+    <p id="thong-bao-telegram" style="display:none"></p>
+  </div>
+
+  <div class="qc-khoi">
     <h3>QC thủ công</h3>
     <div class="inline-form" style="align-items:flex-end">
       <div class="truong">
@@ -95,6 +107,7 @@ let dsLoai = [];
   document.getElementById('qc-ma-don').addEventListener('keydown', e => { if (e.key === 'Enter') chayQc(); });
   document.getElementById('btn-tai-log').onclick = taiLog;
   await taiCauHinh();
+  taiTelegram();
   await taiLog();
 })();
 
@@ -124,6 +137,41 @@ function hangCauHinh(c, ncc) {
 function doiNcc(loai) {
   const c = dsLoai.find(x => x.loai === loai);
   document.getElementById('cau-hinh-' + loai).innerHTML = hangCauHinh(c, document.getElementById('ncc-' + loai).value);
+}
+
+function thongBaoTg(chu, loi) {
+  const el = document.getElementById('thong-bao-telegram');
+  el.style.display = 'block';
+  el.style.color = loi ? 'var(--color-danger-text)' : 'var(--color-success-text)';
+  el.textContent = chu;
+}
+
+async function taiTelegram() {
+  const el = document.getElementById('tg-trang-thai');
+  try {
+    const t = await apiFetch('/qc/telegram');
+    document.getElementById('tg-chat-id').value = t.chatId;
+    el.textContent = !t.coBotToken ? 'Server chưa cấu hình TELEGRAM_BOT_TOKEN trong .env — chưa gửi được.'
+      : t.chatId ? 'Đang BẬT cảnh báo' : 'Đang TẮT (chưa có Chat ID)';
+  } catch (e) { el.textContent = 'Lỗi: ' + e.message; }
+}
+
+async function luuTelegram() {
+  const chatId = document.getElementById('tg-chat-id').value.trim();
+  try {
+    await apiFetch('/qc/telegram', { method: 'POST', body: JSON.stringify({ chatId }) });
+    thongBaoTg(chatId ? 'Đã lưu Chat ID — bấm "Gửi thử" để kiểm tra.' : 'Đã tắt cảnh báo Telegram.');
+    await taiTelegram();
+  } catch (e) { thongBaoTg('Chưa lưu: ' + e.message, true); }
+}
+
+async function guiThuTelegram(nut) {
+  nut.disabled = true;
+  try {
+    await apiFetch('/qc/telegram/gui-thu', { method: 'POST' });
+    thongBaoTg('Đã gửi tin thử — kiểm tra group Telegram. (Gửi tới Chat ID ĐÃ LƯU.)');
+  } catch (e) { thongBaoTg(e.message, true); }
+  nut.disabled = false;
 }
 
 async function taiCauHinh() {

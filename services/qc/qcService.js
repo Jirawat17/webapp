@@ -12,6 +12,7 @@ const { layChiTietAnhThuMucDrive, taiFileDriveTheoId } = require('../driveServic
 const { tachLink, ghiChuXuongHienThi, chuanHoaAnh } = require('../thueTeamKhacService');
 const { thoiGianVNISOString } = require('../dateUtils');
 const aiProvider = require('./aiProvider');
+const telegramService = require('../telegramService');
 
 const LOAI_QC = { QC1: 'QC1 – QC Vẽ File', QC2: 'QC2 – QC Sản Xuất', QC3: 'QC3 – QC Dán Tem' };
 const LOAI_DA_TRIEN_KHAI = ['QC1', 'QC2', 'QC3'];
@@ -419,6 +420,34 @@ const chayQc1 = sttKey => chayDoiChieu(sttKey, QC1);
 
 const CHAY_THEO_LOAI = { QC1: chayQc1, QC2: chayQc2, QC3: chayQc3 };
 
+// Cảnh báo Telegram (01/10/2026, theo yêu cầu người dùng) — gửi khi FAIL, CAN_CHECK_LAI (kể cả không gọi AI) hoặc lỗi API.
+// 1 Chat ID chung (menu QC), bot TELEGRAM_BOT_TOKEN sẵn có. Không chờ gửi xong — không làm chậm/hỏng lượt QC.
+// Cắt từng trường TRƯỚC khi escape (không cắt cả tin sau escape — dễ cắt đôi thẻ/entity HTML) để tin < 4096 ký tự của Telegram.
+const escTg = s => String(s ?? '').slice(0, 350).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const NHAN_TG = { FAIL: '🔴 QC FAIL', CAN_CHECK_LAI: '🟡 QC CẦN CHECK LẠI', LOI: '❗ QC LỖI API' };
+function taoTinCanhBao({ loai, sttKey, model, nguoiChay, ketQua, loi }) {
+  const dong = [`${NHAN_TG[ketQua ? ketQua.result : 'LOI']} — ${escTg(LOAI_QC[loai])}`, `Đơn: <b>${escTg(sttKey)}</b>`];
+  if (loi) dong.push(`Lỗi: ${escTg(loi)}`);
+  if (ketQua) {
+    if (ketQua.reason) dong.push(`Lý do: ${escTg(ketQua.reason)}`);
+    const vanDe = (ketQua.issues || []).slice(0, 8);
+    if (vanDe.length) dong.push('Vấn đề:', ...vanDe.map(v => `• ${escTg(v)}`));
+  }
+  dong.push(`${model ? `Model: ${escTg(model)} · ` : 'Không gọi AI · '}Người chạy: ${escTg(nguoiChay)}`);
+  return dong.join('\n');
+}
+function canhBaoTelegram(thongTin) {
+  const chatId = caiDatDbService.layChatIdQc();
+  if (!chatId) return;
+  telegramService.guiTinNhan(chatId, taoTinCanhBao(thongTin)).catch(() => {});
+}
+async function guiThuTelegram() {
+  const chatId = caiDatDbService.layChatIdQc();
+  if (!chatId) throw loiNghiepVu('Chưa lưu Chat ID Telegram.');
+  const kq = await telegramService.guiTinNhan(chatId, '✅ Thử cảnh báo AI QC — Chat ID này sẽ nhận cảnh báo FAIL / CẦN CHECK LẠI / LỖI API.');
+  if (!kq || !kq.ok) throw loiNghiepVu((kq && kq.loi) || 'Gửi Telegram thất bại.');
+}
+
 // Chạy 1 lượt QC + ghi log. -> { id, loai, sttKey, model, anh, ketQua | null, loi | null }
 // Mã đơn không tồn tại / loại chưa triển khai -> throw (status 404/400), vẫn ghi log với mã không tồn tại.
 async function chayQc({ sttKey, loai, user }) {
@@ -434,6 +463,7 @@ async function chayQc({ sttKey, loai, user }) {
   } catch (err) {
     const id = nhatKyDbService.ghiQcLog({ ...dong, KetQua: 'LOI', LoiApi: err.message });
     if (err.status) throw Object.assign(err, { logId: id });
+    canhBaoTelegram({ loai, sttKey, model, nguoiChay: user.ten, loi: err.message });
     return { id, loai, sttKey, model, anh: [], ketQua: null, loi: err.message };
   }
   const k = kq.ketQua;
@@ -443,6 +473,7 @@ async function chayQc({ sttKey, loai, user }) {
     KetQua: k.result, DoTinCay: k.confidence, LyDo: k.reason,
     ChiTiet: JSON.stringify({ ket_qua: k, ai_goc: kq.aiGoc || null }),
   });
+  if (k.result !== 'PASS') canhBaoTelegram({ loai, sttKey, model: kq.daGoiAi ? model : '', nguoiChay: user.ten, ketQua: k });
   return { id, loai, sttKey, model: kq.daGoiAi ? model : '', anh: kq.anh, ketQua: k, loi: null };
 }
 
@@ -452,4 +483,4 @@ async function thuKetNoi(loai, nhaCungCap) {
   await aiProvider.thuKetNoi(ch, ch.nhaCungCap);
 }
 
-module.exports = { LOAI_QC, LOAI_DA_TRIEN_KHAI, MODEL_MAC_DINH, NHA_CUNG_CAP, layCauHinh, chayQc, thuKetNoi, hoanThienKetQua3, hoanThienKetQuaDoiChieu, chuanHoaMa, khopMa };
+module.exports = { LOAI_QC, LOAI_DA_TRIEN_KHAI, MODEL_MAC_DINH, NHA_CUNG_CAP, layCauHinh, chayQc, thuKetNoi, guiThuTelegram, taoTinCanhBao, hoanThienKetQua3, hoanThienKetQuaDoiChieu, chuanHoaMa, khopMa };

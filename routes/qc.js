@@ -49,6 +49,25 @@ router.post('/thu-ket-noi', async (req, res) => {
   }
 });
 
+// Cảnh báo Telegram (01/10/2026) — 1 Chat ID chung cho cả 3 QC; trống = tắt. Bot token nằm ở .env (TELEGRAM_BOT_TOKEN).
+router.get('/telegram', (req, res) => {
+  res.json({ chatId: caiDatDbService.layChatIdQc(), coBotToken: !!process.env.TELEGRAM_BOT_TOKEN });
+});
+router.post('/telegram', (req, res) => {
+  const chatId = String(req.body.chatId || '').trim();
+  if (chatId && !/^(-?\d{3,20}|@[A-Za-z0-9_]{5,32})$/.test(chatId)) return res.status(400).json({ error: 'Chat ID không hợp lệ (vd -1001234567890 hoặc @tenkenh).' });
+  caiDatDbService.datChatIdQc(chatId);
+  res.json({ ok: true });
+});
+router.post('/telegram/gui-thu', async (req, res) => {
+  try {
+    await qcService.guiThuTelegram();
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(err.status || 400).json({ error: err.message });
+  }
+});
+
 router.post('/chay', async (req, res) => {
   try {
     res.json(await qcService.chayQc({ sttKey: req.body.sttKey, loai: req.body.loai, user: req.session.user }));

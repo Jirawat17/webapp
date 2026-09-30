@@ -324,8 +324,17 @@ function datCauHinhQc(loai, thayDoi) {
     ON CONFLICT(Loai) DO UPDATE SET ${COT_QC.map(c => `${c} = excluded.${c}`).join(', ')}`).run(loai, ...moi);
 }
 
+// Cảnh báo Telegram cho AI QC (01/10/2026): 1 Chat ID chung cho cả 3 QC, bot dùng TELEGRAM_BOT_TOKEN sẵn có. Trống = tắt.
+db.exec(`CREATE TABLE IF NOT EXISTS qc_canh_bao_telegram (id INTEGER PRIMARY KEY CHECK (id = 1), ChatId TEXT NOT NULL DEFAULT '')`);
+function layChatIdQc() {
+  return (db.prepare(`SELECT ChatId FROM qc_canh_bao_telegram WHERE id = 1`).get() || {}).ChatId || '';
+}
+function datChatIdQc(chatId) {
+  db.prepare(`INSERT INTO qc_canh_bao_telegram (id, ChatId) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET ChatId = excluded.ChatId`).run(chatId);
+}
+
 module.exports = {
-  layCauHinhQc, datCauHinhQc,
+  layCauHinhQc, datCauHinhQc, layChatIdQc, datChatIdQc,
   CAC_COT_TAI_KHOAN_GKE, layDanhSachTaiKhoanGke, layTaiKhoanGke, ghiTaiKhoanGke, xoaTaiKhoanGke,
   layGanTaiKhoanGke, ganTaiKhoanGkeChoXuong,
   layCaiDatHangLoat, datCaiDatHangLoat,

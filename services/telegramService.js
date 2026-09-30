@@ -12,10 +12,11 @@ const CHAT_ID_THEO_MUC = {
 
 const NHAN_MUC = { VANG: '🟡 VÀNG', CAM: '🟠 CAM', DO: '🔴 ĐỎ', NHAC_SHIP: '📦 NHẮC SHIP' };
 
+// Luôn resolve (không reject) -> { ok, loi } — nơi cần biết kết quả (nút "Gửi thử" ở menu QC) đọc, nơi khác bỏ qua.
 function guiTinNhan(chatId, text) {
   if (!BOT_TOKEN || !chatId) {
     console.log('[Telegram] Bỏ qua gửi tin — thiếu BOT_TOKEN hoặc chat_id.');
-    return Promise.resolve();
+    return Promise.resolve({ ok: false, loi: !BOT_TOKEN ? 'Server chưa cấu hình TELEGRAM_BOT_TOKEN trong .env.' : 'Chưa có Chat ID.' });
   }
 
   const body = JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' });
@@ -30,11 +31,16 @@ function guiTinNhan(chatId, text) {
       let raw = '';
       res.on('data', (c) => { raw += c; });
       res.on('end', () => {
-        if (res.statusCode >= 400) console.error('[Telegram] Lỗi gửi tin:', res.statusCode, raw);
-        resolve();
+        if (res.statusCode >= 400) {
+          console.error('[Telegram] Lỗi gửi tin:', res.statusCode, raw);
+          let moTa = raw.slice(0, 200);
+          try { moTa = JSON.parse(raw).description || moTa; } catch (e) { /* giữ raw */ }
+          return resolve({ ok: false, loi: `Telegram báo lỗi (HTTP ${res.statusCode}): ${moTa}` });
+        }
+        resolve({ ok: true });
       });
     });
-    req.on('error', (err) => { console.error('[Telegram] Lỗi kết nối:', err.message); resolve(); });
+    req.on('error', (err) => { console.error('[Telegram] Lỗi kết nối:', err.message); resolve({ ok: false, loi: `Lỗi kết nối Telegram: ${err.message}` }); });
     req.write(body);
     req.end();
   });
