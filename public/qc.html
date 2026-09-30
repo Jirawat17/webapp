@@ -75,7 +75,9 @@
 <script src="/js/api.js?v=109"></script>
 <script>
 const NHAN_KET_QUA = { PASS: 'PASS', FAIL: 'FAIL', CAN_CHECK_LAI: 'CẦN CHECK LẠI', LOI: 'LỖI' };
-const NHAN_HANG_MUC = { tracking: 'Mã tracking', nguoi_nhan: 'Người nhận', dia_chi: 'Địa chỉ', ma_don_gom: 'Mã đơn kiện gom', design: 'Design', color: 'Màu', position: 'Vị trí', size: 'Kích thước' };
+const NHAN_HANG_MUC = { tracking: 'Mã tracking', nguoi_nhan: 'Người nhận', dia_chi: 'Địa chỉ', ma_don_gom: 'Mã đơn kiện gom',
+  design: 'Design', text: 'Chữ/ký tự', chi_tiet: 'Chi tiết', color: 'Màu', position: 'Vị trí', huong: 'Hướng', size: 'Kích thước/tỷ lệ', loi_san_xuat: 'Lỗi sản xuất' };
+const NHAN_VAI_TRO_ANH = { DESIGN: 'Design', MOCKUP: 'Mockup', FILE_THEU: 'File thêu', SAN_PHAM: 'Sản phẩm', THAM_KHAO: 'Tham khảo', KHONG_LIEN_QUAN: 'Không liên quan' };
 let dsLoai = [];
 
 (async () => {
@@ -174,9 +176,11 @@ function renderKetQua(kq) {
         ${hangMuc ? `<p style="margin-bottom:4px"><strong>Từng hạng mục:</strong></p><ul style="margin-top:0">${hangMuc}</ul>` : ''}
         ${k.issues && k.issues.length ? `<p style="margin-bottom:4px"><strong>Vấn đề:</strong></p><ul style="margin-top:0">${k.issues.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</ul>` : ''}
         ${docDuoc ? `<p style="margin-bottom:4px"><strong>AI đọc được trên tem:</strong></p><ul style="margin-top:0">${docDuoc}</ul>` : ''}
+        ${k.design_file || k.mockup_file ? `<p><strong>Design được chọn:</strong> ${escapeHtml(k.design_file || '—')} · <strong>Mockup được chọn:</strong> ${escapeHtml(k.mockup_file || '—')}</p>` : ''}
+        ${k.vai_tro_anh && k.vai_tro_anh.length ? `<p style="margin-bottom:4px"><strong>AI xác định vai trò ảnh:</strong></p><ul style="margin-top:0">${k.vai_tro_anh.map(v => `<li>${escapeHtml(v.ten)}: ${escapeHtml(NHAN_VAI_TRO_ANH[v.vai_tro] || v.vai_tro)}${v.ghi_chu ? ' — ' + escapeHtml(v.ghi_chu) : ''}</li>`).join('')}</ul>` : ''}
         ${k.kiem_tra_he_thong && k.kiem_tra_he_thong.length ? `<p style="margin-bottom:4px"><strong>Hệ thống tự kiểm tra:</strong></p><ul style="margin-top:0">${k.kiem_tra_he_thong.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</ul>` : ''}
       </div>
-      <div>${(kq.anh || []).map(u => `<a href="${escapeHtml(u)}" target="_blank" rel="noopener"><img src="${escapeHtml(u)}" alt="Ảnh đã dùng để QC" loading="lazy"></a>`).join('')}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:6px;align-content:start">${(kq.anh || []).map(u => `<a href="${escapeHtml(u)}" target="_blank" rel="noopener"><img src="${escapeHtml(urlAnhHienThiList(u, 400)[0] || u)}" alt="Ảnh đã dùng để QC" loading="lazy"></a>`).join('')}</div>
     </div>`;
 }
 

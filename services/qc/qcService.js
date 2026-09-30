@@ -1,5 +1,5 @@
 // AI QC (30/09/2026, theo yêu cầu người dùng) — QC thủ công theo STT_Key ở menu QC (routes/qc.js, CHỈ superadmin).
-// Triển khai theo giai đoạn: QC3 (dán tem) trước; QC2 (sản xuất), QC1 (vẽ file) làm SAU khi người dùng xác nhận QC3.
+// Triển khai theo giai đoạn: QC3 (dán tem) -> QC2 (sản xuất, 30/09/2026) -> QC1 (vẽ file, làm SAU khi người dùng xác nhận QC2).
 // Mỗi lần chạy (kể cả lỗi API / thiếu dữ liệu) ghi 1 dòng qc_log (nhatKyDbService.js). KHÔNG đổi dữ liệu/trạng thái đơn.
 // Kết quả luôn là PASS / FAIL / CAN_CHECK_LAI; server tự kiểm tra lại phần đối chiếu được bằng dữ liệu (mã tracking),
 // không tin tuyệt đối vào AI — AI trả PASS mà mã trên tem không khớp đơn thì vẫn FAIL.
@@ -8,11 +8,13 @@ const donNhieuAoService = require('../donNhieuAoService');
 const caiDatDbService = require('../caiDatDbService');
 const nhatKyDbService = require('../nhatKyDbService');
 const { taiAnh } = require('../anhNguonService');
+const { layChiTietAnhThuMucDrive, taiFileDriveTheoId } = require('../driveService');
+const { tachLink, ghiChuXuongHienThi, chuanHoaAnh } = require('../thueTeamKhacService');
 const { thoiGianVNISOString } = require('../dateUtils');
 const aiProvider = require('./aiProvider');
 
 const LOAI_QC = { QC1: 'QC1 – QC Vẽ File', QC2: 'QC2 – QC Sản Xuất', QC3: 'QC3 – QC Dán Tem' };
-const LOAI_DA_TRIEN_KHAI = ['QC3'];
+const LOAI_DA_TRIEN_KHAI = ['QC2', 'QC3'];
 const MODEL_MAC_DINH = 'gemini-2.5-flash';
 const KET_QUA = ['PASS', 'FAIL', 'CAN_CHECK_LAI'];
 const DUNG_LUONG_ANH_TOI_DA = 15 * 1024 * 1024; // Gemini giới hạn ~20MB/lượt gửi ảnh trực tiếp
@@ -184,7 +186,190 @@ async function chayQc3(sttKey) {
   };
 }
 
-const CHAY_THEO_LOAI = { QC3: chayQc3 };
+// ---------------- QC2 – QC SẢN XUẤT ----------------
+// Căn cứ CHÍNH (người dùng xác nhận 30/09/2026): Design/Mockup + ghi chú = yêu cầu gốc; File thêu chỉ để đối chiếu thêm —
+// sản phẩm khác Design là FAIL kể cả khi giống File thêu. Tối đa 10 ảnh/lượt: luôn gửi ảnh đã sản xuất + File thêu 1-3,
+// phần còn lại chia XEN KẼ Design/Mockup theo thứ tự tên file (CHỈ tải đúng số ảnh sẽ gửi, không tải cả thư mục Drive).
+const SO_ANH_TOI_DA_QC2 = 10;
+const NGUON_THAM_KHAO = [{ cot: 'DUONG_DAN_URL', nhan: 'PNG/Design' }, { cot: 'MOCKUP', nhan: 'Mockup' }];
+const COT_FILE_THEU = ['Anh_File_Theu_URL', 'Anh_File_Theu_URL_2', 'Anh_File_Theu_URL_3'];
+// Hạng mục BẮT BUỘC PASS thì kết quả tổng mới được PASS; màu/kích thước/hướng thường thiếu căn cứ -> CAN_CHECK_LAI vẫn cho qua.
+const HANG_MUC_QC2 = ['design', 'text', 'chi_tiet', 'color', 'position', 'huong', 'size', 'loi_san_xuat'];
+const HANG_MUC_BAT_BUOC_QC2 = ['design', 'text', 'chi_tiet', 'position', 'loi_san_xuat'];
+const VAI_TRO_ANH = ['DESIGN', 'MOCKUP', 'FILE_THEU', 'SAN_PHAM', 'THAM_KHAO', 'KHONG_LIEN_QUAN'];
+
+const SCHEMA_QC2 = {
+  type: 'object',
+  properties: {
+    result: { type: 'string', enum: KET_QUA },
+    confidence: { type: 'number' },
+    design_file: { type: 'string', nullable: true },
+    mockup_file: { type: 'string', nullable: true },
+    checked_items: { type: 'object', properties: Object.fromEntries(HANG_MUC_QC2.map(h => [h, HANG_MUC])), required: HANG_MUC_QC2 },
+    issues: { type: 'array', items: { type: 'string' } },
+    reason: { type: 'string' },
+    vai_tro_anh: {
+      type: 'array',
+      items: { type: 'object', properties: { ten: { type: 'string' }, vai_tro: { type: 'string', enum: VAI_TRO_ANH }, ghi_chu: { type: 'string', nullable: true } }, required: ['ten', 'vai_tro'] },
+    },
+  },
+  required: ['result', 'confidence', 'design_file', 'mockup_file', 'checked_items', 'issues', 'reason', 'vai_tro_anh'],
+};
+
+function promptQc2(duLieu, dsAnh) {
+  return [
+    'Bạn là nhân viên QC của xưởng thêu, nhiệm vụ: kiểm tra SẢN PHẨM THÊU THỰC TẾ (ảnh "san_pham") có đúng yêu cầu đơn hàng hay không.',
+    'Dữ liệu đơn hàng (JSON):',
+    JSON.stringify(duLieu, null, 2),
+    '',
+    'Danh sách ảnh gửi kèm (tên ảnh đứng ngay trước mỗi ảnh). "nguon" chỉ là CỘT DỮ LIỆU chứa link — KHÔNG chắc chắn là vai trò thật của ảnh:',
+    JSON.stringify(dsAnh, null, 2),
+    '',
+    'Quy tắc BẮT BUỘC:',
+    '1. Xác định vai trò TỪNG ảnh vào "vai_tro_anh" (DESIGN / MOCKUP / FILE_THEU / SAN_PHAM / THAM_KHAO / KHONG_LIEN_QUAN) dựa trên NỘI DUNG ảnh, dữ liệu đơn, ghi chú và quan hệ giữa các ảnh — KHÔNG dựa vào tên file. Chọn design_file và mockup_file là ĐÚNG tên ảnh trong danh sách (null nếu không xác định chắc chắn).',
+    '2. Yêu cầu CHÍNH là Design + Mockup + các ghi chú (ghi_chu, ghi_chu_xuong, ghi_chu_ve_file, ghi_chu_chay_may). File thêu chỉ để đối chiếu thêm: sản phẩm khác Design là FAIL kể cả khi giống File thêu — khi đó ghi rõ trong issues "lỗi có thể từ File thêu".',
+    '3. Kiểm tra checked_items (PASS / FAIL / CAN_CHECK_LAI): design (đúng thiết kế), text (ĐỌC TỪNG KÝ TỰ: thiếu, sai, thừa ký tự — rất quan trọng), chi_tiet (thiếu/thừa chi tiết), color (màu chỉ/màu áo), position (vị trí thêu so với vi_tri_theu/ghi chú/mockup), huong (xoay/lật), size (kích thước/tỷ lệ — chỉ khi dữ liệu có số đo rõ, nếu không thì CAN_CHECK_LAI), loi_san_xuat (lỗi thêu nhìn thấy được: bung chỉ, nhăn, lệch, sót chỉ...).',
+    '4. Nếu Design và Mockup khác nhau: nêu rõ khác biệt, xem ghi chú để biết bên nào là yêu cầu chính thức; không đủ căn cứ -> CAN_CHECK_LAI. Nhiều ảnh cùng có thể là Design mà không xác định được ảnh chính -> CAN_CHECK_LAI.',
+    '5. Chỉ FAIL khi thấy RÕ lỗi. Ảnh mờ, bị che, góc chụp không thấy rõ, thiếu ảnh -> CAN_CHECK_LAI. Không kết luận kiểu "nhìn khá giống".',
+    '6. result tổng: FAIL nếu có lỗi rõ ràng; PASS chỉ khi xác định được Design, và design, text, chi_tiet, position, loi_san_xuat đều PASS, không có mâu thuẫn dữ liệu; còn lại CAN_CHECK_LAI.',
+    '7. confidence từ 0 đến 1. issues và reason viết tiếng Việt, ngắn gọn, nêu cụ thể (vd ký tự nào sai, chi tiết nào thiếu).',
+  ].join('\n');
+}
+
+// Link ảnh tham khảo (Design/Mockup) CHƯA tải, theo từng nguồn: [[{ nguon, ten, link, tai }], ...] + lỗi đọc link/thư mục.
+async function lietKeAnhThamKhao(row) {
+  const theoNguon = [];
+  const loi = [];
+  for (const { cot, nhan } of NGUON_THAM_KHAO) {
+    const ds = [];
+    for (const link of tachLink(row[cot])) {
+      try {
+        const thuMuc = await layChiTietAnhThuMucDrive(link);
+        if (thuMuc) thuMuc.forEach(f => ds.push({ nguon: nhan, ten: f.ten, link: f.link, tai: () => taiFileDriveTheoId(f.id) }));
+        else ds.push({ nguon: nhan, ten: tenTuLink(link), link, tai: () => taiAnh(link) });
+      } catch (err) {
+        loi.push(`Không đọc được link ${nhan} (${link}): ${err.message}`);
+      }
+    }
+    theoNguon.push(ds);
+  }
+  return { theoNguon, loi };
+}
+function tenTuLink(link) {
+  const cuoi = String(link).split(/[?#]/)[0].split('/').filter(Boolean).pop() || 'anh';
+  try { return decodeURIComponent(cuoi); } catch (e) { return cuoi; }
+}
+
+// Xen kẽ các nguồn: [a1, b1, a2, b2, ...].
+function xenKe(dsTheoNguon) {
+  const kq = [];
+  for (let i = 0; dsTheoNguon.some(ds => i < ds.length); i++) dsTheoNguon.forEach(ds => { if (i < ds.length) kq.push(ds[i]); });
+  return kq;
+}
+
+async function taiVaChuanHoa(taiFn) {
+  const buffer = await taiFn();
+  if (!buffer || !buffer.length) throw new Error('không tải được ảnh');
+  return (await chuanHoaAnh(buffer)).anh; // JPEG, cạnh dài tối đa 1400px
+}
+
+// Làm sạch JSON AI trả về cho QC2 + ràng buộc hệ thống (tên file phải có thật, hạng mục FAIL -> FAIL, PASS phải đủ điều kiện).
+function hoanThienKetQua2(ai, tenHopLe) {
+  const kq = {
+    result: KET_QUA.includes(ai && ai.result) ? ai.result : 'CAN_CHECK_LAI',
+    confidence: Math.min(1, Math.max(0, Number(ai && ai.confidence) || 0)),
+    design_file: tenHopLe.has(ai && ai.design_file) ? ai.design_file : null,
+    mockup_file: tenHopLe.has(ai && ai.mockup_file) ? ai.mockup_file : null,
+    checked_items: Object.fromEntries(Object.entries((ai && ai.checked_items) || {}).filter(([k, v]) => HANG_MUC_QC2.includes(k) && KET_QUA.includes(v))),
+    issues: Array.isArray(ai && ai.issues) ? ai.issues.map(String) : [],
+    reason: String((ai && ai.reason) || ''),
+    vai_tro_anh: Array.isArray(ai && ai.vai_tro_anh) ? ai.vai_tro_anh.filter(v => v && tenHopLe.has(v.ten)) : [],
+    kiem_tra_he_thong: [],
+  };
+  const haXuong = lyDo => {
+    kq.kiem_tra_he_thong.push(lyDo);
+    if (kq.result === 'PASS') { kq.result = 'CAN_CHECK_LAI'; kq.issues.push(lyDo); }
+  };
+  if (!KET_QUA.includes(ai && ai.result)) kq.issues.push('AI trả kết quả không đúng định dạng — chuyển CAN_CHECK_LAI.');
+  if (ai && ai.design_file && !kq.design_file) haXuong(`AI chọn design_file "${ai.design_file}" không có trong danh sách ảnh đã gửi.`);
+  if (ai && ai.mockup_file && !kq.mockup_file) kq.kiem_tra_he_thong.push(`AI chọn mockup_file "${ai.mockup_file}" không có trong danh sách ảnh — bỏ qua.`);
+  const hangMucLoi = Object.entries(kq.checked_items).filter(([, v]) => v === 'FAIL').map(([k]) => k);
+  if (hangMucLoi.length && kq.result !== 'FAIL') {
+    kq.result = 'FAIL';
+    kq.kiem_tra_he_thong.push(`Có hạng mục FAIL (${hangMucLoi.join(', ')}) — kết quả tổng chuyển FAIL.`);
+  }
+  if (kq.result === 'PASS') {
+    if (!kq.design_file) haXuong('Không xác định chắc chắn được Design chính — không thể PASS.');
+    const chuaDat = HANG_MUC_BAT_BUOC_QC2.filter(h => kq.checked_items[h] !== 'PASS');
+    if (chuaDat.length) haXuong(`Hạng mục bắt buộc chưa PASS: ${chuaDat.join(', ')} — không thể PASS.`);
+  }
+  return kq;
+}
+
+async function chayQc2(sttKey) {
+  const { rows } = await orderService.getAll({ fresh: true });
+  const row = rows.find(r => r.STT_Key === sttKey);
+  if (!row) throw loiNghiepVu(`Không tìm thấy đơn ${sttKey}.`, 404);
+  const khongGoiAi = (lyDo, anh = [], fileTheu = []) => ({
+    daGoiAi: false, anh, fileTheu,
+    ketQua: { result: 'CAN_CHECK_LAI', confidence: 0, design_file: null, mockup_file: null, checked_items: {}, issues: [lyDo], reason: 'Chưa đủ dữ liệu để QC — cần người kiểm tra lại.', kiem_tra_he_thong: [lyDo] },
+  });
+
+  const urlSanPham = row.Anh_Da_San_Xuat_URL || '';
+  if (!urlSanPham) return khongGoiAi('Đơn chưa có ảnh đã sản xuất.');
+  const ghiChuHeThong = [];
+  const dsAnh = []; // { ten, nguon, link, mime, data }
+  try {
+    dsAnh.push({ ten: 'san_pham', nguon: 'Ảnh đã sản xuất', link: urlSanPham, mime: 'image/jpeg', data: await taiVaChuanHoa(() => taiAnh(urlSanPham)) });
+  } catch (err) {
+    return khongGoiAi(`Không đọc được ảnh đã sản xuất (${err.message}).`, [urlSanPham]);
+  }
+  const urlFileTheu = COT_FILE_THEU.map(c => row[c]).filter(Boolean);
+  for (const [i, url] of urlFileTheu.entries()) {
+    try { dsAnh.push({ ten: `file_theu_${i + 1}`, nguon: `File thêu ${i + 1}`, link: url, mime: 'image/jpeg', data: await taiVaChuanHoa(() => taiAnh(url)) }); }
+    catch (err) { ghiChuHeThong.push(`Không đọc được File thêu ${i + 1} (${err.message}).`); }
+  }
+
+  const { theoNguon, loi } = await lietKeAnhThamKhao(row);
+  ghiChuHeThong.push(...loi);
+  const ungVien = xenKe(theoNguon);
+  const tenDaDung = new Set(dsAnh.map(a => a.ten));
+  let soThamKhao = 0;
+  for (const uv of ungVien) {
+    if (dsAnh.length >= SO_ANH_TOI_DA_QC2) break;
+    const goc = `${uv.nguon === 'Mockup' ? 'mockup' : 'design'}__${uv.ten}`;
+    let ten = goc;
+    for (let n = 2; tenDaDung.has(ten); n++) ten = `${goc}_${n}`;
+    try {
+      dsAnh.push({ ten, nguon: uv.nguon, link: uv.link, mime: 'image/jpeg', data: await taiVaChuanHoa(uv.tai) });
+      tenDaDung.add(ten);
+      soThamKhao++;
+    } catch (err) { ghiChuHeThong.push(`Không đọc được ảnh ${uv.nguon} "${uv.ten}" (${err.message}).`); }
+  }
+  if (ungVien.length > soThamKhao) ghiChuHeThong.push(`Chỉ gửi ${soThamKhao}/${ungVien.length} ảnh Design/Mockup (giới hạn ${SO_ANH_TOI_DA_QC2} ảnh mỗi lần QC).`);
+  const anhDaDung = dsAnh.map(a => a.link);
+  if (!soThamKhao) return khongGoiAi('Không có ảnh Design/Mockup nào đọc được — không có căn cứ đối chiếu.', anhDaDung, urlFileTheu);
+
+  const duLieu = {
+    ma_don: row.STT_Key,
+    loai: row.LOAI || '', size_ao: row.KICH_THUOC || '', mau_ao: row.MAU_SAC || '',
+    so_luong: row.SO_LUONG || '', so_luong_ao_tren_don: row.SO_LUONG_AO_TREN_DON || '',
+    vi_tri_theu: orderService.danhSachViTriTheu(row),
+    ghi_chu: row.GHI_CHU || '', ghi_chu_xuong: ghiChuXuongHienThi(row),
+    ghi_chu_ve_file: row.GHI_CHU_VE_FILE || '', ghi_chu_chay_may: row.GHI_CHU_CHAY_MAY || '',
+  };
+  const { apiKey, model } = layCauHinh('QC2');
+  const ai = await aiProvider.phanTichAnh({
+    apiKey, model, schema: SCHEMA_QC2,
+    prompt: promptQc2(duLieu, dsAnh.map(a => ({ ten: a.ten, nguon: a.nguon }))),
+    anh: dsAnh.map(a => ({ mime: a.mime, data: a.data, ten: a.ten })),
+  });
+  const ketQua = hoanThienKetQua2(ai, tenDaDung);
+  ketQua.kiem_tra_he_thong.unshift(...ghiChuHeThong);
+  return { daGoiAi: true, anh: anhDaDung, fileTheu: urlFileTheu, aiGoc: ai, ketQua };
+}
+
+const CHAY_THEO_LOAI = { QC2: chayQc2, QC3: chayQc3 };
 
 // Chạy 1 lượt QC + ghi log. -> { id, loai, sttKey, model, anh, ketQua | null, loi | null }
 // Mã đơn không tồn tại / loại chưa triển khai -> throw (status 404/400), vẫn ghi log với mã không tồn tại.
@@ -206,7 +391,7 @@ async function chayQc({ sttKey, loai, user }) {
   const k = kq.ketQua;
   const id = nhatKyDbService.ghiQcLog({
     ...dong, Model: kq.daGoiAi ? model : '',
-    AnhDaDung: kq.anh.join('\n'), DesignFile: k.design_file || '', MockupFile: k.mockup_file || '',
+    AnhDaDung: kq.anh.join('\n'), FileTheu: (kq.fileTheu || []).join('\n'), DesignFile: k.design_file || '', MockupFile: k.mockup_file || '',
     KetQua: k.result, DoTinCay: k.confidence, LyDo: k.reason,
     ChiTiet: JSON.stringify({ ket_qua: k, ai_goc: kq.aiGoc || null }),
   });
@@ -218,4 +403,4 @@ async function thuKetNoi(loai) {
   await aiProvider.thuKetNoi(layCauHinh(loai));
 }
 
-module.exports = { LOAI_QC, LOAI_DA_TRIEN_KHAI, MODEL_MAC_DINH, layCauHinh, chayQc, thuKetNoi, hoanThienKetQua3, chuanHoaMa, khopMa };
+module.exports = { LOAI_QC, LOAI_DA_TRIEN_KHAI, MODEL_MAC_DINH, layCauHinh, chayQc, thuKetNoi, hoanThienKetQua3, hoanThienKetQua2, chuanHoaMa, khopMa };

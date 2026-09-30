@@ -382,4 +382,4 @@ async function taoPdfThueTeamKhac(dsDonGoc, { thoiGianXuat, nguoiXuat, onTienDo,
   return { buffer: Buffer.concat(chunks), dsLoi, tongAnh };
 }
 
-module.exports = { taoPdfThueTeamKhac, tachLink, ghiChuXuongHienThi, GHI_CHU_THAM_KHAO };
+module.exports = { taoPdfThueTeamKhac, tachLink, ghiChuXuongHienThi, chuanHoaAnh, GHI_CHU_THAM_KHAO }; // chuanHoaAnh: dùng lại ở services/qc/qcService.js (QC2)
