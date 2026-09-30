@@ -48,6 +48,7 @@ app.use('/api/trung-tam-hanh-dong', require('./routes/actionCenter'));
 app.use('/api/dong-bo-sheet-seller', require('./routes/dongBoSheetSeller'));
 app.use('/api/kich-ban', require('./routes/kichBan'));
 app.use('/api/logs', require('./routes/logs'));
+app.use('/api/qc', require('./routes/qc')); // AI QC (30/09/2026) — CHỈ superadmin
 
 app.use(express.static(path.join(__dirname, 'public')));
 

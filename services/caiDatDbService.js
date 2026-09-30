@@ -300,7 +300,26 @@ function datNhomLoaiTrong(nhom) {
   db.prepare(`INSERT INTO cai_dat_nhom_hang (id, NhomLoaiTrong) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET NhomLoaiTrong = excluded.NhomLoaiTrong`).run(nhom);
 }
 
+// ---------- AI QC (30/09/2026, theo yêu cầu người dùng) — API key + model riêng cho QC1/QC2/QC3 (services/qc/qcService.js) ----------
+// Key lưu nguyên văn (cùng cách mật khẩu GKE ở trên, người dùng đã đồng ý); routes/qc.js chỉ trả dạng che ra giao diện.
+db.exec(`CREATE TABLE IF NOT EXISTS qc_cau_hinh (
+  Loai TEXT PRIMARY KEY,
+  ApiKey TEXT NOT NULL DEFAULT '',
+  Model TEXT NOT NULL DEFAULT ''
+)`);
+// { QC1: { ApiKey, Model }, ... } — loại chưa lưu lần nào không có trong kết quả.
+function layCauHinhQc() {
+  return Object.fromEntries(db.prepare(`SELECT Loai, ApiKey, Model FROM qc_cau_hinh`).all().map(r => [r.Loai, { ApiKey: r.ApiKey, Model: r.Model }]));
+}
+// Ghi 1 phần: trường undefined giữ nguyên giá trị cũ.
+function datCauHinhQc(loai, { ApiKey, Model }) {
+  const cu = layCauHinhQc()[loai] || { ApiKey: '', Model: '' };
+  db.prepare(`INSERT INTO qc_cau_hinh (Loai, ApiKey, Model) VALUES (?, ?, ?) ON CONFLICT(Loai) DO UPDATE SET ApiKey = excluded.ApiKey, Model = excluded.Model`)
+    .run(loai, ApiKey === undefined ? cu.ApiKey : ApiKey, Model === undefined ? cu.Model : Model);
+}
+
 module.exports = {
+  layCauHinhQc, datCauHinhQc,
   CAC_COT_TAI_KHOAN_GKE, layDanhSachTaiKhoanGke, layTaiKhoanGke, ghiTaiKhoanGke, xoaTaiKhoanGke,
   layGanTaiKhoanGke, ganTaiKhoanGkeChoXuong,
   layCaiDatHangLoat, datCaiDatHangLoat,

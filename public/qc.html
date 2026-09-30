@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QC — Xưởng Thêu</title>
+<link rel="stylesheet" href="/css/style.css?v=107">
+<script src="/js/theme.js?v=104"></script>
+<style>
+/* AI QC (30/09/2026) — style riêng trang này, không đáng thêm vào style.css dùng chung. */
+.qc-khoi { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-4); margin-bottom: var(--space-5); }
+.qc-khoi h3 { margin-top: 0; }
+.qc-dong-cau-hinh { display: flex; gap: var(--space-3); align-items: flex-end; flex-wrap: wrap; padding: var(--space-3) 0; border-top: 1px solid var(--color-border); }
+.qc-dong-cau-hinh:first-of-type { border-top: none; }
+.qc-dong-cau-hinh .ten { flex: 1 1 180px; font-weight: 700; }
+.qc-dong-cau-hinh .ten small { display: block; font-weight: 400; color: var(--color-text-muted); }
+.qc-dong-cau-hinh input { min-width: 0; }
+.qc-nhan { display: inline-block; font-weight: 700; padding: 4px 12px; border-radius: 999px; font-size: 1rem; }
+.qc-nhan.PASS { background: var(--color-success-bg); color: var(--color-success-text); }
+.qc-nhan.FAIL { background: var(--color-danger-bg); color: var(--color-danger-text); }
+.qc-nhan.CAN_CHECK_LAI { background: var(--color-warning-bg, #fef3c7); color: var(--color-warning-text, #92400e); }
+.qc-nhan.LOI { background: var(--color-bg); color: var(--color-danger-text); border: 1px solid var(--color-danger-text); }
+.qc-ket-qua { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 260px); gap: var(--space-4); }
+@media (max-width: 700px) { .qc-ket-qua { grid-template-columns: minmax(0, 1fr); } }
+.qc-ket-qua img { width: 100%; border-radius: var(--radius-sm); border: 1px solid var(--color-border); }
+.qc-bang-log { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.qc-bang-log th, .qc-bang-log td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--color-border); vertical-align: top; }
+.qc-bang-log td.ly-do { word-break: break-word; min-width: 200px; }
+.qc-cuon-ngang { overflow-x: auto; }
+.qc-chi-tiet { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.75rem; white-space: pre-wrap; word-break: break-word; background: var(--color-bg); padding: var(--space-2); border-radius: var(--radius-sm); max-height: 320px; overflow-y: auto; }
+</style>
+</head>
+<body>
+<div id="nav"></div>
+<div class="page">
+  <h2>QC</h2>
+
+  <div class="qc-khoi">
+    <h3>Cấu hình AI (Gemini)</h3>
+    <p style="color:var(--color-text-muted);margin-top:0">Mỗi QC dùng API key + model riêng (lấy key ở Google AI Studio). Key chỉ hiện dạng che; để trống ô key khi Lưu = giữ key cũ.</p>
+    <div id="khoi-cau-hinh">Đang tải...</div>
+    <p id="thong-bao-cau-hinh" style="display:none"></p>
+  </div>
+
+  <div class="qc-khoi">
+    <h3>QC thủ công</h3>
+    <div class="inline-form" style="align-items:flex-end">
+      <div class="truong">
+        <label for="qc-ma-don">Mã đơn (STT_Key)</label>
+        <input id="qc-ma-don" placeholder="VD: 10TRA5332" autocomplete="off">
+      </div>
+      <div class="truong">
+        <label for="qc-loai">Loại QC</label>
+        <select id="qc-loai"></select>
+      </div>
+      <button type="button" class="btn-hanh-dong" id="btn-chay-qc">Thực hiện QC</button>
+    </div>
+    <div id="qc-ket-qua" style="margin-top:var(--space-4)"></div>
+  </div>
+
+  <div class="qc-khoi">
+    <h3>Log QC</h3>
+    <div class="inline-form" style="align-items:flex-end">
+      <div class="truong"><label for="log-loai">Loại</label><select id="log-loai"><option value="">Tất cả</option></select></div>
+      <div class="truong"><label for="log-ket-qua">Kết quả</label>
+        <select id="log-ket-qua"><option value="">Tất cả</option><option>PASS</option><option>FAIL</option><option>CAN_CHECK_LAI</option><option value="LOI">LỖI</option></select></div>
+      <div class="truong"><label for="log-ma-don">Mã đơn</label><input id="log-ma-don" autocomplete="off"></div>
+      <button type="button" class="btn-hanh-dong phu" id="btn-tai-log">Lọc</button>
+    </div>
+    <div id="khoi-log" class="qc-cuon-ngang" style="margin-top:var(--space-3)"></div>
+  </div>
+</div>
+
+<script src="/js/icons.js?v=104"></script>
+<script src="/js/api.js?v=109"></script>
+<script>
+const NHAN_KET_QUA = { PASS: 'PASS', FAIL: 'FAIL', CAN_CHECK_LAI: 'CẦN CHECK LẠI', LOI: 'LỖI' };
+const NHAN_HANG_MUC = { tracking: 'Mã tracking', nguoi_nhan: 'Người nhận', dia_chi: 'Địa chỉ', ma_don_gom: 'Mã đơn kiện gom', design: 'Design', color: 'Màu', position: 'Vị trí', size: 'Kích thước' };
+let dsLoai = [];
+
+(async () => {
+  const user = await requireLoginOrRedirect();
+  if (!user) return;
+  renderNav(user, 'qc');
+  if (user.vaiTro !== 'superadmin') {
+    document.querySelector('.page').innerHTML = '<p>Bạn không có quyền truy cập trang này.</p>';
+    return;
+  }
+  document.getElementById('btn-chay-qc').onclick = chayQc;
+  document.getElementById('qc-ma-don').addEventListener('keydown', e => { if (e.key === 'Enter') chayQc(); });
+  document.getElementById('btn-tai-log').onclick = taiLog;
+  await taiCauHinh();
+  await taiLog();
+})();
+
+const nhanKetQua = kq => `<span class="qc-nhan ${escapeHtml(kq)}">${escapeHtml(NHAN_KET_QUA[kq] || kq)}</span>`;
+function thongBao(chu, loi) {
+  const el = document.getElementById('thong-bao-cau-hinh');
+  el.style.display = 'block';
+  el.style.color = loi ? 'var(--color-danger-text)' : 'var(--color-success-text)';
+  el.textContent = chu;
+}
+
+async function taiCauHinh() {
+  const el = document.getElementById('khoi-cau-hinh');
+  try { dsLoai = await apiFetch('/qc/cau-hinh'); } catch (e) { el.textContent = 'Lỗi: ' + e.message; return; }
+  el.innerHTML = dsLoai.map(c => `
+    <div class="qc-dong-cau-hinh">
+      <div class="ten">${escapeHtml(c.ten)}<small>${c.coKey ? 'Key đang lưu: ' + escapeHtml(c.keyChe) : 'Chưa có API key'}${c.daTrienKhai ? '' : ' · chưa triển khai QC'}</small></div>
+      <div class="truong"><label for="key-${c.loai}">API key Gemini</label><input type="password" id="key-${c.loai}" placeholder="${c.coKey ? 'Để trống = giữ key cũ' : 'Dán API key'}" autocomplete="new-password"></div>
+      <div class="truong"><label for="model-${c.loai}">Model</label><input id="model-${c.loai}" value="${escapeHtml(c.model)}"></div>
+      <button type="button" class="btn-hanh-dong phu" onclick="luuCauHinh('${c.loai}')">Lưu</button>
+      <button type="button" class="btn-hanh-dong phu" onclick="thuKetNoi('${c.loai}', this)">Thử kết nối</button>
+      ${c.coKey ? `<button type="button" class="btn-hanh-dong phu nguy-hiem" onclick="luuCauHinh('${c.loai}', true)">Xoá key</button>` : ''}
+    </div>`).join('');
+  const oLoai = document.getElementById('qc-loai');
+  const dangChon = oLoai.value;
+  oLoai.innerHTML = dsLoai.map(c => `<option value="${c.loai}" ${c.daTrienKhai ? '' : 'disabled'}>${escapeHtml(c.ten)}${c.daTrienKhai ? '' : ' (chưa triển khai)'}</option>`).join('');
+  oLoai.value = dangChon || (dsLoai.find(c => c.daTrienKhai) || {}).loai || '';
+  const oLogLoai = document.getElementById('log-loai');
+  if (oLogLoai.options.length === 1) oLogLoai.innerHTML += dsLoai.map(c => `<option value="${c.loai}">${escapeHtml(c.ten)}</option>`).join('');
+}
+
+async function luuCauHinh(loai, xoaKey = false) {
+  if (xoaKey && !confirm(`Xoá API key của ${loai}?`)) return;
+  const apiKey = document.getElementById('key-' + loai).value.trim();
+  const model = document.getElementById('model-' + loai).value.trim();
+  try {
+    await apiFetch('/qc/cau-hinh', { method: 'POST', body: JSON.stringify({ loai, model, apiKey, xoaKey }) });
+    thongBao(xoaKey ? `Đã xoá API key ${loai}.` : `Đã lưu cấu hình ${loai}.`);
+    await taiCauHinh();
+  } catch (e) { thongBao('Chưa lưu: ' + e.message, true); }
+}
+
+async function thuKetNoi(loai, nut) {
+  nut.disabled = true;
+  try {
+    await apiFetch('/qc/thu-ket-noi', { method: 'POST', body: JSON.stringify({ loai }) });
+    thongBao(`${loai}: kết nối Gemini thành công (key + model dùng được). Lưu ý: thử với cấu hình ĐÃ LƯU.`);
+  } catch (e) { thongBao(`${loai}: ` + e.message, true); }
+  nut.disabled = false;
+}
+
+async function chayQc() {
+  const sttKey = document.getElementById('qc-ma-don').value.trim();
+  const loai = document.getElementById('qc-loai').value;
+  const el = document.getElementById('qc-ket-qua');
+  if (!sttKey) { el.innerHTML = '<p style="color:var(--color-danger-text)">Nhập mã đơn trước.</p>'; return; }
+  const nut = document.getElementById('btn-chay-qc');
+  nut.disabled = true;
+  el.innerHTML = `<p>${icon('spinner', { className: 'icon-spin', size: 16 })} Đang QC ${escapeHtml(sttKey)}... (có thể mất 10-60 giây)</p>`;
+  try {
+    const kq = await apiFetch('/qc/chay', { method: 'POST', body: JSON.stringify({ sttKey, loai }) });
+    el.innerHTML = renderKetQua(kq);
+  } catch (e) {
+    el.innerHTML = `<p style="color:var(--color-danger-text)">${escapeHtml(e.message)}</p>`;
+  }
+  nut.disabled = false;
+  await taiLog();
+}
+
+function renderKetQua(kq) {
+  if (kq.loi) return `<p>${nhanKetQua('LOI')} <strong>${escapeHtml(kq.sttKey)}</strong> — ${escapeHtml(kq.loi)}</p>`;
+  const k = kq.ketQua;
+  const hangMuc = Object.entries(k.checked_items || {}).map(([ten, v]) => `<li>${escapeHtml(NHAN_HANG_MUC[ten] || ten)}: ${nhanKetQua(v)}</li>`).join('');
+  const doc = k.doc_duoc || {};
+  const docDuoc = [['Mã tracking', doc.ma_tracking], ['Người nhận', doc.ten_nguoi_nhan], ['Địa chỉ', doc.dia_chi], ['Hãng', doc.hang_van_chuyen], ['Mã đơn trên tem', (doc.ma_don_tren_tem || []).join(', ')]]
+    .filter(([, v]) => v).map(([t, v]) => `<li>${t}: <strong>${escapeHtml(v)}</strong></li>`).join('');
+  return `
+    <div class="qc-ket-qua">
+      <div>
+        <p style="margin-top:0;font-size:1.1rem">${nhanKetQua(k.result)} <strong>${escapeHtml(kq.sttKey)}</strong> · ${escapeHtml(kq.loai)} · độ tin cậy ${Math.round((k.confidence || 0) * 100)}%${kq.model ? ` · ${escapeHtml(kq.model)}` : ' · không gọi AI'}</p>
+        <p><strong>Lý do:</strong> ${escapeHtml(k.reason || '')}</p>
+        ${hangMuc ? `<p style="margin-bottom:4px"><strong>Từng hạng mục:</strong></p><ul style="margin-top:0">${hangMuc}</ul>` : ''}
+        ${k.issues && k.issues.length ? `<p style="margin-bottom:4px"><strong>Vấn đề:</strong></p><ul style="margin-top:0">${k.issues.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</ul>` : ''}
+        ${docDuoc ? `<p style="margin-bottom:4px"><strong>AI đọc được trên tem:</strong></p><ul style="margin-top:0">${docDuoc}</ul>` : ''}
+        ${k.kiem_tra_he_thong && k.kiem_tra_he_thong.length ? `<p style="margin-bottom:4px"><strong>Hệ thống tự kiểm tra:</strong></p><ul style="margin-top:0">${k.kiem_tra_he_thong.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</ul>` : ''}
+      </div>
+      <div>${(kq.anh || []).map(u => `<a href="${escapeHtml(u)}" target="_blank" rel="noopener"><img src="${escapeHtml(u)}" alt="Ảnh đã dùng để QC" loading="lazy"></a>`).join('')}</div>
+    </div>`;
+}
+
+async function taiLog() {
+  const el = document.getElementById('khoi-log');
+  const qs = new URLSearchParams();
+  const loai = document.getElementById('log-loai').value;
+  const ketQua = document.getElementById('log-ket-qua').value;
+  const maDon = document.getElementById('log-ma-don').value.trim();
+  if (loai) qs.set('loaiQc', loai);
+  if (ketQua) qs.set('ketQua', ketQua);
+  if (maDon) qs.set('sttKey', maDon);
+  let ds;
+  try { ds = await apiFetch('/qc/log?' + qs); } catch (e) { el.textContent = 'Lỗi: ' + e.message; return; }
+  if (!ds.length) { el.innerHTML = '<p style="color:var(--color-text-muted)">Chưa có lần QC nào.</p>'; return; }
+  el.innerHTML = `<table class="qc-bang-log">
+    <thead><tr><th>Thời gian</th><th>Mã đơn</th><th>QC</th><th>Kết quả</th><th>Tin cậy</th><th>Lý do / lỗi</th><th>Người chạy</th><th></th></tr></thead>
+    <tbody>${ds.map(d => `<tr>
+      <td>${escapeHtml(String(d.ThoiGian).replace('T', ' ').slice(0, 19))}</td>
+      <td>${escapeHtml(d.STT_Key)}</td>
+      <td>${escapeHtml(d.LoaiQc)}</td>
+      <td>${nhanKetQua(d.KetQua)}</td>
+      <td>${d.DoTinCay ? Math.round(Number(d.DoTinCay) * 100) + '%' : '—'}</td>
+      <td class="ly-do">${escapeHtml(d.LoiApi || d.LyDo || '')}</td>
+      <td>${escapeHtml(d.NguoiDung)}</td>
+      <td>${d.ChiTiet ? `<button type="button" class="btn-hanh-dong phu" style="padding:4px 8px;font-size:0.78rem" onclick="xemChiTiet(this, ${d.id})">Chi tiết</button>` : ''}</td>
+    </tr><tr id="chi-tiet-${d.id}" style="display:none"><td colspan="8"><div class="qc-chi-tiet"></div></td></tr>`).join('')}</tbody></table>`;
+  window._dsLog = ds;
+}
+
+function xemChiTiet(nut, id) {
+  const hang = document.getElementById('chi-tiet-' + id);
+  const d = (window._dsLog || []).find(x => x.id === id);
+  if (hang.style.display === 'none' && d) {
+    let chiTiet = d.ChiTiet;
+    try { chiTiet = JSON.stringify(JSON.parse(d.ChiTiet), null, 2); } catch (e) { /* giữ nguyên chuỗi */ }
+    hang.querySelector('.qc-chi-tiet').textContent = `Model: ${d.Model || '(không gọi AI)'}\nẢnh: ${d.AnhDaDung || '—'}\n\n${chiTiet}`;
+    hang.style.display = '';
+  } else hang.style.display = 'none';
+}
+</script>
+</body>
+</html>

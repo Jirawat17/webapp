@@ -177,7 +177,41 @@ function xoaDongBoSheetSellerTheoDon(sttKey) {
   cauXoaDongBoTheoDon.run(sttKey);
 }
 
+// ---------- AI QC (30/09/2026, theo yêu cầu người dùng) — MỌI lần chạy QC1/QC2/QC3, kể cả lỗi API (services/qc/qcService.js) ----------
+db.exec(`CREATE TABLE IF NOT EXISTS qc_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ThoiGian TEXT NOT NULL DEFAULT '',
+  NguoiDung TEXT NOT NULL DEFAULT '',
+  STT_Key TEXT NOT NULL DEFAULT '',
+  LoaiQc TEXT NOT NULL DEFAULT '',
+  Model TEXT NOT NULL DEFAULT '',
+  AnhDaDung TEXT NOT NULL DEFAULT '',
+  FileTheu TEXT NOT NULL DEFAULT '',
+  DesignFile TEXT NOT NULL DEFAULT '',
+  MockupFile TEXT NOT NULL DEFAULT '',
+  KetQua TEXT NOT NULL DEFAULT '',
+  DoTinCay TEXT NOT NULL DEFAULT '',
+  LyDo TEXT NOT NULL DEFAULT '',
+  ChiTiet TEXT NOT NULL DEFAULT '',
+  LoiApi TEXT NOT NULL DEFAULT ''
+)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_qc_log_stt ON qc_log(STT_Key)`);
+const COT_QC_LOG = ['ThoiGian', 'NguoiDung', 'STT_Key', 'LoaiQc', 'Model', 'AnhDaDung', 'FileTheu', 'DesignFile', 'MockupFile', 'KetQua', 'DoTinCay', 'LyDo', 'ChiTiet', 'LoiApi'];
+const cauGhiQcLog = db.prepare(`INSERT INTO qc_log (${COT_QC_LOG.join(', ')}) VALUES (${COT_QC_LOG.map(c => '@' + c).join(', ')})`);
+function ghiQcLog(dong) {
+  return Number(cauGhiQcLog.run(Object.fromEntries(COT_QC_LOG.map(c => [c, dong[c] === undefined || dong[c] === null ? '' : String(dong[c])]))).lastInsertRowid);
+}
+// Mới nhất trước; loc: { loaiQc, ketQua, sttKey, gioiHan }.
+function layQcLog({ loaiQc, ketQua, sttKey, gioiHan = 200 } = {}) {
+  const dk = [], ts = {};
+  if (loaiQc) { dk.push('LoaiQc = @loaiQc'); ts.loaiQc = loaiQc; }
+  if (ketQua) { dk.push('KetQua = @ketQua'); ts.ketQua = ketQua; }
+  if (sttKey) { dk.push('STT_Key = @sttKey'); ts.sttKey = sttKey; }
+  return db.prepare(`SELECT * FROM qc_log ${dk.length ? 'WHERE ' + dk.join(' AND ') : ''} ORDER BY id DESC LIMIT ${Math.min(Number(gioiHan) || 200, 1000)}`).all(ts);
+}
+
 module.exports = {
+  ghiQcLog, layQcLog,
   ghiNhieuDongBoSheetSeller, layNhatKyDongBoSheetSeller, layLoiDongBoDangCho, layDongBoGanNhat, xoaDongBoSheetSellerTheoDon,
   ghiLichSuHoatDong, ghiNhieuLichSuHoatDong, layTatCaLichSuHoatDong, xoaLichSuHoatDongTheoDon,
   ghiNhatKyQuetHangLoat, xoaNhatKyQuetHangLoatTheoDon,
