@@ -5,6 +5,7 @@
 // Lỗi gọi API mang err.loiApi = true.
 const PROVIDER = {
   gemini: require('./geminiProvider'),
+  claude: require('./claudeProvider'),
 };
 const PROVIDER_MAC_DINH = 'gemini';
 

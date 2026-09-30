@@ -307,15 +307,21 @@ db.exec(`CREATE TABLE IF NOT EXISTS qc_cau_hinh (
   ApiKey TEXT NOT NULL DEFAULT '',
   Model TEXT NOT NULL DEFAULT ''
 )`);
-// { QC1: { ApiKey, Model }, ... } — loại chưa lưu lần nào không có trong kết quả.
+// Claude (01/10/2026, theo yêu cầu người dùng): mỗi QC chọn NhaCungCap ('gemini' | 'claude'); key/model Gemini giữ ở
+// ApiKey/Model cũ, Claude ở ApiKeyClaude/ModelClaude — lưu song song, đổi qua lại không mất key bên kia.
+const COT_QC = ['NhaCungCap', 'ApiKey', 'Model', 'ApiKeyClaude', 'ModelClaude'];
+const cotQcDaCo = db.prepare(`PRAGMA table_info(qc_cau_hinh)`).all().map(c => c.name);
+for (const cot of COT_QC) if (!cotQcDaCo.includes(cot)) db.exec(`ALTER TABLE qc_cau_hinh ADD COLUMN ${cot} TEXT NOT NULL DEFAULT ''`);
+// { QC1: { NhaCungCap, ApiKey, Model, ApiKeyClaude, ModelClaude }, ... } — loại chưa lưu lần nào không có trong kết quả.
 function layCauHinhQc() {
-  return Object.fromEntries(db.prepare(`SELECT Loai, ApiKey, Model FROM qc_cau_hinh`).all().map(r => [r.Loai, { ApiKey: r.ApiKey, Model: r.Model }]));
+  return Object.fromEntries(db.prepare(`SELECT Loai, ${COT_QC.join(', ')} FROM qc_cau_hinh`).all().map(({ Loai, ...r }) => [Loai, r]));
 }
 // Ghi 1 phần: trường undefined giữ nguyên giá trị cũ.
-function datCauHinhQc(loai, { ApiKey, Model }) {
-  const cu = layCauHinhQc()[loai] || { ApiKey: '', Model: '' };
-  db.prepare(`INSERT INTO qc_cau_hinh (Loai, ApiKey, Model) VALUES (?, ?, ?) ON CONFLICT(Loai) DO UPDATE SET ApiKey = excluded.ApiKey, Model = excluded.Model`)
-    .run(loai, ApiKey === undefined ? cu.ApiKey : ApiKey, Model === undefined ? cu.Model : Model);
+function datCauHinhQc(loai, thayDoi) {
+  const cu = layCauHinhQc()[loai] || {};
+  const moi = COT_QC.map(c => (thayDoi[c] === undefined ? cu[c] || '' : thayDoi[c]));
+  db.prepare(`INSERT INTO qc_cau_hinh (Loai, ${COT_QC.join(', ')}) VALUES (?, ${COT_QC.map(() => '?').join(', ')})
+    ON CONFLICT(Loai) DO UPDATE SET ${COT_QC.map(c => `${c} = excluded.${c}`).join(', ')}`).run(loai, ...moi);
 }
 
 module.exports = {

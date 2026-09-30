@@ -36,8 +36,10 @@
   <h2>QC</h2>
 
   <div class="qc-khoi">
-    <h3>Cấu hình AI (Gemini)</h3>
-    <p style="color:var(--color-text-muted);margin-top:0">Mỗi QC dùng API key + model riêng (lấy key ở Google AI Studio). Key chỉ hiện dạng che; để trống ô key khi Lưu = giữ key cũ.</p>
+    <h3>Cấu hình AI (Gemini / Claude)</h3>
+    <p style="color:var(--color-text-muted);margin-top:0">Mỗi QC chọn riêng nhà cung cấp AI, key + model riêng (key Gemini lấy ở Google AI Studio, key Claude lấy ở console.anthropic.com). Key Gemini và Claude lưu song song — đổi nhà cung cấp không mất key bên kia. Bấm Lưu = lưu key/model của nhà cung cấp đang chọn VÀ dùng nhà cung cấp đó cho QC. Key chỉ hiện dạng che; để trống ô key khi Lưu = giữ key cũ.</p>
+    <datalist id="goi-y-model-gemini"><option value="gemini-2.5-flash"><option value="gemini-2.5-pro"></datalist>
+    <datalist id="goi-y-model-claude"><option value="claude-sonnet-5-5"><option value="claude-haiku-4-5-20251001"><option value="claude-opus-5-5"></datalist>
     <div id="khoi-cau-hinh">Đang tải...</div>
     <p id="thong-bao-cau-hinh" style="display:none"></p>
   </div>
@@ -104,18 +106,30 @@ function thongBao(chu, loi) {
   el.textContent = chu;
 }
 
+const TEN_NCC = { gemini: 'Gemini', claude: 'Claude' };
+// ncc: nhà cung cấp đang CHỌN trên ô (chưa chắc đã lưu) — c.nhaCungCap là nhà cung cấp đang DÙNG.
+function hangCauHinh(c, ncc) {
+  const ch = c.theoNcc[ncc];
+  const dangDung = ncc === c.nhaCungCap;
+  return `
+      <div class="ten">${escapeHtml(c.ten)}<small>Đang dùng: ${TEN_NCC[c.nhaCungCap]}${dangDung ? '' : ` · ô bên cạnh đang xem ${TEN_NCC[ncc]} (chưa lưu)`}</small><small>${ch.coKey ? `Key ${TEN_NCC[ncc]} đang lưu: ` + escapeHtml(ch.keyChe) : `Chưa có API key ${TEN_NCC[ncc]}`}${c.daTrienKhai ? '' : ' · chưa triển khai QC'}</small></div>
+      <div class="truong"><label for="ncc-${c.loai}">Nhà cung cấp</label><select id="ncc-${c.loai}" onchange="doiNcc('${c.loai}')">${Object.keys(TEN_NCC).map(k => `<option value="${k}" ${k === ncc ? 'selected' : ''}>${TEN_NCC[k]}</option>`).join('')}</select></div>
+      <div class="truong"><label for="key-${c.loai}">API key ${TEN_NCC[ncc]}</label><input type="password" id="key-${c.loai}" placeholder="${ch.coKey ? 'Để trống = giữ key cũ' : 'Dán API key'}" autocomplete="new-password"></div>
+      <div class="truong"><label for="model-${c.loai}">Model</label><input id="model-${c.loai}" list="goi-y-model-${ncc}" value="${escapeHtml(ch.model)}"></div>
+      <button type="button" class="btn-hanh-dong phu" onclick="luuCauHinh('${c.loai}')">Lưu</button>
+      <button type="button" class="btn-hanh-dong phu" onclick="thuKetNoi('${c.loai}', this)">Thử kết nối</button>
+      ${ch.coKey ? `<button type="button" class="btn-hanh-dong phu nguy-hiem" onclick="luuCauHinh('${c.loai}', true)">Xoá key ${TEN_NCC[ncc]}</button>` : ''}`;
+}
+
+function doiNcc(loai) {
+  const c = dsLoai.find(x => x.loai === loai);
+  document.getElementById('cau-hinh-' + loai).innerHTML = hangCauHinh(c, document.getElementById('ncc-' + loai).value);
+}
+
 async function taiCauHinh() {
   const el = document.getElementById('khoi-cau-hinh');
   try { dsLoai = await apiFetch('/qc/cau-hinh'); } catch (e) { el.textContent = 'Lỗi: ' + e.message; return; }
-  el.innerHTML = dsLoai.map(c => `
-    <div class="qc-dong-cau-hinh">
-      <div class="ten">${escapeHtml(c.ten)}<small>${c.coKey ? 'Key đang lưu: ' + escapeHtml(c.keyChe) : 'Chưa có API key'}${c.daTrienKhai ? '' : ' · chưa triển khai QC'}</small></div>
-      <div class="truong"><label for="key-${c.loai}">API key Gemini</label><input type="password" id="key-${c.loai}" placeholder="${c.coKey ? 'Để trống = giữ key cũ' : 'Dán API key'}" autocomplete="new-password"></div>
-      <div class="truong"><label for="model-${c.loai}">Model</label><input id="model-${c.loai}" value="${escapeHtml(c.model)}"></div>
-      <button type="button" class="btn-hanh-dong phu" onclick="luuCauHinh('${c.loai}')">Lưu</button>
-      <button type="button" class="btn-hanh-dong phu" onclick="thuKetNoi('${c.loai}', this)">Thử kết nối</button>
-      ${c.coKey ? `<button type="button" class="btn-hanh-dong phu nguy-hiem" onclick="luuCauHinh('${c.loai}', true)">Xoá key</button>` : ''}
-    </div>`).join('');
+  el.innerHTML = dsLoai.map(c => `<div class="qc-dong-cau-hinh" id="cau-hinh-${c.loai}">${hangCauHinh(c, c.nhaCungCap)}</div>`).join('');
   const oLoai = document.getElementById('qc-loai');
   const dangChon = oLoai.value;
   oLoai.innerHTML = dsLoai.map(c => `<option value="${c.loai}" ${c.daTrienKhai ? '' : 'disabled'}>${escapeHtml(c.ten)}${c.daTrienKhai ? '' : ' (chưa triển khai)'}</option>`).join('');
@@ -125,21 +139,23 @@ async function taiCauHinh() {
 }
 
 async function luuCauHinh(loai, xoaKey = false) {
-  if (xoaKey && !confirm(`Xoá API key của ${loai}?`)) return;
+  const nhaCungCap = document.getElementById('ncc-' + loai).value;
+  if (xoaKey && !confirm(`Xoá API key ${TEN_NCC[nhaCungCap]} của ${loai}?`)) return;
   const apiKey = document.getElementById('key-' + loai).value.trim();
   const model = document.getElementById('model-' + loai).value.trim();
   try {
-    await apiFetch('/qc/cau-hinh', { method: 'POST', body: JSON.stringify({ loai, model, apiKey, xoaKey }) });
-    thongBao(xoaKey ? `Đã xoá API key ${loai}.` : `Đã lưu cấu hình ${loai}.`);
+    await apiFetch('/qc/cau-hinh', { method: 'POST', body: JSON.stringify({ loai, nhaCungCap, model, apiKey, xoaKey }) });
+    thongBao(xoaKey ? `Đã xoá API key ${TEN_NCC[nhaCungCap]} của ${loai}.` : `Đã lưu cấu hình ${loai} — đang dùng ${TEN_NCC[nhaCungCap]}.`);
     await taiCauHinh();
   } catch (e) { thongBao('Chưa lưu: ' + e.message, true); }
 }
 
 async function thuKetNoi(loai, nut) {
+  const nhaCungCap = document.getElementById('ncc-' + loai).value;
   nut.disabled = true;
   try {
-    await apiFetch('/qc/thu-ket-noi', { method: 'POST', body: JSON.stringify({ loai }) });
-    thongBao(`${loai}: kết nối Gemini thành công (key + model dùng được). Lưu ý: thử với cấu hình ĐÃ LƯU.`);
+    await apiFetch('/qc/thu-ket-noi', { method: 'POST', body: JSON.stringify({ loai, nhaCungCap }) });
+    thongBao(`${loai}: kết nối ${TEN_NCC[nhaCungCap]} thành công (key + model dùng được). Lưu ý: thử với cấu hình ĐÃ LƯU.`);
   } catch (e) { thongBao(`${loai}: ` + e.message, true); }
   nut.disabled = false;
 }

@@ -1,5 +1,5 @@
 // Menu QC — AI QC (30/09/2026, theo yêu cầu người dùng). CHỈ superadmin, chặn ở đây cho MỌI route (không chỉ ẩn menu).
-// API key KHÔNG BAO GIỜ trả nguyên văn ra trình duyệt — chỉ dạng che (AIza…xyz9). Logic QC: services/qc/qcService.js.
+// API key KHÔNG BAO GIỜ trả nguyên văn ra trình duyệt — chỉ dạng che (AIza…xyz9, sk-a…xyz9). Logic QC: services/qc/qcService.js.
 const express = require('express');
 const router = express.Router();
 const { requireLogin, requireExactRole } = require('../middleware/auth');
@@ -11,28 +11,38 @@ router.use(requireLogin, requireExactRole('superadmin'));
 
 const cheKey = k => (k ? (k.length <= 8 ? '••••' : `${k.slice(0, 4)}…${k.slice(-4)}`) : '');
 
+// Mỗi QC: nhà cung cấp đang dùng + cấu hình riêng của từng nhà cung cấp (Gemini/Claude lưu song song, 01/10/2026).
 router.get('/cau-hinh', (req, res) => {
   res.json(Object.entries(qcService.LOAI_QC).map(([loai, ten]) => {
-    const { apiKey, model } = qcService.layCauHinh(loai);
-    return { loai, ten, model, coKey: !!apiKey, keyChe: cheKey(apiKey), daTrienKhai: qcService.LOAI_DA_TRIEN_KHAI.includes(loai) };
+    const nhaCungCap = qcService.layCauHinh(loai).nhaCungCap;
+    const theoNcc = Object.fromEntries(Object.keys(qcService.NHA_CUNG_CAP).map(ncc => {
+      const { apiKey, model } = qcService.layCauHinh(loai, ncc);
+      return [ncc, { model, coKey: !!apiKey, keyChe: cheKey(apiKey) }];
+    }));
+    return { loai, ten, nhaCungCap, theoNcc, daTrienKhai: qcService.LOAI_DA_TRIEN_KHAI.includes(loai) };
   }));
 });
 
-// body: { loai, model, apiKey?, xoaKey? } — apiKey trống = giữ key cũ; xoaKey: true = xoá key.
+// body: { loai, nhaCungCap, model, apiKey?, xoaKey? } — lưu key/model CỦA nhà cung cấp đó + chọn nó làm nhà cung cấp
+// đang dùng cho QC này. apiKey trống = giữ key cũ; xoaKey: true = xoá key (chỉ key của nhà cung cấp đó).
 router.post('/cau-hinh', (req, res) => {
   const { loai, apiKey, xoaKey } = req.body;
+  const nhaCungCap = req.body.nhaCungCap || 'gemini';
   const model = String(req.body.model || '').trim();
   if (!qcService.LOAI_QC[loai]) return res.status(400).json({ error: 'Loại QC không hợp lệ — chỉ QC1, QC2, QC3.' });
-  if (!/^[A-Za-z0-9._-]{1,80}$/.test(model)) return res.status(400).json({ error: 'Tên model không hợp lệ (vd gemini-2.5-flash).' });
+  if (!Object.hasOwn(qcService.NHA_CUNG_CAP, nhaCungCap)) return res.status(400).json({ error: 'Nhà cung cấp AI không hợp lệ — chỉ Gemini hoặc Claude.' });
+  if (!/^[A-Za-z0-9._-]{1,80}$/.test(model)) return res.status(400).json({ error: 'Tên model không hợp lệ (vd gemini-2.5-flash, claude-sonnet-5-5).' });
   const keyMoi = String(apiKey || '').trim();
   if (keyMoi && !/^[\x21-\x7e]{10,200}$/.test(keyMoi)) return res.status(400).json({ error: 'API key không hợp lệ.' });
-  caiDatDbService.datCauHinhQc(loai, { Model: model, ...(xoaKey ? { ApiKey: '' } : keyMoi ? { ApiKey: keyMoi } : {}) });
+  const [cotKey, cotModel] = nhaCungCap === 'claude' ? ['ApiKeyClaude', 'ModelClaude'] : ['ApiKey', 'Model'];
+  caiDatDbService.datCauHinhQc(loai, { NhaCungCap: nhaCungCap, [cotModel]: model, ...(xoaKey ? { [cotKey]: '' } : keyMoi ? { [cotKey]: keyMoi } : {}) });
   res.json({ ok: true });
 });
 
+// body: { loai, nhaCungCap? } — thử cấu hình ĐÃ LƯU của nhà cung cấp đó (mặc định: nhà cung cấp đang dùng).
 router.post('/thu-ket-noi', async (req, res) => {
   try {
-    await qcService.thuKetNoi(req.body.loai);
+    await qcService.thuKetNoi(req.body.loai, req.body.nhaCungCap);
     res.json({ ok: true });
   } catch (err) {
     res.status(err.status || 400).json({ error: err.message });

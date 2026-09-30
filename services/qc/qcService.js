@@ -16,14 +16,19 @@ const aiProvider = require('./aiProvider');
 const LOAI_QC = { QC1: 'QC1 – QC Vẽ File', QC2: 'QC2 – QC Sản Xuất', QC3: 'QC3 – QC Dán Tem' };
 const LOAI_DA_TRIEN_KHAI = ['QC1', 'QC2', 'QC3'];
 const MODEL_MAC_DINH = 'gemini-2.5-flash';
+// Nhà cung cấp AI chọn riêng cho từng QC (01/10/2026); chưa chọn = gemini như trước.
+const NHA_CUNG_CAP = { gemini: { ten: 'Gemini', modelMacDinh: MODEL_MAC_DINH }, claude: { ten: 'Claude', modelMacDinh: 'claude-sonnet-5-5' } };
 const KET_QUA = ['PASS', 'FAIL', 'CAN_CHECK_LAI'];
 const DUNG_LUONG_ANH_TOI_DA = 15 * 1024 * 1024; // Gemini giới hạn ~20MB/lượt gửi ảnh trực tiếp
 
 const loiNghiepVu = (thongBao, status = 400) => Object.assign(new Error(thongBao), { status });
 
-function layCauHinh(loai) {
+// -> { nhaCungCap, apiKey, model } của nhà cung cấp đang chọn cho QC `loai` (hoặc `nhaCungCap` truyền vào).
+function layCauHinh(loai, nhaCungCap) {
   const ch = caiDatDbService.layCauHinhQc()[loai] || {};
-  return { apiKey: ch.ApiKey || '', model: ch.Model || MODEL_MAC_DINH };
+  const ncc = NHA_CUNG_CAP[nhaCungCap] ? nhaCungCap : NHA_CUNG_CAP[ch.NhaCungCap] ? ch.NhaCungCap : 'gemini';
+  const [apiKey, model] = ncc === 'claude' ? [ch.ApiKeyClaude, ch.ModelClaude] : [ch.ApiKey, ch.Model];
+  return { nhaCungCap: ncc, apiKey: apiKey || '', model: model || NHA_CUNG_CAP[ncc].modelMacDinh };
 }
 
 // Nhận dạng định dạng ảnh theo byte đầu (ảnh MinIO luôn JPEG sau khi nén ở trình duyệt, nhưng ảnh cũ có thể khác).
@@ -178,8 +183,8 @@ async function chayQc3(sttKey) {
     hang_van_chuyen: row.HANG_VAN_CHUYEN || row.HANG_VAN_CHUYEN2 || '',
     don_gom: { la_kien_gom: laKienGom, cac_ma_don: laKienGom ? [...cungNhom] : [] },
   };
-  const { apiKey, model } = layCauHinh('QC3');
-  const ai = await aiProvider.phanTichAnh({ apiKey, model, prompt: promptQc3(duLieu), anh: [{ mime, data: buffer, ten: 'anh_da_dan_tem' }], schema: SCHEMA_QC3 });
+  const { nhaCungCap, apiKey, model } = layCauHinh('QC3');
+  const ai = await aiProvider.phanTichAnh({ apiKey, model, prompt: promptQc3(duLieu), anh: [{ mime, data: buffer, ten: 'anh_da_dan_tem' }], schema: SCHEMA_QC3 }, nhaCungCap);
   return {
     daGoiAi: true, anh: [urlAnh], aiGoc: ai,
     ketQua: hoanThienKetQua3(ai, { maCanCo: chuanHoaMa(maCanCoGoc), row, rows, cungNhom }),
@@ -354,12 +359,12 @@ async function chayDoiChieu(sttKey, qc) {
     ghi_chu: row.GHI_CHU || '', ghi_chu_xuong: ghiChuXuongHienThi(row),
     ghi_chu_ve_file: row.GHI_CHU_VE_FILE || '', ghi_chu_chay_may: row.GHI_CHU_CHAY_MAY || '',
   };
-  const { apiKey, model } = layCauHinh(qc.loai);
+  const { nhaCungCap, apiKey, model } = layCauHinh(qc.loai);
   const ai = await aiProvider.phanTichAnh({
     apiKey, model, schema: schemaDoiChieu(qc.hangMuc),
     prompt: qc.prompt(duLieu, dsAnh.map(a => ({ ten: a.ten, nguon: a.nguon }))),
     anh: dsAnh.map(a => ({ mime: a.mime, data: a.data, ten: a.ten })),
-  });
+  }, nhaCungCap);
   const ketQua = hoanThienKetQuaDoiChieu(ai, tenDaDung, qc);
   ketQua.kiem_tra_he_thong.unshift(...ghiChuHeThong);
   return { daGoiAi: true, anh: anhDaDung, fileTheu: urlFileTheu, aiGoc: ai, ketQua };
@@ -441,9 +446,10 @@ async function chayQc({ sttKey, loai, user }) {
   return { id, loai, sttKey, model: kq.daGoiAi ? model : '', anh: kq.anh, ketQua: k, loi: null };
 }
 
-async function thuKetNoi(loai) {
+async function thuKetNoi(loai, nhaCungCap) {
   if (!LOAI_QC[loai]) throw loiNghiepVu('Loại QC không hợp lệ — chỉ QC1, QC2, QC3.');
-  await aiProvider.thuKetNoi(layCauHinh(loai));
+  const ch = layCauHinh(loai, nhaCungCap);
+  await aiProvider.thuKetNoi(ch, ch.nhaCungCap);
 }
 
-module.exports = { LOAI_QC, LOAI_DA_TRIEN_KHAI, MODEL_MAC_DINH, layCauHinh, chayQc, thuKetNoi, hoanThienKetQua3, hoanThienKetQuaDoiChieu, chuanHoaMa, khopMa };
+module.exports = { LOAI_QC, LOAI_DA_TRIEN_KHAI, MODEL_MAC_DINH, NHA_CUNG_CAP, layCauHinh, chayQc, thuKetNoi, hoanThienKetQua3, hoanThienKetQuaDoiChieu, chuanHoaMa, khopMa };
