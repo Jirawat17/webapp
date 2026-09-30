@@ -98,35 +98,35 @@ function dongGhiChuNoiBo(don) {
   return `<tr><td>Ghi chú xưởng<br><small>(bản lưu trong app)</small></td><td style="color:var(--color-warning-text)"><strong>${escapeHtml(don.GHI_CHU_XUONG_NOI_BO)}</strong><br><small>${escapeHtml(canhBao)}</small></td></tr>`;
 }
 
+// Ghi chú + Ghi chú xưởng luôn ở đầu bảng, in đậm cả tên trường lẫn giá trị (30/09/2026).
+function dongGhiChu(don) {
+  return `<tr><td><strong>Ghi chú</strong></td><td><strong>${escapeHtml(don.GHI_CHU || '')}</strong></td></tr>
+    <tr><td><strong>Ghi chú xưởng</strong></td><td><strong>${escapeHtml(don.GHI_CHU_XUONG || '')}</strong></td></tr>
+    ${dongGhiChuNoiBo(don)}`;
+}
+
 function renderBangThongTin(don, viTri) {
   if (user.vaiTro === 'san_xuat') {
     return `
+      ${dongGhiChu(don)}
       <tr><td>Số lượng</td><td>${escapeHtml(don.SO_LUONG || '')} ${don.SO_LUONG_AO_TREN_DON ? `(áo trên đơn: ${escapeHtml(don.SO_LUONG_AO_TREN_DON)})` : ''}</td></tr>
-      <tr><td>Ngày lên đơn</td><td>${don.NGAY_LEN_DON ? dinhDangNgay(don.NGAY_LEN_DON) : ''}</td></tr>
-      <tr><td>Ghi chú</td><td><strong>${escapeHtml(don.GHI_CHU || '')}</strong></td></tr>
-      <tr><td>Ghi chú xưởng</td><td><strong>${escapeHtml(don.GHI_CHU_XUONG || '')}</strong></td></tr>
-      ${dongGhiChuNoiBo(don)}`;
+      <tr><td>Ngày lên đơn</td><td>${don.NGAY_LEN_DON ? dinhDangNgay(don.NGAY_LEN_DON) : ''}</td></tr>`;
   }
   return `
-    <tr><td>Mã đơn</td><td>${escapeHtml(don.STT_Key)}</td></tr>
-    <tr><td>Mã đơn (sàn TMĐT)</td><td>${escapeHtml(don.MA_DON_HANG_ORDERID || '')}</td></tr>
+    ${dongGhiChu(don)}
     ${dongNhomNhieuAo(don.NhomNhieuAo)}
-    <tr><td>Khách hàng</td><td>${escapeHtml(don.TenKhachHang || '')} <span style="color:var(--color-text-faint)">(${escapeHtml(don.MA_KHACH_HANG || '')})</span></td></tr>
-    <tr><td>Loại / Kích thước / Màu</td><td>${escapeHtml(don.LOAI || '')} · ${escapeHtml(don.KICH_THUOC || '')} · ${escapeHtml(don.MAU_SAC || '')}</td></tr>
     <tr><td>Vị trí thêu</td><td>${viTri}</td></tr>
     <tr><td>Số lượng</td><td>${escapeHtml(don.SO_LUONG || '')} ${don.SO_LUONG_AO_TREN_DON ? `(áo trên đơn: ${escapeHtml(don.SO_LUONG_AO_TREN_DON)})` : ''}</td></tr>
     <tr><td>Ngày lên đơn</td><td>${don.NGAY_LEN_DON ? dinhDangNgay(don.NGAY_LEN_DON) : ''}</td></tr>
+    <tr><td>Người nhận</td><td>${escapeHtml(don.TEN || '')} ${don.SDT ? '· ' + escapeHtml(don.SDT) : ''}</td></tr>
+    <tr><td>Địa chỉ giao hàng</td><td>${escapeHtml(dongDiaChi(don))}</td></tr>
+    <tr><td>Mã IOSS</td><td>${escapeHtml(don.MA_IOSS || '')}</td></tr>
     <tr><td>Hãng vận chuyển</td><td>${escapeHtml(don.HANG_VAN_CHUYEN || '')}</td></tr>
     <tr><td>Mã tracking</td><td>${escapeHtml(don.TRACKING_ID || '')}${don.TRACKING_CHUNG_CUA ? ` <span style="color:var(--color-text-faint)">(dùng chung của ${escapeHtml(don.TRACKING_CHUNG_CUA)})</span>` : ''}</td></tr>
     <tr><td>Đã mua Tracking</td><td><strong>${escapeHtml(don.DA_MUA_TRACKING || '')}</strong> <span style="color:var(--color-text-faint)">— ${escapeHtml(don.LyDoDaMuaTracking || '')}</span></td></tr>
     ${don.TRACKING_ID && don.TRANG_THAI_TRACKING ? `
     <tr><td>Trạng thái vận chuyển</td><td>${escapeHtml(don.TRANG_THAI_TRACKING)}${don.THOI_GIAN_CAP_NHAT_TRACKING ? ` <span style="color:var(--color-text-faint)">(cập nhật ${escapeHtml(don.THOI_GIAN_CAP_NHAT_TRACKING)})</span>` : ''}</td></tr>` : ''}
-    <tr><td>Người nhận</td><td>${escapeHtml(don.TEN || '')} ${don.SDT ? '· ' + escapeHtml(don.SDT) : ''}</td></tr>
-    <tr><td>Địa chỉ giao hàng</td><td>${escapeHtml(dongDiaChi(don))}</td></tr>
-    <tr><td>Mã IOSS</td><td>${escapeHtml(don.MA_IOSS || '')}</td></tr>
-    <tr><td>Ghi chú</td><td>${escapeHtml(don.GHI_CHU || '')}</td></tr>
-    <tr><td>Ghi chú xưởng</td><td>${escapeHtml(don.GHI_CHU_XUONG || '')}</td></tr>
-    ${dongGhiChuNoiBo(don)}
+    <tr><td>Mã đơn (sàn TMĐT)</td><td>${escapeHtml(don.MA_DON_HANG_ORDERID || '')}</td></tr>
     <tr><td>Xưởng</td><td>${escapeHtml(don.XUONG || '(chưa gán)')}</td></tr>
     <tr><td>Cập nhật lần cuối</td><td>${escapeHtml(don.NguoiCapNhatCuoi || '')}${don.ThoiGianCapNhatCuoi ? ' · ' + tsDep(don.ThoiGianCapNhatCuoi) : ''}</td></tr>`;
 }
