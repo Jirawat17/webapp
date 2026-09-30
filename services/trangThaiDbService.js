@@ -53,6 +53,10 @@ const CAC_COT = [
   // gkeService.js#layCauHinhGkeChoDon) — in lại tem/tra trạng thái luôn dùng đúng tài khoản đó, kể cả khi
   // đơn đổi Xưởng sau khi mua. Rỗng = chưa tạo vận đơn (hoặc tạo trước khi có cột này).
   'TAI_KHOAN_GKE',
+  // Giới hạn thử TỰ ĐỘNG mua tracking (30/09/2026, theo yêu cầu người dùng — trackingAutoService.js#ghiNhanLanThuTuDong):
+  // số lần job tự động thử mà lỗi riêng của đơn, 'THU_CONG' khi đủ 10 lần (job bỏ qua đơn, chỉ còn mua tay), lỗi +
+  // thời điểm thử gần nhất. Mua thành công / "Cho tự động thử lại" -> xoá cả 4.
+  'TU_MUA_SO_LAN_THU', 'TU_MUA_CHE_DO', 'TU_MUA_LOI_GAN_NHAT', 'TU_MUA_THOI_GIAN_THU',
   // GHI_CHU_XUONG_NOI_BO (bổ sung 28/09/2026, theo yêu cầu người dùng) — bản lưu trong app của ô "Ghi chú
   // xưởng" ở Chi tiết đơn, LUÔN ghi mỗi lần bấm Lưu (kể cả khi ghi sang Sheet Seller lỗi). Bản chính là cột
   // GHI_CHU_XUONG (cột Q) trong Sheet của Seller — app ghi ngược vào đó (services/sheetSellerService.js) và

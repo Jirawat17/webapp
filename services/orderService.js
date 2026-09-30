@@ -658,7 +658,19 @@ function suaDonKetSanSang() {
   return ketQua;
 }
 
+// 4 cột theo dõi TỰ ĐỘNG mua tracking (30/09/2026, trackingAutoService.js#ghiNhanLanThuTuDong) — CHỈ vai trò có menu Tracking
+// được thấy (yêu cầu người dùng: chặn cả ở API). Gỡ khỏi dữ liệu đơn trả về cho vai trò khác (routes/orders.js, routes/qr.js).
+const COT_THEO_DOI_MUA_TRACKING = ['TU_MUA_SO_LAN_THU', 'TU_MUA_CHE_DO', 'TU_MUA_LOI_GAN_NHAT', 'TU_MUA_THOI_GIAN_THU'];
+const VAI_TRO_MENU_TRACKING = ['admin', 'superadmin', 've_file'];
+function anCotTheoDoiMuaTracking(row, user) {
+  if (user && VAI_TRO_MENU_TRACKING.includes(user.vaiTro)) return row;
+  const r = { ...row };
+  COT_THEO_DOI_MUA_TRACKING.forEach(c => delete r[c]);
+  return r;
+}
+
 module.exports = {
+  VAI_TRO_MENU_TRACKING, anCotTheoDoiMuaTracking,
   suaDonKetSanSang,
   TAB, KEY_COL, getAll, getByKey, getManyByKeys, update, filterForRole, ganTenKhachHang, tieuDeSanPham, danhSachViTriTheu,
   layDanhSachXuong, locTheoXuong, coQuyenTheoXuong, phamViDon, laUuTien, lyDoDaMuaTracking, NHOM_LOC_TONG_QUAT,

@@ -45,10 +45,18 @@ function ganMoTa(rows, nguoiXem) {
 // Lấy lịch sử của 1 đơn hàng, sắp theo thời gian tăng dần (dùng cho timeline chi tiết đơn). Gồm cả thao tác
 // trên NHIỀU đơn cùng lúc (tạo/thêm/xoá Đơn hàng loạt, xoá/khôi phục dữ liệu — STT_Key rỗng, danh sách đơn
 // nằm trong ChiTiet.sttKeys) có đơn này (bổ sung 27/09/2026).
+// Lịch sử giới hạn 10 lần thử tự động mua tracking (30/09/2026) — CHỈ vai trò có menu Tracking được thấy (cùng danh sách
+// orderService.VAI_TRO_MENU_TRACKING; không require orderService ở đây để tránh vòng require).
+const HANH_DONG_GIOI_HAN_THU = ['TU_DONG_MUA_CHUYEN_THU_CONG', 'CHO_TU_DONG_MUA_LAI'];
+const VAI_TRO_THAY_GIOI_HAN_THU = ['admin', 'superadmin', 've_file'];
+
 async function layLichSuTheoDon(sttKey, nguoiXem) {
   const rows = nhatKyDbService.layTatCaLichSuHoatDong();
-  const coDon = r => r.STT_Key === sttKey
-    || (!r.STT_Key && r.ChiTiet.includes(JSON.stringify(sttKey)) && (docChiTiet(r.ChiTiet).sttKeys || []).includes(sttKey));
+  const vaiTro = nguoiXem && typeof nguoiXem === 'object' ? nguoiXem.vaiTro : nguoiXem;
+  const duocThayGioiHan = VAI_TRO_THAY_GIOI_HAN_THU.includes(vaiTro);
+  const coDon = r => (r.STT_Key === sttKey
+    || (!r.STT_Key && r.ChiTiet.includes(JSON.stringify(sttKey)) && (docChiTiet(r.ChiTiet).sttKeys || []).includes(sttKey)))
+    && (duocThayGioiHan || !HANH_DONG_GIOI_HAN_THU.includes(r.HanhDong));
   return ganMoTa(rows.filter(coDon), nguoiXem)
     .sort((a, b) => new Date(a.ThoiGian) - new Date(b.ThoiGian));
 }

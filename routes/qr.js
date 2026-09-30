@@ -36,9 +36,9 @@ function donDaKetThuc(row) {
   return TRANG_THAI_KET_THUC.includes(row.TRANG_THAI_XUONG);
 }
 
-async function lamGiauDon(row) {
+async function lamGiauDon(row, user) {
   const [daGanKH] = await orderService.ganTenKhachHang([row]);
-  return { ...daGanKH, TieuDeSanPham: orderService.tieuDeSanPham(row), CanhBao: alertService.tinhMucCanhBao(row) };
+  return { ...orderService.anCotTheoDoiMuaTracking(daGanKH, user), TieuDeSanPham: orderService.tieuDeSanPham(row), CanhBao: alertService.tinhMucCanhBao(row) };
 }
 
 // Quét đơn lẻ để tra cứu — CHỈ đọc thông tin, không đổi trạng thái gì cả
@@ -59,7 +59,7 @@ router.get('/tra-cuu/:sttKey', async (req, res) => {
   }
 
   ghiKhongCho(ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_TRA_CUU', sttKey }));
-  res.json({ ...(await lamGiauDon(row)), lichSu });
+  res.json({ ...(await lamGiauDon(row, user)), lichSu });
 });
 
 // Danh sách kịch bản — đọc trực tiếp từ tab CauHinhKichBan, KHÔNG hardcode trong code.
@@ -153,7 +153,7 @@ router.post('/kich-ban/:scenarioId/quet', async (req, res) => {
     trangThaiCu: giaTriHienTai, trangThaiMoi: scenario.setStatus, ketQua: 'THANH_CONG',
   }));
 
-  res.json({ ok: true, don: await lamGiauDon(updated) });
+  res.json({ ok: true, don: await lamGiauDon(updated, user) });
 });
 
 // ============================================================

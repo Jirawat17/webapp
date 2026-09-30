@@ -51,10 +51,11 @@ const { NHOM_LOC_TONG_QUAT } = orderService; // LỌC TỔNG QUÁT — 3 nhóm t
 // nữa, dù cột thật trong Sheet vẫn giữ giá trị cũ làm dấu vết.
 // `banDoNhom` (tuỳ chọn, bổ sung 26/09/2026) — kết quả donNhieuAoService.xayDungBanDoNhom() trên TOÀN BỘ
 // đơn (nhóm có thể gồm đơn nằm ngoài `rows` sau lọc) — gắn NhomNhieuAo cho giao diện.
-async function lamGiauDon(rows, banDoNhom) {
+// user: người xem — vai trò không có menu Tracking không nhận 4 cột theo dõi mua tracking (orderService.anCotTheoDoiMuaTracking).
+async function lamGiauDon(rows, banDoNhom, user) {
   const daGanKH = await orderService.ganTenKhachHang(rows);
   return daGanKH.map(r => ({
-    ...r,
+    ...orderService.anCotTheoDoiMuaTracking(r, user),
     TieuDeSanPham: orderService.tieuDeSanPham(r),
     ViTriTheu: orderService.danhSachViTriTheu(r),
     CanhBao: alertService.tinhMucCanhBao(r),
@@ -156,7 +157,7 @@ router.get('/', async (req, res) => {
   // Gắn CanhBao/TenKhachHang SỚM (trước khi lọc/sắp xếp) — cần có CanhBao để lọc theo "canhBao" và
   // sắp theo "canh_bao" bên dưới; đọc dữ liệu để gắn không phụ thuộc số dòng còn lại sau lọc nên
   // gắn sớm hay muộn cũng cùng 1 chi phí, không tốn thêm gì.
-  list = await lamGiauDon(list, donNhieuAoService.xayDungBanDoNhom(rows));
+  list = await lamGiauDon(list, donNhieuAoService.xayDungBanDoNhom(rows), req.session.user);
   // Lọc DonNhieuAo (bổ sung 26/09/2026): '1' = chỉ đơn thuộc nhóm, '0' = chỉ đơn lẻ.
   if (req.query.donNhieuAo === '1' || req.query.donNhieuAo === '0') list = list.filter(r => !!r.NhomNhieuAo === (req.query.donNhieuAo === '1'));
   // Đã mua Tracking (29/09/2026): 'YES'/'NO' — cột DA_MUA_TRACKING (quy tắc ở orderService.js#tinhDaMuaTracking).
@@ -261,7 +262,7 @@ router.get('/', async (req, res) => {
 router.get('/thong-ke-nhanh', async (req, res) => {
   const { rows } = await orderService.getAll();
   let list = orderService.filterForRole(rows, req.session.user);
-  list = await lamGiauDon(list);
+  list = await lamGiauDon(list, null, req.session.user);
   list = locDonDangChayMayTheoNguoiVanHanh(list, req.session.user);
 
   const demCanhBao = { VANG: 0, CAM: 0, DO: 0 };
@@ -1050,7 +1051,7 @@ router.get('/:sttKey', async (req, res) => {
 
   const [lichSu, [donDaLamGiau], kichBanKeTiep] = await Promise.all([
     layLichSuTheoDon(req.params.sttKey, user),
-    lamGiauDon([row], donNhieuAoService.xayDungBanDoNhom(rows)),
+    lamGiauDon([row], donNhieuAoService.xayDungBanDoNhom(rows), user),
     layKichBanKeTiep(row, user),
   ]);
 
@@ -1096,7 +1097,8 @@ const TRUONG_DUOC_SUA = {
 // GHI_CHU_XUONG là cột Sheet (app không ghi được qua đây), sửa qua route này sẽ "lưu" giả mà không đi đâu.
 // THOI_GIAN_SAN_XUAT (29/09/2026) — mốc tính giờ TỰ ĐỘNG MUA TRACKING (tốn tiền thật), chỉ orderService tự ghi khi
 // đơn chuyển sang "Đã sản xuất"; cho sửa tay qua đây là cho phép ép hệ thống mua sớm.
-const TRUONG_CAM_SUA = ['STT_Key', '_row', 'NguoiCapNhatCuoi', 'ThoiGianCapNhatCuoi', 'TenKhachHang', 'TieuDeSanPham', 'ViTriTheu', 'CanhBao', 'XUONG', 'DON_UU_TIEN', 'DA_XOA', 'GHI_CHU_XUONG', 'GHI_CHU_XUONG_NOI_BO', 'THOI_GIAN_SAN_XUAT', 'DA_MUA_TRACKING'];
+const TRUONG_CAM_SUA = ['STT_Key', '_row', 'NguoiCapNhatCuoi', 'ThoiGianCapNhatCuoi', 'TenKhachHang', 'TieuDeSanPham', 'ViTriTheu', 'CanhBao', 'XUONG', 'DON_UU_TIEN', 'DA_XOA', 'GHI_CHU_XUONG', 'GHI_CHU_XUONG_NOI_BO', 'THOI_GIAN_SAN_XUAT', 'DA_MUA_TRACKING',
+  'TU_MUA_SO_LAN_THU', 'TU_MUA_CHE_DO', 'TU_MUA_LOI_GAN_NHAT', 'TU_MUA_THOI_GIAN_THU'];
 
 // Ghi chú xưởng (28/09/2026, theo yêu cầu người dùng): LUÔN lưu bản trong app (GHI_CHU_XUONG_NOI_BO) rồi ghi vào
 // ô GHI_CHU_XUONG trong Sheet Seller (bản chính — app đọc lại qua RAW -> Don_Hang_ALL). Ghi Sheet lỗi vẫn trả

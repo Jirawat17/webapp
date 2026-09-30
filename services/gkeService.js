@@ -94,6 +94,10 @@ function chuyenCauHinhCuSangTaiKhoan() {
 }
 chuyenCauHinhCuSangTaiKhoan();
 
+// Lỗi CHUNG (30/09/2026) — ảnh hưởng MỌI đơn, không phải do dữ liệu của 1 đơn: tài khoản/cấu hình GKE, đăng nhập, mất
+// kết nối, GKE quá thời gian chờ hoặc trả trang lỗi. trackingAutoService.js KHÔNG tính vào giới hạn 10 lần thử của đơn.
+const loiChung = thongBao => Object.assign(new Error(thongBao), { loiChung: true });
+
 // Chọn tài khoản GKE cho 1 đơn: (1) tài khoản ĐÃ tạo vận đơn cho đơn này (cột TAI_KHOAN_GKE) — in lại
 // tem/tra trạng thái phải dùng đúng tài khoản đó dù đơn đã đổi Xưởng; đơn tạo vận đơn TRƯỚC khi có cột
 // này -> tài khoản cũ (ID_TAI_KHOAN_CU); (2) chưa tạo vận đơn -> tài khoản đang gán cho Xưởng của đơn.
@@ -102,14 +106,14 @@ function layCauHinhGkeChoDon(row) {
   let id = row.TAI_KHOAN_GKE;
   if (!id && (row.TRACKING_ID || row.TAM_THOI)) id = ID_TAI_KHOAN_CU;
   if (!id) {
-    if (!row.XUONG) throw new Error(`[tài khoản GKE] Đơn ${row.STT_Key} chưa gán Xưởng — không xác định được tài khoản GKE để dùng.`);
+    if (!row.XUONG) throw loiChung(`[tài khoản GKE] Đơn ${row.STT_Key} chưa gán Xưởng — không xác định được tài khoản GKE để dùng.`);
     id = caiDatDbService.layGanTaiKhoanGke()[row.XUONG];
-    if (!id) throw new Error(`[tài khoản GKE] Xưởng "${row.XUONG}" chưa được gán tài khoản GKE — vào Settings > Tài khoản GKE để gán.`);
+    if (!id) throw loiChung(`[tài khoản GKE] Xưởng "${row.XUONG}" chưa được gán tài khoản GKE — vào Settings > Tài khoản GKE để gán.`);
   }
   const dong = caiDatDbService.layTaiKhoanGke(id);
-  if (!dong) throw new Error(`[tài khoản GKE] Tài khoản GKE #${id} (dùng cho đơn ${row.STT_Key}) không còn tồn tại — kiểm tra lại ở Settings.`);
+  if (!dong) throw loiChung(`[tài khoản GKE] Tài khoản GKE #${id} (dùng cho đơn ${row.STT_Key}) không còn tồn tại — kiểm tra lại ở Settings.`);
   const ch = cauHinhTuDong(dong);
-  if (!ch.username || !ch.password) throw new Error(`[tài khoản GKE] Tài khoản "${ch.ten}" chưa có username/password — cập nhật ở Settings.`);
+  if (!ch.username || !ch.password) throw loiChung(`[tài khoản GKE] Tài khoản "${ch.ten}" chưa có username/password — cập nhật ở Settings.`);
   return ch;
 }
 
@@ -191,10 +195,10 @@ async function fetchJson(buoc, url, options, nhatKy) {
   } catch (err) {
     if (err.name === 'AbortError') {
       ghiLoi(nhatKy, `[GKE] [${buoc}] Quá thời gian chờ (${TIMEOUT_MS / 1000}s) — kiểm tra mạng/tường lửa tới order.gkelogistics.com`);
-      throw new Error(`[${buoc}] Gọi GKE quá thời gian chờ (${TIMEOUT_MS / 1000}s) — kiểm tra kết nối mạng của server tới order.gkelogistics.com`);
+      throw loiChung(`[${buoc}] Gọi GKE quá thời gian chờ (${TIMEOUT_MS / 1000}s) — kiểm tra kết nối mạng của server tới order.gkelogistics.com`);
     }
     ghiLoi(nhatKy, `[GKE] [${buoc}] Lỗi mạng:`, err.message);
-    throw new Error(`[${buoc}] Lỗi kết nối tới GKE: ${err.message}`);
+    throw loiChung(`[${buoc}] Lỗi kết nối tới GKE: ${err.message}`);
   } finally {
     clearTimeout(timer);
   }
@@ -205,7 +209,7 @@ async function fetchJson(buoc, url, options, nhatKy) {
     data = JSON.parse(text);
   } catch (e) {
     ghiLoi(nhatKy, `[GKE] [${buoc}] Phản hồi KHÔNG phải JSON (HTTP ${res.status}) — 500 ký tự đầu:`, text.slice(0, 500));
-    throw new Error(`[${buoc}] GKE trả về dữ liệu không hợp lệ (HTTP ${res.status}) — xem log server để thấy nguyên văn phản hồi`);
+    throw loiChung(`[${buoc}] GKE trả về dữ liệu không hợp lệ (HTTP ${res.status}) — xem log server để thấy nguyên văn phản hồi`);
   }
 
   ghi(nhatKy, `[GKE] [${buoc}] Phản hồi: HTTP ${res.status}, code=${data.code}, success=${data.success}`);
@@ -226,7 +230,7 @@ async function layToken(cauHinh, { boQuaCache = false } = {}, nhatKy) {
     return daCache.token;
   }
   if (!cauHinh.username || !cauHinh.password) {
-    throw new Error('[đăng nhập] Thiếu username/password tài khoản GKE — cập nhật ở Settings.');
+    throw loiChung('[đăng nhập] Thiếu username/password tài khoản GKE — cập nhật ở Settings.');
   }
   ghi(nhatKy, `[GKE] [đăng nhập] Dùng tài khoản "${cauHinh.ten}" (id ${cauHinh.id})`);
 
@@ -239,7 +243,7 @@ async function layToken(cauHinh, { boQuaCache = false } = {}, nhatKy) {
     }),
   }, nhatKy);
   if (!data.success || !data.data || !data.data.token) {
-    throw new Error('[đăng nhập] Đăng nhập GKE thất bại: ' + (data.detail || 'phản hồi thiếu token'));
+    throw loiChung('[đăng nhập] Đăng nhập GKE thất bại: ' + (data.detail || 'phản hồi thiếu token'));
   }
 
   tokenCache.set(cauHinh.id, { token: data.data.token, thoiDiemLay: Date.now() });
@@ -338,7 +342,7 @@ function duocMuaTrackingTheoQuocGia(row) {
 function thongTinNguoiGui(cauHinh) {
   const thieu = ['shipperPhone', 'shipperAddress', 'shipperPostcode'].filter(k => !cauHinh[k]);
   if (thieu.length) {
-    throw new Error(`[chuẩn bị dữ liệu] Thiếu ${thieu.join(', ')} trong cấu hình GKE — vào menu Tracking để nhập đủ thông tin người gửi (xưởng)`);
+    throw loiChung(`[chuẩn bị dữ liệu] Thiếu ${thieu.join(', ')} trong cấu hình GKE — vào menu Tracking để nhập đủ thông tin người gửi (xưởng)`);
   }
   return {
     full_name: cauHinh.shipperName,
@@ -402,7 +406,7 @@ const MA_DANG_CHO_TEM = 'DANG_CHO_GKE_TAO_TEM';
 async function taoDonGke(donHang, cauHinh, nhatKy) {
   const thieuCauHinh = ['serviceCode', 'customsHsCode', 'customsDeclaredPrice'].filter(k => !cauHinh[k]);
   if (thieuCauHinh.length) {
-    throw new Error(`[chuẩn bị dữ liệu] Thiếu ${thieuCauHinh.join(', ')} trong cấu hình GKE — vào menu Tracking để nhập.`);
+    throw loiChung(`[chuẩn bị dữ liệu] Thiếu ${thieuCauHinh.join(', ')} trong cấu hình GKE — vào menu Tracking để nhập.`);
   }
 
   const body = {

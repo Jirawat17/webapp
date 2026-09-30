@@ -105,6 +105,10 @@ function moTaLichSu(dong, { anXuong = false, xuongDuocThay = [] } = {}) {
     case 'TU_DONG_MUA_TRACKING':
       return kq(`${hd === 'TU_DONG_MUA_TRACKING' ? 'tự động ' : ''}mua tracking GKE`,
         [doi('Mã tracking', undefined, c.trackingNum), doi('Hãng vận chuyển', undefined, c.hangVanChuyen)]);
+    case 'TU_DONG_MUA_CHUYEN_THU_CONG':
+      return kq(`tự động mua tracking thất bại ${c.soLanThu || ''} lần — chuyển sang MUA THỦ CÔNG. Lỗi gần nhất: ${c.lyDo || '(không rõ)'}`);
+    case 'CHO_TU_DONG_MUA_LAI':
+      return kq(`cho tự động mua tracking thử lại (đặt lại ${c.soLanThu || 0} lần đã thử)`);
     case 'IN_LABEL':
       return kq(`in label${c.trackingNum ? ` (tracking ${c.trackingNum})` : ''}`);
     case 'DUNG_CHUNG_TRACKING':

@@ -5,6 +5,7 @@
 // (THOI_GIAN_SAN_XUAT, orderService.js tự ghi) — mua cho đơn từ "Đã sản xuất" trở đi đủ giờ chờ. (Bản trung gian
 // cùng ngày dùng mốc "Đang chạy máy" — người dùng đổi lại sang "Đã sản xuất".) Không bù mốc cho đơn đã nằm sẵn ở
 // "Đã sản xuất" trước khi có cột này (đã xác nhận: chỉ đơn mới — đơn cũ mua tay nếu cần).
+// BỔ SUNG 30/09/2026: HOẶC đủ X giờ (mặc định 48) kể từ "Đã in mã" — điều kiện nào đến trước, xem thoiDiemDenHan.
 const orderService = require('./orderService');
 const gkeService = require('./gkeService');
 const nhatKyDbService = require('./nhatKyDbService');
@@ -12,7 +13,8 @@ const caiDatDbService = require('./caiDatDbService');
 const sheetSellerService = require('./sheetSellerService');
 const telegramService = require('./telegramService');
 const { ghiLog } = require('./logService');
-const { dinhDangNgayGioNgan } = require('./dateUtils');
+const { dinhDangNgayGioNgan, thoiGianVNISOString } = require('./dateUtils');
+const trangThaiDbService = require('./trangThaiDbService');
 const donNhieuAoService = require('./donNhieuAoService');
 
 const SO_PHUT_MAC_DINH = 10;
@@ -24,6 +26,57 @@ const thoiDiemSanXuat = r => {
   const t = new Date(r.THOI_GIAN_SAN_XUAT || '').getTime();
   return isNaN(t) ? null : t;
 };
+
+// Điều kiện BỔ SUNG (30/09/2026, theo yêu cầu người dùng): đơn đã "Đã in mã" đủ X giờ (mặc định 48, chỉnh ở trang
+// Tracking) cũng được tự mua — kể cả khi chưa sản xuất xong. Mốc = THOI_GIAN_IN_MA (orderService.js ghi mỗi lần đơn
+// chuyển sang "Đã in mã", lần gần nhất), chỉ tính đơn in mã từ MocApDungTheoInMa (lúc deploy) trở đi. Trạng thái
+// được mua theo điều kiện này (đã xác nhận): từ "Đã in mã" tới "ĐÃ DÁN TEM" + LỖI SẢN XUẤT; KHÔNG mua đơn bị đưa về
+// "Chưa in mã", huỷ, hoàn, đã giao.
+const SO_GIO_SAU_IN_MA_MAC_DINH = 48;
+const TRANG_THAI_TU_MUA_THEO_IN_MA = ['Đã in mã', 'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đang chạy máy', 'Đã sản xuất', 'LỖI SẢN XUẤT CẦN LÀM LẠI', 'ĐÃ DÁN TEM'];
+
+// Thời điểm (ms) đơn đến hạn tự mua = điều kiện nào đến TRƯỚC: "Đã sản xuất" + số phút chờ, hoặc "Đã in mã" + số giờ.
+// null = không thuộc điều kiện nào (chưa từng tới hạn được).
+function thoiDiemDenHan(r, cauHinh) {
+  const han = [];
+  const sx = thoiDiemSanXuat(r);
+  if (TRANG_THAI_TU_MUA.includes(r.TRANG_THAI_XUONG) && sx !== null) han.push(sx + cauHinh.soPhutCho * 60 * 1000);
+  const inMa = new Date(r.THOI_GIAN_IN_MA || '').getTime();
+  if (TRANG_THAI_TU_MUA_THEO_IN_MA.includes(r.TRANG_THAI_XUONG) && inMa >= cauHinh.mocApDungTheoInMa) {
+    han.push(inMa + cauHinh.soGioSauInMa * 60 * 60 * 1000);
+  }
+  return han.length ? Math.min(...han) : null;
+}
+
+// Giới hạn thử TỰ ĐỘNG (30/09/2026, theo yêu cầu người dùng): mỗi đơn job tự động thử tối đa 10 lần; lần thứ 10 vẫn lỗi ->
+// TU_MUA_CHE_DO = 'THU_CONG', job bỏ qua đơn vĩnh viễn (lưu SQLite, restart không mất) cho tới khi mua tay thành công hoặc
+// bấm "Cho tự động thử lại" (trang Tracking). CHỈ đếm lỗi RIÊNG của đơn sau khi đã tới bước gọi GKE (GKE từ chối đơn,
+// thiếu/sai thông tin người nhận/quốc gia) — KHÔNG đếm lỗi chung (err.loiChung, gkeService.js: tài khoản/đăng nhập/mất
+// kết nối/GKE lỗi) và các điều kiện chặn trước bước GKE. Mua tay lỗi không đếm. Mỗi đơn đã xếp hàng riêng
+// (xepHangMuaTracking) + job không chạy chồng lượt -> không đếm trùng.
+const SO_LAN_THU_TU_DONG_TOI_DA = 10;
+const CHE_DO_THU_CONG = 'THU_CONG';
+const XOA_THEO_DOI_THU = { TU_MUA_SO_LAN_THU: '', TU_MUA_CHE_DO: '', TU_MUA_LOI_GAN_NHAT: '', TU_MUA_THOI_GIAN_THU: '' };
+
+// Không throw — lỗi ghi chỉ in console (không che lỗi mua gốc).
+function ghiNhanLanThuTuDong(row, err) {
+  try {
+    const soLan = (Number(row.TU_MUA_SO_LAN_THU) || 0) + 1;
+    const chuyenThuCong = soLan >= SO_LAN_THU_TU_DONG_TOI_DA;
+    trangThaiDbService.ghiDe(row.STT_Key, {
+      TU_MUA_SO_LAN_THU: String(soLan), TU_MUA_LOI_GAN_NHAT: err.message, TU_MUA_THOI_GIAN_THU: thoiGianVNISOString(),
+      ...(chuyenThuCong ? { TU_MUA_CHE_DO: CHE_DO_THU_CONG } : {}),
+    });
+    if (!chuyenThuCong) return;
+    ghiLogTracking(`[Tự động] ${row.STT_Key}: đã thử ${soLan} lần không mua được — CHUYỂN SANG MUA THỦ CÔNG. Lỗi gần nhất: ${err.message}`, row.STT_Key, true);
+    ghiLog({
+      nguoiDung: NGUOI_HE_THONG.ten, vaiTro: NGUOI_HE_THONG.vaiTro, hanhDong: 'TU_DONG_MUA_CHUYEN_THU_CONG', sttKey: row.STT_Key,
+      chiTiet: { soLanThu: soLan, lyDo: err.message },
+    }).catch(e => console.error('[TrackingTuDong] Lỗi ghi log nền:', e.message));
+  } catch (e) {
+    console.error(`[TrackingTuDong] Lỗi ghi nhận lần thử cho ${row.STT_Key}:`, e.message);
+  }
+}
 
 // "Người dùng" hệ thống — dùng khi ghi qua orderService.update()/ghiLog() từ job chạy nền, không có
 // ai thật đang đăng nhập. Chưa có tiền lệ nào khác trong dự án (job cảnh báo hiện có ghi thẳng
@@ -59,8 +112,9 @@ function xepHangMuaTracking(sttKey, congViec) {
 const SO_DONG_LOG_TOI_DA = 300;
 const _logs = []; // { luc: ISOString, dong: string, sttKey } — sttKey để lọc theo Xưởng người xem (29/09/2026)
 
-function ghiLogTracking(dong, sttKey) {
-  _logs.push({ luc: new Date().toISOString(), dong, sttKey });
+// gioiHanThu: dòng về giới hạn 10 lần thử (30/09/2026) — routes/tracking.js ẩn với vai trò không có menu Tracking.
+function ghiLogTracking(dong, sttKey, gioiHanThu = false) {
+  _logs.push({ luc: new Date().toISOString(), dong, sttKey, gioiHanThu });
   if (_logs.length > SO_DONG_LOG_TOI_DA) _logs.shift();
 }
 
@@ -105,20 +159,23 @@ async function ghiLogTrackingVaoDb({ sttKey, nguon, nguoiDung, vaiTro, ketQua, t
 // Đọc cấu hình bật/tắt + số phút chờ — bảng SQLite cau_hinh_tracking (bổ sung 19/09/2026, xem
 // services/caiDatDbService.js). Chưa từng lưu lần nào (chưa migrate/chưa ai lưu) thì coi như TẮT (mặc
 // định an toàn), không chặn phần còn lại của app.
+// mocApDungTheoInMa: ms, NaN nếu thiếu -> điều kiện "Đã in mã" không áp dụng cho đơn nào (an toàn).
 async function layCauHinh() {
   const dong = caiDatDbService.layCauHinhTracking();
-  if (!dong) return { bat: false, soPhutCho: SO_PHUT_MAC_DINH, daCoDongDuLieu: false };
+  if (!dong) return { bat: false, soPhutCho: SO_PHUT_MAC_DINH, soGioSauInMa: SO_GIO_SAU_IN_MA_MAC_DINH, mocApDungTheoInMa: NaN, daCoDongDuLieu: false };
   return {
     bat: String(dong.BatTuDongMuaTracking).toUpperCase() === 'TRUE',
     soPhutCho: Number(dong.SoPhutCho) > 0 ? Number(dong.SoPhutCho) : SO_PHUT_MAC_DINH,
+    soGioSauInMa: Number(dong.SoGioSauInMa) > 0 ? Number(dong.SoGioSauInMa) : SO_GIO_SAU_IN_MA_MAC_DINH,
+    mocApDungTheoInMa: new Date(dong.MocApDungTheoInMa || '').getTime(),
     daCoDongDuLieu: true,
   };
 }
 
-// Ghi cấu hình — UPSERT ghi 1 phần (chỉ BatTuDongMuaTracking/SoPhutCho, không đụng các cột Gke* mà
+// Ghi cấu hình — UPSERT ghi 1 phần (chỉ BatTuDongMuaTracking/SoPhutCho/SoGioSauInMa, không đụng các cột Gke* mà
 // gkeService.js#luuCauHinhGke ghi riêng trên CÙNG dòng — xem caiDatDbService.js#datCauHinhTracking).
-async function luuCauHinh({ bat, soPhutCho }) {
-  caiDatDbService.datCauHinhTracking({ BatTuDongMuaTracking: bat ? 'TRUE' : 'FALSE', SoPhutCho: soPhutCho });
+async function luuCauHinh({ bat, soPhutCho, soGioSauInMa }) {
+  caiDatDbService.datCauHinhTracking({ BatTuDongMuaTracking: bat ? 'TRUE' : 'FALSE', SoPhutCho: soPhutCho, SoGioSauInMa: soGioSauInMa });
 }
 
 // Khoảng cách quét trạng thái tracking thật — bổ sung 21/09/2026, theo yêu cầu người dùng: cho chỉnh
@@ -262,12 +319,15 @@ async function _muaTrackingChoDonThat(sttKey, user) {
   // qua gkeService.taoDonGke()/layTemIn() — xem gkeService.js#ghi/ghiLoi. Dùng cho cột ChiTiet ở
   // ghiLogTrackingVaoDb() bên dưới, y hệt nội dung sẽ in ra console server.
   const nhatKy = [];
+  let row;
+  let daToiBuocGke = false; // chỉ lỗi từ bước gọi GKE trở đi mới tính là 1 lần thử (ghiNhanLanThuTuDong)
 
   try {
     const { headers, rows } = await orderService.getAll({ fresh: true });
-    const row = rows.find(r => r.STT_Key === sttKey);
+    row = rows.find(r => r.STT_Key === sttKey);
     if (!row) throw new Error('Không tìm thấy đơn: ' + sttKey);
     chanMuaDonDaHuy(row);
+    if (!laThuCong && row.TU_MUA_CHE_DO === CHE_DO_THU_CONG) return null; // đã chuyển mua thủ công — job không thử nữa
     if (row.TRACKING_ID) {
       ghiLogTrackingVaoDb({
         sttKey, nguon: nguonSheet, nguoiDung: user.ten, vaiTro: user.vaiTro,
@@ -315,6 +375,7 @@ async function _muaTrackingChoDonThat(sttKey, user) {
       nhatKy.push(`[DonNhieuAo] Nhóm ${nhom.goc} (${nhom.thanhVien.length} đơn) — mua 1 tracking cho cả nhóm, cân nặng tổng ${canNang} kg.`);
     }
 
+    daToiBuocGke = true;
     const chuaTungTaoDon = !row.TAM_THOI;
     const dangChoTuLanTruoc = row.TAM_THOI === gkeService.MA_DANG_CHO_TEM;
 
@@ -332,6 +393,7 @@ async function _muaTrackingChoDonThat(sttKey, user) {
       TAM_THOI: '', // đã có tracking thật — không còn "tạm" nữa
       TAI_KHOAN_GKE: cauHinhGke.id,
     }, user);
+    if (row.TU_MUA_SO_LAN_THU || row.TU_MUA_CHE_DO) trangThaiDbService.ghiDe(sttKey, XOA_THEO_DOI_THU); // mua được -> hết theo dõi lần thử
 
     let loiSheetCon = [];
     if (nhom) {
@@ -366,6 +428,7 @@ async function _muaTrackingChoDonThat(sttKey, user) {
 
     return { ...ketQuaTem, dayCheKhachHang, loiSheetCon };
   } catch (err) {
+    if (!laThuCong && daToiBuocGke && !err.loiChung) ghiNhanLanThuTuDong(row, err);
     ghiLogTracking(`${nhanNguon} ${sttKey}: LỖI — ${err.message}`, sttKey);
     ghiLogTrackingVaoDb({
       sttKey, nguon: nguonSheet, nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: 'Lỗi',
@@ -533,7 +596,6 @@ async function chayQuetTuDongMuaTracking() {
 
   const { rows } = await orderService.getAll();
   const bayGio = Date.now();
-  const nguongMs = cauHinh.soPhutCho * 60 * 1000;
 
   // DonNhieuAo: sao tracking xuống đơn con mới thêm (nếu đơn ".1" đã mua), rồi loại hẳn đơn con + nhóm
   // lỗi dữ liệu khỏi danh sách mua — nhóm lỗi đã hiện ở Trung tâm hành động, không cần báo lỗi lại mỗi 2 phút.
@@ -541,14 +603,15 @@ async function chayQuetTuDongMuaTracking() {
   const banDoNhom = donNhieuAoService.xayDungBanDoNhom(rows);
 
   const donDuDieuKien = rows.filter(r => {
-    if (!TRANG_THAI_TU_MUA.includes(r.TRANG_THAI_XUONG)) return false; // gồm cả loại đơn huỷ/lỗi/đã giao
     if (r.TRACKING_ID) return false; // đã có tracking thật
-    // DonNhieuAo: chỉ đơn mua (".1") — tính giờ theo mốc "Đã sản xuất" của CHÍNH đơn đó.
+    if (r.TU_MUA_CHE_DO === CHE_DO_THU_CONG) return false; // đã thử đủ 10 lần — chỉ còn mua tay
+    // DonNhieuAo: chỉ đơn mua (".1") — tính giờ theo mốc của CHÍNH đơn đó.
     const nhom = banDoNhom.get(r.STT_Key);
     if (nhom && (nhom.loiChan.length || nhom.donMua.STT_Key !== r.STT_Key)) return false;
     if (!gkeService.duocMuaTrackingTheoQuocGia(r)) return false; // chỉ US/UK — trang Tracking hiện rõ lý do
-    const thoiDiem = thoiDiemSanXuat(r);
-    return thoiDiem !== null && (bayGio - thoiDiem) >= nguongMs;
+    // Trạng thái + thời gian: điều kiện nào đến trước (thoiDiemDenHan) — đơn huỷ/hoàn/đã giao/Chưa in mã không thuộc cả 2.
+    const han = thoiDiemDenHan(r, cauHinh);
+    return han !== null && bayGio >= han;
   });
 
   // Tài khoản GKE theo Xưởng (bổ sung 27/09/2026): đơn không xác định được tài khoản (chưa gán Xưởng,
@@ -701,7 +764,7 @@ async function chayQuetTrangThaiNeuDenLuot() {
 }
 
 // Danh sách đơn cho bảng ở trang public/tracking.html, kèm trạng thái. Từ 29/09/2026 (theo yêu cầu người dùng,
-// thay cho lọc AUTO_TRACKING="YES"): đơn CHỜ tự động mua ("Đã sản xuất" trở đi, có mốc sản xuất, chưa có tracking)
+// thay cho lọc AUTO_TRACKING="YES"): đơn CHỜ tự động mua (thuộc 1 trong 2 điều kiện — thoiDiemDenHan, chưa có tracking)
 // + đơn ĐÃ có tracking mà sản xuất xong trong 7 ngày gần đây (bảng không dài vô hạn). Lọc theo Xưởng của `user`
 // (orderService.js#locTheoXuong) — hàm này CHỈ dùng cho route GET /tracking/danh-sach, không dùng bởi job nền.
 const coTaiKhoanGke = r => { try { gkeService.layCauHinhGkeChoDon(r); return true; } catch { return false; } };
@@ -712,30 +775,33 @@ async function layDanhSachDonAutoTracking(user) {
   const rows = orderService.locTheoXuong(tatCaDon, user);
   const banDoNhom = donNhieuAoService.xayDungBanDoNhom(tatCaDon);
   const bayGio = Date.now();
-  const nguongMs = cauHinh.soPhutCho * 60 * 1000;
 
   return rows
     .filter(r => {
-      const t = thoiDiemSanXuat(r);
-      if (r.TRACKING_ID) return t !== null && bayGio - t <= SO_MS_GIU_DON_DA_MUA;
-      // Chờ mua: phải có mốc "Đã sản xuất" — đơn cũ đã nằm ở "Đã sản xuất" từ trước khi có mốc KHÔNG hiện (không tự
-      // mua, hiện ra chỉ làm ngập bảng).
-      return TRANG_THAI_TU_MUA.includes(r.TRANG_THAI_XUONG) && t !== null;
+      if (r.TRACKING_ID) {
+        const t = thoiDiemSanXuat(r) ?? (new Date(r.THOI_GIAN_IN_MA || '').getTime() || null);
+        return t !== null && bayGio - t <= SO_MS_GIU_DON_DA_MUA;
+      }
+      // Chờ mua: phải thuộc 1 trong 2 điều kiện tự mua — đơn cũ không có mốc KHÔNG hiện (không tự mua, hiện ra chỉ làm
+      // ngập bảng).
+      return thoiDiemDenHan(r, cauHinh) !== null
+        || (r.TU_MUA_CHE_DO === CHE_DO_THU_CONG && !TRANG_THAI_KHONG_CAN_MUA.includes(r.TRANG_THAI_XUONG));
     })
     .map(r => {
       const daCoTrackingThat = !!r.TRACKING_ID;
       const dangChoTem = !r.TRACKING_ID && r.TAM_THOI === gkeService.MA_DANG_CHO_TEM;
-      const thoiDiem = thoiDiemSanXuat(r);
+      const han = thoiDiemDenHan(r, cauHinh);
 
       const nhom = banDoNhom.get(r.STT_Key);
       let trangThai;
       if (daCoTrackingThat) trangThai = 'DA_MUA';
+      else if (r.TU_MUA_CHE_DO === CHE_DO_THU_CONG) trangThai = 'CHUYEN_THU_CONG';
       else if (nhom && nhom.loiChan.length) trangThai = 'LOI_NHOM';
       else if (nhom && nhom.donMua.STT_Key !== r.STT_Key) trangThai = 'CHO_DON_MUA_NHOM';
       else if (!gkeService.duocMuaTrackingTheoQuocGia(r)) trangThai = 'KHONG_THUOC_US_UK';
       else if (!coTaiKhoanGke(r)) trangThai = 'THIEU_TAI_KHOAN_GKE';
       else if (dangChoTem) trangThai = 'DANG_CHO_TEM';
-      else if (bayGio - thoiDiem >= nguongMs) trangThai = 'DEN_HAN_CHO_XU_LY';
+      else if (han !== null && bayGio >= han) trangThai = 'DEN_HAN_CHO_XU_LY';
       else trangThai = 'DANG_CHO';
 
       return {
@@ -743,6 +809,9 @@ async function layDanhSachDonAutoTracking(user) {
         trangThai,
         trackingId: daCoTrackingThat ? r.TRACKING_ID : '',
         hangVanChuyen: daCoTrackingThat ? (r.HANG_VAN_CHUYEN || '') : '',
+        hanTuMua: !daCoTrackingThat && han !== null ? new Date(han).toISOString() : '',
+        soLanThu: daCoTrackingThat ? 0 : Number(r.TU_MUA_SO_LAN_THU) || 0,
+        loiGanNhat: daCoTrackingThat ? '' : r.TU_MUA_LOI_GAN_NHAT || '',
         thoiGianSanXuat: r.THOI_GIAN_SAN_XUAT || '',
         thoiGianCapNhatCuoi: r.ThoiGianCapNhatCuoi || '',
       };
@@ -750,7 +819,31 @@ async function layDanhSachDonAutoTracking(user) {
     .sort((a, b) => new Date(b.thoiGianCapNhatCuoi || 0) - new Date(a.thoiGianCapNhatCuoi || 0));
 }
 
+// Cảnh báo lớn (30/09/2026): đơn đã chuyển MUA THỦ CÔNG mà chưa có tracking, trong Xưởng người xem được thấy. Bỏ đơn
+// đã huỷ/hoàn/đã giao (không còn cần mua). Nơi gọi (routes/tracking.js) tự chặn vai trò không có menu Tracking.
+const TRANG_THAI_KHONG_CAN_MUA = ['CANCELLED_Đã hủy', 'REFUNDED_Hoàn đơn', 'DELIVERED_Đã giao đến khách'];
+async function layDonChuyenThuCong(user) {
+  const { rows } = await orderService.getAll();
+  return orderService.locTheoXuong(rows, user)
+    .filter(r => r.TU_MUA_CHE_DO === CHE_DO_THU_CONG && !r.TRACKING_ID && !TRANG_THAI_KHONG_CAN_MUA.includes(r.TRANG_THAI_XUONG))
+    .map(r => ({ sttKey: r.STT_Key, soLanThu: Number(r.TU_MUA_SO_LAN_THU) || 0, lyDo: r.TU_MUA_LOI_GAN_NHAT || '', thoiGianThu: r.TU_MUA_THOI_GIAN_THU || '' }));
+}
+
+// "Cho tự động thử lại" — xoá số lần thử/chế độ thủ công (dùng sau khi đã sửa thông tin đơn). Trả false nếu đơn không ở
+// chế độ thủ công. Nơi gọi tự kiểm tra quyền + Xưởng.
+function choTuDongThuLai(row, user) {
+  if (row.TU_MUA_CHE_DO !== CHE_DO_THU_CONG) return false;
+  trangThaiDbService.ghiDe(row.STT_Key, XOA_THEO_DOI_THU);
+  ghiLog({
+    nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'CHO_TU_DONG_MUA_LAI', sttKey: row.STT_Key,
+    chiTiet: { soLanThu: Number(row.TU_MUA_SO_LAN_THU) || 0, lyDo: row.TU_MUA_LOI_GAN_NHAT || '' },
+  }).catch(e => console.error('[TrackingTuDong] Lỗi ghi log nền:', e.message));
+  ghiLogTracking(`[Thủ công - ${user.ten}] ${row.STT_Key}: cho tự động thử mua lại (đặt lại số lần thử).`, row.STT_Key, true);
+  return true;
+}
+
 module.exports = {
+  layDonChuyenThuCong, choTuDongThuLai, SO_LAN_THU_TU_DONG_TOI_DA,
   layCauHinh, luuCauHinh, chayQuetTuDongMuaTracking, layDanhSachDonAutoTracking, layLogTracking,
   muaTrackingChoDon, inLabelChoDon, muaTrackingVaInLabelChoDon,
   capNhatTrangThaiTrackingChoDon, chayQuetCapNhatTrangThaiTracking, chayQuetTrangThaiNeuDenLuot,

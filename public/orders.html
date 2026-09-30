@@ -46,6 +46,10 @@
     </div>
   </div>
 
+  <!-- Cảnh báo đơn đã thử TỰ ĐỘNG mua tracking 10 lần không được -> chuyển mua thủ công (30/09/2026) — chỉ vai trò có menu
+       Tracking; API tự chặn vai trò khác (routes/tracking.js GET /canh-bao-thu-cong). -->
+  <div id="canh-bao-thu-cong" style="display:none"></div>
+
   <div id="panel-superadmin" class="panel-dieu-khien" style="display:none">
     <div style="background:var(--color-danger-bg);color:var(--color-danger-text);border:3px solid var(--color-danger-text);border-radius:8px;padding:16px;margin-bottom:12px;font-size:1.15rem;font-weight:700;line-height:1.5">
       ⚠ CẢNH BÁO — CHỨC NĂNG NGUY HIỂM CHỈ DÀNH CHO SUPERADMIN<br>
@@ -360,6 +364,7 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   user = await requireLoginOrRedirect();
   if (!user) return;
   renderNav(user, 'orders');
+  taiCanhBaoThuCong(); // chạy nền, không chặn tải danh sách
   mauTheoXuong = await taiMauTheoXuong();
   // Tải sớm, dùng chung cho các ô liên quan Xưởng bên dưới (admin: chỉ các Xưởng mình phụ trách; superadmin: tất cả).
   try { danhSachXuong = await apiFetch('/orders/danh-sach-xuong'); } catch (e) { danhSachXuong = []; }
@@ -624,6 +629,26 @@ async function apDungChuyenSuperadmin(btn) {
     if (thanhCong.length) await taiDon();
   } catch (e) { alert(e.message); }
   finally { btn.disabled = false; }
+}
+
+// Cảnh báo lớn: đơn đã thử TỰ ĐỘNG mua tracking 10 lần không được, đã chuyển MUA THỦ CÔNG (30/09/2026). CHỈ vai trò có menu
+// Tracking (public/js/api.js#renderNav) mới gọi API; server cũng chặn. Xử lý (mua tay / cho thử lại) ở trang Tracking.
+async function taiCanhBaoThuCong() {
+  if (!['admin', 'superadmin', 've_file'].includes(user.vaiTro)) return;
+  let ds = [];
+  try { ds = await apiFetch('/tracking/canh-bao-thu-cong'); } catch (e) { return; }
+  const el = document.getElementById('canh-bao-thu-cong');
+  if (!ds.length) { el.style.display = 'none'; return; }
+  const gio = t => { const d = new Date(t); return isNaN(d) ? '' : d.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); };
+  el.style.display = '';
+  el.innerHTML = `
+    <div style="background:var(--color-danger-bg);color:var(--color-danger-text);border:3px solid var(--color-danger-text);border-radius:8px;padding:14px 16px;margin-bottom:12px">
+      <div style="font-size:1.2rem;font-weight:700;display:flex;gap:8px;align-items:center">${icon('alert', { size: 24 })} ${ds.length} ĐƠN KHÔNG THỂ TỰ ĐỘNG MUA TRACKING — ĐÃ CHUYỂN SANG MUA THỦ CÔNG</div>
+      <p style="margin:6px 0 8px">Hệ thống đã tự động thử 10 lần không thành công và dừng thử. Kiểm tra nguyên nhân, sửa thông tin đơn rồi mua tay ở trang <a href="/tracking.html" style="color:inherit;font-weight:700">Tracking</a>.</p>
+      <ul style="margin:0;padding-left:20px">${ds.map(d => `
+        <li style="word-break:break-word"><a href="/order.html?stt=${encodeURIComponent(d.sttKey)}" style="font-weight:700;color:inherit">${escapeHtml(d.sttKey)}</a> — ${escapeHtml(d.lyDo || '(không rõ nguyên nhân)')} <small>(thử ${d.soLanThu} lần${d.thoiGianThu ? `, gần nhất ${gio(d.thoiGianThu)}` : ''})</small></li>`).join('')}
+      </ul>
+    </div>`;
 }
 
 const CAC_O_LOC = ['loc-tong-quat', 'loc-trang-thai', 'loc-phoi', 'loc-ve-file', 'loc-canh-bao', 'loc-xuong', 'loc-uu-tien', 'loc-don-nhieu-ao', 'loc-da-mua-tracking', 'loc-nhom-hang', 'loc-don-hang-loat', 'loc-loai', 'loc-kich-thuoc', 'loc-hang-van-chuyen', 'loc-mau-sac', 'loc-quoc-gia-tracking', 'loc-tinh-trang', 'loc-kh', 'loc-ma-tracking', 'loc-tu-ngay', 'loc-den-ngay'];

@@ -4,6 +4,7 @@ const {
   layCauHinh, luuCauHinh, layDanhSachDonAutoTracking, layLogTracking, muaTrackingChoDon,
   inLabelChoDon, muaTrackingVaInLabelChoDon, capNhatTrangThaiTrackingChoDon,
   layCauHinhQuetTrangThai, luuCauHinhQuetTrangThai, SO_PHUT_QUET_TRANG_THAI_TOI_THIEU,
+  layDonChuyenThuCong, choTuDongThuLai,
 } = require('../services/trackingAutoService');
 const {
   gopCacTemPdf, layDanhSachTaiKhoanGke, luuTaiKhoanGke, xoaTaiKhoanGke, ganTaiKhoanGkeChoXuong,
@@ -32,13 +33,17 @@ router.get('/cau-hinh', async (req, res) => {
 });
 
 router.post('/cau-hinh', async (req, res) => {
-  const { bat, soPhutCho } = req.body;
+  const { bat, soPhutCho, soGioSauInMa } = req.body;
   if (typeof bat !== 'boolean') return res.status(400).json({ error: 'Thiếu giá trị bật/tắt' });
   const soPhut = Number(soPhutCho);
   if (!Number.isFinite(soPhut) || soPhut <= 0) {
     return res.status(400).json({ error: 'Số phút chờ phải là số dương' });
   }
-  await luuCauHinh({ bat, soPhutCho: soPhut });
+  const soGio = Number(soGioSauInMa);
+  if (!Number.isFinite(soGio) || soGio <= 0) {
+    return res.status(400).json({ error: 'Số giờ sau "Đã in mã" phải là số dương' });
+  }
+  await luuCauHinh({ bat, soPhutCho: soPhut, soGioSauInMa: soGio });
   res.json({ ok: true });
 });
 
@@ -58,8 +63,12 @@ router.post('/cau-hinh-quet-trang-thai', (req, res) => {
   res.json({ ok: true });
 });
 
+// Vai trò không có menu Tracking (san_xuat — vẫn gọi được API này từ 09/09/2026) không nhận thông tin giới hạn 10 lần thử
+// mua (30/09/2026): số lần thử, lỗi gần nhất, trạng thái "Đã chuyển MUA THỦ CÔNG".
 router.get('/danh-sach', async (req, res) => {
-  res.json(await layDanhSachDonAutoTracking(req.session.user));
+  const ds = await layDanhSachDonAutoTracking(req.session.user);
+  if (orderService.VAI_TRO_MENU_TRACKING.includes(req.session.user.vaiTro)) return res.json(ds);
+  res.json(ds.map(({ soLanThu, loiGanNhat, ...d }) => (d.trangThai === 'CHUYEN_THU_CONG' ? { ...d, trangThai: 'DEN_HAN_CHO_XU_LY' } : d)));
 });
 
 // Tài khoản GKE theo Xưởng (bổ sung 27/09/2026, theo yêu cầu người dùng — thay cho /cau-hinh-gke, 1 bộ
@@ -89,7 +98,8 @@ router.post('/gan-tai-khoan-gke', requireExactRole('superadmin'), (req, res) => 
 
 router.get('/logs', (req, res) => {
   const trongPhamVi = orderService.phamViDon(req.session.user); // chỉ đơn Xưởng mình (29/09/2026)
-  res.json(layLogTracking().filter(l => trongPhamVi(l.sttKey)));
+  const coMenu = orderService.VAI_TRO_MENU_TRACKING.includes(req.session.user.vaiTro);
+  res.json(layLogTracking().filter(l => trongPhamVi(l.sttKey) && (coMenu || !l.gioiHanThu))); // dòng giới hạn 10 lần: chỉ vai trò có menu Tracking
 });
 
 // Mua tracking THỦ CÔNG cho 1 hoặc nhiều đơn — bổ sung 09/09/2026, theo yêu cầu người dùng. Dùng
@@ -145,6 +155,35 @@ router.post('/mua-thu-cong', async (req, res) => {
   }
 
   res.json({ ok: true, thanhCong, loi, loiDaySheetKh });
+});
+
+// Đơn đã thử TỰ ĐỘNG mua 10 lần không được -> chuyển mua thủ công (30/09/2026, theo yêu cầu người dùng): cảnh báo lớn ở
+// Danh sách đơn hàng + trang Tracking. CHỈ vai trò CÓ menu Tracking (public/js/api.js#renderNav: admin/superadmin/ve_file)
+// — chặn cả ở đây, không chỉ ẩn giao diện; admin chỉ thấy đơn Xưởng mình phụ trách (locTheoXuong).
+function coMenuTracking(req, res, next) {
+  if (!orderService.VAI_TRO_MENU_TRACKING.includes(req.session.user.vaiTro)) return res.status(403).json({ error: 'Không có quyền' });
+  next();
+}
+
+router.get('/canh-bao-thu-cong', coMenuTracking, async (req, res) => {
+  res.json(await layDonChuyenThuCong(req.session.user));
+});
+
+// "Cho tự động thử lại" — đặt lại số lần thử cho đơn đã sửa xong thông tin. Cùng khuôn sttKeys/thanhCong/loi.
+router.post('/cho-tu-dong-lai', coMenuTracking, async (req, res) => {
+  const { sttKeys } = req.body;
+  const user = req.session.user;
+  if (!Array.isArray(sttKeys) || sttKeys.length === 0) return res.status(400).json({ error: 'Danh sách đơn trống' });
+  const { rows } = await orderService.getAll({ fresh: true });
+  const thanhCong = [];
+  const loi = [];
+  for (const sttKey of sttKeys) {
+    const row = rows.find(r => r.STT_Key === sttKey);
+    if (!row || !orderService.coQuyenTheoXuong(user, row)) { loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng' }); continue; }
+    if (choTuDongThuLai(row, user)) thanhCong.push(sttKey);
+    else loi.push({ sttKey, lyDo: 'Đơn không ở chế độ mua thủ công.' });
+  }
+  res.json({ ok: true, thanhCong, loi });
 });
 
 // Chạy 1 hàm xử lý (inLabelChoDon hoặc muaTrackingVaInLabelChoDon) cho từng đơn trong sttKeys — lỗi ở

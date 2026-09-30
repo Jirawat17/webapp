@@ -56,6 +56,10 @@ const CAC_COT_CAU_HINH_TRACKING = [
   // bảng tai_khoan_gke (xem gkeService.js#chuyenCauHinhCuSangTaiKhoan) — 14 cột Gke* giữ nguyên làm bản
   // lưu, KHÔNG còn nơi nào đọc nữa.
   'DaChuyenTaiKhoanGke',
+  // SoGioSauInMa (30/09/2026, theo yêu cầu người dùng) — tự mua thêm khi đơn đã "Đã in mã" đủ X giờ (mặc định 48,
+  // xem trackingAutoService.js#thoiDiemDenHan). MocApDungTheoInMa — lần khởi động ĐẦU TIÊN có tính năng này (ghi
+  // bên dưới): CHỈ đơn chuyển "Đã in mã" từ mốc này trở đi mới áp dụng, đơn in mã trước đó không bị mua hàng loạt.
+  'SoGioSauInMa', 'MocApDungTheoInMa',
 ];
 db.exec(`CREATE TABLE IF NOT EXISTS cau_hinh_tracking (
   id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -86,6 +90,7 @@ function datCauHinhTracking(updates) {
     ON CONFLICT(id) DO UPDATE SET ${cot.map(c => `${c} = excluded.${c}`).join(', ')}
   `).run(...giaTri);
 }
+if (!(layCauHinhTracking() || {}).MocApDungTheoInMa) datCauHinhTracking({ MocApDungTheoInMa: new Date().toISOString() });
 
 // ---------- CaiDatCanhBao — ngưỡng số ngày cho 3 mức cảnh báo (Vàng/Cam/Đỏ) ----------
 // Bổ sung 23/09/2026, theo yêu cầu người dùng, xem services/alertService.js#tinhMucCanhBao — trước đây

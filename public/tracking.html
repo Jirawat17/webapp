@@ -88,6 +88,9 @@
 <div id="nav"></div>
 <div class="page">
   <h2>Tracking</h2>
+  <!-- Cảnh báo đơn đã thử TỰ ĐỘNG mua 10 lần không được -> chuyển mua thủ công (30/09/2026) — API tự chặn vai trò không có
+       menu Tracking, xem routes/tracking.js GET /canh-bao-thu-cong. -->
+  <div id="canh-bao-thu-cong" style="display:none"></div>
 
   <div class="tk-o-quet-nhanh">
     <label for="o-quet-in-label">Quét/nhập mã đơn để in label ngay</label>
@@ -124,6 +127,10 @@
       <span style="font-size:0.85rem">giờ</span>
       <input type="number" id="so-phut-cho" min="0" step="1" style="width:56px" aria-label="Số phút">
       <span style="font-size:0.85rem">phút</span>
+      <!-- Điều kiện bổ sung 30/09/2026 — HOẶC đủ X giờ kể từ "Đã in mã" (mặc định 48), điều kiện nào đến trước. -->
+      <span style="font-size:0.85rem;color:var(--color-text-muted)" title="Hoặc mua khi đơn đã chuyển &quot;Đã in mã&quot; đủ số giờ này (kể cả chưa sản xuất xong) — điều kiện nào đến trước thì mua">hoặc sau</span>
+      <input type="number" id="so-gio-sau-in-ma" min="1" step="1" style="width:64px" aria-label="Số giờ sau Đã in mã">
+      <span style="font-size:0.85rem">giờ từ "Đã in mã"</span>
       <button type="button" class="btn-hanh-dong" id="btn-luu-cau-hinh" style="padding:8px 16px">Lưu</button>
     </span>
   </div>
@@ -147,7 +154,7 @@
   <p id="thong-bao-luu-quet-trang-thai" style="display:none;margin-top:8px"></p>
   <!-- Chuyển xuống đây (bổ sung 13/09/2026, theo yêu cầu người dùng) — trước đó nằm ngay dưới <h2>, đứng
        TRƯỚC cả ô quét/Cấu hình. Nội dung không đổi, chỉ đổi vị trí. -->
-  <p style="color:var(--color-text-muted);margin:8px 0 0">Tự động mua tracking GKE cho đơn từ "Đã sản xuất" trở đi, sau khi đủ thời gian chờ kể từ lúc đơn chuyển "Đã sản xuất". Chỉ đơn giao tới US/UK; không mua đơn chưa sản xuất xong, lỗi sản xuất, huỷ, hoàn hoặc đã giao.</p>
+  <p style="color:var(--color-text-muted);margin:8px 0 0">Tự động mua tracking GKE khi đến 1 trong 2 mốc, mốc nào đến trước: (1) đơn "Đã sản xuất"/"ĐÃ DÁN TEM" đủ thời gian chờ kể từ lúc chuyển "Đã sản xuất"; (2) đơn đã chuyển "Đã in mã" đủ số giờ đã đặt (kể cả đang chạy máy hoặc lỗi sản xuất; chỉ tính đơn in mã từ khi có tính năng này). Chỉ đơn giao tới US/UK; không mua đơn huỷ, hoàn, đã giao hoặc bị đưa về "Chưa in mã".</p>
 
   <!-- Cấu hình GKE ĐÃ CHUYỂN sang Settings (bổ sung 23/09/2026, theo yêu cầu người dùng — hạn chế
        người không phải superadmin đổi được thông tin này, kể cả username/password API GKE thật). Xem
@@ -188,6 +195,8 @@ const NHAN_TRANG_THAI = {
   // Chỉ mua tracking GKE cho đơn giao tới US/UK (bổ sung 27/09/2026, xét cột DIA_CHI_NUOC).
   KHONG_THUOC_US_UK: { nhan: 'Không thuộc US/UK — không mua GKE', lop: 'thieu-du-lieu' },
   DA_HUY: { nhan: 'Đơn đã huỷ — không mua', lop: 'thieu-du-lieu' },
+  // Tự động thử 10 lần không được (30/09/2026) — job bỏ qua, chỉ còn mua tay / "Cho tự động thử lại".
+  CHUYEN_THU_CONG: { nhan: 'Đã chuyển MUA THỦ CÔNG', lop: 'thieu-du-lieu' },
 };
 
 const KHOA_LAN_XEM_CUOI = 'trackingLanXemCuoi';
@@ -353,6 +362,7 @@ async function taiCauHinh() {
     // Tách tổng số phút lưu ở Sheet thành giờ + phút để hiện lên 2 ô riêng — xem luuCauHinh() bên dưới.
     document.getElementById('so-gio-cho').value = Math.floor(cauHinh.soPhutCho / 60);
     document.getElementById('so-phut-cho').value = cauHinh.soPhutCho % 60;
+    document.getElementById('so-gio-sau-in-ma').value = cauHinh.soGioSauInMa;
   } catch (e) {
     document.getElementById('thong-bao-luu').style.display = 'block';
     document.getElementById('thong-bao-luu').style.color = 'var(--color-primary)';
@@ -365,6 +375,7 @@ async function luuCauHinh() {
   const soGio = Number(document.getElementById('so-gio-cho').value) || 0;
   const soPhut = Number(document.getElementById('so-phut-cho').value) || 0;
   const soPhutCho = soGio * 60 + soPhut; // Sheet vẫn chỉ lưu 1 tổng số phút, không đổi schema
+  const soGioSauInMa = Number(document.getElementById('so-gio-sau-in-ma').value);
   const thongBao = document.getElementById('thong-bao-luu');
   const nut = document.getElementById('btn-luu-cau-hinh');
 
@@ -374,11 +385,17 @@ async function luuCauHinh() {
     thongBao.textContent = 'Tổng thời gian chờ (giờ + phút) phải lớn hơn 0.';
     return;
   }
+  if (!Number.isFinite(soGioSauInMa) || soGioSauInMa <= 0) {
+    thongBao.style.display = 'block';
+    thongBao.style.color = 'var(--color-primary)';
+    thongBao.textContent = 'Số giờ sau "Đã in mã" phải lớn hơn 0.';
+    return;
+  }
 
   nut.disabled = true;
   nut.textContent = 'Đang lưu...';
   try {
-    await apiFetch('/tracking/cau-hinh', { method: 'POST', body: JSON.stringify({ bat, soPhutCho }) });
+    await apiFetch('/tracking/cau-hinh', { method: 'POST', body: JSON.stringify({ bat, soPhutCho, soGioSauInMa }) });
     thongBao.style.display = 'block';
     thongBao.style.color = '#16a34a';
     thongBao.textContent = 'Đã lưu cấu hình.';
@@ -461,20 +478,22 @@ async function taiDanhSach() {
   } else {
     el.innerHTML = `
       <table class="bang-xem-truoc">
-        <thead><tr><th>Mã đơn</th><th>Trạng thái</th><th>Mã tracking</th><th>Hãng vận chuyển</th><th>Sản xuất xong lúc</th><th>Hành động</th></tr></thead>
+        <thead><tr><th>Mã đơn</th><th>Trạng thái</th><th>Mã tracking</th><th>Hãng vận chuyển</th><th>Sản xuất xong lúc</th><th>Hạn tự mua</th><th>Hành động</th></tr></thead>
         <tbody>
           ${ds.map(d => {
             const tt = NHAN_TRANG_THAI[d.trangThai] || { nhan: d.trangThai, lop: 'dang-cho' };
             return `<tr>
               <td><a href="/order.html?stt=${encodeURIComponent(d.sttKey)}">${escapeHtml(d.sttKey)}</a></td>
-              <td><span class="tk-trang-thai ${tt.lop}">${escapeHtml(tt.nhan)}</span></td>
+              <td><span class="tk-trang-thai ${tt.lop}">${escapeHtml(tt.nhan)}</span>${d.soLanThu ? `<div style="font-size:0.78rem;color:var(--color-danger-text);margin-top:4px">Tự động thử ${d.soLanThu}/10 lần — ${escapeHtml(d.loiGanNhat)}</div>` : ''}</td>
               <td>${escapeHtml(d.trackingId || '—')}</td>
               <td>${escapeHtml(d.hangVanChuyen || '—')}</td>
               <td>${d.thoiGianSanXuat ? dinhDangNgayGioNganAnToan(d.thoiGianSanXuat) : '—'}</td>
+              <td>${d.hanTuMua ? dinhDangNgayGioNganAnToan(d.hanTuMua) : '—'}</td>
               <td style="display:flex;gap:6px;flex-wrap:wrap">
                 ${d.trangThai === 'DA_MUA' ? '' : `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="muaThuCongTuBang(this, '${escapeJsChuoi(d.sttKey)}', '${d.trangThai}')">Mua ngay</button>`}
                 ${d.trangThai === 'DA_MUA' ? `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="apDungInLabelTuBang(this, '${escapeJsChuoi(d.sttKey)}')">IN LABEL</button>` : ''}
                 <button type="button" class="btn-hanh-dong" style="padding:6px 10px;font-size:0.82rem" onclick="apDungMuaVaInLabelTuBang(this, '${escapeJsChuoi(d.sttKey)}', '${d.trangThai}')">MUA TRACKING và IN LABEL</button>
+                ${d.trangThai === 'CHUYEN_THU_CONG' ? `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="choTuDongLaiTuBang(this, '${escapeJsChuoi(d.sttKey)}')">Cho tự động thử lại</button>` : ''}
               </td>
             </tr>`;
           }).join('')}
@@ -483,6 +502,41 @@ async function taiDanhSach() {
   }
 
   hienPopupNeuCoMoi(ds);
+  await taiCanhBaoThuCong(); // mua/đặt lại xong -> cảnh báo cập nhật theo
+}
+
+// Cảnh báo lớn: đơn đã thử TỰ ĐỘNG mua 10 lần không được, đã chuyển MUA THỦ CÔNG (30/09/2026). Lỗi tải/403 -> ẩn.
+async function taiCanhBaoThuCong() {
+  const el = document.getElementById('canh-bao-thu-cong');
+  let ds = [];
+  try { ds = await apiFetch('/tracking/canh-bao-thu-cong'); } catch (e) { /* không có quyền / lỗi mạng -> không hiện */ }
+  if (!ds.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.style.display = '';
+  el.innerHTML = `
+    <div style="background:var(--color-danger-bg);color:var(--color-danger-text);border:3px solid var(--color-danger-text);border-radius:8px;padding:14px 16px;margin-bottom:var(--space-4)">
+      <div style="font-size:1.2rem;font-weight:700;display:flex;gap:8px;align-items:center">${icon('alert', { size: 24 })} ${ds.length} ĐƠN KHÔNG THỂ TỰ ĐỘNG MUA TRACKING — ĐÃ CHUYỂN SANG MUA THỦ CÔNG</div>
+      <p style="margin:6px 0 10px">Hệ thống đã tự động thử 10 lần không thành công và dừng thử. Kiểm tra nguyên nhân, sửa thông tin đơn rồi bấm "Mua ngay" hoặc "Cho tự động thử lại".</p>
+      ${ds.map(d => `
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 0;border-top:1px solid color-mix(in srgb, var(--color-danger-text) 25%, transparent)">
+          <a href="/order.html?stt=${encodeURIComponent(d.sttKey)}" style="font-weight:700;color:inherit">${escapeHtml(d.sttKey)}</a>
+          <span style="flex:1 1 260px;min-width:0;word-break:break-word">${escapeHtml(d.lyDo || '(không rõ nguyên nhân)')} <small>(thử ${d.soLanThu} lần${d.thoiGianThu ? `, gần nhất ${dinhDangNgayGioNganAnToan(d.thoiGianThu)}` : ''})</small></span>
+          <button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="muaThuCongTuBang(this, '${escapeJsChuoi(d.sttKey)}', 'CHUYEN_THU_CONG')">Mua ngay</button>
+          <button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="choTuDongLaiTuBang(this, '${escapeJsChuoi(d.sttKey)}')">Cho tự động thử lại</button>
+        </div>`).join('')}
+    </div>`;
+}
+
+// "Cho tự động thử lại" — đặt lại số lần thử, job tự động mua lại đơn này ở các lượt sau (tối đa 10 lần nữa).
+async function choTuDongLaiTuBang(btn, sttKey) {
+  if (!confirm(`Cho hệ thống tự động thử mua tracking lại cho đơn ${sttKey}? (Nên sửa xong thông tin đơn trước — tối đa 10 lần thử nữa.)`)) return;
+  btn.disabled = true;
+  try {
+    const kq = await apiFetch('/tracking/cho-tu-dong-lai', { method: 'POST', body: JSON.stringify({ sttKeys: [sttKey] }) });
+    if (kq.loi.length) alert('Không thực hiện được: ' + kq.loi[0].lyDo);
+  } catch (e) { alert('Lỗi: ' + e.message); }
+  btn.disabled = false;
+  await taiDanhSach();
+  await taiLogs();
 }
 
 // Nút "Mua ngay" — mua tracking THỦ CÔNG cho 1 đơn, bỏ qua bộ đếm "x phút" (bổ sung 09/09/2026, theo
