@@ -1,5 +1,5 @@
 // AI QC (30/09/2026, theo yêu cầu người dùng) — QC thủ công theo STT_Key ở menu QC (routes/qc.js, CHỈ superadmin).
-// Triển khai theo giai đoạn: QC3 (dán tem) -> QC2 (sản xuất, 30/09/2026) -> QC1 (vẽ file, làm SAU khi người dùng xác nhận QC2).
+// Triển khai theo giai đoạn đã xác nhận: QC3 (dán tem) -> QC2 (sản xuất) -> QC1 (vẽ file) — cả 3 xong 30/09/2026.
 // Mỗi lần chạy (kể cả lỗi API / thiếu dữ liệu) ghi 1 dòng qc_log (nhatKyDbService.js). KHÔNG đổi dữ liệu/trạng thái đơn.
 // Kết quả luôn là PASS / FAIL / CAN_CHECK_LAI; server tự kiểm tra lại phần đối chiếu được bằng dữ liệu (mã tracking),
 // không tin tuyệt đối vào AI — AI trả PASS mà mã trên tem không khớp đơn thì vẫn FAIL.
@@ -14,7 +14,7 @@ const { thoiGianVNISOString } = require('../dateUtils');
 const aiProvider = require('./aiProvider');
 
 const LOAI_QC = { QC1: 'QC1 – QC Vẽ File', QC2: 'QC2 – QC Sản Xuất', QC3: 'QC3 – QC Dán Tem' };
-const LOAI_DA_TRIEN_KHAI = ['QC2', 'QC3'];
+const LOAI_DA_TRIEN_KHAI = ['QC1', 'QC2', 'QC3'];
 const MODEL_MAC_DINH = 'gemini-2.5-flash';
 const KET_QUA = ['PASS', 'FAIL', 'CAN_CHECK_LAI'];
 const DUNG_LUONG_ANH_TOI_DA = 15 * 1024 * 1024; // Gemini giới hạn ~20MB/lượt gửi ảnh trực tiếp
@@ -186,26 +186,23 @@ async function chayQc3(sttKey) {
   };
 }
 
-// ---------------- QC2 – QC SẢN XUẤT ----------------
-// Căn cứ CHÍNH (người dùng xác nhận 30/09/2026): Design/Mockup + ghi chú = yêu cầu gốc; File thêu chỉ để đối chiếu thêm —
-// sản phẩm khác Design là FAIL kể cả khi giống File thêu. Tối đa 10 ảnh/lượt: luôn gửi ảnh đã sản xuất + File thêu 1-3,
-// phần còn lại chia XEN KẼ Design/Mockup theo thứ tự tên file (CHỈ tải đúng số ảnh sẽ gửi, không tải cả thư mục Drive).
-const SO_ANH_TOI_DA_QC2 = 10;
+// ---------------- Phần CHUNG của QC1 (vẽ file) + QC2 (sản xuất): đối chiếu ảnh cần kiểm với Design/Mockup + ghi chú ----------------
+// Căn cứ CHÍNH (người dùng xác nhận 30/09/2026): Design/Mockup + ghi chú = yêu cầu gốc. Tối đa 10 ảnh/lượt: luôn gửi ảnh
+// cần kiểm (+ ảnh phụ), phần còn lại chia XEN KẼ Design/Mockup theo thứ tự tên file (CHỈ tải đúng số ảnh sẽ gửi, không tải
+// cả thư mục Drive). AI tự xác định vai trò ảnh theo NỘI DUNG, không theo tên file.
+const SO_ANH_TOI_DA = 10;
 const NGUON_THAM_KHAO = [{ cot: 'DUONG_DAN_URL', nhan: 'PNG/Design' }, { cot: 'MOCKUP', nhan: 'Mockup' }];
 const COT_FILE_THEU = ['Anh_File_Theu_URL', 'Anh_File_Theu_URL_2', 'Anh_File_Theu_URL_3'];
-// Hạng mục BẮT BUỘC PASS thì kết quả tổng mới được PASS; màu/kích thước/hướng thường thiếu căn cứ -> CAN_CHECK_LAI vẫn cho qua.
-const HANG_MUC_QC2 = ['design', 'text', 'chi_tiet', 'color', 'position', 'huong', 'size', 'loi_san_xuat'];
-const HANG_MUC_BAT_BUOC_QC2 = ['design', 'text', 'chi_tiet', 'position', 'loi_san_xuat'];
 const VAI_TRO_ANH = ['DESIGN', 'MOCKUP', 'FILE_THEU', 'SAN_PHAM', 'THAM_KHAO', 'KHONG_LIEN_QUAN'];
 
-const SCHEMA_QC2 = {
+const schemaDoiChieu = hangMuc => ({
   type: 'object',
   properties: {
     result: { type: 'string', enum: KET_QUA },
     confidence: { type: 'number' },
     design_file: { type: 'string', nullable: true },
     mockup_file: { type: 'string', nullable: true },
-    checked_items: { type: 'object', properties: Object.fromEntries(HANG_MUC_QC2.map(h => [h, HANG_MUC])), required: HANG_MUC_QC2 },
+    checked_items: { type: 'object', properties: Object.fromEntries(hangMuc.map(h => [h, HANG_MUC])), required: hangMuc },
     issues: { type: 'array', items: { type: 'string' } },
     reason: { type: 'string' },
     vai_tro_anh: {
@@ -214,27 +211,20 @@ const SCHEMA_QC2 = {
     },
   },
   required: ['result', 'confidence', 'design_file', 'mockup_file', 'checked_items', 'issues', 'reason', 'vai_tro_anh'],
-};
+});
 
-function promptQc2(duLieu, dsAnh) {
-  return [
-    'Bạn là nhân viên QC của xưởng thêu, nhiệm vụ: kiểm tra SẢN PHẨM THÊU THỰC TẾ (ảnh "san_pham") có đúng yêu cầu đơn hàng hay không.',
-    'Dữ liệu đơn hàng (JSON):',
-    JSON.stringify(duLieu, null, 2),
-    '',
-    'Danh sách ảnh gửi kèm (tên ảnh đứng ngay trước mỗi ảnh). "nguon" chỉ là CỘT DỮ LIỆU chứa link — KHÔNG chắc chắn là vai trò thật của ảnh:',
-    JSON.stringify(dsAnh, null, 2),
-    '',
-    'Quy tắc BẮT BUỘC:',
-    '1. Xác định vai trò TỪNG ảnh vào "vai_tro_anh" (DESIGN / MOCKUP / FILE_THEU / SAN_PHAM / THAM_KHAO / KHONG_LIEN_QUAN) dựa trên NỘI DUNG ảnh, dữ liệu đơn, ghi chú và quan hệ giữa các ảnh — KHÔNG dựa vào tên file. Chọn design_file và mockup_file là ĐÚNG tên ảnh trong danh sách (null nếu không xác định chắc chắn).',
-    '2. Yêu cầu CHÍNH là Design + Mockup + các ghi chú (ghi_chu, ghi_chu_xuong, ghi_chu_ve_file, ghi_chu_chay_may). File thêu chỉ để đối chiếu thêm: sản phẩm khác Design là FAIL kể cả khi giống File thêu — khi đó ghi rõ trong issues "lỗi có thể từ File thêu".',
-    '3. Kiểm tra checked_items (PASS / FAIL / CAN_CHECK_LAI): design (đúng thiết kế), text (ĐỌC TỪNG KÝ TỰ: thiếu, sai, thừa ký tự — rất quan trọng), chi_tiet (thiếu/thừa chi tiết), color (màu chỉ/màu áo), position (vị trí thêu so với vi_tri_theu/ghi chú/mockup), huong (xoay/lật), size (kích thước/tỷ lệ — chỉ khi dữ liệu có số đo rõ, nếu không thì CAN_CHECK_LAI), loi_san_xuat (lỗi thêu nhìn thấy được: bung chỉ, nhăn, lệch, sót chỉ...).',
-    '4. Nếu Design và Mockup khác nhau: nêu rõ khác biệt, xem ghi chú để biết bên nào là yêu cầu chính thức; không đủ căn cứ -> CAN_CHECK_LAI. Nhiều ảnh cùng có thể là Design mà không xác định được ảnh chính -> CAN_CHECK_LAI.',
-    '5. Chỉ FAIL khi thấy RÕ lỗi. Ảnh mờ, bị che, góc chụp không thấy rõ, thiếu ảnh -> CAN_CHECK_LAI. Không kết luận kiểu "nhìn khá giống".',
-    '6. result tổng: FAIL nếu có lỗi rõ ràng; PASS chỉ khi xác định được Design, và design, text, chi_tiet, position, loi_san_xuat đều PASS, không có mâu thuẫn dữ liệu; còn lại CAN_CHECK_LAI.',
-    '7. confidence từ 0 đến 1. issues và reason viết tiếng Việt, ngắn gọn, nêu cụ thể (vd ký tự nào sai, chi tiết nào thiếu).',
-  ].join('\n');
-}
+// Phần mở đầu chung của prompt: dữ liệu đơn + danh sách ảnh + quy tắc xác định vai trò ảnh.
+const dauPrompt = (nhiemVu, duLieu, dsAnh) => [
+  nhiemVu,
+  'Dữ liệu đơn hàng (JSON):',
+  JSON.stringify(duLieu, null, 2),
+  '',
+  'Danh sách ảnh gửi kèm (tên ảnh đứng ngay trước mỗi ảnh). "nguon" chỉ là CỘT DỮ LIỆU chứa link — KHÔNG chắc chắn là vai trò thật của ảnh:',
+  JSON.stringify(dsAnh, null, 2),
+  '',
+  'Quy tắc BẮT BUỘC:',
+  '1. Xác định vai trò TỪNG ảnh vào "vai_tro_anh" (DESIGN / MOCKUP / FILE_THEU / SAN_PHAM / THAM_KHAO / KHONG_LIEN_QUAN) dựa trên NỘI DUNG ảnh, dữ liệu đơn, ghi chú và quan hệ giữa các ảnh — KHÔNG dựa vào tên file. Chọn design_file và mockup_file là ĐÚNG tên ảnh trong danh sách (null nếu không xác định chắc chắn).',
+];
 
 // Link ảnh tham khảo (Design/Mockup) CHƯA tải, theo từng nguồn: [[{ nguon, ten, link, tai }], ...] + lỗi đọc link/thư mục.
 async function lietKeAnhThamKhao(row) {
@@ -273,14 +263,15 @@ async function taiVaChuanHoa(taiFn) {
   return (await chuanHoaAnh(buffer)).anh; // JPEG, cạnh dài tối đa 1400px
 }
 
-// Làm sạch JSON AI trả về cho QC2 + ràng buộc hệ thống (tên file phải có thật, hạng mục FAIL -> FAIL, PASS phải đủ điều kiện).
-function hoanThienKetQua2(ai, tenHopLe) {
+// Làm sạch JSON AI trả về + ràng buộc hệ thống: tên file phải có thật; hạng mục FAIL -> FAIL; PASS chỉ khi xác định được
+// Design và mọi hạng mục `batBuoc` đều PASS (các hạng mục còn lại được phép CAN_CHECK_LAI).
+function hoanThienKetQuaDoiChieu(ai, tenHopLe, { hangMuc, batBuoc }) {
   const kq = {
     result: KET_QUA.includes(ai && ai.result) ? ai.result : 'CAN_CHECK_LAI',
     confidence: Math.min(1, Math.max(0, Number(ai && ai.confidence) || 0)),
     design_file: tenHopLe.has(ai && ai.design_file) ? ai.design_file : null,
     mockup_file: tenHopLe.has(ai && ai.mockup_file) ? ai.mockup_file : null,
-    checked_items: Object.fromEntries(Object.entries((ai && ai.checked_items) || {}).filter(([k, v]) => HANG_MUC_QC2.includes(k) && KET_QUA.includes(v))),
+    checked_items: Object.fromEntries(Object.entries((ai && ai.checked_items) || {}).filter(([k, v]) => hangMuc.includes(k) && KET_QUA.includes(v))),
     issues: Array.isArray(ai && ai.issues) ? ai.issues.map(String) : [],
     reason: String((ai && ai.reason) || ''),
     vai_tro_anh: Array.isArray(ai && ai.vai_tro_anh) ? ai.vai_tro_anh.filter(v => v && tenHopLe.has(v.ten)) : [],
@@ -300,34 +291,39 @@ function hoanThienKetQua2(ai, tenHopLe) {
   }
   if (kq.result === 'PASS') {
     if (!kq.design_file) haXuong('Không xác định chắc chắn được Design chính — không thể PASS.');
-    const chuaDat = HANG_MUC_BAT_BUOC_QC2.filter(h => kq.checked_items[h] !== 'PASS');
+    const chuaDat = batBuoc.filter(h => kq.checked_items[h] !== 'PASS');
     if (chuaDat.length) haXuong(`Hạng mục bắt buộc chưa PASS: ${chuaDat.join(', ')} — không thể PASS.`);
   }
   return kq;
 }
 
-async function chayQc2(sttKey) {
+// Chạy 1 lượt QC đối chiếu. qc = {
+//   loai, anhCanKiem(row) -> [{ ten, nguon, url }] (ảnh BẮT BUỘC, đọc được ít nhất 1), thieuAnh: lý do khi không có ảnh cần kiểm,
+//   anhPhu(row) -> [{ ten, nguon, url }] (gửi thêm nếu đọc được), hangMuc, batBuoc, prompt(duLieu, dsAnh) }
+async function chayDoiChieu(sttKey, qc) {
   const { rows } = await orderService.getAll({ fresh: true });
   const row = rows.find(r => r.STT_Key === sttKey);
   if (!row) throw loiNghiepVu(`Không tìm thấy đơn ${sttKey}.`, 404);
-  const khongGoiAi = (lyDo, anh = [], fileTheu = []) => ({
-    daGoiAi: false, anh, fileTheu,
+  const urlFileTheu = COT_FILE_THEU.map(c => row[c]).filter(Boolean);
+  const khongGoiAi = (lyDo, anh = []) => ({
+    daGoiAi: false, anh, fileTheu: urlFileTheu,
     ketQua: { result: 'CAN_CHECK_LAI', confidence: 0, design_file: null, mockup_file: null, checked_items: {}, issues: [lyDo], reason: 'Chưa đủ dữ liệu để QC — cần người kiểm tra lại.', kiem_tra_he_thong: [lyDo] },
   });
 
-  const urlSanPham = row.Anh_Da_San_Xuat_URL || '';
-  if (!urlSanPham) return khongGoiAi('Đơn chưa có ảnh đã sản xuất.');
+  const canKiem = qc.anhCanKiem(row);
+  if (!canKiem.length) return khongGoiAi(qc.thieuAnh);
   const ghiChuHeThong = [];
   const dsAnh = []; // { ten, nguon, link, mime, data }
-  try {
-    dsAnh.push({ ten: 'san_pham', nguon: 'Ảnh đã sản xuất', link: urlSanPham, mime: 'image/jpeg', data: await taiVaChuanHoa(() => taiAnh(urlSanPham)) });
-  } catch (err) {
-    return khongGoiAi(`Không đọc được ảnh đã sản xuất (${err.message}).`, [urlSanPham]);
+  const loiCanKiem = [];
+  for (const a of canKiem) {
+    try { dsAnh.push({ ten: a.ten, nguon: a.nguon, link: a.url, mime: 'image/jpeg', data: await taiVaChuanHoa(() => taiAnh(a.url)) }); }
+    catch (err) { loiCanKiem.push(`Không đọc được ${a.nguon} (${err.message}).`); }
   }
-  const urlFileTheu = COT_FILE_THEU.map(c => row[c]).filter(Boolean);
-  for (const [i, url] of urlFileTheu.entries()) {
-    try { dsAnh.push({ ten: `file_theu_${i + 1}`, nguon: `File thêu ${i + 1}`, link: url, mime: 'image/jpeg', data: await taiVaChuanHoa(() => taiAnh(url)) }); }
-    catch (err) { ghiChuHeThong.push(`Không đọc được File thêu ${i + 1} (${err.message}).`); }
+  if (!dsAnh.length) return khongGoiAi(loiCanKiem.join(' '), canKiem.map(a => a.url));
+  ghiChuHeThong.push(...loiCanKiem);
+  for (const a of qc.anhPhu(row)) {
+    try { dsAnh.push({ ten: a.ten, nguon: a.nguon, link: a.url, mime: 'image/jpeg', data: await taiVaChuanHoa(() => taiAnh(a.url)) }); }
+    catch (err) { ghiChuHeThong.push(`Không đọc được ${a.nguon} (${err.message}).`); }
   }
 
   const { theoNguon, loi } = await lietKeAnhThamKhao(row);
@@ -336,7 +332,7 @@ async function chayQc2(sttKey) {
   const tenDaDung = new Set(dsAnh.map(a => a.ten));
   let soThamKhao = 0;
   for (const uv of ungVien) {
-    if (dsAnh.length >= SO_ANH_TOI_DA_QC2) break;
+    if (dsAnh.length >= SO_ANH_TOI_DA) break;
     const goc = `${uv.nguon === 'Mockup' ? 'mockup' : 'design'}__${uv.ten}`;
     let ten = goc;
     for (let n = 2; tenDaDung.has(ten); n++) ten = `${goc}_${n}`;
@@ -346,9 +342,9 @@ async function chayQc2(sttKey) {
       soThamKhao++;
     } catch (err) { ghiChuHeThong.push(`Không đọc được ảnh ${uv.nguon} "${uv.ten}" (${err.message}).`); }
   }
-  if (ungVien.length > soThamKhao) ghiChuHeThong.push(`Chỉ gửi ${soThamKhao}/${ungVien.length} ảnh Design/Mockup (giới hạn ${SO_ANH_TOI_DA_QC2} ảnh mỗi lần QC).`);
+  if (ungVien.length > soThamKhao) ghiChuHeThong.push(`Chỉ gửi ${soThamKhao}/${ungVien.length} ảnh Design/Mockup (giới hạn ${SO_ANH_TOI_DA} ảnh mỗi lần QC).`);
   const anhDaDung = dsAnh.map(a => a.link);
-  if (!soThamKhao) return khongGoiAi('Không có ảnh Design/Mockup nào đọc được — không có căn cứ đối chiếu.', anhDaDung, urlFileTheu);
+  if (!soThamKhao) return khongGoiAi('Không có ảnh Design/Mockup nào đọc được — không có căn cứ đối chiếu.', anhDaDung);
 
   const duLieu = {
     ma_don: row.STT_Key,
@@ -358,18 +354,65 @@ async function chayQc2(sttKey) {
     ghi_chu: row.GHI_CHU || '', ghi_chu_xuong: ghiChuXuongHienThi(row),
     ghi_chu_ve_file: row.GHI_CHU_VE_FILE || '', ghi_chu_chay_may: row.GHI_CHU_CHAY_MAY || '',
   };
-  const { apiKey, model } = layCauHinh('QC2');
+  const { apiKey, model } = layCauHinh(qc.loai);
   const ai = await aiProvider.phanTichAnh({
-    apiKey, model, schema: SCHEMA_QC2,
-    prompt: promptQc2(duLieu, dsAnh.map(a => ({ ten: a.ten, nguon: a.nguon }))),
+    apiKey, model, schema: schemaDoiChieu(qc.hangMuc),
+    prompt: qc.prompt(duLieu, dsAnh.map(a => ({ ten: a.ten, nguon: a.nguon }))),
     anh: dsAnh.map(a => ({ mime: a.mime, data: a.data, ten: a.ten })),
   });
-  const ketQua = hoanThienKetQua2(ai, tenDaDung);
+  const ketQua = hoanThienKetQuaDoiChieu(ai, tenDaDung, qc);
   ketQua.kiem_tra_he_thong.unshift(...ghiChuHeThong);
   return { daGoiAi: true, anh: anhDaDung, fileTheu: urlFileTheu, aiGoc: ai, ketQua };
 }
 
-const CHAY_THEO_LOAI = { QC2: chayQc2, QC3: chayQc3 };
+const anhFileTheu = row => COT_FILE_THEU.map((c, i) => row[c] && { ten: `file_theu_${i + 1}`, nguon: `File thêu ${i + 1}`, url: row[c] }).filter(Boolean);
+
+// ---------------- QC2 – QC SẢN XUẤT ----------------
+// Ảnh cần kiểm: ảnh đã sản xuất. File thêu gửi kèm chỉ để đối chiếu — sản phẩm khác Design là FAIL kể cả khi giống File thêu.
+const QC2 = {
+  loai: 'QC2',
+  anhCanKiem: row => (row.Anh_Da_San_Xuat_URL ? [{ ten: 'san_pham', nguon: 'ảnh đã sản xuất', url: row.Anh_Da_San_Xuat_URL }] : []),
+  thieuAnh: 'Đơn chưa có ảnh đã sản xuất.',
+  anhPhu: anhFileTheu,
+  hangMuc: ['design', 'text', 'chi_tiet', 'color', 'position', 'huong', 'size', 'loi_san_xuat'],
+  batBuoc: ['design', 'text', 'chi_tiet', 'position', 'loi_san_xuat'],
+  prompt: (duLieu, dsAnh) => [
+    ...dauPrompt('Bạn là nhân viên QC của xưởng thêu, nhiệm vụ: kiểm tra SẢN PHẨM THÊU THỰC TẾ (ảnh "san_pham") có đúng yêu cầu đơn hàng hay không.', duLieu, dsAnh),
+    '2. Yêu cầu CHÍNH là Design + Mockup + các ghi chú (ghi_chu, ghi_chu_xuong, ghi_chu_ve_file, ghi_chu_chay_may). File thêu chỉ để đối chiếu thêm: sản phẩm khác Design là FAIL kể cả khi giống File thêu — khi đó ghi rõ trong issues "lỗi có thể từ File thêu".',
+    '3. Kiểm tra checked_items (PASS / FAIL / CAN_CHECK_LAI): design (đúng thiết kế), text (ĐỌC TỪNG KÝ TỰ: thiếu, sai, thừa ký tự — rất quan trọng), chi_tiet (thiếu/thừa chi tiết), color (màu chỉ/màu áo), position (vị trí thêu so với vi_tri_theu/ghi chú/mockup), huong (xoay/lật), size (kích thước/tỷ lệ — chỉ khi dữ liệu có số đo rõ, nếu không thì CAN_CHECK_LAI), loi_san_xuat (lỗi thêu nhìn thấy được: bung chỉ, nhăn, lệch, sót chỉ...).',
+    '4. Nếu Design và Mockup khác nhau: nêu rõ khác biệt, xem ghi chú để biết bên nào là yêu cầu chính thức; không đủ căn cứ -> CAN_CHECK_LAI. Nhiều ảnh cùng có thể là Design mà không xác định được ảnh chính -> CAN_CHECK_LAI.',
+    '5. Chỉ FAIL khi thấy RÕ lỗi. Ảnh mờ, bị che, góc chụp không thấy rõ, thiếu ảnh -> CAN_CHECK_LAI. Không kết luận kiểu "nhìn khá giống".',
+    '6. result tổng: FAIL nếu có lỗi rõ ràng; PASS chỉ khi xác định được Design, và design, text, chi_tiet, position, loi_san_xuat đều PASS, không có mâu thuẫn dữ liệu; còn lại CAN_CHECK_LAI.',
+    '7. confidence từ 0 đến 1. issues và reason viết tiếng Việt, ngắn gọn, nêu cụ thể (vd ký tự nào sai, chi tiết nào thiếu).',
+  ].join('\n'),
+};
+
+// ---------------- QC1 – QC VẼ FILE ----------------
+// Ảnh cần kiểm: File thêu 1-3 (ảnh preview file thêu ve_file tải lên). PASS khi (người dùng xác nhận 30/09/2026) design,
+// text, chi_tiet, huong đều PASS và Design/Mockup không mâu thuẫn; màu chỉ, kích thước, tỷ lệ, vị trí được phép CAN_CHECK_LAI
+// (hệ thống không có dữ liệu màu chỉ/kích thước hình thêu; ảnh File thêu thường không thể hiện vị trí trên áo).
+const QC1 = {
+  loai: 'QC1',
+  anhCanKiem: anhFileTheu,
+  thieuAnh: 'Đơn chưa có ảnh File thêu nào.',
+  anhPhu: () => [],
+  hangMuc: ['design', 'text', 'chi_tiet', 'color', 'size', 'ty_le', 'position', 'huong', 'design_mockup'],
+  batBuoc: ['design', 'text', 'chi_tiet', 'huong', 'design_mockup'],
+  prompt: (duLieu, dsAnh) => [
+    ...dauPrompt('Bạn là nhân viên QC của xưởng thêu, nhiệm vụ: kiểm tra FILE THÊU vừa vẽ (các ảnh "file_theu_*" — ảnh xem trước file thêu) có đúng yêu cầu đơn hàng hay không, TRƯỚC khi đưa vào sản xuất.', duLieu, dsAnh),
+    '2. Yêu cầu CHÍNH là Design + Mockup + các ghi chú (ghi_chu, ghi_chu_xuong, ghi_chu_ve_file, ghi_chu_chay_may). Đơn có thể có 2-3 File thêu cho các vị trí/chi tiết khác nhau — đối chiếu tổng thể, mỗi phần của Design phải có trong File thêu tương ứng.',
+    '3. Kiểm tra checked_items (PASS / FAIL / CAN_CHECK_LAI): design (đúng thiết kế, không đổi logo/hình dạng đáng kể), text (ĐỌC TỪNG KÝ TỰ: thiếu, sai, thừa ký tự, sai chính tả so với Design/ghi chú — rất quan trọng), chi_tiet (thiếu/thừa chi tiết), color (màu chỉ — CHỈ khi ghi chú/dữ liệu có thông tin màu chỉ hoặc mã chỉ; không có thì CAN_CHECK_LAI), size (kích thước — chỉ khi có số đo rõ, nếu không thì CAN_CHECK_LAI), ty_le (tỷ lệ/biến dạng so với Design: bị kéo dãn, bóp méo, phóng to/thu nhỏ sai từng phần), position (vị trí trên áo so với vi_tri_theu/ghi chú/mockup — File thêu không thể hiện vị trí thì CAN_CHECK_LAI), huong (xoay/lật ngược/đối xứng gương), design_mockup (Design và Mockup có nhất quán không: PASS nếu không mâu thuẫn; mâu thuẫn mà ghi chú không nói rõ bên nào đúng -> CAN_CHECK_LAI).',
+    '4. Nếu Design và Mockup khác nhau: nêu rõ khác biệt, xem ghi chú để biết bên nào là yêu cầu chính thức; không tự ý chọn 1 nguồn khi chưa đủ căn cứ. Nhiều ảnh cùng có thể là Design mà không xác định được ảnh chính -> CAN_CHECK_LAI.',
+    '5. Chỉ FAIL khi thấy RÕ lỗi. Ảnh mờ, bị cắt, không đủ để kết luận -> CAN_CHECK_LAI. Không kết luận kiểu "nhìn khá giống", không suy đoán kích thước/màu khi không có dữ liệu.',
+    '6. result tổng: FAIL nếu có lỗi rõ ràng; PASS chỉ khi xác định được Design, và design, text, chi_tiet, huong, design_mockup đều PASS; còn lại CAN_CHECK_LAI.',
+    '7. confidence từ 0 đến 1. issues và reason viết tiếng Việt, ngắn gọn, nêu cụ thể (vd ký tự nào sai, chi tiết nào thiếu, File thêu nào).',
+  ].join('\n'),
+};
+
+const chayQc2 = sttKey => chayDoiChieu(sttKey, QC2);
+const chayQc1 = sttKey => chayDoiChieu(sttKey, QC1);
+
+const CHAY_THEO_LOAI = { QC1: chayQc1, QC2: chayQc2, QC3: chayQc3 };
 
 // Chạy 1 lượt QC + ghi log. -> { id, loai, sttKey, model, anh, ketQua | null, loi | null }
 // Mã đơn không tồn tại / loại chưa triển khai -> throw (status 404/400), vẫn ghi log với mã không tồn tại.
@@ -403,4 +446,4 @@ async function thuKetNoi(loai) {
   await aiProvider.thuKetNoi(layCauHinh(loai));
 }
 
-module.exports = { LOAI_QC, LOAI_DA_TRIEN_KHAI, MODEL_MAC_DINH, layCauHinh, chayQc, thuKetNoi, hoanThienKetQua3, hoanThienKetQua2, chuanHoaMa, khopMa };
+module.exports = { LOAI_QC, LOAI_DA_TRIEN_KHAI, MODEL_MAC_DINH, layCauHinh, chayQc, thuKetNoi, hoanThienKetQua3, hoanThienKetQuaDoiChieu, chuanHoaMa, khopMa };
