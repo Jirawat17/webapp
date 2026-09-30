@@ -260,10 +260,10 @@ function renderKhuVucThaoTac(don) {
       </div>`;
   }
 
-  // Sửa trạng thái THỦ CÔNG — CHỈ admin/superadmin (28/09/2026, theo yêu cầu người dùng; trước đây mọi vai trò).
-  // ve_file đưa đơn lỗi về làm lại ở trang Đơn hàng (chọn đơn -> "Chuyển đến trạng thái..." / nút Phôi, Vẽ file).
+  // Sửa trạng thái THỦ CÔNG — admin/superadmin (28/09/2026, theo yêu cầu người dùng; trước đây mọi vai trò) + ve_file
+  // (mở lại 30/09/2026, theo yêu cầu người dùng — đủ 3 ô như admin, đúng quyền ve_file vốn có ở trang Đơn hàng).
   // Server (routes/orders.js, TRUONG_DUOC_SUA) vẫn là nơi chặn thật sự nếu vai trò không đủ quyền sửa cột nào đó.
-  if (laAdmin(user.vaiTro)) html += `
+  if (laAdmin(user.vaiTro) || user.vaiTro === 've_file') html += `
     <div class="upload-box">
       <label>Sửa trạng thái thủ công</label>
       <label for="sua-tinh-trang" style="font-size:0.85rem;font-weight:400">Trạng thái chung (TRANG_THAI_XUONG)</label>
