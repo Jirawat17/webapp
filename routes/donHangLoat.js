@@ -3,6 +3,8 @@ const router = express.Router();
 const orderService = require('../services/orderService');
 const donHangLoatService = require('../services/donHangLoatService');
 const { requireRole } = require('../middleware/auth');
+const trangThaiDbService = require('../services/trangThaiDbService');
+const { ghiLog } = require('../services/logService');
 
 // Toàn bộ tính năng "Đơn hàng loạt" (gợi ý + quản lý chính thức) CHỈ dành admin/ve_file — gộp 1 chỗ
 // duy nhất (khác routes/orders.js vốn có nhiều phạm vi quyền khác nhau trộn lẫn trong 1 file) vì MỌI
@@ -44,6 +46,22 @@ router.get('/goi-y', async (req, res) => {
     .sort((a, b) => b.donHang.length - a.donHang.length);
 
   res.json({ nhoms });
+});
+
+// Xoá 1 nhóm hệ thống đề xuất (30/09/2026) — chỉ bỏ mã NHOM_HANG_LOAT khỏi đúng các đơn đang hiển thị
+// trong nhóm (trong phạm vi Xưởng của người dùng). Không lưu "nhóm đã xoá": lần quét sau có thể gom lại.
+router.delete('/goi-y/:maNhom', async (req, res) => {
+  const user = req.session.user;
+  const { maNhom } = req.params;
+  const sttKeys = Array.isArray(req.body?.sttKeys) ? req.body.sttKeys : [];
+  const { rows } = await orderService.getAll({ fresh: true });
+  const xoa = orderService.locTheoXuong(rows, user)
+    .filter(r => r.NHOM_HANG_LOAT === maNhom && sttKeys.includes(r.STT_Key))
+    .map(r => r.STT_Key);
+  if (!xoa.length) return res.status(400).json({ error: 'Không còn đơn nào thuộc nhóm đề xuất này.' });
+  xoa.forEach(stt => trangThaiDbService.ghiDe(stt, { NHOM_HANG_LOAT: '' }));
+  await ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'XOA_NHOM_DE_XUAT_HANG_LOAT', chiTiet: { maNhom, sttKeys: xoa } });
+  res.json({ ok: true, soDon: xoa.length });
 });
 
 router.get('/nguong', async (req, res) => {

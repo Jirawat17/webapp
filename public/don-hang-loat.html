@@ -157,6 +157,9 @@ async function taiDanhSachGoiY() {
     <div class="khoi-nhom-hang-loat">
       <div class="dong-tieu-de-nhom">
         <h4>Nhóm ${escapeHtml(nhom.maNhom)} <span class="meta">(${nhom.donHang.length} đơn)</span></h4>
+        <button type="button" class="btn-hanh-dong phu nguy-hiem"
+          data-ma-nhom="${escapeHtml(nhom.maNhom)}" data-stt-keys="${escapeHtml(JSON.stringify(nhom.donHang.map(d => d.STT_Key)))}"
+          onclick="xoaGoiY(this.dataset.maNhom, JSON.parse(this.dataset.sttKeys))">Xoá nhóm đề xuất</button>
         <button type="button" class="btn-hanh-dong phu"
           data-ma-nhom="${escapeHtml(nhom.maNhom)}" data-stt-keys="${escapeHtml(JSON.stringify(nhom.donHang.map(d => d.STT_Key)))}"
           onclick="xacNhanGoiY(this.dataset.maNhom, JSON.parse(this.dataset.sttKeys))">Xác nhận thành Đơn hàng loạt</button>
@@ -183,6 +186,16 @@ async function xacNhanGoiY(maNhom, sttKeys) {
     const kq = await apiFetch('/don-hang-loat', { method: 'POST', body: JSON.stringify({ sttKeys, tenNhom }) });
     alert(`Đã tạo ${kq.maDonHangLoat} — "${tenNhom}" (${sttKeys.length} đơn).`);
     await taiDanhSachXacNhan();
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
+  }
+}
+
+async function xoaGoiY(maNhom, sttKeys) {
+  if (!confirm(`Xoá nhóm đề xuất ${maNhom} (${sttKeys.length} đơn)? Các đơn không bị xoá, chỉ bỏ khỏi nhóm đề xuất.`)) return;
+  try {
+    await apiFetch(`/don-hang-loat/goi-y/${encodeURIComponent(maNhom)}`, { method: 'DELETE', body: JSON.stringify({ sttKeys }) });
+    await taiDanhSachGoiY();
   } catch (e) {
     alert('Lỗi: ' + e.message);
   }

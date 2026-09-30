@@ -126,6 +126,8 @@ function moTaLichSu(dong, { anXuong = false, xuongDuocThay = [] } = {}) {
       return kq(`thêm ${soDon(c)} đơn vào Đơn hàng loạt ${c.maDonHangLoat || ''}`);
     case 'XOA_DON_HANG_LOAT':
       return kq(`bỏ đơn khỏi Đơn hàng loạt ${c.maDonHangLoat || ''}`);
+    case 'XOA_NHOM_DE_XUAT_HANG_LOAT':
+      return kq(`xoá nhóm hệ thống đề xuất ${c.maNhom || ''} (${soDon(c)} đơn)`);
     case 'XOA_NHOM_HANG_LOAT':
       return kq(`xoá Đơn hàng loạt ${c.maDonHangLoat || ''}${c.tenNhom ? ` "${c.tenNhom}"` : ''}`);
     case 'DOI_TEN_HANG_LOAT':
