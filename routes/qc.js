@@ -73,6 +73,34 @@ router.post('/telegram/gui-thu', async (req, res) => {
   }
 });
 
+// Ngưỡng kết luận riêng từng QC (01/10/2026): pass/fail = score 0–100, ccl = độ chắc chắn tối thiểu (%). Xem qcService#quyetDinhKetQua.
+router.get('/nguong', (req, res) => {
+  res.json({
+    macDinh: qcService.NGUONG_MAC_DINH,
+    ds: Object.entries(qcService.LOAI_QC).map(([loai, ten]) => {
+      const n = qcService.layNguong(loai);
+      return { loai, ten, ...n, loi: qcService.kiemTraNguong(n, ten) };
+    }),
+  });
+});
+// body: { nguong: { QC1: { pass, fail, ccl }, ... } } — kiểm tra TẤT CẢ trước, 1 QC sai thì không lưu QC nào. Giá trị lưu
+// đúng như người dùng nhập (không tự làm tròn/sửa).
+router.post('/nguong', (req, res) => {
+  const nguong = req.body && typeof req.body.nguong === 'object' && req.body.nguong ? req.body.nguong : {};
+  const cacLoai = Object.keys(nguong);
+  if (!cacLoai.length) return res.status(400).json({ error: 'Chưa có ngưỡng nào để lưu.' });
+  for (const loai of cacLoai) {
+    if (!Object.hasOwn(qcService.LOAI_QC, loai)) return res.status(400).json({ error: `Loại QC không hợp lệ: ${loai}.` });
+    const loi = qcService.kiemTraNguong(nguong[loai], qcService.LOAI_QC[loai]);
+    if (loi) return res.status(400).json({ error: loi, loai });
+  }
+  for (const loai of cacLoai) {
+    const { pass, fail, ccl } = nguong[loai];
+    caiDatDbService.datCauHinhQc(loai, { NguongPass: String(qcService.docSo(pass)), NguongFail: String(qcService.docSo(fail)), NguongCcl: String(qcService.docSo(ccl)) });
+  }
+  res.json({ ok: true });
+});
+
 router.post('/chay', async (req, res) => {
   try {
     res.json(await qcService.chayQc({ sttKey: req.body.sttKey, loai: req.body.loai, user: req.session.user }));

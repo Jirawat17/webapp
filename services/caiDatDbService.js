@@ -309,7 +309,9 @@ db.exec(`CREATE TABLE IF NOT EXISTS qc_cau_hinh (
 )`);
 // Claude (01/10/2026, theo yêu cầu người dùng): mỗi QC chọn NhaCungCap ('gemini' | 'claude'); key/model Gemini giữ ở
 // ApiKey/Model cũ, Claude ở ApiKeyClaude/ModelClaude — lưu song song, đổi qua lại không mất key bên kia.
-const COT_QC = ['NhaCungCap', 'ApiKey', 'Model', 'ApiKeyClaude', 'ModelClaude'];
+// Ngưỡng kết luận riêng từng QC (01/10/2026): NguongPass / NguongFail (score 0–100) + NguongCcl (độ chắc chắn tối thiểu, %).
+// Trống = mặc định trong services/qc/qcService.js#NGUONG_MAC_DINH.
+const COT_QC = ['NhaCungCap', 'ApiKey', 'Model', 'ApiKeyClaude', 'ModelClaude', 'NguongPass', 'NguongFail', 'NguongCcl'];
 const cotQcDaCo = db.prepare(`PRAGMA table_info(qc_cau_hinh)`).all().map(c => c.name);
 for (const cot of COT_QC) if (!cotQcDaCo.includes(cot)) db.exec(`ALTER TABLE qc_cau_hinh ADD COLUMN ${cot} TEXT NOT NULL DEFAULT ''`);
 // { QC1: { NhaCungCap, ApiKey, Model, ApiKeyClaude, ModelClaude }, ... } — loại chưa lưu lần nào không có trong kết quả.

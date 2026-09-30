@@ -50,13 +50,143 @@ function khopMa(a, b) {
   return ngan.length >= 10 && dai.includes(ngan);
 }
 
+// ---------------- NGƯỠNG KẾT LUẬN + QUYẾT ĐỊNH CUỐI (01/10/2026, theo yêu cầu người dùng) ----------------
+// AI chỉ PHÂN TÍCH: score (0–100, mức khớp yêu cầu, càng CAO càng tốt), confidence (0–1, độ chắc chắn), từng hạng mục,
+// evidence (quan sát trực tiếp) và result ĐỀ XUẤT. Kết quả cuối do quyetDinhKetQua() — nơi DUY NHẤT quyết định PASS/FAIL/
+// CAN_CHECK_LAI — tính từ ngưỡng cấu hình riêng từng QC (menu QC) + luật cứng hệ thống tự kiểm tra (luật cứng ưu tiên).
+const NGUONG_MAC_DINH = { pass: 85, fail: 40, ccl: 70 };
+const TEN_NGUONG = { pass: 'PASS', fail: 'FAIL', ccl: 'CAN_CHECK_LAI' };
+
+// Chỉ nhận số thật (number hữu hạn hoặc chuỗi thập phân "85", "72.5"). -> number | null
+function docSo(v) {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+  if (typeof v === 'string' && /^\s*\d+(\.\d+)?\s*$/.test(v)) return Number(v);
+  return null;
+}
+
+// n = { pass, fail, ccl } (số hoặc chuỗi). -> thông báo lỗi tiếng Việt, hoặc null nếu hợp lệ.
+// Quy tắc: cả 3 là số 0–100; FAIL < PASS (score nằm giữa = CAN_CHECK_LAI). CAN_CHECK_LAI là thang ĐỘ CHẮC CHẮN (%), độc lập.
+function kiemTraNguong(n, ten = '') {
+  const tien = ten ? `${ten}: ` : '';
+  const so = {};
+  for (const k of ['pass', 'fail', 'ccl']) {
+    const x = docSo(n && n[k]);
+    if (x === null) return `${tien}ngưỡng ${TEN_NGUONG[k]} phải là số.`;
+    if (x < 0 || x > 100) return `${tien}ngưỡng ${TEN_NGUONG[k]} phải từ 0 đến 100 (đang là ${x}).`;
+    so[k] = x;
+  }
+  if (!(so.fail < so.pass)) return `${tien}ngưỡng FAIL (${so.fail}) phải NHỎ HƠN ngưỡng PASS (${so.pass}) — score nằm giữa 2 ngưỡng mới là CAN_CHECK_LAI.`;
+  return null;
+}
+
+// Ngưỡng đang lưu của 1 QC (trống = mặc định). Giá trị giữ nguyên dạng đã lưu — gọi kiemTraNguong() trước khi dùng.
+function layNguong(loai) {
+  const ch = caiDatDbService.layCauHinhQc()[loai] || {};
+  const lay = (cot, k) => (ch[cot] === undefined || ch[cot] === '' ? NGUONG_MAC_DINH[k] : ch[cot]);
+  return { pass: lay('NguongPass', 'pass'), fail: lay('NguongFail', 'fail'), ccl: lay('NguongCcl', 'ccl') };
+}
+const nguongSo = n => ({ pass: docSo(n.pass), fail: docSo(n.fail), ccl: docSo(n.ccl) });
+
+// Làm sạch phần CHUNG của JSON AI. Không tự sửa giá trị sai — ghi vào loiDinhDang để quyết định an toàn (CAN_CHECK_LAI).
+// Hạng mục AI chấm FAIL mà không có evidence nào của chính hạng mục đó -> hạ xuống CAN_CHECK_LAI (FAIL phải có bằng chứng).
+function chuanHoaAi(ai, hangMuc) {
+  const a = ai && typeof ai === 'object' ? ai : {};
+  const loiDinhDang = [];
+  const aiDeXuat = KET_QUA.includes(a.result) ? a.result : null;
+  if (!aiDeXuat) loiDinhDang.push('thiếu/sai "result" đề xuất.');
+  const score = docSo(a.score);
+  const scoreHopLe = score !== null && score >= 0 && score <= 100;
+  if (!scoreHopLe) loiDinhDang.push('thiếu/sai "score" (phải là số 0–100).');
+  const tinCay = docSo(a.confidence);
+  const tinCayHopLe = tinCay !== null && tinCay >= 0 && tinCay <= 1;
+  if (!tinCayHopLe) loiDinhDang.push('thiếu/sai "confidence" (phải là số 0–1).');
+  const evidence = (Array.isArray(a.evidence) ? a.evidence : [])
+    .filter(e => e && hangMuc.includes(e.hang_muc) && typeof e.quan_sat === 'string' && e.quan_sat.trim())
+    .slice(0, 40)
+    .map(e => ({ hang_muc: e.hang_muc, anh: typeof e.anh === 'string' ? e.anh : '', quan_sat: e.quan_sat.trim() }));
+  const kq = {
+    result: 'CAN_CHECK_LAI',
+    ai_de_xuat: aiDeXuat,
+    score: scoreHopLe ? score : null,
+    confidence: tinCayHopLe ? tinCay : 0,
+    checked_items: Object.fromEntries(Object.entries(a.checked_items && typeof a.checked_items === 'object' ? a.checked_items : {})
+      .filter(([k, v]) => hangMuc.includes(k) && KET_QUA.includes(v))),
+    evidence,
+    issues: Array.isArray(a.issues) ? a.issues.map(String) : [],
+    reason: String(a.reason || ''),
+    kiem_tra_he_thong: [],
+  };
+  for (const [h, v] of Object.entries(kq.checked_items)) {
+    if (v === 'FAIL' && !evidence.some(e => e.hang_muc === h)) {
+      kq.checked_items[h] = 'CAN_CHECK_LAI';
+      kq.kiem_tra_he_thong.push(`AI chấm "${h}" FAIL nhưng không kèm quan sát cụ thể — hạ xuống CAN_CHECK_LAI.`);
+    }
+  }
+  return { kq, loiDinhDang };
+}
+
+// NƠI DUY NHẤT quyết định kết quả cuối. Thứ tự ưu tiên:
+//  1. failCung (luật hệ thống tự kiểm tra, vd tem mang mã tracking khác) -> FAIL
+//  2. JSON AI sai/thiếu score/confidence/result -> CAN_CHECK_LAI
+//  3. độ chắc chắn < ngưỡng CAN_CHECK_LAI -> CAN_CHECK_LAI
+//  4. score >= PASS -> PASS nếu không vướng chanPass / hạng mục FAIL / AI không đề xuất PASS; vướng -> CAN_CHECK_LAI
+//  5. score <= FAIL -> FAIL nếu có hạng mục FAIL (đã có bằng chứng) và AI không đề xuất PASS; không thì CAN_CHECK_LAI
+//  6. còn lại (giữa 2 ngưỡng) -> CAN_CHECK_LAI
+function quyetDinhKetQua(kq, { nguong, loiDinhDang = [], failCung = [], chanPass = [] }) {
+  kq.nguong = { ...nguong };
+  const ketLuan = (result, lyDo) => Object.assign(kq, { result, ly_do_ket_luan: lyDo });
+  if (failCung.length) return ketLuan('FAIL', `Luật hệ thống: ${failCung.join(' ')}`);
+  if (loiDinhDang.length) return ketLuan('CAN_CHECK_LAI', `Kết quả AI không hợp lệ: ${loiDinhDang.join(' ')} Không tự kết luận.`);
+  const tinCay = Math.round(kq.confidence * 1000) / 10; // %, 1 chữ số thập phân — tránh sai số 0.57*100
+  if (tinCay < nguong.ccl) return ketLuan('CAN_CHECK_LAI', `Độ chắc chắn ${tinCay}% < ngưỡng CAN_CHECK_LAI ${nguong.ccl}%.`);
+  const hangMucFail = Object.entries(kq.checked_items).filter(([, v]) => v === 'FAIL').map(([k]) => k);
+  if (kq.score >= nguong.pass) {
+    const chan = [...chanPass];
+    if (hangMucFail.length) chan.push(`AI chấm FAIL hạng mục ${hangMucFail.join(', ')} — mâu thuẫn với score cao.`);
+    if (kq.ai_de_xuat !== 'PASS') chan.push(`AI đề xuất ${kq.ai_de_xuat} — mâu thuẫn với score cao.`);
+    return chan.length
+      ? ketLuan('CAN_CHECK_LAI', `Score ${kq.score} ≥ ngưỡng PASS ${nguong.pass} nhưng chưa đủ điều kiện PASS: ${chan.join(' ')}`)
+      : ketLuan('PASS', `Score ${kq.score} ≥ ngưỡng PASS ${nguong.pass}, độ chắc chắn ${tinCay}% ≥ ${nguong.ccl}%.`);
+  }
+  if (kq.score <= nguong.fail) {
+    if (!hangMucFail.length) return ketLuan('CAN_CHECK_LAI', `Score ${kq.score} ≤ ngưỡng FAIL ${nguong.fail} nhưng không có hạng mục FAIL kèm bằng chứng — không kết luận FAIL.`);
+    if (kq.ai_de_xuat === 'PASS') return ketLuan('CAN_CHECK_LAI', `Score ${kq.score} ≤ ngưỡng FAIL ${nguong.fail} nhưng AI đề xuất PASS — mâu thuẫn.`);
+    return ketLuan('FAIL', `Score ${kq.score} ≤ ngưỡng FAIL ${nguong.fail}; lỗi có bằng chứng ở: ${hangMucFail.join(', ')}.`);
+  }
+  return ketLuan('CAN_CHECK_LAI', `Score ${kq.score} nằm giữa ngưỡng FAIL ${nguong.fail} và PASS ${nguong.pass}.`);
+}
+
+// Kết quả khi KHÔNG gọi AI (thiếu dữ liệu) — cùng khuôn với kết quả có AI.
+const ketQuaThieuDuLieu = (lyDo, nguong) => ({
+  result: 'CAN_CHECK_LAI', ai_de_xuat: null, score: null, confidence: 0, nguong: { ...nguong }, design_file: null, mockup_file: null,
+  checked_items: {}, evidence: [], issues: [lyDo], reason: 'Chưa đủ dữ liệu để QC — cần người kiểm tra lại.',
+  ly_do_ket_luan: `Thiếu dữ liệu, không gọi AI: ${lyDo}`, kiem_tra_he_thong: [lyDo],
+});
+
+// Phần yêu cầu chung cuối mỗi prompt — AI phân tích + đưa bằng chứng, KHÔNG tự quyết định kết quả cuối.
+const QUY_TAC_KET_QUA = [
+  '',
+  'CÁCH TRẢ KẾT QUẢ (hệ thống tự quyết định PASS/FAIL/CAN_CHECK_LAI cuối cùng từ các trường dưới — "result" chỉ là ĐỀ XUẤT của bạn):',
+  '- score: số 0–100 = mức khớp với yêu cầu đơn (100 = mọi hạng mục kiểm được đều đúng; lỗi rõ ràng càng nhiều/càng nặng thì càng thấp; 0 = sai hoàn toàn). Hạng mục thiếu dữ liệu KHÔNG làm giảm score — thể hiện ở confidence.',
+  '- confidence: số 0–1 = mức chắc chắn về đánh giá (ảnh rõ, đủ dữ liệu -> cao; ảnh mờ, bị che, thiếu dữ liệu -> thấp).',
+  '- evidence: danh sách QUAN SÁT trực tiếp (điều NHÌN THẤY, không phải kết luận): hang_muc, anh (đúng tên ảnh), quan_sat (cụ thể, vd "ký tự thứ 3 trên file_theu_1 là A, trên Design là O"). Mỗi hạng mục chấm FAIL BẮT BUỘC có ít nhất 1 evidence của chính hạng mục đó — thiếu thì hệ thống bỏ FAIL.',
+  '- reason: kết luận ngắn gọn DỰA TRÊN evidence. Không đủ dữ liệu -> CAN_CHECK_LAI và hạ confidence, TUYỆT ĐỐI không đoán.',
+];
+
 // ---------------- QC3 – QC DÁN TEM ----------------
 const HANG_MUC = { type: 'string', enum: KET_QUA };
+const HANG_MUC_QC3 = ['tracking', 'nguoi_nhan', 'dia_chi', 'ma_don_gom'];
+const schemaEvidence = hangMuc => ({
+  type: 'array',
+  items: { type: 'object', properties: { hang_muc: { type: 'string', enum: hangMuc }, anh: { type: 'string' }, quan_sat: { type: 'string' } }, required: ['hang_muc', 'anh', 'quan_sat'] },
+});
 const SCHEMA_QC3 = {
   type: 'object',
   properties: {
     result: { type: 'string', enum: KET_QUA },
+    score: { type: 'number' },
     confidence: { type: 'number' },
+    evidence: schemaEvidence(HANG_MUC_QC3),
     design_file: { type: 'string', nullable: true },
     mockup_file: { type: 'string', nullable: true },
     checked_items: {
@@ -79,7 +209,7 @@ const SCHEMA_QC3 = {
       required: ['co_tem'],
     },
   },
-  required: ['result', 'confidence', 'checked_items', 'issues', 'reason', 'doc_duoc'],
+  required: ['result', 'score', 'confidence', 'evidence', 'checked_items', 'issues', 'reason', 'doc_duoc'],
 };
 
 function promptQc3(duLieu) {
@@ -95,57 +225,58 @@ function promptQc3(duLieu) {
     '4. Tem thường in HOA, bỏ dấu, viết tắt (Street/St, Avenue/Ave, Apartment/Apt, tên bang viết tắt như CA = California, United States/US/USA) — những khác biệt kiểu này KHÔNG phải lỗi.',
     '5. Chỉ dùng FAIL khi đọc RÕ và thấy KHÁC thật sự (sai người, sai địa chỉ, sai mã). Ảnh mờ, bị che, bị cắt, lóa, không chắc chắn -> CAN_CHECK_LAI. Không được kết luận chỉ vì "nhìn khá giống".',
     '6. result tổng: FAIL nếu có ít nhất 1 mục FAIL rõ ràng; PASS chỉ khi mọi mục cần kiểm đều PASS và đọc được mã tracking; còn lại CAN_CHECK_LAI.',
-    '7. design_file và mockup_file luôn null (QC dán tem không dùng design/mockup). confidence từ 0 đến 1. issues và reason viết tiếng Việt, ngắn gọn, nêu cụ thể chỗ sai/chỗ không đọc được.',
+    '7. design_file và mockup_file luôn null (QC dán tem không dùng design/mockup). confidence từ 0 đến 1. issues và reason viết tiếng Việt, ngắn gọn, nêu cụ thể chỗ sai/chỗ không đọc được. Tên ảnh trong evidence: "anh_da_dan_tem".',
+    ...QUY_TAC_KET_QUA,
   ].join('\n');
 }
 
-// Làm sạch JSON AI trả về + đối chiếu mã tracking bằng dữ liệu hệ thống. -> kết quả cuối (cùng khuôn yêu cầu, thêm kiem_tra_he_thong).
-function hoanThienKetQua3(ai, { maCanCo, row, rows, cungNhom }) {
-  const kq = {
-    result: KET_QUA.includes(ai && ai.result) ? ai.result : 'CAN_CHECK_LAI',
-    confidence: Math.min(1, Math.max(0, Number(ai && ai.confidence) || 0)),
-    design_file: null,
-    mockup_file: null,
-    checked_items: Object.fromEntries(Object.entries((ai && ai.checked_items) || {}).filter(([, v]) => KET_QUA.includes(v))),
-    issues: Array.isArray(ai && ai.issues) ? ai.issues.map(String) : [],
-    reason: String((ai && ai.reason) || ''),
-    doc_duoc: (ai && typeof ai.doc_duoc === 'object' && ai.doc_duoc) || {},
-    kiem_tra_he_thong: [],
-  };
-  if (!KET_QUA.includes(ai && ai.result)) kq.issues.push('AI trả kết quả không đúng định dạng — chuyển CAN_CHECK_LAI.');
+// Làm sạch JSON AI + đối chiếu mã tracking bằng dữ liệu hệ thống, rồi quyetDinhKetQua(). Luật cứng: mã trên tem khác mã đơn /
+// là mã của đơn khác -> FAIL; không đọc được mã, không có tem, người nhận/địa chỉ/mã kiện gom chưa PASS -> không được PASS.
+function hoanThienKetQua3(ai, { maCanCo, row, rows, cungNhom, laKienGom = false }, nguong) {
+  const { kq, loiDinhDang } = chuanHoaAi(ai, HANG_MUC_QC3);
+  kq.design_file = null;
+  kq.mockup_file = null;
+  kq.doc_duoc = (ai && typeof ai.doc_duoc === 'object' && ai.doc_duoc) || {};
+  const failCung = [];
+  const chanPass = [];
+  const heThongThay = quanSat => kq.evidence.unshift({ hang_muc: 'tracking', anh: 'anh_da_dan_tem', quan_sat: `Hệ thống: ${quanSat}` });
 
   const maTem = chuanHoaMa(kq.doc_duoc.ma_tracking);
   if (!maTem) {
     kq.kiem_tra_he_thong.push('Không đọc được mã tracking trên tem — hệ thống không đối chiếu được.');
-    kq.checked_items.tracking = kq.checked_items.tracking === 'FAIL' ? 'FAIL' : 'CAN_CHECK_LAI';
-    if (kq.result === 'PASS') {
-      kq.result = 'CAN_CHECK_LAI';
-      kq.issues.push('Không đọc được mã tracking trên tem — không thể xác nhận PASS.');
-    }
-    return kq;
-  }
-  // Dán nhầm: mã trên tem là tracking của đơn KHÁC (ngoài đơn này và nhóm DonNhieuAo của nó).
-  const donKhac = rows.filter(r => r.STT_Key !== row.STT_Key && !cungNhom.has(r.STT_Key)
-    && (khopMa(maTem, chuanHoaMa(r.TRACKING_ID)) || khopMa(maTem, chuanHoaMa(r.TRACKING_ID2)))).map(r => r.STT_Key);
-  if (donKhac.length && !khopMa(maTem, maCanCo)) {
-    kq.result = 'FAIL';
-    kq.checked_items.tracking = 'FAIL';
-    kq.issues.unshift(`Mã tracking trên tem (${kq.doc_duoc.ma_tracking}) là của đơn ${donKhac.join(', ')} — nghi DÁN NHẦM TEM.`);
-    kq.kiem_tra_he_thong.push(`Mã trên tem trùng tracking của đơn khác: ${donKhac.join(', ')}.`);
-  } else if (!khopMa(maTem, maCanCo)) {
-    kq.result = 'FAIL';
-    kq.checked_items.tracking = 'FAIL';
-    kq.issues.unshift(`Mã tracking trên tem (${kq.doc_duoc.ma_tracking}) khác mã của đơn (${maCanCo}).`);
-    kq.kiem_tra_he_thong.push('Mã tracking trên tem KHÔNG khớp đơn.');
+    kq.checked_items.tracking = 'CAN_CHECK_LAI';
+    chanPass.push('Không đọc được mã tracking trên tem.');
   } else {
-    kq.checked_items.tracking = 'PASS';
-    kq.kiem_tra_he_thong.push('Mã tracking trên tem khớp đơn.');
+    // Dán nhầm: mã trên tem là tracking của đơn KHÁC (ngoài đơn này và nhóm DonNhieuAo của nó).
+    const donKhac = rows.filter(r => r.STT_Key !== row.STT_Key && !cungNhom.has(r.STT_Key)
+      && (khopMa(maTem, chuanHoaMa(r.TRACKING_ID)) || khopMa(maTem, chuanHoaMa(r.TRACKING_ID2)))).map(r => r.STT_Key);
+    if (donKhac.length && !khopMa(maTem, maCanCo)) {
+      const moTa = `Mã tracking trên tem (${kq.doc_duoc.ma_tracking}) là của đơn ${donKhac.join(', ')} — nghi DÁN NHẦM TEM.`;
+      kq.checked_items.tracking = 'FAIL';
+      kq.issues.unshift(moTa);
+      kq.kiem_tra_he_thong.push(`Mã trên tem trùng tracking của đơn khác: ${donKhac.join(', ')}.`);
+      heThongThay(moTa);
+      failCung.push(moTa);
+    } else if (!khopMa(maTem, maCanCo)) {
+      const moTa = `Mã tracking trên tem (${kq.doc_duoc.ma_tracking}) khác mã của đơn (${maCanCo}).`;
+      kq.checked_items.tracking = 'FAIL';
+      kq.issues.unshift(moTa);
+      kq.kiem_tra_he_thong.push('Mã tracking trên tem KHÔNG khớp đơn.');
+      heThongThay(moTa);
+      failCung.push(moTa);
+    } else {
+      kq.checked_items.tracking = 'PASS';
+      kq.kiem_tra_he_thong.push('Mã tracking trên tem khớp đơn.');
+    }
   }
-  return kq;
+  if (kq.doc_duoc.co_tem === false) chanPass.push('AI báo ảnh không có tem vận chuyển.');
+  const chuaDat = ['nguoi_nhan', 'dia_chi', ...(laKienGom ? ['ma_don_gom'] : [])].filter(h => kq.checked_items[h] !== 'PASS');
+  if (chuaDat.length) chanPass.push(`Hạng mục chưa PASS: ${chuaDat.join(', ')}.`);
+  return quyetDinhKetQua(kq, { nguong, loiDinhDang, failCung, chanPass });
 }
 
 // -> { ketQua, anh: [url], model, daGoiAi }
-async function chayQc3(sttKey) {
+async function chayQc3(sttKey, nguong) {
   const { rows } = await orderService.getAll({ fresh: true });
   const row = rows.find(r => r.STT_Key === sttKey);
   if (!row) throw loiNghiepVu(`Không tìm thấy đơn ${sttKey}.`, 404);
@@ -157,10 +288,7 @@ async function chayQc3(sttKey) {
     || row.TRACKING_ID2 || (nhom && nhom.donMua && nhom.donMua.TRACKING_ID2) || '';
   const urlAnh = row.Anh_Da_Dan_Tem_URL || (donTem && donTem.Anh_Da_Dan_Tem_URL) || '';
   const cungNhom = new Set(nhom ? nhom.thanhVien.map(r => r.STT_Key) : []);
-  const khongGoiAi = (lyDo, anh = []) => ({
-    daGoiAi: false, anh,
-    ketQua: { result: 'CAN_CHECK_LAI', confidence: 0, design_file: null, mockup_file: null, checked_items: {}, issues: [lyDo], reason: 'Chưa đủ dữ liệu để QC — cần người kiểm tra lại.', kiem_tra_he_thong: [lyDo] },
-  });
+  const khongGoiAi = (lyDo, anh = []) => ({ daGoiAi: false, anh, ketQua: ketQuaThieuDuLieu(lyDo, nguong) });
 
   if (!urlAnh) return khongGoiAi('Đơn chưa có ảnh ĐÃ DÁN TEM.');
   if (!maCanCoGoc) return khongGoiAi('Đơn chưa có mã tracking (TRACKING_ID lẫn TRACKING_ID2 đều trống).', [urlAnh]);
@@ -188,7 +316,7 @@ async function chayQc3(sttKey) {
   const ai = await aiProvider.phanTichAnh({ apiKey, model, prompt: promptQc3(duLieu), anh: [{ mime, data: buffer, ten: 'anh_da_dan_tem' }], schema: SCHEMA_QC3 }, nhaCungCap);
   return {
     daGoiAi: true, anh: [urlAnh], aiGoc: ai,
-    ketQua: hoanThienKetQua3(ai, { maCanCo: chuanHoaMa(maCanCoGoc), row, rows, cungNhom }),
+    ketQua: hoanThienKetQua3(ai, { maCanCo: chuanHoaMa(maCanCoGoc), row, rows, cungNhom, laKienGom }, nguong),
   };
 }
 
@@ -205,7 +333,9 @@ const schemaDoiChieu = hangMuc => ({
   type: 'object',
   properties: {
     result: { type: 'string', enum: KET_QUA },
+    score: { type: 'number' },
     confidence: { type: 'number' },
+    evidence: schemaEvidence(hangMuc),
     design_file: { type: 'string', nullable: true },
     mockup_file: { type: 'string', nullable: true },
     checked_items: { type: 'object', properties: Object.fromEntries(hangMuc.map(h => [h, HANG_MUC])), required: hangMuc },
@@ -216,7 +346,7 @@ const schemaDoiChieu = hangMuc => ({
       items: { type: 'object', properties: { ten: { type: 'string' }, vai_tro: { type: 'string', enum: VAI_TRO_ANH }, ghi_chu: { type: 'string', nullable: true } }, required: ['ten', 'vai_tro'] },
     },
   },
-  required: ['result', 'confidence', 'design_file', 'mockup_file', 'checked_items', 'issues', 'reason', 'vai_tro_anh'],
+  required: ['result', 'score', 'confidence', 'evidence', 'design_file', 'mockup_file', 'checked_items', 'issues', 'reason', 'vai_tro_anh'],
 });
 
 // Phần mở đầu chung của prompt: dữ liệu đơn + danh sách ảnh + quy tắc xác định vai trò ảnh.
@@ -269,52 +399,32 @@ async function taiVaChuanHoa(taiFn) {
   return (await chuanHoaAnh(buffer)).anh; // JPEG, cạnh dài tối đa 1400px
 }
 
-// Làm sạch JSON AI trả về + ràng buộc hệ thống: tên file phải có thật; hạng mục FAIL -> FAIL; PASS chỉ khi xác định được
-// Design và mọi hạng mục `batBuoc` đều PASS (các hạng mục còn lại được phép CAN_CHECK_LAI).
-function hoanThienKetQuaDoiChieu(ai, tenHopLe, { hangMuc, batBuoc }) {
-  const kq = {
-    result: KET_QUA.includes(ai && ai.result) ? ai.result : 'CAN_CHECK_LAI',
-    confidence: Math.min(1, Math.max(0, Number(ai && ai.confidence) || 0)),
-    design_file: tenHopLe.has(ai && ai.design_file) ? ai.design_file : null,
-    mockup_file: tenHopLe.has(ai && ai.mockup_file) ? ai.mockup_file : null,
-    checked_items: Object.fromEntries(Object.entries((ai && ai.checked_items) || {}).filter(([k, v]) => hangMuc.includes(k) && KET_QUA.includes(v))),
-    issues: Array.isArray(ai && ai.issues) ? ai.issues.map(String) : [],
-    reason: String((ai && ai.reason) || ''),
-    vai_tro_anh: Array.isArray(ai && ai.vai_tro_anh) ? ai.vai_tro_anh.filter(v => v && tenHopLe.has(v.ten)) : [],
-    kiem_tra_he_thong: [],
-  };
-  const haXuong = lyDo => {
-    kq.kiem_tra_he_thong.push(lyDo);
-    if (kq.result === 'PASS') { kq.result = 'CAN_CHECK_LAI'; kq.issues.push(lyDo); }
-  };
-  if (!KET_QUA.includes(ai && ai.result)) kq.issues.push('AI trả kết quả không đúng định dạng — chuyển CAN_CHECK_LAI.');
-  if (ai && ai.design_file && !kq.design_file) haXuong(`AI chọn design_file "${ai.design_file}" không có trong danh sách ảnh đã gửi.`);
-  if (ai && ai.mockup_file && !kq.mockup_file) kq.kiem_tra_he_thong.push(`AI chọn mockup_file "${ai.mockup_file}" không có trong danh sách ảnh — bỏ qua.`);
-  const hangMucLoi = Object.entries(kq.checked_items).filter(([, v]) => v === 'FAIL').map(([k]) => k);
-  if (hangMucLoi.length && kq.result !== 'FAIL') {
-    kq.result = 'FAIL';
-    kq.kiem_tra_he_thong.push(`Có hạng mục FAIL (${hangMucLoi.join(', ')}) — kết quả tổng chuyển FAIL.`);
-  }
-  if (kq.result === 'PASS') {
-    if (!kq.design_file) haXuong('Không xác định chắc chắn được Design chính — không thể PASS.');
-    const chuaDat = batBuoc.filter(h => kq.checked_items[h] !== 'PASS');
-    if (chuaDat.length) haXuong(`Hạng mục bắt buộc chưa PASS: ${chuaDat.join(', ')} — không thể PASS.`);
-  }
-  return kq;
+// Làm sạch JSON AI + ràng buộc hệ thống, rồi quyetDinhKetQua(). Luật cứng chặn PASS: không xác định được Design (tên file
+// phải có thật trong ảnh đã gửi), hạng mục `batBuoc` chưa PASS (các hạng mục còn lại được phép CAN_CHECK_LAI).
+function hoanThienKetQuaDoiChieu(ai, tenHopLe, { hangMuc, batBuoc }, nguong) {
+  const { kq, loiDinhDang } = chuanHoaAi(ai, hangMuc);
+  const a = ai && typeof ai === 'object' ? ai : {};
+  kq.design_file = tenHopLe.has(a.design_file) ? a.design_file : null;
+  kq.mockup_file = tenHopLe.has(a.mockup_file) ? a.mockup_file : null;
+  kq.vai_tro_anh = Array.isArray(a.vai_tro_anh) ? a.vai_tro_anh.filter(v => v && tenHopLe.has(v.ten)) : [];
+  if (a.design_file && !kq.design_file) kq.kiem_tra_he_thong.push(`AI chọn design_file "${a.design_file}" không có trong danh sách ảnh đã gửi.`);
+  if (a.mockup_file && !kq.mockup_file) kq.kiem_tra_he_thong.push(`AI chọn mockup_file "${a.mockup_file}" không có trong danh sách ảnh — bỏ qua.`);
+  const chanPass = [];
+  if (!kq.design_file) chanPass.push('Không xác định chắc chắn được Design chính.');
+  const chuaDat = batBuoc.filter(h => kq.checked_items[h] !== 'PASS');
+  if (chuaDat.length) chanPass.push(`Hạng mục bắt buộc chưa PASS: ${chuaDat.join(', ')}.`);
+  return quyetDinhKetQua(kq, { nguong, loiDinhDang, chanPass });
 }
 
 // Chạy 1 lượt QC đối chiếu. qc = {
 //   loai, anhCanKiem(row) -> [{ ten, nguon, url }] (ảnh BẮT BUỘC, đọc được ít nhất 1), thieuAnh: lý do khi không có ảnh cần kiểm,
 //   anhPhu(row) -> [{ ten, nguon, url }] (gửi thêm nếu đọc được), hangMuc, batBuoc, prompt(duLieu, dsAnh) }
-async function chayDoiChieu(sttKey, qc) {
+async function chayDoiChieu(sttKey, qc, nguong) {
   const { rows } = await orderService.getAll({ fresh: true });
   const row = rows.find(r => r.STT_Key === sttKey);
   if (!row) throw loiNghiepVu(`Không tìm thấy đơn ${sttKey}.`, 404);
   const urlFileTheu = COT_FILE_THEU.map(c => row[c]).filter(Boolean);
-  const khongGoiAi = (lyDo, anh = []) => ({
-    daGoiAi: false, anh, fileTheu: urlFileTheu,
-    ketQua: { result: 'CAN_CHECK_LAI', confidence: 0, design_file: null, mockup_file: null, checked_items: {}, issues: [lyDo], reason: 'Chưa đủ dữ liệu để QC — cần người kiểm tra lại.', kiem_tra_he_thong: [lyDo] },
-  });
+  const khongGoiAi = (lyDo, anh = []) => ({ daGoiAi: false, anh, fileTheu: urlFileTheu, ketQua: ketQuaThieuDuLieu(lyDo, nguong) });
 
   const canKiem = qc.anhCanKiem(row);
   if (!canKiem.length) return khongGoiAi(qc.thieuAnh);
@@ -366,7 +476,7 @@ async function chayDoiChieu(sttKey, qc) {
     prompt: qc.prompt(duLieu, dsAnh.map(a => ({ ten: a.ten, nguon: a.nguon }))),
     anh: dsAnh.map(a => ({ mime: a.mime, data: a.data, ten: a.ten })),
   }, nhaCungCap);
-  const ketQua = hoanThienKetQuaDoiChieu(ai, tenDaDung, qc);
+  const ketQua = hoanThienKetQuaDoiChieu(ai, tenDaDung, qc, nguong);
   ketQua.kiem_tra_he_thong.unshift(...ghiChuHeThong);
   return { daGoiAi: true, anh: anhDaDung, fileTheu: urlFileTheu, aiGoc: ai, ketQua };
 }
@@ -390,6 +500,7 @@ const QC2 = {
     '5. Chỉ FAIL khi thấy RÕ lỗi. Ảnh mờ, bị che, góc chụp không thấy rõ, thiếu ảnh -> CAN_CHECK_LAI. Không kết luận kiểu "nhìn khá giống".',
     '6. result tổng: FAIL nếu có lỗi rõ ràng; PASS chỉ khi xác định được Design, và design, text, chi_tiet, position, loi_san_xuat đều PASS, không có mâu thuẫn dữ liệu; còn lại CAN_CHECK_LAI.',
     '7. confidence từ 0 đến 1. issues và reason viết tiếng Việt, ngắn gọn, nêu cụ thể (vd ký tự nào sai, chi tiết nào thiếu).',
+    ...QUY_TAC_KET_QUA,
   ].join('\n'),
 };
 
@@ -412,11 +523,12 @@ const QC1 = {
     '5. Chỉ FAIL khi thấy RÕ lỗi. Ảnh mờ, bị cắt, không đủ để kết luận -> CAN_CHECK_LAI. Không kết luận kiểu "nhìn khá giống", không suy đoán kích thước/màu khi không có dữ liệu.',
     '6. result tổng: FAIL nếu có lỗi rõ ràng; PASS chỉ khi xác định được Design, và design, text, chi_tiet, huong, design_mockup đều PASS; còn lại CAN_CHECK_LAI.',
     '7. confidence từ 0 đến 1. issues và reason viết tiếng Việt, ngắn gọn, nêu cụ thể (vd ký tự nào sai, chi tiết nào thiếu, File thêu nào).',
+    ...QUY_TAC_KET_QUA,
   ].join('\n'),
 };
 
-const chayQc2 = sttKey => chayDoiChieu(sttKey, QC2);
-const chayQc1 = sttKey => chayDoiChieu(sttKey, QC1);
+const chayQc2 = (sttKey, nguong) => chayDoiChieu(sttKey, QC2, nguong);
+const chayQc1 = (sttKey, nguong) => chayDoiChieu(sttKey, QC1, nguong);
 
 const CHAY_THEO_LOAI = { QC1: chayQc1, QC2: chayQc2, QC3: chayQc3 };
 
@@ -429,6 +541,8 @@ function taoTinCanhBao({ loai, sttKey, model, nguoiChay, ketQua, loi }) {
   const dong = [`${NHAN_TG[ketQua ? ketQua.result : 'LOI']} — ${escTg(LOAI_QC[loai])}`, `Đơn: <b>${escTg(sttKey)}</b>`];
   if (loi) dong.push(`Lỗi: ${escTg(loi)}`);
   if (ketQua) {
+    if (ketQua.ly_do_ket_luan) dong.push(`Kết luận: ${escTg(ketQua.ly_do_ket_luan)}`);
+    if (ketQua.score !== null && ketQua.score !== undefined) dong.push(`Điểm: ${escTg(ketQua.score)} · Chắc chắn: ${Math.round((ketQua.confidence || 0) * 100)}%`);
     if (ketQua.reason) dong.push(`Lý do: ${escTg(ketQua.reason)}`);
     const vanDe = (ketQua.issues || []).slice(0, 8);
     if (vanDe.length) dong.push('Vấn đề:', ...vanDe.map(v => `• ${escTg(v)}`));
@@ -460,11 +574,16 @@ async function chayQc({ sttKey, loai, user }) {
   if (!LOAI_QC[loai]) throw loiNghiepVu('Loại QC không hợp lệ — chỉ QC1, QC2, QC3.');
   if (!LOAI_DA_TRIEN_KHAI.includes(loai)) throw loiNghiepVu(`${LOAI_QC[loai]} chưa được triển khai.`);
   if (!sttKey) throw loiNghiepVu('Chưa nhập mã đơn (STT_Key).');
+  // Ngưỡng đọc 1 lần cho cả lượt; cấu hình sai -> KHÔNG chạy QC (không đoán, không tự sửa).
+  const nguongGoc = layNguong(loai);
+  const loiNguong = kiemTraNguong(nguongGoc, LOAI_QC[loai]);
+  if (loiNguong) throw loiNghiepVu(`Ngưỡng kết luận không hợp lệ — ${loiNguong} Sửa ở mục "Ngưỡng kết luận" trước khi chạy QC.`);
+  const nguong = nguongSo(nguongGoc);
   const { model } = layCauHinh(loai);
-  const dong = { ThoiGian: thoiGianVNISOString(), NguoiDung: user.ten, STT_Key: sttKey, LoaiQc: loai, Model: model };
+  const dong = { ThoiGian: thoiGianVNISOString(), NguoiDung: user.ten, STT_Key: sttKey, LoaiQc: loai, Model: model, NguongDaDung: JSON.stringify(nguong) };
   let kq;
   try {
-    kq = await CHAY_THEO_LOAI[loai](sttKey);
+    kq = await CHAY_THEO_LOAI[loai](sttKey, nguong);
   } catch (err) {
     const id = nhatKyDbService.ghiQcLog({ ...dong, KetQua: 'LOI', LoiApi: err.message });
     if (err.status) throw Object.assign(err, { logId: id });
@@ -476,6 +595,7 @@ async function chayQc({ sttKey, loai, user }) {
     ...dong, Model: kq.daGoiAi ? model : '',
     AnhDaDung: kq.anh.join('\n'), FileTheu: (kq.fileTheu || []).join('\n'), DesignFile: k.design_file || '', MockupFile: k.mockup_file || '',
     KetQua: k.result, DoTinCay: k.confidence, LyDo: k.reason,
+    Diem: k.score === null || k.score === undefined ? '' : k.score, AiDeXuat: k.ai_de_xuat || '', LyDoKetLuan: k.ly_do_ket_luan || '',
     ChiTiet: JSON.stringify({ ket_qua: k, ai_goc: kq.aiGoc || null }),
   });
   if (k.result !== 'PASS') canhBaoTelegram({ loai, sttKey, model: kq.daGoiAi ? model : '', nguoiChay: user.ten, ketQua: k });
@@ -488,4 +608,4 @@ async function thuKetNoi(loai, nhaCungCap) {
   await aiProvider.thuKetNoi(ch, ch.nhaCungCap);
 }
 
-module.exports = { LOAI_QC, LOAI_DA_TRIEN_KHAI, MODEL_MAC_DINH, NHA_CUNG_CAP, layCauHinh, chayQc, thuKetNoi, guiThuTelegram, taoTinCanhBao, hoanThienKetQua3, hoanThienKetQuaDoiChieu, chuanHoaMa, khopMa };
+module.exports = { LOAI_QC, LOAI_DA_TRIEN_KHAI, MODEL_MAC_DINH, NHA_CUNG_CAP, NGUONG_MAC_DINH, layCauHinh, layNguong, kiemTraNguong, docSo, quyetDinhKetQua, chayQc, thuKetNoi, guiThuTelegram, taoTinCanhBao, hoanThienKetQua3, hoanThienKetQuaDoiChieu, chuanHoaMa, khopMa };

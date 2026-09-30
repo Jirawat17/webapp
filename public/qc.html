@@ -27,6 +27,10 @@
 .qc-bang-log th, .qc-bang-log td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--color-border); vertical-align: top; }
 .qc-bang-log td.ly-do { word-break: break-word; min-width: 200px; }
 .qc-cuon-ngang { overflow-x: auto; }
+.qc-bang-nguong { border-collapse: collapse; }
+.qc-bang-nguong th, .qc-bang-nguong td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--color-border); }
+.qc-bang-nguong input { width: 90px; }
+.qc-bang-nguong input.sai { border-color: var(--color-danger-text); }
 .qc-chi-tiet { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.75rem; white-space: pre-wrap; word-break: break-word; background: var(--color-bg); padding: var(--space-2); border-radius: var(--radius-sm); max-height: 320px; overflow-y: auto; }
 </style>
 </head>
@@ -42,6 +46,22 @@
     <datalist id="goi-y-model-claude"><option value="claude-sonnet-5-5"><option value="claude-haiku-4-5-20251001"><option value="claude-opus-5-5"></datalist>
     <div id="khoi-cau-hinh">Đang tải...</div>
     <p id="thong-bao-cau-hinh" style="display:none"></p>
+  </div>
+
+  <div class="qc-khoi">
+    <h3>Ngưỡng kết luận</h3>
+    <p style="color:var(--color-text-muted);margin-top:0">AI chỉ phân tích và chấm <strong>score</strong> (0–100, mức khớp yêu cầu — càng cao càng tốt) + <strong>độ chắc chắn</strong>; hệ thống tự kết luận theo ngưỡng dưới đây. Luật cứng luôn ưu tiên (vd tem mang mã tracking khác → FAIL; chưa xác định được Design / hạng mục bắt buộc chưa PASS → không PASS; FAIL phải có bằng chứng).</p>
+    <ul style="color:var(--color-text-muted);margin-top:0">
+      <li>Độ chắc chắn &lt; ngưỡng <strong>CAN_CHECK_LAI</strong> (%) → CAN_CHECK_LAI</li>
+      <li>score ≥ ngưỡng <strong>PASS</strong> → PASS · score ≤ ngưỡng <strong>FAIL</strong> → FAIL · ở giữa → CAN_CHECK_LAI</li>
+      <li>Quy tắc: cả 3 là số từ 0 đến 100, và FAIL &lt; PASS.</li>
+    </ul>
+    <div class="qc-cuon-ngang"><table class="qc-bang-nguong">
+      <thead><tr><th>QC</th><th>PASS (score ≥)</th><th>FAIL (score ≤)</th><th>CAN_CHECK_LAI (chắc chắn &lt; %)</th></tr></thead>
+      <tbody id="bang-nguong"><tr><td colspan="4">Đang tải...</td></tr></tbody>
+    </table></div>
+    <p style="margin-bottom:0"><button type="button" class="btn-hanh-dong" onclick="luuNguong(this)">Lưu ngưỡng</button> <span id="nguong-mac-dinh" style="color:var(--color-text-muted)"></span></p>
+    <p id="thong-bao-nguong" style="display:none"></p>
   </div>
 
   <div class="qc-khoi">
@@ -109,6 +129,7 @@ let dsLoai = [];
   document.getElementById('qc-ma-don').addEventListener('keydown', e => { if (e.key === 'Enter') chayQc(); });
   document.getElementById('btn-tai-log').onclick = taiLog;
   await taiCauHinh();
+  taiNguong();
   taiTelegram();
   await taiLog();
 })();
@@ -139,6 +160,56 @@ function hangCauHinh(c, ncc) {
 function doiNcc(loai) {
   const c = dsLoai.find(x => x.loai === loai);
   document.getElementById('cau-hinh-' + loai).innerHTML = hangCauHinh(c, document.getElementById('ncc-' + loai).value);
+}
+
+// ---- Ngưỡng kết luận: cùng quy tắc với backend (services/qc/qcService.js#kiemTraNguong) — backend vẫn kiểm tra lại khi lưu và khi chạy QC.
+const TEN_NGUONG = { pass: 'PASS', fail: 'FAIL', ccl: 'CAN_CHECK_LAI' };
+function kiemTraNguongGiaoDien(n, ten) {
+  for (const k of ['pass', 'fail', 'ccl']) {
+    if (!/^\d+(\.\d+)?$/.test(n[k])) return { k, loi: `${ten}: ngưỡng ${TEN_NGUONG[k]} phải là số (0–100).` };
+    if (Number(n[k]) > 100) return { k, loi: `${ten}: ngưỡng ${TEN_NGUONG[k]} phải từ 0 đến 100.` };
+  }
+  if (!(Number(n.fail) < Number(n.pass))) return { k: 'fail', loi: `${ten}: ngưỡng FAIL (${n.fail}) phải NHỎ HƠN ngưỡng PASS (${n.pass}).` };
+  return null;
+}
+function thongBaoNguong(chu, loi) {
+  const el = document.getElementById('thong-bao-nguong');
+  el.style.display = 'block';
+  el.style.color = loi ? 'var(--color-danger-text)' : 'var(--color-success-text)';
+  el.textContent = chu;
+}
+let dsNguong = [];
+async function taiNguong() {
+  const el = document.getElementById('bang-nguong');
+  let d;
+  try { d = await apiFetch('/qc/nguong'); } catch (e) { el.innerHTML = `<tr><td colspan="4">Lỗi: ${escapeHtml(e.message)}</td></tr>`; return; }
+  dsNguong = d.ds;
+  el.innerHTML = d.ds.map(n => `<tr>
+    <td><strong>${escapeHtml(n.ten)}</strong>${n.loi ? `<br><small style="color:var(--color-danger-text)">${escapeHtml(n.loi)} — QC này sẽ không chạy cho tới khi sửa.</small>` : ''}</td>
+    ${['pass', 'fail', 'ccl'].map(k => `<td><input type="number" min="0" max="100" step="any" inputmode="decimal" id="nguong-${n.loai}-${k}" value="${escapeHtml(String(n[k]))}" aria-label="${escapeHtml(n.loai)} ngưỡng ${TEN_NGUONG[k]}"></td>`).join('')}
+  </tr>`).join('');
+  document.getElementById('nguong-mac-dinh').textContent = `Mặc định: PASS ${d.macDinh.pass} · FAIL ${d.macDinh.fail} · CAN_CHECK_LAI ${d.macDinh.ccl}%`;
+}
+async function luuNguong(nut) {
+  const nguong = {};
+  document.querySelectorAll('.qc-bang-nguong input').forEach(i => i.classList.remove('sai'));
+  for (const n of dsNguong) {
+    const gt = Object.fromEntries(['pass', 'fail', 'ccl'].map(k => [k, document.getElementById(`nguong-${n.loai}-${k}`).value.trim()]));
+    const sai = kiemTraNguongGiaoDien(gt, n.ten);
+    if (sai) {
+      document.getElementById(`nguong-${n.loai}-${sai.k}`).classList.add('sai');
+      thongBaoNguong('Chưa lưu: ' + sai.loi, true);
+      return;
+    }
+    nguong[n.loai] = gt;
+  }
+  nut.disabled = true;
+  try {
+    await apiFetch('/qc/nguong', { method: 'POST', body: JSON.stringify({ nguong }) });
+    thongBaoNguong('Đã lưu ngưỡng — áp dụng từ lượt QC tiếp theo.');
+    await taiNguong();
+  } catch (e) { thongBaoNguong('Chưa lưu: ' + e.message, true); }
+  nut.disabled = false;
 }
 
 function thongBaoTg(chu, loi) {
@@ -244,8 +315,11 @@ function renderKetQua(kq) {
   return `
     <div class="qc-ket-qua">
       <div>
-        <p style="margin-top:0;font-size:1.1rem">${nhanKetQua(k.result)} <strong>${escapeHtml(kq.sttKey)}</strong> · ${escapeHtml(kq.loai)} · độ tin cậy ${Math.round((k.confidence || 0) * 100)}%${kq.model ? ` · ${escapeHtml(kq.model)}` : ' · không gọi AI'}</p>
-        <p><strong>Lý do:</strong> ${escapeHtml(k.reason || '')}</p>
+        <p style="margin-top:0;font-size:1.1rem">${nhanKetQua(k.result)} <strong>${escapeHtml(kq.sttKey)}</strong> · ${escapeHtml(kq.loai)} · score ${k.score === null || k.score === undefined ? '—' : escapeHtml(k.score)} · chắc chắn ${Math.round((k.confidence || 0) * 100)}%${kq.model ? ` · ${escapeHtml(kq.model)}` : ' · không gọi AI'}</p>
+        ${k.ly_do_ket_luan ? `<p><strong>Hệ thống kết luận:</strong> ${escapeHtml(k.ly_do_ket_luan)}</p>` : ''}
+        ${k.nguong ? `<p style="color:var(--color-text-muted)">Ngưỡng đã dùng: PASS ≥ ${escapeHtml(k.nguong.pass)} · FAIL ≤ ${escapeHtml(k.nguong.fail)} · chắc chắn ≥ ${escapeHtml(k.nguong.ccl)}%${k.ai_de_xuat ? ` · AI đề xuất: ${escapeHtml(k.ai_de_xuat)}` : ''}</p>` : ''}
+        <p><strong>Lý do${kq.model ? ' (AI)' : ''}:</strong> ${escapeHtml(k.reason || '')}</p>
+        ${k.evidence && k.evidence.length ? `<p style="margin-bottom:4px"><strong>Bằng chứng (quan sát):</strong></p><ul style="margin-top:0">${k.evidence.map(e => `<li>${escapeHtml(NHAN_HANG_MUC[e.hang_muc] || e.hang_muc)}${e.anh ? ` [${escapeHtml(e.anh)}]` : ''}: ${escapeHtml(e.quan_sat)}</li>`).join('')}</ul>` : ''}
         ${hangMuc ? `<p style="margin-bottom:4px"><strong>Từng hạng mục:</strong></p><ul style="margin-top:0">${hangMuc}</ul>` : ''}
         ${k.issues && k.issues.length ? `<p style="margin-bottom:4px"><strong>Vấn đề:</strong></p><ul style="margin-top:0">${k.issues.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</ul>` : ''}
         ${docDuoc ? `<p style="margin-bottom:4px"><strong>AI đọc được trên tem:</strong></p><ul style="margin-top:0">${docDuoc}</ul>` : ''}
@@ -270,17 +344,18 @@ async function taiLog() {
   try { ds = await apiFetch('/qc/log?' + qs); } catch (e) { el.textContent = 'Lỗi: ' + e.message; return; }
   if (!ds.length) { el.innerHTML = '<p style="color:var(--color-text-muted)">Chưa có lần QC nào.</p>'; return; }
   el.innerHTML = `<table class="qc-bang-log">
-    <thead><tr><th>Thời gian</th><th>Mã đơn</th><th>QC</th><th>Kết quả</th><th>Tin cậy</th><th>Lý do / lỗi</th><th>Người chạy</th><th></th></tr></thead>
+    <thead><tr><th>Thời gian</th><th>Mã đơn</th><th>QC</th><th>Kết quả</th><th>Score</th><th>Chắc chắn</th><th>Lý do / lỗi</th><th>Người chạy</th><th></th></tr></thead>
     <tbody>${ds.map(d => `<tr>
       <td>${escapeHtml(String(d.ThoiGian).replace('T', ' ').slice(0, 19))}</td>
       <td>${escapeHtml(d.STT_Key)}</td>
       <td>${escapeHtml(d.LoaiQc)}</td>
-      <td>${nhanKetQua(d.KetQua)}</td>
+      <td>${nhanKetQua(d.KetQua)}${d.AiDeXuat && d.AiDeXuat !== d.KetQua ? `<br><small>AI đề xuất: ${escapeHtml(d.AiDeXuat)}</small>` : ''}</td>
+      <td>${d.Diem !== undefined && d.Diem !== '' ? escapeHtml(d.Diem) : '—'}</td>
       <td>${d.DoTinCay ? Math.round(Number(d.DoTinCay) * 100) + '%' : '—'}</td>
-      <td class="ly-do">${escapeHtml(d.LoiApi || d.LyDo || '')}</td>
+      <td class="ly-do">${escapeHtml(d.LoiApi || d.LyDoKetLuan || d.LyDo || '')}${d.LyDoKetLuan && d.LyDo ? `<br><small style="color:var(--color-text-muted)">AI: ${escapeHtml(d.LyDo)}</small>` : ''}</td>
       <td>${escapeHtml(d.NguoiDung)}</td>
       <td>${d.ChiTiet ? `<button type="button" class="btn-hanh-dong phu" style="padding:4px 8px;font-size:0.78rem" onclick="xemChiTiet(this, ${d.id})">Chi tiết</button>` : ''}</td>
-    </tr><tr id="chi-tiet-${d.id}" style="display:none"><td colspan="8"><div class="qc-chi-tiet"></div></td></tr>`).join('')}</tbody></table>`;
+    </tr><tr id="chi-tiet-${d.id}" style="display:none"><td colspan="9"><div class="qc-chi-tiet"></div></td></tr>`).join('')}</tbody></table>`;
   window._dsLog = ds;
 }
 
@@ -290,7 +365,7 @@ function xemChiTiet(nut, id) {
   if (hang.style.display === 'none' && d) {
     let chiTiet = d.ChiTiet;
     try { chiTiet = JSON.stringify(JSON.parse(d.ChiTiet), null, 2); } catch (e) { /* giữ nguyên chuỗi */ }
-    hang.querySelector('.qc-chi-tiet').textContent = `Model: ${d.Model || '(không gọi AI)'}\nẢnh: ${d.AnhDaDung || '—'}\n\n${chiTiet}`;
+    hang.querySelector('.qc-chi-tiet').textContent = `Model: ${d.Model || '(không gọi AI)'}\nNgưỡng đã dùng: ${d.NguongDaDung || '—'}\nẢnh: ${d.AnhDaDung || '—'}\n\n${chiTiet}`;
     hang.style.display = '';
   } else hang.style.display = 'none';
 }

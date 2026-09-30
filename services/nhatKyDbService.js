@@ -196,7 +196,12 @@ db.exec(`CREATE TABLE IF NOT EXISTS qc_log (
   LoiApi TEXT NOT NULL DEFAULT ''
 )`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_qc_log_stt ON qc_log(STT_Key)`);
-const COT_QC_LOG = ['ThoiGian', 'NguoiDung', 'STT_Key', 'LoaiQc', 'Model', 'AnhDaDung', 'FileTheu', 'DesignFile', 'MockupFile', 'KetQua', 'DoTinCay', 'LyDo', 'ChiTiet', 'LoiApi'];
+// Audit ngưỡng (01/10/2026): Diem (score AI), AiDeXuat (result AI đề xuất), NguongDaDung (JSON ngưỡng lúc chạy), LyDoKetLuan
+// (vì sao hệ thống ra kết quả cuối KetQua).
+const COT_QC_LOG_THEM = ['Diem', 'AiDeXuat', 'NguongDaDung', 'LyDoKetLuan'];
+const cotQcLogDaCo = db.prepare(`PRAGMA table_info(qc_log)`).all().map(c => c.name);
+for (const cot of COT_QC_LOG_THEM) if (!cotQcLogDaCo.includes(cot)) db.exec(`ALTER TABLE qc_log ADD COLUMN ${cot} TEXT NOT NULL DEFAULT ''`);
+const COT_QC_LOG = ['ThoiGian', 'NguoiDung', 'STT_Key', 'LoaiQc', 'Model', 'AnhDaDung', 'FileTheu', 'DesignFile', 'MockupFile', 'KetQua', 'DoTinCay', 'LyDo', 'ChiTiet', 'LoiApi', ...COT_QC_LOG_THEM];
 const cauGhiQcLog = db.prepare(`INSERT INTO qc_log (${COT_QC_LOG.join(', ')}) VALUES (${COT_QC_LOG.map(c => '@' + c).join(', ')})`);
 function ghiQcLog(dong) {
   return Number(cauGhiQcLog.run(Object.fromEntries(COT_QC_LOG.map(c => [c, dong[c] === undefined || dong[c] === null ? '' : String(dong[c])]))).lastInsertRowid);
