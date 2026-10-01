@@ -70,14 +70,15 @@ function docThongTinGke(row) {
   if (!o || typeof o !== 'object' || Array.isArray(o)) return {};
   return Object.fromEntries(Object.entries(o).filter(([k, v]) => Object.hasOwn(TRUONG_SUA_GKE, k) && typeof v === 'string' && v));
 }
-// Giá trị gốc (Sheet) đúng như lúc gửi GKE — địa chỉ GKE dùng DIA_CHI_TEN_DUONG, trống thì TEN_DIA_CHI (gkeService.js#thongTinNguoiNhan).
-const giaTriGocGke = (row, truong) => (truong === 'DIA_CHI_TEN_DUONG' ? row.DIA_CHI_TEN_DUONG || row.TEN_DIA_CHI : row[truong]) || '';
+// Giá trị gốc (Sheet) đúng như lúc gửi GKE — "Địa chỉ" = dòng 1 + dòng 2 đã ghép (gkeService.js#diaChiGuiGke).
+const giaTriGocGke = (row, truong) => (truong === 'DIA_CHI_TEN_DUONG' ? gkeService.diaChiGuiGke(row) : row[truong]) || '';
 // -> bản sao row đã đè giá trị sửa tay (nếu có) + ghi 1 dòng nhật ký để log mua tracking thấy rõ đã dùng dữ liệu sửa tay.
 function apDungThongTinGke(row, nhatKy) {
   const sua = docThongTinGke(row);
   if (!Object.keys(sua).length) return row;
   nhatKy.push(`[Sửa tay dữ liệu gửi GKE] ${Object.entries(sua).map(([k, v]) => `${TRUONG_SUA_GKE[k]}: "${giaTriGocGke(row, k)}" -> "${v}"`).join('; ')}.`);
-  return { ...row, ...sua };
+  // "Địa chỉ" sửa tay = địa chỉ ĐẦY ĐỦ (người dùng chốt 02/10/2026) — không ghép thêm DIA_CHI_TEN_DUONG_2 của Sheet nữa.
+  return { ...row, ...sua, ...(sua.DIA_CHI_TEN_DUONG ? { DIA_CHI_TEN_DUONG_2: '' } : {}) };
 }
 const XOA_THEO_DOI_THU = { TU_MUA_SO_LAN_THU: '', TU_MUA_CHE_DO: '', TU_MUA_LOI_GAN_NHAT: '', TU_MUA_THOI_GIAN_THU: '' };
 

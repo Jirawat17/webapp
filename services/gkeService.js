@@ -362,6 +362,16 @@ function thongTinNguoiGui(cauHinh) {
 // tiết, báo cáo), tránh nhầm số giả này là số thật của khách.
 const SDT_MAC_DINH_KHI_THIEU = '0000000000';
 
+// Địa chỉ gửi GKE (02/10/2026, theo yêu cầu người dùng): dòng 1 (DIA_CHI_TEN_DUONG, trống thì TEN_DIA_CHI — giữ như cũ) + dòng 2
+// (DIA_CHI_TEN_DUONG_2, vd "311 APT") ghép bằng 1 khoảng trắng. Tài liệu API GKE (order/create/ -> consignee_info = address_info)
+// KHÔNG có trường riêng cho địa chỉ dòng 2 — chỉ có `address` (Full Address, bắt buộc, tối đa 254 ký tự). Trước đây dòng 2 bị
+// bỏ hẳn ở đây. Không có dòng 2 -> kết quả y hệt cũ. Mỗi dòng chỉ cắt khoảng trắng đầu/cuối, giữ nguyên ký tự/dấu.
+function diaChiGuiGke(donHang) {
+  const dong1 = String(donHang.DIA_CHI_TEN_DUONG || donHang.TEN_DIA_CHI || '').trim();
+  const dong2 = String(donHang.DIA_CHI_TEN_DUONG_2 || '').trim();
+  return [dong1, dong2].filter(Boolean).join(' ');
+}
+
 function thongTinNguoiNhan(donHang) {
   const thieu = ['TEN', 'DIA_CHI_TEN_TP', 'MA_ZIPCODE'].filter(k => !donHang[k]);
   if (thieu.length) {
@@ -374,7 +384,7 @@ function thongTinNguoiNhan(donHang) {
     postcode: donHang.MA_ZIPCODE || '',
     province: donHang.DIA_CHI_BANG || '',
     city: donHang.DIA_CHI_TEN_TP || '',
-    address: donHang.DIA_CHI_TEN_DUONG || donHang.TEN_DIA_CHI || '',
+    address: diaChiGuiGke(donHang),
   };
 }
 
@@ -525,7 +535,7 @@ async function ghiChuLenTem(base64, chu) {
 }
 
 module.exports = {
-  duocMuaTrackingTheoQuocGia,
+  duocMuaTrackingTheoQuocGia, diaChiGuiGke,
   layCauHinhGkeChoDon, layDanhSachTaiKhoanGke, luuTaiKhoanGke, xoaTaiKhoanGke, ganTaiKhoanGkeChoXuong,
   ghiChuLenTem, tinhCanNangKg, taoDonGke, layTemIn, layLichSuTrackingGke, maQuocGia, MA_DANG_CHO_TEM, gopCacTemPdf,
   chuanHoa };

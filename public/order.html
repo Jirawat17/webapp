@@ -66,7 +66,8 @@ let dsVeFileDangHoatDong = []; // chỉ admin cần, nạp 1 lần lúc vào tra
 })();
 
 function dongDiaChi(don) {
-  const phan = [don.TEN_DIA_CHI, don.DIA_CHI_TEN_DUONG, don.DIA_CHI_TEN_TP, don.DIA_CHI_BANG, don.MA_ZIPCODE, don.DIA_CHI_NUOC]
+  // DIA_CHI_TEN_DUONG_2 (02/10/2026): địa chỉ dòng 2 (vd "311 APT") — trước đây không hiển thị.
+  const phan = [don.TEN_DIA_CHI, don.DIA_CHI_TEN_DUONG, don.DIA_CHI_TEN_DUONG_2, don.DIA_CHI_TEN_TP, don.DIA_CHI_BANG, don.MA_ZIPCODE, don.DIA_CHI_NUOC]
     .filter(Boolean);
   return phan.length ? phan.join(', ') : '(chưa có địa chỉ)';
 }
