@@ -57,6 +57,10 @@ const CAC_COT = [
   // số lần job tự động thử mà lỗi riêng của đơn, 'THU_CONG' khi đủ 10 lần (job bỏ qua đơn, chỉ còn mua tay), lỗi +
   // thời điểm thử gần nhất. Mua thành công / "Cho tự động thử lại" -> xoá cả 4.
   'TU_MUA_SO_LAN_THU', 'TU_MUA_CHE_DO', 'TU_MUA_LOI_GAN_NHAT', 'TU_MUA_THOI_GIAN_THU',
+  // THONG_TIN_GKE_CHO_DON_LOI (01/10/2026, theo yêu cầu người dùng) — JSON {cột: giá trị} người dùng sửa tay ở hộp đỏ
+  // "mua thủ công" (vd {"MA_ZIPCODE":"75432"}); CHỈ đè lên dữ liệu đơn trong lượt gửi GKE (trackingAutoService.js#apDungThongTinGke),
+  // KHÔNG ghi Google Sheet, không hiển thị thay dữ liệu gốc ở nơi khác.
+  'THONG_TIN_GKE_CHO_DON_LOI',
   // GHI_CHU_XUONG_NOI_BO (bổ sung 28/09/2026, theo yêu cầu người dùng) — bản lưu trong app của ô "Ghi chú
   // xưởng" ở Chi tiết đơn, LUÔN ghi mỗi lần bấm Lưu (kể cả khi ghi sang Sheet Seller lỗi). Bản chính là cột
   // GHI_CHU_XUONG (cột Q) trong Sheet của Seller — app ghi ngược vào đó (services/sheetSellerService.js) và

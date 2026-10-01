@@ -1098,7 +1098,7 @@ const TRUONG_DUOC_SUA = {
 // THOI_GIAN_SAN_XUAT (29/09/2026) — mốc tính giờ TỰ ĐỘNG MUA TRACKING (tốn tiền thật), chỉ orderService tự ghi khi
 // đơn chuyển sang "Đã sản xuất"; cho sửa tay qua đây là cho phép ép hệ thống mua sớm.
 const TRUONG_CAM_SUA = ['STT_Key', '_row', 'NguoiCapNhatCuoi', 'ThoiGianCapNhatCuoi', 'TenKhachHang', 'TieuDeSanPham', 'ViTriTheu', 'CanhBao', 'XUONG', 'DON_UU_TIEN', 'DA_XOA', 'GHI_CHU_XUONG', 'GHI_CHU_XUONG_NOI_BO', 'THOI_GIAN_SAN_XUAT', 'DA_MUA_TRACKING',
-  'TU_MUA_SO_LAN_THU', 'TU_MUA_CHE_DO', 'TU_MUA_LOI_GAN_NHAT', 'TU_MUA_THOI_GIAN_THU'];
+  'TU_MUA_SO_LAN_THU', 'TU_MUA_CHE_DO', 'TU_MUA_LOI_GAN_NHAT', 'TU_MUA_THOI_GIAN_THU', 'THONG_TIN_GKE_CHO_DON_LOI'];
 
 // Ghi chú xưởng (28/09/2026, theo yêu cầu người dùng): LUÔN lưu bản trong app (GHI_CHU_XUONG_NOI_BO) rồi ghi vào
 // ô GHI_CHU_XUONG trong Sheet Seller (bản chính — app đọc lại qua RAW -> Don_Hang_ALL). Ghi Sheet lỗi vẫn trả

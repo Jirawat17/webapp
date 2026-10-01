@@ -107,6 +107,10 @@ function moTaLichSu(dong, { anXuong = false, xuongDuocThay = [] } = {}) {
         [doi('Mã tracking', undefined, c.trackingNum), doi('Hãng vận chuyển', undefined, c.hangVanChuyen)]);
     case 'TU_DONG_MUA_CHUYEN_THU_CONG':
       return kq(`tự động mua tracking thất bại ${c.soLanThu || ''} lần — chuyển sang MUA THỦ CÔNG. Lỗi gần nhất: ${c.lyDo || '(không rõ)'}`);
+    case 'SUA_THONG_TIN_GKE':
+      return kq(`sửa dữ liệu gửi GKE (chỉ dùng khi mua tracking, Sheet giữ nguyên)`, [doi(`${c.nhan || c.truong || '?'} gửi GKE`, c.giaTriCu || c.giaTriGoc, c.giaTriMoi)]);
+    case 'XOA_THONG_TIN_GKE':
+      return kq(`xoá dữ liệu sửa tay gửi GKE — quay về dữ liệu gốc`, [doi(`${c.nhan || c.truong || '?'} gửi GKE`, c.giaTriCu, c.giaTriGoc)]);
     case 'CHO_TU_DONG_MUA_LAI':
       return kq(`cho tự động mua tracking thử lại (đặt lại ${c.soLanThu || 0} lần đã thử)`);
     case 'IN_LABEL':

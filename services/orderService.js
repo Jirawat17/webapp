@@ -660,7 +660,8 @@ function suaDonKetSanSang() {
 
 // 4 cột theo dõi TỰ ĐỘNG mua tracking (30/09/2026, trackingAutoService.js#ghiNhanLanThuTuDong) — CHỈ vai trò có menu Tracking
 // được thấy (yêu cầu người dùng: chặn cả ở API). Gỡ khỏi dữ liệu đơn trả về cho vai trò khác (routes/orders.js, routes/qr.js).
-const COT_THEO_DOI_MUA_TRACKING = ['TU_MUA_SO_LAN_THU', 'TU_MUA_CHE_DO', 'TU_MUA_LOI_GAN_NHAT', 'TU_MUA_THOI_GIAN_THU'];
+// + THONG_TIN_GKE_CHO_DON_LOI (01/10/2026): dữ liệu sửa tay gửi GKE — cùng nhóm, cùng quyền xem.
+const COT_THEO_DOI_MUA_TRACKING = ['TU_MUA_SO_LAN_THU', 'TU_MUA_CHE_DO', 'TU_MUA_LOI_GAN_NHAT', 'TU_MUA_THOI_GIAN_THU', 'THONG_TIN_GKE_CHO_DON_LOI'];
 const VAI_TRO_MENU_TRACKING = ['admin', 'superadmin', 've_file'];
 function anCotTheoDoiMuaTracking(row, user) {
   if (user && VAI_TRO_MENU_TRACKING.includes(user.vaiTro)) return row;

@@ -321,6 +321,7 @@
 
 <script src="/js/icons.js?v=104"></script>
 <script src="/js/api.js?v=109"></script>
+<script src="/js/suaThongTinGke.js?v=1"></script>
 <script>
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
 // settings.html (superadmin), 3/5/7 không còn luôn đúng nên không hard-code vào nhãn hiển thị nữa.
@@ -646,7 +647,7 @@ async function taiCanhBaoThuCong() {
       <div style="font-size:1.2rem;font-weight:700;display:flex;gap:8px;align-items:center">${icon('alert', { size: 24 })} ${ds.length} ĐƠN KHÔNG THỂ TỰ ĐỘNG MUA TRACKING — ĐÃ CHUYỂN SANG MUA THỦ CÔNG</div>
       <p style="margin:6px 0 8px">Hệ thống đã tự động thử 10 lần không thành công và dừng thử. Kiểm tra nguyên nhân, sửa thông tin đơn rồi mua tay ở trang <a href="/tracking.html" style="color:inherit;font-weight:700">Tracking</a>.</p>
       <ul style="margin:0;padding-left:20px">${ds.map(d => `
-        <li style="word-break:break-word"><a href="/order.html?stt=${encodeURIComponent(d.sttKey)}" style="font-weight:700;color:inherit">${escapeHtml(d.sttKey)}</a> — ${escapeHtml(d.lyDo || '(không rõ nguyên nhân)')} <small>(thử ${d.soLanThu} lần${d.thoiGianThu ? `, gần nhất ${gio(d.thoiGianThu)}` : ''})</small></li>`).join('')}
+        <li style="word-break:break-word"><a href="/order.html?stt=${encodeURIComponent(d.sttKey)}" style="font-weight:700;color:inherit">${escapeHtml(d.sttKey)}</a> — ${escapeHtml(d.lyDo || '(không rõ nguyên nhân)')} <small>(thử ${d.soLanThu} lần${d.thoiGianThu ? `, gần nhất ${gio(d.thoiGianThu)}` : ''})</small>${htmlSuaThongTinGke(d)}</li>`).join('')}
       </ul>
     </div>`;
 }

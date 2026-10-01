@@ -179,6 +179,7 @@
 
 <script src="/js/icons.js?v=104"></script>
 <script src="/js/api.js?v=109"></script>
+<script src="/js/suaThongTinGke.js?v=1"></script>
 <script>
 // Nhãn + class hiển thị cho từng trạng thái trả về từ services/trackingAutoService.js
 // (layDanhSachDonAutoTracking) — xem docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md.
@@ -522,6 +523,7 @@ async function taiCanhBaoThuCong() {
           <span style="flex:1 1 260px;min-width:0;word-break:break-word">${escapeHtml(d.lyDo || '(không rõ nguyên nhân)')} <small>(thử ${d.soLanThu} lần${d.thoiGianThu ? `, gần nhất ${dinhDangNgayGioNganAnToan(d.thoiGianThu)}` : ''})</small></span>
           <button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="muaThuCongTuBang(this, '${escapeJsChuoi(d.sttKey)}', 'CHUYEN_THU_CONG')">Mua ngay</button>
           <button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="choTuDongLaiTuBang(this, '${escapeJsChuoi(d.sttKey)}')">Cho tự động thử lại</button>
+          ${htmlSuaThongTinGke(d)}
         </div>`).join('')}
     </div>`;
 }

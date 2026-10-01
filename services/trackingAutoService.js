@@ -56,6 +56,29 @@ function thoiDiemDenHan(r, cauHinh) {
 // (xepHangMuaTracking) + job không chạy chồng lượt -> không đếm trùng.
 const SO_LAN_THU_TU_DONG_TOI_DA = 10;
 const CHE_DO_THU_CONG = 'THU_CONG';
+
+// Sửa dữ liệu gửi GKE cho đơn đã chuyển mua thủ công (01/10/2026, theo yêu cầu người dùng). Cột THONG_TIN_GKE_CHO_DON_LOI
+// (SQLite) = JSON {cột: giá trị}; chỉ 7 cột người nhận dưới đây, CHỈ dùng khi gửi GKE — Sheet giữ nguyên.
+const TRUONG_SUA_GKE = {
+  MA_ZIPCODE: 'ZIP code', TEN: 'Tên người nhận', SDT: 'Số điện thoại', DIA_CHI_TEN_DUONG: 'Địa chỉ',
+  DIA_CHI_TEN_TP: 'Thành phố', DIA_CHI_BANG: 'Bang', DIA_CHI_NUOC: 'Quốc gia',
+};
+const DO_DAI_GIA_TRI_GKE_TOI_DA = 200;
+function docThongTinGke(row) {
+  let o;
+  try { o = JSON.parse(row.THONG_TIN_GKE_CHO_DON_LOI || '{}'); } catch (e) { return {}; }
+  if (!o || typeof o !== 'object' || Array.isArray(o)) return {};
+  return Object.fromEntries(Object.entries(o).filter(([k, v]) => Object.hasOwn(TRUONG_SUA_GKE, k) && typeof v === 'string' && v));
+}
+// Giá trị gốc (Sheet) đúng như lúc gửi GKE — địa chỉ GKE dùng DIA_CHI_TEN_DUONG, trống thì TEN_DIA_CHI (gkeService.js#thongTinNguoiNhan).
+const giaTriGocGke = (row, truong) => (truong === 'DIA_CHI_TEN_DUONG' ? row.DIA_CHI_TEN_DUONG || row.TEN_DIA_CHI : row[truong]) || '';
+// -> bản sao row đã đè giá trị sửa tay (nếu có) + ghi 1 dòng nhật ký để log mua tracking thấy rõ đã dùng dữ liệu sửa tay.
+function apDungThongTinGke(row, nhatKy) {
+  const sua = docThongTinGke(row);
+  if (!Object.keys(sua).length) return row;
+  nhatKy.push(`[Sửa tay dữ liệu gửi GKE] ${Object.entries(sua).map(([k, v]) => `${TRUONG_SUA_GKE[k]}: "${giaTriGocGke(row, k)}" -> "${v}"`).join('; ')}.`);
+  return { ...row, ...sua };
+}
 const XOA_THEO_DOI_THU = { TU_MUA_SO_LAN_THU: '', TU_MUA_CHE_DO: '', TU_MUA_LOI_GAN_NHAT: '', TU_MUA_THOI_GIAN_THU: '' };
 
 // Không throw — lỗi ghi chỉ in console (không che lỗi mua gốc).
@@ -360,18 +383,20 @@ async function _muaTrackingChoDonThat(sttKey, user) {
     }
     // CHỈ mua cho đơn giao tới US/UK (bổ sung 27/09/2026, theo yêu cầu người dùng) — xét DIA_CHI_NUOC của
     // đơn mua (đơn ".1" nếu là DonNhieuAo). Chặn ở ĐÂY nên áp dụng cho mọi lối mua.
-    if (!gkeService.duocMuaTrackingTheoQuocGia(row)) {
-      throw new Error(`Chỉ mua tracking GKE cho đơn giao tới US hoặc UK — đơn ${sttKey} có quốc gia "${row.DIA_CHI_NUOC || '(trống)'}".`);
+    // Dữ liệu sửa tay ở hộp đỏ mua thủ công (nếu có) — đè TRƯỚC khi xét quốc gia + gửi GKE; `row` gốc giữ nguyên cho mọi việc khác.
+    const rowGke = apDungThongTinGke(row, nhatKy);
+    if (!gkeService.duocMuaTrackingTheoQuocGia(rowGke)) {
+      throw new Error(`Chỉ mua tracking GKE cho đơn giao tới US hoặc UK — đơn ${sttKey} có quốc gia "${rowGke.DIA_CHI_NUOC || '(trống)'}".`);
     }
     // Tài khoản GKE theo Xưởng của đơn (đơn ".1" nếu là DonNhieuAo) — lỗi rõ ràng nếu Xưởng chưa gán
     // tài khoản, KHÔNG dùng tài khoản Xưởng khác thay thế (xem gkeService.js#layCauHinhGkeChoDon).
     const cauHinhGke = gkeService.layCauHinhGkeChoDon(row);
-    let donGuiGke = row;
+    let donGuiGke = rowGke;
     if (nhom) {
       const canNang = nhom.thanhVien
         .filter(r => r.TRANG_THAI_XUONG !== donNhieuAoService.TRANG_THAI_HUY)
         .reduce((tong, r) => tong + gkeService.tinhCanNangKg(r, cauHinhGke), 0);
-      donGuiGke = { ...row, _CAN_NANG_KG: canNang };
+      donGuiGke = { ...rowGke, _CAN_NANG_KG: canNang };
       nhatKy.push(`[DonNhieuAo] Nhóm ${nhom.goc} (${nhom.thanhVien.length} đơn) — mua 1 tracking cho cả nhóm, cân nặng tổng ${canNang} kg.`);
     }
 
@@ -826,7 +851,40 @@ async function layDonChuyenThuCong(user) {
   const { rows } = await orderService.getAll();
   return orderService.locTheoXuong(rows, user)
     .filter(r => r.TU_MUA_CHE_DO === CHE_DO_THU_CONG && !r.TRACKING_ID && !TRANG_THAI_KHONG_CAN_MUA.includes(r.TRANG_THAI_XUONG))
-    .map(r => ({ sttKey: r.STT_Key, soLanThu: Number(r.TU_MUA_SO_LAN_THU) || 0, lyDo: r.TU_MUA_LOI_GAN_NHAT || '', thoiGianThu: r.TU_MUA_THOI_GIAN_THU || '' }));
+    .map(r => {
+      const sua = docThongTinGke(r);
+      return {
+        sttKey: r.STT_Key, soLanThu: Number(r.TU_MUA_SO_LAN_THU) || 0, lyDo: r.TU_MUA_LOI_GAN_NHAT || '', thoiGianThu: r.TU_MUA_THOI_GIAN_THU || '',
+        thongTinGke: Object.entries(TRUONG_SUA_GKE).map(([truong, nhan]) => ({ truong, nhan, goc: giaTriGocGke(r, truong), sua: sua[truong] || '' })),
+      };
+    });
+}
+
+// Lưu (giaTri có nội dung) hoặc xoá (giaTri === null) 1 trường sửa tay. CHỈ khi đơn đang ở chế độ mua thủ công. Nơi gọi tự
+// kiểm tra quyền + Xưởng. -> thông báo lỗi (string) hoặc null nếu thành công. Ghi lịch sử đơn + log Tracking.
+function suaThongTinGke(row, user, truong, giaTri) {
+  if (row.TU_MUA_CHE_DO !== CHE_DO_THU_CONG) return 'Chỉ sửa được dữ liệu gửi GKE khi đơn đang ở chế độ mua thủ công.';
+  if (!Object.hasOwn(TRUONG_SUA_GKE, truong)) return 'Trường thông tin không hợp lệ.';
+  const xoa = giaTri === null;
+  const moi = xoa ? '' : String(giaTri ?? '').trim();
+  if (!xoa && !moi) return 'Chưa nhập giá trị mới.';
+  if (moi.length > DO_DAI_GIA_TRI_GKE_TOI_DA) return `Giá trị quá dài (tối đa ${DO_DAI_GIA_TRI_GKE_TOI_DA} ký tự).`;
+  const hienTai = docThongTinGke(row);
+  const cu = hienTai[truong] || '';
+  if (xoa && !cu) return 'Trường này chưa có giá trị sửa tay.';
+  if (xoa) delete hienTai[truong]; else hienTai[truong] = moi;
+  trangThaiDbService.ghiDe(row.STT_Key, { THONG_TIN_GKE_CHO_DON_LOI: Object.keys(hienTai).length ? JSON.stringify(hienTai) : '' });
+  const goc = giaTriGocGke(row, truong);
+  ghiLog({
+    nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: xoa ? 'XOA_THONG_TIN_GKE' : 'SUA_THONG_TIN_GKE', sttKey: row.STT_Key,
+    chiTiet: { truong, nhan: TRUONG_SUA_GKE[truong], giaTriGoc: goc, giaTriCu: cu, giaTriMoi: moi },
+  }).catch(e => console.error('[TrackingTuDong] Lỗi ghi log nền:', e.message));
+  const moTa = xoa
+    ? `XOÁ dữ liệu sửa tay gửi GKE — ${TRUONG_SUA_GKE[truong]} "${cu}" (quay về dữ liệu gốc "${goc}").`
+    : `SỬA dữ liệu gửi GKE — ${TRUONG_SUA_GKE[truong]}: gốc "${goc}"${cu ? `, đang sửa "${cu}"` : ''} -> "${moi}" (chỉ dùng khi gửi GKE, Sheet giữ nguyên).`;
+  ghiLogTracking(`[Thủ công - ${user.ten}] ${row.STT_Key}: ${moTa}`, row.STT_Key, true);
+  ghiLogTrackingVaoDb({ sttKey: row.STT_Key, nguon: 'Thủ công', nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: xoa ? 'Xoá dữ liệu sửa GKE' : 'Sửa dữ liệu GKE', chiTiet: moTa });
+  return null;
 }
 
 // "Cho tự động thử lại" — xoá số lần thử/chế độ thủ công (dùng sau khi đã sửa thông tin đơn). Trả false nếu đơn không ở
@@ -843,7 +901,7 @@ function choTuDongThuLai(row, user) {
 }
 
 module.exports = {
-  layDonChuyenThuCong, choTuDongThuLai, SO_LAN_THU_TU_DONG_TOI_DA,
+  layDonChuyenThuCong, choTuDongThuLai, suaThongTinGke, SO_LAN_THU_TU_DONG_TOI_DA,
   layCauHinh, luuCauHinh, chayQuetTuDongMuaTracking, layDanhSachDonAutoTracking, layLogTracking,
   muaTrackingChoDon, inLabelChoDon, muaTrackingVaInLabelChoDon,
   capNhatTrangThaiTrackingChoDon, chayQuetCapNhatTrangThaiTracking, chayQuetTrangThaiNeuDenLuot,
