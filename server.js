@@ -72,6 +72,9 @@ require('./services/canhBaoJob').batDauLichCanhBao();
 // admin tự bật ở trang "Tracking" (services/trackingAutoService.js tự đọc cấu hình mỗi lượt quét).
 require('./services/trackingJob').batDauLichTracking();
 
+// Tự động quét QC (02/10/2026) — mỗi 2 phút; từng QC TẮT theo mặc định, bật ở menu QC (services/qc/qcAutoService.js).
+require('./services/qc/qcAutoService').batDauLichAutoQc();
+
 // Bật lịch backup SQLite (bổ sung 22/09/2026, theo yêu cầu người dùng — data/ trước đây không có
 // cơ chế backup nào, xem services/backupDbService.js).
 require('./services/backupDbService').batDauLichBackup();

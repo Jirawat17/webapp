@@ -575,7 +575,8 @@ async function guiThuTelegram() {
 
 // Chạy 1 lượt QC + ghi log. -> { id, loai, sttKey, model, anh, ketQua | null, loi | null }
 // Mã đơn không tồn tại / loại chưa triển khai -> throw (status 404/400), vẫn ghi log với mã không tồn tại.
-async function chayQc({ sttKey, loai, user }) {
+// cheDo: 'MANUAL' (bấm ở menu QC) | 'AUTO' (Tự động quét QC — services/qc/qcAutoService.js, kèm thongTinAuto để ghi log).
+async function chayQc({ sttKey, loai, user, cheDo = 'MANUAL', thongTinAuto = null }) {
   sttKey = String(sttKey || '').trim();
   if (!LOAI_QC[loai]) throw loiNghiepVu('Loại QC không hợp lệ — chỉ QC1, QC2, QC3.');
   if (!LOAI_DA_TRIEN_KHAI.includes(loai)) throw loiNghiepVu(`${LOAI_QC[loai]} chưa được triển khai.`);
@@ -586,12 +587,13 @@ async function chayQc({ sttKey, loai, user }) {
   if (loiNguong) throw loiNghiepVu(`Ngưỡng kết luận không hợp lệ — ${loiNguong} Sửa ở mục "Ngưỡng kết luận" trước khi chạy QC.`);
   const nguong = nguongSo(nguongGoc);
   const { model } = layCauHinh(loai);
-  const dong = { ThoiGian: thoiGianVNISOString(), NguoiDung: user.ten, STT_Key: sttKey, LoaiQc: loai, Model: model, NguongDaDung: JSON.stringify(nguong) };
+  const dong = { ThoiGian: thoiGianVNISOString(), NguoiDung: user.ten, STT_Key: sttKey, LoaiQc: loai, Model: model, NguongDaDung: JSON.stringify(nguong),
+    CheDo: cheDo, ThongTinAuto: thongTinAuto ? JSON.stringify(thongTinAuto) : '' };
   let kq;
   try {
     kq = await CHAY_THEO_LOAI[loai](sttKey, nguong);
   } catch (err) {
-    const id = nhatKyDbService.ghiQcLog({ ...dong, KetQua: 'LOI', LoiApi: err.message });
+    const id = nhatKyDbService.ghiQcLog({ ...dong, KetQua: 'LOI', LoiApi: err.message, ThoiGianKetThuc: thoiGianVNISOString() });
     if (err.status) throw Object.assign(err, { logId: id });
     canhBaoTelegram({ loai, sttKey, model, nguoiChay: user.ten, loi: err.message });
     return { id, loai, sttKey, model, anh: [], ketQua: null, loi: err.message };
@@ -602,6 +604,7 @@ async function chayQc({ sttKey, loai, user }) {
     AnhDaDung: kq.anh.join('\n'), FileTheu: (kq.fileTheu || []).join('\n'), DesignFile: k.design_file || '', MockupFile: k.mockup_file || '',
     KetQua: k.result, DoTinCay: k.confidence, LyDo: k.reason,
     Diem: k.score === null || k.score === undefined ? '' : k.score, AiDeXuat: k.ai_de_xuat || '', LyDoKetLuan: k.ly_do_ket_luan || '',
+    ThoiGianKetThuc: thoiGianVNISOString(),
     ChiTiet: JSON.stringify({ ket_qua: k, ai_goc: kq.aiGoc || null }),
   });
   if (k.result !== 'PASS') canhBaoTelegram({ loai, sttKey, model: kq.daGoiAi ? model : '', nguoiChay: user.ten, ketQua: k });

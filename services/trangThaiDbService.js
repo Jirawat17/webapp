@@ -34,6 +34,9 @@ const CAC_COT = [
   // tracking (services/trackingAutoService.js). AUTO_TRACKING giữ cột cũ nhưng không còn dùng trong logic.
   // (THOI_GIAN_CHAY_MAY — mốc cũ bản trước, đã bỏ; cột có thể còn trong DB, không ảnh hưởng.)
   'THOI_GIAN_SAN_XUAT',
+  // THOI_GIAN_VE_FILE / THOI_GIAN_DAN_TEM (02/10/2026, Tự động quét QC) — lần gần nhất đơn chuyển sang "Đã vẽ file" (cột
+  // TRANG_THAI_VE_FILE) / "ĐÃ DÁN TEM"; mốc tính thời gian chờ Auto QC1 / Auto QC3 (services/qc/qcAutoService.js).
+  'THOI_GIAN_VE_FILE', 'THOI_GIAN_DAN_TEM',
   'HANG_VAN_CHUYEN', 'TRACKING_ID', 'TRANG_THAI_TRACKING', 'THOI_GIAN_CAP_NHAT_TRACKING',
   // MA_NODE_TRACKING/MA_TRANG_THAI_NODE_TRACKING (bổ sung 21/09/2026, theo yêu cầu người dùng — xem
   // services/trackingAutoService.js#daGiaoThanhCongGke): lưu song song mã "order_node"/"node_status"

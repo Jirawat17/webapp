@@ -50,6 +50,17 @@
   </div>
 
   <div class="qc-khoi">
+    <h3>Tự động quét QC</h3>
+    <p style="color:var(--color-text-muted);margin-top:0">Hệ thống tự QC mỗi 2 phút, <strong>mỗi đơn tối đa 1 lần auto cho từng QC</strong> (QC thủ công không bị ảnh hưởng). Chỉ áp dụng cho đơn chuyển trạng thái <strong>sau khi</strong> có tính năng này. Lỗi kỹ thuật (key sai, hết quota…) tự thử lại tối đa 2 lần, cách nhau 30 phút. Mỗi QC tối đa 10 đơn mỗi lượt.</p>
+    <div class="qc-cuon-ngang"><table class="qc-bang-nguong">
+      <thead><tr><th>QC</th><th>Tự động</th><th>Chờ (giờ)</th><th>Chờ (phút)</th><th>Điều kiện</th></tr></thead>
+      <tbody id="bang-auto"><tr><td colspan="5">Đang tải...</td></tr></tbody>
+    </table></div>
+    <p style="margin-bottom:0"><button type="button" class="btn-hanh-dong" onclick="luuAuto(this)">Lưu tự động quét</button></p>
+    <p id="thong-bao-auto" style="display:none"></p>
+  </div>
+
+  <div class="qc-khoi">
     <h3>Ngưỡng kết luận</h3>
     <p style="color:var(--color-text-muted);margin-top:0">AI chỉ phân tích và chấm <strong>score</strong> (0–100, mức khớp yêu cầu — càng cao càng tốt) + <strong>độ chắc chắn</strong>; hệ thống tự kết luận theo ngưỡng dưới đây. Luật cứng luôn ưu tiên (vd tem mang mã tracking khác → FAIL; chưa xác định được Design / hạng mục bắt buộc chưa PASS → không PASS; FAIL phải có bằng chứng).</p>
     <ul style="color:var(--color-text-muted);margin-top:0">
@@ -130,6 +141,7 @@ let dsLoai = [];
   document.getElementById('qc-ma-don').addEventListener('keydown', e => { if (e.key === 'Enter') chayQc(); });
   document.getElementById('btn-tai-log').onclick = taiLog;
   await taiCauHinh();
+  taiAuto();
   taiNguong();
   taiTelegram();
   await taiLog();
@@ -161,6 +173,48 @@ function hangCauHinh(c, ncc) {
 function doiNcc(loai) {
   const c = dsLoai.find(x => x.loai === loai);
   document.getElementById('cau-hinh-' + loai).innerHTML = hangCauHinh(c, document.getElementById('ncc-' + loai).value);
+}
+
+// ---- Tự động quét QC (02/10/2026) — backend kiểm tra lại (services/qc/qcAutoService.js#luuCauHinhAuto).
+const DIEU_KIEN_AUTO = {
+  QC1: 'Vẽ file = "Đã vẽ file" + có ≥ 1 ảnh File thêu · chờ tính từ lúc chuyển "Đã vẽ file"',
+  QC2: 'Đã sản xuất (hoặc bước sau) + có Ảnh đã sản xuất · chờ tính từ lúc chuyển "Đã sản xuất"',
+  QC3: 'ĐÃ DÁN TEM (hoặc DELIVERED) + có Ảnh đã dán tem · chờ tính từ lúc chuyển "ĐÃ DÁN TEM"',
+};
+function thongBaoAuto(chu, loi) {
+  const el = document.getElementById('thong-bao-auto');
+  el.style.display = 'block';
+  el.style.color = loi ? 'var(--color-danger-text)' : 'var(--color-success-text)';
+  el.textContent = chu;
+}
+let dsAuto = [];
+async function taiAuto() {
+  const el = document.getElementById('bang-auto');
+  try { dsAuto = await apiFetch('/qc/auto'); } catch (e) { el.innerHTML = `<tr><td colspan="5">Lỗi: ${escapeHtml(e.message)}</td></tr>`; return; }
+  el.innerHTML = dsAuto.map(a => `<tr>
+    <td><strong>${escapeHtml(a.loai)}</strong></td>
+    <td><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="auto-${a.loai}-bat" ${a.bat ? 'checked' : ''}> ${a.bat ? 'BẬT' : 'TẮT'}</label></td>
+    <td><input type="number" min="0" max="720" step="1" id="auto-${a.loai}-gio" value="${a.gio}" aria-label="${a.loai} giờ chờ"></td>
+    <td><input type="number" min="0" max="59" step="1" id="auto-${a.loai}-phut" value="${a.phut}" aria-label="${a.loai} phút chờ"></td>
+    <td style="color:var(--color-text-muted);font-size:0.85rem">${escapeHtml(DIEU_KIEN_AUTO[a.loai] || '')}</td>
+  </tr>`).join('');
+}
+async function luuAuto(nut) {
+  const ds = [];
+  for (const a of dsAuto) {
+    const gio = document.getElementById(`auto-${a.loai}-gio`).value.trim();
+    const phut = document.getElementById(`auto-${a.loai}-phut`).value.trim();
+    if (!/^\d+$/.test(gio) || Number(gio) > 720) return thongBaoAuto(`Chưa lưu: ${a.loai} — giờ phải là số nguyên 0–720.`, true);
+    if (!/^\d+$/.test(phut) || Number(phut) > 59) return thongBaoAuto(`Chưa lưu: ${a.loai} — phút phải là số nguyên 0–59.`, true);
+    ds.push({ loai: a.loai, bat: document.getElementById(`auto-${a.loai}-bat`).checked, gio: Number(gio), phut: Number(phut) });
+  }
+  nut.disabled = true;
+  try {
+    await apiFetch('/qc/auto', { method: 'POST', body: JSON.stringify({ ds }) });
+    thongBaoAuto(`Đã lưu — đang bật: ${ds.filter(d => d.bat).map(d => d.loai).join(', ') || '(không QC nào)'}.`);
+    await taiAuto();
+  } catch (e) { thongBaoAuto('Chưa lưu: ' + e.message, true); }
+  nut.disabled = false;
 }
 
 // ---- Ngưỡng kết luận: cùng quy tắc với backend (services/qc/qcService.js#kiemTraNguong) — backend vẫn kiểm tra lại khi lưu và khi chạy QC.
@@ -345,18 +399,19 @@ async function taiLog() {
   try { ds = await apiFetch('/qc/log?' + qs); } catch (e) { el.textContent = 'Lỗi: ' + e.message; return; }
   if (!ds.length) { el.innerHTML = '<p style="color:var(--color-text-muted)">Chưa có lần QC nào.</p>'; return; }
   el.innerHTML = `<table class="qc-bang-log">
-    <thead><tr><th>Thời gian</th><th>Mã đơn</th><th>QC</th><th>Kết quả</th><th>Score</th><th>Chắc chắn</th><th>Lý do / lỗi</th><th>Người chạy</th><th></th></tr></thead>
+    <thead><tr><th>Thời gian</th><th>Mã đơn</th><th>QC</th><th>Chế độ</th><th>Kết quả</th><th>Score</th><th>Chắc chắn</th><th>Lý do / lỗi</th><th>Người chạy</th><th></th></tr></thead>
     <tbody>${ds.map(d => `<tr>
       <td>${escapeHtml(String(d.ThoiGian).replace('T', ' ').slice(0, 19))}</td>
       <td>${escapeHtml(d.STT_Key)}</td>
       <td>${escapeHtml(d.LoaiQc)}</td>
+      <td>${d.CheDo === 'AUTO' ? '<strong>AUTO</strong>' : 'MANUAL'}</td>
       <td>${nhanKetQua(d.KetQua)}${d.AiDeXuat && d.AiDeXuat !== d.KetQua ? `<br><small>AI đề xuất: ${escapeHtml(d.AiDeXuat)}</small>` : ''}</td>
       <td>${d.Diem !== undefined && d.Diem !== '' ? escapeHtml(d.Diem) : '—'}</td>
       <td>${d.DoTinCay ? Math.round(Number(d.DoTinCay) * 100) + '%' : '—'}</td>
       <td class="ly-do">${escapeHtml(d.LoiApi || d.LyDoKetLuan || d.LyDo || '')}${d.LyDoKetLuan && d.LyDo ? `<br><small style="color:var(--color-text-muted)">AI: ${escapeHtml(d.LyDo)}</small>` : ''}</td>
       <td>${escapeHtml(d.NguoiDung)}</td>
       <td>${d.ChiTiet ? `<button type="button" class="btn-hanh-dong phu" style="padding:4px 8px;font-size:0.78rem" onclick="xemChiTiet(this, ${d.id})">Chi tiết</button>` : ''}</td>
-    </tr><tr id="chi-tiet-${d.id}" style="display:none"><td colspan="9"><div class="qc-chi-tiet"></div></td></tr>`).join('')}</tbody></table>`;
+    </tr><tr id="chi-tiet-${d.id}" style="display:none"><td colspan="10"><div class="qc-chi-tiet"></div></td></tr>`).join('')}</tbody></table>`;
   window._dsLog = ds;
 }
 
@@ -366,7 +421,7 @@ function xemChiTiet(nut, id) {
   if (hang.style.display === 'none' && d) {
     let chiTiet = d.ChiTiet;
     try { chiTiet = JSON.stringify(JSON.parse(d.ChiTiet), null, 2); } catch (e) { /* giữ nguyên chuỗi */ }
-    hang.querySelector('.qc-chi-tiet').textContent = `Model: ${d.Model || '(không gọi AI)'}\nNgưỡng đã dùng: ${d.NguongDaDung || '—'}\nẢnh: ${d.AnhDaDung || '—'}\n\n${chiTiet}`;
+    hang.querySelector('.qc-chi-tiet').textContent = `Chế độ: ${d.CheDo || 'MANUAL'} · bắt đầu ${d.ThoiGian} · kết thúc ${d.ThoiGianKetThuc || '—'}\n${d.ThongTinAuto ? 'Auto: ' + d.ThongTinAuto + '\n' : ''}Model: ${d.Model || '(không gọi AI)'}\nNgưỡng đã dùng: ${d.NguongDaDung || '—'}\nẢnh: ${d.AnhDaDung || '—'}\n\n${chiTiet}`;
     hang.style.display = '';
   } else hang.style.display = 'none';
 }

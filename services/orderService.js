@@ -448,6 +448,13 @@ async function capNhatThat(sttKey, updates, user, tuyChon) {
   ) {
     updatesDaTinh.THOI_GIAN_SAN_XUAT = thoiGianVNISOString();
   }
+  // Mốc Tự động quét QC (02/10/2026): QC1 tính từ lúc vẽ file xong, QC3 từ lúc ĐÃ DÁN TEM (QC2 dùng THOI_GIAN_SAN_XUAT ở trên).
+  if (updatesDaTinh.TRANG_THAI_VE_FILE === 'Đã vẽ file' && row.TRANG_THAI_VE_FILE !== 'Đã vẽ file') {
+    updatesDaTinh.THOI_GIAN_VE_FILE = thoiGianVNISOString();
+  }
+  if (updatesDaTinh.TRANG_THAI_XUONG === 'ĐÃ DÁN TEM' && row.TRANG_THAI_XUONG !== 'ĐÃ DÁN TEM') {
+    updatesDaTinh.THOI_GIAN_DAN_TEM = thoiGianVNISOString();
+  }
 
   // DonNhieuAo — huỷ 1 đơn = huỷ CẢ nhóm (bổ sung 26/09/2026, theo yêu cầu người dùng). Chặn nếu trong
   // nhóm đã có đơn gửi đi (ĐÃ DÁN TEM/DELIVERED). Nút superadmin (boQua) KHÔNG áp dụng: đổi đúng các đơn

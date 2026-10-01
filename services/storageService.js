@@ -3,6 +3,7 @@ const {
   PutObjectCommand,
   GetObjectCommand,
   DeleteObjectCommand,
+  HeadObjectCommand,
   ListObjectsV2Command,
 } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
@@ -86,6 +87,22 @@ async function getObjectStream(objectKey) {
  * AbortController tự huỷ sau timeoutMs, bọc CẢ 2 giai đoạn (gửi yêu cầu + đọc xong body) trong cùng 1
  * hạn chót — huỷ thật sự (đóng kết nối), không chỉ ngừng chờ.
  */
+// Object có thật trên MinIO không (HEAD — không tải nội dung). true/false; lỗi khác "không tồn tại" (mạng, MinIO treo) -> throw.
+async function tonTaiObject(objectKey, { timeoutMs = THOI_GIAN_CHO_TOI_DA_MS } = {}) {
+  requireConfig();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    await s3.send(new HeadObjectCommand({ Bucket: BUCKET, Key: objectKey }), { abortSignal: controller.signal });
+    return true;
+  } catch (err) {
+    if (err.name === 'NotFound' || err.name === 'NoSuchKey' || (err.$metadata && err.$metadata.httpStatusCode === 404)) return false;
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function getObjectBuffer(objectKey, { timeoutMs = THOI_GIAN_CHO_TOI_DA_MS } = {}) {
   requireConfig();
   const controller = new AbortController();
@@ -154,6 +171,7 @@ module.exports = {
   uploadImageBuffer,
   getObjectStream,
   getObjectBuffer,
+  tonTaiObject,
   taoPresignedUrl,
   deleteObject,
   listObjectKeys,

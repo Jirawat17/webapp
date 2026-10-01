@@ -101,6 +101,17 @@ router.post('/nguong', (req, res) => {
   res.json({ ok: true });
 });
 
+// Tự động quét QC (02/10/2026) — bật/tắt + thời gian chờ riêng từng QC. Logic: services/qc/qcAutoService.js.
+router.get('/auto', (req, res) => {
+  res.json(require('../services/qc/qcAutoService').layCauHinhAuto());
+});
+// body: { ds: [{ loai, bat, gio, phut }] } — 1 dòng sai thì không lưu dòng nào.
+router.post('/auto', (req, res) => {
+  const loi = require('../services/qc/qcAutoService').luuCauHinhAuto(req.body && req.body.ds);
+  if (loi) return res.status(400).json({ error: loi });
+  res.json({ ok: true });
+});
+
 router.post('/chay', async (req, res) => {
   try {
     res.json(await qcService.chayQc({ sttKey: req.body.sttKey, loai: req.body.loai, user: req.session.user }));

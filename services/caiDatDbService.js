@@ -312,7 +312,8 @@ db.exec(`CREATE TABLE IF NOT EXISTS qc_cau_hinh (
 // Ngưỡng kết luận riêng từng QC (01/10/2026): NguongPass / NguongFail (score 0–100) + NguongCcl (độ chắc chắn tối thiểu, %).
 // Trống = mặc định trong services/qc/qcService.js#NGUONG_MAC_DINH.
 // ApiKeyVertex/ModelVertex (01/10/2026): Gemini qua Agent Platform / Vertex AI — lưu song song như Claude.
-const COT_QC = ['NhaCungCap', 'ApiKey', 'Model', 'ApiKeyClaude', 'ModelClaude', 'ApiKeyVertex', 'ModelVertex', 'NguongPass', 'NguongFail', 'NguongCcl'];
+// AutoBat ('TRUE'/'') / AutoGio / AutoPhut (02/10/2026): Tự động quét QC riêng từng QC (services/qc/qcAutoService.js).
+const COT_QC = ['NhaCungCap', 'ApiKey', 'Model', 'ApiKeyClaude', 'ModelClaude', 'ApiKeyVertex', 'ModelVertex', 'NguongPass', 'NguongFail', 'NguongCcl', 'AutoBat', 'AutoGio', 'AutoPhut'];
 const cotQcDaCo = db.prepare(`PRAGMA table_info(qc_cau_hinh)`).all().map(c => c.name);
 for (const cot of COT_QC) if (!cotQcDaCo.includes(cot)) db.exec(`ALTER TABLE qc_cau_hinh ADD COLUMN ${cot} TEXT NOT NULL DEFAULT ''`);
 // { QC1: { NhaCungCap, ApiKey, Model, ApiKeyClaude, ModelClaude }, ... } — loại chưa lưu lần nào không có trong kết quả.
@@ -344,8 +345,14 @@ function datTelegramQc({ chatId, botToken }) {
     .run(chatId === undefined ? cu.chatId : chatId, botToken === undefined ? cu.botToken : botToken);
 }
 
+// Mốc áp dụng Tự động quét QC (02/10/2026): lần khởi động ĐẦU TIÊN có tính năng — chỉ auto QC đơn chuyển trạng thái từ
+// mốc này trở đi (người dùng chốt: không QC hàng loạt đơn cũ). Ghi 1 lần, không đổi về sau.
+db.exec(`CREATE TABLE IF NOT EXISTS qc_auto_moc (id INTEGER PRIMARY KEY CHECK (id = 1), MocApDung TEXT NOT NULL DEFAULT '')`);
+db.prepare(`INSERT OR IGNORE INTO qc_auto_moc (id, MocApDung) VALUES (1, ?)`).run(new Date().toISOString());
+const layMocApDungAutoQc = () => (db.prepare(`SELECT MocApDung FROM qc_auto_moc WHERE id = 1`).get() || {}).MocApDung || '';
+
 module.exports = {
-  layCauHinhQc, datCauHinhQc, layTelegramQc, datTelegramQc,
+  layCauHinhQc, datCauHinhQc, layMocApDungAutoQc, layTelegramQc, datTelegramQc,
   CAC_COT_TAI_KHOAN_GKE, layDanhSachTaiKhoanGke, layTaiKhoanGke, ghiTaiKhoanGke, xoaTaiKhoanGke,
   layGanTaiKhoanGke, ganTaiKhoanGkeChoXuong,
   layCaiDatHangLoat, datCaiDatHangLoat,

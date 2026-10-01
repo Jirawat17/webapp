@@ -198,7 +198,9 @@ db.exec(`CREATE TABLE IF NOT EXISTS qc_log (
 db.exec(`CREATE INDEX IF NOT EXISTS idx_qc_log_stt ON qc_log(STT_Key)`);
 // Audit ngưỡng (01/10/2026): Diem (score AI), AiDeXuat (result AI đề xuất), NguongDaDung (JSON ngưỡng lúc chạy), LyDoKetLuan
 // (vì sao hệ thống ra kết quả cuối KetQua).
-const COT_QC_LOG_THEM = ['Diem', 'AiDeXuat', 'NguongDaDung', 'LyDoKetLuan'];
+// Tự động quét QC (02/10/2026): CheDo ('MANUAL' | 'AUTO'; dòng cũ trống = MANUAL), ThoiGianKetThuc, ThongTinAuto (JSON: trạng thái
+// đơn, mốc chuyển trạng thái, thời gian chờ, lần thử, ảnh + thời điểm upload).
+const COT_QC_LOG_THEM = ['Diem', 'AiDeXuat', 'NguongDaDung', 'LyDoKetLuan', 'CheDo', 'ThoiGianKetThuc', 'ThongTinAuto'];
 const cotQcLogDaCo = db.prepare(`PRAGMA table_info(qc_log)`).all().map(c => c.name);
 for (const cot of COT_QC_LOG_THEM) if (!cotQcLogDaCo.includes(cot)) db.exec(`ALTER TABLE qc_log ADD COLUMN ${cot} TEXT NOT NULL DEFAULT ''`);
 const COT_QC_LOG = ['ThoiGian', 'NguoiDung', 'STT_Key', 'LoaiQc', 'Model', 'AnhDaDung', 'FileTheu', 'DesignFile', 'MockupFile', 'KetQua', 'DoTinCay', 'LyDo', 'ChiTiet', 'LoiApi', ...COT_QC_LOG_THEM];
@@ -206,6 +208,40 @@ const cauGhiQcLog = db.prepare(`INSERT INTO qc_log (${COT_QC_LOG.join(', ')}) VA
 function ghiQcLog(dong) {
   return Number(cauGhiQcLog.run(Object.fromEntries(COT_QC_LOG.map(c => [c, dong[c] === undefined || dong[c] === null ? '' : String(dong[c])]))).lastInsertRowid);
 }
+// ---- Tự động quét QC (02/10/2026): mỗi (đơn, loại QC) TỐI ĐA 1 lần auto — khoá chính (STT_Key, LoaiQc).
+// TrangThai: DANG_CHAY (đã giành quyền, đang QC) | XONG (đã có kết quả PASS/FAIL/CAN_CHECK_LAI) | LOI (lỗi kỹ thuật, còn được thử
+// lại nếu SoLanThu < tối đa và đủ khoảng cách). Giành quyền = 1 câu lệnh SQL nguyên tử (INSERT OR IGNORE / UPDATE có điều kiện)
+// -> nhiều lượt/tiến trình cùng lúc chỉ 1 bên thắng, nhờ khoá ghi của SQLite.
+db.exec(`CREATE TABLE IF NOT EXISTS qc_auto (
+  STT_Key TEXT NOT NULL,
+  LoaiQc TEXT NOT NULL,
+  TrangThai TEXT NOT NULL DEFAULT '',
+  SoLanThu INTEGER NOT NULL DEFAULT 0,
+  LanThuCuoi TEXT NOT NULL DEFAULT '',
+  KetQua TEXT NOT NULL DEFAULT '',
+  QcLogId TEXT NOT NULL DEFAULT '',
+  PRIMARY KEY (STT_Key, LoaiQc)
+)`);
+// Lần đầu: chèn mới. Lần thử lại: chỉ khi đang LOI, SoLanThu < soLanToiDa và LanThuCuoi <= truocMoc (ISO). -> true nếu giành được.
+function giuQuyenAutoQc(sttKey, loaiQc, { bayGio, truocMoc, soLanToiDa }) {
+  const moi = db.prepare(`INSERT OR IGNORE INTO qc_auto (STT_Key, LoaiQc, TrangThai, SoLanThu, LanThuCuoi) VALUES (?, ?, 'DANG_CHAY', 1, ?)`).run(sttKey, loaiQc, bayGio);
+  if (moi.changes === 1) return true;
+  const thuLai = db.prepare(`UPDATE qc_auto SET TrangThai = 'DANG_CHAY', SoLanThu = SoLanThu + 1, LanThuCuoi = ?
+    WHERE STT_Key = ? AND LoaiQc = ? AND TrangThai = 'LOI' AND SoLanThu < ? AND LanThuCuoi <= ?`).run(bayGio, sttKey, loaiQc, soLanToiDa, truocMoc);
+  return thuLai.changes === 1;
+}
+function ketThucAutoQc(sttKey, loaiQc, { trangThai, ketQua = '', qcLogId = '' }) {
+  db.prepare(`UPDATE qc_auto SET TrangThai = ?, KetQua = ?, QcLogId = ? WHERE STT_Key = ? AND LoaiQc = ?`).run(trangThai, ketQua, String(qcLogId), sttKey, loaiQc);
+}
+// { 'STT|QC1': row } — để lọc nhanh đơn đã auto.
+function layTatCaAutoQc() {
+  return new Map(db.prepare(`SELECT * FROM qc_auto`).all().map(r => [`${r.STT_Key}|${r.LoaiQc}`, r]));
+}
+// Khởi động lại khi đang QC dở (tiến trình chết giữa chừng) -> coi là 1 lần LOI (vẫn tính lần thử, không kẹt DANG_CHAY mãi).
+function donDepAutoQcDangChay() {
+  return db.prepare(`UPDATE qc_auto SET TrangThai = 'LOI', KetQua = 'Server khởi động lại khi đang QC' WHERE TrangThai = 'DANG_CHAY'`).run().changes;
+}
+
 // Mới nhất trước; loc: { loaiQc, ketQua, sttKey, gioiHan }.
 function layQcLog({ loaiQc, ketQua, sttKey, gioiHan = 200 } = {}) {
   const dk = [], ts = {};
@@ -216,7 +252,7 @@ function layQcLog({ loaiQc, ketQua, sttKey, gioiHan = 200 } = {}) {
 }
 
 module.exports = {
-  ghiQcLog, layQcLog,
+  ghiQcLog, layQcLog, giuQuyenAutoQc, ketThucAutoQc, layTatCaAutoQc, donDepAutoQcDangChay,
   ghiNhieuDongBoSheetSeller, layNhatKyDongBoSheetSeller, layLoiDongBoDangCho, layDongBoGanNhat, xoaDongBoSheetSellerTheoDon,
   ghiLichSuHoatDong, ghiNhieuLichSuHoatDong, layTatCaLichSuHoatDong, xoaLichSuHoatDongTheoDon,
   ghiNhatKyQuetHangLoat, xoaNhatKyQuetHangLoatTheoDon,
