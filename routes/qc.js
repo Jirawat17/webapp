@@ -30,11 +30,11 @@ router.post('/cau-hinh', (req, res) => {
   const nhaCungCap = req.body.nhaCungCap || 'gemini';
   const model = String(req.body.model || '').trim();
   if (!qcService.LOAI_QC[loai]) return res.status(400).json({ error: 'Loại QC không hợp lệ — chỉ QC1, QC2, QC3.' });
-  if (!Object.hasOwn(qcService.NHA_CUNG_CAP, nhaCungCap)) return res.status(400).json({ error: 'Nhà cung cấp AI không hợp lệ — chỉ Gemini hoặc Claude.' });
+  if (!Object.hasOwn(qcService.NHA_CUNG_CAP, nhaCungCap)) return res.status(400).json({ error: 'Nhà cung cấp AI không hợp lệ — chỉ Gemini, Gemini (Agent Platform) hoặc Claude.' });
   if (!/^[A-Za-z0-9._-]{1,80}$/.test(model)) return res.status(400).json({ error: 'Tên model không hợp lệ (vd gemini-2.5-flash, claude-sonnet-5-5).' });
   const keyMoi = String(apiKey || '').trim();
   if (keyMoi && !/^[\x21-\x7e]{10,200}$/.test(keyMoi)) return res.status(400).json({ error: 'API key không hợp lệ.' });
-  const [cotKey, cotModel] = nhaCungCap === 'claude' ? ['ApiKeyClaude', 'ModelClaude'] : ['ApiKey', 'Model'];
+  const { cotKey, cotModel } = qcService.NHA_CUNG_CAP[nhaCungCap];
   caiDatDbService.datCauHinhQc(loai, { NhaCungCap: nhaCungCap, [cotModel]: model, ...(xoaKey ? { [cotKey]: '' } : keyMoi ? { [cotKey]: keyMoi } : {}) });
   res.json({ ok: true });
 });

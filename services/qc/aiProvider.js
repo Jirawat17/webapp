@@ -6,6 +6,7 @@
 const PROVIDER = {
   gemini: require('./geminiProvider'),
   claude: require('./claudeProvider'),
+  vertex: require('./geminiProvider').vertex, // Gemini qua Agent Platform / Vertex AI (01/10/2026)
 };
 const PROVIDER_MAC_DINH = 'gemini';
 

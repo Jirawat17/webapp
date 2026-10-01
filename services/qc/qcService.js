@@ -18,7 +18,13 @@ const LOAI_QC = { QC1: 'QC1 – QC Vẽ File', QC2: 'QC2 – QC Sản Xuất', Q
 const LOAI_DA_TRIEN_KHAI = ['QC1', 'QC2', 'QC3'];
 const MODEL_MAC_DINH = 'gemini-2.5-flash';
 // Nhà cung cấp AI chọn riêng cho từng QC (01/10/2026); chưa chọn = gemini như trước.
-const NHA_CUNG_CAP = { gemini: { ten: 'Gemini', modelMacDinh: MODEL_MAC_DINH }, claude: { ten: 'Claude', modelMacDinh: 'claude-sonnet-5-5' } };
+// vertex (01/10/2026): Gemini gọi qua Agent Platform / Vertex AI — dùng được credits Google Cloud (Gemini API của AI Studio thì không).
+// cotKey/cotModel: cột lưu trong qc_cau_hinh (caiDatDbService.js) — mỗi nhà cung cấp 1 cặp riêng, lưu song song.
+const NHA_CUNG_CAP = {
+  gemini: { ten: 'Gemini', modelMacDinh: MODEL_MAC_DINH, cotKey: 'ApiKey', cotModel: 'Model' },
+  claude: { ten: 'Claude', modelMacDinh: 'claude-sonnet-5-5', cotKey: 'ApiKeyClaude', cotModel: 'ModelClaude' },
+  vertex: { ten: 'Gemini (Agent Platform / Vertex AI)', modelMacDinh: MODEL_MAC_DINH, cotKey: 'ApiKeyVertex', cotModel: 'ModelVertex' },
+};
 const KET_QUA = ['PASS', 'FAIL', 'CAN_CHECK_LAI'];
 const DUNG_LUONG_ANH_TOI_DA = 15 * 1024 * 1024; // Gemini giới hạn ~20MB/lượt gửi ảnh trực tiếp
 
@@ -27,9 +33,9 @@ const loiNghiepVu = (thongBao, status = 400) => Object.assign(new Error(thongBao
 // -> { nhaCungCap, apiKey, model } của nhà cung cấp đang chọn cho QC `loai` (hoặc `nhaCungCap` truyền vào).
 function layCauHinh(loai, nhaCungCap) {
   const ch = caiDatDbService.layCauHinhQc()[loai] || {};
-  const ncc = NHA_CUNG_CAP[nhaCungCap] ? nhaCungCap : NHA_CUNG_CAP[ch.NhaCungCap] ? ch.NhaCungCap : 'gemini';
-  const [apiKey, model] = ncc === 'claude' ? [ch.ApiKeyClaude, ch.ModelClaude] : [ch.ApiKey, ch.Model];
-  return { nhaCungCap: ncc, apiKey: apiKey || '', model: model || NHA_CUNG_CAP[ncc].modelMacDinh };
+  const ncc = Object.hasOwn(NHA_CUNG_CAP, nhaCungCap) ? nhaCungCap : Object.hasOwn(NHA_CUNG_CAP, ch.NhaCungCap) ? ch.NhaCungCap : 'gemini';
+  const { cotKey, cotModel, modelMacDinh } = NHA_CUNG_CAP[ncc];
+  return { nhaCungCap: ncc, apiKey: ch[cotKey] || '', model: ch[cotModel] || modelMacDinh };
 }
 
 // Nhận dạng định dạng ảnh theo byte đầu (ảnh MinIO luôn JPEG sau khi nén ở trình duyệt, nhưng ảnh cũ có thể khác).
