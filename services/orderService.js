@@ -4,7 +4,7 @@ const { layBanDoTenKhachHang } = require('./khachHangService');
 const taiSanService = require('./taiSanService');
 const { chiSoTinhTrang, TINH_TRANG_VALUES, TRANG_THAI_PHOI_VALUES, TRANG_THAI_VE_FILE_VALUES } = require('../data/pipelineTinhTrang');
 const { thoiGianVNISOString } = require('./dateUtils');
-const { laAdmin, laSuperAdmin } = require('../middleware/auth');
+const { laSuperAdmin } = require('../middleware/auth');
 const { layDanhSachXuong, layTeamXuongMacDinh } = require('./caiDatDbService');
 const donNhieuAoService = require('./donNhieuAoService');
 const taiKhoanService = require('./taiKhoanService');
@@ -276,8 +276,8 @@ function tinhTinhTrangTuDong(rowHienTai, updates) {
 // (routes/photos.js, gọi update() với tuyChon.quaAnh = true): "Đã sản xuất" mốc da_san_xuat, "ĐÃ DÁN
 // TEM" mốc da_dan_tem (đổi từ "Quét mã QR Tracking" gọi GKE thật sang thuần ảnh 09/09/2026 lần 4, theo
 // yêu cầu người dùng — xem routes/photos.js). Chặn MỌI đường khác (ô "Sửa trạng thái thủ công" ở order.html, chuyển hàng loạt...)
-// — bất kể đơn đang ở trạng thái nào trước đó. admin vẫn ghi đè được cả 2 giá trị (cần 1 lối thoát khi
-// máy ảnh/QR hỏng) — đã xác nhận rõ với người dùng, chấp nhận rủi ro bị lạm dụng ở mức admin.
+// — bất kể đơn đang ở trạng thái nào trước đó. Từ 03/10/2026 CHỈ superadmin còn ghi đè được cả 2 giá trị
+// (lối thoát khi máy ảnh/QR hỏng); admin phải chụp ảnh như các vai trò khác (theo yêu cầu người dùng).
 // (Bổ sung 09/09/2026 lần 3, XOÁ "Đã đóng gói" — xem data/pipelineTinhTrang.js): riêng "ĐÃ DÁN TEM",
 // admin sửa tay KHÔNG được miễn trừ điều kiện trạng thái NGUỒN như "Đã sản xuất" — xem
 // TRANG_THAI_NGUON_HOP_LE_CHO_DAN_TEM bên dưới, kiểm tra TRƯỚC cả nhánh admin, áp dụng cho MỌI người gọi.
@@ -317,7 +317,10 @@ function kiemTraCongAnhBatBuoc(rowHienTai, updates, user, quaAnh) {
   }
 
   if (quaAnh) return;
-  if (user && laAdmin(user.vaiTro)) return;
+  // 03/10/2026, theo yêu cầu người dùng: CHỈ superadmin còn được set tay — admin phải đi đúng luồng chụp ảnh
+  // (ảnh đã sản xuất -> "Đã sản xuất", ảnh dán tem -> "ĐÃ DÁN TEM"). Đơn cũ đang ở 2 trạng thái này không bị
+  // ảnh hưởng (chỉ chặn CHUYỂN ĐỔI mới, không kiểm tra ảnh của đơn đã nằm sẵn ở đó).
+  if (user && laSuperAdmin(user.vaiTro)) return;
 
   if (TRANG_THAI_BAT_BUOC_CHUP_ANH.includes(updates.TRANG_THAI_XUONG)) {
     throw new Error(
