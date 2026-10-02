@@ -200,10 +200,21 @@ function layPreparedGhiDe(cotDaSort) {
 // Ghi đè MỘT PHẦN (chỉ các cột thực sự có trong `updates`, đúng ngữ nghĩa updateCells cũ) — UPSERT
 // theo stt_key, không quan tâm dòng đã tồn tại trong DB hay chưa (đơn mới tự động INSERT).
 const COT_TRANG_THAI_THEO_DOI = Object.keys(MAC_DINH_THAT_THEO_COT);
+// Lịch sử đổi trạng thái (03/10/2026, AdminAI): 1 dòng / 1 cột trạng thái THẬT SỰ đổi, ghi cùng chỗ với mốc ở ghiDe() -> đủ mọi
+// đường đổi (quét, sửa tay, hàng loạt, tự chuyển...) kèm giá trị CŨ — nhật ký "sửa đơn" không có giá trị cũ. Chỉ có từ khi deploy.
+db.exec(`CREATE TABLE IF NOT EXISTS lich_su_doi_trang_thai (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, ThoiGian TEXT NOT NULL, STT_Key TEXT NOT NULL, Cot TEXT NOT NULL,
+  Tu TEXT NOT NULL DEFAULT '', Sang TEXT NOT NULL DEFAULT '', Nguoi TEXT NOT NULL DEFAULT ''
+)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_lsdtt_thoi_gian ON lich_su_doi_trang_thai(ThoiGian)`);
+const cauGhiLichSuDoi = db.prepare(`INSERT INTO lich_su_doi_trang_thai (ThoiGian, STT_Key, Cot, Tu, Sang, Nguoi) VALUES (?, ?, ?, ?, ?, ?)`);
+// -> [{ ThoiGian, STT_Key, Cot, Tu, Sang, Nguoi }] từ mốc `tu` (ISO giờ VN), cũ trước.
+const layLichSuDoiTrangThaiTu = tu => db.prepare(`SELECT ThoiGian, STT_Key, Cot, Tu, Sang, Nguoi FROM lich_su_doi_trang_thai WHERE ThoiGian >= ? ORDER BY id`).all(tu);
 // tuyChon.nguoi: tên người thực hiện (orderService.update truyền user.ten); không truyền thì lấy NguoiCapNhatCuoi trong updates.
 function ghiDe(sttKey, updates, tuyChon = {}) {
   const key = chuanHoaKey(sttKey);
   // Mốc đổi trạng thái: so với giá trị đang lưu (đã áp mặc định thật — '' và 'Chưa in mã' là CÙNG 1 trạng thái).
+  let lichSu = [];
   if (COT_TRANG_THAI_THEO_DOI.some(c => updates[c] !== undefined)) {
     const cu = layTheoKey(key);
     const moi = apDungMacDinhThat(Object.fromEntries(COT_TRANG_THAI_THEO_DOI.map(c => [c, updates[c] === undefined ? cu[c] : String(updates[c] ?? '')])));
@@ -212,6 +223,7 @@ function ghiDe(sttKey, updates, tuyChon = {}) {
       updates = { ...updates, THOI_GIAN_DOI_TRANG_THAI: require('./dateUtils').thoiGianVNISOString(),
         NGUOI_DOI_TRANG_THAI: tuyChon.nguoi || updates.NguoiCapNhatCuoi || '',
         TRANG_THAI_TRUOC_DO: JSON.stringify(Object.fromEntries(daDoi.map(c => [c, cu[c]]))) };
+      lichSu = daDoi.map(c => [updates.THOI_GIAN_DOI_TRANG_THAI, key, c, cu[c], moi[c], updates.NGUOI_DOI_TRANG_THAI]);
     }
   }
   // .sort() — xem lý do bắt buộc ở comment layPreparedGhiDe() trên.
@@ -220,6 +232,7 @@ function ghiDe(sttKey, updates, tuyChon = {}) {
 
   const giaTri = cot.map(c => (updates[c] === undefined || updates[c] === null) ? '' : String(updates[c]));
   layPreparedGhiDe(cot).run(key, ...giaTri);
+  for (const d of lichSu) cauGhiLichSuDoi.run(...d);
 }
 
 // [[sttKey, updates], ...] trong 1 giao dịch — dùng khi hệ thống tự ghi hàng loạt (orderService.js#tuGanXuongTheoTeam).
@@ -242,4 +255,4 @@ function layDonDoiTrangThaiTu(tu) {
     .all(tu).map(({ stt_key, ...r }) => ({ STT_Key: stt_key, ...apDungMacDinhThat(r) }));
 }
 
-module.exports = { CAC_COT, RONG_MAC_DINH, layTheoKey, layTatCa, ghiDe, ghiDeNhieu, demTheoXuong, doiTenXuongHangLoat, layDonDoiTrangThaiTu };
+module.exports = { CAC_COT, RONG_MAC_DINH, layTheoKey, layTatCa, ghiDe, ghiDeNhieu, demTheoXuong, doiTenXuongHangLoat, layDonDoiTrangThaiTu, layLichSuDoiTrangThaiTu };
