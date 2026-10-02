@@ -185,7 +185,7 @@
 </div>
 
 <script src="/js/icons.js?v=104"></script>
-<script src="/js/api.js?v=109"></script>
+<script src="/js/api.js?v=110"></script>
 <script>
 const NHAN_KET_QUA = { PASS: 'PASS', FAIL: 'FAIL', CAN_CHECK_LAI: 'CẦN CHECK LẠI', LOI: 'LỖI' };
 const NHAN_HANG_MUC = { tracking: 'Mã tracking', nguoi_nhan: 'Người nhận', dia_chi: 'Địa chỉ', ma_don_gom: 'Mã đơn kiện gom',
@@ -538,7 +538,7 @@ async function taiLog() {
     <thead><tr><th>Thời gian</th><th>Mã đơn</th><th>QC</th><th>Chế độ</th><th>Kết quả</th><th>Score</th><th>Chắc chắn</th><th>Lý do / lỗi</th><th>Người chạy</th><th>Đánh giá (thực tế)</th><th></th></tr></thead>
     <tbody>${ds.map(d => `<tr${aiSai(d) ? ' class="qc-ai-sai"' : ''}>
       <td>${escapeHtml(String(d.ThoiGian).replace('T', ' ').slice(0, 19))}</td>
-      <td>${escapeHtml(d.STT_Key)}</td>
+      <td><a href="/order.html?stt=${encodeURIComponent(d.STT_Key)}" target="_blank" rel="noopener" style="font-weight:700">${escapeHtml(d.STT_Key)}</a></td>
       <td>${escapeHtml(d.LoaiQc)}</td>
       <td>${d.CheDo === 'AUTO' ? '<strong>AUTO</strong>' : 'MANUAL'}</td>
       <td>${nhanKetQua(d.KetQua)}${d.AiDeXuat && d.AiDeXuat !== d.KetQua ? `<br><small>AI đề xuất: ${escapeHtml(d.AiDeXuat)}</small>` : ''}</td>

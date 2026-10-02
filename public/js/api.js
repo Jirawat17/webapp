@@ -222,6 +222,8 @@ function renderNav(user, active) {
       // lại sau (đúng quy ước "ẩn menu, không khoá route" đã áp dụng nhất quán trong hàm này).
       // "QC" (bổ sung 30/09/2026, theo yêu cầu người dùng) — AI QC bằng Gemini, CHỈ superadmin (routes/qc.js cũng chặn).
       links.push({ href: '/qc.html', label: 'QC', icon: 'navReports', key: 'qc' });
+      // "Notes" (bổ sung 02/10/2026, theo yêu cầu người dùng) — ghi chép kinh nghiệm, CHỈ superadmin (routes/notes.js cũng chặn).
+      links.push({ href: '/notes.html', label: 'Notes', icon: 'file', key: 'notes' });
       links.push({ href: '/users.html', label: 'Nhân viên', icon: 'navUsers', key: 'users' });
       // "Logs" (bổ sung 23/09/2026, theo yêu cầu người dùng) — xem log console server, CHỈ superadmin
       // (cùng mức nhạy cảm với Nhân viên/Setting) — xem routes/logs.js + public/logs.html.

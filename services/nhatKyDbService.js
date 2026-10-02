@@ -338,6 +338,39 @@ function thongKeTokenQc(tuThoiGian = '', gom = 'NGAY') {
     FROM qc_log WHERE TokenVao != '' AND ThoiGian >= @tu GROUP BY 1, 2, 3 ORDER BY 1 DESC, 2, 3`).all({ tu: tuThoiGian });
 }
 
+// ---------- Notes (02/10/2026, theo yêu cầu người dùng — CHỈ superadmin, routes/notes.js) — ghi chép kinh nghiệm xử lý vấn đề.
+// The: các thẻ cách nhau dấu phẩy, có ',' bao 2 đầu (",gke,zip,") để lọc đúng 1 thẻ bằng LIKE. Anh: JSON mảng object key MinIO (notes/...).
+db.exec(`CREATE TABLE IF NOT EXISTS notes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  TieuDe TEXT NOT NULL DEFAULT '',
+  NoiDung TEXT NOT NULL DEFAULT '',
+  The TEXT NOT NULL DEFAULT '',
+  Anh TEXT NOT NULL DEFAULT '[]',
+  NguoiTao TEXT NOT NULL DEFAULT '',
+  ThoiGianTao TEXT NOT NULL DEFAULT '',
+  NguoiSua TEXT NOT NULL DEFAULT '',
+  ThoiGianSua TEXT NOT NULL DEFAULT ''
+)`);
+const theSangCot = ds => (ds.length ? `,${ds.join(',')},` : '');
+const docNote = r => (r ? { ...r, The: r.The.split(',').filter(Boolean), Anh: JSON.parse(r.Anh || '[]') } : null);
+const layNote = id => docNote(db.prepare(`SELECT * FROM notes WHERE id = ?`).get(id));
+// loc: { tuKhoa, the } — mới sửa/tạo gần nhất trước.
+function layDanhSachNote({ tuKhoa = '', the = '' } = {}) {
+  const dk = [], ts = {};
+  if (tuKhoa) { dk.push(`(TieuDe || ' ' || NoiDung || ' ' || The) LIKE @tuKhoa`); ts.tuKhoa = `%${tuKhoa}%`; }
+  if (the) { dk.push(`The LIKE @the`); ts.the = `%,${the},%`; }
+  return db.prepare(`SELECT * FROM notes ${dk.length ? 'WHERE ' + dk.join(' AND ') : ''} ORDER BY COALESCE(NULLIF(ThoiGianSua, ''), ThoiGianTao) DESC, id DESC LIMIT 500`).all(ts).map(docNote);
+}
+const layTatCaTheNote = () => [...new Set(db.prepare(`SELECT The FROM notes`).all().flatMap(r => r.The.split(',').filter(Boolean)))].sort();
+function taoNote({ tieuDe, noiDung, the }, nguoi, thoiGian) {
+  return Number(db.prepare(`INSERT INTO notes (TieuDe, NoiDung, The, NguoiTao, ThoiGianTao) VALUES (?, ?, ?, ?, ?)`)
+    .run(tieuDe, noiDung, theSangCot(the), nguoi, thoiGian).lastInsertRowid);
+}
+const suaNote = (id, { tieuDe, noiDung, the }, nguoi, thoiGian) => db.prepare(`UPDATE notes SET TieuDe = ?, NoiDung = ?, The = ?, NguoiSua = ?, ThoiGianSua = ? WHERE id = ?`)
+  .run(tieuDe, noiDung, theSangCot(the), nguoi, thoiGian, id).changes;
+const datAnhNote = (id, anh) => db.prepare(`UPDATE notes SET Anh = ? WHERE id = ?`).run(JSON.stringify(anh), id).changes;
+const xoaNote = id => db.prepare(`DELETE FROM notes WHERE id = ?`).run(id).changes;
+
 // Gợi ý ngưỡng (02/10/2026): các lần QC đã đánh giá thực tế, có gọi AI (Model khác ''), không LỖI.
 const layDongDaDanhGiaCoAi = loaiQc => db.prepare(`SELECT id, Model, ChiTiet, DanhGiaThucTe FROM qc_log
   WHERE LoaiQc = ? AND DanhGiaThucTe != '' AND KetQua != 'LOI' AND Model != ''`).all(loaiQc);
@@ -376,6 +409,7 @@ function thongKeDanhGiaQc(tuThoiGian = '') {
 }
 
 module.exports = {
+  layNote, layDanhSachNote, layTatCaTheNote, taoNote, suaNote, datAnhNote, xoaNote,
   ghiQcLog, layQcLog, layQcLogTheoId, danhGiaQcLog, thongKeDanhGiaQc, thongKeTokenQc, layDongDaDanhGiaCoAi, maxQcLogId, layCclSauId, tongKetQcNgay,
   taoKinhNghiem, suaKinhNghiem, doiTrangThaiKinhNghiem, layKinhNghiemTheoId, layDanhSachKinhNghiem, layKinhNghiemApDung, tangSoLanDungKinhNghiem, giuQuyenAutoQc, ketThucAutoQc, layTatCaAutoQc, donDepAutoQcDangChay,
   ghiNhieuDongBoSheetSeller, layNhatKyDongBoSheetSeller, layLoiDongBoDangCho, layDongBoGanNhat, xoaDongBoSheetSellerTheoDon,
