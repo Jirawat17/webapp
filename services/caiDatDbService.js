@@ -334,16 +334,39 @@ db.exec(`CREATE TABLE IF NOT EXISTS qc_canh_bao_telegram (id INTEGER PRIMARY KEY
 if (!db.prepare(`PRAGMA table_info(qc_canh_bao_telegram)`).all().some(c => c.name === 'BotToken')) {
   db.exec(`ALTER TABLE qc_canh_bao_telegram ADD COLUMN BotToken TEXT NOT NULL DEFAULT ''`);
 }
+// Gộp cảnh báo (02/10/2026): GopCclPhut = chu kỳ gửi gộp CAN_CHECK_LAI (phút, 0 = gửi ngay từng tin như cũ); GioTongKet = "HH:MM"
+// gửi tin tổng kết ngày ('' = tắt); NgayTongKetCuoi = ngày (YYYY-MM-DD, giờ VN) đã gửi tổng kết — chống gửi trùng.
+// IdCclDaGui = id qc_log CAN_CHECK_LAI lớn nhất đã gửi gộp; ThoiGianGuiCclCuoi = ISO lần gửi gộp gần nhất (services/qc/qcTelegramService.js).
+for (const [cot, md] of [['GopCclPhut', '0'], ['GioTongKet', ''], ['NgayTongKetCuoi', ''], ['IdCclDaGui', '0'], ['ThoiGianGuiCclCuoi', '']]) {
+  if (!db.prepare(`PRAGMA table_info(qc_canh_bao_telegram)`).all().some(c => c.name === cot)) {
+    db.exec(`ALTER TABLE qc_canh_bao_telegram ADD COLUMN ${cot} TEXT NOT NULL DEFAULT '${md}'`);
+  }
+}
 function layTelegramQc() {
-  const r = db.prepare(`SELECT ChatId, BotToken FROM qc_canh_bao_telegram WHERE id = 1`).get() || {};
-  return { chatId: r.ChatId || '', botToken: r.BotToken || '' };
+  const r = db.prepare(`SELECT * FROM qc_canh_bao_telegram WHERE id = 1`).get() || {};
+  return { chatId: r.ChatId || '', botToken: r.BotToken || '', gopCclPhut: Number(r.GopCclPhut) || 0, gioTongKet: r.GioTongKet || '', ngayTongKetCuoi: r.NgayTongKetCuoi || '',
+    idCclDaGui: Number(r.IdCclDaGui) || 0, thoiGianGuiCclCuoi: r.ThoiGianGuiCclCuoi || '' };
 }
 // Ghi 1 phần: trường undefined giữ nguyên.
-function datTelegramQc({ chatId, botToken }) {
-  const cu = layTelegramQc();
-  db.prepare(`INSERT INTO qc_canh_bao_telegram (id, ChatId, BotToken) VALUES (1, ?, ?) ON CONFLICT(id) DO UPDATE SET ChatId = excluded.ChatId, BotToken = excluded.BotToken`)
-    .run(chatId === undefined ? cu.chatId : chatId, botToken === undefined ? cu.botToken : botToken);
+const COT_TELEGRAM = { chatId: 'ChatId', botToken: 'BotToken', gopCclPhut: 'GopCclPhut', gioTongKet: 'GioTongKet', ngayTongKetCuoi: 'NgayTongKetCuoi', idCclDaGui: 'IdCclDaGui', thoiGianGuiCclCuoi: 'ThoiGianGuiCclCuoi' };
+function datTelegramQc(moi) {
+  const gop = { ...layTelegramQc(), ...Object.fromEntries(Object.entries(moi).filter(([, v]) => v !== undefined)) };
+  const cot = Object.values(COT_TELEGRAM);
+  db.prepare(`INSERT INTO qc_canh_bao_telegram (id, ${cot.join(', ')}) VALUES (1, ${cot.map(() => '?').join(', ')})
+    ON CONFLICT(id) DO UPDATE SET ${cot.map(c => `${c} = excluded.${c}`).join(', ')}`).run(...Object.keys(COT_TELEGRAM).map(k => String(gop[k])));
 }
+
+// Giá token AI (02/10/2026) — superadmin nhập ở menu QC, USD / 1 triệu token; KHÔNG có giá mặc định (không tự đoán giá).
+// Chi phí = ước tính theo giá ĐANG lưu (nhập giá sau vẫn tính lại được cho các lần QC cũ).
+db.exec(`CREATE TABLE IF NOT EXISTS qc_gia_token (Model TEXT PRIMARY KEY, GiaVao TEXT NOT NULL DEFAULT '', GiaRa TEXT NOT NULL DEFAULT '')`);
+const layGiaTokenQc = () => db.prepare(`SELECT Model, GiaVao, GiaRa FROM qc_gia_token ORDER BY Model`).all();
+// ds: [{ model, giaVao, giaRa }] — giá trống cả 2 = xoá dòng. Ghi trong 1 transaction.
+const datGiaTokenQc = ds => db.transaction(() => {
+  for (const { model, giaVao, giaRa } of ds) {
+    if (giaVao === '' && giaRa === '') db.prepare(`DELETE FROM qc_gia_token WHERE Model = ?`).run(model);
+    else db.prepare(`INSERT INTO qc_gia_token (Model, GiaVao, GiaRa) VALUES (?, ?, ?) ON CONFLICT(Model) DO UPDATE SET GiaVao = excluded.GiaVao, GiaRa = excluded.GiaRa`).run(model, giaVao, giaRa);
+  }
+})();
 
 // Mốc áp dụng Tự động quét QC (02/10/2026): lần khởi động ĐẦU TIÊN có tính năng — chỉ auto QC đơn chuyển trạng thái từ
 // mốc này trở đi (người dùng chốt: không QC hàng loạt đơn cũ). Ghi 1 lần, không đổi về sau.
@@ -352,7 +375,7 @@ db.prepare(`INSERT OR IGNORE INTO qc_auto_moc (id, MocApDung) VALUES (1, ?)`).ru
 const layMocApDungAutoQc = () => (db.prepare(`SELECT MocApDung FROM qc_auto_moc WHERE id = 1`).get() || {}).MocApDung || '';
 
 module.exports = {
-  layCauHinhQc, datCauHinhQc, layMocApDungAutoQc, layTelegramQc, datTelegramQc,
+  layCauHinhQc, datCauHinhQc, layMocApDungAutoQc, layTelegramQc, datTelegramQc, layGiaTokenQc, datGiaTokenQc,
   CAC_COT_TAI_KHOAN_GKE, layDanhSachTaiKhoanGke, layTaiKhoanGke, ghiTaiKhoanGke, xoaTaiKhoanGke,
   layGanTaiKhoanGke, ganTaiKhoanGkeChoXuong,
   layCaiDatHangLoat, datCaiDatHangLoat,

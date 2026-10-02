@@ -200,9 +200,15 @@ db.exec(`CREATE INDEX IF NOT EXISTS idx_qc_log_stt ON qc_log(STT_Key)`);
 // (vì sao hệ thống ra kết quả cuối KetQua).
 // Tự động quét QC (02/10/2026): CheDo ('MANUAL' | 'AUTO'; dòng cũ trống = MANUAL), ThoiGianKetThuc, ThongTinAuto (JSON: trạng thái
 // đơn, mốc chuyển trạng thái, thời gian chờ, lần thử, ảnh + thời điểm upload).
-const COT_QC_LOG_THEM = ['Diem', 'AiDeXuat', 'NguongDaDung', 'LyDoKetLuan', 'CheDo', 'ThoiGianKetThuc', 'ThongTinAuto'];
+// Kinh nghiệm QC (02/10/2026): KinhNghiemDaDung = JSON [{ id, phamVi, noiDung }] — NGUYÊN VĂN kinh nghiệm đã đưa vào prompt lần
+// đó (trống = không có), để truy vết kể cả khi kinh nghiệm bị sửa/ngừng dùng sau này.
+// Chi phí AI (02/10/2026): TokenVao / TokenRa = số token API trả về cho lượt gọi AI (trống = không gọi AI / API không trả).
+const COT_QC_LOG_THEM = ['Diem', 'AiDeXuat', 'NguongDaDung', 'LyDoKetLuan', 'CheDo', 'ThoiGianKetThuc', 'ThongTinAuto', 'KinhNghiemDaDung', 'TokenVao', 'TokenRa'];
 const cotQcLogDaCo = db.prepare(`PRAGMA table_info(qc_log)`).all().map(c => c.name);
-for (const cot of COT_QC_LOG_THEM) if (!cotQcLogDaCo.includes(cot)) db.exec(`ALTER TABLE qc_log ADD COLUMN ${cot} TEXT NOT NULL DEFAULT ''`);
+// Đánh giá QC (02/10/2026, chỉ superadmin): kết quả THỰC TẾ do người xem gán (PASS/FAIL; trống = chưa đánh giá) — chỉ ghi nhận,
+// KHÔNG đổi trạng thái đơn. Không nằm trong ghiQcLog (dòng mới luôn chưa đánh giá).
+const COT_QC_DANH_GIA = ['DanhGiaThucTe', 'DanhGiaLyDo', 'DanhGiaNguoi', 'DanhGiaThoiGian'];
+for (const cot of [...COT_QC_LOG_THEM, ...COT_QC_DANH_GIA]) if (!cotQcLogDaCo.includes(cot)) db.exec(`ALTER TABLE qc_log ADD COLUMN ${cot} TEXT NOT NULL DEFAULT ''`);
 const COT_QC_LOG = ['ThoiGian', 'NguoiDung', 'STT_Key', 'LoaiQc', 'Model', 'AnhDaDung', 'FileTheu', 'DesignFile', 'MockupFile', 'KetQua', 'DoTinCay', 'LyDo', 'ChiTiet', 'LoiApi', ...COT_QC_LOG_THEM];
 const cauGhiQcLog = db.prepare(`INSERT INTO qc_log (${COT_QC_LOG.join(', ')}) VALUES (${COT_QC_LOG.map(c => '@' + c).join(', ')})`);
 function ghiQcLog(dong) {
@@ -242,17 +248,136 @@ function donDepAutoQcDangChay() {
   return db.prepare(`UPDATE qc_auto SET TrangThai = 'LOI', KetQua = 'Server khởi động lại khi đang QC' WHERE TrangThai = 'DANG_CHAY'`).run().changes;
 }
 
-// Mới nhất trước; loc: { loaiQc, ketQua, sttKey, gioiHan }.
-function layQcLog({ loaiQc, ketQua, sttKey, gioiHan = 200 } = {}) {
+// AI sai = AI kết luận PASS/FAIL khác thực tế (CAN_CHECK_LAI không tính đúng/sai; dòng LOI không đánh giá được).
+const DK_AI_SAI = `DanhGiaThucTe != '' AND KetQua IN ('PASS','FAIL') AND KetQua != DanhGiaThucTe`;
+
+// Mới nhất trước; loc: { loaiQc, ketQua, sttKey, danhGia: '' | 'CHUA' | 'SAI', gioiHan }.
+function layQcLog({ loaiQc, ketQua, sttKey, danhGia, gioiHan = 200 } = {}) {
   const dk = [], ts = {};
   if (loaiQc) { dk.push('LoaiQc = @loaiQc'); ts.loaiQc = loaiQc; }
   if (ketQua) { dk.push('KetQua = @ketQua'); ts.ketQua = ketQua; }
   if (sttKey) { dk.push('STT_Key = @sttKey'); ts.sttKey = sttKey; }
-  return db.prepare(`SELECT * FROM qc_log ${dk.length ? 'WHERE ' + dk.join(' AND ') : ''} ORDER BY id DESC LIMIT ${Math.min(Number(gioiHan) || 200, 1000)}`).all(ts);
+  if (danhGia === 'CHUA') dk.push(`DanhGiaThucTe = '' AND KetQua != 'LOI'`);
+  if (danhGia === 'SAI') dk.push(DK_AI_SAI);
+  // Mẫu kiểm PASS (02/10/2026): cố định 10% lần QC PASS theo băm id (mở lại không đổi) — để phát hiện PASS sai, tránh chỉ đánh giá đơn lỗi.
+  if (danhGia === 'MAU_PASS') dk.push(`KetQua = 'PASS' AND DanhGiaThucTe = '' AND ((id * 2654435761) % 4294967296) % 100 < 10`);
+  return db.prepare(`SELECT *, (SELECT k.id FROM qc_kinh_nghiem k WHERE k.QcLogId = qc_log.id) AS KinhNghiemId
+    FROM qc_log ${dk.length ? 'WHERE ' + dk.join(' AND ') : ''} ORDER BY id DESC LIMIT ${Math.min(Number(gioiHan) || 200, 1000)}`).all(ts);
+}
+const layQcLogTheoId = id => db.prepare(`SELECT * FROM qc_log WHERE id = ?`).get(id);
+
+// ---------- Kinh nghiệm QC (02/10/2026, chỉ superadmin) — giải thích của Superadmin về lỗi AI, TỐI ĐA 1 kinh nghiệm / 1 dòng qc_log.
+// Chỉ kinh nghiệm DA_XAC_NHAN được đưa vào prompt (qcService#chonKinhNghiem). Không xoá — chỉ chuyển KHONG_SU_DUNG.
+// KetQuaAi/DiemAi/LyDoAi/KetQuaDung = bản chụp lúc tạo. GiaTriPhamVi: STT_Key (DON_NAY) | LOAI của đơn gốc (LOAI_SAN_PHAM) | '' (TOAN_QC).
+// HangMucSai, NguyenNhan: JSON mảng mã.
+db.exec(`CREATE TABLE IF NOT EXISTS qc_kinh_nghiem (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  QcLogId INTEGER NOT NULL UNIQUE,
+  STT_Key TEXT NOT NULL DEFAULT '',
+  LoaiQc TEXT NOT NULL DEFAULT '',
+  KetQuaAi TEXT NOT NULL DEFAULT '',
+  DiemAi TEXT NOT NULL DEFAULT '',
+  LyDoAi TEXT NOT NULL DEFAULT '',
+  KetQuaDung TEXT NOT NULL DEFAULT '',
+  AiSaiGi TEXT NOT NULL DEFAULT '',
+  HangMucSai TEXT NOT NULL DEFAULT '[]',
+  NguyenNhan TEXT NOT NULL DEFAULT '[]',
+  NguyenNhanKhac TEXT NOT NULL DEFAULT '',
+  KinhNghiem TEXT NOT NULL DEFAULT '',
+  PhamVi TEXT NOT NULL DEFAULT '',
+  GiaTriPhamVi TEXT NOT NULL DEFAULT '',
+  TrangThai TEXT NOT NULL DEFAULT 'CHUA_XAC_NHAN',
+  SoLanDung INTEGER NOT NULL DEFAULT 0,
+  NguoiTao TEXT NOT NULL DEFAULT '',
+  ThoiGianTao TEXT NOT NULL DEFAULT '',
+  NguoiSua TEXT NOT NULL DEFAULT '',
+  ThoiGianSua TEXT NOT NULL DEFAULT ''
+)`);
+const COT_KN_SUA = ['AiSaiGi', 'HangMucSai', 'NguyenNhan', 'NguyenNhanKhac', 'KinhNghiem', 'PhamVi', 'GiaTriPhamVi'];
+function taoKinhNghiem(kn) {
+  const cot = ['QcLogId', 'STT_Key', 'LoaiQc', 'KetQuaAi', 'DiemAi', 'LyDoAi', 'KetQuaDung', ...COT_KN_SUA, 'NguoiTao', 'ThoiGianTao'];
+  return Number(db.prepare(`INSERT INTO qc_kinh_nghiem (${cot.join(', ')}) VALUES (${cot.map(c => '@' + c).join(', ')})`)
+    .run(Object.fromEntries(cot.map(c => [c, kn[c] ?? '']))).lastInsertRowid);
+}
+// Sửa nội dung -> luôn về CHUA_XAC_NHAN (nội dung mới chưa được xác nhận thì chưa được dùng).
+function suaKinhNghiem(id, kn, nguoi, thoiGian) {
+  return db.prepare(`UPDATE qc_kinh_nghiem SET ${COT_KN_SUA.map(c => `${c} = @${c}`).join(', ')}, TrangThai = 'CHUA_XAC_NHAN',
+    NguoiSua = @nguoi, ThoiGianSua = @thoiGian WHERE id = @id`).run({ ...Object.fromEntries(COT_KN_SUA.map(c => [c, kn[c] ?? ''])), id, nguoi, thoiGian }).changes;
+}
+function doiTrangThaiKinhNghiem(id, trangThai, nguoi, thoiGian) {
+  return db.prepare(`UPDATE qc_kinh_nghiem SET TrangThai = ?, NguoiSua = ?, ThoiGianSua = ? WHERE id = ?`).run(trangThai, nguoi, thoiGian, id).changes;
+}
+const layKinhNghiemTheoId = id => db.prepare(`SELECT * FROM qc_kinh_nghiem WHERE id = ?`).get(id);
+// loc: { loaiQc, trangThai, hangMuc, nguyenNhan, loaiSanPham, tuKhoa } — mới nhất trước.
+function layDanhSachKinhNghiem({ loaiQc, trangThai, hangMuc, nguyenNhan, loaiSanPham, tuKhoa } = {}) {
+  const dk = [], ts = {};
+  if (loaiQc) { dk.push('LoaiQc = @loaiQc'); ts.loaiQc = loaiQc; }
+  if (trangThai) { dk.push('TrangThai = @trangThai'); ts.trangThai = trangThai; }
+  if (hangMuc) { dk.push(`HangMucSai LIKE @hangMuc`); ts.hangMuc = `%"${hangMuc}"%`; }
+  if (nguyenNhan) { dk.push(`NguyenNhan LIKE @nguyenNhan`); ts.nguyenNhan = `%"${nguyenNhan}"%`; }
+  if (loaiSanPham) { dk.push(`PhamVi = 'LOAI_SAN_PHAM' AND GiaTriPhamVi = @loaiSanPham COLLATE NOCASE`); ts.loaiSanPham = loaiSanPham; }
+  if (tuKhoa) { dk.push(`(AiSaiGi || ' ' || KinhNghiem || ' ' || NguyenNhanKhac || ' ' || STT_Key) LIKE @tuKhoa`); ts.tuKhoa = `%${tuKhoa}%`; }
+  return db.prepare(`SELECT * FROM qc_kinh_nghiem ${dk.length ? 'WHERE ' + dk.join(' AND ') : ''} ORDER BY id DESC LIMIT 500`).all(ts);
+}
+// Ứng viên đưa vào prompt: DA_XAC_NHAN, cùng QC, phạm vi khớp đơn. Thứ tự: đơn này -> cùng loại SP -> toàn QC, mới nhất trước.
+function layKinhNghiemApDung(loaiQc, sttKey, loaiSanPham) {
+  return db.prepare(`SELECT * FROM qc_kinh_nghiem WHERE TrangThai = 'DA_XAC_NHAN' AND LoaiQc = @loaiQc AND (
+      (PhamVi = 'DON_NAY' AND GiaTriPhamVi = @sttKey) OR
+      (PhamVi = 'LOAI_SAN_PHAM' AND @loaiSp != '' AND GiaTriPhamVi = @loaiSp COLLATE NOCASE) OR
+      PhamVi = 'TOAN_QC')
+    ORDER BY CASE PhamVi WHEN 'DON_NAY' THEN 0 WHEN 'LOAI_SAN_PHAM' THEN 1 ELSE 2 END, id DESC`)
+    .all({ loaiQc, sttKey, loaiSp: String(loaiSanPham || '').trim() });
+}
+const tangSoLanDungKinhNghiem = ids => { const st = db.prepare(`UPDATE qc_kinh_nghiem SET SoLanDung = SoLanDung + 1 WHERE id = ?`); db.transaction(() => ids.forEach(id => st.run(id)))(); };
+
+// Token AI theo (kỳ, QC, model) — gom 'NGAY' (YYYY-MM-DD) | 'THANG' (YYYY-MM) theo ThoiGian giờ VN; chỉ lượt có số token.
+function thongKeTokenQc(tuThoiGian = '', gom = 'NGAY') {
+  const doDai = gom === 'THANG' ? 7 : 10;
+  return db.prepare(`SELECT substr(ThoiGian, 1, ${doDai}) AS Ky, LoaiQc, Model, COUNT(*) AS soLan,
+      SUM(CAST(TokenVao AS INTEGER)) AS tokenVao, SUM(CAST(TokenRa AS INTEGER)) AS tokenRa
+    FROM qc_log WHERE TokenVao != '' AND ThoiGian >= @tu GROUP BY 1, 2, 3 ORDER BY 1 DESC, 2, 3`).all({ tu: tuThoiGian });
+}
+
+// Gợi ý ngưỡng (02/10/2026): các lần QC đã đánh giá thực tế, có gọi AI (Model khác ''), không LỖI.
+const layDongDaDanhGiaCoAi = loaiQc => db.prepare(`SELECT id, Model, ChiTiet, DanhGiaThucTe FROM qc_log
+  WHERE LoaiQc = ? AND DanhGiaThucTe != '' AND KetQua != 'LOI' AND Model != ''`).all(loaiQc);
+
+// Cảnh báo Telegram gộp (02/10/2026, services/qc/qcTelegramService.js).
+const maxQcLogId = () => db.prepare(`SELECT COALESCE(MAX(id), 0) AS m FROM qc_log`).get().m;
+const layCclSauId = id => db.prepare(`SELECT id, ThoiGian, STT_Key, LoaiQc, CheDo, Diem, LyDoKetLuan, LyDo FROM qc_log WHERE KetQua = 'CAN_CHECK_LAI' AND id > ? ORDER BY id`).all(id);
+// Tổng kết các lần QC có ThoiGian bắt đầu bằng ngay ('YYYY-MM-DD', giờ VN).
+function tongKetQcNgay(ngay) {
+  const dk = `substr(ThoiGian, 1, 10) = @ngay`;
+  return {
+    theoKetQua: db.prepare(`SELECT LoaiQc, KetQua, CASE WHEN CheDo = 'AUTO' THEN 'AUTO' ELSE 'MANUAL' END AS CheDo, COUNT(*) AS n FROM qc_log WHERE ${dk} GROUP BY 1, 2, 3`).all({ ngay }),
+    chuaDanhGia: db.prepare(`SELECT COUNT(*) AS n FROM qc_log WHERE ${dk} AND KetQua != 'LOI' AND DanhGiaThucTe = ''`).get({ ngay }).n,
+    token: db.prepare(`SELECT Model, SUM(CAST(TokenVao AS INTEGER)) AS tokenVao, SUM(CAST(TokenRa AS INTEGER)) AS tokenRa FROM qc_log WHERE ${dk} AND TokenVao != '' GROUP BY Model`).all({ ngay }),
+    kinhNghiemChoXacNhan: db.prepare(`SELECT COUNT(*) AS n FROM qc_kinh_nghiem WHERE TrangThai = 'CHUA_XAC_NHAN'`).get().n,
+  };
+}
+
+// thucTe: 'PASS' | 'FAIL' | '' (bỏ đánh giá). Trả số dòng đã sửa (0 = không có dòng / dòng LOI).
+function danhGiaQcLog(id, { thucTe, lyDo, nguoi, thoiGian }) {
+  return db.prepare(`UPDATE qc_log SET DanhGiaThucTe = @thucTe, DanhGiaLyDo = @lyDo, DanhGiaNguoi = @nguoi, DanhGiaThoiGian = @thoiGian
+    WHERE id = @id AND KetQua != 'LOI'`).run(thucTe ? { id, thucTe, lyDo, nguoi, thoiGian } : { id, thucTe: '', lyDo: '', nguoi: '', thoiGian: '' }).changes;
+}
+
+// Độ chính xác theo (LoaiQc, Model, CheDo) — chỉ dòng ĐÃ đánh giá, ThoiGian >= tuThoiGian (chuỗi ISO VN, '' = tất cả).
+function thongKeDanhGiaQc(tuThoiGian = '') {
+  return db.prepare(`SELECT LoaiQc, Model, CASE WHEN CheDo = 'AUTO' THEN 'AUTO' ELSE 'MANUAL' END AS CheDo,
+      CASE WHEN KinhNghiemDaDung != '' THEN 'Có' ELSE 'Không' END AS CoKinhNghiem,
+      COUNT(*) AS daDanhGia,
+      SUM(KetQua IN ('PASS','FAIL') AND KetQua = DanhGiaThucTe) AS dung,
+      SUM(KetQua = 'PASS' AND DanhGiaThucTe = 'FAIL') AS passSai,
+      SUM(KetQua = 'FAIL' AND DanhGiaThucTe = 'PASS') AS failSai,
+      SUM(KetQua = 'CAN_CHECK_LAI') AS canCheckLai
+    FROM qc_log WHERE DanhGiaThucTe != '' AND ThoiGian >= @tu
+    GROUP BY 1, 2, 3, 4 ORDER BY 1, 2, 3, 4`).all({ tu: tuThoiGian });
 }
 
 module.exports = {
-  ghiQcLog, layQcLog, giuQuyenAutoQc, ketThucAutoQc, layTatCaAutoQc, donDepAutoQcDangChay,
+  ghiQcLog, layQcLog, layQcLogTheoId, danhGiaQcLog, thongKeDanhGiaQc, thongKeTokenQc, layDongDaDanhGiaCoAi, maxQcLogId, layCclSauId, tongKetQcNgay,
+  taoKinhNghiem, suaKinhNghiem, doiTrangThaiKinhNghiem, layKinhNghiemTheoId, layDanhSachKinhNghiem, layKinhNghiemApDung, tangSoLanDungKinhNghiem, giuQuyenAutoQc, ketThucAutoQc, layTatCaAutoQc, donDepAutoQcDangChay,
   ghiNhieuDongBoSheetSeller, layNhatKyDongBoSheetSeller, layLoiDongBoDangCho, layDongBoGanNhat, xoaDongBoSheetSellerTheoDon,
   ghiLichSuHoatDong, ghiNhieuLichSuHoatDong, layTatCaLichSuHoatDong, xoaLichSuHoatDongTheoDon,
   ghiNhatKyQuetHangLoat, xoaNhatKyQuetHangLoatTheoDon,

@@ -27,7 +27,7 @@ const loiApi = thongBao => Object.assign(new Error(thongBao), { loiApi: true });
 //    cho Gemini API của AI Studio): aiplatform.googleapis.com/v1/publishers/google/models/{model}:generateContent (endpoint global,
 //    key tạo ở "Get Agent Platform API Key"). Mỗi provider = taoProvider({ ten, diaChiApi }) với tên riêng trong thông báo lỗi.
 function taoProvider({ ten, diaChiApi }) {
-  async function goi({ apiKey, model, body }) {
+  async function goi({ apiKey, model, body, thongKe }) {
     if (!apiKey) throw loiApi(`Chưa nhập API key ${ten} ở menu QC.`);
     if (!model) throw loiApi(`Chưa chọn model ${ten} ở menu QC.`);
     const controller = new AbortController();
@@ -54,20 +54,23 @@ function taoProvider({ ten, diaChiApi }) {
     if (data.promptFeedback && data.promptFeedback.blockReason) throw loiApi(`${ten} từ chối xử lý (${data.promptFeedback.blockReason}).`);
     const ungVien = (data.candidates || [])[0];
     const traLoi = ungVien && ungVien.content && (ungVien.content.parts || []).map(p => p.text || '').join('');
+    // Token (02/10/2026): output tính cả token "suy nghĩ" (thoughtsTokenCount) — Google tính phí như output.
+    const u = data.usageMetadata;
+    if (thongKe && u) Object.assign(thongKe, { tokenVao: u.promptTokenCount || 0, tokenRa: (u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0) });
     if (!traLoi) throw loiApi(`${ten} không trả nội dung (finishReason: ${(ungVien && ungVien.finishReason) || 'không rõ'}).`);
     return traLoi;
   }
 
   // anh: [{ mime, data: Buffer, ten }] — mỗi ảnh kèm 1 dòng tên ngay trước để model tham chiếu đúng file.
   // -> object JSON đã parse (throw loiApi nếu không parse được).
-  async function phanTichAnh({ apiKey, model, prompt, anh = [], schema }) {
+  async function phanTichAnh({ apiKey, model, prompt, anh = [], schema, thongKe }) {
     const parts = [{ text: prompt }];
     for (const a of anh) {
       parts.push({ text: `Ảnh: ${a.ten}` });
       parts.push({ inline_data: { mime_type: a.mime, data: a.data.toString('base64') } });
     }
     const traLoi = await goi({
-      apiKey, model,
+      apiKey, model, thongKe,
       body: {
         contents: [{ role: 'user', parts }],
         generationConfig: { temperature: 0, responseMimeType: 'application/json', ...(schema ? { responseSchema: sangSchemaGemini(schema) } : {}) },

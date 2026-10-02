@@ -10,6 +10,14 @@
 /* AI QC (30/09/2026) — style riêng trang này, không đáng thêm vào style.css dùng chung. */
 .qc-khoi { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-4); margin-bottom: var(--space-5); }
 .qc-khoi h3 { margin-top: 0; }
+/* Thu gọn từng khối (02/10/2026): mặc định đóng, bấm tiêu đề để mở; mở được nhiều khối cùng lúc. */
+.qc-khoi > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: var(--space-2); user-select: none; }
+.qc-khoi > summary::-webkit-details-marker { display: none; }
+.qc-khoi > summary::before { content: '▸'; font-size: 1.1rem; color: var(--color-text-muted); transition: transform .15s; }
+.qc-khoi[open] > summary::before { transform: rotate(90deg); }
+.qc-khoi > summary h3 { margin: 0; }
+.qc-khoi[open] > summary { margin-bottom: var(--space-3); }
+.qc-khoi:not([open]) { padding-top: var(--space-3); padding-bottom: var(--space-3); margin-bottom: var(--space-3); }
 .qc-dong-cau-hinh { display: flex; gap: var(--space-3); align-items: flex-end; flex-wrap: wrap; padding: var(--space-3) 0; border-top: 1px solid var(--color-border); }
 .qc-dong-cau-hinh:first-of-type { border-top: none; }
 .qc-dong-cau-hinh .ten { flex: 1 1 180px; font-weight: 700; }
@@ -27,6 +35,7 @@
 .qc-bang-log th, .qc-bang-log td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--color-border); vertical-align: top; }
 .qc-bang-log td.ly-do { word-break: break-word; min-width: 200px; }
 .qc-cuon-ngang { overflow-x: auto; }
+.qc-bang-log tr.qc-ai-sai td { background: var(--color-danger-bg); }
 .qc-bang-nguong { border-collapse: collapse; }
 .qc-bang-nguong th, .qc-bang-nguong td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--color-border); }
 .qc-bang-nguong input { width: 90px; }
@@ -39,18 +48,24 @@
 <div class="page">
   <h2>QC</h2>
 
-  <div class="qc-khoi">
-    <h3>Cấu hình AI (Gemini / Claude)</h3>
+  <details class="qc-khoi">
+    <summary><h3>Đơn hàng vừa cập nhật trạng thái <span id="vcn-so" style="font-weight:400;color:var(--color-text-muted)"></span></h3></summary>
+    <p style="color:var(--color-text-muted);margin-top:0">Đơn có Trạng thái chung, Phôi hoặc Vẽ file đổi trong <strong>1 giờ</strong> gần nhất (tính từ lúc trạng thái thật sự đổi, mọi người dùng và hệ thống). Mỗi đơn 1 dòng — lần đổi gần nhất. Tự tải lại mỗi phút; đơn quá 1 giờ tự rời danh sách. Chỉ có dữ liệu từ khi có tính năng này.</p>
+    <div id="khoi-vua-cap-nhat" class="qc-cuon-ngang">Đang tải...</div>
+  </details>
+
+  <details class="qc-khoi">
+    <summary><h3>Cấu hình AI (Gemini / Claude)</h3></summary>
     <p style="color:var(--color-text-muted);margin-top:0">Mỗi QC chọn riêng nhà cung cấp AI, key + model riêng (key Gemini AI Studio lấy ở aistudio.google.com; key Gemini Agent Platform / Vertex AI lấy ở Google Cloud → "Get Agent Platform API Key" — dùng được credits Google Cloud; key Claude lấy ở console.anthropic.com). Key các nhà cung cấp lưu song song — đổi nhà cung cấp không mất key bên kia. Bấm Lưu = lưu key/model của nhà cung cấp đang chọn VÀ dùng nhà cung cấp đó cho QC. Key chỉ hiện dạng che; để trống ô key khi Lưu = giữ key cũ.</p>
     <datalist id="goi-y-model-gemini"><option value="gemini-2.5-flash"><option value="gemini-2.5-pro"></datalist>
     <datalist id="goi-y-model-vertex"><option value="gemini-2.5-flash"><option value="gemini-2.5-pro"></datalist>
     <datalist id="goi-y-model-claude"><option value="claude-sonnet-5-5"><option value="claude-haiku-4-5-20251001"><option value="claude-opus-5-5"></datalist>
     <div id="khoi-cau-hinh">Đang tải...</div>
     <p id="thong-bao-cau-hinh" style="display:none"></p>
-  </div>
+  </details>
 
-  <div class="qc-khoi">
-    <h3>Tự động quét QC</h3>
+  <details class="qc-khoi">
+    <summary><h3>Tự động quét QC</h3></summary>
     <p style="color:var(--color-text-muted);margin-top:0">Hệ thống tự QC mỗi 2 phút, <strong>mỗi đơn tối đa 1 lần auto cho từng QC</strong> (QC thủ công không bị ảnh hưởng). Chỉ áp dụng cho đơn chuyển trạng thái <strong>sau khi</strong> có tính năng này. Lỗi kỹ thuật (key sai, hết quota…) tự thử lại tối đa 2 lần, cách nhau 30 phút. Mỗi QC tối đa 10 đơn mỗi lượt.</p>
     <div class="qc-cuon-ngang"><table class="qc-bang-nguong">
       <thead><tr><th>QC</th><th>Tự động</th><th>Chờ (giờ)</th><th>Chờ (phút)</th><th>Điều kiện</th></tr></thead>
@@ -58,10 +73,10 @@
     </table></div>
     <p style="margin-bottom:0"><button type="button" class="btn-hanh-dong" onclick="luuAuto(this)">Lưu tự động quét</button></p>
     <p id="thong-bao-auto" style="display:none"></p>
-  </div>
+  </details>
 
-  <div class="qc-khoi">
-    <h3>Ngưỡng kết luận</h3>
+  <details class="qc-khoi">
+    <summary><h3>Ngưỡng kết luận</h3></summary>
     <p style="color:var(--color-text-muted);margin-top:0">AI chỉ phân tích và chấm <strong>score</strong> (0–100, mức khớp yêu cầu — càng cao càng tốt) + <strong>độ chắc chắn</strong>; hệ thống tự kết luận theo ngưỡng dưới đây. Luật cứng luôn ưu tiên (vd tem mang mã tracking khác → FAIL; chưa xác định được Design / hạng mục bắt buộc chưa PASS → không PASS; FAIL phải có bằng chứng).</p>
     <ul style="color:var(--color-text-muted);margin-top:0">
       <li>Độ chắc chắn &lt; ngưỡng <strong>CAN_CHECK_LAI</strong> (%) → CAN_CHECK_LAI</li>
@@ -69,15 +84,15 @@
       <li>Quy tắc: cả 3 là số từ 0 đến 100, và FAIL &lt; PASS.</li>
     </ul>
     <div class="qc-cuon-ngang"><table class="qc-bang-nguong">
-      <thead><tr><th>QC</th><th>PASS (score ≥)</th><th>FAIL (score ≤)</th><th>CAN_CHECK_LAI (chắc chắn &lt; %)</th></tr></thead>
-      <tbody id="bang-nguong"><tr><td colspan="4">Đang tải...</td></tr></tbody>
+      <thead><tr><th>QC</th><th>PASS (score ≥)</th><th>FAIL (score ≤)</th><th>CAN_CHECK_LAI (chắc chắn &lt; %)</th><th></th></tr></thead>
+      <tbody id="bang-nguong"><tr><td colspan="5">Đang tải...</td></tr></tbody>
     </table></div>
     <p style="margin-bottom:0"><button type="button" class="btn-hanh-dong" onclick="luuNguong(this)">Lưu ngưỡng</button> <span id="nguong-mac-dinh" style="color:var(--color-text-muted)"></span></p>
     <p id="thong-bao-nguong" style="display:none"></p>
-  </div>
+  </details>
 
-  <div class="qc-khoi">
-    <h3>Cảnh báo Telegram</h3>
+  <details class="qc-khoi">
+    <summary><h3>Cảnh báo Telegram</h3></summary>
     <p style="color:var(--color-text-muted);margin-top:0">Tự gửi tin khi QC ra <strong>FAIL</strong>, <strong>CẦN CHECK LẠI</strong> hoặc <strong>lỗi API</strong> (cả 3 QC, cùng 1 Chat ID). Bot Token lấy từ @BotFather (để trống = dùng TELEGRAM_BOT_TOKEN trong .env nếu có) — nhớ thêm bot vào group nhận tin. Token chỉ hiện dạng che; để trống ô token khi Lưu = giữ token cũ. Để trống Chat ID = tắt cảnh báo.</p>
     <div class="qc-dong-cau-hinh">
       <div class="ten">Telegram<small id="tg-trang-thai">Đang tải...</small><small id="tg-token-trang-thai"></small></div>
@@ -87,11 +102,17 @@
       <button type="button" class="btn-hanh-dong phu" onclick="guiThuTelegram(this)">Gửi thử</button>
       <button type="button" class="btn-hanh-dong phu nguy-hiem" id="tg-xoa-token" style="display:none" onclick="luuTelegram(true)">Xoá token</button>
     </div>
+    <div class="qc-dong-cau-hinh">
+      <div class="ten">Gộp cảnh báo<small>FAIL và LỖI API luôn gửi ngay. CẦN CHECK LẠI: 0 = gửi ngay từng tin; hoặc gộp thành 1 tin mỗi N phút (15–1440). Tổng kết ngày: 1 tin lúc giờ đã chọn (giờ VN) — để trống = tắt.</small></div>
+      <div class="truong"><label for="tg-gop-phut">Gộp CẦN CHECK LẠI (phút)</label><input type="number" id="tg-gop-phut" min="0" max="1440" step="1" style="width:110px"></div>
+      <div class="truong"><label for="tg-gio-tong-ket">Giờ tổng kết ngày</label><input type="time" id="tg-gio-tong-ket"></div>
+      <button type="button" class="btn-hanh-dong phu" onclick="luuGopTelegram(this)">Lưu gộp</button>
+    </div>
     <p id="thong-bao-telegram" style="display:none"></p>
-  </div>
+  </details>
 
-  <div class="qc-khoi">
-    <h3>QC thủ công</h3>
+  <details class="qc-khoi">
+    <summary><h3>QC thủ công</h3></summary>
     <div class="inline-form" style="align-items:flex-end">
       <div class="truong">
         <label for="qc-ma-don">Mã đơn (STT_Key)</label>
@@ -104,19 +125,63 @@
       <button type="button" class="btn-hanh-dong" id="btn-chay-qc">Thực hiện QC</button>
     </div>
     <div id="qc-ket-qua" style="margin-top:var(--space-4)"></div>
-  </div>
+  </details>
 
-  <div class="qc-khoi">
-    <h3>Log QC</h3>
+  <details class="qc-khoi">
+    <summary><h3>Độ chính xác</h3></summary>
+    <p style="color:var(--color-text-muted);margin-top:0">Tính từ các lần QC đã được đánh giá kết quả thực tế ở Log QC bên dưới. <strong>PASS sai</strong> = AI cho qua nhưng thực tế lỗi (nguy hiểm nhất). <strong>FAIL sai</strong> = AI báo lỗi nhưng thực tế đạt. Tỉ lệ đúng chỉ tính trên các lần AI kết luận PASS/FAIL. Nếu chỉ đánh giá đơn FAIL/CẦN CHECK LẠI thì không bao giờ thấy PASS sai — hãy đánh giá cả bộ lọc <strong>"Mẫu kiểm PASS (10%)"</strong> ở Log QC (hệ thống chọn cố định 10% lần QC PASS).</p>
+    <div class="inline-form" style="align-items:flex-end">
+      <div class="truong"><label for="dcx-ngay">Khoảng thời gian</label>
+        <select id="dcx-ngay" onchange="taiDoChinhXac()"><option value="7">7 ngày</option><option value="30" selected>30 ngày</option><option value="">Tất cả</option></select></div>
+    </div>
+    <div id="khoi-do-chinh-xac" class="qc-cuon-ngang" style="margin-top:var(--space-3)">Đang tải...</div>
+  </details>
+
+  <details class="qc-khoi">
+    <summary><h3>Chi phí AI</h3></summary>
+    <p style="color:var(--color-text-muted);margin-top:0">Số token lấy từ chính API trả về cho mỗi lần gọi AI (chỉ các lần QC từ khi có tính năng này). Chi phí là <strong>ước tính</strong> theo giá bạn nhập bên dưới (USD / 1 triệu token — xem bảng giá trên trang của Google / Anthropic); model chưa nhập giá thì không tính tiền. Gemini: token output gồm cả token "suy nghĩ".</p>
+    <div class="qc-cuon-ngang"><table class="qc-bang-nguong">
+      <thead><tr><th>Model</th><th>Giá input (USD / 1M token)</th><th>Giá output (USD / 1M token)</th></tr></thead>
+      <tbody id="bang-gia-token"><tr><td colspan="3">Đang tải...</td></tr></tbody>
+    </table></div>
+    <p><button type="button" class="btn-hanh-dong phu" onclick="luuGiaToken(this)">Lưu giá</button> <span id="thong-bao-gia"></span></p>
+    <div class="inline-form" style="align-items:flex-end">
+      <div class="truong"><label for="cp-ngay">Khoảng thời gian</label>
+        <select id="cp-ngay" onchange="taiChiPhi()"><option value="7">7 ngày</option><option value="30" selected>30 ngày</option><option value="">Tất cả</option></select></div>
+      <div class="truong"><label for="cp-gom">Gom theo</label>
+        <select id="cp-gom" onchange="taiChiPhi()"><option value="NGAY">Ngày</option><option value="THANG">Tháng</option></select></div>
+    </div>
+    <div id="khoi-chi-phi" class="qc-cuon-ngang" style="margin-top:var(--space-3)">Đang tải...</div>
+  </details>
+
+  <details class="qc-khoi">
+    <summary><h3>Log QC</h3></summary>
     <div class="inline-form" style="align-items:flex-end">
       <div class="truong"><label for="log-loai">Loại</label><select id="log-loai"><option value="">Tất cả</option></select></div>
       <div class="truong"><label for="log-ket-qua">Kết quả</label>
         <select id="log-ket-qua"><option value="">Tất cả</option><option>PASS</option><option>FAIL</option><option>CAN_CHECK_LAI</option><option value="LOI">LỖI</option></select></div>
+      <div class="truong"><label for="log-danh-gia">Đánh giá</label>
+        <select id="log-danh-gia"><option value="">Tất cả</option><option value="CHUA">Chưa đánh giá</option><option value="SAI">AI sai</option><option value="MAU_PASS">Mẫu kiểm PASS (10%) chưa đánh giá</option></select></div>
       <div class="truong"><label for="log-ma-don">Mã đơn</label><input id="log-ma-don" autocomplete="off"></div>
       <button type="button" class="btn-hanh-dong phu" id="btn-tai-log">Lọc</button>
     </div>
     <div id="khoi-log" class="qc-cuon-ngang" style="margin-top:var(--space-3)"></div>
-  </div>
+  </details>
+
+  <details class="qc-khoi">
+    <summary><h3>Kinh nghiệm QC</h3></summary>
+    <p style="color:var(--color-text-muted);margin-top:0">Giải thích của Superadmin về lỗi AI (tạo từ nút "Giải thích lỗi AI" ở Log QC). Chỉ kinh nghiệm <strong>Đã xác nhận</strong> mới được đưa cho AI ở các lần QC sau — cùng QC, phạm vi khớp đơn, tối đa 5 kinh nghiệm / 1000 ký tự mỗi lần, chỉ gửi phần "Kinh nghiệm cần tích luỹ". Sửa nội dung thì kinh nghiệm quay về Chưa xác nhận. Không xoá được — chỉ chuyển "Không sử dụng"; kết quả QC cũ không bị thay đổi.</p>
+    <div class="inline-form" style="align-items:flex-end">
+      <div class="truong"><label for="kn-loai">QC</label><select id="kn-loai"><option value="">Tất cả</option><option>QC1</option><option>QC2</option><option>QC3</option></select></div>
+      <div class="truong"><label for="kn-trang-thai">Trạng thái</label><select id="kn-trang-thai"><option value="">Tất cả</option></select></div>
+      <div class="truong"><label for="kn-hang-muc">Hạng mục</label><select id="kn-hang-muc"><option value="">Tất cả</option></select></div>
+      <div class="truong"><label for="kn-nguyen-nhan">Nguyên nhân</label><select id="kn-nguyen-nhan"><option value="">Tất cả</option></select></div>
+      <div class="truong"><label for="kn-loai-sp">Loại sản phẩm</label><input id="kn-loai-sp" autocomplete="off" placeholder="vd Hoodie"></div>
+      <div class="truong"><label for="kn-tu-khoa">Từ khoá</label><input id="kn-tu-khoa" autocomplete="off"></div>
+      <button type="button" class="btn-hanh-dong phu" onclick="taiKinhNghiem()">Lọc</button>
+    </div>
+    <div id="khoi-kinh-nghiem" class="qc-cuon-ngang" style="margin-top:var(--space-3)"></div>
+  </details>
 </div>
 
 <script src="/js/icons.js?v=104"></script>
@@ -144,6 +209,12 @@ let dsLoai = [];
   taiAuto();
   taiNguong();
   taiTelegram();
+  taiDoChinhXac();
+  taiChiPhi();
+  taiDonVuaCapNhat();
+  setInterval(taiDonVuaCapNhat, 60000);
+  await taiDanhMucKn();
+  taiKinhNghiem();
   await taiLog();
 })();
 
@@ -237,14 +308,62 @@ let dsNguong = [];
 async function taiNguong() {
   const el = document.getElementById('bang-nguong');
   let d;
-  try { d = await apiFetch('/qc/nguong'); } catch (e) { el.innerHTML = `<tr><td colspan="4">Lỗi: ${escapeHtml(e.message)}</td></tr>`; return; }
+  try { d = await apiFetch('/qc/nguong'); } catch (e) { el.innerHTML = `<tr><td colspan="5">Lỗi: ${escapeHtml(e.message)}</td></tr>`; return; }
   dsNguong = d.ds;
   el.innerHTML = d.ds.map(n => `<tr>
     <td><strong>${escapeHtml(n.ten)}</strong>${n.loi ? `<br><small style="color:var(--color-danger-text)">${escapeHtml(n.loi)} — QC này sẽ không chạy cho tới khi sửa.</small>` : ''}</td>
     ${['pass', 'fail', 'ccl'].map(k => `<td><input type="number" min="0" max="100" step="any" inputmode="decimal" id="nguong-${n.loai}-${k}" value="${escapeHtml(String(n[k]))}" aria-label="${escapeHtml(n.loai)} ngưỡng ${TEN_NGUONG[k]}"></td>`).join('')}
-  </tr>`).join('');
+    <td><button type="button" class="btn-hanh-dong phu" style="padding:4px 8px;font-size:0.78rem" onclick="moGoiYNguong('${n.loai}')">Gợi ý từ dữ liệu</button></td>
+  </tr><tr id="goi-y-nguong-${n.loai}" style="display:none"><td colspan="5"></td></tr>`).join('');
   document.getElementById('nguong-mac-dinh').textContent = `Mặc định: PASS ${d.macDinh.pass} · FAIL ${d.macDinh.fail} · CAN_CHECK_LAI ${d.macDinh.ccl}%`;
 }
+// Gợi ý ngưỡng (02/10/2026) — CHỈ hiển thị; "Điền vào ô" chỉ điền ô nhập, phải bấm "Lưu ngưỡng" mới áp dụng.
+function moGoiYNguong(loai) {
+  const hang = document.getElementById('goi-y-nguong-' + loai);
+  if (hang.style.display !== 'none') { hang.style.display = 'none'; return; }
+  hang.style.display = '';
+  tinhGoiYNguong(loai, false);
+}
+async function tinhGoiYNguong(loai, coThu) {
+  const o = document.querySelector(`#goi-y-nguong-${loai} td`);
+  const thu = coThu ? Object.fromEntries(['pass', 'fail', 'ccl'].map(k => [k, document.getElementById(`gyn-${loai}-${k}`).value.trim()])) : null;
+  if (!coThu) o.textContent = 'Đang tính...';
+  let d;
+  try { d = await apiFetch(`/qc/nguong/goi-y?loai=${loai}${thu ? '&' + new URLSearchParams(thu) : ''}`); } catch (e) {
+    if (coThu) { document.getElementById(`gyn-${loai}-loi`).textContent = 'Lỗi: ' + e.message; return; }
+    o.textContent = 'Lỗi: ' + e.message; return;
+  }
+  const ht = d.hienTai;
+  const chenh = (m, k) => (!ht || m === ht ? '' : m[k] === ht[k] ? '' : ` <small style="color:${(m[k] < ht[k]) ? 'var(--color-success-text)' : 'var(--color-danger-text)'}">(${m[k] > ht[k] ? '+' : ''}${m[k] - ht[k]})</small>`);
+  const dong = (nhan, m, dien) => `<tr><td>${nhan}</td><td>PASS ≥ ${m.pass} · FAIL ≤ ${m.fail} · chắc chắn &lt; ${m.ccl}%</td>
+    <td>${m.dung}${chenh(m, 'dung')}</td><td style="color:var(--color-danger-text)">${m.passSai}${chenh(m, 'passSai')}</td><td>${m.failSai}${chenh(m, 'failSai')}</td><td>${m.canCheckLai}${chenh(m, 'canCheckLai')}</td>
+    <td>${dien ? `<button type="button" class="btn-hanh-dong phu" style="padding:3px 8px;font-size:0.75rem" onclick="dienNguong('${loai}', ${m.pass}, ${m.fail}, ${m.ccl})">Điền vào ô</button>` : ''}</td></tr>`;
+  const canhBao = d.soDong < d.toiThieu
+    ? `<p style="color:var(--color-danger-text);margin:4px 0">Mới có ${d.soDong} lần QC đủ dữ liệu (cần ít nhất ${d.toiThieu}) — kết quả CHƯA đáng tin, chỉ tham khảo.</p>` : '';
+  const vao = (k, v) => `<input id="gyn-${loai}-${k}" type="number" min="0" max="100" step="any" style="width:80px" value="${escapeHtml(String(v))}" aria-label="Thử ngưỡng ${TEN_NGUONG[k]}">`;
+  const nguonThu = thu || (ht ? { pass: ht.pass, fail: ht.fail, ccl: ht.ccl } : { pass: '', fail: '', ccl: '' });
+  o.innerHTML = `<div style="padding:var(--space-2) 0">
+    <p style="margin:0 0 4px">Dữ liệu: <strong>${d.soDong}</strong> lần QC đã đánh giá thực tế của model <strong>${escapeHtml(d.model)}</strong> (thực tế PASS ${d.soThucTePass} · FAIL ${d.soThucTeFail}).
+      <small style="color:var(--color-text-muted)">Bỏ qua: ${d.boQuaModelKhac} lần của model khác (score mỗi model khác nhau); ${d.boQuaThieuDuLieu} lần QC trước khi có tính năng này (thiếu dữ liệu tính lại).</small></p>
+    ${canhBao}
+    ${d.soDong ? `<p style="margin:4px 0;color:var(--color-text-muted)">Tính lại bằng đúng quy tắc kết luận hiện hành (luật cứng giữ nguyên) trên kết quả AI đã lưu. Số trong ngoặc: chênh so với ngưỡng hiện tại.</p>
+    <div class="qc-cuon-ngang"><table class="qc-bang-log"><thead><tr><th></th><th>Bộ ngưỡng</th><th>Đúng</th><th>PASS sai</th><th>FAIL sai</th><th>CẦN CHECK LẠI</th><th></th></tr></thead><tbody>
+      ${ht ? dong('<strong>Hiện tại</strong>', ht, false) : ''}
+      ${d.thu ? dong('<strong>Bạn thử</strong>', d.thu, true) : ''}
+      ${d.goiY.map(g => {
+        const trung = ht && g.pass === ht.pass && g.fail === ht.fail && g.ccl === ht.ccl;
+        return dong(`Gợi ý: ${escapeHtml(g.moTa)}${trung ? '<br><small>= trùng ngưỡng hiện tại (không có bộ nào tốt hơn theo hướng này)</small>' : ''}`, g, !trung);
+      }).join('')}
+    </tbody></table></div>
+    <p style="margin:6px 0 0">Thử ngưỡng khác: PASS ${vao('pass', nguonThu.pass)} FAIL ${vao('fail', nguonThu.fail)} Chắc chắn ${vao('ccl', nguonThu.ccl)}
+      <button type="button" class="btn-hanh-dong phu" onclick="tinhGoiYNguong('${loai}', true)">Tính thử</button> <span id="gyn-${loai}-loi" style="color:var(--color-danger-text)"></span></p>` : ''}
+  </div>`;
+}
+function dienNguong(loai, pass, fail, ccl) {
+  Object.entries({ pass, fail, ccl }).forEach(([k, v]) => { document.getElementById(`nguong-${loai}-${k}`).value = v; });
+  thongBaoNguong(`Đã điền ngưỡng gợi ý cho ${loai} vào ô — CHƯA lưu. Bấm "Lưu ngưỡng" nếu muốn áp dụng.`);
+}
+
 async function luuNguong(nut) {
   const nguong = {};
   document.querySelectorAll('.qc-bang-nguong input').forEach(i => i.classList.remove('sai'));
@@ -279,6 +398,8 @@ async function taiTelegram() {
   try {
     const t = await apiFetch('/qc/telegram');
     document.getElementById('tg-chat-id').value = t.chatId;
+    document.getElementById('tg-gop-phut').value = t.gopCclPhut;
+    document.getElementById('tg-gio-tong-ket').value = t.gioTongKet;
     document.getElementById('tg-bot-token').value = '';
     document.getElementById('tg-bot-token').placeholder = t.nguonToken === 'app' ? 'Để trống = giữ token cũ' : '123456789:AAE...';
     document.getElementById('tg-xoa-token').style.display = t.nguonToken === 'app' ? '' : 'none';
@@ -297,6 +418,19 @@ async function luuTelegram(xoaToken = false) {
     thongBaoTg(xoaToken ? 'Đã xoá Bot Token.' : chatId ? 'Đã lưu — bấm "Gửi thử" để kiểm tra.' : 'Đã lưu — cảnh báo đang TẮT (chưa có Chat ID).');
     await taiTelegram();
   } catch (e) { thongBaoTg('Chưa lưu: ' + e.message, true); }
+}
+
+async function luuGopTelegram(nut) {
+  const gopCclPhut = document.getElementById('tg-gop-phut').value.trim();
+  const gioTongKet = document.getElementById('tg-gio-tong-ket').value;
+  if (!/^\d+$/.test(gopCclPhut) || (Number(gopCclPhut) !== 0 && (Number(gopCclPhut) < 15 || Number(gopCclPhut) > 1440))) return thongBaoTg('Chưa lưu: chu kỳ gộp phải là 0 hoặc số phút nguyên từ 15 đến 1440.', true);
+  nut.disabled = true;
+  try {
+    await apiFetch('/qc/telegram/gop', { method: 'POST', body: JSON.stringify({ gopCclPhut: Number(gopCclPhut), gioTongKet }) });
+    thongBaoTg(`Đã lưu — CẦN CHECK LẠI: ${Number(gopCclPhut) ? `gộp mỗi ${gopCclPhut} phút` : 'gửi ngay từng tin'}; tổng kết ngày: ${gioTongKet || 'tắt'}.`);
+    await taiTelegram();
+  } catch (e) { thongBaoTg('Chưa lưu: ' + e.message, true); }
+  nut.disabled = false;
 }
 
 async function guiThuTelegram(nut) {
@@ -392,6 +526,8 @@ async function taiLog() {
   const loai = document.getElementById('log-loai').value;
   const ketQua = document.getElementById('log-ket-qua').value;
   const maDon = document.getElementById('log-ma-don').value.trim();
+  const danhGia = document.getElementById('log-danh-gia').value;
+  if (danhGia) qs.set('danhGia', danhGia);
   if (loai) qs.set('loaiQc', loai);
   if (ketQua) qs.set('ketQua', ketQua);
   if (maDon) qs.set('sttKey', maDon);
@@ -399,8 +535,8 @@ async function taiLog() {
   try { ds = await apiFetch('/qc/log?' + qs); } catch (e) { el.textContent = 'Lỗi: ' + e.message; return; }
   if (!ds.length) { el.innerHTML = '<p style="color:var(--color-text-muted)">Chưa có lần QC nào.</p>'; return; }
   el.innerHTML = `<table class="qc-bang-log">
-    <thead><tr><th>Thời gian</th><th>Mã đơn</th><th>QC</th><th>Chế độ</th><th>Kết quả</th><th>Score</th><th>Chắc chắn</th><th>Lý do / lỗi</th><th>Người chạy</th><th></th></tr></thead>
-    <tbody>${ds.map(d => `<tr>
+    <thead><tr><th>Thời gian</th><th>Mã đơn</th><th>QC</th><th>Chế độ</th><th>Kết quả</th><th>Score</th><th>Chắc chắn</th><th>Lý do / lỗi</th><th>Người chạy</th><th>Đánh giá (thực tế)</th><th></th></tr></thead>
+    <tbody>${ds.map(d => `<tr${aiSai(d) ? ' class="qc-ai-sai"' : ''}>
       <td>${escapeHtml(String(d.ThoiGian).replace('T', ' ').slice(0, 19))}</td>
       <td>${escapeHtml(d.STT_Key)}</td>
       <td>${escapeHtml(d.LoaiQc)}</td>
@@ -410,9 +546,251 @@ async function taiLog() {
       <td>${d.DoTinCay ? Math.round(Number(d.DoTinCay) * 100) + '%' : '—'}</td>
       <td class="ly-do">${escapeHtml(d.LoiApi || d.LyDoKetLuan || d.LyDo || '')}${d.LyDoKetLuan && d.LyDo ? `<br><small style="color:var(--color-text-muted)">AI: ${escapeHtml(d.LyDo)}</small>` : ''}</td>
       <td>${escapeHtml(d.NguoiDung)}</td>
+      <td>${oDanhGia(d)}</td>
       <td>${d.ChiTiet ? `<button type="button" class="btn-hanh-dong phu" style="padding:4px 8px;font-size:0.78rem" onclick="xemChiTiet(this, ${d.id})">Chi tiết</button>` : ''}</td>
-    </tr><tr id="chi-tiet-${d.id}" style="display:none"><td colspan="10"><div class="qc-chi-tiet"></div></td></tr>`).join('')}</tbody></table>`;
+    </tr><tr id="chi-tiet-${d.id}" style="display:none"><td colspan="11"><div class="qc-chi-tiet"></div></td></tr><tr id="giai-thich-${d.id}" style="display:none"><td colspan="11"></td></tr>`).join('')}</tbody></table>`;
   window._dsLog = ds;
+}
+
+// ---- Đánh giá QC (02/10/2026): gán kết quả THỰC TẾ cho từng lần QC — chỉ ghi nhận, không đổi trạng thái đơn.
+const aiSai = d => !!d.DanhGiaThucTe && ['PASS', 'FAIL'].includes(d.KetQua) && d.KetQua !== d.DanhGiaThucTe;
+function oDanhGia(d) {
+  if (d.KetQua === 'LOI') return '—';
+  const nut = (kq, chu) => `<button type="button" class="btn-hanh-dong phu" style="padding:3px 8px;font-size:0.75rem" onclick="danhGia(${d.id}, '${kq}')">${chu}</button>`;
+  if (!d.DanhGiaThucTe) return `${nut('PASS', 'PASS')} ${nut('FAIL', 'FAIL')}`;
+  const nutGiaiThich = d.KetQua !== d.DanhGiaThucTe
+    ? `<br><button type="button" class="btn-hanh-dong phu" style="padding:3px 8px;font-size:0.75rem;margin-top:4px" onclick="moGiaiThichTuLog(${d.id})">${d.KinhNghiemId ? `Giải thích KN#${d.KinhNghiemId}` : 'Giải thích lỗi AI'}</button>` : '';
+  return `${nhanKetQua(d.DanhGiaThucTe)}${aiSai(d) ? ' <strong style="color:var(--color-danger-text)">AI sai</strong>' : ''}
+    ${d.DanhGiaLyDo ? `<br><small>${escapeHtml(d.DanhGiaLyDo)}</small>` : ''}
+    <br><small style="color:var(--color-text-muted)">${escapeHtml(d.DanhGiaNguoi)} · ${escapeHtml(String(d.DanhGiaThoiGian).replace('T', ' ').slice(0, 16))}</small>
+    <br>${nut(d.DanhGiaThucTe === 'PASS' ? 'FAIL' : 'PASS', 'Đổi thành ' + (d.DanhGiaThucTe === 'PASS' ? 'FAIL' : 'PASS'))} ${nut('', 'Bỏ')}${nutGiaiThich}`;
+}
+async function danhGia(id, thucTe) {
+  let lyDo = '';
+  if (thucTe) {
+    lyDo = prompt(`Kết quả thực tế: ${thucTe}. Lý do / ghi chú (không bắt buộc):`, '');
+    if (lyDo === null) return;
+  } else if (!confirm('Bỏ đánh giá lần QC này?')) return;
+  try {
+    await apiFetch(`/qc/log/${id}/danh-gia`, { method: 'POST', body: JSON.stringify({ thucTe, lyDo }) });
+  } catch (e) { alert('Chưa lưu: ' + e.message); return; }
+  await taiLog();
+  taiDoChinhXac();
+}
+
+// ---- Kinh nghiệm QC (02/10/2026): giải thích của Superadmin về lỗi AI. Backend kiểm tra lại mọi trường (qcService#kiemTraKinhNghiem).
+let DM_KN = null;
+async function taiDanhMucKn() {
+  try { DM_KN = await apiFetch('/qc/kinh-nghiem/danh-muc'); } catch (e) { document.getElementById('khoi-kinh-nghiem').textContent = 'Lỗi: ' + e.message; return; }
+  const them = (id, obj) => { document.getElementById(id).insertAdjacentHTML('beforeend', Object.entries(obj).map(([k, v]) => `<option value="${escapeHtml(k)}">${escapeHtml(v)}</option>`).join('')); };
+  them('kn-trang-thai', DM_KN.trangThai);
+  them('kn-nguyen-nhan', DM_KN.nguyenNhan);
+  them('kn-hang-muc', Object.fromEntries([...new Set(Object.values(DM_KN.hangMuc).flat())].map(h => [h, NHAN_HANG_MUC[h] || h])));
+}
+const nhanTrangThaiKn = t => `<strong style="color:${t === 'DA_XAC_NHAN' ? 'var(--color-success-text)' : t === 'KHONG_SU_DUNG' ? 'var(--color-text-muted)' : 'var(--color-warning-text, #92400e)'}">${escapeHtml((DM_KN && DM_KN.trangThai[t]) || t)}</strong>`;
+const docMang = s => { try { return JSON.parse(s || '[]'); } catch (e) { return []; } };
+
+let dsKn = [];
+async function taiKinhNghiem() {
+  const el = document.getElementById('khoi-kinh-nghiem');
+  const qs = new URLSearchParams();
+  for (const [k, id] of [['loaiQc', 'kn-loai'], ['trangThai', 'kn-trang-thai'], ['hangMuc', 'kn-hang-muc'], ['nguyenNhan', 'kn-nguyen-nhan'], ['loaiSanPham', 'kn-loai-sp'], ['tuKhoa', 'kn-tu-khoa']]) {
+    const v = document.getElementById(id).value.trim();
+    if (v) qs.set(k, v);
+  }
+  try { dsKn = await apiFetch('/qc/kinh-nghiem?' + qs); } catch (e) { el.textContent = 'Lỗi: ' + e.message; return; }
+  if (!dsKn.length) { el.innerHTML = '<p style="color:var(--color-text-muted)">Chưa có kinh nghiệm nào.</p>'; return; }
+  const nutNho = (chu, onclick) => `<button type="button" class="btn-hanh-dong phu" style="padding:3px 8px;font-size:0.75rem;margin:2px 0" onclick="${onclick}">${chu}</button>`;
+  el.innerHTML = `<table class="qc-bang-log">
+    <thead><tr><th>KN</th><th>QC · Đơn</th><th>AI → Đúng</th><th>Hạng mục · Nguyên nhân</th><th>Kinh nghiệm (gửi cho AI)</th><th>Phạm vi</th><th>Trạng thái</th><th>Đã dùng</th><th></th></tr></thead>
+    <tbody>${dsKn.map(k => `<tr>
+      <td><strong>KN#${k.id}</strong><br><small style="color:var(--color-text-muted)">${escapeHtml(k.NguoiSua || k.NguoiTao)} · ${escapeHtml(String(k.ThoiGianSua || k.ThoiGianTao).replace('T', ' ').slice(0, 16))}</small></td>
+      <td>${escapeHtml(k.LoaiQc)}<br>${escapeHtml(k.STT_Key)}<br><small>log #${k.QcLogId}</small></td>
+      <td>${nhanKetQua(k.KetQuaAi)} → ${nhanKetQua(k.KetQuaDung)}</td>
+      <td class="ly-do">${escapeHtml(docMang(k.HangMucSai).map(h => NHAN_HANG_MUC[h] || h).join(', ') || '—')}<br><small>${escapeHtml(docMang(k.NguyenNhan).map(n => (DM_KN && DM_KN.nguyenNhan[n]) || n).join(', '))}${k.NguyenNhanKhac ? ': ' + escapeHtml(k.NguyenNhanKhac) : ''}</small></td>
+      <td class="ly-do">${escapeHtml(k.KinhNghiem)}<br><small style="color:var(--color-text-muted)">AI sai: ${escapeHtml(k.AiSaiGi)}</small></td>
+      <td>${escapeHtml((DM_KN && DM_KN.phamVi[k.PhamVi]) || k.PhamVi)}${k.GiaTriPhamVi ? `<br><small>${escapeHtml(k.GiaTriPhamVi)}</small>` : ''}</td>
+      <td>${nhanTrangThaiKn(k.TrangThai)}</td>
+      <td>${k.SoLanDung}</td>
+      <td style="white-space:nowrap">${nutNho('Sửa', `moSuaKn(${k.id})`)}<br>
+        ${k.TrangThai !== 'DA_XAC_NHAN' ? nutNho('Xác nhận', `doiTrangThaiKn(${k.id}, 'DA_XAC_NHAN')`) + '<br>' : ''}
+        ${k.TrangThai !== 'KHONG_SU_DUNG' ? nutNho('Không sử dụng', `doiTrangThaiKn(${k.id}, 'KHONG_SU_DUNG')`) + '<br>' : ''}
+        ${nutNho('Chạy lại đơn gốc', `chayLaiDonGoc(this, ${k.id})`)}<br>
+        ${nutNho('Xem log đơn', `xemLogDon('${escapeHtml(k.STT_Key)}')`)}</td>
+    </tr><tr id="sua-kn-${k.id}" style="display:none"><td colspan="9"></td></tr>`).join('')}</tbody></table>`;
+}
+
+// Form dùng chung cho tạo (từ dòng log) và sửa (từ danh sách). goc = { LoaiQc, STT_Key, KetQuaAi, DiemAi, LyDoAi, KetQuaDung }, kn = kinh nghiệm hiện có | null.
+function htmlFormKn(goc, kn, khoa) {
+  const daChon = (s, v) => docMang(s).includes(v) ? 'checked' : '';
+  const hop = (ten, ds, s) => Object.entries(ds).map(([v, nhan]) => `<label style="display:inline-flex;gap:4px;align-items:center;margin:2px 10px 2px 0"><input type="checkbox" name="${ten}-${khoa}" value="${escapeHtml(v)}" ${daChon(s, v)}> ${escapeHtml(nhan)}</label>`).join('');
+  const hangMuc = Object.fromEntries((DM_KN.hangMuc[goc.LoaiQc] || []).map(h => [h, NHAN_HANG_MUC[h] || h]));
+  return `<div style="border:1px solid var(--color-border);border-radius:var(--radius-sm);padding:var(--space-3);background:var(--color-surface)">
+    <h4 style="margin:0 0 var(--space-2)">Giải thích của Superadmin về lỗi AI — ${escapeHtml(goc.LoaiQc)} · đơn ${escapeHtml(goc.STT_Key)}${kn ? ` · KN#${kn.id} (${nhanTrangThaiKn(kn.TrangThai)})` : ''}</h4>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--space-2);margin-bottom:var(--space-3)">
+      <div><small style="color:var(--color-text-muted)">Kết quả AI ban đầu</small><br>${nhanKetQua(goc.KetQuaAi)} ${goc.DiemAi !== '' && goc.DiemAi !== undefined ? `score ${escapeHtml(goc.DiemAi)}` : ''}<br><small>${escapeHtml(goc.LyDoAi || '')}</small></div>
+      <div><small style="color:var(--color-text-muted)">2. Kết quả đúng (đánh giá thực tế)</small><br>${nhanKetQua(goc.KetQuaDung)}</div>
+    </div>
+    <div class="truong"><label>1. AI đã đánh giá sai điều gì? *</label><textarea id="kn-ai-sai-${khoa}" rows="3" maxlength="2000" style="width:100%">${escapeHtml(kn ? kn.AiSaiGi : '')}</textarea></div>
+    <div class="truong"><label>Hạng mục AI đánh giá sai</label><div>${hop('kn-hm', hangMuc, kn && kn.HangMucSai)}</div></div>
+    <div class="truong"><label>3. Vì sao AI đánh giá sai? * (chọn ít nhất 1)</label><div>${hop('kn-nn', DM_KN.nguyenNhan, kn && kn.NguyenNhan)}</div>
+      <input id="kn-nn-khac-${khoa}" maxlength="1000" style="width:100%;margin-top:4px" placeholder="Mô tả thêm nguyên nhân (bắt buộc nếu chọn Nguyên nhân khác)" value="${escapeHtml(kn ? kn.NguyenNhanKhac : '')}"></div>
+    <div class="truong"><label>4. Kinh nghiệm cần tích luỹ * — <strong>phần DUY NHẤT gửi cho AI</strong>: ghi cả dấu hiệu nhận biết tình huống + cách đánh giá đúng (tối đa ${DM_KN.doDaiKinhNghiem} ký tự)</label>
+      <textarea id="kn-kinh-nghiem-${khoa}" rows="3" maxlength="${DM_KN.doDaiKinhNghiem}" style="width:100%" placeholder="vd Ảnh chụp nghiêng làm hình thêu trông lệch: so khoảng cách tới đường may cổ áo trước khi kết luận sai vị trí.">${escapeHtml(kn ? kn.KinhNghiem : '')}</textarea></div>
+    <div class="truong"><label for="kn-pham-vi-${khoa}">5. Phạm vi áp dụng *</label>
+      <select id="kn-pham-vi-${khoa}">${Object.entries(DM_KN.phamVi).map(([v, nhan]) => `<option value="${v}" ${kn && kn.PhamVi === v ? 'selected' : ''}>${escapeHtml(nhan)}</option>`).join('')}</select></div>
+    <p style="margin-bottom:0"><button type="button" class="btn-hanh-dong" onclick="luuKn(this, '${khoa}')">${kn ? 'Lưu thay đổi (về Chưa xác nhận)' : 'Lưu (Chưa xác nhận)'}</button>
+      ${kn && kn.TrangThai !== 'DA_XAC_NHAN' ? `<button type="button" class="btn-hanh-dong phu" onclick="doiTrangThaiKn(${kn.id}, 'DA_XAC_NHAN')">Xác nhận</button>` : ''}
+      ${kn && kn.TrangThai !== 'KHONG_SU_DUNG' ? `<button type="button" class="btn-hanh-dong phu" onclick="doiTrangThaiKn(${kn.id}, 'KHONG_SU_DUNG')">Không sử dụng</button>` : ''}
+      <span id="kn-thong-bao-${khoa}"></span></p>
+  </div>`;
+}
+const formKnDangMo = {}; // khoa -> { qcLogId } (tạo) | { id } (sửa)
+async function moGiaiThichTuLog(logId) {
+  const hang = document.getElementById('giai-thich-' + logId);
+  if (hang.style.display !== 'none') { hang.style.display = 'none'; return; }
+  const d = (window._dsLog || []).find(x => x.id === logId);
+  if (!d || !DM_KN) return;
+  let kn = null;
+  if (d.KinhNghiemId) { try { kn = await apiFetch('/qc/kinh-nghiem/' + d.KinhNghiemId); } catch (e) { alert('Lỗi: ' + e.message); return; } }
+  const goc = kn || { LoaiQc: d.LoaiQc, STT_Key: d.STT_Key, KetQuaAi: d.KetQua, DiemAi: d.Diem, LyDoAi: d.LyDoKetLuan || d.LyDo, KetQuaDung: d.DanhGiaThucTe };
+  const khoa = 'log' + logId;
+  formKnDangMo[khoa] = kn ? { id: kn.id } : { qcLogId: logId };
+  hang.firstElementChild.innerHTML = htmlFormKn(goc, kn, khoa);
+  hang.style.display = '';
+}
+async function moSuaKn(id) {
+  const hang = document.getElementById('sua-kn-' + id);
+  if (hang.style.display !== 'none') { hang.style.display = 'none'; return; }
+  const kn = dsKn.find(k => k.id === id);
+  if (!kn || !DM_KN) return;
+  const khoa = 'kn' + id;
+  formKnDangMo[khoa] = { id };
+  hang.firstElementChild.innerHTML = htmlFormKn(kn, kn, khoa);
+  hang.style.display = '';
+}
+async function luuKn(nut, khoa) {
+  const muc = formKnDangMo[khoa];
+  const tb = document.getElementById('kn-thong-bao-' + khoa);
+  const chon = ten => [...document.querySelectorAll(`input[name="${ten}-${khoa}"]:checked`)].map(i => i.value);
+  const body = {
+    aiSaiGi: document.getElementById('kn-ai-sai-' + khoa).value, hangMucSai: chon('kn-hm'), nguyenNhan: chon('kn-nn'),
+    nguyenNhanKhac: document.getElementById('kn-nn-khac-' + khoa).value, kinhNghiem: document.getElementById('kn-kinh-nghiem-' + khoa).value,
+    phamVi: document.getElementById('kn-pham-vi-' + khoa).value,
+  };
+  nut.disabled = true;
+  try {
+    if (muc.id) await apiFetch('/qc/kinh-nghiem/' + muc.id, { method: 'PUT', body: JSON.stringify(body) });
+    else await apiFetch('/qc/kinh-nghiem', { method: 'POST', body: JSON.stringify({ ...body, qcLogId: muc.qcLogId }) });
+  } catch (e) {
+    tb.style.color = 'var(--color-danger-text)';
+    tb.textContent = 'Chưa lưu: ' + e.message;
+    nut.disabled = false;
+    return;
+  }
+  await Promise.all([taiLog(), taiKinhNghiem()]);
+}
+async function doiTrangThaiKn(id, trangThai) {
+  if (trangThai === 'DA_XAC_NHAN' && !confirm(`Xác nhận KN#${id}? Kinh nghiệm sẽ được đưa cho AI ở các lần QC sau (đúng QC, đúng phạm vi).`)) return;
+  try { await apiFetch(`/qc/kinh-nghiem/${id}/trang-thai`, { method: 'POST', body: JSON.stringify({ trangThai }) }); } catch (e) { alert('Chưa lưu: ' + e.message); return; }
+  await Promise.all([taiLog(), taiKinhNghiem()]);
+}
+// Chạy lại QC đơn gốc (ghi 1 dòng log MANUAL mới, không sửa dòng cũ) rồi so với kết quả đúng.
+async function chayLaiDonGoc(nut, id) {
+  const kn = dsKn.find(k => k.id === id);
+  if (!kn || !confirm(`Chạy lại ${kn.LoaiQc} cho đơn ${kn.STT_Key}? (gọi AI — tốn 1 lượt API)`)) return;
+  nut.disabled = true;
+  try {
+    const kq = await apiFetch('/qc/chay', { method: 'POST', body: JSON.stringify({ sttKey: kn.STT_Key, loai: kn.LoaiQc }) });
+    const ra = kq.ketQua ? kq.ketQua.result : 'LOI';
+    alert(`Kết quả mới: ${NHAN_KET_QUA[ra] || ra} — kết quả đúng: ${NHAN_KET_QUA[kn.KetQuaDung]}. ${ra === kn.KetQuaDung ? 'KHỚP.' : 'CHƯA khớp.'}\n(Lưu ý: đơn gốc khớp chưa chứng minh kinh nghiệm giúp được các đơn khác.)`);
+  } catch (e) { alert('Lỗi: ' + e.message); }
+  nut.disabled = false;
+  await Promise.all([taiLog(), taiKinhNghiem(), taiDoChinhXac()]);
+}
+function xemLogDon(sttKey) {
+  document.getElementById('log-ma-don').value = sttKey;
+  for (const id of ['log-loai', 'log-ket-qua', 'log-danh-gia']) document.getElementById(id).value = '';
+  taiLog();
+  document.getElementById('khoi-log').closest('details').open = true;
+  document.getElementById('khoi-log').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ---- Đơn hàng vừa cập nhật trạng thái (02/10/2026) — dữ liệu luôn lấy từ server (routes/qc.js GET /don-vua-cap-nhat).
+const gioVN = t => { const d = new Date(t); return isNaN(d) ? '' : d.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }); };
+async function taiDonVuaCapNhat() {
+  const el = document.getElementById('khoi-vua-cap-nhat');
+  let kq;
+  try { kq = await apiFetch('/qc/don-vua-cap-nhat'); } catch (e) { el.textContent = 'Lỗi: ' + e.message; return; }
+  document.getElementById('vcn-so').textContent = `(${kq.ds.length})`;
+  if (!kq.ds.length) { el.innerHTML = '<p style="color:var(--color-text-muted)">Không có đơn nào đổi trạng thái trong 1 giờ qua.</p>'; return; }
+  const bayGio = new Date(kq.bayGio).getTime();
+  el.innerHTML = `<table class="qc-bang-log">
+    <thead><tr><th>Mã đơn</th><th>Trạng thái chung</th><th>Phôi</th><th>Vẽ file</th><th>Đổi lúc</th><th>Xưởng</th></tr></thead>
+    <tbody>${kq.ds.map(d => `<tr>
+      <td><a href="/order.html?stt=${encodeURIComponent(d.sttKey)}" style="font-weight:700">${escapeHtml(d.sttKey)}</a></td>
+      <td>${escapeHtml(d.trangThai)}</td><td>${escapeHtml(d.phoi)}</td><td>${escapeHtml(d.veFile)}</td>
+      <td>${escapeHtml(gioVN(d.thoiGian))} <small style="color:var(--color-text-muted)">(${Math.max(0, Math.round((bayGio - new Date(d.thoiGian).getTime()) / 60000))} phút trước)</small></td>
+      <td>${escapeHtml(d.xuong || '(chưa gán)')}</td></tr>`).join('')}</tbody></table>`;
+}
+
+// ---- Chi phí AI (02/10/2026) — backend kiểm tra lại giá (routes/qc.js POST /gia-token).
+const soNgan = n => Number(n || 0).toLocaleString('vi-VN');
+const usd = v => (v === null || v === undefined ? '—' : '$' + v.toFixed(v < 1 ? 4 : 2));
+let dsGia = [];
+async function taiChiPhi() {
+  const el = document.getElementById('khoi-chi-phi');
+  let kq;
+  try { kq = await apiFetch(`/qc/chi-phi?ngay=${document.getElementById('cp-ngay').value}&gom=${document.getElementById('cp-gom').value}`); } catch (e) { el.textContent = 'Lỗi: ' + e.message; return; }
+  dsGia = kq.gia;
+  document.getElementById('bang-gia-token').innerHTML = dsGia.length ? dsGia.map((g, i) => `<tr><td><strong>${escapeHtml(g.model)}</strong></td>
+    <td><input id="gia-vao-${i}" inputmode="decimal" value="${escapeHtml(g.giaVao)}" aria-label="${escapeHtml(g.model)} giá input"></td>
+    <td><input id="gia-ra-${i}" inputmode="decimal" value="${escapeHtml(g.giaRa)}" aria-label="${escapeHtml(g.model)} giá output"></td></tr>`).join('')
+    : '<tr><td colspan="3">Chưa có model nào.</td></tr>';
+  if (!kq.ds.length) { el.innerHTML = '<p style="color:var(--color-text-muted)">Chưa có lần gọi AI nào có số token trong khoảng này.</p>'; return; }
+  const tong = kq.ds.reduce((t, d) => ({ soLan: t.soLan + d.soLan, tokenVao: t.tokenVao + d.tokenVao, tokenRa: t.tokenRa + d.tokenRa,
+    chiPhi: t.chiPhi + (d.chiPhi || 0), thieuGia: t.thieuGia || d.chiPhi === null }), { soLan: 0, tokenVao: 0, tokenRa: 0, chiPhi: 0, thieuGia: false });
+  el.innerHTML = `<table class="qc-bang-log">
+    <thead><tr><th>Kỳ</th><th>QC</th><th>Model</th><th>Số lần gọi AI</th><th>Token input</th><th>Token output</th><th>Chi phí ước tính</th><th>TB / lần</th></tr></thead>
+    <tbody>${kq.ds.map(d => `<tr><td>${escapeHtml(d.Ky)}</td><td>${escapeHtml(d.LoaiQc)}</td><td>${escapeHtml(d.Model)}</td><td>${d.soLan}</td>
+      <td>${soNgan(d.tokenVao)}</td><td>${soNgan(d.tokenRa)}</td><td>${d.chiPhi === null ? '<small>chưa nhập giá</small>' : usd(d.chiPhi)}</td><td>${d.chiPhi === null ? '—' : usd(d.chiPhi / d.soLan)}</td></tr>`).join('')}
+    <tr style="font-weight:700;background:var(--color-bg)"><td colspan="3">Tổng</td><td>${tong.soLan}</td><td>${soNgan(tong.tokenVao)}</td><td>${soNgan(tong.tokenRa)}</td>
+      <td>${usd(tong.chiPhi)}${tong.thieuGia ? '<br><small>(chưa tính model chưa nhập giá)</small>' : ''}</td><td></td></tr></tbody></table>`;
+}
+async function luuGiaToken(nut) {
+  const tb = document.getElementById('thong-bao-gia');
+  const ds = dsGia.map((g, i) => ({ model: g.model, giaVao: document.getElementById('gia-vao-' + i).value.trim(), giaRa: document.getElementById('gia-ra-' + i).value.trim() }));
+  nut.disabled = true;
+  try {
+    await apiFetch('/qc/gia-token', { method: 'POST', body: JSON.stringify({ ds }) });
+    tb.style.color = 'var(--color-success-text)'; tb.textContent = 'Đã lưu giá.';
+    await taiChiPhi();
+  } catch (e) { tb.style.color = 'var(--color-danger-text)'; tb.textContent = 'Chưa lưu: ' + e.message; }
+  nut.disabled = false;
+}
+
+const phanTram = (a, b) => (b ? Math.round(a * 100 / b) + '%' : '—');
+async function taiDoChinhXac() {
+  const el = document.getElementById('khoi-do-chinh-xac');
+  let ds;
+  try { ds = await apiFetch('/qc/do-chinh-xac?ngay=' + document.getElementById('dcx-ngay').value); } catch (e) { el.textContent = 'Lỗi: ' + e.message; return; }
+  if (!ds.length) { el.innerHTML = '<p style="color:var(--color-text-muted)">Chưa có lần QC nào được đánh giá trong khoảng này.</p>'; return; }
+  // Dòng tổng mỗi QC + các dòng tách theo model/chế độ.
+  const tong = {};
+  for (const d of ds) {
+    const t = tong[d.LoaiQc] ||= { LoaiQc: d.LoaiQc, Model: '', CheDo: '', CoKinhNghiem: '', daDanhGia: 0, dung: 0, passSai: 0, failSai: 0, canCheckLai: 0, tong: true };
+    for (const k of ['daDanhGia', 'dung', 'passSai', 'failSai', 'canCheckLai']) t[k] += d[k];
+  }
+  const dong = d => {
+    const ketLuan = d.daDanhGia - d.canCheckLai;
+    return `<tr${d.tong ? ' style="font-weight:700;background:var(--color-bg)"' : ''}>
+      <td>${escapeHtml(d.tong ? d.LoaiQc : '')}</td><td>${d.tong ? 'Tổng' : escapeHtml(d.Model || '—')}</td><td>${escapeHtml(d.CheDo)}</td><td>${escapeHtml(d.CoKinhNghiem)}</td>
+      <td>${d.daDanhGia}</td><td>${phanTram(d.dung, ketLuan)}</td>
+      <td style="color:var(--color-danger-text)">${d.passSai}</td><td>${d.failSai}</td><td>${d.canCheckLai} (${phanTram(d.canCheckLai, d.daDanhGia)})</td></tr>`;
+  };
+  el.innerHTML = `<table class="qc-bang-log">
+    <thead><tr><th>QC</th><th>Model</th><th>Chế độ</th><th>Dùng kinh nghiệm</th><th>Đã đánh giá</th><th>Tỉ lệ đúng</th><th>PASS sai</th><th>FAIL sai</th><th>CẦN CHECK LẠI</th></tr></thead>
+    <tbody>${Object.values(tong).map(t => dong(t) + ds.filter(d => d.LoaiQc === t.LoaiQc).map(dong).join('')).join('')}</tbody></table>`;
 }
 
 function xemChiTiet(nut, id) {
@@ -420,8 +798,14 @@ function xemChiTiet(nut, id) {
   const d = (window._dsLog || []).find(x => x.id === id);
   if (hang.style.display === 'none' && d) {
     let chiTiet = d.ChiTiet;
-    try { chiTiet = JSON.stringify(JSON.parse(d.ChiTiet), null, 2); } catch (e) { /* giữ nguyên chuỗi */ }
-    hang.querySelector('.qc-chi-tiet').textContent = `Chế độ: ${d.CheDo || 'MANUAL'} · bắt đầu ${d.ThoiGian} · kết thúc ${d.ThoiGianKetThuc || '—'}\n${d.ThongTinAuto ? 'Auto: ' + d.ThongTinAuto + '\n' : ''}Model: ${d.Model || '(không gọi AI)'}\nNgưỡng đã dùng: ${d.NguongDaDung || '—'}\nẢnh: ${d.AnhDaDung || '—'}\n\n${chiTiet}`;
+    let apDung = null;
+    try { const ct = JSON.parse(d.ChiTiet); apDung = ct.ket_qua && ct.ket_qua.kinh_nghiem_ap_dung; chiTiet = JSON.stringify(ct, null, 2); } catch (e) { /* giữ nguyên chuỗi */ }
+    let kn = [];
+    try { kn = d.KinhNghiemDaDung ? JSON.parse(d.KinhNghiemDaDung) : []; } catch (e) { /* bỏ qua */ }
+    const dongKn = kn.length
+      ? `Kinh nghiệm đã cung cấp cho AI (${kn.length}) — AI khai đã áp dụng: ${apDung && apDung.length ? apDung.map(i => 'KN#' + i).join(', ') : '(không)'}\n${kn.map(k => '  ' + k.noiDung).join('\n')}\n`
+      : 'Kinh nghiệm đã cung cấp cho AI: (không)\n';
+    hang.querySelector('.qc-chi-tiet').textContent = `Chế độ: ${d.CheDo || 'MANUAL'} · bắt đầu ${d.ThoiGian} · kết thúc ${d.ThoiGianKetThuc || '—'}\n${d.ThongTinAuto ? 'Auto: ' + d.ThongTinAuto + '\n' : ''}Model: ${d.Model || '(không gọi AI)'}${d.TokenVao !== '' && d.TokenVao !== undefined ? ` · token input ${d.TokenVao} / output ${d.TokenRa}` : ''}\nNgưỡng đã dùng: ${d.NguongDaDung || '—'}\n${dongKn}Ảnh: ${d.AnhDaDung || '—'}\n\n${chiTiet}`;
     hang.style.display = '';
   } else hang.style.display = 'none';
 }

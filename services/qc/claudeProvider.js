@@ -64,7 +64,7 @@ async function thuNhoNeuCan({ mime, data }) {
 }
 
 // anh: [{ mime, data: Buffer, ten }] — mỗi ảnh kèm 1 dòng tên ngay trước để model tham chiếu đúng file.
-async function phanTichAnh({ apiKey, model, prompt, anh = [], schema }) {
+async function phanTichAnh({ apiKey, model, prompt, anh = [], schema, thongKe }) {
   const content = [{ type: 'text', text: prompt }];
   for (const a of anh) {
     const { mime, data } = await thuNhoNeuCan(a);
@@ -81,6 +81,7 @@ async function phanTichAnh({ apiKey, model, prompt, anh = [], schema }) {
       tool_choice: { type: 'tool', name: TEN_TOOL },
     },
   });
+  if (thongKe && data.usage) Object.assign(thongKe, { tokenVao: data.usage.input_tokens || 0, tokenRa: data.usage.output_tokens || 0 });
   if (data.stop_reason === 'max_tokens') throw loiApi('Claude trả lời bị cắt ngang (hết max_tokens).');
   const tool = (data.content || []).find(c => c.type === 'tool_use' && c.name === TEN_TOOL);
   if (!tool || !tool.input || typeof tool.input !== 'object') throw loiApi(`Claude không trả kết quả có cấu trúc (stop_reason: ${data.stop_reason || 'không rõ'}).`);

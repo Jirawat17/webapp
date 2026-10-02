@@ -7,19 +7,6 @@
 <link rel="stylesheet" href="/css/style.css?v=107">
 <script src="/js/theme.js?v=104"></script>
 <style>
-/* Popup báo "vừa tự động mua tracking" — trang này tự chứa, chưa có class modal/popup dùng chung nào
-   trong style.css để tái dùng (đã rà trước khi thêm). */
-.tk-lop-phu {
-  position: fixed; inset: 0; background: rgba(24,24,27,0.45); z-index: 100;
-  display: flex; align-items: center; justify-content: center; padding: var(--space-4);
-}
-.tk-popup {
-  background: var(--color-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-lg, 0 12px 40px rgba(0,0,0,0.25));
-  max-width: 440px; width: 100%; padding: var(--space-5); max-height: 80vh; overflow-y: auto;
-}
-.tk-popup h3 { margin-top: 0; }
-.tk-popup ul { margin: 0; padding-left: 1.2em; }
-.tk-popup li { margin-bottom: 4px; }
 .tk-trang-thai { font-size: 0.82rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
 .tk-trang-thai.da-mua { background: color-mix(in srgb, #16a34a 15%, transparent); color: #16a34a; }
 .tk-trang-thai.dang-cho-tem { background: color-mix(in srgb, #2563eb 15%, transparent); color: #2563eb; }
@@ -169,13 +156,8 @@
   <div id="tk-logs" class="tk-logs">Đang tải...</div>
 </div>
 
-<div id="tk-popup-moi" class="tk-lop-phu" style="display:none">
-  <div class="tk-popup">
-    <h3>🎉 Vừa tự động mua tracking</h3>
-    <ul id="tk-popup-danh-sach"></ul>
-    <button type="button" class="btn-hanh-dong" style="margin-top:var(--space-3)" id="btn-dong-popup">Đã biết</button>
-  </div>
-</div>
+<!-- Popup "🎉 Vừa tự động mua tracking" đã BỎ (02/10/2026, theo yêu cầu người dùng) — chỉ bỏ hiển thị; dữ liệu, API,
+     quy trình mua và bảng "Danh sách đơn tự động mua tracking" giữ nguyên. -->
 
 <script src="/js/icons.js?v=104"></script>
 <script src="/js/api.js?v=109"></script>
@@ -200,8 +182,6 @@ const NHAN_TRANG_THAI = {
   CHUYEN_THU_CONG: { nhan: 'Đã chuyển MUA THỦ CÔNG', lop: 'thieu-du-lieu' },
 };
 
-const KHOA_LAN_XEM_CUOI = 'trackingLanXemCuoi';
-
 (async () => {
   const user = await requireLoginOrRedirect();
   if (!user) return;
@@ -211,9 +191,6 @@ const KHOA_LAN_XEM_CUOI = 'trackingLanXemCuoi';
 
   document.getElementById('btn-luu-cau-hinh').onclick = luuCauHinh;
   document.getElementById('btn-luu-cau-hinh-quet-trang-thai').onclick = luuCauHinhQuetTrangThai;
-  document.getElementById('btn-dong-popup').onclick = () => {
-    document.getElementById('tk-popup-moi').style.display = 'none';
-  };
   // 4 lượt tải ban đầu ĐỘC LẬP nhau (cấu hình mua tracking/quét trạng thái/danh sách đơn/logs) —
   // chạy SONG SONG thay vì xếp hàng tuần tự (bổ sung 22/09/2026, theo yêu cầu người dùng cải thiện tốc
   // độ tải trang) — trước đây thời gian tải = TỔNG round-trip, giờ = round-trip CHẬM NHẤT trong số đó.
@@ -502,7 +479,6 @@ async function taiDanhSach() {
       </table>`;
   }
 
-  hienPopupNeuCoMoi(ds);
   await taiCanhBaoThuCong(); // mua/đặt lại xong -> cảnh báo cập nhật theo
 }
 
@@ -626,28 +602,6 @@ function dinhDangNgayGioNganAnToan(isoStr) {
   return `${fmt(vn.getDate())}-${fmt(vn.getMonth() + 1)} ${fmt(vn.getHours())}:${fmt(vn.getMinutes())}:${fmt(vn.getSeconds())}`;
 }
 
-// Popup "vừa tự động mua tracking" — không có cơ chế đẩy tin thời gian thực nào trong dự án (đã trao
-// đổi với người dùng), nên so ThoiGianCapNhatCuoi của các đơn "Đã mua" với mốc "lần cuối xem trang
-// này" (lưu localStorage, riêng theo máy) — có đơn mới hơn thì hiện popup, rồi cập nhật lại mốc.
-function hienPopupNeuCoMoi(ds) {
-  let lanXemCuoi = 0;
-  try { lanXemCuoi = Number(localStorage.getItem(KHOA_LAN_XEM_CUOI)) || 0; } catch (e) { /* bỏ qua */ }
-
-  const donMoi = ds.filter(d => {
-    if (d.trangThai !== 'DA_MUA' || !d.thoiGianCapNhatCuoi) return false;
-    const thoiDiem = new Date(d.thoiGianCapNhatCuoi).getTime();
-    return !isNaN(thoiDiem) && thoiDiem > lanXemCuoi;
-  });
-
-  if (donMoi.length > 0) {
-    document.getElementById('tk-popup-danh-sach').innerHTML = donMoi.map(d =>
-      `<li><strong>${escapeHtml(d.sttKey)}</strong> — mã tracking ${escapeHtml(d.trackingId)} (${escapeHtml(d.hangVanChuyen || '')})</li>`
-    ).join('');
-    document.getElementById('tk-popup-moi').style.display = 'flex';
-  }
-
-  try { localStorage.setItem(KHOA_LAN_XEM_CUOI, String(Date.now())); } catch (e) { /* bỏ qua */ }
-}
 </script>
 </body>
 </html>

@@ -16,6 +16,13 @@
   <div class="tieu-de-cong-cu">
     <h2>Danh sách đơn hàng</h2>
     <div class="thanh-cong-cu-danh-sach">
+      <!-- Tìm nhanh theo mã đơn (02/10/2026, theo yêu cầu người dùng) — CHỈ STT_Key, khớp một phần (tham số maDon, KHÁC ô
+           "Tìm theo đơn / mã KH" trong panel Lọc). Enter/nút Tìm: đưa MỌI bộ lọc khác về "Tất cả" rồi tìm; xoá trống ô: tải lại
+           đầy đủ (mọi bộ lọc "Tất cả"); đổi bộ lọc khác: tự xoá ô này (không dùng chung với bộ lọc). Xem timNhanhMaDon(). -->
+      <span style="display:inline-flex;gap:4px;flex:0 1 240px;min-width:170px">
+        <input type="search" id="tim-nhanh-ma-don" placeholder="Nhập mã đơn..." aria-label="Tìm nhanh theo mã đơn" autocomplete="off" style="flex:1;min-width:0">
+        <button type="button" class="btn-hanh-dong phu" onclick="timNhanhMaDon()" style="flex:0 0 auto">Tìm</button>
+      </span>
       <button type="button" class="btn-hanh-dong phu" id="btn-mo-loc" onclick="batTatPanel('panel-loc')"></button>
       <button type="button" class="btn-hanh-dong phu" id="btn-mo-sap-xep" onclick="batTatPanel('panel-sap-xep')"></button>
       <!-- "IN DANH SÁCH PHÔI CỦA ĐƠN ĐANG CHỌN" hiện LẠI 23/09/2026, theo yêu cầu người dùng — đã tạm
@@ -398,6 +405,14 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   // Sắp xếp chỉ đổi THỨ TỰ, không đổi danh sách đang chọn (khác lọc — lọc có thể làm mất đơn khỏi
   // danh sách hiển thị) nên KHÔNG cần bỏ chọn khi đổi kiểu sắp xếp.
   document.getElementById('sap-xep').onchange = () => { taiDon(); };
+  // Tìm nhanh mã đơn (02/10/2026)
+  const oTimNhanh = document.getElementById('tim-nhanh-ma-don');
+  oTimNhanh.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); timNhanhMaDon(); } });
+  oTimNhanh.addEventListener('input', () => { if (!oTimNhanh.value.trim()) timNhanhMaDon(); });
+  // Đổi bất kỳ bộ lọc nào trong panel Lọc -> xoá ô tìm nhanh TRƯỚC (pha capture chạy trước onchange/oninput của ô lọc).
+  const xoaTimNhanhKhiLoc = e => { if (CAC_O_LOC.includes(e.target.id)) oTimNhanh.value = ''; };
+  document.getElementById('panel-loc').addEventListener('change', xoaTimNhanhKhiLoc, true);
+  document.getElementById('panel-loc').addEventListener('input', xoaTimNhanhKhiLoc, true);
 
   document.getElementById('btn-mo-loc').innerHTML = icon('filter', { size: 16 }) + ' Lọc';
   document.getElementById('btn-mo-sap-xep').innerHTML = icon('sort', { size: 16 }) + ' Sắp xếp';
@@ -640,11 +655,41 @@ async function taiCanhBaoThuCong() {
   try { ds = await apiFetch('/tracking/canh-bao-thu-cong'); } catch (e) { return; }
   const el = document.getElementById('canh-bao-thu-cong');
   if (!ds.length) { el.style.display = 'none'; return; }
-  const gio = t => { const d = new Date(t); return isNaN(d) ? '' : d.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); };
+  _dsCanhBaoThuCong = ds;
+  // Thu gọn (02/10/2026): nhớ trên máy; có đơn MỚI bị chuyển thủ công (chưa có lúc thu gọn) -> tự mở lại để không bỏ sót.
+  const nho = docThuGonCanhBao();
+  if (nho.thuGon && ds.some(d => !nho.cacDon.includes(d.sttKey))) ghiThuGonCanhBao(false, []);
+  veCanhBaoThuCong();
+}
+let _dsCanhBaoThuCong = [];
+const KHOA_THU_GON_CANH_BAO = 'donHang.canhBaoThuCong.thuGon';
+function docThuGonCanhBao() {
+  try { const v = JSON.parse(localStorage.getItem(KHOA_THU_GON_CANH_BAO) || '{}'); return { thuGon: !!v.thuGon, cacDon: Array.isArray(v.cacDon) ? v.cacDon : [] }; }
+  catch (e) { return { thuGon: false, cacDon: [] }; }
+}
+function ghiThuGonCanhBao(thuGon, cacDon) {
+  try { localStorage.setItem(KHOA_THU_GON_CANH_BAO, JSON.stringify({ thuGon, cacDon })); } catch (e) { /* bỏ qua */ }
+}
+function batTatCanhBaoThuCong() {
+  const thuGon = !docThuGonCanhBao().thuGon;
+  ghiThuGonCanhBao(thuGon, thuGon ? _dsCanhBaoThuCong.map(d => d.sttKey) : []);
+  veCanhBaoThuCong();
+}
+function veCanhBaoThuCong() {
+  const ds = _dsCanhBaoThuCong;
+  const el = document.getElementById('canh-bao-thu-cong');
+  const thuGon = docThuGonCanhBao().thuGon;
+  const nut = `<button type="button" onclick="batTatCanhBaoThuCong()" aria-expanded="${!thuGon}" style="margin-left:auto;background:transparent;border:1px solid currentColor;color:inherit;border-radius:6px;padding:2px 10px;font-weight:700;cursor:pointer;white-space:nowrap">${thuGon ? 'Hiện ▾' : 'Thu gọn ▴'}</button>`;
   el.style.display = '';
+  if (thuGon) {
+    el.innerHTML = `<div style="background:var(--color-danger-bg);color:var(--color-danger-text);border:2px solid var(--color-danger-text);border-radius:8px;padding:4px 10px;margin-bottom:8px;display:flex;gap:8px;align-items:center;font-weight:700">
+      ${icon('alert', { size: 18 })} ${ds.length} đơn không thể tự động mua tracking ${nut}</div>`;
+    return;
+  }
+  const gio = t => { const d = new Date(t); return isNaN(d) ? '' : d.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); };
   el.innerHTML = `
     <div style="background:var(--color-danger-bg);color:var(--color-danger-text);border:3px solid var(--color-danger-text);border-radius:8px;padding:14px 16px;margin-bottom:12px">
-      <div style="font-size:1.2rem;font-weight:700;display:flex;gap:8px;align-items:center">${icon('alert', { size: 24 })} ${ds.length} ĐƠN KHÔNG THỂ TỰ ĐỘNG MUA TRACKING — ĐÃ CHUYỂN SANG MUA THỦ CÔNG</div>
+      <div style="font-size:1.2rem;font-weight:700;display:flex;gap:8px;align-items:center;flex-wrap:wrap">${icon('alert', { size: 24 })} ${ds.length} ĐƠN KHÔNG THỂ TỰ ĐỘNG MUA TRACKING — ĐÃ CHUYỂN SANG MUA THỦ CÔNG ${nut}</div>
       <p style="margin:6px 0 8px">Hệ thống đã tự động thử 10 lần không thành công và dừng thử. Kiểm tra nguyên nhân, sửa thông tin đơn rồi mua tay ở trang <a href="/tracking.html" style="color:inherit;font-weight:700">Tracking</a>.</p>
       <ul style="margin:0;padding-left:20px">${ds.map(d => `
         <li style="word-break:break-word"><a href="/order.html?stt=${encodeURIComponent(d.sttKey)}" style="font-weight:700;color:inherit">${escapeHtml(d.sttKey)}</a> — ${escapeHtml(d.lyDo || '(không rõ nguyên nhân)')} <small>(thử ${d.soLanThu} lần${d.thoiGianThu ? `, gần nhất ${gio(d.thoiGianThu)}` : ''})</small>${htmlSuaThongTinGke(d)}</li>`).join('')}
@@ -654,7 +699,15 @@ async function taiCanhBaoThuCong() {
 
 const CAC_O_LOC = ['loc-tong-quat', 'loc-trang-thai', 'loc-phoi', 'loc-ve-file', 'loc-canh-bao', 'loc-xuong', 'loc-uu-tien', 'loc-don-nhieu-ao', 'loc-da-mua-tracking', 'loc-nhom-hang', 'loc-don-hang-loat', 'loc-loai', 'loc-kich-thuoc', 'loc-hang-van-chuyen', 'loc-mau-sac', 'loc-quoc-gia-tracking', 'loc-tinh-trang', 'loc-kh', 'loc-ma-tracking', 'loc-tu-ngay', 'loc-den-ngay'];
 
+// Tìm nhanh theo mã đơn: mọi bộ lọc khác về "Tất cả" (sắp xếp giữ nguyên) rồi tải lại; ô trống = danh sách đầy đủ.
+function timNhanhMaDon() {
+  CAC_O_LOC.forEach(id => { document.getElementById(id).value = ''; });
+  boChonTatCaDon();
+  taiDon();
+}
+
 function xoaTatCaLoc() {
+  document.getElementById('tim-nhanh-ma-don').value = '';
   CAC_O_LOC.forEach(id => { document.getElementById(id).value = ''; });
   boChonTatCaDon();
   taiDon();
@@ -753,6 +806,8 @@ async function taiDon() {
   if (quocGiaTracking) qs.set('quocGiaTracking', quocGiaTracking);
   if (tinhTrang) qs.set('tinhTrang', tinhTrang);
   if (kh) qs.set('kh', kh);
+  const maDonNhanh = document.getElementById('tim-nhanh-ma-don').value.trim();
+  if (maDonNhanh) qs.set('maDon', maDonNhanh);
   if (maTracking) qs.set('maTracking', maTracking);
   if (tuNgay) qs.set('tuNgay', tuNgay);
   if (denNgay) qs.set('denNgay', denNgay);

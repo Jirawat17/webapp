@@ -37,6 +37,10 @@ const CAC_COT = [
   // THOI_GIAN_VE_FILE / THOI_GIAN_DAN_TEM (02/10/2026, Tự động quét QC) — lần gần nhất đơn chuyển sang "Đã vẽ file" (cột
   // TRANG_THAI_VE_FILE) / "ĐÃ DÁN TEM"; mốc tính thời gian chờ Auto QC1 / Auto QC3 (services/qc/qcAutoService.js).
   'THOI_GIAN_VE_FILE', 'THOI_GIAN_DAN_TEM',
+  // THOI_GIAN_DOI_TRANG_THAI (02/10/2026, theo yêu cầu người dùng — menu QC "Đơn hàng vừa cập nhật trạng thái"): lần gần
+  // nhất 1 trong 3 cột TRANG_THAI_XUONG / TRANG_THAI_PHOI / TRANG_THAI_VE_FILE THẬT SỰ đổi giá trị. Tự ghi trong ghiDe()
+  // bên dưới (điểm ghi duy nhất) — không ai ghi tay; đơn đổi trước khi có cột này để trống (không suy từ lịch sử cũ).
+  'THOI_GIAN_DOI_TRANG_THAI',
   'HANG_VAN_CHUYEN', 'TRACKING_ID', 'TRANG_THAI_TRACKING', 'THOI_GIAN_CAP_NHAT_TRACKING',
   // MA_NODE_TRACKING/MA_TRANG_THAI_NODE_TRACKING (bổ sung 21/09/2026, theo yêu cầu người dùng — xem
   // services/trackingAutoService.js#daGiaoThanhCongGke): lưu song song mã "order_node"/"node_status"
@@ -192,8 +196,15 @@ function layPreparedGhiDe(cotDaSort) {
 
 // Ghi đè MỘT PHẦN (chỉ các cột thực sự có trong `updates`, đúng ngữ nghĩa updateCells cũ) — UPSERT
 // theo stt_key, không quan tâm dòng đã tồn tại trong DB hay chưa (đơn mới tự động INSERT).
+const COT_TRANG_THAI_THEO_DOI = Object.keys(MAC_DINH_THAT_THEO_COT);
 function ghiDe(sttKey, updates) {
   const key = chuanHoaKey(sttKey);
+  // Mốc đổi trạng thái: so với giá trị đang lưu (đã áp mặc định thật — '' và 'Chưa in mã' là CÙNG 1 trạng thái).
+  if (COT_TRANG_THAI_THEO_DOI.some(c => updates[c] !== undefined)) {
+    const cu = layTheoKey(key);
+    const moi = apDungMacDinhThat(Object.fromEntries(COT_TRANG_THAI_THEO_DOI.map(c => [c, updates[c] === undefined ? cu[c] : String(updates[c] ?? '')])));
+    if (COT_TRANG_THAI_THEO_DOI.some(c => moi[c] !== cu[c])) updates = { ...updates, THOI_GIAN_DOI_TRANG_THAI: require('./dateUtils').thoiGianVNISOString() };
+  }
   // .sort() — xem lý do bắt buộc ở comment layPreparedGhiDe() trên.
   const cot = Object.keys(updates).filter(c => CAC_COT.includes(c)).sort();
   if (cot.length === 0) return; // updates chỉ đụng cột KHÔNG thuộc bảng này (vd cột RAW) — không có gì để ghi ở đây
@@ -216,4 +227,10 @@ function doiTenXuongHangLoat(tenCu, tenMoi) {
   db.prepare(`UPDATE trang_thai_don SET XUONG = ? WHERE XUONG = ?`).run(tenMoi, tenCu);
 }
 
-module.exports = { CAC_COT, RONG_MAC_DINH, layTheoKey, layTatCa, ghiDe, ghiDeNhieu, demTheoXuong, doiTenXuongHangLoat };
+// Đơn có trạng thái đổi từ mốc `tu` (chuỗi ISO giờ VN như thoiGianVNISOString) — menu QC "Đơn hàng vừa cập nhật trạng thái".
+function layDonDoiTrangThaiTu(tu) {
+  return db.prepare(`SELECT stt_key, ${DS_COT_SELECT} FROM trang_thai_don WHERE THOI_GIAN_DOI_TRANG_THAI >= ? ORDER BY THOI_GIAN_DOI_TRANG_THAI DESC`)
+    .all(tu).map(({ stt_key, ...r }) => ({ STT_Key: stt_key, ...apDungMacDinhThat(r) }));
+}
+
+module.exports = { CAC_COT, RONG_MAC_DINH, layTheoKey, layTatCa, ghiDe, ghiDeNhieu, demTheoXuong, doiTenXuongHangLoat, layDonDoiTrangThaiTu };

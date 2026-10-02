@@ -140,6 +140,8 @@ function chuanHoaAi(ai, hangMuc) {
 //  6. còn lại (giữa 2 ngưỡng) -> CAN_CHECK_LAI
 function quyetDinhKetQua(kq, { nguong, loiDinhDang = [], failCung = [], chanPass = [] }) {
   kq.nguong = { ...nguong };
+  // Lưu đầu vào (02/10/2026) để Gợi ý ngưỡng tính lại ĐÚNG kết luận với ngưỡng khác (goiYNguong) bằng chính hàm này.
+  kq.dau_vao_quyet_dinh = { loiDinhDang: [...loiDinhDang], failCung: [...failCung], chanPass: [...chanPass] };
   const ketLuan = (result, lyDo) => Object.assign(kq, { result, ly_do_ket_luan: lyDo });
   if (failCung.length) return ketLuan('FAIL', `Luật hệ thống: ${failCung.join(' ')}`);
   if (loiDinhDang.length) return ketLuan('CAN_CHECK_LAI', `Kết quả AI không hợp lệ: ${loiDinhDang.join(' ')} Không tự kết luận.`);
@@ -218,7 +220,7 @@ const SCHEMA_QC3 = {
   required: ['result', 'score', 'confidence', 'evidence', 'checked_items', 'issues', 'reason', 'doc_duoc'],
 };
 
-function promptQc3(duLieu) {
+function promptQc3(duLieu, kn = []) {
   return [
     'Bạn là nhân viên QC của xưởng thêu, nhiệm vụ: kiểm tra TEM VẬN CHUYỂN đã dán trên kiện hàng trong ảnh có đúng đơn hàng hay không.',
     'Dữ liệu đơn hàng trong hệ thống (JSON):',
@@ -232,13 +234,85 @@ function promptQc3(duLieu) {
     '5. Chỉ dùng FAIL khi đọc RÕ và thấy KHÁC thật sự (sai người, sai địa chỉ, sai mã). Ảnh mờ, bị che, bị cắt, lóa, không chắc chắn -> CAN_CHECK_LAI. Không được kết luận chỉ vì "nhìn khá giống".',
     '6. result tổng: FAIL nếu có ít nhất 1 mục FAIL rõ ràng; PASS chỉ khi mọi mục cần kiểm đều PASS và đọc được mã tracking; còn lại CAN_CHECK_LAI.',
     '7. design_file và mockup_file luôn null (QC dán tem không dùng design/mockup). confidence từ 0 đến 1. issues và reason viết tiếng Việt, ngắn gọn, nêu cụ thể chỗ sai/chỗ không đọc được. Tên ảnh trong evidence: "anh_da_dan_tem".',
+    ...khoiKinhNghiem(kn),
     ...QUY_TAC_KET_QUA,
   ].join('\n');
 }
 
 // Làm sạch JSON AI + đối chiếu mã tracking bằng dữ liệu hệ thống, rồi quyetDinhKetQua(). Luật cứng: mã trên tem khác mã đơn /
 // là mã của đơn khác -> FAIL; không đọc được mã, không có tem, người nhận/địa chỉ/mã kiện gom chưa PASS -> không được PASS.
-function hoanThienKetQua3(ai, { maCanCo, row, rows, cungNhom, laKienGom = false }, nguong) {
+// Mã vạch (02/10/2026, theo yêu cầu người dùng): ảnh có thể có NHIỀU mã (tem cũ, mã sản phẩm, SKU...). Chỉ xét mã >= 10 ký tự.
+//  - có mã của ĐƠN KHÁC, không có mã khớp đơn -> FAIL (dán nhầm, theo mã vạch)
+//  - có cả mã khớp đơn lẫn mã của đơn khác -> CAN_CHECK_LAI (có thể 2 tem trên 1 kiện)
+//  - mã khớp đơn: AI đọc chữ ra mã KHÁC -> CAN_CHECK_LAI; còn lại -> tracking PASS (không phụ thuộc AI đọc chữ)
+//  - chỉ có mã lạ (không thuộc đơn nào) / không đọc được mã vạch -> giữ cách đối chiếu chữ AI đọc như cũ.
+// -> true nếu mã vạch đã quyết định hạng mục tracking.
+function doiChieuMaVach(kq, maVach, { maCanCo, row, rows, cungNhom }, failCung, chanPass, heThongThay) {
+  if (!maVach.length) return false;
+  kq.ma_vach_doc_duoc = maVach;
+  const maDonKhac = ma => rows.filter(r => r.STT_Key !== row.STT_Key && !cungNhom.has(r.STT_Key)
+    && (khopMa(ma, chuanHoaMa(r.TRACKING_ID)) || khopMa(ma, chuanHoaMa(r.TRACKING_ID2)))).map(r => r.STT_Key);
+  const khopDon = maVach.filter(m => khopMa(chuanHoaMa(m), maCanCo));
+  const cuaDonKhac = maVach.filter(m => !khopDon.includes(m)).map(m => ({ ma: m, don: maDonKhac(chuanHoaMa(m)) })).filter(x => x.don.length);
+  const moTaKhac = cuaDonKhac.map(x => `${x.ma} (đơn ${x.don.join(', ')})`).join('; ');
+  if (cuaDonKhac.length && !khopDon.length) {
+    const moTa = `Mã vạch trên ảnh là tracking của đơn khác: ${moTaKhac} — nghi DÁN NHẦM TEM.`;
+    kq.checked_items.tracking = 'FAIL';
+    kq.issues.unshift(moTa);
+    kq.kiem_tra_he_thong.push(`Mã vạch: ${moTa}`);
+    heThongThay(moTa);
+    failCung.push(moTa);
+    return true;
+  }
+  if (cuaDonKhac.length) {
+    kq.checked_items.tracking = 'CAN_CHECK_LAI';
+    kq.kiem_tra_he_thong.push(`Mã vạch: ảnh có cả mã của đơn này và mã của đơn khác (${moTaKhac}) — có thể có 2 tem trên 1 kiện.`);
+    chanPass.push('Ảnh có mã vạch của cả đơn này và đơn khác.');
+    return true;
+  }
+  if (khopDon.length) {
+    const maTem = chuanHoaMa(kq.doc_duoc.ma_tracking);
+    if (maTem && !khopMa(maTem, maCanCo)) {
+      kq.checked_items.tracking = 'CAN_CHECK_LAI';
+      kq.kiem_tra_he_thong.push(`Mã vạch khớp đơn nhưng chữ AI đọc ra mã khác (${kq.doc_duoc.ma_tracking}) — có thể có 2 tem trên 1 kiện.`);
+      chanPass.push('Mã vạch và chữ AI đọc trên tem không thống nhất.');
+      return true;
+    }
+    kq.checked_items.tracking = 'PASS';
+    kq.kiem_tra_he_thong.push('Mã vạch trên tem khớp mã tracking của đơn (đọc bằng thư viện mã vạch).');
+    return true;
+  }
+  kq.kiem_tra_he_thong.push(`Mã vạch đọc được không thuộc đơn nào (${maVach.join(', ')}) — bỏ qua, đối chiếu theo chữ AI đọc.`);
+  return false;
+}
+
+// Đọc mọi mã vạch / QR trong ảnh (zxing-wasm, chạy WASM tại chỗ — không gọi mạng). -> [chuỗi gốc] mã >= 10 ký tự (sau chuẩn hoá),
+// không trùng. Lỗi đọc -> [] (QC vẫn chạy theo AI như cũ).
+// LƯU Ý: mặc định zxing-wasm TẢI file .wasm từ CDN jsdelivr khi có fetch (kể cả trong Node) -> nạp thẳng file .wasm trong node_modules
+// qua overrides.wasmBinary, không bao giờ gọi mạng.
+let zxingDaNap = false;
+function napZxing() {
+  const zxing = require('zxing-wasm/reader');
+  if (!zxingDaNap) {
+    const fs = require('fs');
+    const duongDan = require('path').join(require.resolve('zxing-wasm/reader'), '../../../reader/zxing_reader.wasm');
+    zxing.prepareZXingModule({ overrides: { wasmBinary: fs.readFileSync(duongDan) } });
+    zxingDaNap = true;
+  }
+  return zxing;
+}
+async function docMaVach(buffer) {
+  try {
+    const { readBarcodes } = napZxing();
+    const ds = await readBarcodes(new Uint8Array(buffer), { tryHarder: true, maxNumberOfSymbols: 20 });
+    return [...new Set(ds.filter(d => d.isValid).map(d => d.text.trim()).filter(t => chuanHoaMa(t).length >= 10))];
+  } catch (err) {
+    console.error('[QC3] Không đọc được mã vạch:', err.message);
+    return [];
+  }
+}
+
+function hoanThienKetQua3(ai, { maCanCo, row, rows, cungNhom, laKienGom = false, maVach = [] }, nguong) {
   const { kq, loiDinhDang } = chuanHoaAi(ai, HANG_MUC_QC3);
   kq.design_file = null;
   kq.mockup_file = null;
@@ -248,7 +322,9 @@ function hoanThienKetQua3(ai, { maCanCo, row, rows, cungNhom, laKienGom = false 
   const heThongThay = quanSat => kq.evidence.unshift({ hang_muc: 'tracking', anh: 'anh_da_dan_tem', quan_sat: `Hệ thống: ${quanSat}` });
 
   const maTem = chuanHoaMa(kq.doc_duoc.ma_tracking);
-  if (!maTem) {
+  if (doiChieuMaVach(kq, maVach, { maCanCo, row, rows, cungNhom }, failCung, chanPass, heThongThay)) {
+    // mã vạch đã quyết định hạng mục tracking
+  } else if (!maTem) {
     kq.kiem_tra_he_thong.push('Không đọc được mã tracking trên tem — hệ thống không đối chiếu được.');
     kq.checked_items.tracking = 'CAN_CHECK_LAI';
     chanPass.push('Không đọc được mã tracking trên tem.');
@@ -282,7 +358,7 @@ function hoanThienKetQua3(ai, { maCanCo, row, rows, cungNhom, laKienGom = false 
 }
 
 // -> { ketQua, anh: [url], model, daGoiAi }
-async function chayQc3(sttKey, nguong) {
+async function chayQc3(sttKey, nguong, thongKe) {
   const { rows } = await orderService.getAll({ fresh: true });
   const row = rows.find(r => r.STT_Key === sttKey);
   if (!row) throw loiNghiepVu(`Không tìm thấy đơn ${sttKey}.`, 404);
@@ -319,11 +395,12 @@ async function chayQc3(sttKey, nguong) {
     don_gom: { la_kien_gom: laKienGom, cac_ma_don: laKienGom ? [...cungNhom] : [] },
   };
   const { nhaCungCap, apiKey, model } = layCauHinh('QC3');
-  const ai = await aiProvider.phanTichAnh({ apiKey, model, prompt: promptQc3(duLieu), anh: [{ mime, data: buffer, ten: 'anh_da_dan_tem' }], schema: SCHEMA_QC3 }, nhaCungCap);
-  return {
-    daGoiAi: true, anh: [urlAnh], aiGoc: ai,
-    ketQua: hoanThienKetQua3(ai, { maCanCo: chuanHoaMa(maCanCoGoc), row, rows, cungNhom, laKienGom }, nguong),
-  };
+  const kn = chonKinhNghiem('QC3', row);
+  const maVach = await docMaVach(buffer);
+  const ai = await aiProvider.phanTichAnh({ apiKey, model, prompt: promptQc3(duLieu, kn), anh: [{ mime, data: buffer, ten: 'anh_da_dan_tem' }], schema: themTruongKinhNghiem(SCHEMA_QC3, kn), thongKe }, nhaCungCap);
+  const ketQua = hoanThienKetQua3(ai, { maCanCo: chuanHoaMa(maCanCoGoc), row, rows, cungNhom, laKienGom, maVach }, nguong);
+  if (kn.length) ketQua.kinh_nghiem_ap_dung = kinhNghiemAiApDung(ai, kn);
+  return { daGoiAi: true, anh: [urlAnh], aiGoc: ai, kinhNghiem: kn, ketQua };
 }
 
 // ---------------- Phần CHUNG của QC1 (vẽ file) + QC2 (sản xuất): đối chiếu ảnh cần kiểm với Design/Mockup + ghi chú ----------------
@@ -425,7 +502,7 @@ function hoanThienKetQuaDoiChieu(ai, tenHopLe, { hangMuc, batBuoc }, nguong) {
 // Chạy 1 lượt QC đối chiếu. qc = {
 //   loai, anhCanKiem(row) -> [{ ten, nguon, url }] (ảnh BẮT BUỘC, đọc được ít nhất 1), thieuAnh: lý do khi không có ảnh cần kiểm,
 //   anhPhu(row) -> [{ ten, nguon, url }] (gửi thêm nếu đọc được), hangMuc, batBuoc, prompt(duLieu, dsAnh) }
-async function chayDoiChieu(sttKey, qc, nguong) {
+async function chayDoiChieu(sttKey, qc, nguong, thongKe) {
   const { rows } = await orderService.getAll({ fresh: true });
   const row = rows.find(r => r.STT_Key === sttKey);
   if (!row) throw loiNghiepVu(`Không tìm thấy đơn ${sttKey}.`, 404);
@@ -477,14 +554,16 @@ async function chayDoiChieu(sttKey, qc, nguong) {
     ghi_chu_ve_file: row.GHI_CHU_VE_FILE || '', ghi_chu_chay_may: row.GHI_CHU_CHAY_MAY || '',
   };
   const { nhaCungCap, apiKey, model } = layCauHinh(qc.loai);
+  const kn = chonKinhNghiem(qc.loai, row);
   const ai = await aiProvider.phanTichAnh({
-    apiKey, model, schema: schemaDoiChieu(qc.hangMuc),
-    prompt: qc.prompt(duLieu, dsAnh.map(a => ({ ten: a.ten, nguon: a.nguon }))),
+    apiKey, model, thongKe, schema: themTruongKinhNghiem(schemaDoiChieu(qc.hangMuc), kn),
+    prompt: qc.prompt(duLieu, dsAnh.map(a => ({ ten: a.ten, nguon: a.nguon })), kn),
     anh: dsAnh.map(a => ({ mime: a.mime, data: a.data, ten: a.ten })),
   }, nhaCungCap);
   const ketQua = hoanThienKetQuaDoiChieu(ai, tenDaDung, qc, nguong);
   ketQua.kiem_tra_he_thong.unshift(...ghiChuHeThong);
-  return { daGoiAi: true, anh: anhDaDung, fileTheu: urlFileTheu, aiGoc: ai, ketQua };
+  if (kn.length) ketQua.kinh_nghiem_ap_dung = kinhNghiemAiApDung(ai, kn);
+  return { daGoiAi: true, anh: anhDaDung, fileTheu: urlFileTheu, aiGoc: ai, kinhNghiem: kn, ketQua };
 }
 
 const anhFileTheu = row => COT_FILE_THEU.map((c, i) => row[c] && { ten: `file_theu_${i + 1}`, nguon: `File thêu ${i + 1}`, url: row[c] }).filter(Boolean);
@@ -498,7 +577,7 @@ const QC2 = {
   anhPhu: anhFileTheu,
   hangMuc: ['design', 'text', 'chi_tiet', 'color', 'position', 'huong', 'size', 'loi_san_xuat'],
   batBuoc: ['design', 'text', 'chi_tiet', 'position', 'loi_san_xuat'],
-  prompt: (duLieu, dsAnh) => [
+  prompt: (duLieu, dsAnh, kn = []) => [
     ...dauPrompt('Bạn là nhân viên QC của xưởng thêu, nhiệm vụ: kiểm tra SẢN PHẨM THÊU THỰC TẾ (ảnh "san_pham") có đúng yêu cầu đơn hàng hay không.', duLieu, dsAnh),
     '2. Yêu cầu CHÍNH là Design + Mockup + các ghi chú (ghi_chu, ghi_chu_xuong, ghi_chu_ve_file, ghi_chu_chay_may). File thêu chỉ để đối chiếu thêm: sản phẩm khác Design là FAIL kể cả khi giống File thêu — khi đó ghi rõ trong issues "lỗi có thể từ File thêu".',
     '3. Kiểm tra checked_items (PASS / FAIL / CAN_CHECK_LAI): design (đúng thiết kế), text (ĐỌC TỪNG KÝ TỰ: thiếu, sai, thừa ký tự — rất quan trọng), chi_tiet (thiếu/thừa chi tiết), color (màu chỉ/màu áo), position (vị trí thêu so với vi_tri_theu/ghi chú/mockup), huong (xoay/lật), size (kích thước/tỷ lệ — chỉ khi dữ liệu có số đo rõ, nếu không thì CAN_CHECK_LAI), loi_san_xuat (lỗi thêu nhìn thấy được: bung chỉ, nhăn, lệch, sót chỉ...).',
@@ -506,6 +585,7 @@ const QC2 = {
     '5. Chỉ FAIL khi thấy RÕ lỗi. Ảnh mờ, bị che, góc chụp không thấy rõ, thiếu ảnh -> CAN_CHECK_LAI. Không kết luận kiểu "nhìn khá giống".',
     '6. result tổng: FAIL nếu có lỗi rõ ràng; PASS chỉ khi xác định được Design, và design, text, chi_tiet, position, loi_san_xuat đều PASS, không có mâu thuẫn dữ liệu; còn lại CAN_CHECK_LAI.',
     '7. confidence từ 0 đến 1. issues và reason viết tiếng Việt, ngắn gọn, nêu cụ thể (vd ký tự nào sai, chi tiết nào thiếu).',
+    ...khoiKinhNghiem(kn),
     ...QUY_TAC_KET_QUA,
   ].join('\n'),
 };
@@ -521,7 +601,7 @@ const QC1 = {
   anhPhu: () => [],
   hangMuc: ['design', 'text', 'chi_tiet', 'color', 'size', 'ty_le', 'position', 'huong', 'design_mockup'],
   batBuoc: ['design', 'text', 'chi_tiet', 'huong', 'design_mockup'],
-  prompt: (duLieu, dsAnh) => [
+  prompt: (duLieu, dsAnh, kn = []) => [
     ...dauPrompt('Bạn là nhân viên QC của xưởng thêu, nhiệm vụ: kiểm tra FILE THÊU vừa vẽ (các ảnh "file_theu_*" — ảnh xem trước file thêu) có đúng yêu cầu đơn hàng hay không, TRƯỚC khi đưa vào sản xuất.', duLieu, dsAnh),
     '2. Yêu cầu CHÍNH là Design + Mockup + các ghi chú (ghi_chu, ghi_chu_xuong, ghi_chu_ve_file, ghi_chu_chay_may). Đơn có thể có 2-3 File thêu cho các vị trí/chi tiết khác nhau — đối chiếu tổng thể, mỗi phần của Design phải có trong File thêu tương ứng.',
     '3. Kiểm tra checked_items (PASS / FAIL / CAN_CHECK_LAI): design (đúng thiết kế, không đổi logo/hình dạng đáng kể), text (ĐỌC TỪNG KÝ TỰ: thiếu, sai, thừa ký tự, sai chính tả so với Design/ghi chú — rất quan trọng), chi_tiet (thiếu/thừa chi tiết), color (màu chỉ — CHỈ khi ghi chú/dữ liệu có thông tin màu chỉ hoặc mã chỉ; không có thì CAN_CHECK_LAI), size (kích thước — chỉ khi có số đo rõ, nếu không thì CAN_CHECK_LAI), ty_le (tỷ lệ/biến dạng so với Design: bị kéo dãn, bóp méo, phóng to/thu nhỏ sai từng phần), position (vị trí trên áo so với vi_tri_theu/ghi chú/mockup — File thêu không thể hiện vị trí thì CAN_CHECK_LAI), huong (xoay/lật ngược/đối xứng gương), design_mockup (Design và Mockup có nhất quán không: PASS nếu không mâu thuẫn; mâu thuẫn mà ghi chú không nói rõ bên nào đúng -> CAN_CHECK_LAI).',
@@ -529,12 +609,186 @@ const QC1 = {
     '5. Chỉ FAIL khi thấy RÕ lỗi. Ảnh mờ, bị cắt, không đủ để kết luận -> CAN_CHECK_LAI. Không kết luận kiểu "nhìn khá giống", không suy đoán kích thước/màu khi không có dữ liệu.',
     '6. result tổng: FAIL nếu có lỗi rõ ràng; PASS chỉ khi xác định được Design, và design, text, chi_tiet, huong, design_mockup đều PASS; còn lại CAN_CHECK_LAI.',
     '7. confidence từ 0 đến 1. issues và reason viết tiếng Việt, ngắn gọn, nêu cụ thể (vd ký tự nào sai, chi tiết nào thiếu, File thêu nào).',
+    ...khoiKinhNghiem(kn),
     ...QUY_TAC_KET_QUA,
   ].join('\n'),
 };
 
-const chayQc2 = (sttKey, nguong) => chayDoiChieu(sttKey, QC2, nguong);
-const chayQc1 = (sttKey, nguong) => chayDoiChieu(sttKey, QC1, nguong);
+// ---------------- KINH NGHIỆM QC (02/10/2026, theo yêu cầu người dùng) ----------------
+// Superadmin giải thích lỗi AI trên 1 dòng qc_log (đã đánh giá thực tế + AI khác thực tế) -> 1 kinh nghiệm CHUA_XAC_NHAN.
+// Chỉ kinh nghiệm DA_XAC_NHAN, cùng QC, phạm vi khớp đơn mới được đưa vào prompt (chỉ phần KinhNghiem, dạng chữ, không ảnh),
+// tối đa KN_TOI_DA kinh nghiệm / KN_KY_TU_TOI_DA ký tự. Chỉ là NGỮ CẢNH tham khảo — quyetDinhKetQua/ngưỡng/luật cứng không đổi.
+const HANG_MUC_THEO_LOAI = { QC1: QC1.hangMuc, QC2: QC2.hangMuc, QC3: HANG_MUC_QC3 };
+const NGUYEN_NHAN_KN = {
+  HIEU_SAI_ANH_MAU: 'Hiểu sai hình ảnh mẫu', BO_SOT_CHI_TIET: 'Bỏ sót chi tiết quan trọng', NHAM_MAU_TUONG_TU: 'Nhầm giữa hai mẫu thêu tương tự',
+  SAI_KICH_THUOC: 'Đánh giá sai kích thước', SAI_VI_TRI: 'Đánh giá sai vị trí', SAI_MAU_SAC: 'Đánh giá sai màu sắc', SAI_HINH_DANG: 'Đánh giá sai hình dạng',
+  HIEU_SAI_GHI_CHU: 'Chưa hiểu đúng ghi chú đơn hàng', TIEU_CHI_CHUA_PHU_HOP: 'Dùng tiêu chí đánh giá chưa phù hợp', KHAC: 'Nguyên nhân khác',
+};
+const PHAM_VI_KN = { DON_NAY: 'Chỉ đơn này', LOAI_SAN_PHAM: 'Cùng loại sản phẩm', TOAN_QC: 'Toàn bộ QC này' };
+const TRANG_THAI_KN = { CHUA_XAC_NHAN: 'Chưa xác nhận', DA_XAC_NHAN: 'Đã xác nhận', KHONG_SU_DUNG: 'Không sử dụng' };
+const KN_TOI_DA = 5;
+const KN_KY_TU_TOI_DA = 1000;
+const KN_DO_DAI_KINH_NGHIEM = 600; // 1 kinh nghiệm luôn vừa ngân sách ký tự
+
+const dongKinhNghiem = k => `[KN#${k.id}] (Hạng mục: ${JSON.parse(k.HangMucSai || '[]').join(', ') || '—'}; Phạm vi: ${PHAM_VI_KN[k.PhamVi]}${k.GiaTriPhamVi ? ' ' + k.GiaTriPhamVi : ''}) ${k.KinhNghiem}`;
+// -> [{ id, phamVi, noiDung }] — bỏ qua (không cắt giữa chừng) kinh nghiệm không còn vừa ngân sách ký tự.
+function chonKinhNghiem(loai, row) {
+  const chon = [];
+  let kyTu = 0;
+  for (const k of nhatKyDbService.layKinhNghiemApDung(loai, row.STT_Key, row.LOAI)) {
+    if (chon.length >= KN_TOI_DA) break;
+    const noiDung = dongKinhNghiem(k);
+    if (kyTu + noiDung.length > KN_KY_TU_TOI_DA) continue;
+    kyTu += noiDung.length;
+    chon.push({ id: k.id, phamVi: k.PhamVi, noiDung });
+  }
+  return chon;
+}
+const khoiKinhNghiem = kn => (kn.length ? [
+  '',
+  'KINH NGHIỆM TỪ CÁC LẦN QC TRƯỚC (Superadmin đã xác nhận) — CHỈ THAM KHẢO:',
+  '- Chỉ áp dụng khi tình huống trong ảnh/dữ liệu đơn này THẬT SỰ giống mô tả. Không mặc định ca cũ đúng với đơn này.',
+  '- KHÔNG được dùng kinh nghiệm để bỏ qua lỗi nhìn thấy rõ trong ảnh.',
+  '- Ghi id các kinh nghiệm bạn đã thật sự áp dụng vào "kinh_nghiem_ap_dung" (không áp dụng cái nào thì để mảng rỗng).',
+  ...kn.map(k => k.noiDung),
+] : []);
+// Chỉ thêm trường khi có kinh nghiệm — lượt QC không có kinh nghiệm giữ nguyên schema cũ.
+const themTruongKinhNghiem = (schema, kn) => (kn.length
+  ? { ...schema, properties: { ...schema.properties, kinh_nghiem_ap_dung: { type: 'array', items: { type: 'integer' } } } } : schema);
+const kinhNghiemAiApDung = (ai, kn) => {
+  const ids = new Set(kn.map(k => k.id));
+  return [...new Set((ai && Array.isArray(ai.kinh_nghiem_ap_dung) ? ai.kinh_nghiem_ap_dung : []).map(Number).filter(id => ids.has(id)))];
+};
+
+// body: { aiSaiGi, hangMucSai[], nguyenNhan[], nguyenNhanKhac, kinhNghiem, phamVi } -> object cột đã làm sạch (throw 400 nếu sai).
+function kiemTraKinhNghiem(body, log) {
+  const b = body || {};
+  const aiSaiGi = String(b.aiSaiGi || '').trim();
+  const kinhNghiem = String(b.kinhNghiem || '').trim();
+  const nguyenNhanKhac = String(b.nguyenNhanKhac || '').trim();
+  const hangMucSai = [...new Set(Array.isArray(b.hangMucSai) ? b.hangMucSai : [])];
+  const nguyenNhan = [...new Set(Array.isArray(b.nguyenNhan) ? b.nguyenNhan : [])];
+  if (!aiSaiGi) throw loiNghiepVu('Chưa nhập "AI đã đánh giá sai điều gì".');
+  if (aiSaiGi.length > 2000) throw loiNghiepVu('"AI đã đánh giá sai điều gì" tối đa 2000 ký tự.');
+  if (!kinhNghiem) throw loiNghiepVu('Chưa nhập "Kinh nghiệm cần tích luỹ".');
+  if (kinhNghiem.length > KN_DO_DAI_KINH_NGHIEM) throw loiNghiepVu(`"Kinh nghiệm cần tích luỹ" tối đa ${KN_DO_DAI_KINH_NGHIEM} ký tự (đây là phần gửi cho AI).`);
+  if (hangMucSai.some(h => !HANG_MUC_THEO_LOAI[log.LoaiQc].includes(h))) throw loiNghiepVu('Hạng mục sai không hợp lệ.');
+  if (!nguyenNhan.length) throw loiNghiepVu('Chọn ít nhất 1 nguyên nhân AI đánh giá sai.');
+  if (nguyenNhan.some(n => !Object.hasOwn(NGUYEN_NHAN_KN, n))) throw loiNghiepVu('Nguyên nhân không hợp lệ.');
+  if (nguyenNhan.includes('KHAC') && !nguyenNhanKhac) throw loiNghiepVu('Đã chọn "Nguyên nhân khác" — hãy mô tả nguyên nhân.');
+  if (nguyenNhanKhac.length > 1000) throw loiNghiepVu('Mô tả nguyên nhân tối đa 1000 ký tự.');
+  if (!Object.hasOwn(PHAM_VI_KN, b.phamVi)) throw loiNghiepVu('Phạm vi áp dụng không hợp lệ.');
+  return { aiSaiGi, kinhNghiem, nguyenNhanKhac, hangMucSai, nguyenNhan, phamVi: b.phamVi };
+}
+// Phạm vi -> giá trị so khớp lấy từ ĐƠN GỐC (loại sản phẩm đọc lại từ đơn; đơn không có LOAI thì không chọn được phạm vi này).
+async function giaTriPhamVi(phamVi, log) {
+  if (phamVi === 'DON_NAY') return log.STT_Key;
+  if (phamVi === 'TOAN_QC') return '';
+  const { rows } = await orderService.getAll();
+  const row = rows.find(r => r.STT_Key === log.STT_Key);
+  const loai = String((row && row.LOAI) || '').trim();
+  if (!loai) throw loiNghiepVu(`Đơn ${log.STT_Key} không có loại sản phẩm (LOAI) — không chọn được phạm vi "Cùng loại sản phẩm".`);
+  return loai;
+}
+const cotKinhNghiem = (k, giaTri) => ({ AiSaiGi: k.aiSaiGi, HangMucSai: JSON.stringify(k.hangMucSai), NguyenNhan: JSON.stringify(k.nguyenNhan),
+  NguyenNhanKhac: k.nguyenNhanKhac, KinhNghiem: k.kinhNghiem, PhamVi: k.phamVi, GiaTriPhamVi: giaTri });
+
+async function taoKinhNghiemTuLog(logId, body, user) {
+  const log = nhatKyDbService.layQcLogTheoId(Number(logId));
+  if (!log) throw loiNghiepVu('Không tìm thấy lần QC này.', 404);
+  if (log.KetQua === 'LOI') throw loiNghiepVu('Lần QC bị LỖI API — không có kết quả AI để giải thích.');
+  if (!log.DanhGiaThucTe) throw loiNghiepVu('Hãy đánh giá kết quả thực tế (PASS/FAIL) của lần QC này trước.');
+  if (log.KetQua === log.DanhGiaThucTe) throw loiNghiepVu('Kết quả AI trùng kết quả thực tế — không có lỗi AI để giải thích.');
+  const k = kiemTraKinhNghiem(body, log);
+  const giaTri = await giaTriPhamVi(k.phamVi, log);
+  try {
+    return nhatKyDbService.taoKinhNghiem({
+      QcLogId: log.id, STT_Key: log.STT_Key, LoaiQc: log.LoaiQc, KetQuaAi: log.KetQua, DiemAi: log.Diem, LyDoAi: log.LyDoKetLuan || log.LyDo,
+      KetQuaDung: log.DanhGiaThucTe, ...cotKinhNghiem(k, giaTri), NguoiTao: user.ten, ThoiGianTao: thoiGianVNISOString(),
+    });
+  } catch (err) {
+    if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') throw loiNghiepVu('Lần QC này đã có giải thích — hãy sửa giải thích hiện có.', 409);
+    throw err;
+  }
+}
+async function suaKinhNghiem(id, body, user) {
+  const cu = nhatKyDbService.layKinhNghiemTheoId(Number(id));
+  if (!cu) throw loiNghiepVu('Không tìm thấy kinh nghiệm.', 404);
+  const k = kiemTraKinhNghiem(body, cu);
+  // Giữ giá trị phạm vi cũ nếu không đổi phạm vi (đơn gốc có thể đã đổi LOAI).
+  const giaTri = k.phamVi === cu.PhamVi ? cu.GiaTriPhamVi : await giaTriPhamVi(k.phamVi, cu);
+  nhatKyDbService.suaKinhNghiem(cu.id, cotKinhNghiem(k, giaTri), user.ten, thoiGianVNISOString());
+}
+function doiTrangThaiKinhNghiem(id, trangThai, user) {
+  if (!Object.hasOwn(TRANG_THAI_KN, trangThai)) throw loiNghiepVu('Trạng thái không hợp lệ.');
+  if (!nhatKyDbService.doiTrangThaiKinhNghiem(Number(id), trangThai, user.ten, thoiGianVNISOString())) throw loiNghiepVu('Không tìm thấy kinh nghiệm.', 404);
+}
+
+// ---------------- GỢI Ý NGƯỠNG (02/10/2026, theo yêu cầu người dùng) — CHỈ hiển thị, KHÔNG tự đổi ngưỡng ----------------
+// Dữ liệu: các lần QC đã đánh giá thực tế, có gọi AI, đúng model ĐANG dùng của QC đó (score mỗi model khác nhau), và có lưu
+// dau_vao_quyet_dinh (lần QC từ 02/10/2026). Mỗi bộ ngưỡng: chạy lại quyetDinhKetQua() trên kết quả AI đã lưu -> so thực tế.
+const GOI_Y_SO_DONG_TOI_THIEU = 30;
+function danhGiaBoNguong(dong, nguong) {
+  const m = { pass: nguong.pass, fail: nguong.fail, ccl: nguong.ccl, dung: 0, passSai: 0, failSai: 0, canCheckLai: 0 };
+  for (const d of dong) {
+    const kq = quyetDinhKetQua(structuredClone(d.kq), { nguong, ...d.kq.dau_vao_quyet_dinh }).result;
+    if (kq === 'CAN_CHECK_LAI') m.canCheckLai++;
+    else if (kq === d.thucTe) m.dung++;
+    else if (kq === 'PASS') m.passSai++;
+    else m.failSai++;
+  }
+  return m;
+}
+// thu: { pass, fail, ccl } tuỳ chọn — bộ ngưỡng người dùng muốn thử.
+function goiYNguong(loai, thu) {
+  if (!LOAI_QC[loai]) throw loiNghiepVu('Loại QC không hợp lệ.');
+  const { model } = layCauHinh(loai);
+  const tatCa = nhatKyDbService.layDongDaDanhGiaCoAi(loai);
+  const dong = [];
+  let boQuaModelKhac = 0, boQuaThieuDuLieu = 0;
+  for (const r of tatCa) {
+    if (r.Model !== model) { boQuaModelKhac++; continue; }
+    let kq = null;
+    try { kq = JSON.parse(r.ChiTiet).ket_qua; } catch (e) { /* bỏ qua */ }
+    if (!kq || !kq.dau_vao_quyet_dinh || kq.score === null || kq.score === undefined) { boQuaThieuDuLieu++; continue; }
+    dong.push({ kq, thucTe: r.DanhGiaThucTe });
+  }
+  const hienTaiGoc = layNguong(loai);
+  const loiHienTai = kiemTraNguong(hienTaiGoc);
+  const ketQua = { loai, model, soDong: dong.length, boQuaModelKhac, boQuaThieuDuLieu, toiThieu: GOI_Y_SO_DONG_TOI_THIEU,
+    soThucTePass: dong.filter(d => d.thucTe === 'PASS').length, soThucTeFail: dong.filter(d => d.thucTe === 'FAIL').length,
+    hienTai: !loiHienTai && dong.length ? danhGiaBoNguong(dong, nguongSo(hienTaiGoc)) : null, thu: null, goiY: [] };
+  if (thu) {
+    const loi = kiemTraNguong(thu, 'Ngưỡng thử');
+    if (loi) throw loiNghiepVu(loi);
+    if (dong.length) ketQua.thu = danhGiaBoNguong(dong, nguongSo(thu));
+  }
+  if (!dong.length) return ketQua;
+  // Lưới bước 5. KHÔNG xếp hạng chỉ theo "ít sai nhất" — đẩy hết về CAN_CHECK_LAI (PASS 100 / FAIL 0) luôn 0 sai nhưng vô dụng.
+  // 3 gợi ý theo 3 hướng đánh đổi; hoà thì chọn bộ gần ngưỡng hiện tại nhất. Người dùng tự quyết.
+  // ponytail: duyệt hết lưới (~1000 bộ x số dòng) — đủ nhanh tới vài nghìn dòng đã đánh giá; nhiều hơn thì thu hẹp lưới.
+  const ht = ketQua.hienTai || { pass: 0, fail: 0, ccl: 0, passSai: Infinity, failSai: Infinity, canCheckLai: Infinity };
+  const cacBo = [];
+  for (let pass = 50; pass <= 100; pass += 5) {
+    for (let fail = 0; fail < pass; fail += 5) {
+      for (let ccl = 50; ccl <= 95; ccl += 5) cacBo.push(danhGiaBoNguong(dong, { pass, fail, ccl }));
+    }
+  }
+  const lech = m => Math.abs(m.pass - ht.pass) + Math.abs(m.fail - ht.fail) + Math.abs(m.ccl - ht.ccl);
+  const tot = (ds, ...tieuChi) => [...ds].sort((a, b) => tieuChi.reduce((kq, f) => kq || f(a) - f(b), 0) || lech(a) - lech(b))[0];
+  const huong = [
+    ['AN_TOAN', 'Ít PASS sai nhất (rồi ít CẦN CHECK LẠI nhất)', tot(cacBo, m => m.passSai, m => m.canCheckLai, m => m.failSai)],
+    ['IT_CCL', 'Ít CẦN CHECK LẠI nhất mà PASS sai và FAIL sai không tăng so với hiện tại',
+      tot(cacBo.filter(m => m.passSai <= ht.passSai && m.failSai <= ht.failSai), m => m.canCheckLai)],
+    ['IT_SAI', 'Ít sai nhất (PASS sai + FAIL sai) mà CẦN CHECK LẠI không tăng so với hiện tại',
+      tot(cacBo.filter(m => m.canCheckLai <= ht.canCheckLai), m => m.passSai + m.failSai, m => m.passSai)],
+  ];
+  ketQua.goiY = huong.filter(([, , m]) => m).map(([ma, moTa, m]) => ({ ma, moTa, ...m }));
+  return ketQua;
+}
+
+const chayQc2 = (sttKey, nguong, thongKe) => chayDoiChieu(sttKey, QC2, nguong, thongKe);
+const chayQc1 = (sttKey, nguong, thongKe) => chayDoiChieu(sttKey, QC1, nguong, thongKe);
 
 const CHAY_THEO_LOAI = { QC1: chayQc1, QC2: chayQc2, QC3: chayQc3 };
 
@@ -564,6 +818,8 @@ function layTelegram() {
 function canhBaoTelegram(thongTin) {
   const { chatId, botToken } = layTelegram();
   if (!chatId) return;
+  // Gộp (02/10/2026): CAN_CHECK_LAI để qcTelegramService gửi gộp theo chu kỳ (lấy từ qc_log). FAIL / LỖI API luôn gửi ngay.
+  if (thongTin.ketQua && thongTin.ketQua.result === 'CAN_CHECK_LAI' && caiDatDbService.layTelegramQc().gopCclPhut > 0) return;
   telegramService.guiTinNhan(chatId, taoTinCanhBao(thongTin), botToken).catch(() => {});
 }
 async function guiThuTelegram() {
@@ -590,10 +846,12 @@ async function chayQc({ sttKey, loai, user, cheDo = 'MANUAL', thongTinAuto = nul
   const dong = { ThoiGian: thoiGianVNISOString(), NguoiDung: user.ten, STT_Key: sttKey, LoaiQc: loai, Model: model, NguongDaDung: JSON.stringify(nguong),
     CheDo: cheDo, ThongTinAuto: thongTinAuto ? JSON.stringify(thongTinAuto) : '' };
   let kq;
+  const thongKe = {}; // { tokenVao, tokenRa } — provider tự ghi (chi phí AI, 02/10/2026)
+  const cotToken = () => ({ TokenVao: thongKe.tokenVao ?? '', TokenRa: thongKe.tokenRa ?? '' });
   try {
-    kq = await CHAY_THEO_LOAI[loai](sttKey, nguong);
+    kq = await CHAY_THEO_LOAI[loai](sttKey, nguong, thongKe);
   } catch (err) {
-    const id = nhatKyDbService.ghiQcLog({ ...dong, KetQua: 'LOI', LoiApi: err.message, ThoiGianKetThuc: thoiGianVNISOString() });
+    const id = nhatKyDbService.ghiQcLog({ ...dong, ...cotToken(), KetQua: 'LOI', LoiApi: err.message, ThoiGianKetThuc: thoiGianVNISOString() });
     if (err.status) throw Object.assign(err, { logId: id });
     canhBaoTelegram({ loai, sttKey, model, nguoiChay: user.ten, loi: err.message });
     return { id, loai, sttKey, model, anh: [], ketQua: null, loi: err.message };
@@ -606,7 +864,10 @@ async function chayQc({ sttKey, loai, user, cheDo = 'MANUAL', thongTinAuto = nul
     Diem: k.score === null || k.score === undefined ? '' : k.score, AiDeXuat: k.ai_de_xuat || '', LyDoKetLuan: k.ly_do_ket_luan || '',
     ThoiGianKetThuc: thoiGianVNISOString(),
     ChiTiet: JSON.stringify({ ket_qua: k, ai_goc: kq.aiGoc || null }),
+    KinhNghiemDaDung: kq.kinhNghiem && kq.kinhNghiem.length ? JSON.stringify(kq.kinhNghiem) : '',
+    ...cotToken(),
   });
+  if (kq.kinhNghiem && kq.kinhNghiem.length) nhatKyDbService.tangSoLanDungKinhNghiem(kq.kinhNghiem.map(x => x.id));
   if (k.result !== 'PASS') canhBaoTelegram({ loai, sttKey, model: kq.daGoiAi ? model : '', nguoiChay: user.ten, ketQua: k });
   return { id, loai, sttKey, model: kq.daGoiAi ? model : '', anh: kq.anh, ketQua: k, loi: null };
 }
@@ -617,4 +878,5 @@ async function thuKetNoi(loai, nhaCungCap) {
   await aiProvider.thuKetNoi(ch, ch.nhaCungCap);
 }
 
-module.exports = { LOAI_QC, LOAI_DA_TRIEN_KHAI, MODEL_MAC_DINH, NHA_CUNG_CAP, NGUONG_MAC_DINH, layCauHinh, layNguong, kiemTraNguong, docSo, quyetDinhKetQua, chayQc, thuKetNoi, guiThuTelegram, taoTinCanhBao, hoanThienKetQua3, hoanThienKetQuaDoiChieu, chuanHoaMa, khopMa };
+module.exports = { LOAI_QC, LOAI_DA_TRIEN_KHAI, MODEL_MAC_DINH, NHA_CUNG_CAP, NGUONG_MAC_DINH, layCauHinh, layNguong, kiemTraNguong, docSo, quyetDinhKetQua, chayQc, thuKetNoi, guiThuTelegram, taoTinCanhBao, hoanThienKetQua3, hoanThienKetQuaDoiChieu, chuanHoaMa, khopMa, layTelegram, goiYNguong,
+  HANG_MUC_THEO_LOAI, NGUYEN_NHAN_KN, PHAM_VI_KN, TRANG_THAI_KN, KN_DO_DAI_KINH_NGHIEM, chonKinhNghiem, taoKinhNghiemTuLog, suaKinhNghiem, doiTrangThaiKinhNghiem };

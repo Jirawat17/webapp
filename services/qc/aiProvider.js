@@ -1,6 +1,7 @@
 // Lớp AI Provider cho AI QC (30/09/2026, theo yêu cầu người dùng) — qcService.js chỉ gọi 2 hàm dưới đây, không biết đang
 // dùng nhà cung cấp nào. Thêm nhà cung cấp mới: viết 1 file cùng giao diện { phanTichAnh, thuKetNoi } rồi đăng ký vào PROVIDER.
-//   phanTichAnh({ apiKey, model, prompt, anh: [{ mime, data: Buffer, ten }], schema }) -> object JSON
+//   phanTichAnh({ apiKey, model, prompt, anh: [{ mime, data: Buffer, ten }], schema, thongKe? }) -> object JSON
+//     thongKe (02/10/2026): object tuỳ chọn — provider ghi { tokenVao, tokenRa } nếu API trả số token (kể cả khi kết quả lỗi định dạng).
 //   thuKetNoi({ apiKey, model }) -> throw nếu key/model không dùng được
 // Lỗi gọi API mang err.loiApi = true.
 const PROVIDER = {

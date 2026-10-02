@@ -74,6 +74,8 @@ require('./services/trackingJob').batDauLichTracking();
 
 // Tự động quét QC (02/10/2026) — mỗi 2 phút; từng QC TẮT theo mặc định, bật ở menu QC (services/qc/qcAutoService.js).
 require('./services/qc/qcAutoService').batDauLichAutoQc();
+// Cảnh báo Telegram QC gộp CẦN CHECK LẠI + tổng kết ngày (02/10/2026) — mỗi phút, cấu hình ở menu QC (services/qc/qcTelegramService.js).
+require('./services/qc/qcTelegramService').batDauLichTelegramQc();
 
 // Bật lịch backup SQLite (bổ sung 22/09/2026, theo yêu cầu người dùng — data/ trước đây không có
 // cơ chế backup nào, xem services/backupDbService.js).
