@@ -111,6 +111,51 @@ router.post('/nguong', (req, res) => {
   res.json({ ok: true });
 });
 
+// Prompt AI sửa được (02/10/2026) — mỗi lần Lưu = 1 phiên bản mới + dùng ngay; kích hoạt lại phiên bản cũ / về mặc định (0);
+// chạy thử bản đang sửa (chưa lưu) trên 1 đơn. Kiểm tra mẫu: qcService#kiemTraMauPrompt.
+router.get('/prompt', (req, res) => {
+  res.json({ choGiuCho: qcService.CHO_GIU_CHO, ds: Object.entries(qcService.LOAI_QC).map(([loai, ten]) => {
+    const dang = qcService.layPromptDangDung(loai);
+    return { loai, ten, choGiuCho: qcService.CHO_GIU_CHO_THEO_LOAI[loai], macDinh: qcService.MAU_PROMPT_MAC_DINH[loai],
+      dangDung: dang.nhan, noiDung: dang.noiDung, lichSu: caiDatDbService.layLichSuPromptQc(loai) };
+  }) });
+});
+router.get('/prompt/phien-ban/:id', (req, res) => {
+  const pb = caiDatDbService.layPhienBanPromptQc(Number(req.params.id));
+  if (!pb) return res.status(404).json({ error: 'Không tìm thấy phiên bản.' });
+  res.json(pb);
+});
+// body: { loai, noiDung, ghiChu? }
+router.post('/prompt', (req, res) => {
+  const { loai, noiDung } = req.body || {};
+  const loi = qcService.kiemTraMauPrompt(loai, noiDung);
+  if (loi) return res.status(400).json({ error: loi });
+  const ghiChu = String((req.body && req.body.ghiChu) || '').trim().slice(0, 300);
+  res.json({ ok: true, id: caiDatDbService.luuPhienBanPromptQc(loai, noiDung.replace(/\r\n/g, '\n'), ghiChu, req.session.user.ten, thoiGianVNISOString()) });
+});
+// body: { loai, phienBan } — 0 = mặc định.
+router.post('/prompt/kich-hoat', (req, res) => {
+  const { loai } = req.body || {};
+  const phienBan = Number(req.body && req.body.phienBan) || 0;
+  if (!Object.hasOwn(qcService.LOAI_QC, loai)) return res.status(400).json({ error: 'Loại QC không hợp lệ.' });
+  if (phienBan) {
+    const pb = caiDatDbService.layPhienBanPromptQc(phienBan);
+    if (!pb || pb.LoaiQc !== loai) return res.status(404).json({ error: 'Không tìm thấy phiên bản của QC này.' });
+  }
+  caiDatDbService.datPromptDangDungQc(loai, phienBan);
+  res.json({ ok: true });
+});
+// body: { loai, sttKey, noiDung } — ghi Log chế độ TEST, không Telegram, không tính thống kê.
+router.post('/prompt/chay-thu', async (req, res) => {
+  const { loai, sttKey, noiDung } = req.body || {};
+  try {
+    res.json(await qcService.chayQc({ sttKey, loai, user: req.session.user, mauChayThu: String(noiDung ?? '').replace(/\r\n/g, '\n') }));
+  } catch (err) {
+    if (!err.status) throw err;
+    res.status(err.status).json({ error: err.message });
+  }
+});
+
 // Đơn hàng vừa cập nhật trạng thái (02/10/2026): đơn có Trạng thái chung / Phôi / Vẽ file đổi trong 1 giờ gần nhất (mốc
 // THOI_GIAN_DOI_TRANG_THAI do trangThaiDbService.ghiDe tự ghi). Mỗi đơn 1 dòng (lần đổi gần nhất), mới nhất trước.
 router.get('/don-vua-cap-nhat', (req, res) => {

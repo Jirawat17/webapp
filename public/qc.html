@@ -65,6 +65,33 @@
   </details>
 
   <details class="qc-khoi">
+    <summary><h3>Prompt AI</h3></summary>
+    <p style="color:var(--color-text-muted);margin-top:0">Sửa toàn bộ prompt gửi cho AI của từng QC. Các <strong>chỗ giữ chỗ</strong> dạng <code>{{...}}</code> hệ thống tự điền mỗi lần QC — phải giữ ĐÚNG 1 lần mỗi chỗ. Mỗi lần <strong>Lưu</strong> tạo 1 phiên bản mới và dùng ngay cho các lần QC sau (thủ công + tự động); phiên bản cũ luôn còn để dùng lại. Log QC ghi phiên bản đã dùng.</p>
+    <p style="color:var(--color-danger-text);margin-top:0"><strong>Cẩn thận phần "CÁCH TRẢ KẾT QUẢ":</strong> hệ thống cần AI trả đủ result, score, confidence, evidence, checked_items… — xoá/sửa sai phần này AI sẽ trả thiếu và mọi đơn ra CẦN CHECK LẠI. Nên <strong>Chạy thử</strong> trước khi Lưu.</p>
+    <div class="inline-form" style="align-items:flex-end">
+      <div class="truong"><label for="pr-loai">QC</label><select id="pr-loai" onchange="vePrompt()"></select></div>
+      <span id="pr-dang-dung" style="padding-bottom:8px"></span>
+    </div>
+    <div id="pr-cho-giu-cho" style="font-size:0.85rem;color:var(--color-text-muted);margin:8px 0"></div>
+    <textarea id="pr-noi-dung" spellcheck="false" style="width:100%;box-sizing:border-box;min-height:420px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:0.8rem" oninput="danhDauSua()"></textarea>
+    <p id="pr-trang-thai-sua" style="margin:4px 0;font-size:0.85rem"></p>
+    <div class="inline-form" style="align-items:flex-end;margin-top:8px">
+      <div class="truong"><label for="pr-ghi-chu">Ghi chú phiên bản</label><input id="pr-ghi-chu" maxlength="300" placeholder="vd Bỏ đánh giá kích thước" style="min-width:260px"></div>
+      <button type="button" class="btn-hanh-dong" onclick="luuPrompt(this)">Lưu thành phiên bản mới</button>
+      <button type="button" class="btn-hanh-dong phu" onclick="napMacDinhVaoO()">Nạp mẫu mặc định vào ô</button>
+      <button type="button" class="btn-hanh-dong phu" onclick="napDangDungVaoO()">Bỏ thay đổi</button>
+    </div>
+    <div class="inline-form" style="align-items:flex-end;margin-top:8px">
+      <div class="truong"><label for="pr-ma-thu">Chạy thử bản đang sửa trên mã đơn</label><input id="pr-ma-thu" placeholder="VD: 10TRA5332" autocomplete="off"></div>
+      <button type="button" class="btn-hanh-dong phu" onclick="chayThuPrompt(this)">Chạy thử (chưa lưu)</button>
+    </div>
+    <div id="pr-ket-qua-thu" style="margin-top:8px"></div>
+    <p id="pr-thong-bao" style="display:none"></p>
+    <h4 style="margin-bottom:6px">Phiên bản</h4>
+    <div id="pr-lich-su" class="qc-cuon-ngang"></div>
+  </details>
+
+  <details class="qc-khoi">
     <summary><h3>Tự động quét QC</h3></summary>
     <p style="color:var(--color-text-muted);margin-top:0">Hệ thống tự QC mỗi 2 phút, <strong>mỗi đơn tối đa 1 lần auto cho từng QC</strong> (QC thủ công không bị ảnh hưởng). Chỉ áp dụng cho đơn chuyển trạng thái <strong>sau khi</strong> có tính năng này. Lỗi kỹ thuật (key sai, hết quota…) tự thử lại tối đa 2 lần, cách nhau 30 phút. Mỗi QC tối đa 10 đơn mỗi lượt.</p>
     <div class="qc-cuon-ngang"><table class="qc-bang-nguong">
@@ -208,6 +235,7 @@ let dsLoai = [];
   await taiCauHinh();
   taiAuto();
   taiNguong();
+  taiPrompt();
   taiTelegram();
   taiDoChinhXac();
   taiChiPhi();
@@ -540,7 +568,7 @@ async function taiLog() {
       <td>${escapeHtml(String(d.ThoiGian).replace('T', ' ').slice(0, 19))}</td>
       <td><a href="/order.html?stt=${encodeURIComponent(d.STT_Key)}" target="_blank" rel="noopener" style="font-weight:700">${escapeHtml(d.STT_Key)}</a></td>
       <td>${escapeHtml(d.LoaiQc)}</td>
-      <td>${d.CheDo === 'AUTO' ? '<strong>AUTO</strong>' : 'MANUAL'}</td>
+      <td>${d.CheDo === 'AUTO' ? '<strong>AUTO</strong>' : d.CheDo === 'TEST' ? '<strong style="color:var(--color-text-muted)">TEST</strong>' : 'MANUAL'}${d.PhienBanPrompt && d.PhienBanPrompt !== 'MAC_DINH' && d.PhienBanPrompt !== 'CHAY_THU' ? `<br><small>prompt #${escapeHtml(d.PhienBanPrompt)}</small>` : ''}</td>
       <td>${nhanKetQua(d.KetQua)}${d.AiDeXuat && d.AiDeXuat !== d.KetQua ? `<br><small>AI đề xuất: ${escapeHtml(d.AiDeXuat)}</small>` : ''}</td>
       <td>${d.Diem !== undefined && d.Diem !== '' ? escapeHtml(d.Diem) : '—'}</td>
       <td>${d.DoTinCay ? Math.round(Number(d.DoTinCay) * 100) + '%' : '—'}</td>
@@ -734,6 +762,114 @@ async function taiDonVuaCapNhat() {
       <td>${escapeHtml(d.xuong || '(chưa gán)')}</td></tr>`).join('')}</tbody></table>`;
 }
 
+// ---- Prompt AI (02/10/2026) — backend kiểm tra lại mẫu (qcService#kiemTraMauPrompt).
+let duLieuPrompt = null;
+const daSuaPrompt = {}; // loai -> nội dung đang sửa chưa lưu (giữ khi đổi qua lại giữa các QC)
+function thongBaoPr(chu, loi) {
+  const el = document.getElementById('pr-thong-bao');
+  el.style.display = 'block';
+  el.style.color = loi ? 'var(--color-danger-text)' : 'var(--color-success-text)';
+  el.textContent = chu;
+}
+async function taiPrompt() {
+  try { duLieuPrompt = await apiFetch('/qc/prompt'); } catch (e) { document.getElementById('pr-lich-su').textContent = 'Lỗi: ' + e.message; return; }
+  const sel = document.getElementById('pr-loai');
+  const dangChon = sel.value || 'QC1';
+  sel.innerHTML = duLieuPrompt.ds.map(d => `<option value="${d.loai}">${escapeHtml(d.ten)}</option>`).join('');
+  sel.value = dangChon;
+  vePrompt();
+}
+const prHienTai = () => duLieuPrompt.ds.find(d => d.loai === document.getElementById('pr-loai').value);
+const nhanPhienBan = nhan => (nhan === 'MAC_DINH' ? 'Mặc định' : '#' + nhan);
+function vePrompt() {
+  const d = prHienTai();
+  document.getElementById('pr-dang-dung').innerHTML = `Đang dùng: <strong>${escapeHtml(nhanPhienBan(d.dangDung))}</strong>`;
+  document.getElementById('pr-cho-giu-cho').innerHTML = 'Chỗ giữ chỗ bắt buộc: ' + d.choGiuCho.map(k => `<code>{{${k}}}</code> — ${escapeHtml(duLieuPrompt.choGiuCho[k])}`).join(' · ');
+  document.getElementById('pr-noi-dung').value = daSuaPrompt[d.loai] ?? d.noiDung;
+  danhDauSua();
+  document.getElementById('pr-lich-su').innerHTML = `<table class="qc-bang-log"><thead><tr><th>Phiên bản</th><th>Thời gian</th><th>Người lưu</th><th>Ghi chú</th><th>Độ dài</th><th></th></tr></thead><tbody>
+    <tr><td><strong>Mặc định</strong>${d.dangDung === 'MAC_DINH' ? ' ✓ đang dùng' : ''}</td><td colspan="3" style="color:var(--color-text-muted)">Prompt gốc trong code</td><td>${d.macDinh.length}</td>
+      <td style="white-space:nowrap"><button type="button" class="btn-hanh-dong phu" style="padding:3px 8px;font-size:0.75rem" onclick="napMacDinhVaoO()">Xem</button>
+      ${d.dangDung === 'MAC_DINH' ? '' : `<button type="button" class="btn-hanh-dong phu" style="padding:3px 8px;font-size:0.75rem" onclick="kichHoatPrompt(0)">Dùng bản này</button>`}</td></tr>
+    ${d.lichSu.map(p => `<tr><td><strong>#${p.id}</strong>${String(p.id) === d.dangDung ? ' ✓ đang dùng' : ''}</td><td>${escapeHtml(String(p.ThoiGian).replace('T', ' ').slice(0, 16))}</td><td>${escapeHtml(p.NguoiTao)}</td><td class="ly-do">${escapeHtml(p.GhiChu || '')}</td><td>${p.DoDai}</td>
+      <td style="white-space:nowrap"><button type="button" class="btn-hanh-dong phu" style="padding:3px 8px;font-size:0.75rem" onclick="xemPhienBan(${p.id})">Xem</button>
+      ${String(p.id) === d.dangDung ? '' : `<button type="button" class="btn-hanh-dong phu" style="padding:3px 8px;font-size:0.75rem" onclick="kichHoatPrompt(${p.id})">Dùng bản này</button>`}</td></tr>`).join('')}
+  </tbody></table>`;
+}
+function danhDauSua() {
+  const d = prHienTai();
+  const v = document.getElementById('pr-noi-dung').value;
+  if (v !== d.noiDung) daSuaPrompt[d.loai] = v; else delete daSuaPrompt[d.loai];
+  const el = document.getElementById('pr-trang-thai-sua');
+  el.style.color = v !== d.noiDung ? 'var(--color-warning-text, #92400e)' : 'var(--color-text-muted)';
+  el.textContent = v !== d.noiDung ? `Có thay đổi CHƯA lưu (${v.length.toLocaleString('vi-VN')} ký tự) — chưa ảnh hưởng QC cho tới khi bấm Lưu.` : `Đang hiển thị đúng prompt đang dùng (${v.length.toLocaleString('vi-VN')} ký tự).`;
+}
+function datOPrompt(noiDung) { document.getElementById('pr-noi-dung').value = noiDung; danhDauSua(); }
+function napMacDinhVaoO() { datOPrompt(prHienTai().macDinh); thongBaoPr('Đã nạp mẫu MẶC ĐỊNH vào ô (chưa lưu). Bấm "Dùng bản này" ở dòng Mặc định nếu chỉ muốn quay về mặc định.'); }
+function napDangDungVaoO() { datOPrompt(prHienTai().noiDung); }
+async function xemPhienBan(id) {
+  try { datOPrompt((await apiFetch('/qc/prompt/phien-ban/' + id)).NoiDung); thongBaoPr(`Đã nạp phiên bản #${id} vào ô (chưa lưu, chưa dùng). Bấm "Dùng bản này" để dùng lại nguyên bản, hoặc sửa rồi Lưu thành bản mới.`); }
+  catch (e) { thongBaoPr('Lỗi: ' + e.message, true); }
+}
+// Cùng quy tắc với backend — báo sớm trước khi gửi.
+function kiemTraPromptGiaoDien(d, v) {
+  if (!v.trim()) return 'Prompt không được để trống.';
+  const gap = (v.match(/\{\{[A-Z_]+\}\}/g) || []).map(x => x.slice(2, -2));
+  const la = gap.filter(k => !d.choGiuCho.includes(k));
+  if (la.length) return `Chỗ giữ chỗ không dùng được cho ${d.loai}: ${la.map(k => '{{' + k + '}}').join(', ')}.`;
+  for (const k of d.choGiuCho) { const n = gap.filter(x => x === k).length; if (n !== 1) return `Phải có ĐÚNG 1 lần {{${k}}} — đang có ${n} lần.`; }
+  return null;
+}
+async function luuPrompt(nut) {
+  const d = prHienTai();
+  const v = document.getElementById('pr-noi-dung').value;
+  const loi = kiemTraPromptGiaoDien(d, v);
+  if (loi) return thongBaoPr('Chưa lưu: ' + loi, true);
+  if (v === d.noiDung && !confirm('Nội dung giống hệt prompt đang dùng. Vẫn lưu thành phiên bản mới?')) return;
+  if (!confirm(`Lưu và DÙNG NGAY prompt này cho ${d.ten} (cả QC thủ công và tự động)?`)) return;
+  nut.disabled = true;
+  try {
+    const kq = await apiFetch('/qc/prompt', { method: 'POST', body: JSON.stringify({ loai: d.loai, noiDung: v, ghiChu: document.getElementById('pr-ghi-chu').value }) });
+    delete daSuaPrompt[d.loai];
+    document.getElementById('pr-ghi-chu').value = '';
+    await taiPrompt();
+    thongBaoPr(`Đã lưu phiên bản #${kq.id} và đang dùng cho ${d.ten}.`);
+  } catch (e) { thongBaoPr('Chưa lưu: ' + e.message, true); }
+  nut.disabled = false;
+}
+async function kichHoatPrompt(phienBan) {
+  const d = prHienTai();
+  if (!confirm(`Dùng ${phienBan ? 'phiên bản #' + phienBan : 'prompt MẶC ĐỊNH'} cho ${d.ten} từ lần QC tiếp theo?`)) return;
+  try {
+    await apiFetch('/qc/prompt/kich-hoat', { method: 'POST', body: JSON.stringify({ loai: d.loai, phienBan }) });
+    delete daSuaPrompt[d.loai];
+    await taiPrompt();
+    thongBaoPr(`${d.ten} đang dùng ${phienBan ? 'phiên bản #' + phienBan : 'prompt mặc định'}.`);
+  } catch (e) { thongBaoPr('Lỗi: ' + e.message, true); }
+}
+async function chayThuPrompt(nut) {
+  const d = prHienTai();
+  const v = document.getElementById('pr-noi-dung').value;
+  const sttKey = document.getElementById('pr-ma-thu').value.trim();
+  const el = document.getElementById('pr-ket-qua-thu');
+  if (!sttKey) return thongBaoPr('Nhập mã đơn để chạy thử.', true);
+  const loi = kiemTraPromptGiaoDien(d, v);
+  if (loi) return thongBaoPr('Chưa chạy: ' + loi, true);
+  nut.disabled = true;
+  el.innerHTML = '<p>Đang chạy thử (gọi AI, có thể mất 10–60 giây)...</p>';
+  try {
+    const kq = await apiFetch('/qc/prompt/chay-thu', { method: 'POST', body: JSON.stringify({ loai: d.loai, sttKey, noiDung: v }) });
+    const k = kq.ketQua;
+    el.innerHTML = kq.loi ? `<p style="color:var(--color-danger-text)">Lỗi API: ${escapeHtml(kq.loi)}</p>` : `<div style="border:1px dashed var(--color-border);border-radius:var(--radius-sm);padding:8px">
+      <strong>Chạy thử ${escapeHtml(d.loai)} · ${escapeHtml(sttKey)}</strong> (Log #${kq.id}, chế độ TEST — không tính thống kê, không gửi Telegram)<br>
+      ${nhanKetQua(k.result)} · score ${escapeHtml(k.score ?? '—')} · chắc chắn ${Math.round((k.confidence || 0) * 100)}%${k.ai_de_xuat ? ` · AI đề xuất ${escapeHtml(k.ai_de_xuat)}` : ''}<br>
+      <small>${escapeHtml(k.ly_do_ket_luan || '')}</small><br><small style="color:var(--color-text-muted)">AI: ${escapeHtml(k.reason || '')}</small>
+      ${(k.issues || []).length ? `<ul style="margin:4px 0">${k.issues.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</ul>` : ''}</div>`;
+    taiLog();
+  } catch (e) { el.innerHTML = `<p style="color:var(--color-danger-text)">Chưa chạy được: ${escapeHtml(e.message)}</p>`; }
+  nut.disabled = false;
+}
+
 // ---- Chi phí AI (02/10/2026) — backend kiểm tra lại giá (routes/qc.js POST /gia-token).
 const soNgan = n => Number(n || 0).toLocaleString('vi-VN');
 const usd = v => (v === null || v === undefined ? '—' : '$' + v.toFixed(v < 1 ? 4 : 2));
@@ -778,18 +914,18 @@ async function taiDoChinhXac() {
   // Dòng tổng mỗi QC + các dòng tách theo model/chế độ.
   const tong = {};
   for (const d of ds) {
-    const t = tong[d.LoaiQc] ||= { LoaiQc: d.LoaiQc, Model: '', CheDo: '', CoKinhNghiem: '', daDanhGia: 0, dung: 0, passSai: 0, failSai: 0, canCheckLai: 0, tong: true };
+    const t = tong[d.LoaiQc] ||= { LoaiQc: d.LoaiQc, Model: '', CheDo: '', CoKinhNghiem: '', PhienBanPrompt: '', daDanhGia: 0, dung: 0, passSai: 0, failSai: 0, canCheckLai: 0, tong: true };
     for (const k of ['daDanhGia', 'dung', 'passSai', 'failSai', 'canCheckLai']) t[k] += d[k];
   }
   const dong = d => {
     const ketLuan = d.daDanhGia - d.canCheckLai;
     return `<tr${d.tong ? ' style="font-weight:700;background:var(--color-bg)"' : ''}>
-      <td>${escapeHtml(d.tong ? d.LoaiQc : '')}</td><td>${d.tong ? 'Tổng' : escapeHtml(d.Model || '—')}</td><td>${escapeHtml(d.CheDo)}</td><td>${escapeHtml(d.CoKinhNghiem)}</td>
+      <td>${escapeHtml(d.tong ? d.LoaiQc : '')}</td><td>${d.tong ? 'Tổng' : escapeHtml(d.Model || '—')}</td><td>${escapeHtml(d.CheDo)}</td><td>${escapeHtml(d.PhienBanPrompt)}</td><td>${escapeHtml(d.CoKinhNghiem)}</td>
       <td>${d.daDanhGia}</td><td>${phanTram(d.dung, ketLuan)}</td>
       <td style="color:var(--color-danger-text)">${d.passSai}</td><td>${d.failSai}</td><td>${d.canCheckLai} (${phanTram(d.canCheckLai, d.daDanhGia)})</td></tr>`;
   };
   el.innerHTML = `<table class="qc-bang-log">
-    <thead><tr><th>QC</th><th>Model</th><th>Chế độ</th><th>Dùng kinh nghiệm</th><th>Đã đánh giá</th><th>Tỉ lệ đúng</th><th>PASS sai</th><th>FAIL sai</th><th>CẦN CHECK LẠI</th></tr></thead>
+    <thead><tr><th>QC</th><th>Model</th><th>Chế độ</th><th>Prompt</th><th>Dùng kinh nghiệm</th><th>Đã đánh giá</th><th>Tỉ lệ đúng</th><th>PASS sai</th><th>FAIL sai</th><th>CẦN CHECK LẠI</th></tr></thead>
     <tbody>${Object.values(tong).map(t => dong(t) + ds.filter(d => d.LoaiQc === t.LoaiQc).map(dong).join('')).join('')}</tbody></table>`;
 }
 

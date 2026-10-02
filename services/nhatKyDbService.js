@@ -203,7 +203,9 @@ db.exec(`CREATE INDEX IF NOT EXISTS idx_qc_log_stt ON qc_log(STT_Key)`);
 // Kinh nghiệm QC (02/10/2026): KinhNghiemDaDung = JSON [{ id, phamVi, noiDung }] — NGUYÊN VĂN kinh nghiệm đã đưa vào prompt lần
 // đó (trống = không có), để truy vết kể cả khi kinh nghiệm bị sửa/ngừng dùng sau này.
 // Chi phí AI (02/10/2026): TokenVao / TokenRa = số token API trả về cho lượt gọi AI (trống = không gọi AI / API không trả).
-const COT_QC_LOG_THEM = ['Diem', 'AiDeXuat', 'NguongDaDung', 'LyDoKetLuan', 'CheDo', 'ThoiGianKetThuc', 'ThongTinAuto', 'KinhNghiemDaDung', 'TokenVao', 'TokenRa'];
+// PhienBanPrompt (02/10/2026): 'MAC_DINH' | id phiên bản prompt (cai_dat qc_prompt_phien_ban) | 'CHAY_THU'; dòng cũ trống = mặc định.
+// CheDo 'TEST' = chạy thử prompt chưa lưu — KHÔNG tính vào Độ chính xác / Gợi ý ngưỡng / mẫu kiểm PASS / Telegram gộp / tổng kết.
+const COT_QC_LOG_THEM = ['Diem', 'AiDeXuat', 'NguongDaDung', 'LyDoKetLuan', 'CheDo', 'ThoiGianKetThuc', 'ThongTinAuto', 'KinhNghiemDaDung', 'TokenVao', 'TokenRa', 'PhienBanPrompt'];
 const cotQcLogDaCo = db.prepare(`PRAGMA table_info(qc_log)`).all().map(c => c.name);
 // Đánh giá QC (02/10/2026, chỉ superadmin): kết quả THỰC TẾ do người xem gán (PASS/FAIL; trống = chưa đánh giá) — chỉ ghi nhận,
 // KHÔNG đổi trạng thái đơn. Không nằm trong ghiQcLog (dòng mới luôn chưa đánh giá).
@@ -260,7 +262,7 @@ function layQcLog({ loaiQc, ketQua, sttKey, danhGia, gioiHan = 200 } = {}) {
   if (danhGia === 'CHUA') dk.push(`DanhGiaThucTe = '' AND KetQua != 'LOI'`);
   if (danhGia === 'SAI') dk.push(DK_AI_SAI);
   // Mẫu kiểm PASS (02/10/2026): cố định 10% lần QC PASS theo băm id (mở lại không đổi) — để phát hiện PASS sai, tránh chỉ đánh giá đơn lỗi.
-  if (danhGia === 'MAU_PASS') dk.push(`KetQua = 'PASS' AND DanhGiaThucTe = '' AND ((id * 2654435761) % 4294967296) % 100 < 10`);
+  if (danhGia === 'MAU_PASS') dk.push(`CheDo != 'TEST' AND KetQua = 'PASS' AND DanhGiaThucTe = '' AND ((id * 2654435761) % 4294967296) % 100 < 10`);
   return db.prepare(`SELECT *, (SELECT k.id FROM qc_kinh_nghiem k WHERE k.QcLogId = qc_log.id) AS KinhNghiemId
     FROM qc_log ${dk.length ? 'WHERE ' + dk.join(' AND ') : ''} ORDER BY id DESC LIMIT ${Math.min(Number(gioiHan) || 200, 1000)}`).all(ts);
 }
@@ -373,18 +375,19 @@ const xoaNote = id => db.prepare(`DELETE FROM notes WHERE id = ?`).run(id).chang
 
 // Gợi ý ngưỡng (02/10/2026): các lần QC đã đánh giá thực tế, có gọi AI (Model khác ''), không LỖI.
 const layDongDaDanhGiaCoAi = loaiQc => db.prepare(`SELECT id, Model, ChiTiet, DanhGiaThucTe FROM qc_log
-  WHERE LoaiQc = ? AND DanhGiaThucTe != '' AND KetQua != 'LOI' AND Model != ''`).all(loaiQc);
+  WHERE LoaiQc = ? AND DanhGiaThucTe != '' AND KetQua != 'LOI' AND Model != '' AND CheDo != 'TEST'`).all(loaiQc);
 
 // Cảnh báo Telegram gộp (02/10/2026, services/qc/qcTelegramService.js).
 const maxQcLogId = () => db.prepare(`SELECT COALESCE(MAX(id), 0) AS m FROM qc_log`).get().m;
-const layCclSauId = id => db.prepare(`SELECT id, ThoiGian, STT_Key, LoaiQc, CheDo, Diem, LyDoKetLuan, LyDo FROM qc_log WHERE KetQua = 'CAN_CHECK_LAI' AND id > ? ORDER BY id`).all(id);
+const layCclSauId = id => db.prepare(`SELECT id, ThoiGian, STT_Key, LoaiQc, CheDo, Diem, LyDoKetLuan, LyDo FROM qc_log WHERE KetQua = 'CAN_CHECK_LAI' AND CheDo != 'TEST' AND id > ? ORDER BY id`).all(id);
 // Tổng kết các lần QC có ThoiGian bắt đầu bằng ngay ('YYYY-MM-DD', giờ VN).
 function tongKetQcNgay(ngay) {
-  const dk = `substr(ThoiGian, 1, 10) = @ngay`;
+  const dk = `substr(ThoiGian, 1, 10) = @ngay AND CheDo != 'TEST'`; // token/chi phí tính cả chạy thử (tốn tiền thật)
+  const dkToken = `substr(ThoiGian, 1, 10) = @ngay`;
   return {
     theoKetQua: db.prepare(`SELECT LoaiQc, KetQua, CASE WHEN CheDo = 'AUTO' THEN 'AUTO' ELSE 'MANUAL' END AS CheDo, COUNT(*) AS n FROM qc_log WHERE ${dk} GROUP BY 1, 2, 3`).all({ ngay }),
     chuaDanhGia: db.prepare(`SELECT COUNT(*) AS n FROM qc_log WHERE ${dk} AND KetQua != 'LOI' AND DanhGiaThucTe = ''`).get({ ngay }).n,
-    token: db.prepare(`SELECT Model, SUM(CAST(TokenVao AS INTEGER)) AS tokenVao, SUM(CAST(TokenRa AS INTEGER)) AS tokenRa FROM qc_log WHERE ${dk} AND TokenVao != '' GROUP BY Model`).all({ ngay }),
+    token: db.prepare(`SELECT Model, SUM(CAST(TokenVao AS INTEGER)) AS tokenVao, SUM(CAST(TokenRa AS INTEGER)) AS tokenRa FROM qc_log WHERE ${dkToken} AND TokenVao != '' GROUP BY Model`).all({ ngay }),
     kinhNghiemChoXacNhan: db.prepare(`SELECT COUNT(*) AS n FROM qc_kinh_nghiem WHERE TrangThai = 'CHUA_XAC_NHAN'`).get().n,
   };
 }
@@ -399,13 +402,14 @@ function danhGiaQcLog(id, { thucTe, lyDo, nguoi, thoiGian }) {
 function thongKeDanhGiaQc(tuThoiGian = '') {
   return db.prepare(`SELECT LoaiQc, Model, CASE WHEN CheDo = 'AUTO' THEN 'AUTO' ELSE 'MANUAL' END AS CheDo,
       CASE WHEN KinhNghiemDaDung != '' THEN 'Có' ELSE 'Không' END AS CoKinhNghiem,
+      CASE WHEN PhienBanPrompt IN ('', 'MAC_DINH') THEN 'Mặc định' ELSE '#' || PhienBanPrompt END AS PhienBanPrompt,
       COUNT(*) AS daDanhGia,
       SUM(KetQua IN ('PASS','FAIL') AND KetQua = DanhGiaThucTe) AS dung,
       SUM(KetQua = 'PASS' AND DanhGiaThucTe = 'FAIL') AS passSai,
       SUM(KetQua = 'FAIL' AND DanhGiaThucTe = 'PASS') AS failSai,
       SUM(KetQua = 'CAN_CHECK_LAI') AS canCheckLai
-    FROM qc_log WHERE DanhGiaThucTe != '' AND ThoiGian >= @tu
-    GROUP BY 1, 2, 3, 4 ORDER BY 1, 2, 3, 4`).all({ tu: tuThoiGian });
+    FROM qc_log WHERE DanhGiaThucTe != '' AND CheDo != 'TEST' AND ThoiGian >= @tu
+    GROUP BY 1, 2, 3, 4, 5 ORDER BY 1, 2, 3, 4, 5`).all({ tu: tuThoiGian });
 }
 
 module.exports = {

@@ -356,6 +356,35 @@ function datTelegramQc(moi) {
     ON CONFLICT(id) DO UPDATE SET ${cot.map(c => `${c} = excluded.${c}`).join(', ')}`).run(...Object.keys(COT_TELEGRAM).map(k => String(gop[k])));
 }
 
+// Prompt AI QC sửa được (02/10/2026, theo yêu cầu người dùng — menu QC, CHỈ superadmin). Mỗi lần Lưu = 1 phiên bản mới (không sửa/xoá
+// phiên bản cũ); qc_prompt_dang_dung trỏ phiên bản đang dùng của từng QC — không có dòng / PhienBanId 0 = mẫu MẶC ĐỊNH trong code
+// (qcService.js#MAU_PROMPT_MAC_DINH).
+db.exec(`CREATE TABLE IF NOT EXISTS qc_prompt_phien_ban (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  LoaiQc TEXT NOT NULL DEFAULT '',
+  NoiDung TEXT NOT NULL DEFAULT '',
+  GhiChu TEXT NOT NULL DEFAULT '',
+  NguoiTao TEXT NOT NULL DEFAULT '',
+  ThoiGian TEXT NOT NULL DEFAULT ''
+)`);
+db.exec(`CREATE TABLE IF NOT EXISTS qc_prompt_dang_dung (LoaiQc TEXT PRIMARY KEY, PhienBanId INTEGER NOT NULL DEFAULT 0)`);
+const layPhienBanPromptQc = id => db.prepare(`SELECT * FROM qc_prompt_phien_ban WHERE id = ?`).get(id) || null;
+// -> phiên bản đang dùng (đủ cột) hoặc null = mặc định.
+function layPromptDangDungQc(loai) {
+  const r = db.prepare(`SELECT PhienBanId FROM qc_prompt_dang_dung WHERE LoaiQc = ?`).get(loai);
+  return r && r.PhienBanId ? layPhienBanPromptQc(r.PhienBanId) : null;
+}
+const datPromptDangDungQc = (loai, phienBanId) => db.prepare(`INSERT INTO qc_prompt_dang_dung (LoaiQc, PhienBanId) VALUES (?, ?)
+  ON CONFLICT(LoaiQc) DO UPDATE SET PhienBanId = excluded.PhienBanId`).run(loai, phienBanId || 0);
+// Thêm phiên bản + dùng ngay, trong 1 giao dịch. -> id
+const luuPhienBanPromptQc = db.transaction((loai, noiDung, ghiChu, nguoi, thoiGian) => {
+  const id = Number(db.prepare(`INSERT INTO qc_prompt_phien_ban (LoaiQc, NoiDung, GhiChu, NguoiTao, ThoiGian) VALUES (?, ?, ?, ?, ?)`)
+    .run(loai, noiDung, ghiChu, nguoi, thoiGian).lastInsertRowid);
+  datPromptDangDungQc(loai, id);
+  return id;
+});
+const layLichSuPromptQc = loai => db.prepare(`SELECT id, GhiChu, NguoiTao, ThoiGian, length(NoiDung) AS DoDai FROM qc_prompt_phien_ban WHERE LoaiQc = ? ORDER BY id DESC LIMIT 100`).all(loai);
+
 // Giá token AI (02/10/2026) — superadmin nhập ở menu QC, USD / 1 triệu token; KHÔNG có giá mặc định (không tự đoán giá).
 // Chi phí = ước tính theo giá ĐANG lưu (nhập giá sau vẫn tính lại được cho các lần QC cũ).
 db.exec(`CREATE TABLE IF NOT EXISTS qc_gia_token (Model TEXT PRIMARY KEY, GiaVao TEXT NOT NULL DEFAULT '', GiaRa TEXT NOT NULL DEFAULT '')`);
@@ -376,6 +405,7 @@ const layMocApDungAutoQc = () => (db.prepare(`SELECT MocApDung FROM qc_auto_moc 
 
 module.exports = {
   layCauHinhQc, datCauHinhQc, layMocApDungAutoQc, layTelegramQc, datTelegramQc, layGiaTokenQc, datGiaTokenQc,
+  layPhienBanPromptQc, layPromptDangDungQc, datPromptDangDungQc, luuPhienBanPromptQc, layLichSuPromptQc,
   CAC_COT_TAI_KHOAN_GKE, layDanhSachTaiKhoanGke, layTaiKhoanGke, ghiTaiKhoanGke, xoaTaiKhoanGke,
   layGanTaiKhoanGke, ganTaiKhoanGkeChoXuong,
   layCaiDatHangLoat, datCaiDatHangLoat,

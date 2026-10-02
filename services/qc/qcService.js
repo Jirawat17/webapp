@@ -220,11 +220,12 @@ const SCHEMA_QC3 = {
   required: ['result', 'score', 'confidence', 'evidence', 'checked_items', 'issues', 'reason', 'doc_duoc'],
 };
 
-function promptQc3(duLieu, kn = []) {
+// Mẫu prompt MẶC ĐỊNH (02/10/2026: prompt sửa được ở menu QC — xem MAU_PROMPT_MAC_DINH/taoPrompt bên dưới).
+function mauPromptQc3() {
   return [
     'Bạn là nhân viên QC của xưởng thêu, nhiệm vụ: kiểm tra TEM VẬN CHUYỂN đã dán trên kiện hàng trong ảnh có đúng đơn hàng hay không.',
     'Dữ liệu đơn hàng trong hệ thống (JSON):',
-    JSON.stringify(duLieu, null, 2),
+    '{{DU_LIEU_DON}}',
     '',
     'Quy tắc BẮT BUỘC:',
     '1. Đọc NGUYÊN VĂN chữ trên tem vào "doc_duoc": mã tracking (dòng số/chữ dưới mã vạch), tên người nhận, địa chỉ người nhận, hãng vận chuyển, và mọi mã đơn in trên tem (vd dòng "KIEN GOM ... DON: ..."). Không đọc được rõ thì để null — TUYỆT ĐỐI không đoán hay tự điền từ dữ liệu đơn.',
@@ -234,7 +235,8 @@ function promptQc3(duLieu, kn = []) {
     '5. Chỉ dùng FAIL khi đọc RÕ và thấy KHÁC thật sự (sai người, sai địa chỉ, sai mã). Ảnh mờ, bị che, bị cắt, lóa, không chắc chắn -> CAN_CHECK_LAI. Không được kết luận chỉ vì "nhìn khá giống".',
     '6. result tổng: FAIL nếu có ít nhất 1 mục FAIL rõ ràng; PASS chỉ khi mọi mục cần kiểm đều PASS và đọc được mã tracking; còn lại CAN_CHECK_LAI.',
     '7. design_file và mockup_file luôn null (QC dán tem không dùng design/mockup). confidence từ 0 đến 1. issues và reason viết tiếng Việt, ngắn gọn, nêu cụ thể chỗ sai/chỗ không đọc được. Tên ảnh trong evidence: "anh_da_dan_tem".',
-    ...khoiKinhNghiem(kn),
+    '',
+    '{{KINH_NGHIEM}}',
     ...QUY_TAC_KET_QUA,
   ].join('\n');
 }
@@ -358,7 +360,7 @@ function hoanThienKetQua3(ai, { maCanCo, row, rows, cungNhom, laKienGom = false,
 }
 
 // -> { ketQua, anh: [url], model, daGoiAi }
-async function chayQc3(sttKey, nguong, thongKe) {
+async function chayQc3(sttKey, nguong, thongKe, mau) {
   const { rows } = await orderService.getAll({ fresh: true });
   const row = rows.find(r => r.STT_Key === sttKey);
   if (!row) throw loiNghiepVu(`Không tìm thấy đơn ${sttKey}.`, 404);
@@ -397,7 +399,7 @@ async function chayQc3(sttKey, nguong, thongKe) {
   const { nhaCungCap, apiKey, model } = layCauHinh('QC3');
   const kn = chonKinhNghiem('QC3', row);
   const maVach = await docMaVach(buffer);
-  const ai = await aiProvider.phanTichAnh({ apiKey, model, prompt: promptQc3(duLieu, kn), anh: [{ mime, data: buffer, ten: 'anh_da_dan_tem' }], schema: themTruongKinhNghiem(SCHEMA_QC3, kn), thongKe }, nhaCungCap);
+  const ai = await aiProvider.phanTichAnh({ apiKey, model, prompt: taoPrompt('QC3', mau, { duLieu, kn }), anh: [{ mime, data: buffer, ten: 'anh_da_dan_tem' }], schema: themTruongKinhNghiem(SCHEMA_QC3, kn), thongKe }, nhaCungCap);
   const ketQua = hoanThienKetQua3(ai, { maCanCo: chuanHoaMa(maCanCoGoc), row, rows, cungNhom, laKienGom, maVach }, nguong);
   if (kn.length) ketQua.kinh_nghiem_ap_dung = kinhNghiemAiApDung(ai, kn);
   return { daGoiAi: true, anh: [urlAnh], aiGoc: ai, kinhNghiem: kn, ketQua };
@@ -433,13 +435,13 @@ const schemaDoiChieu = hangMuc => ({
 });
 
 // Phần mở đầu chung của prompt: dữ liệu đơn + danh sách ảnh + quy tắc xác định vai trò ảnh.
-const dauPrompt = (nhiemVu, duLieu, dsAnh) => [
+const dauPrompt = nhiemVu => [
   nhiemVu,
   'Dữ liệu đơn hàng (JSON):',
-  JSON.stringify(duLieu, null, 2),
+  '{{DU_LIEU_DON}}',
   '',
   'Danh sách ảnh gửi kèm (tên ảnh đứng ngay trước mỗi ảnh). "nguon" chỉ là CỘT DỮ LIỆU chứa link — KHÔNG chắc chắn là vai trò thật của ảnh:',
-  JSON.stringify(dsAnh, null, 2),
+  '{{DANH_SACH_ANH}}',
   '',
   'Quy tắc BẮT BUỘC:',
   '1. Xác định vai trò TỪNG ảnh vào "vai_tro_anh" (DESIGN / MOCKUP / FILE_THEU / SAN_PHAM / THAM_KHAO / KHONG_LIEN_QUAN) dựa trên NỘI DUNG ảnh, dữ liệu đơn, ghi chú và quan hệ giữa các ảnh — KHÔNG dựa vào tên file. Chọn design_file và mockup_file là ĐÚNG tên ảnh trong danh sách (null nếu không xác định chắc chắn).',
@@ -502,7 +504,7 @@ function hoanThienKetQuaDoiChieu(ai, tenHopLe, { hangMuc, batBuoc }, nguong) {
 // Chạy 1 lượt QC đối chiếu. qc = {
 //   loai, anhCanKiem(row) -> [{ ten, nguon, url }] (ảnh BẮT BUỘC, đọc được ít nhất 1), thieuAnh: lý do khi không có ảnh cần kiểm,
 //   anhPhu(row) -> [{ ten, nguon, url }] (gửi thêm nếu đọc được), hangMuc, batBuoc, prompt(duLieu, dsAnh) }
-async function chayDoiChieu(sttKey, qc, nguong, thongKe) {
+async function chayDoiChieu(sttKey, qc, nguong, thongKe, mau) {
   const { rows } = await orderService.getAll({ fresh: true });
   const row = rows.find(r => r.STT_Key === sttKey);
   if (!row) throw loiNghiepVu(`Không tìm thấy đơn ${sttKey}.`, 404);
@@ -557,7 +559,7 @@ async function chayDoiChieu(sttKey, qc, nguong, thongKe) {
   const kn = chonKinhNghiem(qc.loai, row);
   const ai = await aiProvider.phanTichAnh({
     apiKey, model, thongKe, schema: themTruongKinhNghiem(schemaDoiChieu(qc.hangMuc), kn),
-    prompt: qc.prompt(duLieu, dsAnh.map(a => ({ ten: a.ten, nguon: a.nguon })), kn),
+    prompt: taoPrompt(qc.loai, mau, { duLieu, dsAnh: dsAnh.map(a => ({ ten: a.ten, nguon: a.nguon })), kn }),
     anh: dsAnh.map(a => ({ mime: a.mime, data: a.data, ten: a.ten })),
   }, nhaCungCap);
   const ketQua = hoanThienKetQuaDoiChieu(ai, tenDaDung, qc, nguong);
@@ -577,15 +579,16 @@ const QC2 = {
   anhPhu: anhFileTheu,
   hangMuc: ['design', 'text', 'chi_tiet', 'color', 'position', 'huong', 'size', 'loi_san_xuat'],
   batBuoc: ['design', 'text', 'chi_tiet', 'position', 'loi_san_xuat'],
-  prompt: (duLieu, dsAnh, kn = []) => [
-    ...dauPrompt('Bạn là nhân viên QC của xưởng thêu, nhiệm vụ: kiểm tra SẢN PHẨM THÊU THỰC TẾ (ảnh "san_pham") có đúng yêu cầu đơn hàng hay không.', duLieu, dsAnh),
+  mauPrompt: () => [
+    ...dauPrompt('Bạn là nhân viên QC của xưởng thêu, nhiệm vụ: kiểm tra SẢN PHẨM THÊU THỰC TẾ (ảnh "san_pham") có đúng yêu cầu đơn hàng hay không.'),
     '2. Yêu cầu CHÍNH là Design + Mockup + các ghi chú (ghi_chu, ghi_chu_xuong, ghi_chu_ve_file, ghi_chu_chay_may). File thêu chỉ để đối chiếu thêm: sản phẩm khác Design là FAIL kể cả khi giống File thêu — khi đó ghi rõ trong issues "lỗi có thể từ File thêu".',
     '3. Kiểm tra checked_items (PASS / FAIL / CAN_CHECK_LAI): design (đúng thiết kế), text (ĐỌC TỪNG KÝ TỰ: thiếu, sai, thừa ký tự — rất quan trọng), chi_tiet (thiếu/thừa chi tiết), color (màu chỉ/màu áo), position (vị trí thêu so với vi_tri_theu/ghi chú/mockup), huong (xoay/lật), size (kích thước/tỷ lệ — chỉ khi dữ liệu có số đo rõ, nếu không thì CAN_CHECK_LAI), loi_san_xuat (lỗi thêu nhìn thấy được: bung chỉ, nhăn, lệch, sót chỉ...).',
     '4. Nếu Design và Mockup khác nhau: nêu rõ khác biệt, xem ghi chú để biết bên nào là yêu cầu chính thức; không đủ căn cứ -> CAN_CHECK_LAI. Nhiều ảnh cùng có thể là Design mà không xác định được ảnh chính -> CAN_CHECK_LAI.',
     '5. Chỉ FAIL khi thấy RÕ lỗi. Ảnh mờ, bị che, góc chụp không thấy rõ, thiếu ảnh -> CAN_CHECK_LAI. Không kết luận kiểu "nhìn khá giống".',
     '6. result tổng: FAIL nếu có lỗi rõ ràng; PASS chỉ khi xác định được Design, và design, text, chi_tiet, position, loi_san_xuat đều PASS, không có mâu thuẫn dữ liệu; còn lại CAN_CHECK_LAI.',
     '7. confidence từ 0 đến 1. issues và reason viết tiếng Việt, ngắn gọn, nêu cụ thể (vd ký tự nào sai, chi tiết nào thiếu).',
-    ...khoiKinhNghiem(kn),
+    '',
+    '{{KINH_NGHIEM}}',
     ...QUY_TAC_KET_QUA,
   ].join('\n'),
 };
@@ -601,15 +604,16 @@ const QC1 = {
   anhPhu: () => [],
   hangMuc: ['design', 'text', 'chi_tiet', 'color', 'size', 'ty_le', 'position', 'huong', 'design_mockup'],
   batBuoc: ['design', 'text', 'chi_tiet', 'huong', 'design_mockup'],
-  prompt: (duLieu, dsAnh, kn = []) => [
-    ...dauPrompt('Bạn là nhân viên QC của xưởng thêu, nhiệm vụ: kiểm tra FILE THÊU vừa vẽ (các ảnh "file_theu_*" — ảnh xem trước file thêu) có đúng yêu cầu đơn hàng hay không, TRƯỚC khi đưa vào sản xuất.', duLieu, dsAnh),
+  mauPrompt: () => [
+    ...dauPrompt('Bạn là nhân viên QC của xưởng thêu, nhiệm vụ: kiểm tra FILE THÊU vừa vẽ (các ảnh "file_theu_*" — ảnh xem trước file thêu) có đúng yêu cầu đơn hàng hay không, TRƯỚC khi đưa vào sản xuất.'),
     '2. Yêu cầu CHÍNH là Design + Mockup + các ghi chú (ghi_chu, ghi_chu_xuong, ghi_chu_ve_file, ghi_chu_chay_may). Đơn có thể có 2-3 File thêu cho các vị trí/chi tiết khác nhau — đối chiếu tổng thể, mỗi phần của Design phải có trong File thêu tương ứng.',
     '3. Kiểm tra checked_items (PASS / FAIL / CAN_CHECK_LAI): design (đúng thiết kế, không đổi logo/hình dạng đáng kể), text (ĐỌC TỪNG KÝ TỰ: thiếu, sai, thừa ký tự, sai chính tả so với Design/ghi chú — rất quan trọng), chi_tiet (thiếu/thừa chi tiết), color (màu chỉ — CHỈ khi ghi chú/dữ liệu có thông tin màu chỉ hoặc mã chỉ; không có thì CAN_CHECK_LAI), size (kích thước — chỉ khi có số đo rõ, nếu không thì CAN_CHECK_LAI), ty_le (tỷ lệ/biến dạng so với Design: bị kéo dãn, bóp méo, phóng to/thu nhỏ sai từng phần), position (vị trí trên áo so với vi_tri_theu/ghi chú/mockup — File thêu không thể hiện vị trí thì CAN_CHECK_LAI), huong (xoay/lật ngược/đối xứng gương), design_mockup (Design và Mockup có nhất quán không: PASS nếu không mâu thuẫn; mâu thuẫn mà ghi chú không nói rõ bên nào đúng -> CAN_CHECK_LAI).',
     '4. Nếu Design và Mockup khác nhau: nêu rõ khác biệt, xem ghi chú để biết bên nào là yêu cầu chính thức; không tự ý chọn 1 nguồn khi chưa đủ căn cứ. Nhiều ảnh cùng có thể là Design mà không xác định được ảnh chính -> CAN_CHECK_LAI.',
     '5. Chỉ FAIL khi thấy RÕ lỗi. Ảnh mờ, bị cắt, không đủ để kết luận -> CAN_CHECK_LAI. Không kết luận kiểu "nhìn khá giống", không suy đoán kích thước/màu khi không có dữ liệu.',
     '6. result tổng: FAIL nếu có lỗi rõ ràng; PASS chỉ khi xác định được Design, và design, text, chi_tiet, huong, design_mockup đều PASS; còn lại CAN_CHECK_LAI.',
     '7. confidence từ 0 đến 1. issues và reason viết tiếng Việt, ngắn gọn, nêu cụ thể (vd ký tự nào sai, chi tiết nào thiếu, File thêu nào).',
-    ...khoiKinhNghiem(kn),
+    '',
+    '{{KINH_NGHIEM}}',
     ...QUY_TAC_KET_QUA,
   ].join('\n'),
 };
@@ -652,6 +656,45 @@ const khoiKinhNghiem = kn => (kn.length ? [
   '- Ghi id các kinh nghiệm bạn đã thật sự áp dụng vào "kinh_nghiem_ap_dung" (không áp dụng cái nào thì để mảng rỗng).',
   ...kn.map(k => k.noiDung),
 ] : []);
+// ---------------- PROMPT SỬA ĐƯỢC (02/10/2026, theo yêu cầu người dùng) ----------------
+// Prompt = mẫu văn bản (phiên bản đang dùng ở menu QC, hoặc MAU_PROMPT_MAC_DINH) + chỗ giữ chỗ hệ thống TỰ ĐIỀN mỗi lượt:
+// {{DU_LIEU_DON}} (JSON đơn), {{DANH_SACH_ANH}} (QC1/QC2), {{KINH_NGHIEM}} (kinh nghiệm đã xác nhận, trống nếu không có).
+// Mỗi chỗ giữ chỗ bắt buộc ĐÚNG 1 lần. Người dùng sửa được cả phần "cách trả kết quả" — sửa sai thì AI có thể trả thiếu trường
+// -> chuanHoaAi/quyetDinhKetQua tự ra CAN_CHECK_LAI (an toàn), không tự sửa prompt. Mẫu mặc định = đúng prompt trước khi có tính năng.
+const CHO_GIU_CHO = {
+  DU_LIEU_DON: 'Dữ liệu đơn hàng (JSON) — hệ thống tự điền',
+  DANH_SACH_ANH: 'Danh sách tên ảnh gửi kèm (JSON) — hệ thống tự điền',
+  KINH_NGHIEM: 'Kinh nghiệm QC đã xác nhận phù hợp đơn này — trống nếu không có',
+};
+const CHO_GIU_CHO_THEO_LOAI = { QC1: ['DU_LIEU_DON', 'DANH_SACH_ANH', 'KINH_NGHIEM'], QC2: ['DU_LIEU_DON', 'DANH_SACH_ANH', 'KINH_NGHIEM'], QC3: ['DU_LIEU_DON', 'KINH_NGHIEM'] };
+const MAU_PROMPT_MAC_DINH = { QC1: QC1.mauPrompt(), QC2: QC2.mauPrompt(), QC3: mauPromptQc3() };
+const PROMPT_TOI_DA = 30000;
+function kiemTraMauPrompt(loai, mau) {
+  if (!CHO_GIU_CHO_THEO_LOAI[loai]) return 'Loại QC không hợp lệ.';
+  if (typeof mau !== 'string' || !mau.trim()) return 'Prompt không được để trống.';
+  if (mau.length > PROMPT_TOI_DA) return `Prompt tối đa ${PROMPT_TOI_DA.toLocaleString('vi-VN')} ký tự.`;
+  const dung = CHO_GIU_CHO_THEO_LOAI[loai];
+  const gap = (mau.match(/\{\{[A-Z_]+\}\}/g) || []).map(x => x.slice(2, -2));
+  const la = gap.filter(k => !dung.includes(k));
+  if (la.length) return `Chỗ giữ chỗ không dùng được cho ${loai}: ${[...new Set(la)].map(k => `{{${k}}}`).join(', ')}.`;
+  for (const k of dung) {
+    const n = gap.filter(x => x === k).length;
+    if (n !== 1) return `Prompt phải có ĐÚNG 1 lần {{${k}}} (${CHO_GIU_CHO[k]}) — đang có ${n} lần.`;
+  }
+  return null;
+}
+// -> { noiDung, nhan: 'MAC_DINH' | '<id phiên bản>' }
+function layPromptDangDung(loai) {
+  const pb = caiDatDbService.layPromptDangDungQc(loai);
+  return pb ? { noiDung: pb.NoiDung, nhan: String(pb.id) } : { noiDung: MAU_PROMPT_MAC_DINH[loai], nhan: 'MAC_DINH' };
+}
+function taoPrompt(loai, mau, { duLieu, dsAnh = [], kn = [] }) {
+  const giaTri = { DU_LIEU_DON: JSON.stringify(duLieu, null, 2), DANH_SACH_ANH: JSON.stringify(dsAnh, null, 2), KINH_NGHIEM: khoiKinhNghiem(kn).slice(1).join('\n') };
+  return (mau ?? layPromptDangDung(loai).noiDung)
+    .replace(/\{\{([A-Z_]+)\}\}/g, (m, k) => (Object.hasOwn(giaTri, k) ? giaTri[k] : m)) // hàm thay thế: không diễn giải $& trong dữ liệu
+    .replace(/\n{3,}/g, '\n\n'); // {{KINH_NGHIEM}} trống không để lại dòng trắng thừa
+}
+
 // Chỉ thêm trường khi có kinh nghiệm — lượt QC không có kinh nghiệm giữ nguyên schema cũ.
 const themTruongKinhNghiem = (schema, kn) => (kn.length
   ? { ...schema, properties: { ...schema.properties, kinh_nghiem_ap_dung: { type: 'array', items: { type: 'integer' } } } } : schema);
@@ -787,8 +830,8 @@ function goiYNguong(loai, thu) {
   return ketQua;
 }
 
-const chayQc2 = (sttKey, nguong, thongKe) => chayDoiChieu(sttKey, QC2, nguong, thongKe);
-const chayQc1 = (sttKey, nguong, thongKe) => chayDoiChieu(sttKey, QC1, nguong, thongKe);
+const chayQc2 = (sttKey, nguong, thongKe, mau) => chayDoiChieu(sttKey, QC2, nguong, thongKe, mau);
+const chayQc1 = (sttKey, nguong, thongKe, mau) => chayDoiChieu(sttKey, QC1, nguong, thongKe, mau);
 
 const CHAY_THEO_LOAI = { QC1: chayQc1, QC2: chayQc2, QC3: chayQc3 };
 
@@ -832,11 +875,21 @@ async function guiThuTelegram() {
 // Chạy 1 lượt QC + ghi log. -> { id, loai, sttKey, model, anh, ketQua | null, loi | null }
 // Mã đơn không tồn tại / loại chưa triển khai -> throw (status 404/400), vẫn ghi log với mã không tồn tại.
 // cheDo: 'MANUAL' (bấm ở menu QC) | 'AUTO' (Tự động quét QC — services/qc/qcAutoService.js, kèm thongTinAuto để ghi log).
-async function chayQc({ sttKey, loai, user, cheDo = 'MANUAL', thongTinAuto = null }) {
+// mauChayThu (02/10/2026): prompt ĐANG SỬA chưa lưu -> chế độ 'TEST': không gửi Telegram, không tính số lần dùng kinh nghiệm,
+// không tính vào Độ chính xác/Gợi ý ngưỡng/mẫu kiểm PASS (nhatKyDbService lọc CheDo = 'TEST'); prompt thử lưu kèm ChiTiet.
+async function chayQc({ sttKey, loai, user, cheDo = 'MANUAL', thongTinAuto = null, mauChayThu = null }) {
   sttKey = String(sttKey || '').trim();
   if (!LOAI_QC[loai]) throw loiNghiepVu('Loại QC không hợp lệ — chỉ QC1, QC2, QC3.');
   if (!LOAI_DA_TRIEN_KHAI.includes(loai)) throw loiNghiepVu(`${LOAI_QC[loai]} chưa được triển khai.`);
   if (!sttKey) throw loiNghiepVu('Chưa nhập mã đơn (STT_Key).');
+  const chayThu = mauChayThu !== null;
+  if (chayThu) {
+    const loiMau = kiemTraMauPrompt(loai, mauChayThu);
+    if (loiMau) throw loiNghiepVu(loiMau);
+    cheDo = 'TEST';
+  }
+  // Prompt đọc 1 lần cho cả lượt (đổi phiên bản giữa chừng không ảnh hưởng lượt đang chạy); log ghi phiên bản đã dùng.
+  const prompt = chayThu ? { noiDung: mauChayThu, nhan: 'CHAY_THU' } : layPromptDangDung(loai);
   // Ngưỡng đọc 1 lần cho cả lượt; cấu hình sai -> KHÔNG chạy QC (không đoán, không tự sửa).
   const nguongGoc = layNguong(loai);
   const loiNguong = kiemTraNguong(nguongGoc, LOAI_QC[loai]);
@@ -844,16 +897,16 @@ async function chayQc({ sttKey, loai, user, cheDo = 'MANUAL', thongTinAuto = nul
   const nguong = nguongSo(nguongGoc);
   const { model } = layCauHinh(loai);
   const dong = { ThoiGian: thoiGianVNISOString(), NguoiDung: user.ten, STT_Key: sttKey, LoaiQc: loai, Model: model, NguongDaDung: JSON.stringify(nguong),
-    CheDo: cheDo, ThongTinAuto: thongTinAuto ? JSON.stringify(thongTinAuto) : '' };
+    CheDo: cheDo, ThongTinAuto: thongTinAuto ? JSON.stringify(thongTinAuto) : '', PhienBanPrompt: prompt.nhan };
   let kq;
   const thongKe = {}; // { tokenVao, tokenRa } — provider tự ghi (chi phí AI, 02/10/2026)
   const cotToken = () => ({ TokenVao: thongKe.tokenVao ?? '', TokenRa: thongKe.tokenRa ?? '' });
   try {
-    kq = await CHAY_THEO_LOAI[loai](sttKey, nguong, thongKe);
+    kq = await CHAY_THEO_LOAI[loai](sttKey, nguong, thongKe, prompt.noiDung);
   } catch (err) {
     const id = nhatKyDbService.ghiQcLog({ ...dong, ...cotToken(), KetQua: 'LOI', LoiApi: err.message, ThoiGianKetThuc: thoiGianVNISOString() });
     if (err.status) throw Object.assign(err, { logId: id });
-    canhBaoTelegram({ loai, sttKey, model, nguoiChay: user.ten, loi: err.message });
+    if (!chayThu) canhBaoTelegram({ loai, sttKey, model, nguoiChay: user.ten, loi: err.message });
     return { id, loai, sttKey, model, anh: [], ketQua: null, loi: err.message };
   }
   const k = kq.ketQua;
@@ -863,12 +916,12 @@ async function chayQc({ sttKey, loai, user, cheDo = 'MANUAL', thongTinAuto = nul
     KetQua: k.result, DoTinCay: k.confidence, LyDo: k.reason,
     Diem: k.score === null || k.score === undefined ? '' : k.score, AiDeXuat: k.ai_de_xuat || '', LyDoKetLuan: k.ly_do_ket_luan || '',
     ThoiGianKetThuc: thoiGianVNISOString(),
-    ChiTiet: JSON.stringify({ ket_qua: k, ai_goc: kq.aiGoc || null }),
+    ChiTiet: JSON.stringify({ ket_qua: k, ai_goc: kq.aiGoc || null, ...(chayThu ? { prompt_chay_thu: mauChayThu } : {}) }),
     KinhNghiemDaDung: kq.kinhNghiem && kq.kinhNghiem.length ? JSON.stringify(kq.kinhNghiem) : '',
     ...cotToken(),
   });
-  if (kq.kinhNghiem && kq.kinhNghiem.length) nhatKyDbService.tangSoLanDungKinhNghiem(kq.kinhNghiem.map(x => x.id));
-  if (k.result !== 'PASS') canhBaoTelegram({ loai, sttKey, model: kq.daGoiAi ? model : '', nguoiChay: user.ten, ketQua: k });
+  if (!chayThu && kq.kinhNghiem && kq.kinhNghiem.length) nhatKyDbService.tangSoLanDungKinhNghiem(kq.kinhNghiem.map(x => x.id));
+  if (!chayThu && k.result !== 'PASS') canhBaoTelegram({ loai, sttKey, model: kq.daGoiAi ? model : '', nguoiChay: user.ten, ketQua: k });
   return { id, loai, sttKey, model: kq.daGoiAi ? model : '', anh: kq.anh, ketQua: k, loi: null };
 }
 
@@ -879,4 +932,5 @@ async function thuKetNoi(loai, nhaCungCap) {
 }
 
 module.exports = { LOAI_QC, LOAI_DA_TRIEN_KHAI, MODEL_MAC_DINH, NHA_CUNG_CAP, NGUONG_MAC_DINH, layCauHinh, layNguong, kiemTraNguong, docSo, quyetDinhKetQua, chayQc, thuKetNoi, guiThuTelegram, taoTinCanhBao, hoanThienKetQua3, hoanThienKetQuaDoiChieu, chuanHoaMa, khopMa, layTelegram, goiYNguong,
+  CHO_GIU_CHO, CHO_GIU_CHO_THEO_LOAI, MAU_PROMPT_MAC_DINH, kiemTraMauPrompt, layPromptDangDung, taoPrompt,
   HANG_MUC_THEO_LOAI, NGUYEN_NHAN_KN, PHAM_VI_KN, TRANG_THAI_KN, KN_DO_DAI_KINH_NGHIEM, chonKinhNghiem, taoKinhNghiemTuLog, suaKinhNghiem, doiTrangThaiKinhNghiem };
