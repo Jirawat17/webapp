@@ -22,7 +22,13 @@ async function gui(text) {
 // Gửi gộp các CAN_CHECK_LAI chưa gửi. batBuoc = true: gửi ngay không chờ đủ chu kỳ (khi chuyển về chế độ gửi ngay).
 async function guiGopCcl(bayGio = new Date(), batBuoc = false) {
   const ch = caiDatDbService.layTelegramQc();
-  if (!ch.chatId || (!ch.gopCclPhut && !batBuoc)) return;
+  if (!ch.gopCclPhut && !batBuoc) return;
+  // Đang gộp mà CHƯA có Chat ID (cảnh báo đang tắt): vẫn dời mốc đã xử lý — nhập Chat ID sau đó KHÔNG gửi dồn cả đống CCL cũ.
+  if (!ch.chatId) {
+    const max = nhatKyDbService.maxQcLogId();
+    if (max > ch.idCclDaGui) caiDatDbService.datTelegramQc({ idCclDaGui: max, thoiGianGuiCclCuoi: bayGio.toISOString() });
+    return;
+  }
   if (!batBuoc && ch.thoiGianGuiCclCuoi && bayGio - new Date(ch.thoiGianGuiCclCuoi) < ch.gopCclPhut * 60000) return;
   const ds = nhatKyDbService.layCclSauId(ch.idCclDaGui);
   if (!ds.length) return;

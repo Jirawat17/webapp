@@ -47,7 +47,7 @@ function ganMoTa(rows, nguoiXem) {
 // nằm trong ChiTiet.sttKeys) có đơn này (bổ sung 27/09/2026).
 // Lịch sử giới hạn 10 lần thử tự động mua tracking (30/09/2026) — CHỈ vai trò có menu Tracking được thấy (cùng danh sách
 // orderService.VAI_TRO_MENU_TRACKING; không require orderService ở đây để tránh vòng require).
-const HANH_DONG_GIOI_HAN_THU = ['TU_DONG_MUA_CHUYEN_THU_CONG', 'CHO_TU_DONG_MUA_LAI', 'SUA_THONG_TIN_GKE', 'XOA_THONG_TIN_GKE'];
+const HANH_DONG_GIOI_HAN_THU = ['TU_DONG_MUA_CHUYEN_THU_CONG', 'CHO_TU_DONG_MUA_LAI', 'SUA_THONG_TIN_GKE', 'XOA_THONG_TIN_GKE', 'XUAT_EXCEL_GKE'];
 const VAI_TRO_THAY_GIOI_HAN_THU = ['admin', 'superadmin', 've_file'];
 
 async function layLichSuTheoDon(sttKey, nguoiXem) {

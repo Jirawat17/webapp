@@ -653,9 +653,10 @@ function veChuTheoChanChu(doc, chu, x, chanChu) {
 // Thẻ in 1 đơn (khổ 100x150mm, KHÔNG còn dòng chân trang) — bố cục theo HÌNH MẪU người dùng gửi 30/09/2026 (lần 2):
 //   MÃ ĐƠN (26pt đậm)                                             [ QR ]
 //   Tên người nhận (9pt đậm, 1 dòng, dài thì "…")                  [ QR ]
-//   Loại · Size · Màu (14pt)                                      [ QR ]
 //   SL: n (30pt đậm)              dd/mm (ngày lên đơn, 10pt)      [ QR ]
+//   Quốc gia (DIA_CHI_NUOC nguyên văn, 14pt đậm, 1 dòng; trống thì không vẽ — 02/10/2026, theo yêu cầu người dùng)
 //   [ Ảnh mẫu ] [ Ảnh mockup ]
+//   Loại · Size · Màu (14pt) — dời xuống dưới ảnh 02/10/2026 (theo yêu cầu người dùng)
 //   Vị trí thêu (chỉ giá trị, 10pt)
 //   (Còn ảnh chưa hiển thị hết ...) — chỉ khi có ảnh dư
 //   Áo/đơn: n (số 30pt đậm)   Ghi chú: ... (15pt đậm, chảy tiếp xuống các dòng dưới, hết chỗ thì "…")
@@ -694,7 +695,7 @@ function veTheDonPdf(doc, don, anh, offsetY, caoThe) {
     veOTrongPdf(doc, qrX, qrY, qrKichThuoc, 'Không có QR');
   }
 
-  // KHỐI TRÊN TRÁI (cạnh QR): mã đơn / tên người nhận / loại·size·màu / SL + ngày.
+  // KHỐI TRÊN TRÁI (cạnh QR): mã đơn / tên người nhận / SL + ngày / quốc gia.
   const rongTrai = qrX - x0 - 6;
   let y = yDau;
   const maDon = don.STT_Key || '';
@@ -707,11 +708,6 @@ function veTheDonPdf(doc, don, anh, offsetY, caoThe) {
     doc.text(don.TEN, x0, y, { width: rongTrai, height: caoDong + 0.5, ellipsis: true }); // đúng 1 dòng, dài thì "…"
     y += caoDong;
   }
-  const chuLoai = `${don.LOAI || ''} · ${don.KICH_THUOC || ''} · ${don.MAU_SAC || ''}`;
-  doc.font('NotoSans').fontSize(14);
-  const caoLoai = doc.heightOfString(chuLoai, { width: rongTrai });
-  doc.text(chuLoai, x0, y, { width: rongTrai });
-  y += caoLoai + 3;
   // SL 30pt đậm + ngày dd/mm (10pt) sát mép phải khối, cùng đường chân chữ; SL dài bất thường tự thu nhỏ cho khỏi đè ngày.
   const ngayDay = dinhDangNgay(don.NGAY_LEN_DON);
   const ngayNgan = /^\d{2}\/\d{2}\/\d{4}$/.test(ngayDay) ? ngayDay.slice(0, 5) : ngayDay;
@@ -725,7 +721,15 @@ function veTheDonPdf(doc, don, anh, offsetY, caoThe) {
     doc.font('NotoSans').fontSize(10);
     veChuTheoChanChu(doc, ngayNgan, x0 + rongTrai - rongNgay, chanChuSl);
   }
-  y = Math.max(chanChuSl + 4, qrY + qrKichThuoc) + 6;
+  // Quốc gia ngay dưới SL, cạnh QR (chỗ trống sẵn có vì khối trên cao theo QR) — đúng 1 dòng, tên dài tự thu nhỏ, không lấn QR.
+  let dayKhoiTrai = chanChuSl + 4;
+  const quocGia = String(don.DIA_CHI_NUOC || '').trim();
+  if (quocGia) {
+    doc.font('NotoSans-Bold').fontSize(14);
+    doc.fontSize(Math.min(14, 14 * rongTrai / (doc.widthOfString(quocGia) || 1)));
+    dayKhoiTrai = veChuTheoDinh(doc, quocGia, x0, chanChuSl + 8) + 4;
+  }
+  y = Math.max(dayKhoiTrai, qrY + qrKichThuoc) + 6;
 
   // 2 ẢNH to xếp cạnh nhau, hết chiều ngang thẻ.
   const khoangCachAnh = 4;
@@ -745,6 +749,11 @@ function veTheDonPdf(doc, don, anh, offsetY, caoThe) {
     veOTrongPdf(doc, anhX2, anhY, anhKichThuoc, 'Không có ảnh mockup');
   }
   y = anhY + anhKichThuoc + 6;
+
+  // Loại · Size · Màu — ngay dưới ảnh (02/10/2026), cùng cỡ 14pt như trước, trải cả chiều ngang thẻ.
+  const chuLoai = `${don.LOAI || ''} · ${don.KICH_THUOC || ''} · ${don.MAU_SAC || ''}`;
+  doc.font('NotoSans').fontSize(14).text(chuLoai, x0, y, { width: rongTrong });
+  y = doc.y + 2;
 
   // Vị trí thêu — chỉ giá trị (hình mẫu bỏ nhãn "Vị trí thêu:").
   doc.font('NotoSans').fontSize(10).text(don.VI_TRI_1 || '—', x0, y, { width: rongTrong });

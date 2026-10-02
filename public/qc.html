@@ -50,7 +50,7 @@
 
   <details class="qc-khoi">
     <summary><h3>Đơn hàng vừa cập nhật trạng thái <span id="vcn-so" style="font-weight:400;color:var(--color-text-muted)"></span></h3></summary>
-    <p style="color:var(--color-text-muted);margin-top:0">Đơn có Trạng thái chung, Phôi hoặc Vẽ file đổi trong <strong>1 giờ</strong> gần nhất (tính từ lúc trạng thái thật sự đổi, mọi người dùng và hệ thống). Mỗi đơn 1 dòng — lần đổi gần nhất. Tự tải lại mỗi phút; đơn quá 1 giờ tự rời danh sách. Chỉ có dữ liệu từ khi có tính năng này.</p>
+    <p style="color:var(--color-text-muted);margin-top:0">Đơn có Trạng thái chung, Phôi hoặc Vẽ file đổi trong <strong>1 giờ</strong> gần nhất (tính từ lúc trạng thái thật sự đổi, mọi người dùng và hệ thống). Mỗi đơn 1 dòng — lần đổi gần nhất; cột in đậm là trạng thái vừa đổi, "Trạng thái trước đó" là giá trị ngay trước lần đổi đó. Tự tải lại mỗi phút; đơn quá 1 giờ tự rời danh sách. Chỉ có dữ liệu từ khi có tính năng này.</p>
     <div id="khoi-vua-cap-nhat" class="qc-cuon-ngang">Đang tải...</div>
   </details>
 
@@ -644,7 +644,7 @@ async function taiKinhNghiem() {
         ${k.TrangThai !== 'DA_XAC_NHAN' ? nutNho('Xác nhận', `doiTrangThaiKn(${k.id}, 'DA_XAC_NHAN')`) + '<br>' : ''}
         ${k.TrangThai !== 'KHONG_SU_DUNG' ? nutNho('Không sử dụng', `doiTrangThaiKn(${k.id}, 'KHONG_SU_DUNG')`) + '<br>' : ''}
         ${nutNho('Chạy lại đơn gốc', `chayLaiDonGoc(this, ${k.id})`)}<br>
-        ${nutNho('Xem log đơn', `xemLogDon('${escapeHtml(k.STT_Key)}')`)}</td>
+        ${nutNho('Xem log đơn', `xemLogDon(${escapeHtml(JSON.stringify(k.STT_Key))})`)}</td>
     </tr><tr id="sua-kn-${k.id}" style="display:none"><td colspan="9"></td></tr>`).join('')}</tbody></table>`;
 }
 
@@ -746,6 +746,7 @@ function xemLogDon(sttKey) {
 
 // ---- Đơn hàng vừa cập nhật trạng thái (02/10/2026) — dữ liệu luôn lấy từ server (routes/qc.js GET /don-vua-cap-nhat).
 const gioVN = t => { const d = new Date(t); return isNaN(d) ? '' : d.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }); };
+const NHAN_COT_TRANG_THAI = { TRANG_THAI_XUONG: 'Chung', TRANG_THAI_PHOI: 'Phôi', TRANG_THAI_VE_FILE: 'Vẽ file' };
 async function taiDonVuaCapNhat() {
   const el = document.getElementById('khoi-vua-cap-nhat');
   let kq;
@@ -754,10 +755,14 @@ async function taiDonVuaCapNhat() {
   if (!kq.ds.length) { el.innerHTML = '<p style="color:var(--color-text-muted)">Không có đơn nào đổi trạng thái trong 1 giờ qua.</p>'; return; }
   const bayGio = new Date(kq.bayGio).getTime();
   el.innerHTML = `<table class="qc-bang-log">
-    <thead><tr><th>Mã đơn</th><th>Trạng thái chung</th><th>Phôi</th><th>Vẽ file</th><th>Đổi lúc</th><th>Xưởng</th></tr></thead>
+    <thead><tr><th>Mã đơn</th><th>Trạng thái chung</th><th>Phôi</th><th>Vẽ file</th><th>Trạng thái trước đó</th><th>Người thực hiện</th><th>Đổi lúc</th><th>Xưởng</th></tr></thead>
     <tbody>${kq.ds.map(d => `<tr>
       <td><a href="/order.html?stt=${encodeURIComponent(d.sttKey)}" style="font-weight:700">${escapeHtml(d.sttKey)}</a></td>
-      <td>${escapeHtml(d.trangThai)}</td><td>${escapeHtml(d.phoi)}</td><td>${escapeHtml(d.veFile)}</td>
+      ${[['TRANG_THAI_XUONG', d.trangThai], ['TRANG_THAI_PHOI', d.phoi], ['TRANG_THAI_VE_FILE', d.veFile]]
+        .map(([cot, v]) => `<td>${d.truoc && cot in d.truoc ? `<strong>${escapeHtml(v)}</strong>` : escapeHtml(v)}</td>`).join('')}
+      <td>${d.truoc ? Object.entries(d.truoc).map(([cot, v]) => `<small style="color:var(--color-text-muted)">${NHAN_COT_TRANG_THAI[cot] || cot}:</small> ${escapeHtml(v)}`).join('<br>')
+        : '<span style="color:var(--color-text-muted)">—</span>'}</td>
+      <td>${escapeHtml(d.nguoi || '—')}</td>
       <td>${escapeHtml(gioVN(d.thoiGian))} <small style="color:var(--color-text-muted)">(${Math.max(0, Math.round((bayGio - new Date(d.thoiGian).getTime()) / 60000))} phút trước)</small></td>
       <td>${escapeHtml(d.xuong || '(chưa gán)')}</td></tr>`).join('')}</tbody></table>`;
 }

@@ -167,7 +167,7 @@ function themAnhCho(files) {
 function veAnhForm() {
   const cu = dangSua ? dangSua.Anh.filter(k => !anhBo.includes(k)) : [];
   document.getElementById('nt-anh-form').innerHTML =
-    cu.map(k => `<div class="o-anh"><img src="${urlAnh(k)}" alt="Ảnh đính kèm"><button type="button" class="xoa-anh" title="Bỏ ảnh này" onclick="boAnhCu('${escapeHtml(k)}')">×</button></div>`).join('') +
+    cu.map(k => `<div class="o-anh"><img src="${urlAnh(k)}" alt="Ảnh đính kèm"><button type="button" class="xoa-anh" title="Bỏ ảnh này" onclick="boAnhCu(${escapeHtml(JSON.stringify(k))})">×</button></div>`).join('') +
     anhCho.map((a, i) => `<div class="o-anh"><img src="${a.url}" alt="Ảnh mới (chưa lưu)" style="outline:2px dashed var(--color-primary)"><button type="button" class="xoa-anh" title="Bỏ ảnh này" onclick="boAnhCho(${i})">×</button></div>`).join('');
 }
 function boAnhCu(key) { anhBo.push(key); veAnhForm(); }

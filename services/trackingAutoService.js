@@ -902,7 +902,7 @@ function choTuDongThuLai(row, user) {
 }
 
 module.exports = {
-  layDonChuyenThuCong, choTuDongThuLai, suaThongTinGke, SO_LAN_THU_TU_DONG_TOI_DA,
+  layDonChuyenThuCong, choTuDongThuLai, suaThongTinGke, SO_LAN_THU_TU_DONG_TOI_DA, apDungThongTinGke, docThongTinGke,
   layCauHinh, luuCauHinh, chayQuetTuDongMuaTracking, layDanhSachDonAutoTracking, layLogTracking,
   muaTrackingChoDon, inLabelChoDon, muaTrackingVaInLabelChoDon,
   capNhatTrangThaiTrackingChoDon, chayQuetCapNhatTrangThaiTracking, chayQuetTrangThaiNeuDenLuot,

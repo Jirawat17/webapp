@@ -147,6 +147,31 @@
        người không phải superadmin đổi được thông tin này, kể cả username/password API GKE thật). Xem
        public/settings.html + routes/tracking.js (tài khoản GKE theo Xưởng, /tai-khoan-gke — CHỈ superadmin). -->
 
+  <!-- XUẤT EXCEL MUA TRACKING THỦ CÔNG theo mẫu GKE (02/10/2026) — chỉ tạo file để tải lên website GKE; KHÔNG đổi trạng thái đơn,
+       KHÔNG gửi gì sang GKE. Logic: services/trackingExcelGkeService.js. -->
+  <p style="margin-top:var(--space-5)"><button type="button" class="btn-hanh-dong" id="btn-xuat-excel-gke" onclick="batTatXuatExcelGke()" aria-expanded="false">XUẤT EXCEL MUA TRACKING THỦ CÔNG ▾</button></p>
+  <div id="khoi-xuat-excel-gke" class="panel-dieu-khien" style="display:none">
+    <p style="margin-top:0;color:var(--color-text-muted)">Tạo file Excel theo mẫu lên đơn của GKE (sheet "bản mẫu") để tự tải lên website GKE và mua tracking thủ công. Chỉ đơn giao <strong>US/UK</strong>, chưa có tracking, chưa tạo vận đơn trên GKE. Dữ liệu giống hệt khi mua qua API (kể cả dữ liệu "Sửa dữ liệu gửi GKE"). Mỗi tài khoản GKE 1 file. <strong>Xuất file KHÔNG có nghĩa là đã mua tracking</strong> — mua xong trên GKE, dùng IN LABEL / tra cứu tracking như bình thường.</p>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px">
+      <label><input type="radio" name="xeg-cach" value="ds" checked onchange="doiCachChonXeg()"> Chọn từ đơn chuyển mua thủ công</label>
+      <label><input type="radio" name="xeg-cach" value="nhap" onchange="doiCachChonXeg()"> Nhập mã đơn</label>
+    </div>
+    <div id="xeg-tab-ds">
+      <div class="inline-form" style="align-items:flex-end">
+        <div class="truong"><label for="xeg-tim">Tìm mã đơn</label><input id="xeg-tim" autocomplete="off" oninput="veGoiYXeg()"></div>
+        <label style="display:flex;gap:6px;align-items:center;padding-bottom:8px"><input type="checkbox" id="xeg-chon-tat-ca" onchange="chonTatCaXeg(this.checked)"> Chọn tất cả đang hiển thị</label>
+        <button type="button" class="btn-hanh-dong phu" onclick="taiGoiYXeg()">Tải lại</button>
+      </div>
+      <div id="xeg-goi-y" class="qc-cuon-ngang" style="overflow-x:auto;margin-top:8px">Đang tải...</div>
+    </div>
+    <div id="xeg-tab-nhap" style="display:none">
+      <label for="xeg-ma">Mã đơn (mỗi dòng 1 mã hoặc cách nhau dấu phẩy)</label>
+      <textarea id="xeg-ma" rows="5" style="width:100%;box-sizing:border-box;text-transform:uppercase" placeholder="9ABC123&#10;9XYZ456"></textarea>
+    </div>
+    <p><button type="button" class="btn-hanh-dong" onclick="kiemTraXeg(this)">Kiểm tra</button> <span id="xeg-thong-bao"></span></p>
+    <div id="xeg-ket-qua"></div>
+  </div>
+
   <h3 style="margin-top:var(--space-5)">Danh sách đơn tự động mua tracking</h3>
   <p style="color:var(--color-text-muted);margin:-8px 0 12px">Đơn đang chờ mua + đơn đã có tracking sản xuất xong trong 7 ngày gần đây.</p>
   <div id="bang-danh-sach">Đang tải...</div>
@@ -491,6 +516,98 @@ async function taiCanhBaoThuCong() {
   _dsCanhBaoThuCong = ds;
   veCanhBaoThuCong();
 }
+// ---- XUẤT EXCEL MUA TRACKING THỦ CÔNG (02/10/2026) — server kiểm tra lại mọi thứ (kể cả lúc tải file).
+let dsGoiYXeg = [];
+const xegChon = new Set();
+let ketQuaXeg = null;
+function batTatXuatExcelGke() {
+  const khoi = document.getElementById('khoi-xuat-excel-gke');
+  const mo = khoi.style.display === 'none';
+  khoi.style.display = mo ? '' : 'none';
+  const nut = document.getElementById('btn-xuat-excel-gke');
+  nut.setAttribute('aria-expanded', String(mo));
+  nut.textContent = `XUẤT EXCEL MUA TRACKING THỦ CÔNG ${mo ? '▴' : '▾'}`;
+  if (mo) taiGoiYXeg();
+}
+function doiCachChonXeg() {
+  const ds = document.querySelector('input[name="xeg-cach"]:checked').value === 'ds';
+  document.getElementById('xeg-tab-ds').style.display = ds ? '' : 'none';
+  document.getElementById('xeg-tab-nhap').style.display = ds ? 'none' : '';
+}
+async function taiGoiYXeg() {
+  const el = document.getElementById('xeg-goi-y');
+  try { dsGoiYXeg = await apiFetch('/tracking/xuat-excel-gke/goi-y'); } catch (e) { el.textContent = 'Lỗi: ' + e.message; return; }
+  for (const k of [...xegChon]) if (!dsGoiYXeg.some(d => d.sttKey === k)) xegChon.delete(k);
+  veGoiYXeg();
+}
+const dsGoiYXegHienThi = () => {
+  const tim = document.getElementById('xeg-tim').value.trim().toLowerCase();
+  return dsGoiYXeg.filter(d => !tim || d.sttKey.toLowerCase().includes(tim));
+};
+function veGoiYXeg() {
+  const el = document.getElementById('xeg-goi-y');
+  const ds = dsGoiYXegHienThi();
+  if (!dsGoiYXeg.length) { el.innerHTML = '<p style="color:var(--color-text-muted)">Không có đơn nào đang chuyển mua thủ công. Dùng "Nhập mã đơn" để xuất đơn khác.</p>'; return; }
+  document.getElementById('xeg-chon-tat-ca').checked = ds.length > 0 && ds.every(d => xegChon.has(d.sttKey));
+  el.innerHTML = `<table class="bang-xem-truoc"><thead><tr><th></th><th>Mã đơn</th><th>Quốc gia</th><th>Người nhận</th><th>Địa chỉ</th><th>Ngày lên đơn</th><th>Lỗi mua tracking gần nhất</th><th>Xuất Excel?</th></tr></thead><tbody>
+    ${ds.map(d => `<tr>
+      <td><input type="checkbox" ${xegChon.has(d.sttKey) ? 'checked' : ''} onchange="chonXeg('${escapeJsChuoi(d.sttKey)}', this.checked)" aria-label="Chọn ${escapeHtml(d.sttKey)}"></td>
+      <td><a href="/order.html?stt=${encodeURIComponent(d.sttKey)}" target="_blank" rel="noopener">${escapeHtml(d.sttKey)}</a></td>
+      <td>${escapeHtml(d.quocGia || '—')}</td><td>${escapeHtml(d.ten || '—')}</td>
+      <td style="min-width:200px;word-break:break-word">${escapeHtml(d.diaChi || '—')}</td><td>${escapeHtml(d.ngayLenDon || '')}</td>
+      <td style="min-width:220px;word-break:break-word;color:var(--color-danger-text)">${escapeHtml(d.lyDoLoi || '(không rõ)')}<br><small>thử ${d.soLanThu} lần${d.thoiGianThu ? `, gần nhất ${dinhDangNgayGioNganAnToan(d.thoiGianThu)}` : ''}</small></td>
+      <td style="min-width:200px">${d.xuatDuoc ? `<strong style="color:var(--color-success-text)">Được</strong>${d.canhBao.length ? `<br><small style="color:var(--color-warning-text,#92400e)">⚠ ${d.canhBao.map(escapeHtml).join('<br>⚠ ')}</small>` : ''}`
+        : `<strong style="color:var(--color-danger-text)">Không</strong><br><small>${d.lyDoKhongXuat.map(escapeHtml).join('<br>')}</small>`}</td>
+    </tr>`).join('')}</tbody></table>`;
+}
+function chonXeg(ma, co) { if (co) xegChon.add(ma); else xegChon.delete(ma); veGoiYXeg(); }
+function chonTatCaXeg(co) { dsGoiYXegHienThi().forEach(d => (co ? xegChon.add(d.sttKey) : xegChon.delete(d.sttKey))); veGoiYXeg(); }
+const cacMaXeg = () => (document.querySelector('input[name="xeg-cach"]:checked').value === 'ds'
+  ? [...xegChon] : document.getElementById('xeg-ma').value.toUpperCase().split(/[\s,;]+/).map(x => x.trim()).filter(Boolean));
+async function kiemTraXeg(nut) {
+  const tb = document.getElementById('xeg-thong-bao');
+  const el = document.getElementById('xeg-ket-qua');
+  const ma = cacMaXeg();
+  if (!ma.length) { tb.style.color = 'var(--color-danger-text)'; tb.textContent = 'Chưa chọn / nhập mã đơn nào.'; return; }
+  nut.disabled = true; tb.textContent = 'Đang kiểm tra...'; tb.style.color = '';
+  try { ketQuaXeg = await apiFetch('/tracking/xuat-excel-gke/kiem-tra', { method: 'POST', body: JSON.stringify({ sttKeys: ma }) }); }
+  catch (e) { tb.style.color = 'var(--color-danger-text)'; tb.textContent = 'Lỗi: ' + e.message; nut.disabled = false; return; }
+  nut.disabled = false; tb.textContent = '';
+  const k = ketQuaXeg;
+  const theoTk = {};
+  k.hopLe.forEach(d => { (theoTk[d.taiKhoan.id] ||= { ten: d.taiKhoan.ten, ds: [] }).ds.push(d); });
+  const giaTri = (d, c) => escapeHtml(String(d.duLieu[c] ?? ''));
+  el.innerHTML = `<div style="border:1px solid var(--color-border);border-radius:8px;padding:10px;margin-bottom:10px">
+      <strong>Tổng mã yêu cầu: ${k.tong}</strong> · <span style="color:var(--color-success-text)">Đủ điều kiện: ${k.hopLe.length}</span>
+      · <span style="color:var(--color-danger-text)">Không đủ điều kiện: ${k.biLoai.length}</span> · Không tìm thấy: ${k.khongTimThay.length}</div>
+    ${Object.entries(theoTk).map(([id, tk]) => `<div style="margin-bottom:14px">
+      <p style="margin:0 0 6px"><strong>Tài khoản GKE: ${escapeHtml(tk.ten)}</strong> — ${tk.ds.length} đơn
+        <button type="button" class="btn-hanh-dong" style="margin-left:8px" onclick="taiExcelXeg(this, '${escapeJsChuoi(id)}')">Tải Excel (${tk.ds.length} đơn)</button></p>
+      <div style="overflow-x:auto"><table class="bang-xem-truoc"><thead><tr><th>Mã đơn</th><th>Người nhận</th><th>SĐT</th><th>Quốc gia</th><th>ZIP</th><th>Bang</th><th>Thành phố</th><th>Địa chỉ 1 (street)</th><th>Địa chỉ 2 (address)</th><th>Cân nặng</th><th>SL</th><th>Cảnh báo</th></tr></thead><tbody>
+      ${tk.ds.map(d => `<tr><td>${escapeHtml(d.sttKey)}</td><td>${giaTri(d, 'consignee_info.full_name')}</td><td>${giaTri(d, 'consignee_info.phone')}</td><td>${giaTri(d, 'consignee_info.country')}</td>
+        <td>${giaTri(d, 'consignee_info.postcode')}</td><td>${giaTri(d, 'consignee_info.province')}</td><td>${giaTri(d, 'consignee_info.city')}</td>
+        <td style="min-width:160px">${giaTri(d, 'consignee_info.street')}</td><td>${giaTri(d, 'consignee_info.address')}</td><td>${giaTri(d, 'parcel_list.weight')}</td><td>${giaTri(d, 'qty')}</td>
+        <td style="min-width:220px;color:var(--color-warning-text,#92400e)">${d.canhBao.map(escapeHtml).join('<br>')}</td></tr>`).join('')}</tbody></table></div></div>`).join('')}
+    ${k.biLoai.length ? `<details open><summary><strong style="color:var(--color-danger-text)">${k.biLoai.length} đơn không đủ điều kiện (không đưa vào file)</strong></summary>
+      <ul>${k.biLoai.map(d => `<li><strong>${escapeHtml(d.sttKey)}</strong>: ${d.lyDo.map(escapeHtml).join(' ')}</li>`).join('')}</ul></details>` : ''}
+    ${k.khongTimThay.length ? `<p><strong>Không tìm thấy</strong> (không có hoặc ngoài Xưởng bạn phụ trách): ${k.khongTimThay.map(escapeHtml).join(', ')}</p>` : ''}`;
+}
+async function taiExcelXeg(nut, taiKhoanId) {
+  const tb = document.getElementById('xeg-thong-bao');
+  const ma = ketQuaXeg.hopLe.filter(d => d.taiKhoan.id === taiKhoanId).map(d => d.sttKey);
+  nut.disabled = true;
+  try {
+    const res = await fetch('/api/tracking/xuat-excel-gke/tai', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sttKeys: ma, taiKhoanId }) });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Không tạo được file');
+    const ten = (/filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') || '') || [])[1] || 'GKE_Manual_Tracking.xlsx';
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement('a'); a.href = url; a.download = ten; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    tb.style.color = 'var(--color-success-text)'; tb.textContent = `Đã tạo ${ten}. Nhớ: chưa mua tracking — tải file này lên website GKE.`;
+  } catch (e) { tb.style.color = 'var(--color-danger-text)'; tb.textContent = 'Lỗi: ' + e.message; }
+  nut.disabled = false;
+}
+
 // Thu gọn (02/10/2026, theo yêu cầu người dùng): LUÔN thu gọn mỗi lần mở trang, không nhớ, không tự mở khi có đơn mới;
 // bấm Hiện/Thu gọn chỉ giữ trong lượt xem hiện tại (tải lại danh sách sau khi mua không đổi lựa chọn).
 let _dsCanhBaoThuCong = [];

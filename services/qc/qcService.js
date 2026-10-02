@@ -690,9 +690,11 @@ function layPromptDangDung(loai) {
 }
 function taoPrompt(loai, mau, { duLieu, dsAnh = [], kn = [] }) {
   const giaTri = { DU_LIEU_DON: JSON.stringify(duLieu, null, 2), DANH_SACH_ANH: JSON.stringify(dsAnh, null, 2), KINH_NGHIEM: khoiKinhNghiem(kn).slice(1).join('\n') };
-  return (mau ?? layPromptDangDung(loai).noiDung)
-    .replace(/\{\{([A-Z_]+)\}\}/g, (m, k) => (Object.hasOwn(giaTri, k) ? giaTri[k] : m)) // hàm thay thế: không diễn giải $& trong dữ liệu
-    .replace(/\n{3,}/g, '\n\n'); // {{KINH_NGHIEM}} trống không để lại dòng trắng thừa
+  let mauDung = mau ?? layPromptDangDung(loai).noiDung;
+  // Không có kinh nghiệm: bỏ chỗ giữ chỗ + gộp 2 khoảng xuống dòng 2 bên thành 1 (giữ khoảng DÀI hơn) — CHỈ quanh {{KINH_NGHIEM}},
+  // không đụng dòng trắng ở chỗ khác của prompt / nội dung dữ liệu.
+  if (!giaTri.KINH_NGHIEM) mauDung = mauDung.replace(/(\n*)\{\{KINH_NGHIEM\}\}(\n*)/, (m, truoc, sau) => (truoc.length >= sau.length ? truoc : sau));
+  return mauDung.replace(/\{\{([A-Z_]+)\}\}/g, (m, k) => (Object.hasOwn(giaTri, k) ? giaTri[k] : m)); // hàm thay thế: không diễn giải $& trong dữ liệu
 }
 
 // Chỉ thêm trường khi có kinh nghiệm — lượt QC không có kinh nghiệm giữ nguyên schema cũ.

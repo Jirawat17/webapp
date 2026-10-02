@@ -162,7 +162,12 @@ router.get('/don-vua-cap-nhat', (req, res) => {
   const tu = thoiGianVNISOString(new Date(Date.now() - 3600000));
   res.json({ bayGio: new Date().toISOString(), ds: require('../services/trangThaiDbService').layDonDoiTrangThaiTu(tu)
     .filter(r => !r.DA_XOA)
-    .map(r => ({ sttKey: r.STT_Key, trangThai: r.TRANG_THAI_XUONG, phoi: r.TRANG_THAI_PHOI, veFile: r.TRANG_THAI_VE_FILE, thoiGian: r.THOI_GIAN_DOI_TRANG_THAI, xuong: r.XUONG })) });
+    .map(r => {
+      let truoc = null; // null = lần đổi trước khi có cột này (không rõ)
+      try { truoc = r.TRANG_THAI_TRUOC_DO ? JSON.parse(r.TRANG_THAI_TRUOC_DO) : null; } catch (e) { /* bỏ qua */ }
+      return { sttKey: r.STT_Key, trangThai: r.TRANG_THAI_XUONG, phoi: r.TRANG_THAI_PHOI, veFile: r.TRANG_THAI_VE_FILE, thoiGian: r.THOI_GIAN_DOI_TRANG_THAI,
+        xuong: r.XUONG, nguoi: r.NGUOI_DOI_TRANG_THAI || '', truoc };
+    }) });
 });
 
 // Gợi ý ngưỡng (02/10/2026) — CHỈ tính và hiển thị, không lưu gì. ?loai=QC1 [&pass=&fail=&ccl= : bộ ngưỡng muốn thử]

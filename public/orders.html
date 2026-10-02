@@ -408,9 +408,10 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   // Tìm nhanh mã đơn (02/10/2026)
   const oTimNhanh = document.getElementById('tim-nhanh-ma-don');
   oTimNhanh.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); timNhanhMaDon(); } });
-  oTimNhanh.addEventListener('input', () => { if (!oTimNhanh.value.trim()) timNhanhMaDon(); });
+  // Xoá trống ô: CHỈ reset khi đang có kết quả tìm nhanh (gõ rồi xoá mà chưa bấm Tìm/Enter thì không đụng bộ lọc).
+  oTimNhanh.addEventListener('input', () => { if (!oTimNhanh.value.trim() && maDonDangTim) timNhanhMaDon(); });
   // Đổi bất kỳ bộ lọc nào trong panel Lọc -> xoá ô tìm nhanh TRƯỚC (pha capture chạy trước onchange/oninput của ô lọc).
-  const xoaTimNhanhKhiLoc = e => { if (CAC_O_LOC.includes(e.target.id)) oTimNhanh.value = ''; };
+  const xoaTimNhanhKhiLoc = e => { if (CAC_O_LOC.includes(e.target.id)) { oTimNhanh.value = ''; maDonDangTim = ''; } };
   document.getElementById('panel-loc').addEventListener('change', xoaTimNhanhKhiLoc, true);
   document.getElementById('panel-loc').addEventListener('input', xoaTimNhanhKhiLoc, true);
 
@@ -700,7 +701,10 @@ function veCanhBaoThuCong() {
 const CAC_O_LOC = ['loc-tong-quat', 'loc-trang-thai', 'loc-phoi', 'loc-ve-file', 'loc-canh-bao', 'loc-xuong', 'loc-uu-tien', 'loc-don-nhieu-ao', 'loc-da-mua-tracking', 'loc-nhom-hang', 'loc-don-hang-loat', 'loc-loai', 'loc-kich-thuoc', 'loc-hang-van-chuyen', 'loc-mau-sac', 'loc-quoc-gia-tracking', 'loc-tinh-trang', 'loc-kh', 'loc-ma-tracking', 'loc-tu-ngay', 'loc-den-ngay'];
 
 // Tìm nhanh theo mã đơn: mọi bộ lọc khác về "Tất cả" (sắp xếp giữ nguyên) rồi tải lại; ô trống = danh sách đầy đủ.
+// maDonDangTim = mã ĐÃ tìm (bấm Tìm/Enter) — taiDon() lọc theo biến này, không theo chữ đang gõ dở trong ô.
+let maDonDangTim = '';
 function timNhanhMaDon() {
+  maDonDangTim = document.getElementById('tim-nhanh-ma-don').value.trim();
   CAC_O_LOC.forEach(id => { document.getElementById(id).value = ''; });
   boChonTatCaDon();
   taiDon();
@@ -708,6 +712,7 @@ function timNhanhMaDon() {
 
 function xoaTatCaLoc() {
   document.getElementById('tim-nhanh-ma-don').value = '';
+  maDonDangTim = '';
   CAC_O_LOC.forEach(id => { document.getElementById(id).value = ''; });
   boChonTatCaDon();
   taiDon();
@@ -806,8 +811,7 @@ async function taiDon() {
   if (quocGiaTracking) qs.set('quocGiaTracking', quocGiaTracking);
   if (tinhTrang) qs.set('tinhTrang', tinhTrang);
   if (kh) qs.set('kh', kh);
-  const maDonNhanh = document.getElementById('tim-nhanh-ma-don').value.trim();
-  if (maDonNhanh) qs.set('maDon', maDonNhanh);
+  if (maDonDangTim) qs.set('maDon', maDonDangTim);
   if (maTracking) qs.set('maTracking', maTracking);
   if (tuNgay) qs.set('tuNgay', tuNgay);
   if (denNgay) qs.set('denNgay', denNgay);

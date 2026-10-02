@@ -190,6 +190,8 @@ function moTaLichSu(dong, { anXuong = false, xuongDuocThay = [] } = {}) {
         : `CHƯA ghi được vào Sheet Seller — ${sh.lyDo || 'không rõ lý do'}`;
       return kq(`sửa ghi chú xưởng — ${ketQuaSheet}`, [doi('Ghi chú xưởng', c.tu, c.sang)]);
     }
+    case 'XUAT_EXCEL_GKE':
+      return kq(`xuất Excel mua tracking thủ công GKE (${c.tenFile || '?'}${c.soDon > 1 ? `, cùng ${c.soDon} đơn` : ''}) — CHƯA phải đã mua tracking`);
     case 'XUAT_PDF_THUE_TEAM_KHAC':
       return kq(`xuất PDF THUÊ TEAM KHÁC (${c.tenFile || '?'}${c.soDon > 1 ? `, cùng ${c.soDon} đơn` : ''})${c.soAnhLoi ? ` — THIẾU ${c.soAnhLoi} ẢNH` : ''}`,
         (c.anhLoi || []).map(l => doi('Ảnh thiếu', undefined, l)));

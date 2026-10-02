@@ -41,6 +41,9 @@ const CAC_COT = [
   // nhất 1 trong 3 cột TRANG_THAI_XUONG / TRANG_THAI_PHOI / TRANG_THAI_VE_FILE THẬT SỰ đổi giá trị. Tự ghi trong ghiDe()
   // bên dưới (điểm ghi duy nhất) — không ai ghi tay; đơn đổi trước khi có cột này để trống (không suy từ lịch sử cũ).
   'THOI_GIAN_DOI_TRANG_THAI',
+  // NGUOI_DOI_TRANG_THAI / TRANG_THAI_TRUOC_DO (02/10/2026): người thực hiện lần đổi đó + giá trị TRƯỚC KHI đổi của các cột trạng thái
+  // vừa đổi (JSON {cột: giá trị cũ}). Cùng ghi với THOI_GIAN_DOI_TRANG_THAI trong ghiDe(); đơn đổi trước khi có 2 cột này để trống.
+  'NGUOI_DOI_TRANG_THAI', 'TRANG_THAI_TRUOC_DO',
   'HANG_VAN_CHUYEN', 'TRACKING_ID', 'TRANG_THAI_TRACKING', 'THOI_GIAN_CAP_NHAT_TRACKING',
   // MA_NODE_TRACKING/MA_TRANG_THAI_NODE_TRACKING (bổ sung 21/09/2026, theo yêu cầu người dùng — xem
   // services/trackingAutoService.js#daGiaoThanhCongGke): lưu song song mã "order_node"/"node_status"
@@ -197,13 +200,19 @@ function layPreparedGhiDe(cotDaSort) {
 // Ghi đè MỘT PHẦN (chỉ các cột thực sự có trong `updates`, đúng ngữ nghĩa updateCells cũ) — UPSERT
 // theo stt_key, không quan tâm dòng đã tồn tại trong DB hay chưa (đơn mới tự động INSERT).
 const COT_TRANG_THAI_THEO_DOI = Object.keys(MAC_DINH_THAT_THEO_COT);
-function ghiDe(sttKey, updates) {
+// tuyChon.nguoi: tên người thực hiện (orderService.update truyền user.ten); không truyền thì lấy NguoiCapNhatCuoi trong updates.
+function ghiDe(sttKey, updates, tuyChon = {}) {
   const key = chuanHoaKey(sttKey);
   // Mốc đổi trạng thái: so với giá trị đang lưu (đã áp mặc định thật — '' và 'Chưa in mã' là CÙNG 1 trạng thái).
   if (COT_TRANG_THAI_THEO_DOI.some(c => updates[c] !== undefined)) {
     const cu = layTheoKey(key);
     const moi = apDungMacDinhThat(Object.fromEntries(COT_TRANG_THAI_THEO_DOI.map(c => [c, updates[c] === undefined ? cu[c] : String(updates[c] ?? '')])));
-    if (COT_TRANG_THAI_THEO_DOI.some(c => moi[c] !== cu[c])) updates = { ...updates, THOI_GIAN_DOI_TRANG_THAI: require('./dateUtils').thoiGianVNISOString() };
+    const daDoi = COT_TRANG_THAI_THEO_DOI.filter(c => moi[c] !== cu[c]);
+    if (daDoi.length) {
+      updates = { ...updates, THOI_GIAN_DOI_TRANG_THAI: require('./dateUtils').thoiGianVNISOString(),
+        NGUOI_DOI_TRANG_THAI: tuyChon.nguoi || updates.NguoiCapNhatCuoi || '',
+        TRANG_THAI_TRUOC_DO: JSON.stringify(Object.fromEntries(daDoi.map(c => [c, cu[c]]))) };
+    }
   }
   // .sort() — xem lý do bắt buộc ở comment layPreparedGhiDe() trên.
   const cot = Object.keys(updates).filter(c => CAC_COT.includes(c)).sort();

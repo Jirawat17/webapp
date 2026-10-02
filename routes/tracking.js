@@ -169,6 +169,33 @@ router.get('/canh-bao-thu-cong', coMenuTracking, async (req, res) => {
   res.json(await layDonChuyenThuCong(req.session.user));
 });
 
+// XUẤT EXCEL MUA TRACKING THỦ CÔNG theo mẫu GKE (02/10/2026) — CHỈ ĐỌC, không đổi trạng thái đơn, không gửi gì sang GKE.
+// Logic + quy tắc: services/trackingExcelGkeService.js. Quyền: như menu Tracking; admin chỉ đơn Xưởng mình.
+const trackingExcelGke = require('../services/trackingExcelGkeService');
+const { ghiLog } = require('../services/logService');
+const traLoiLoiExcel = (res, err) => { if (!err.status) throw err; res.status(err.status).json({ error: err.message }); };
+router.get('/xuat-excel-gke/goi-y', coMenuTracking, async (req, res) => {
+  res.json(await trackingExcelGke.danhSachGoiY(req.session.user));
+});
+// body: { sttKeys: [..] | "chuỗi nhiều mã" }
+router.post('/xuat-excel-gke/kiem-tra', coMenuTracking, async (req, res) => {
+  try { res.json(await trackingExcelGke.kiemTra(req.body && req.body.sttKeys, req.session.user)); } catch (err) { traLoiLoiExcel(res, err); }
+});
+// body: { sttKeys, taiKhoanId } -> file .xlsx (server kiểm tra lại toàn bộ trước khi tạo file)
+router.post('/xuat-excel-gke/tai', coMenuTracking, async (req, res) => {
+  try {
+    const { buffer, tenFile, soDon, cacMa } = await trackingExcelGke.taoFile(req.body && req.body.sttKeys, req.body && req.body.taiKhoanId, req.session.user);
+    // Lịch sử từng đơn (chỉ ghi nhận đã xuất file — KHÔNG phải đã mua tracking).
+    for (const sttKey of cacMa) {
+      ghiLog({ nguoiDung: req.session.user.ten, vaiTro: req.session.user.vaiTro, hanhDong: 'XUAT_EXCEL_GKE', sttKey, chiTiet: { tenFile, soDon } })
+        .catch(e => console.error('[Tracking] Lỗi ghi log xuất Excel GKE:', e.message));
+    }
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${tenFile}"`);
+    res.send(buffer);
+  } catch (err) { traLoiLoiExcel(res, err); }
+});
+
 // "Cho tự động thử lại" — đặt lại số lần thử cho đơn đã sửa xong thông tin. Cùng khuôn sttKeys/thanhCong/loi.
 router.post('/cho-tu-dong-lai', coMenuTracking, async (req, res) => {
   const { sttKeys } = req.body;

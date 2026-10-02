@@ -483,7 +483,7 @@ async function capNhatThat(sttKey, updates, user, tuyChon) {
   // niệm "đọc lại số dòng mới nhất trước khi ghi cả lô" nữa (bỏ hẳn layLaiSoDongMoiNhat/soDongMoiNhat,
   // xem docs/superpowers/specs/2026-09-18-chuyen-cot-app-ghi-sang-sqlite-design.md) — SQLite ghi đúng
   // đơn dù Don_Hang_ALL xáo trộn dòng bất cứ lúc nào trước/trong/sau khi hàm này chạy.
-  trangThaiDbService.ghiDe(sttKey, updatesDaTinh);
+  trangThaiDbService.ghiDe(sttKey, updatesDaTinh, { nguoi: user && user.ten });
 
   // Ghi THẲNG SQLite (không qua update()) cho các đơn cùng nhóm — gọi update() lồng ở đây có thể TREO nếu
   // 2 đơn cùng nhóm được huỷ song song (mỗi lượt đợi lượt kia trong hàng đợi theo đơn). Huỷ không có tác
