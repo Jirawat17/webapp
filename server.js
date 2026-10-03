@@ -50,7 +50,6 @@ app.use('/api/kich-ban', require('./routes/kichBan'));
 app.use('/api/logs', require('./routes/logs'));
 app.use('/api/qc', require('./routes/qc')); // AI QC (30/09/2026) — CHỈ superadmin
 app.use('/api/notes', require('./routes/notes')); // Notes (02/10/2026) — CHỈ superadmin
-app.use('/api/admin-ai', require('./routes/adminAi')); // AdminAI (03/10/2026) — CHỈ superadmin
 
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -78,8 +77,6 @@ require('./services/trackingJob').batDauLichTracking();
 require('./services/qc/qcAutoService').batDauLichAutoQc();
 // Cảnh báo Telegram QC gộp CẦN CHECK LẠI + tổng kết ngày (02/10/2026) — mỗi phút, cấu hình ở menu QC (services/qc/qcTelegramService.js).
 require('./services/qc/qcTelegramService').batDauLichTelegramQc();
-// AdminAI (03/10/2026) — quét mỗi 5 phút (mọi luật mặc định TẮT), báo cáo đầu ngày + phân tích tuần kiểm tra mỗi phút.
-require('./services/adminAi/adminAiService').batDauLichAdminAi();
 
 // Bật lịch backup SQLite (bổ sung 22/09/2026, theo yêu cầu người dùng — data/ trước đây không có
 // cơ chế backup nào, xem services/backupDbService.js).

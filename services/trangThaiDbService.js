@@ -209,9 +209,6 @@ db.exec(`CREATE TABLE IF NOT EXISTS lich_su_doi_trang_thai (
 db.exec(`CREATE INDEX IF NOT EXISTS idx_lsdtt_thoi_gian ON lich_su_doi_trang_thai(ThoiGian)`);
 const cauGhiLichSuDoi = db.prepare(`INSERT INTO lich_su_doi_trang_thai (ThoiGian, STT_Key, Cot, Tu, Sang, Nguoi) VALUES (?, ?, ?, ?, ?, ?)`);
 // -> [{ ThoiGian, STT_Key, Cot, Tu, Sang, Nguoi }] từ mốc `tu` (ISO giờ VN), cũ trước.
-// Mốc dòng lịch sử ĐẦU TIÊN ('' = chưa có) — từ mốc này nhật ký hoạt động không còn là nguồn lịch sử trạng thái (luat.js).
-const mocBatDauLichSuDoi = () => (db.prepare(`SELECT MIN(ThoiGian) AS t FROM lich_su_doi_trang_thai`).get() || {}).t || '';
-const xoaLichSuDoiTrangThaiTheoDon = sttKey => db.prepare(`DELETE FROM lich_su_doi_trang_thai WHERE STT_Key = ?`).run(chuanHoaKey(sttKey));
 const layLichSuDoiTrangThaiTu = tu => db.prepare(`SELECT ThoiGian, STT_Key, Cot, Tu, Sang, Nguoi FROM lich_su_doi_trang_thai WHERE ThoiGian >= ? ORDER BY id`).all(tu);
 // tuyChon.nguoi: tên người thực hiện (orderService.update truyền user.ten); không truyền thì lấy NguoiCapNhatCuoi trong updates.
 function ghiDe(sttKey, updates, tuyChon = {}) {
@@ -258,4 +255,4 @@ function layDonDoiTrangThaiTu(tu) {
     .all(tu).map(({ stt_key, ...r }) => ({ STT_Key: stt_key, ...apDungMacDinhThat(r) }));
 }
 
-module.exports = { CAC_COT, RONG_MAC_DINH, layTheoKey, layTatCa, ghiDe, ghiDeNhieu, demTheoXuong, doiTenXuongHangLoat, layDonDoiTrangThaiTu, layLichSuDoiTrangThaiTu, mocBatDauLichSuDoi, xoaLichSuDoiTrangThaiTheoDon };
+module.exports = { CAC_COT, RONG_MAC_DINH, layTheoKey, layTatCa, ghiDe, ghiDeNhieu, demTheoXuong, doiTenXuongHangLoat, layDonDoiTrangThaiTu, layLichSuDoiTrangThaiTu };

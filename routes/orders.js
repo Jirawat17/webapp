@@ -271,14 +271,6 @@ router.get('/thong-ke-nhanh', async (req, res) => {
   list = locDonDangChayMayTheoNguoiVanHanh(list, req.session.user);
 
   const demCanhBao = { VANG: 0, CAM: 0, DO: 0 };
-  // ?chiTiet=VANG|CAM|DO (03/10/2026, theo yêu cầu người dùng — bấm số ở BĐK mở popup danh sách): trả đúng các đơn đã
-  // được đếm ở trên (cùng bộ lọc quyền/Xưởng), số ngày cao nhất trước.
-  if (Object.hasOwn(demCanhBao, req.query.chiTiet)) {
-    return res.json({ ds: list.filter(r => r.CanhBao === req.query.chiTiet).map(r => ({
-      sttKey: r.STT_Key, loai: r.LOAI || '', trangThai: r.TRANG_THAI_XUONG || '', ngayLenDon: r.NGAY_LEN_DON || '',
-      soNgay: alertService.soNgayTu(r.NGAY_LEN_DON), ...(laSuperAdmin(req.session.user.vaiTro) ? { xuong: r.XUONG || '' } : {}), // Xưởng: chỉ superadmin thấy
-    })).sort((a, b) => (b.soNgay ?? -1) - (a.soNgay ?? -1)) });
-  }
   const dangChayMay = {};
   const dangVeFile = {};
   for (const r of list) {

@@ -253,9 +253,6 @@ router.get('/chi-phi', (req, res) => {
   // Model cần nhập giá: đang cấu hình ở các QC + đã xuất hiện trong log + đã có giá.
   const model = new Set([...Object.keys(gia), ...nhatKyDbService.thongKeTokenQc('', 'THANG').map(d => d.Model)]);
   for (const loai of Object.keys(qcService.LOAI_QC)) model.add(qcService.layCauHinh(loai).model);
-  // AdminAI (03/10/2026) dùng chung bảng giá: thêm model đang cấu hình + đã dùng của AdminAI.
-  model.add(qcService.layCauHinh('ADMIN_AI').model);
-  for (const d of nhatKyDbService.thongKeTokenAdminAi('')) model.add(d.Model);
   res.json({ ds, gia: [...model].filter(Boolean).sort().map(m => ({ model: m, giaVao: gia[m] ? gia[m].GiaVao : '', giaRa: gia[m] ? gia[m].GiaRa : '' })) });
 });
 // body: { ds: [{ model, giaVao, giaRa }] } — USD / 1 triệu token; cả 2 trống = xoá giá. 1 dòng sai thì không lưu dòng nào.
