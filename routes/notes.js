@@ -100,18 +100,14 @@ router.delete('/:id/anh', async (req, res) => {
 router.get('/anh/*', async (req, res) => {
   const key = decodeURIComponent(req.path.replace(/^\/anh\//, ''));
   if (!key.startsWith(TIEN_TO_ANH) || key.includes('..')) return loi(res, 'Đường dẫn ảnh không hợp lệ.');
-  let kq;
   try {
-    kq = await storageService.getObjectStream(key);
+    // guiObjectQuaHttp (03/10/2026): có timeout + đóng đúng kết nối khi MinIO đứt/treo giữa chừng (.pipe() cũ để người xem chờ mãi).
+    await storageService.guiObjectQuaHttp(res, key, { headers: { 'Cache-Control': 'private, max-age=3600' } });
   } catch (err) {
     if (err.name === 'NoSuchKey' || err.$metadata?.httpStatusCode === 404) return loi(res, 'Không tìm thấy ảnh.', 404);
     console.error('[Notes] Đọc ảnh lỗi:', err.message);
     return loi(res, 'Đọc ảnh từ kho lưu trữ thất bại.', 502);
   }
-  res.setHeader('Content-Type', kq.ContentType || 'application/octet-stream');
-  res.setHeader('Cache-Control', 'private, max-age=3600');
-  if (kq.ContentLength) res.setHeader('Content-Length', kq.ContentLength);
-  kq.Body.pipe(res);
 });
 
 // Import .txt / .md: field "files" (tối đa 20 file, mỗi file <= 1MB, UTF-8). Mỗi file -> 1 note (tiêu đề = tên file bỏ đuôi),

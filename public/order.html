@@ -14,7 +14,7 @@
 </div>
 
 <script src="/js/icons.js?v=104"></script>
-<script src="/js/api.js?v=110"></script>
+<script src="/js/api.js?v=112"></script>
 <script>
 const sttKey = new URLSearchParams(location.search).get('stt');
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
@@ -192,6 +192,7 @@ async function taiChiTiet() {
           ${don.Anh_Da_Dan_Tem_URL ? `<a href="${escapeHtml(don.Anh_Da_Dan_Tem_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh ĐÃ DÁN TEM</a>` : ''}
           ${don.Anh_Dong_Goi_URL ? `<a href="${escapeHtml(don.Anh_Dong_Goi_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh đóng gói</a>` : ''}
         </div>` : ''}
+        <div id="khu-vuc-emb" style="margin:8px 0"></div>
         <table class="info-table">
           ${renderBangThongTin(don, viTri)}
         </table>
@@ -216,6 +217,53 @@ async function taiChiTiet() {
     </div>
   `;
   renderKhuVucThaoTac(don);
+  taiKhoiEmb();
+}
+
+// Khối "File EMB" (03/10/2026, thư viện "Tìm ảnh" — docs/superpowers/specs/2026-10-03-thu-vien-tim-anh-design.md mục 13).
+// Ai xem được đơn đều thấy trạng thái; tải về / tải lên chỉ ve_file, admin, superadmin (server kiểm lại). Không gắn với đổi trạng thái.
+async function taiKhoiEmb() {
+  const el = document.getElementById('khu-vuc-emb');
+  if (!el) return;
+  let d;
+  try { d = await apiFetch('/thu-vien/emb/' + encodeURIComponent(sttKey)); } catch (e) { el.innerHTML = ''; return; }
+  const ngay = s => String(s || '').slice(0, 16).replace('T', ' ');
+  const c = d.chinh;
+  el.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:0.9rem">
+    <span>${icon('file', {size:14})} <strong>File EMB:</strong>
+      ${c ? `<span style="color:var(--color-success-text);font-weight:700">ĐÃ CÓ</span> ${escapeHtml(c.ten)} · phiên bản ${c.so_thu_tu} · ${escapeHtml(ngay(c.ngay_luu))}${c.nguoi_tai_len ? ' · ' + escapeHtml(c.nguoi_tai_len) : ''}`
+        : '<span style="color:var(--color-danger-text);font-weight:700">Chưa tìm thấy file EMB liên kết</span>'}</span>
+    ${c && d.duocTai ? `<a href="/api/thu-vien/file/${c.id}?tai=1">${icon('download', {size:14})} Tải EMB</a>` : ''}
+    ${d.duocTaiLen ? `<button type="button" class="btn-hanh-dong phu" onclick="document.getElementById('chon-emb').click()">${icon('download', {size:14})} Tải lên EMB</button>
+      <input type="file" id="chon-emb" accept=".emb" hidden onchange="taiLenEmb(this)">
+      <a href="/tim-anh.html?stt=${encodeURIComponent(sttKey)}">Tìm thiết kế tương tự</a>` : ''}
+    ${d.cu.length && d.duocTai ? `<span style="color:var(--color-text-muted)">Bản cũ: ${d.cu.map(x => `<a href="/api/thu-vien/file/${x.id}?tai=1">v${x.so_thu_tu}</a> (${escapeHtml(ngay(x.ngay_luu))})`).join(', ')}</span>` : ''}
+  </div>`;
+}
+
+async function taiLenEmb(input) {
+  const f = input.files[0];
+  input.value = '';
+  if (!f) return;
+  if (!/\.emb$/i.test(f.name)) { alert('Chỉ nhận file .emb'); return; }
+  if (f.size > 30 * 1048576) { alert('File quá lớn (tối đa 30MB).'); return; }
+  if (!confirm(`Tải "${f.name}" lên làm file EMB của đơn ${sttKey}? Bản EMB cũ (nếu có) vẫn được giữ lại.`)) return;
+  const gui = xacNhan => {
+    const fd = new FormData();
+    fd.append('file', f, f.name);
+    if (xacNhan) fd.append('xacNhanNgoaiSheet', '1');
+    return apiFetch('/thu-vien/emb/' + encodeURIComponent(sttKey), { method: 'POST', body: fd, headers: {} });
+  };
+  try {
+    let kq = await gui(false);
+    // mã chưa có trong Sheet lẫn thư viện (hoặc không đọc được Sheet) -> server hỏi lại trước khi lưu
+    if (kq.ketQua === 'CAN_XAC_NHAN') {
+      if (!confirm(`${kq.lyDo} Vẫn lưu file EMB vào đơn ${sttKey}?`)) return;
+      kq = await gui(true);
+    }
+    alert(kq.ketQua === 'DA_LUU' ? 'Đã lưu file EMB.' : (kq.lyDo || 'Không lưu.'));
+  } catch (e) { alert('Tải lên EMB lỗi: ' + e.message); }
+  taiKhoiEmb();
 }
 
 // Tô màu <select> Phôi/Vẽ file theo giá trị đang chọn — xanh lá cho "Đã..." (positive), cam cho

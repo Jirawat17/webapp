@@ -8,6 +8,7 @@ const {
 } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const crypto = require('crypto');
+const { pipeline } = require('stream/promises');
 
 // Storage backend S3-compatible (MinIO trên Zima NAS). Dùng AWS SDK thay vì MinIO SDK
 // để sau này có thể chuyển sang AWS S3 / R2 / Wasabi... mà không phải sửa business logic.
@@ -72,15 +73,46 @@ async function uploadImageBuffer(buffer, objectKey, contentType = 'image/jpeg') 
 }
 
 /**
- * Lấy stream ảnh từ MinIO theo object key. Ném lỗi NoSuchKey nếu không tồn tại.
+ * Phát 1 object MinIO thẳng ra HTTP response — dùng chung cho mọi route xem file (routes/photos.js, routes/notes.js,
+ * routes/thuVien.js). Thay cho getObjectStream() + .pipe(res) trước đây (03/10/2026, phát hiện khi rà soát code):
+ * - .pipe() KHÔNG chuyển lỗi/kết thúc: NAS/MinIO ngắt kết nối giữa chừng -> response của người xem KHÔNG BAO GIỜ đóng
+ *   (đã đo 03/10/2026: sau 4 giây người xem vẫn chờ, socket treo mãi). pipeline() huỷ luôn response khi nguồn lỗi.
+ * - getObjectStream() không có timeout (S3Client mặc định chờ vô hạn, xem ghi chú THOI_GIAN_CHO_TOI_DA_MS bên trên):
+ *   giờ chờ MinIO trả header tối đa timeoutMs, và trong lúc truyền, quá timeoutMs không nhận thêm byte nào thì huỷ.
+ * Lỗi TRƯỚC khi gửi header -> throw (nơi gọi trả 404/502 như cũ, NoSuchKey vẫn giữ nguyên err.name). Lỗi SAU khi đã gửi
+ * header (đứt giữa chừng, người xem tự đóng trang) -> chỉ log + huỷ response, không throw.
  */
-async function getObjectStream(objectKey) {
+async function guiObjectQuaHttp(res, objectKey, { headers = {}, timeoutMs = THOI_GIAN_CHO_TOI_DA_MS } = {}) {
   requireConfig();
-  return s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: objectKey }));
+  const controller = new AbortController();
+  let body = null;
+  const timer = setTimeout(() => {
+    controller.abort();
+    if (body) body.destroy(new Error(`MinIO không gửi thêm dữ liệu trong ${timeoutMs}ms`));
+  }, timeoutMs);
+  let result;
+  try {
+    result = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: objectKey }), { abortSignal: controller.signal });
+  } catch (err) {
+    clearTimeout(timer);
+    throw err;
+  }
+  body = result.Body;
+  res.setHeader('Content-Type', result.ContentType || 'application/octet-stream');
+  if (result.ContentLength) res.setHeader('Content-Length', result.ContentLength);
+  for (const [ten, giaTri] of Object.entries(headers)) res.setHeader(ten, giaTri);
+  body.on('data', () => timer.refresh());
+  try {
+    await pipeline(body, res);
+  } catch (err) {
+    if (err.code !== 'ERR_STREAM_PREMATURE_CLOSE') console.error('[MinIO] Truyền file bị gián đoạn:', objectKey, '-', err.message);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**
- * Tải TOÀN BỘ nội dung 1 object MinIO thành Buffer, có giới hạn thời gian chờ — khác getObjectStream
+ * Tải TOÀN BỘ nội dung 1 object MinIO thành Buffer, có giới hạn thời gian chờ — khác guiObjectQuaHttp
  * (trả thẳng stream để pipe() thẳng cho response HTTP ở routes/photos.js, KHÔNG đổi hàm đó để không
  * ảnh hưởng luồng xem ảnh đang chạy tốt). Dùng cho chỗ cần Buffer đầy đủ trước khi xử lý tiếp (vd tính
  * hash ảnh trong vòng lặp quét hàng loạt hàng trăm đơn) — 1 lần treo ở đây là kẹt cả lô. Dùng
@@ -169,7 +201,7 @@ function proxyUrlToObjectKey(url) {
 module.exports = {
   taoObjectKeyDonHang,
   uploadImageBuffer,
-  getObjectStream,
+  guiObjectQuaHttp,
   getObjectBuffer,
   tonTaiObject,
   taoPresignedUrl,

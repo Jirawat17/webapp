@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tìm ảnh — Xưởng Thêu</title>
+<link rel="stylesheet" href="/css/style.css?v=107">
+<script src="/js/theme.js?v=104"></script>
+<style>
+/* Tìm ảnh (03/10/2026) — thư viện thiết kế thêu. GĐ1: hàng chờ, nhập Excel, cần xử lý. GĐ2: tìm kiếm, tải lên thư viện. */
+.ta-khoi { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-4); margin-bottom: var(--space-4); }
+.ta-khoi h3 { margin-top: 0; }
+.ta-so { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); margin: var(--space-2) 0; }
+.ta-so div { min-width: 110px; }
+.ta-so b { display: block; font-size: 1.25rem; }
+.ta-so span { font-size: 0.8rem; color: var(--color-text-muted); }
+.ta-canh-bao { background: var(--color-warning-bg, #fff7e6); color: var(--color-warning-text, #8a5300); border: 1px solid currentColor; border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); margin: var(--space-2) 0; }
+.ta-luoi-anh { display: flex; flex-wrap: wrap; gap: 8px; margin-top: var(--space-2); }
+.ta-luoi-anh figure { margin: 0; width: 104px; font-size: 0.72rem; color: var(--color-text-muted); }
+.ta-luoi-anh img { width: 104px; height: 104px; object-fit: contain; border-radius: var(--radius-sm); border: 1px solid var(--color-border);
+  background: repeating-conic-gradient(#e5e5e5 0% 25%, #fff 0% 50%) 50% / 16px 16px; display: block; }
+.ta-luoi-anh figcaption { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ta-cuon { overflow-x: auto; }
+.ta-cuon td.loi { white-space: normal; min-width: 260px; max-width: 520px; word-break: break-word; }
+.ta-link { max-width: 280px; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: bottom; }
+.ta-muted { color: var(--color-text-muted); font-size: 0.85rem; }
+.ta-hang { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: flex-end; margin-bottom: var(--space-2); }
+.ta-hang .truong { flex: 1 1 220px; min-width: 0; }
+.ta-hang .truong label { display: block; margin-bottom: 4px; }
+.ta-hang .truong input[type=text] { width: 100%; box-sizing: border-box; }
+.ta-tinh-trang { border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: var(--space-3); margin: var(--space-2) 0; }
+.ta-tinh-trang p { margin: 4px 0; }
+.ta-co { color: var(--color-success-text); font-weight: 700; }
+.ta-chua { color: var(--color-danger-text); font-weight: 700; }
+.ta-nhan { display: inline-block; font-size: 0.72rem; padding: 1px 7px; border-radius: 999px; border: 1px solid currentColor; margin-right: 4px; }
+.ta-nhan.trung { color: var(--color-success-text); }
+.ta-nhan.ngoai { color: var(--color-warning-text, #8a5300); }
+.ta-luoi-kq { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: var(--space-3); margin-top: var(--space-2); }
+.ta-the { border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: var(--space-2); font-size: 0.82rem; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.ta-the img { width: 100%; height: 170px; object-fit: contain; border-radius: var(--radius-sm); background: repeating-conic-gradient(#e5e5e5 0% 25%, #fff 0% 50%) 50% / 16px 16px; }
+.ta-the .ten { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ta-the .diem { display: flex; gap: var(--space-3); }
+.ta-the .diem b { font-size: 1.05rem; }
+.ta-the .thao-tac { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.ta-the .thao-tac a, .ta-the .thao-tac button { font-size: 0.78rem; }
+.ta-the .quyet-dinh { border-top: 1px dashed var(--color-border); padding-top: 4px; margin-top: 2px; }
+.ta-the .quyet-dinh button { font-size: 0.75rem; padding: 3px 8px; }
+.ta-trang { display: flex; gap: 6px; align-items: center; margin-top: var(--space-2); flex-wrap: wrap; }
+.ta-bang-tai td.dd { max-width: 340px; overflow: hidden; text-overflow: ellipsis; }
+.ta-bang-tai input[type=text] { width: 110px; }
+.ta-nhan.giong { color: var(--color-success-text); }
+.ta-nhan.xem-tay { color: var(--color-warning-text, #8a5300); }
+.ta-nhan.thap { color: var(--color-text-muted); }
+.ta-cap { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); margin: var(--space-2) 0; }
+.ta-cap figure { margin: 0; text-align: center; }
+.ta-cap img { width: 100%; max-height: 360px; object-fit: contain; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: repeating-conic-gradient(#e5e5e5 0% 25%, #fff 0% 50%) 50% / 16px 16px; }
+.ta-nguong-o input { width: 70px; }
+</style>
+</head>
+<body>
+<div id="nav"></div>
+<div class="page">
+  <h2>Tìm ảnh</h2>
+  <p class="ta-muted" style="margin-top:0">Thư viện thiết kế thêu (PNG/EMB): tìm thiết kế đã từng làm theo mã đơn hoặc theo ảnh, xem đơn đã có PNG/EMB chưa, tải PNG/EMB lên thư viện.</p>
+  <p id="ta-thong-bao" style="display:none"></p>
+
+  <div id="ta-tim" class="ta-khoi" style="display:none">
+    <h3>Tìm thiết kế</h3>
+    <div class="ta-hang">
+      <div class="truong"><label for="ta-ma">Mã đơn (STT_Key)</label><input type="text" id="ta-ma" placeholder="vd 10LH72" autocomplete="off" onkeydown="if (event.key === 'Enter') traTheoMa()"></div>
+      <button type="button" class="btn-hanh-dong" onclick="traTheoMa()">Tra theo mã</button>
+    </div>
+    <div class="ta-hang">
+      <div class="truong"><label for="ta-anh-tim">Hoặc tải 1 ảnh PNG/JPG lên để tìm (ảnh này KHÔNG được lưu vào thư viện)</label><input type="file" id="ta-anh-tim" accept="image/png,image/jpeg"></div>
+      <button type="button" class="btn-hanh-dong" id="ta-nut-tim-anh" onclick="timTheoAnh()">TÌM THIẾT KẾ TƯƠNG TỰ</button>
+    </div>
+    <p class="ta-muted" style="margin:0">Khi tìm theo ảnh mà ô "Mã đơn" có mã, mã đó là <b>đơn mới đang vẽ</b>: bỏ khỏi kết quả và dùng để ghi quyết định. Điểm % chỉ để tham khảo. Khi superadmin đã chọn ngưỡng (đo trên ảnh thật ở mục "Đo ngưỡng"), kết quả được gắn nhóm; trước đó chỉ <b>Trùng file</b> (giống hệt từng byte) là chắc chắn.</p>
+    <div id="ta-ket-qua-tim"></div>
+  </div>
+
+  <div id="ta-tai-len" class="ta-khoi" style="display:none">
+    <h3>Tải lên thư viện (PNG, EMB)</h3>
+    <p class="ta-muted" style="margin-top:0">Chọn <b>cả thư mục</b> (máy tính, Chrome/Edge) hoặc <b>từng file</b>. Hệ thống đọc mã đơn trong tên file (vd <code>10LH72.png</code>, <code>10LH72_2.png</code>, <code>10LH72.emb</code>); tên file không có mã thì xét tên thư mục chứa nó. <b>.png .jpg .jpeg</b> vào thư viện ảnh; <b>.emb</b> là file EMB của đơn (bản mới thành bản chính, bản cũ vẫn giữ). Tối đa 30MB/file. Xem trước bảng khớp rồi mới tải lên.</p>
+    <button type="button" class="btn-hanh-dong" onclick="document.getElementById('ta-chon-thu-muc').click()">Chọn thư mục</button>
+    <button type="button" class="btn-hanh-dong phu" onclick="document.getElementById('ta-chon-file').click()">Chọn file</button>
+    <input type="file" id="ta-chon-thu-muc" webkitdirectory multiple hidden onchange="xemTruoc([...this.files]); this.value = ''">
+    <input type="file" id="ta-chon-file" multiple accept=".png,.jpg,.jpeg,.emb" hidden onchange="xemTruoc([...this.files]); this.value = ''">
+    <div id="ta-xem-truoc"></div>
+  </div>
+
+  <div id="ta-hang-cho" class="ta-khoi" style="display:none">
+    <h3>Hàng chờ tải ảnh</h3>
+    <!-- nút cố định, KHÔNG nằm trong phần vẽ lại mỗi 5 giây (vẽ lại đúng lúc bấm sẽ làm mất cú bấm) -->
+    <p style="margin:0">Trạng thái: <b id="ta-trang-thai">...</b>
+      <button type="button" class="btn-hanh-dong" id="ta-nut-tam-dung" style="margin-left:var(--space-2)" disabled onclick="datTamDung(this.dataset.tamDung === '1')"></button></p>
+    <div class="ta-tinh-trang" style="margin-top:var(--space-2)">
+      <label><input type="checkbox" id="ta-tu-dong-sheet" onchange="datTuDongSheet(this)"> <b>Tự động lấy PNG từ cột DUONG_DAN_URL</b> của đơn (10 phút/lần)</label>
+      <button type="button" class="btn-hanh-dong phu" id="ta-nut-quet-sheet" onclick="quetSheetNgay(this)" style="margin-left:var(--space-2)">Quét ngay</button>
+      <p class="ta-muted" style="margin:4px 0 0">Đơn có link PNG mới hoặc đổi link thì link được đưa vào hàng chờ; file đã lưu không bị xoá. <b>Lần quét đầu đưa link của TOÀN BỘ đơn trong Sheet vào hàng chờ</b> — kiểm tra dung lượng NAS trước khi bật.</p>
+      <p class="ta-muted" id="ta-lan-quet-sheet" style="margin:4px 0 0"></p>
+    </div>
+    <div id="ta-hang-cho-noi-dung">Đang tải...</div>
+  </div>
+
+  <div id="ta-excel" class="ta-khoi" style="display:none">
+    <h3>Nhập từ Excel</h3>
+    <p class="ta-muted" style="margin-top:0">File <b>.xlsx</b> xuất từ Sheet, có 2 cột tiêu đề <code>STT_Key</code> và <code>DUONG_DAN_URL</code>. <b>Tối đa 3MB</b> — xoá các cột khác trước khi xuất (2 cột thì 3MB đủ khoảng 180.000 dòng). Hệ thống tải ảnh về MinIO theo STT_Key, đơn nhiều ảnh đánh số _1, _2… Nhập lại cùng file không tạo bản trùng.</p>
+    <input type="file" id="ta-file-excel" accept=".xlsx">
+    <button type="button" class="btn-hanh-dong" id="ta-nut-nhap" onclick="nhapExcel()">Nhập Excel</button>
+    <div id="ta-ket-qua-nhap" class="ta-muted" style="margin-top:var(--space-2)"></div>
+    <h4>Các lần nhập gần đây</h4>
+    <div id="ta-ds-lo" class="ta-cuon">Đang tải...</div>
+  </div>
+
+  <div id="ta-nguong" class="ta-khoi" style="display:none">
+    <h3>Đo ngưỡng nhóm kết quả (trên ảnh thật)</h3>
+    <p class="ta-muted" style="margin-top:0">Hệ thống lấy ngẫu nhiên từng <b>cặp ảnh trong thư viện</b> ở nhiều mức điểm khác nhau; bạn chỉ cần nhìn và chọn <b>Cùng thiết kế</b> hay <b>Khác thiết kế</b> (điểm % được ẩn để không ảnh hưởng đánh giá). Đủ số cặp thì superadmin xem gợi ý ngưỡng và tự chọn.</p>
+    <p id="ta-thong-ke-cap" class="ta-muted"></p>
+    <button type="button" class="btn-hanh-dong" onclick="layCapMoi()">Đánh giá cặp ảnh</button>
+    <div id="ta-cap"></div>
+    <div id="ta-nguong-sa" style="display:none">
+      <h4>Gợi ý & chọn ngưỡng (superadmin)</h4>
+      <p class="ta-muted" style="margin-top:0">"Giống" = nhóm Ảnh giống hoặc Cùng hình dạng. <b>Giống sai</b>: cặp KHÁC thiết kế bị xếp vào nhóm giống. <b>Bỏ sót</b>: cặp CÙNG thiết kế rơi xuống "Điểm thấp". Cặp trong dải "Cần xem tay" để người vẽ tự nhìn.</p>
+      <div class="ta-hang ta-nguong-o">
+        <label>Ảnh giống ≥ <input type="number" id="ta-ng-anh" min="50" max="100" step="0.5">%</label>
+        <label>Cùng hình dạng ≥ <input type="number" id="ta-ng-hd" min="50" max="100" step="0.5">%</label>
+        <label>Cần xem tay ≥ <input type="number" id="ta-ng-xt" min="50" max="100" step="0.5">%</label>
+        <button type="button" class="btn-hanh-dong phu" onclick="tinhGoiY(true)">Thử bộ này</button>
+        <button type="button" class="btn-hanh-dong" onclick="luuNguong()">Lưu ngưỡng</button>
+        <button type="button" class="btn-hanh-dong phu nguy-hiem" onclick="xoaNguong()">Xoá ngưỡng</button>
+      </div>
+      <button type="button" class="btn-hanh-dong phu" onclick="tinhGoiY(false, true)">Tính gợi ý</button>
+      <div id="ta-goi-y" class="ta-cuon"></div>
+      <details style="margin-top:var(--space-2)" ontoggle="if (this.open) taiDsCap()"><summary>Cặp đã đánh giá (xoá cặp đánh giá nhầm)</summary><div id="ta-ds-cap" class="ta-cuon"></div></details>
+    </div>
+  </div>
+
+  <div id="ta-thong-ke" class="ta-khoi" style="display:none">
+    <h3>Thống kê thư viện</h3>
+    <p class="ta-muted" style="margin-top:0">Tình trạng dữ liệu để biết còn thiếu/trùng ở đâu (admin chỉ thấy đơn thuộc Xưởng mình). Bấm vào mã đơn để tra ngay.</p>
+    <button type="button" class="btn-hanh-dong phu" onclick="taiThongKe()">Tính thống kê</button>
+    <div id="ta-thong-ke-noi-dung"></div>
+  </div>
+
+  <div id="ta-can-xu-ly" class="ta-khoi" style="display:none">
+    <h3>Cần xử lý</h3>
+    <p class="ta-muted" style="margin-top:0">Link tải lỗi (tự thử lại tối đa 5 lần, giãn cách 5 phút → 8 giờ) và file đã lưu nhưng chưa tính được hash/thumbnail.</p>
+    <button type="button" class="btn-hanh-dong phu" onclick="taiCanXuLy()">Làm mới</button>
+    <button type="button" class="btn-hanh-dong phu" onclick="thuLai({ tatCa: true })">Thử lại tất cả link lỗi</button>
+    <div id="ta-can-xu-ly-noi-dung" class="ta-cuon" style="margin-top:var(--space-2)">Đang tải...</div>
+  </div>
+</div>
+
+<script src="/js/icons.js?v=104"></script>
+<script src="/js/api.js?v=112"></script>
+<script>
+const MB = b => (b < 1048576 ? Math.round(b / 1024) + ' KB' : (b / 1048576).toFixed(1) + ' MB');
+const GB = b => (b / 1073741824).toFixed(1) + ' GB';
+const NHAN_VIEC = { CHO: 'Đang chờ', DANG_CHAY: 'Đang tải', XONG: 'Thành công', LOI: 'Lỗi — sẽ thử lại', LOI_CUOI: 'Lỗi (đã dừng thử lại)', BO_QUA: 'Bỏ qua' };
+const gio = ms => new Date(ms).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+let user;
+
+(async () => {
+  user = await requireLoginOrRedirect();
+  if (!user) return;
+  renderNav(user, 'tim-anh');
+  if (!laAdmin(user.vaiTro) && user.vaiTro !== 've_file') {
+    document.querySelector('.page').innerHTML = '<h2>Tìm ảnh</h2><p>Bạn không có quyền dùng menu này.</p>';
+    return;
+  }
+  document.getElementById('ta-tim').style.display = '';
+  document.getElementById('ta-tai-len').style.display = '';
+  document.getElementById('ta-nguong').style.display = '';
+  if (laSuperAdmin(user.vaiTro)) { document.getElementById('ta-nguong-sa').style.display = ''; tinhGoiY(false); }
+  const maTuUrl = new URLSearchParams(location.search).get('stt');
+  if (maTuUrl) { document.getElementById('ta-ma').value = maTuUrl; traTheoMa(); }
+  if (!laAdmin(user.vaiTro)) return;
+  document.getElementById('ta-can-xu-ly').style.display = '';
+  taiCanXuLy();
+  document.getElementById('ta-thong-ke').style.display = ''; // KHÔNG tự tính khi mở trang — chỉ khi bấm (thư viện lớn tốn ~1 giây xử lý)
+  if (laSuperAdmin(user.vaiTro)) {
+    document.getElementById('ta-hang-cho').style.display = '';
+    document.getElementById('ta-excel').style.display = '';
+    taiHangCho(); taiDsLo();
+    // Hàng chờ 5 giây; bảng các lần nhập 15 giây (truy vấn theo từng lô nặng hơn, không cần cập nhật dày như vậy).
+    setInterval(() => { if (!document.hidden) taiHangCho(); }, 5000);
+    setInterval(() => { if (!document.hidden) taiDsLo(); }, 15000);
+  }
+})();
+
+function thongBao(chu, loi) {
+  const el = document.getElementById('ta-thong-bao');
+  el.style.display = 'block';
+  el.style.color = loi ? 'var(--color-danger-text)' : 'var(--color-success-text)';
+  el.textContent = chu;
+}
+
+async function taiHangCho() {
+  const el = document.getElementById('ta-hang-cho-noi-dung');
+  let d;
+  try { d = await apiFetch('/thu-vien/hang-cho'); } catch (e) { el.textContent = 'Không tải được: ' + e.message; return; }
+  const v = d.viec;
+  const diemDo = d.dungTaiDiemDo ? `<div class="ta-canh-bao">
+      <b>Điểm dừng đo dung lượng:</b> hàng chờ đã lưu ${d.soPngHangCho} PNG, trung bình <b>${MB(d.trungBinhByte)}</b>/ảnh, ~${d.anhMoiLink.toFixed(1)} ảnh/link.
+      Còn <b>${d.conCho}</b> link đang chờ → ước tính cần thêm khoảng <b>${GB(d.uocTinhConLaiByte)}</b> trên NAS.
+      Kiểm tra dung lượng NAS rồi bấm <b>Chạy tiếp</b>.</div>` : '';
+  const tt = document.getElementById('ta-trang-thai');
+  tt.textContent = d.tamDung ? 'Đang TẠM DỪNG' : 'Đang chạy';
+  tt.style.color = d.tamDung ? 'var(--color-danger-text)' : 'var(--color-success-text)';
+  const nut = document.getElementById('ta-nut-tam-dung');
+  nut.disabled = false;
+  nut.textContent = d.tamDung ? 'Chạy tiếp' : 'Tạm dừng';
+  nut.dataset.tamDung = d.tamDung ? '0' : '1'; // giá trị sẽ gửi khi bấm: '1' = tạm dừng
+  nut.classList.toggle('phu', !d.tamDung);
+  const ts = d.tuDongSheet || {};
+  const o = document.getElementById('ta-tu-dong-sheet');
+  if (document.activeElement !== o) o.checked = !!ts.bat;
+  const lq = ts.lanQuet;
+  const nutQuet = document.getElementById('ta-nut-quet-sheet');
+  nutQuet.disabled = !!ts.dangQuet;
+  nutQuet.textContent = ts.dangQuet ? 'Đang quét...' : 'Quét ngay';
+  document.getElementById('ta-lan-quet-sheet').textContent = (ts.dangQuet ? 'Đang quét Sheet (có thể mất vài phút)... ' : '') + (!lq ? 'Chưa quét lần nào.'
+    : lq.loi ? `Lần quét gần nhất ${ngay(lq.luc)}: LỖI — ${lq.loi}`
+    : `Lần quét gần nhất ${ngay(lq.luc)}${lq.bamTay ? ' (bấm tay)' : ''}: ${lq.soDon} đơn, ${lq.soDonDoi} đơn đổi link, ${lq.soViecMoi} link mới vào hàng chờ (${lq.ms}ms).`);
+  const tuDung = d.lyDoTamDung ? `<div class="ta-canh-bao"><b>Hàng chờ TỰ tạm dừng:</b> ${escapeHtml(d.lyDoTamDung)}</div>` : '';
+  el.innerHTML = `
+    ${tuDung}${diemDo}
+    <div class="ta-so">
+      <div><b>${v.CHO + v.DANG_CHAY}</b><span>link đang chờ</span></div>
+      <div><b>${v.XONG}</b><span>link xong</span></div>
+      <div><b>${v.LOI}</b><span>lỗi, sẽ thử lại</span></div>
+      <div><b>${v.LOI_CUOI}</b><span>lỗi, đã dừng</span></div>
+      <div><b>${d.soFile}</b><span>file trong thư viện</span></div>
+      <div><b>${GB(d.tongByte)}</b><span>dung lượng (PNG hàng chờ TB ${MB(d.trungBinhByte)}/ảnh)</span></div>
+    </div>
+    ${d.fileMoiNhat.length ? `<div class="ta-muted">File mới lưu gần nhất:</div><div class="ta-luoi-anh">${d.fileMoiNhat.map(f => `
+      <figure><a href="/api/thu-vien/file/${f.id}" target="_blank" rel="noopener">${f.thumb_key ? `<img src="/api/thu-vien/thumb/${f.id}" alt="" loading="lazy">` : '<div style="width:104px;height:104px;border:1px dashed var(--color-border)"></div>'}</a>
+        <figcaption title="${escapeHtml(f.ten_file_goc)}"><b>${escapeHtml(f.stt_key)}</b> · ${MB(f.kich_thuoc)}</figcaption></figure>`).join('')}</div>` : ''}`;
+}
+
+async function datTamDung(tamDung) {
+  try { await apiFetch('/thu-vien/hang-cho', { method: 'POST', body: JSON.stringify({ tamDung }) }); } catch (e) { thongBao(e.message, true); return; }
+  taiHangCho();
+}
+
+async function nhapExcel() {
+  const input = document.getElementById('ta-file-excel');
+  const file = input.files[0];
+  if (!file) { thongBao('Chưa chọn file Excel.', true); return; }
+  const nut = document.getElementById('ta-nut-nhap');
+  nut.disabled = true; nut.textContent = 'Đang đọc file...';
+  const fd = new FormData();
+  fd.append('file', file, file.name);
+  try {
+    const kq = await apiFetch('/thu-vien/excel', { method: 'POST', body: fd, headers: {} });
+    document.getElementById('ta-ket-qua-nhap').textContent =
+      `Sheet "${kq.tenSheet}": ${kq.tongDong} dòng, ${kq.soLink} link → thêm ${kq.soViecMoi} link mới vào hàng chờ` +
+      `${kq.soViecDaCo ? `, ${kq.soViecDaCo} link đã có từ trước` : ''}${kq.soDongBoQua ? `, ${kq.soDongBoQua} dòng bỏ qua (xem file kết quả)` : ''}.`;
+    input.value = '';
+    taiDsLo(); taiHangCho();
+  } catch (e) {
+    thongBao('Nhập Excel lỗi: ' + e.message, true);
+  }
+  nut.disabled = false; nut.textContent = 'Nhập Excel';
+}
+
+async function taiDsLo() {
+  const el = document.getElementById('ta-ds-lo');
+  let ds;
+  try { ds = await apiFetch('/thu-vien/excel'); } catch (e) { el.textContent = 'Không tải được: ' + e.message; return; }
+  if (!ds.length) { el.innerHTML = '<p class="ta-muted">Chưa nhập lần nào.</p>'; return; }
+  // "Dòng"/"Dòng bỏ qua" đếm theo dòng Excel; 3 cột "Link ..." đếm theo link (1 dòng có thể nhiều link, dòng trùng tính 1 lần).
+  el.innerHTML = `<table class="bang-xem-truoc"><thead><tr><th>#</th><th>File</th><th>Người nhập</th><th>Lúc</th><th>Dòng</th>
+    <th>Link chờ</th><th>Link xong</th><th>Link lỗi</th><th>Dòng bỏ qua</th><th>Ảnh đã lưu</th><th></th></tr></thead><tbody>${ds.map(lo => `<tr>
+      <td>${lo.id}</td><td>${escapeHtml(lo.ten_file)}</td><td>${escapeHtml(lo.nguoi)}</td><td>${escapeHtml(lo.tao_luc.slice(0, 16).replace('T', ' '))}</td>
+      <td>${lo.tong_dong}</td><td>${lo.tienDo.CHO + lo.tienDo.DANG_CHAY}</td><td>${lo.tienDo.XONG}</td>
+      <td>${lo.tienDo.LOI + lo.tienDo.LOI_CUOI}</td><td>${lo.tienDo.BO_QUA}</td><td>${lo.soFile}</td>
+      <td><a href="/api/thu-vien/excel/${lo.id}/ket-qua.xlsx">Tải kết quả</a></td></tr>`).join('')}</tbody></table>`;
+}
+
+async function taiCanXuLy() {
+  const el = document.getElementById('ta-can-xu-ly-noi-dung');
+  let d;
+  try { d = await apiFetch('/thu-vien/can-xu-ly'); } catch (e) { el.textContent = 'Không tải được: ' + e.message; return; }
+  const bangViec = d.viecLoi.length ? `<table class="bang-xem-truoc"><thead><tr><th>STT_Key</th><th>Link</th><th>Trạng thái</th><th>Lần thử</th><th>Lỗi</th><th></th></tr></thead><tbody>
+    ${d.viecLoi.map(v => `<tr><td>${escapeHtml(v.stt_key)}</td>
+      <td><a class="ta-link" href="${escapeHtml(v.url)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(v.url)}">${escapeHtml(v.url)}</a></td>
+      <td>${NHAN_VIEC[v.trang_thai]}${v.trang_thai === 'LOI' ? `<br><span class="ta-muted">thử lại lúc ${gio(v.thu_lai_luc)}</span>` : ''}</td>
+      <td>${v.so_lan_thu}</td><td class="loi">${escapeHtml(v.loi_cuoi)}</td>
+      <td><button type="button" class="btn-hanh-dong phu" onclick="thuLai({ viecIds: [${v.id}] })">Thử lại</button></td></tr>`).join('')}</tbody></table>`
+    : '<p class="ta-muted">Không có link lỗi.</p>';
+  const bangFile = d.fileLoiHash.length ? `<h4>File chưa tính được hash/thumbnail</h4><table class="bang-xem-truoc"><thead><tr><th>STT_Key</th><th>File</th><th>Ngày lưu</th><th></th></tr></thead><tbody>
+    ${d.fileLoiHash.map(f => `<tr><td>${escapeHtml(f.stt_key)}</td><td><a href="/api/thu-vien/file/${f.id}" target="_blank" rel="noopener">${escapeHtml(f.object_key.split('/').pop())}</a></td>
+      <td>${escapeHtml(f.ngay_luu.slice(0, 16).replace('T', ' '))}</td>
+      <td><button type="button" class="btn-hanh-dong phu" onclick="tinhLai(${f.id}, this)">Tính lại</button></td></tr>`).join('')}</tbody></table>` : '';
+  el.innerHTML = bangViec + bangFile;
+}
+
+async function thuLai(body) {
+  try {
+    const kq = await apiFetch('/thu-vien/can-xu-ly/thu-lai', { method: 'POST', body: JSON.stringify(body) });
+    thongBao(`Đã đưa ${kq.soViec} link về hàng chờ.`);
+  } catch (e) { thongBao(e.message, true); }
+  taiCanXuLy();
+}
+
+async function tinhLai(fileId, nut) {
+  nut.disabled = true; nut.textContent = 'Đang tính...';
+  try {
+    const kq = await apiFetch('/thu-vien/can-xu-ly/thu-lai', { method: 'POST', body: JSON.stringify({ fileId }) });
+    thongBao(kq.trangThai === 'XONG' ? 'Đã tính lại xong.' : 'Vẫn chưa tính được (ảnh trống hoặc không đọc được) — xem Logs.', kq.trangThai !== 'XONG');
+  } catch (e) { thongBao(e.message, true); }
+  taiCanXuLy();
+}
+// ================= Giai đoạn 2: tìm kiếm =================
+const SO_KQ_MOI_TRANG = 24;
+const NHAN_NGUON = { SHEET: 'Sheet', EXCEL: 'Excel', UPLOAD: 'Tải lên' };
+const NHAN_QD = { DA_KIEM: 'Đã kiểm tra', TAI_SU_DUNG: 'Tái sử dụng', VE_MOI: 'Vẽ mới' };
+const NHAN_NHOM = { TRUNG_FILE: 'TRÙNG FILE', ANH_GIONG: 'ẢNH GIỐNG', CUNG_HINH_DANG: 'CÙNG HÌNH DẠNG', CAN_XEM_TAY: 'CẦN XEM TAY', DIEM_THAP: 'Điểm thấp' };
+const LOP_NHOM = { TRUNG_FILE: 'trung', ANH_GIONG: 'giong', CUNG_HINH_DANG: 'giong', CAN_XEM_TAY: 'xem-tay', DIEM_THAP: 'thap' };
+const moTaNguong = n => n ? `Nhóm theo ngưỡng: Ảnh giống ≥ ${n.anh}%, Cùng hình dạng ≥ ${n.hinhDang}%, Cần xem tay ≥ ${n.xemTay}%.` : 'Chưa có ngưỡng — chỉ gắn nhãn Trùng file.';
+let kqTim = null; // { tuongTu, sttKeyMoi, quyetDinh, trang }
+const ngay = s => String(s || '').slice(0, 16).replace('T', ' ');
+const urlFile = (id, tai) => `/api/thu-vien/file/${id}${tai ? '?tai=1' : ''}`;
+const pct = v => (v === null || v === undefined ? '—' : String(v).replace(/\.0$/, '') + '%');
+
+async function traTheoMa(ma) {
+  const o = document.getElementById('ta-ma');
+  if (ma) o.value = ma;
+  const stt = o.value.trim();
+  const el = document.getElementById('ta-ket-qua-tim');
+  if (!stt) { el.innerHTML = '<p class="ta-chua">Nhập mã đơn trước.</p>'; return; }
+  el.innerHTML = '<p>Đang tra...</p>';
+  let d;
+  try { d = await apiFetch('/thu-vien/don/' + encodeURIComponent(stt)); } catch (e) { el.innerHTML = `<p class="ta-chua">${escapeHtml(e.message)}</p>`; return; }
+  kqTim = { tuongTu: d.tuongTu, sttKeyMoi: d.sttKey, quyetDinh: d.quyetDinh, trang: 0, nhieuMau: d.png.length > 1, nguong: d.nguong };
+  const e = d.embChinh;
+  el.innerHTML = `<div class="ta-tinh-trang">
+      <p>Đơn <b style="font-size:1.1rem">${escapeHtml(d.sttKey)}</b> ${d.trongSheet === false ? '<span class="ta-nhan ngoai">Đơn không còn trong Sheet</span>' : ''}
+        ${d.trongSheet !== false ? `<a href="/order.html?stt=${encodeURIComponent(d.sttKey)}" target="_blank" rel="noopener">Mở chi tiết đơn</a>` : ''}</p>
+      <p>PNG thiết kế: ${d.png.length ? `<span class="ta-co">ĐÃ CÓ (${d.png.length} file)</span>` : '<span class="ta-chua">CHƯA CÓ</span>'}
+        ${d.soLinkDangCho ? ` · <span class="ta-muted">đang chờ sao chép ${d.soLinkDangCho} link</span>` : ''}</p>
+      <p>File EMB: ${e ? `<span class="ta-co">ĐÃ CÓ</span> ${escapeHtml(e.ten)} · phiên bản ${e.so_thu_tu} · ${escapeHtml(ngay(e.ngay_luu))}${e.nguoi_tai_len ? ' · ' + escapeHtml(e.nguoi_tai_len) : ''}
+          · <a href="${urlFile(e.id, true)}">Tải EMB</a>${d.embCu.length ? ` <span class="ta-muted">(+${d.embCu.length} bản cũ: ${d.embCu.map(c => `<a href="${urlFile(c.id, true)}">v${c.so_thu_tu}</a>`).join(', ')})</span>` : ''}`
+        : '<span class="ta-chua">CHƯA TÌM THẤY file EMB liên kết với đơn này</span>'}</p>
+      ${d.png.length ? `<div class="ta-luoi-anh">${d.png.map(f => `<figure><a href="${urlFile(f.id)}" target="_blank" rel="noopener">${f.coThumb ? `<img src="/api/thu-vien/thumb/${f.id}" alt="" loading="lazy">` : '<div style="width:104px;height:104px;border:1px dashed var(--color-border)"></div>'}</a>
+        <figcaption title="${escapeHtml(f.ten)}">${escapeHtml(f.tenLuu)}</figcaption></figure>`).join('')}</div>` : ''}
+      ${d.quyetDinh.length ? `<p class="ta-muted">Quyết định đã ghi: ${d.quyetDinh.slice(0, 5).map(q => `${escapeHtml(NHAN_QD[q.quyet_dinh] || q.quyet_dinh)} theo ${escapeHtml(q.stt_key_cu || '?')} (${escapeHtml(q.nguoi)}, ${escapeHtml(ngay(q.thoi_gian))})`).join('; ')}</p>` : ''}
+    </div>
+    ${d.png.length ? `<h4 style="margin-bottom:0">Thiết kế tương tự trong thư viện <span class="ta-muted">(so ${d.tongSoSanh} file, bỏ chính đơn này)</span></h4><div id="ta-luoi-kq"></div>`
+      : '<p class="ta-muted">Đơn chưa có PNG trong thư viện nên chưa so được theo mã — dùng "Tải 1 ảnh lên để tìm" bên trên.</p>'}`;
+  if (d.png.length) veKetQuaTim();
+}
+
+async function timTheoAnh() {
+  const input = document.getElementById('ta-anh-tim');
+  const el = document.getElementById('ta-ket-qua-tim');
+  if (!input.files[0]) { el.innerHTML = '<p class="ta-chua">Chọn 1 ảnh trước.</p>'; return; }
+  const nut = document.getElementById('ta-nut-tim-anh');
+  nut.disabled = true; el.innerHTML = '<p>Đang tính và so sánh...</p>';
+  const fd = new FormData();
+  fd.append('anh', input.files[0], input.files[0].name);
+  const sttKeyMoi = document.getElementById('ta-ma').value.trim();
+  if (sttKeyMoi) fd.append('sttKeyMoi', sttKeyMoi);
+  let d;
+  try { d = await apiFetch('/thu-vien/tim-theo-anh', { method: 'POST', body: fd, headers: {} }); } catch (e) { el.innerHTML = `<p class="ta-chua">${escapeHtml(e.message)}</p>`; nut.disabled = false; return; }
+  nut.disabled = false;
+  kqTim = { tuongTu: d.tuongTu, sttKeyMoi: d.sttKeyMoi, quyetDinh: d.quyetDinh, trang: 0, nhieuMau: false, nguong: d.nguong };
+  el.innerHTML = `<h4 style="margin-bottom:0">Kết quả cho ảnh <i>${escapeHtml(input.files[0].name)}</i>${d.sttKeyMoi ? ` — đơn mới <b>${escapeHtml(d.sttKeyMoi)}</b>` : ''} <span class="ta-muted">(so ${d.tongSoSanh} file)</span></h4>
+    ${d.khongTinhDuocHash ? '<p class="ta-chua">Không tính được đặc trưng hình ảnh (ảnh trống/hỏng) — chỉ so được trùng file.</p>' : ''}
+    <div id="ta-luoi-kq"></div>`;
+  veKetQuaTim();
+}
+
+function veKetQuaTim() {
+  const el = document.getElementById('ta-luoi-kq');
+  if (!el || !kqTim) return;
+  const ds = kqTim.tuongTu;
+  if (!ds.length) { el.innerHTML = '<p class="ta-muted">Không có kết quả — thư viện chưa có ảnh nào khác, hoặc các ảnh đều thuộc đơn ngoài phạm vi Xưởng bạn được xem.</p>'; return; }
+  const soTrang = Math.ceil(ds.length / SO_KQ_MOI_TRANG);
+  const trang = Math.min(kqTim.trang, soTrang - 1);
+  const qdTheoFile = new Map();
+  for (const q of kqTim.quyetDinh || []) if (!qdTheoFile.has(q.file_id)) qdTheoFile.set(q.file_id, q);
+  const the = ds.slice(trang * SO_KQ_MOI_TRANG, (trang + 1) * SO_KQ_MOI_TRANG).map(r => {
+    const qd = qdTheoFile.get(r.id);
+    return `<div class="ta-the">
+      <a href="${urlFile(r.id)}" target="_blank" rel="noopener" title="Xem ảnh gốc">${r.coThumb ? `<img src="/api/thu-vien/thumb/${r.id}" alt="" loading="lazy">` : '<div style="height:170px;border:1px dashed var(--color-border)"></div>'}</a>
+      <div>${r.nhom ? `<span class="ta-nhan ${LOP_NHOM[r.nhom]}">${NHAN_NHOM[r.nhom]}</span>` : r.trungFile ? '<span class="ta-nhan trung">TRÙNG FILE</span>' : ''}${r.trongSheet === false ? '<span class="ta-nhan ngoai">Đơn không còn trong Sheet</span>' : ''}</div>
+      <div><b>${escapeHtml(r.stt_key)}</b> · <a href="javascript:void(0)" onclick="traTheoMa(${escapeHtml(JSON.stringify(r.stt_key))})">Xem tất cả file của đơn</a></div>
+      <div class="ten" title="${escapeHtml(r.ten)}">${escapeHtml(r.tenLuu)}${r.ten !== r.tenLuu ? ` <span class="ta-muted">(${escapeHtml(r.ten)})</span>` : ''}</div>
+      <div class="diem"><span>Ảnh <b>${pct(r.phanTramAnh)}</b></span><span>Hình dạng <b>${pct(r.phanTramHinhDang)}</b></span></div>
+      ${kqTim.nhieuMau && r.soVoi ? `<div class="ta-muted">giống nhất với ${escapeHtml(r.soVoi)}</div>` : ''}
+      <div>EMB: ${r.emb ? `<span class="ta-co">CÓ</span> ${escapeHtml(r.emb.ten)} · <a href="${urlFile(r.emb.id, true)}">Tải EMB</a>` : '<span class="ta-chua">Chưa tìm thấy</span>'}</div>
+      <div class="ta-muted">${escapeHtml(ngay(r.ngay_luu))} · ${escapeHtml(NHAN_NGUON[r.nguon] || r.nguon)}${r.url_goc ? ` · <a href="${escapeHtml(r.url_goc)}" target="_blank" rel="noopener noreferrer">link gốc</a>` : ''}</div>
+      <div class="thao-tac"><a href="${urlFile(r.id, true)}">Tải PNG</a>${r.trongSheet !== false ? `<a href="/order.html?stt=${encodeURIComponent(r.stt_key)}" target="_blank" rel="noopener">Chi tiết đơn</a>` : ''}</div>
+      ${kqTim.sttKeyMoi ? `<div class="quyet-dinh">${qd ? `<div class="ta-muted">Đã ghi: <b>${escapeHtml(NHAN_QD[qd.quyet_dinh] || qd.quyet_dinh)}</b> (${escapeHtml(qd.nguoi)}, ${escapeHtml(ngay(qd.thoi_gian))})</div>` : ''}
+        ${Object.entries(NHAN_QD).map(([k, v]) => `<button type="button" class="btn-hanh-dong phu" onclick="ghiQuyetDinh(${r.id}, '${k}', this)">${v}</button>`).join(' ')}</div>` : ''}
+    </div>`;
+  }).join('');
+  el.innerHTML = `<p class="ta-muted" style="margin:4px 0">${escapeHtml(moTaNguong(kqTim.nguong))}</p><div class="ta-luoi-kq">${the}</div>
+    ${soTrang > 1 ? `<div class="ta-trang">${Array.from({ length: soTrang }, (_, i) => `<button type="button" class="btn-hanh-dong ${i === trang ? '' : 'phu'}" onclick="kqTim.trang = ${i}; veKetQuaTim()">${i + 1}</button>`).join('')}
+      <span class="ta-muted">${ds.length} kết quả gần nhất (tối đa 200)</span></div>` : ''}`;
+}
+
+async function ghiQuyetDinh(fileId, quyetDinh, nut) {
+  const ghiChu = prompt(`Ghi chú cho "${NHAN_QD[quyetDinh]}" (có thể để trống). Chỉ ghi nhận, không thay đổi đơn hay file:`, '');
+  if (ghiChu === null) return;
+  nut.disabled = true;
+  try {
+    const d = await apiFetch('/thu-vien/quyet-dinh', { method: 'POST', body: JSON.stringify({ sttKeyMoi: kqTim.sttKeyMoi, fileId, quyetDinh, ghiChu }) });
+    kqTim.quyetDinh = d.quyetDinh;
+    veKetQuaTim();
+    thongBao(`Đã ghi "${NHAN_QD[quyetDinh]}" cho đơn ${kqTim.sttKeyMoi}.`);
+  } catch (e) { thongBao(e.message, true); nut.disabled = false; }
+}
+
+// ================= Giai đoạn 2: tải lên thư viện =================
+const NHAN_KHOP = {
+  KHOP: 'Khớp', TRUNG: 'Trùng file đã có — không tải lại', KHONG_KHOP: 'Không khớp — gõ mã đơn', NHIEU: 'Khớp nhiều đơn — gõ mã đúng',
+  QUA_LON: 'Quá 30MB', KHONG_HO_TRO: 'Không hỗ trợ (chỉ .png .jpg .jpeg .emb)', KHONG_QUYEN: 'Đơn ngoài phạm vi Xưởng của bạn',
+};
+let phienTai = null; // { dong: [{ file, ten, duongDan, loai, trangThai, sttKey, ... , kq }], dangTai, dung }
+
+async function maSha256(file) {
+  if (!window.crypto || !crypto.subtle) return ''; // ngoài https không có — server vẫn tự chống trùng khi lưu
+  const buf = await crypto.subtle.digest('SHA-256', await file.arrayBuffer());
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function xemTruoc(files) {
+  const el = document.getElementById('ta-xem-truoc');
+  if (!files.length) return;
+  if (phienTai && phienTai.dangTai) { thongBao('Đang tải lên — bấm Dừng trước khi chọn lại.', true); return; }
+  const dong = files.map(f => ({ file: f, ten: f.name, duongDan: f.webkitRelativePath || f.name }));
+  const hoTro = /\.(png|jpe?g|emb)$/i;
+  for (let i = 0; i < dong.length; i++) {
+    el.innerHTML = `<p>Đang đọc file ${i + 1}/${dong.length} (tính mã để kiểm tra trùng)...</p>`;
+    const d = dong[i];
+    d.sha256 = hoTro.test(d.ten) && d.file.size <= 30 * 1048576 ? await maSha256(d.file) : '';
+  }
+  // Chia đợt theo DUNG LƯỢNG body (server nhận JSON tối đa 100KB) và tối đa 500 file/đợt: 500 file có đường dẫn tiếng Việt dài
+  // (~100 ký tự) đã ~136KB (đo 03/10/2026) -> cả thư mục báo lỗi xem trước.
+  const BYTE_TOI_DA_MOT_DOT = 80000;
+  const maHoa = new TextEncoder();
+  const dsDot = [];
+  let dot = [], byteDot = 0;
+  for (const d of dong) {
+    const m = { ten: d.ten, duongDan: d.duongDan, kichThuoc: d.file.size, sha256: d.sha256 };
+    const n = maHoa.encode(JSON.stringify(m)).length + 1;
+    if (dot.length && (dot.length >= 500 || byteDot + n > BYTE_TOI_DA_MOT_DOT)) { dsDot.push(dot); dot = []; byteDot = 0; }
+    dot.push({ d, m }); byteDot += n;
+  }
+  if (dot.length) dsDot.push(dot);
+  let khongDocDuocSheet = false, sheetCuLuc = null, daKhop = 0;
+  for (const lo of dsDot) {
+    el.innerHTML = `<p>Đang khớp mã đơn ${daKhop + lo.length}/${dong.length}...</p>`;
+    let r;
+    try {
+      r = await apiFetch('/thu-vien/xem-truoc', { method: 'POST', body: JSON.stringify({ files: lo.map(x => x.m) }) });
+    } catch (e) { el.innerHTML = `<p class="ta-chua">Xem trước lỗi: ${escapeHtml(e.message)}</p>`; return; }
+    r.ketQua.forEach((k, j) => Object.assign(lo[j].d, k));
+    khongDocDuocSheet = khongDocDuocSheet || r.khongDocDuocSheet;
+    sheetCuLuc = sheetCuLuc || r.sheetCuLuc;
+    daKhop += lo.length;
+  }
+  phienTai = { dong, dangTai: false, dung: false, khongDocDuocSheet, sheetCuLuc };
+  veBangTai();
+}
+
+const coTheGoTay = d => d.trangThai === 'KHONG_KHOP' || d.trangThai === 'NHIEU';
+function veBangTai() {
+  const el = document.getElementById('ta-xem-truoc');
+  const { dong } = phienTai;
+  const dem = {};
+  dong.forEach(d => { dem[d.trangThai] = (dem[d.trangThai] || 0) + 1; });
+  const moTaKhop = d => {
+    if (d.kq) return d.kq;
+    let t = escapeHtml(NHAN_KHOP[d.trangThai] || d.trangThai);
+    if (d.trangThai === 'KHOP') t += ` <span class="ta-muted">(${d.theo === 'THU_MUC' ? 'theo thư mục' : 'theo tên file'})</span>${d.ngoaiSheet ? ' <span class="ta-nhan ngoai">Đơn không còn trong Sheet</span>' : ''}`;
+    if (d.trangThai === 'NHIEU' && d.ungVien.length) t += ` <span class="ta-muted">(${escapeHtml(d.ungVien.join(', '))})</span>`;
+    return t;
+  };
+  el.innerHTML = `
+    ${phienTai.khongDocDuocSheet ? '<div class="ta-canh-bao">Không đọc được danh sách đơn từ Sheet lúc này — chỉ khớp được với mã đã có trong thư viện. Có thể thử lại sau.</div>' : ''}
+    ${phienTai.sheetCuLuc ? `<div class="ta-canh-bao">Không đọc được Sheet lúc này — đang khớp theo danh sách đơn đọc lúc <b>${escapeHtml(gio(phienTai.sheetCuLuc))}</b> (đơn tạo sau lúc đó chưa có). Có thể thử lại sau.</div>` : ''}
+    <p>${dong.length} file: ${Object.entries(dem).map(([k, n]) => `${escapeHtml(NHAN_KHOP[k] || k)}: <b>${n}</b>`).join(' · ')}</p>
+    <p><button type="button" class="btn-hanh-dong" id="ta-nut-tai-len" onclick="taiLenThuVien()">Xác nhận tải lên</button>
+      <button type="button" class="btn-hanh-dong phu" id="ta-nut-dung-tai" style="display:none" onclick="phienTai.dung = true; this.disabled = true">Dừng</button>
+      <span id="ta-tien-do-tai" class="ta-muted"></span>
+      <button type="button" class="btn-hanh-dong phu" id="ta-nut-csv" style="display:none" onclick="taiBangKetQuaCsv()">Tải bảng kết quả (.csv)</button></p>
+    <p class="ta-muted" style="margin-top:0">Chỉ tải các dòng <b>Khớp</b> và các dòng bạn đã gõ mã đơn. Dòng không khớp mà để trống mã sẽ không tải lên.</p>
+    <div class="ta-cuon"><table class="bang-xem-truoc ta-bang-tai"><thead><tr><th>#</th><th>File (đường dẫn)</th><th>Loại</th><th>Mã đơn</th><th>Trạng thái</th></tr></thead><tbody>
+    ${dong.map((d, i) => `<tr><td>${i + 1}</td><td class="dd" title="${escapeHtml(d.duongDan)}">${escapeHtml(d.duongDan)}</td><td>${escapeHtml(d.loai || '—')}</td>
+      <td>${coTheGoTay(d) ? `<input type="text" id="ta-go-${i}" placeholder="gõ mã" value="${escapeHtml(d.goTay || '')}" oninput="phienTai.dong[${i}].goTay = this.value.trim()">
+          <label class="ta-muted" style="display:block"><input type="checkbox" ${d.xacNhan ? 'checked' : ''} onchange="phienTai.dong[${i}].xacNhan = this.checked"> lưu dù mã không có trong Sheet</label>`
+        : escapeHtml(d.sttKey || '')}</td>
+      <td id="ta-tt-${i}">${moTaKhop(d)}</td></tr>`).join('')}
+    </tbody></table></div>`;
+}
+
+async function taiLenThuVien() {
+  const dsTai = phienTai.dong.map((d, i) => ({ d, i })).filter(({ d }) => !d.daXuLy && (d.trangThai === 'KHOP' || (coTheGoTay(d) && d.goTay)));
+  if (!dsTai.length) { thongBao('Không có file nào để tải lên (cần dòng Khớp hoặc dòng đã gõ mã).', true); return; }
+  if (!confirm(`Tải lên ${dsTai.length} file vào thư viện?`)) return;
+  phienTai.dangTai = true; phienTai.dung = false;
+  const nut = document.getElementById('ta-nut-tai-len'), nutDung = document.getElementById('ta-nut-dung-tai'), tienDo = document.getElementById('ta-tien-do-tai');
+  nut.disabled = true; nutDung.style.display = ''; nutDung.disabled = false;
+  const dem = { DA_LUU: 0, TRUNG: 0, BO_QUA: 0, LOI: 0 };
+  for (let n = 0; n < dsTai.length; n++) {
+    if (phienTai.dung) break;
+    const { d, i } = dsTai[n];
+    tienDo.textContent = `Đang tải ${n + 1}/${dsTai.length}: ${d.ten}`;
+    const fd = new FormData();
+    fd.append('file', d.file, d.ten);
+    fd.append('duongDan', d.duongDan);
+    if (coTheGoTay(d)) { fd.append('sttKeyGoTay', d.goTay); if (d.xacNhan) fd.append('xacNhanNgoaiSheet', '1'); }
+    let kq;
+    try {
+      const r = await apiFetch('/thu-vien/upload', { method: 'POST', body: fd, headers: {} });
+      kq = r.ketQua;
+      d.kq = kq === 'DA_LUU' ? `<span class="ta-co">Đã lưu</span> vào ${escapeHtml(r.sttKey)}` : kq === 'TRUNG' ? `Trùng — ${escapeHtml(r.lyDo)}` : `<span class="ta-chua">Bỏ qua</span> — ${escapeHtml(r.lyDo)}`;
+      d.ketQuaChu = kq === 'DA_LUU' ? `Đã lưu vào ${r.sttKey}` : (kq === 'TRUNG' ? 'Trùng' : 'Bỏ qua') + ' — ' + r.lyDo;
+      d.daXuLy = true;
+    } catch (e) {
+      kq = 'LOI';
+      d.kq = `<span class="ta-chua">Lỗi</span> — ${escapeHtml(e.message)}`;
+      d.ketQuaChu = 'Lỗi — ' + e.message;
+    }
+    dem[kq] = (dem[kq] || 0) + 1;
+    const o = document.getElementById('ta-tt-' + i);
+    if (o) o.innerHTML = d.kq;
+  }
+  phienTai.dangTai = false;
+  nut.disabled = false; nutDung.style.display = 'none';
+  tienDo.textContent = `${phienTai.dung ? 'Đã dừng. ' : 'Xong. '}Đã lưu ${dem.DA_LUU}, trùng ${dem.TRUNG}, bỏ qua ${dem.BO_QUA}, lỗi ${dem.LOI}.`;
+  document.getElementById('ta-nut-csv').style.display = '';
+}
+
+// Bảng kết quả tải lên (.csv, có BOM để Excel đọc đúng tiếng Việt).
+function taiBangKetQuaCsv() {
+  // Ô bắt đầu bằng = + - @ (tên file, mã gõ tay, thông báo lỗi) Excel hiểu là công thức -> thêm ' phía trước để giữ là chữ.
+  const o = v => `"${String(v ?? '').replace(/^[=+\-@\t\r]/, "'$&").replace(/"/g, '""')}"`;
+  const dongCsv = [['File', 'Loại', 'Mã đơn', 'Kết quả'].map(o).join(',')];
+  for (const d of phienTai.dong) {
+    const ketQua = d.ketQuaChu || (d.trangThai === 'KHOP' ? 'Chưa tải' : (NHAN_KHOP[d.trangThai] || d.trangThai) + (coTheGoTay(d) ? ' — không tải lên' : ''));
+    dongCsv.push([d.duongDan, d.loai || '', d.sttKey || d.goTay || '', ketQua].map(o).join(','));
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\ufeff' + dongCsv.join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+  a.download = 'KetQua_TaiLenThuVien.csv';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+// ================= Giai đoạn 3: tự động lấy PNG từ Sheet =================
+async function datTuDongSheet(o) {
+  const bat = o.checked;
+  if (bat && !confirm('BẬT tự động lấy PNG từ Sheet? Lần quét đầu đưa link PNG của TOÀN BỘ đơn trong Sheet vào hàng chờ (có thể rất nhiều ảnh — kiểm tra dung lượng NAS trước).')) { o.checked = false; return; }
+  try { await apiFetch('/thu-vien/tu-dong-sheet', { method: 'POST', body: JSON.stringify({ bat }) }); thongBao(bat ? 'Đã BẬT tự động lấy PNG từ Sheet (10 phút/lần).' : 'Đã TẮT tự động lấy PNG từ Sheet.'); }
+  catch (e) { thongBao(e.message, true); o.checked = !bat; }
+}
+async function quetSheetNgay(nut) {
+  const tat = !document.getElementById('ta-tu-dong-sheet').checked;
+  if (tat && !confirm('Tự động lấy PNG từ Sheet đang TẮT.\n\nQuét ngay vẫn đưa link PNG của mọi đơn có DUONG_DAN_URL thay đổi vào hàng chờ — nếu chưa quét lần nào thì là link của TOÀN BỘ đơn trong Sheet (có thể rất nhiều ảnh, kiểm tra dung lượng NAS trước).\n\nVẫn quét 1 lần?')) return;
+  nut.disabled = true;
+  try {
+    await apiFetch('/thu-vien/tu-dong-sheet/quet-ngay', { method: 'POST', body: JSON.stringify({ xacNhanKhiTat: tat }) });
+    thongBao('Đã bắt đầu quét Sheet — kết quả hiện ở dòng "Lần quét gần nhất" khi xong.');
+  } catch (e) { thongBao(e.message, true); }
+  taiHangCho();
+}
+
+// ================= Giai đoạn 4: đo ngưỡng =================
+let capHienTai = null;
+const thongKeCap = t => { document.getElementById('ta-thong-ke-cap').textContent = `Đã đánh giá ${t.soCap} cặp (cùng thiết kế ${t.soCung}, khác thiết kế ${t.soKhac}). Cần tối thiểu 30 cặp, mỗi loại ít nhất 5, để có gợi ý.`; };
+
+async function layCapMoi() {
+  const el = document.getElementById('ta-cap');
+  el.innerHTML = '<p>Đang chọn cặp ảnh...</p>';
+  let d;
+  try { d = await apiFetch('/thu-vien/cap-danh-gia/moi'); } catch (e) { el.innerHTML = `<p class="ta-chua">${escapeHtml(e.message)}</p>`; return; }
+  thongKeCap(d.thongKe);
+  capHienTai = d.cap;
+  if (!d.cap) { el.innerHTML = '<p class="ta-muted">Không tìm được cặp mới (thư viện còn ít ảnh có đủ hash, hoặc đã đánh giá hết các cặp gần nhau). Thử lại sau khi thư viện có thêm ảnh.</p>'; return; }
+  // Thumbnail (vài chục KB) thay vì ảnh gốc (có thể vài MB/ảnh, mỗi lần bấm 2 ảnh); chưa có thumbnail thì dùng ảnh gốc.
+  const anh = f => `<figure><a href="/api/thu-vien/file/${f.id}" target="_blank" rel="noopener" title="Mở ảnh gốc"><img src="/api/thu-vien/thumb/${f.id}" alt="" onerror="this.onerror=null;this.src='/api/thu-vien/file/${f.id}'"></a><figcaption class="ta-muted">${escapeHtml(f.stt_key)} · <a href="/api/thu-vien/file/${f.id}" target="_blank" rel="noopener">ảnh gốc</a></figcaption></figure>`;
+  el.innerHTML = `<div class="ta-cap">${anh(d.cap.a)}${anh(d.cap.b)}</div>
+    <p style="text-align:center">
+      <button type="button" class="btn-hanh-dong" onclick="danhGiaCap('CUNG')">Cùng thiết kế</button>
+      <button type="button" class="btn-hanh-dong" onclick="danhGiaCap('KHAC')">Khác thiết kế</button>
+      <button type="button" class="btn-hanh-dong phu" onclick="layCapMoi()">Không chắc — bỏ qua</button></p>`;
+}
+
+async function danhGiaCap(ketLuan) {
+  if (!capHienTai) return;
+  try {
+    const d = await apiFetch('/thu-vien/cap-danh-gia', { method: 'POST', body: JSON.stringify({ fileA: capHienTai.a.id, fileB: capHienTai.b.id, ketLuan }) });
+    thongKeCap(d.thongKe);
+    goiYDaTinh = null; // có cặp mới -> gợi ý cũ không còn đúng
+  } catch (e) { thongBao(e.message, true); return; }
+  layCapMoi();
+}
+
+const oNguong = () => ({ anh: Number(document.getElementById('ta-ng-anh').value), hinhDang: Number(document.getElementById('ta-ng-hd').value), xemTay: Number(document.getElementById('ta-ng-xt').value) });
+function dienNguong(n) {
+  document.getElementById('ta-ng-anh').value = n.anh; document.getElementById('ta-ng-hd').value = n.hinhDang; document.getElementById('ta-ng-xt').value = n.xemTay;
+}
+const dongChiSo = (ten, m, nut) => `<tr><td>${ten}</td><td>${m.anh}%</td><td>${m.hinhDang}%</td><td>${m.xemTay}%</td>
+  <td>${m.giongDung ?? '—'}</td><td style="color:var(--color-danger-text)"><b>${m.giongSai ?? '—'}</b></td><td>${m.canXemTay ?? '—'} <span class="ta-muted">(${m.xemTayCung ?? 0} cùng / ${m.xemTayKhac ?? 0} khác)</span></td>
+  <td style="color:var(--color-danger-text)"><b>${m.boSot ?? '—'}</b></td><td>${m.thapDung ?? '—'}</td><td>${nut || ''}</td></tr>`;
+
+function tomTatPhanBo(pb) {
+  const ten = { phanTramAnh: '% Ảnh', phanTramHinhDang: '% Hình dạng' };
+  const tv = a => a.length ? a[Math.floor(a.length / 2)] : '—';
+  return pb.map(p => `<li>${ten[p.cot]}: cặp <b>cùng</b> thấp nhất ${p.cung[0] ?? '—'}% (trung vị ${tv(p.cung)}%) · cặp <b>khác</b> cao nhất ${p.khac[p.khac.length - 1] ?? '—'}% (trung vị ${tv(p.khac)}%)
+    ${p.cung.length && p.khac.length ? (p.khac[p.khac.length - 1] < p.cung[0] ? ' — <span class="ta-co">tách rời hẳn</span>' : ` — <span class="ta-chua">chồng lấn</span> (${p.khac.filter(v => v >= p.cung[0]).length} cặp khác ≥ điểm thấp nhất của cặp cùng)`) : ''}</li>`).join('');
+}
+
+// Gợi ý (lưới vài nghìn bộ x mọi cặp) chỉ tính khi bấm "Tính gợi ý"; mở trang / Thử / lưu chỉ lấy số cặp + bộ đang dùng.
+// Gợi ý đã tính được giữ lại để "Thử bộ này" / "Dùng bộ này" không làm mất; cặp đổi (đánh giá thêm / xoá) thì bỏ.
+let goiYDaTinh = null;
+async function tinhGoiY(thu, tinh) {
+  const el = document.getElementById('ta-goi-y');
+  const qs = new URLSearchParams();
+  if (thu) { const n = oNguong(); qs.set('anh', n.anh); qs.set('hinhDang', n.hinhDang); qs.set('xemTay', n.xemTay); }
+  if (tinh) { qs.set('tinh', '1'); el.innerHTML = '<p>Đang tính gợi ý...</p>'; }
+  let d;
+  try { d = await apiFetch('/thu-vien/nguong/goi-y' + (qs.toString() ? '?' + qs : '')); } catch (e) { el.innerHTML = `<p class="ta-chua">${escapeHtml(e.message)}</p>`; return; }
+  if (tinh) goiYDaTinh = { goiY: d.goiY, luc: Date.now() };
+  else if (goiYDaTinh) d.goiY = goiYDaTinh.goiY;
+  thongKeCap({ soCap: d.soCap, soCung: d.soCung, soKhac: d.soKhac });
+  if (d.hienTai && !thu && !document.getElementById('ta-ng-anh').value) dienNguong(d.hienTai);
+  const du = d.soCap >= d.toiThieu && d.soCung >= d.toiThieuMoiLoai && d.soKhac >= d.toiThieuMoiLoai;
+  el.innerHTML = `
+    <p>Ngưỡng đang dùng: ${d.hienTai ? `<b>Ảnh ≥ ${d.hienTai.anh}%, Hình dạng ≥ ${d.hienTai.hinhDang}%, Xem tay ≥ ${d.hienTai.xemTay}%</b>` : '<b>chưa chọn</b> (kết quả chỉ gắn nhãn Trùng file)'}</p>
+    ${d.soCap ? `<ul class="ta-muted">${tomTatPhanBo(d.phanBo)}</ul><p class="ta-muted">Nếu cả 2 cột đều chồng lấn nhiều (cặp khác thiết kế có điểm cao hơn cặp cùng thiết kế) thì so hash không đủ — cân nhắc mức 3 (AI). Tách rời thì không cần.</p>` : ''}
+    ${!du ? `<p class="ta-chua">Chưa đủ dữ liệu để gợi ý: ${d.soCap}/${d.toiThieu} cặp (cùng ${d.soCung}, khác ${d.soKhac}; mỗi loại cần ≥ ${d.toiThieuMoiLoai}). Vẫn thử được bộ ngưỡng tự nhập.</p>`
+      : goiYDaTinh ? `<p class="ta-muted">Gợi ý tính lúc ${gio(goiYDaTinh.luc)} — bấm <b>Tính gợi ý</b> để tính lại.</p>` : '<p class="ta-muted">Bấm <b>Tính gợi ý</b> để xem các bộ ngưỡng gợi ý.</p>'}
+    ${d.goiY.length || d.thu || (d.hienTai && d.hienTai.giongDung !== undefined) ? `<table class="bang-xem-truoc"><thead><tr><th>Bộ ngưỡng</th><th>Ảnh</th><th>Hình dạng</th><th>Xem tay</th><th>Giống đúng</th><th>Giống SAI</th><th>Cần xem tay</th><th>Bỏ sót</th><th>Điểm thấp đúng</th><th></th></tr></thead><tbody>
+      ${d.hienTai && d.hienTai.giongDung !== undefined ? dongChiSo('Đang dùng', d.hienTai) : ''}
+      ${d.thu ? dongChiSo('<b>Bộ đang thử</b>', d.thu) : ''}
+      ${d.goiY.map(g => dongChiSo(`<span title="${escapeHtml(g.moTa)}">${escapeHtml(g.moTa)}</span>`, g, `<button type="button" class="btn-hanh-dong phu" onclick='dienNguong(${JSON.stringify({ anh: g.anh, hinhDang: g.hinhDang, xemTay: g.xemTay })}); tinhGoiY(true)'>Dùng bộ này</button>`)).join('')}
+    </tbody></table>` : ''}`;
+}
+
+async function luuNguong() {
+  const n = oNguong();
+  if (!confirm(`Lưu ngưỡng: Ảnh giống ≥ ${n.anh}%, Cùng hình dạng ≥ ${n.hinhDang}%, Cần xem tay ≥ ${n.xemTay}%? Kết quả tìm kiếm của mọi người sẽ được gắn nhóm theo bộ này.`)) return;
+  try { await apiFetch('/thu-vien/nguong', { method: 'POST', body: JSON.stringify(n) }); thongBao('Đã lưu ngưỡng.'); tinhGoiY(false); }
+  catch (e) { thongBao(e.message, true); }
+}
+async function xoaNguong() {
+  if (!confirm('Xoá ngưỡng? Kết quả tìm kiếm quay về chỉ gắn nhãn Trùng file.')) return;
+  try { await apiFetch('/thu-vien/nguong', { method: 'POST', body: JSON.stringify({ xoa: true }) }); ['ta-ng-anh', 'ta-ng-hd', 'ta-ng-xt'].forEach(id => { document.getElementById(id).value = ''; }); thongBao('Đã xoá ngưỡng.'); tinhGoiY(false); }
+  catch (e) { thongBao(e.message, true); }
+}
+
+async function taiDsCap() {
+  const el = document.getElementById('ta-ds-cap');
+  let d;
+  try { d = await apiFetch('/thu-vien/cap-danh-gia'); } catch (e) { el.innerHTML = `<p class="ta-chua">${escapeHtml(e.message)}</p>`; return; }
+  if (!d.ds.length) { el.innerHTML = '<p class="ta-muted">Chưa có cặp nào.</p>'; return; }
+  el.innerHTML = `<table class="bang-xem-truoc"><thead><tr><th>Ảnh A</th><th>Ảnh B</th><th>Kết luận</th><th>Người</th><th>Lúc</th><th></th></tr></thead><tbody>
+    ${d.ds.map(c => `<tr><td><a href="/api/thu-vien/file/${c.file_a}" target="_blank" rel="noopener"><img src="/api/thu-vien/thumb/${c.file_a}" alt="" style="width:56px;height:56px;object-fit:contain"></a><br>${escapeHtml(c.stt_a)}</td>
+      <td><a href="/api/thu-vien/file/${c.file_b}" target="_blank" rel="noopener"><img src="/api/thu-vien/thumb/${c.file_b}" alt="" style="width:56px;height:56px;object-fit:contain"></a><br>${escapeHtml(c.stt_b)}</td>
+      <td>${c.ket_luan === 'CUNG' ? 'Cùng thiết kế' : 'Khác thiết kế'}</td><td>${escapeHtml(c.nguoi)}</td><td>${escapeHtml(ngay(c.thoi_gian))}</td>
+      <td><button type="button" class="btn-hanh-dong phu nguy-hiem" onclick="xoaCap(${c.id})">Xoá</button></td></tr>`).join('')}</tbody></table>`;
+}
+async function xoaCap(id) {
+  if (!confirm('Xoá cặp đánh giá này?')) return;
+  try { await apiFetch('/thu-vien/cap-danh-gia/' + id, { method: 'DELETE' }); goiYDaTinh = null; taiDsCap(); tinhGoiY(false); } catch (e) { thongBao(e.message, true); }
+}
+// ================= Giai đoạn 5: thống kê =================
+async function taiThongKe() {
+  const el = document.getElementById('ta-thong-ke-noi-dung');
+  el.textContent = 'Đang tính...';
+  let d;
+  try { d = await apiFetch('/thu-vien/thong-ke'); } catch (e) { el.innerHTML = `<p class="ta-chua">${escapeHtml(e.message)}</p>`; return; }
+  const maTra = ma => `<a href="javascript:void(0)" onclick='traVaCuon(${escapeHtml(JSON.stringify(ma))})'>${escapeHtml(ma)}</a>`;
+  const muc = (tieuDe, m, giaiThich) => m === null ? `<li>${tieuDe}: <span class="ta-muted">không đọc được Sheet lúc này</span></li>`
+    : `<li>${tieuDe}: <b>${m.so}</b>${giaiThich ? ` <span class="ta-muted">— ${giaiThich}</span>` : ''}${m.mau.length ? `<details><summary class="ta-muted">Xem ${m.mau.length === m.so ? 'tất cả' : m.mau.length + ' mã đầu'}</summary>${m.mau.map(maTra).join(', ')}</details>` : ''}</li>`;
+  const v = d.viec;
+  el.innerHTML = `
+    ${d.sheetCuLuc ? `<div class="ta-canh-bao">Không đọc được Sheet lúc này — các mục so với Sheet tính theo danh sách đơn đọc lúc <b>${escapeHtml(gio(d.sheetCuLuc))}</b>.</div>` : ''}
+    <div class="ta-so">
+      <div><b>${d.soPng}</b><span>file PNG (${d.soDonCoPng} đơn)</span></div>
+      <div><b>${d.soDonCoEmb}</b><span>đơn có EMB (${d.soEmbPhienBan} phiên bản)</span></div>
+      <div><b>${d.soDon}</b><span>đơn trong thư viện</span></div>
+      <div><b>${GB(d.tongByte)}</b><span>dung lượng</span></div>
+      <div><b>${v.CHO + v.DANG_CHAY}</b><span>link đang chờ</span></div>
+      <div><b>${v.LOI + v.LOI_CUOI}</b><span>link lỗi (${v.LOI_CUOI} đã dừng)</span></div>
+      <div><b>${d.soFileLoiHash}</b><span>file chưa tính được hash</span></div>
+    </div>
+    <ul style="margin:var(--space-2) 0 0;padding-left:1.2em">
+      ${muc('Đơn trong Sheet chưa có PNG trong thư viện', d.sheetChuaCoPng, 'chưa có ảnh để tìm/đối chiếu')}
+      ${muc('Đơn có PNG nhưng chưa tìm thấy EMB liên kết', d.pngChuaEmb)}
+      ${muc('Đơn có EMB nhưng chưa có PNG', d.embChuaPng)}
+      ${muc('Đơn trong thư viện không còn trong Sheet', d.khongConTrongSheet)}
+      <li>Cùng 1 nội dung PNG có ở nhiều đơn: <b>${d.trungNoiDung.soNhom}</b> nhóm (${d.trungNoiDung.soFile} file) <span class="ta-muted">— thường là khách đặt lại đúng mẫu cũ, ứng viên tái sử dụng EMB</span>
+        ${d.trungNoiDung.mau.length ? `<details><summary class="ta-muted">Xem ${d.trungNoiDung.mau.length} nhóm đầu</summary>${d.trungNoiDung.mau.map(nhom => `<div>${nhom.map(maTra).join(' · ')}</div>`).join('')}</details>` : ''}</li>
+    </ul>
+    <p class="ta-muted">Tính trong ${d.ms}ms.</p>`;
+}
+function traVaCuon(ma) {
+  document.getElementById('ta-tim').scrollIntoView({ behavior: 'smooth' });
+  traTheoMa(ma);
+}
+</script>
+</body>
+</html>

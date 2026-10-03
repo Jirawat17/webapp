@@ -21,7 +21,7 @@ const path = require('path');
 const fs = require('fs');
 const Database = require('better-sqlite3');
 
-const CAC_FILE_DB = ['trang_thai_don.db', 'nhat_ky.db', 'cai_dat.db', 'don_hang_loat.db', 'tai_khoan.db', 'kich_ban.db'];
+const CAC_FILE_DB = ['trang_thai_don.db', 'nhat_ky.db', 'cai_dat.db', 'don_hang_loat.db', 'tai_khoan.db', 'kich_ban.db', 'thu_vien.db'];
 
 const THU_MUC_DATA = path.join(__dirname, '..', 'data');
 const THU_MUC_BACKUP = process.env.BACKUP_DIR || path.join(__dirname, '..', 'data-backups');

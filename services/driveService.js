@@ -130,17 +130,28 @@ async function layChiTietAnhThuMucDrive(url) {
   do {
     const res = await drive.files.list({
       q: `'${folderId}' in parents and mimeType contains 'image/' and trashed = false`,
-      fields: 'nextPageToken, files(id, name)', orderBy: 'name', pageSize: 100, pageToken,
+      fields: 'nextPageToken, files(id, name, mimeType, size)', orderBy: 'name', pageSize: 100, pageToken,
     }, { timeout: THOI_GIAN_CHO_TOI_DA_MS });
     files.push(...(res.data.files || []));
     pageToken = res.data.nextPageToken;
   } while (pageToken);
 
-  return files.map(f => ({ id: f.id, ten: f.name, link: `https://drive.google.com/file/d/${f.id}/view` }));
+  // mimeType/kichThuoc (03/10/2026, thư viện "Tìm ảnh"): lọc file không phải PNG/JPEG hoặc quá lớn TRƯỚC khi tải — thư mục
+  // thiết kế hay có PSD/TIFF hàng trăm MB (vẫn là image/*). kichThuoc null nếu Drive không trả (file Google Docs...).
+  return files.map(f => ({ id: f.id, ten: f.name, link: `https://drive.google.com/file/d/${f.id}/view`, mimeType: f.mimeType || '', kichThuoc: f.size ? Number(f.size) : null }));
+}
+
+// Thông tin 1 file Drive (03/10/2026, thư viện "Tìm ảnh") — tên gốc + loại + dung lượng, để lọc trước khi tải và lưu đúng tên
+// file. Lỗi (không có quyền / không tồn tại) -> THROW kèm thông điệp của Google, nơi gọi ghi lại làm lý do lỗi rõ ràng.
+async function layThongTinFileDrive(fileId) {
+  const drive = await getDriveReadClient();
+  const res = await drive.files.get({ fileId, fields: 'name, mimeType, size' }, { timeout: THOI_GIAN_CHO_TOI_DA_MS });
+  return { ten: res.data.name || '', mimeType: res.data.mimeType || '', kichThuoc: res.data.size ? Number(res.data.size) : null };
 }
 
 module.exports = {
   layChiTietAnhThuMucDrive,
+  layThongTinFileDrive,
   layFileIdTuLinkDrive,
   layFolderIdTuLinkDrive,
   taiAnhTuLinkDrive,

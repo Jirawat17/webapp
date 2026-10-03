@@ -245,6 +245,13 @@ const ghiDeNhieu = db.transaction(ds => ds.forEach(([sttKey, updates]) => ghiDe(
 function demTheoXuong(xuong) {
   return db.prepare(`SELECT COUNT(*) AS c FROM trang_thai_don WHERE XUONG = ?`).get(xuong).c;
 }
+// Mọi stt_key thuộc các Xưởng cho trước (03/10/2026, thư viện "Tìm ảnh"): phạm vi của admin lấy 1 lần cho cả yêu cầu thay vì
+// layTheoKey từng mã (~16µs/mã — tìm kiếm của admin Xưởng nhỏ phải xét cả thư viện). Cùng điều kiện với orderService#phamViDon:
+// XUONG đã lưu khớp đúng tên 1 Xưởng được phân công (đơn chưa có dòng trong DB / XUONG rỗng -> không thuộc Xưởng nào).
+function dsKeyTheoXuong(cacXuong) {
+  if (!cacXuong.length) return [];
+  return db.prepare(`SELECT stt_key FROM trang_thai_don WHERE XUONG IN (${cacXuong.map(() => '?').join(',')})`).pluck().all(...cacXuong);
+}
 function doiTenXuongHangLoat(tenCu, tenMoi) {
   db.prepare(`UPDATE trang_thai_don SET XUONG = ? WHERE XUONG = ?`).run(tenMoi, tenCu);
 }
@@ -255,4 +262,4 @@ function layDonDoiTrangThaiTu(tu) {
     .all(tu).map(({ stt_key, ...r }) => ({ STT_Key: stt_key, ...apDungMacDinhThat(r) }));
 }
 
-module.exports = { CAC_COT, RONG_MAC_DINH, layTheoKey, layTatCa, ghiDe, ghiDeNhieu, demTheoXuong, doiTenXuongHangLoat, layDonDoiTrangThaiTu, layLichSuDoiTrangThaiTu };
+module.exports = { CAC_COT, RONG_MAC_DINH, layTheoKey, layTatCa, ghiDe, ghiDeNhieu, demTheoXuong, dsKeyTheoXuong, doiTenXuongHangLoat, layDonDoiTrangThaiTu, layLichSuDoiTrangThaiTu };

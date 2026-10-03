@@ -165,6 +165,8 @@ function renderNav(user, active) {
       { href: '/my-orders-ve-file.html', label: 'Vẽ file', icon: 'navMyOrders', key: 'my-orders-ve-file' },
       { href: '/scan.html', label: 'Quét QR', icon: 'navScan', key: 'scan' },
       { href: '/tracking.html', label: 'Tracking', icon: 'navTracking', key: 'tracking' },
+      // "Tìm ảnh" (03/10/2026, giai đoạn 2) — tìm thiết kế cũ + tải PNG/EMB lên thư viện.
+      { href: '/tim-anh.html', label: 'Tìm ảnh', icon: 'camera', key: 'tim-anh' },
     ];
   } else {
     // Chỉ còn admin/superadmin đi qua nhánh này (nguoi_lay_phoi/san_xuat/ve_file đã tách nhánh riêng ở
@@ -208,6 +210,9 @@ function renderNav(user, active) {
       // qua đây). Đặt GIỮA "Quét QR" và "TK" — sau khi chèn "Đơn hàng loạt" ở trên, Quét QR đã đẩy từ
       // index 4 lên 5, TK từ 5 lên 6, nên chèn TRƯỚC index 6 (đã tăng từ 5, đổi theo, xem 13/09/2026).
       links.splice(6, 0, { href: '/tracking.html', label: 'Tracking', icon: 'navTracking', key: 'tracking' });
+      // "Tìm ảnh" (03/10/2026) — thư viện thiết kế thêu PNG/EMB (docs/superpowers/specs/2026-10-03-thu-vien-tim-anh-design.md);
+      // ve_file có mục riêng ở nhánh ve_file phía trên.
+      links.push({ href: '/tim-anh.html', label: 'Tìm ảnh', icon: 'camera', key: 'tim-anh' });
       // "Kịch bản quét" (bổ sung 19/09/2026, theo yêu cầu người dùng — trang quản lý mới thay cho sửa
       // tay tab Sheet CauHinhKichBan cũ, xem routes/kichBan.js). Ảnh hưởng toàn bộ luồng quét QR hệ thống —
       // CHỈ superadmin từ 29/09/2026 (ẩn với admin theo yêu cầu người dùng; trang + API cũng chặn admin).

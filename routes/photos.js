@@ -6,7 +6,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 
 const sharp = require('sharp');
 const orderService = require('../services/orderService');
 const storageService = require('../services/storageService');
-const { taiDsAnh } = require('../services/anhNguonService');
+const { taiDsAnh, nhanDangKieuAnh } = require('../services/anhNguonService');
 const { ghiLog } = require('../services/logService');
 const { requireLogin, requireExactRole } = require('../middleware/auth');
 const { layCaiDatNenAnh, datCaiDatNenAnh } = require('../services/caiDatDbService');
@@ -231,9 +231,9 @@ router.get('/file/*', async (req, res) => {
     return res.status(404).json({ error: 'Không tìm thấy ảnh' });
   }
 
-  let result;
+  // guiObjectQuaHttp (03/10/2026): có timeout + đóng đúng kết nối khi MinIO đứt/treo giữa chừng (.pipe() cũ để người xem chờ mãi).
   try {
-    result = await storageService.getObjectStream(objectKey);
+    await storageService.guiObjectQuaHttp(res, objectKey);
   } catch (err) {
     if (err.name === 'NoSuchKey' || err.$metadata?.httpStatusCode === 404) {
       return res.status(404).json({ error: 'Không tìm thấy ảnh' });
@@ -241,10 +241,6 @@ router.get('/file/*', async (req, res) => {
     console.error('[MinIO] Đọc ảnh thất bại:', err.message);
     return res.status(502).json({ error: 'Đọc ảnh từ kho lưu trữ thất bại' });
   }
-
-  res.setHeader('Content-Type', result.ContentType || 'application/octet-stream');
-  if (result.ContentLength) res.setHeader('Content-Length', result.ContentLength);
-  result.Body.pipe(res);
 });
 
 // ============================================================
@@ -298,14 +294,8 @@ function luuVaoCacheAnhNgoai(khoa, danhSachAnh) {
   }
 }
 
-// Nhận diện Content-Type qua magic bytes — cùng kỹ thuật routes/reports.js#nhanDangDinhDangAnh() dùng
-// cho PDF, viết riêng 1 bản ở đây (khác định dạng trả về: Content-Type thật thay vì mã ngắn 'png'/'jpeg')
-// để không phải export/import chéo giữa 2 route học không liên quan tới nhau.
-function nhanDangContentTypeAnh(buffer) {
-  if (buffer && buffer.length >= 4 && buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) return 'image/png';
-  if (buffer && buffer.length >= 2 && buffer[0] === 0xff && buffer[1] === 0xd8) return 'image/jpeg';
-  return 'application/octet-stream';
-}
+// Content-Type qua magic bytes — dùng chung anhNguonService.js#nhanDangKieuAnh (03/10/2026, thay bản viết riêng ở đây).
+const nhanDangContentTypeAnh = buffer => nhanDangKieuAnh(buffer) || 'application/octet-stream';
 
 // Resize + nén ảnh GỐC thành bản HIỂN THỊ nhẹ hơn (bổ sung 21/09/2026, theo yêu cầu người dùng — ảnh
 // gốc từ link thư mục Drive/MinIO/URL thường tải nguyên bản (thường vài MB/ảnh) trong khi khung hiển

@@ -51,30 +51,64 @@ async function urlDuocPhepFetch(url) {
 // gemini.google.com — header ~25KB, fetch() ném lỗi HeadersOverflowError ngay cả trước khi đọc được
 // nội dung). maxHeaderSize nâng lên ở đây tránh đúng lỗi này. Tự theo redirect (301/302/303/307/308)
 // vì http(s).get() KHÔNG tự làm như fetch() — tối đa 5 lần, đủ dùng thực tế, tránh lặp vô hạn.
-async function taiUrlTho(url, soLanChuyenHuongConLai = 5) {
+// Trần dung lượng 1 lần tải (03/10/2026, rà soát thư viện "Tìm ảnh" — nhập Excel đưa hàng loạt link ngoài vào đây): trước
+// đó gom HẾT mọi byte vào RAM rồi mới xét, 1 link trỏ nhầm vào file lớn (zip, video) có thể làm tràn bộ nhớ container.
+// 50MB dư sức cho mọi ảnh thiết kế/ảnh tham khảo thật; vượt -> bỏ, trả null như link lỗi.
+const KICH_THUOC_TAI_TOI_DA = 50 * 1024 * 1024;
+// Hạn TỔNG cho 1 lần tải (03/10/2026, rà soát chống nghẽn): `timeout: 15000` bên dưới chỉ tính lúc kết nối IM LẶNG — server
+// nhỏ giọt vài byte mỗi chục giây giữ kết nối gần như mãi mãi. 60 giây dư cho ảnh 50MB ở mạng bình thường. Tính cho CẢ chuỗi
+// chuyển hướng (hanChotTong truyền xuống lần gọi đệ quy) — đặt lại ở mỗi lần chuyển hướng thì 5 lần chuyển = 6 phút.
+const THOI_GIAN_TAI_TOI_DA_MS = 60000;
+
+async function taiUrlTho(url, soLanChuyenHuongConLai = 5, hanChotTong = Date.now() + THOI_GIAN_TAI_TOI_DA_MS) {
   // Kiểm tra lại ở MỖI lần gọi — kể cả khi đệ quy theo redirect bên dưới — vì URL ban đầu hợp lệ
   // (công khai) vẫn có thể redirect sang 1 địa chỉ nội bộ.
   if (!(await urlDuocPhepFetch(url))) {
     console.error('[Ảnh ngoài] Chặn tải — URL trỏ vào địa chỉ nội bộ/riêng tư:', url);
     return null;
   }
-  return new Promise((resolve) => {
+  return new Promise((resolveGoc) => {
+    let hanChot = null;
+    const resolve = v => { clearTimeout(hanChot); resolveGoc(v); };
     const mod = String(url).startsWith('http://') ? http : https;
     const yeuCau = mod.get(url, {
       maxHeaderSize: 65536 * 4, // 256KB — dư sức so với ~25KB thực tế gặp phải, vẫn có giới hạn để tránh phản hồi bất thường
       timeout: 15000,
       headers: { 'User-Agent': 'Mozilla/5.0' }, // 1 số site chặn request không có User-Agint hợp lệ
     }, (res) => {
+      // Kết nối bị huỷ/đứt giữa lúc đang nhận body (server nguồn ngắt, timeout 15s bên dưới, quaLon bên dưới): res phát
+      // 'error' "aborted", KHÔNG có 'end' — thiếu listener này promise treo MÃI (đã đo 03/10/2026), kéo theo cả hàng chờ thư viện
+      // "Tìm ảnh" đứng im tới khi khởi động lại server.
+      res.on('error', () => resolve(null));
       if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location && soLanChuyenHuongConLai > 0) {
         res.resume();
-        return resolve(taiUrlTho(new URL(res.headers.location, url).toString(), soLanChuyenHuongConLai - 1));
+        return resolve(taiUrlTho(new URL(res.headers.location, url).toString(), soLanChuyenHuongConLai - 1, hanChotTong));
       }
       if (res.statusCode !== 200) { res.resume(); return resolve(null); }
+      let daBo = false;
+      const quaLon = () => {
+        if (daBo) return; // 'data' có thể còn tới vài lần sau destroy() — chỉ log/huỷ 1 lần
+        daBo = true;
+        console.error(`[Ảnh ngoài] Bỏ — file vượt ${KICH_THUOC_TAI_TOI_DA / 1048576}MB:`, url);
+        yeuCau.destroy();
+        resolve(null);
+      };
+      if (Number(res.headers['content-length']) > KICH_THUOC_TAI_TOI_DA) return quaLon();
 
       const chunks = [];
-      res.on('data', c => chunks.push(c));
+      let tong = 0;
+      res.on('data', c => {
+        tong += c.length;
+        if (tong > KICH_THUOC_TAI_TOI_DA) return quaLon();
+        if (!daBo) chunks.push(c);
+      });
       res.on('end', () => resolve(Buffer.concat(chunks)));
     });
+    hanChot = setTimeout(() => {
+      console.error(`[Ảnh ngoài] Bỏ — tải quá ${THOI_GIAN_TAI_TOI_DA_MS / 1000} giây:`, url);
+      yeuCau.destroy();
+      resolve(null);
+    }, Math.max(0, hanChotTong - Date.now()));
     yeuCau.on('timeout', () => yeuCau.destroy());
     yeuCau.on('error', (err) => {
       console.error('[Ảnh ngoài] Không tải được:', url, '-', err.message);
@@ -122,4 +156,12 @@ async function taiDsAnh(url, tuyChon = {}) {
   return mot ? [mot] : [];
 }
 
-module.exports = { taiUrlTho, taiAnhTuUrlThuong, taiAnh, taiDsAnh };
+// Nhận diện định dạng ảnh qua magic bytes -> 'image/png' | 'image/jpeg' | null. Dùng chung cho routes/photos.js (proxy ảnh
+// ngoài) và thư viện "Tìm ảnh" (services/thuVien/xuLyService.js) — gộp 03/10/2026 thay cho 2 bản viết riêng.
+function nhanDangKieuAnh(b) {
+  if (b && b.length >= 4 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return 'image/png';
+  if (b && b.length >= 2 && b[0] === 0xff && b[1] === 0xd8) return 'image/jpeg';
+  return null;
+}
+
+module.exports = { taiUrlTho, taiAnhTuUrlThuong, taiAnh, taiDsAnh, nhanDangKieuAnh };

@@ -98,6 +98,137 @@ async function tinhHashAnh(buffer) {
   }
 }
 
+// ---------------- Hash HÌNH DẠNG (03/10/2026, menu "Tìm ảnh" — docs/superpowers/specs/2026-10-03-thu-vien-tim-anh-design.md mục 9) ----------------
+// KHÔNG thay tinhHashAnh ở trên (Đơn hàng loạt vẫn dùng nguyên). Mục tiêu: cùng 1 thiết kế nhưng khác màu chỉ / khác nền
+// (trong suốt, đen, trắng) / khác viền / khác kích thước vẫn ra hash gần nhau. tinhHashAnh không làm được vì sharp đưa vùng
+// trong suốt về ĐEN — nền trong suốt và nền đen giống nhau, nền trắng lệch hẳn; đổi màu chỉ cũng đổi độ sáng.
+// Cách làm: tách MẶT NẠ "điểm nào là nội dung" (bỏ hẳn màu), cắt sát nội dung, lấy độ phủ trung bình theo ô 17x16 rồi dHash.
+// - Ảnh có kênh trong suốt thật (có điểm alpha < 250): nội dung = alpha >= 128. Riêng ảnh là 1 TẤM NỀN ĐẶC có vài điểm trong
+//   suốt (góc bo tròn, lề trong suốt quanh tấm nền — mặt nạ alpha phủ > 90% khung của chính nó): mặt nạ alpha chỉ là tấm nền,
+//   hash gần như hằng số và mọi thiết kế kiểu này "giống 100%" nhau (đo 03/10/2026) -> tách nội dung theo màu tấm nền
+//   (trung vị màu các điểm đục trên viền khung) như ảnh không trong suốt.
+// - Ảnh không trong suốt: nền = trung vị màu 4 góc; nội dung = điểm lệch màu nền > DO_LECH_NEN. Giới hạn đã biết: thiết kế
+//   tràn kín cả 4 góc thì đoán sai nền.
+// Khung nội dung bỏ 0,5% điểm nội dung ở mỗi phía (theo hàng, theo cột): 1 chấm lạc ở góc ảnh không kéo giãn khung (đo
+// 03/10/2026: chấm 4px làm cùng 1 thiết kế chỉ còn giống 66%, thấp hơn 1 thiết kế khác).
+// ponytail: phân vị cố định 0,5% — nét thật nhỏ hơn mức đó ở rìa thiết kế cũng bị cắt; đổi tỉ lệ nếu đo ảnh thật thấy lệch.
+// Độ phủ theo Ô (trung bình mọi điểm trong ô) thay vì lấy 1 điểm/ô — nét chữ thêu mảnh dễ rơi lọt giữa các điểm lấy mẫu.
+const CANH_MAT_NA = 512;
+const DO_LECH_NEN = 48; // khoảng cách màu RGB (Euclid, 0..441) — hiệu chỉnh bằng ảnh giả lập 03/10/2026, xem số đo trong spec
+const TI_LE_PHU_TAM_NEN = 0.9;
+const TI_LE_BO_MOI_PHIA = 0.005;
+
+// Số điểm nội dung theo từng hàng / cột.
+function demHangCot(matNa, w, h) {
+  const hang = new Uint32Array(h), cot = new Uint32Array(w);
+  let tong = 0;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) if (matNa[y * w + x]) { hang[y]++; cot[x]++; tong++; }
+  }
+  return { hang, cot, tong };
+}
+// [đầu, cuối] sau khi bỏ tối đa `bo` điểm ở mỗi phía (bo = 0 -> đúng khung min/max).
+function bien(dem, bo) {
+  let a = 0, b = dem.length - 1, s = 0;
+  while (s + dem[a] <= bo) s += dem[a++];
+  s = 0;
+  while (s + dem[b] <= bo) s += dem[b--];
+  return [a, b];
+}
+
+async function tinhHashHinhDang(buffer) {
+  if (!buffer || buffer.length === 0) return null;
+  try {
+    const { data, info } = await Promise.race([
+      sharp(buffer)
+        .ensureAlpha()
+        .resize(CANH_MAT_NA, CANH_MAT_NA, { fit: 'inside', withoutEnlargement: true, kernel: KERNEL_RESIZE })
+        .raw()
+        .toBuffer({ resolveWithObject: true }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Quá thời gian chờ tính hash hình dạng')), THOI_GIAN_TOI_DA_MS)),
+    ]);
+    const w = info.width, h = info.height, kenh = info.channels; // ensureAlpha -> 4 kênh
+    const soDiem = w * h;
+
+    let coTrongSuot = false;
+    for (let i = 3; i < data.length; i += kenh) if (data[i] < 250) { coTrongSuot = true; break; }
+
+    // trung vị màu (từng kênh) của các điểm cho trước
+    const trungVi = dsDiem => [0, 1, 2].map(c => {
+      const v = dsDiem.map(p => data[p * kenh + c]).sort((a, b) => a - b);
+      const m = v.length >> 1;
+      return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2;
+    });
+    // nội dung = điểm ĐỤC lệch màu nền > DO_LECH_NEN (ảnh không trong suốt: mọi điểm đều đục)
+    const theoMauNen = (nen, matNaRa) => {
+      const nguong2 = DO_LECH_NEN * DO_LECH_NEN;
+      for (let p = 0; p < soDiem; p++) {
+        const dr = data[p * kenh] - nen[0], dg = data[p * kenh + 1] - nen[1], db = data[p * kenh + 2] - nen[2];
+        matNaRa[p] = data[p * kenh + 3] >= 128 && dr * dr + dg * dg + db * db > nguong2 ? 1 : 0;
+      }
+    };
+
+    let matNa = new Uint8Array(soDiem);
+    let dem;
+    if (coTrongSuot) {
+      for (let p = 0; p < soDiem; p++) matNa[p] = data[p * kenh + 3] >= 128 ? 1 : 0;
+      dem = demHangCot(matNa, w, h);
+      if (!dem.tong) return null; // trong suốt hoàn toàn
+      const [ax, bx] = bien(dem.cot, 0), [ay, by] = bien(dem.hang, 0);
+      if (dem.tong > TI_LE_PHU_TAM_NEN * (bx - ax + 1) * (by - ay + 1)) { // tấm nền đặc — xem ghi chú đầu mục
+        const vien = [];
+        for (let x = ax; x <= bx; x++) vien.push(ay * w + x, by * w + x);
+        for (let y = ay + 1; y < by; y++) vien.push(y * w + ax, y * w + bx);
+        const matNaNen = new Uint8Array(soDiem);
+        theoMauNen(trungVi(vien.filter(p => matNa[p])), matNaNen);
+        const demNen = demHangCot(matNaNen, w, h);
+        if (demNen.tong) { matNa = matNaNen; dem = demNen; } // tấm nền trơn không có gì trên đó -> giữ mặt nạ alpha
+      }
+    } else {
+      theoMauNen(trungVi([0, w - 1, (h - 1) * w, h * w - 1]), matNa);
+      dem = demHangCot(matNa, w, h);
+    }
+    if (!dem.tong) return null; // ảnh trống — không có điểm nội dung nào
+    const bo = Math.floor(dem.tong * TI_LE_BO_MOI_PHIA);
+    const [x0, x1] = bien(dem.cot, bo), [y0, y1] = bien(dem.hang, bo);
+
+    const bw = x1 - x0 + 1, bh = y1 - y0 + 1;
+    const phu = new Float64Array(CHIEU_RONG_HASH * CHIEU_CAO_HASH);
+    for (let oy = 0; oy < CHIEU_CAO_HASH; oy++) {
+      const ya = y0 + Math.floor(oy * bh / CHIEU_CAO_HASH), yb = Math.max(ya + 1, y0 + Math.floor((oy + 1) * bh / CHIEU_CAO_HASH));
+      for (let ox = 0; ox < CHIEU_RONG_HASH; ox++) {
+        const xa = x0 + Math.floor(ox * bw / CHIEU_RONG_HASH), xb = Math.max(xa + 1, x0 + Math.floor((ox + 1) * bw / CHIEU_RONG_HASH));
+        let tong = 0;
+        for (let y = ya; y < yb; y++) for (let x = xa; x < xb; x++) tong += matNa[y * w + x];
+        phu[oy * CHIEU_RONG_HASH + ox] = tong / ((yb - ya) * (xb - xa));
+      }
+    }
+
+    let hex = '';
+    let nibble = 0, soBit = 0;
+    for (let y = 0; y < CHIEU_CAO_HASH; y++) {
+      for (let x = 0; x < CHIEU_RONG_HASH - 1; x++) {
+        nibble = (nibble << 1) | (phu[y * CHIEU_RONG_HASH + x] < phu[y * CHIEU_RONG_HASH + x + 1] ? 1 : 0);
+        if (++soBit === 4) { hex += nibble.toString(16); nibble = 0; soBit = 0; }
+      }
+    }
+    return hex;
+  } catch (err) {
+    return null;
+  }
+}
+
+// Hash gần như hằng số (gần hết bit 0 hoặc gần hết bit 1) = ảnh gần như 1 màu / 1 khối đặc: KHÔNG mang thông tin hình dạng,
+// 2 ảnh khác hẳn nhau vẫn "giống 100%" (đo 03/10/2026: chỉ đen thuần trên nền trong suốt -> hash toàn 0; tấm nền bo góc -> 4 bit
+// 1). Thiết kế thật đo được ~120-130 bit 1/256. Thư viện "Tìm ảnh" coi hash suy biến như không có hash khi so điểm.
+const SO_BIT_1_TOI_THIEU = 16;
+function laHashSuyBien(hex) {
+  if (!hex) return false;
+  let soBit1 = 0;
+  for (let i = 0; i < hex.length; i++) soBit1 += SO_BIT_1_TRONG_NIBBLE[parseInt(hex[i], 16)];
+  return soBit1 < SO_BIT_1_TOI_THIEU || soBit1 > hex.length * 4 - SO_BIT_1_TOI_THIEU;
+}
+
 // Khoảng cách Hamming (số bit khác nhau) giữa 2 hash — càng nhỏ càng giống nhau. Trả về Infinity nếu
 // thiếu 1 trong 2 giá trị hoặc độ dài không khớp (không thể so sánh), để nơi gọi coi như "chắc chắn
 // không cùng nhóm" thay vì so sánh sai.
@@ -112,4 +243,4 @@ function khoangCachHamming(hexA, hexB) {
   return khoangCach;
 }
 
-module.exports = { tinhHashAnh, khoangCachHamming };
+module.exports = { tinhHashAnh, tinhHashHinhDang, laHashSuyBien, khoangCachHamming };
