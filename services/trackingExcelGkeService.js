@@ -30,14 +30,15 @@ const COT = ['customer_order_num', 'service_code', 'consignee_info.full_name', '
 const tachMaDon = chuoi => [...new Set(String(chuoi || '').split(/[\s,;]+/).map(s => s.trim()).filter(Boolean))];
 
 // 1 đơn -> { sttKey, hopLe, lyDo[], canhBao[], taiKhoan: { id, ten }, duLieu: { mã trường: giá trị } }
-function kiemTraDon(row, rows) {
+// banDoNhom (tuỳ chọn): donNhieuAoService.xayDungBanDoNhom(rows) dựng sẵn — gọi cho nhiều đơn thì truyền vào để khỏi dựng lại mỗi đơn.
+function kiemTraDon(row, rows, banDoNhom) {
   const lyDo = [], canhBao = [];
   const kq = { sttKey: row.STT_Key, hopLe: false, lyDo, canhBao, taiKhoan: null, duLieu: null, loiGanNhat: row.TU_MUA_LOI_GAN_NHAT || '' };
   if (TRANG_THAI_KHONG_CAN_MUA.includes(row.TRANG_THAI_XUONG)) lyDo.push(`Đơn đang "${row.TRANG_THAI_XUONG}" — không cần mua tracking.`);
   if (row.TRACKING_ID) lyDo.push(`Đã có mã tracking ${row.TRACKING_ID} — không mua lại.`);
   // TAM_THOI = "đang chờ tem": vận đơn ĐÃ tạo bên GKE (lỗi ở bước lấy tem) — upload Excel sẽ trùng customer_order_num / tạo vận đơn thứ 2.
   if (row.TAM_THOI) lyDo.push('Vận đơn ĐÃ được tạo trên GKE (đang chờ tem) — dùng IN LABEL để lấy tem, KHÔNG tạo lại bằng Excel.');
-  const nhom = donNhieuAoService.layNhomCuaDon(row.STT_Key, rows);
+  const nhom = banDoNhom ? banDoNhom.get(row.STT_Key) || null : donNhieuAoService.layNhomCuaDon(row.STT_Key, rows);
   if (nhom && nhom.loiChan.length) lyDo.push(`Nhóm DonNhieuAo ${nhom.goc} lỗi dữ liệu: ${nhom.loiChan.join(' ')}`);
   if (nhom && nhom.donMua.STT_Key !== row.STT_Key) lyDo.push(`Thuộc nhóm DonNhieuAo ${nhom.goc} — chỉ xuất đơn ${nhom.donMua.STT_Key} (cả nhóm dùng chung 1 tracking).`);
   if (lyDo.length) return kq;

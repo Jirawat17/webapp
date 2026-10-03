@@ -106,6 +106,23 @@
 }
 @keyframes bdkThoXanh { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
 .bdk-lan-cuoi { font-size:0.72rem; color:#8fb8d9; font-variant-numeric:tabular-nums; white-space:nowrap; }
+/* Bấm số ở thẻ cảnh báo / tỷ lệ lỗi -> popup danh sách đơn (03/10/2026, theo yêu cầu người dùng). <dialog> gốc của trình duyệt. */
+.bdk-kpi-bam { cursor:pointer; transition: transform .15s ease, box-shadow .15s ease; }
+.bdk-kpi-bam:hover, .bdk-kpi-bam:focus-visible { transform: translateY(-2px); box-shadow: 0 0 24px rgba(126,232,250,0.28); outline:none; }
+.bdk-kpi-bam .bdk-kpi-nhan::after { content:' ›'; }
+#bdk-popup { background:#0b1730; color:#cfe8ff; border:1px solid rgba(126,232,250,0.4); border-radius:10px; padding:0;
+  width:min(920px, calc(100vw - 32px)); max-height:min(80vh, 760px); box-shadow:0 0 40px rgba(126,232,250,0.25); }
+#bdk-popup::backdrop { background: rgba(2,6,15,0.7); }
+.bdk-popup-dau { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:14px 18px; border-bottom:1px solid rgba(126,232,250,0.2); position:sticky; top:0; background:#0b1730; }
+.bdk-popup-dau h3 { margin:0; color:#7ee8fa; font-size:1rem; letter-spacing:1px; text-transform:uppercase; }
+.bdk-popup-dau button { background:none; border:1px solid rgba(126,232,250,0.4); color:#cfe8ff; border-radius:6px; padding:4px 12px; cursor:pointer; font-size:0.85rem; }
+.bdk-popup-than { padding:12px 18px 18px; overflow-x:auto; }
+.bdk-popup-than table { width:100%; border-collapse:collapse; font-size:0.84rem; }
+.bdk-popup-than th, .bdk-popup-than td { text-align:left; padding:7px 8px; border-bottom:1px solid rgba(126,232,250,0.12); white-space:nowrap; }
+.bdk-popup-than th { color:#8fb8d9; font-weight:600; font-size:0.74rem; text-transform:uppercase; letter-spacing:0.5px; }
+.bdk-popup-than a { color:#7ee8fa; font-weight:700; text-decoration:none; }
+.bdk-popup-than a:hover { text-decoration:underline; }
+.bdk-popup-ghi-chu { color:#8fb8d9; font-size:0.8rem; margin:0 0 8px; }
 </style>
 </head>
 <body>
@@ -135,19 +152,19 @@
       <div class="bdk-kpi-nhan">Tổng số đơn</div>
       <div class="bdk-kpi-so" id="kpi-tong-don">0</div>
     </div>
-    <div class="bdk-kpi-card bdk-kpi-vang">
+    <div class="bdk-kpi-card bdk-kpi-vang bdk-kpi-bam" role="button" tabindex="0" onclick="moPopupCanhBao('VANG')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();moPopupCanhBao('VANG')}">
       <div class="bdk-kpi-nhan">Cảnh báo Vàng</div>
       <div class="bdk-kpi-so" id="kpi-vang">0</div>
     </div>
-    <div class="bdk-kpi-card bdk-kpi-cam">
+    <div class="bdk-kpi-card bdk-kpi-cam bdk-kpi-bam" role="button" tabindex="0" onclick="moPopupCanhBao('CAM')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();moPopupCanhBao('CAM')}">
       <div class="bdk-kpi-nhan">Cảnh báo Cam</div>
       <div class="bdk-kpi-so" id="kpi-cam">0</div>
     </div>
-    <div class="bdk-kpi-card bdk-kpi-do">
+    <div class="bdk-kpi-card bdk-kpi-do bdk-kpi-bam" role="button" tabindex="0" onclick="moPopupCanhBao('DO')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();moPopupCanhBao('DO')}">
       <div class="bdk-kpi-nhan">Cảnh báo Đỏ</div>
       <div class="bdk-kpi-so" id="kpi-do">0</div>
     </div>
-    <div class="bdk-kpi-card">
+    <div class="bdk-kpi-card bdk-kpi-bam" role="button" tabindex="0" onclick="moPopupLoi()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();moPopupLoi()}">
       <div class="bdk-kpi-nhan">Tỷ lệ lỗi sản xuất</div>
       <div class="bdk-kpi-so" id="kpi-ty-le-loi">0%</div>
     </div>
@@ -210,11 +227,54 @@
   </div>
 </div>
 
+<dialog id="bdk-popup" aria-labelledby="bdk-popup-tieu-de">
+  <div class="bdk-popup-dau"><h3 id="bdk-popup-tieu-de"></h3><button type="button" onclick="document.getElementById('bdk-popup').close()">Đóng</button></div>
+  <div class="bdk-popup-than" id="bdk-popup-than"></div>
+</dialog>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="/js/icons.js?v=104"></script>
-<script src="/js/api.js?v=110"></script>
+<script src="/js/api.js?v=111"></script>
 <script>
 let kyHienTai = 'toan_bo';
+let thongKeLoiGanNhat = null; // /reports/thong-ke-loi của lần tải gần nhất — popup "Tỷ lệ lỗi sản xuất" dùng lại, không gọi thêm
+
+// ---- Popup danh sách đơn khi bấm số (03/10/2026) ----
+const TEN_MUC_CANH_BAO = { VANG: 'Vàng', CAM: 'Cam', DO: 'Đỏ' };
+const linkDonBdk = k => `<a href="/order.html?stt=${encodeURIComponent(k)}" target="_blank" rel="noopener">${escapeHtml(k)}</a>`;
+let lanMoPopup = 0; // tăng mỗi lần mở — dữ liệu tải về muộn của lần bấm TRƯỚC không được ghi đè popup hiện tại
+function moPopup(tieuDe, html) {
+  document.getElementById('bdk-popup-tieu-de').textContent = tieuDe;
+  document.getElementById('bdk-popup-than').innerHTML = html;
+  const dlg = document.getElementById('bdk-popup');
+  if (!dlg.open) dlg.showModal();
+}
+// Danh sách tải lúc bấm (ảnh chụp NGAY LÚC ĐÓ — có thể lệch vài đơn so với số trên thẻ nếu thẻ chưa tới lượt tự tải lại 60 giây).
+async function moPopupCanhBao(muc) {
+  const tieuDe = `Cảnh báo ${TEN_MUC_CANH_BAO[muc]}`;
+  const lan = ++lanMoPopup;
+  moPopup(tieuDe, '<p class="bdk-popup-ghi-chu">Đang tải...</p>');
+  // Đã bấm thẻ khác, hoặc đã Đóng popup trong lúc chờ -> bỏ kết quả (không ghi đè / không tự mở lại).
+  const conHieuLuc = () => lan === lanMoPopup && document.getElementById('bdk-popup').open;
+  let ds;
+  try { ds = (await apiFetch('/orders/thong-ke-nhanh?chiTiet=' + muc)).ds; }
+  catch (e) { if (conHieuLuc()) moPopup(tieuDe, `<p style="color:#ff5e5e">${escapeHtml(e.message)}</p>`); return; }
+  if (!conHieuLuc()) return;
+  const coXuong = ds.some(d => d.xuong !== undefined);
+  moPopup(`${tieuDe} — ${ds.length} đơn`, ds.length ? `<p class="bdk-popup-ghi-chu">Đơn đang ở mức cảnh báo này ngay lúc xem; số ngày tính từ ngày lên đơn, nhiều nhất trước. Bấm mã đơn để mở chi tiết (tab mới).</p>
+    <table><thead><tr><th>Mã đơn</th><th>Loại</th><th>Trạng thái</th><th>Ngày lên đơn</th><th>Số ngày</th>${coXuong ? '<th>Xưởng</th>' : ''}</tr></thead><tbody>${ds.map(d => `
+      <tr><td>${linkDonBdk(d.sttKey)}</td><td>${escapeHtml(d.loai)}</td><td>${escapeHtml(d.trangThai || 'Chưa in mã')}</td><td>${escapeHtml(d.ngayLenDon)}</td>
+        <td>${d.soNgay ?? '—'}</td>${coXuong ? `<td>${escapeHtml(d.xuong)}</td>` : ''}</tr>`).join('')}</tbody></table>` : '<p class="bdk-popup-ghi-chu">Không có đơn nào.</p>');
+}
+function moPopupLoi() {
+  lanMoPopup++;
+  const tk = thongKeLoiGanNhat;
+  if (!tk) { moPopup('Lỗi sản xuất', '<p class="bdk-popup-ghi-chu">Dữ liệu chưa tải xong (hoặc tải lỗi) — đợi trang tải lại rồi bấm lại.</p>'); return; }
+  const ds = tk.chiTiet || [];
+  moPopup(`Lỗi sản xuất — ${tk.tongSoLoi} lần`, ds.length ? `<p class="bdk-popup-ghi-chu">Mỗi dòng là 1 lần đơn bị chuyển sang "LỖI SẢN XUẤT CẦN LÀM LẠI" trong kỳ đang chọn, mới nhất trước${tk.tongSoLoi > ds.length ? ` — hiển thị ${ds.length} lần mới nhất / ${tk.tongSoLoi}` : ''}. Bấm mã đơn để mở chi tiết (tab mới).</p>
+    <table><thead><tr><th>Mã đơn</th><th>Loại</th><th>Người báo lỗi</th><th>Người sản xuất</th><th>Thời gian</th></tr></thead><tbody>${ds.map(d => `
+      <tr><td>${linkDonBdk(d.sttKey)}</td><td>${escapeHtml(d.loai)}</td><td>${escapeHtml(d.nguoiDung)}</td><td>${escapeHtml(d.nguoiSanXuat)}</td><td>${escapeHtml(d.thoiGian)}</td></tr>`).join('')}</tbody></table>` : '<p class="bdk-popup-ghi-chu">Không có lần lỗi nào trong kỳ đang chọn.</p>');
+}
 let user;
 const cacBieuDo = {};
 
@@ -411,6 +471,7 @@ async function taiBangDieuKhien() {
   renderXepHangDangXuLy('bdk-dang-chay-may', demChayMay, 'Hiện không có đơn nào đang chạy máy.');
   renderXepHangDangXuLy('bdk-dang-ve-file', demVeFile, 'Hiện không có file nào đang vẽ.');
 
+  thongKeLoiGanNhat = thongKeLoi;
   const tyLeLoi = thongKe.tongSoDon > 0 ? (thongKeLoi.tongSoLoi / thongKe.tongSoDon * 100) : 0;
   document.getElementById('kpi-ty-le-loi').textContent = tyLeLoi.toFixed(1) + '%';
 

@@ -327,7 +327,7 @@
 </div>
 
 <script src="/js/icons.js?v=104"></script>
-<script src="/js/api.js?v=110"></script>
+<script src="/js/api.js?v=111"></script>
 <script src="/js/suaThongTinGke.js?v=1"></script>
 <script>
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
@@ -474,12 +474,12 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
     }).catch(() => {}); // im lặng bỏ qua — không có Đơn hàng loạt nào cũng là trạng thái bình thường
   }
 
-  // "IN KÊ KHAI HẢI QUAN ĐƠN ĐANG CHỌN" (bổ sung 08/09/2026) — chỉ admin/ve_file, cùng phạm vi với
+  // "IN KÊ KHAI HẢI QUAN" (bổ sung 08/09/2026; đổi tên từ "... ĐƠN ĐANG CHỌN" 03/10/2026) — chỉ admin/ve_file, cùng phạm vi với
   // nút gộp phía trên.
   const btnInHaiQuan = document.getElementById('btn-in-hai-quan');
   if (laAdmin(user.vaiTro) || user.vaiTro === 've_file') {
     btnInHaiQuan.style.display = '';
-    btnInHaiQuan.innerHTML = icon('printer') + ' IN KÊ KHAI HẢI QUAN ĐƠN ĐANG CHỌN';
+    btnInHaiQuan.innerHTML = icon('printer') + ' IN KÊ KHAI HẢI QUAN';
     document.getElementById('btn-thue-team-khac').style.display = '';
   }
 
@@ -1483,7 +1483,7 @@ async function inPhoiDangChon(nut, tuyChon = {}) {
   }
 }
 
-// "IN KÊ KHAI HẢI QUAN ĐƠN ĐANG CHỌN" (bổ sung 08/09/2026) — bảng Excel thuần (Mã đơn/Loại/Số lượng/
+// "IN KÊ KHAI HẢI QUAN" (bổ sung 08/09/2026) — bảng Excel thuần (Mã đơn/Loại/Số lượng/
 // Mã tracking/Quốc gia, mẫu 'hai_quan' — xem routes/reports.js xayDungBaoCaoDangBang), không tải ảnh
 // từng đơn nên luôn đủ nhanh — gọi thẳng /excel, không cần chạy nền + tiến độ như "IN ĐƠN ĐANG CHỌN".
 async function inHaiQuanDangChon(nut) {

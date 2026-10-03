@@ -403,7 +403,18 @@ db.exec(`CREATE TABLE IF NOT EXISTS qc_auto_moc (id INTEGER PRIMARY KEY CHECK (i
 db.prepare(`INSERT OR IGNORE INTO qc_auto_moc (id, MocApDung) VALUES (1, ?)`).run(new Date().toISOString());
 const layMocApDungAutoQc = () => (db.prepare(`SELECT MocApDung FROM qc_auto_moc WHERE id = 1`).get() || {}).MocApDung || '';
 
+// AdminAI (03/10/2026, theo yêu cầu người dùng): toàn bộ cài đặt (bật/tắt luật, ngưỡng, giờ báo cáo, lịch phân tích...) lưu 1 JSON —
+// services/adminAi/caiDat.js kiểm tra/giải nghĩa. MocApDung = lần khởi động ĐẦU TIÊN có AdminAI (ghi 1 lần): băm ảnh từ mốc - 30 ngày.
+// Cấu hình AI riêng của AdminAI dùng chung bảng qc_cau_hinh với Loai = 'ADMIN_AI' (cùng cột nhà cung cấp/key/model như QC).
+db.exec(`CREATE TABLE IF NOT EXISTS admin_ai_cai_dat (id INTEGER PRIMARY KEY CHECK (id = 1), Json TEXT NOT NULL DEFAULT '{}', MocApDung TEXT NOT NULL DEFAULT '')`);
+db.prepare(`INSERT OR IGNORE INTO admin_ai_cai_dat (id, Json, MocApDung) VALUES (1, '{}', ?)`).run(new Date().toISOString());
+const layCaiDatAdminAi = () => JSON.parse((db.prepare(`SELECT Json FROM admin_ai_cai_dat WHERE id = 1`).get() || {}).Json || '{}');
+// Ghi đè các khoá cấp 1 có trong `moi` (giữ nguyên khoá khác).
+const datCaiDatAdminAi = moi => db.prepare(`UPDATE admin_ai_cai_dat SET Json = ? WHERE id = 1`).run(JSON.stringify({ ...layCaiDatAdminAi(), ...moi }));
+const layMocApDungAdminAi = () => (db.prepare(`SELECT MocApDung FROM admin_ai_cai_dat WHERE id = 1`).get() || {}).MocApDung || '';
+
 module.exports = {
+  layCaiDatAdminAi, datCaiDatAdminAi, layMocApDungAdminAi,
   layCauHinhQc, datCauHinhQc, layMocApDungAutoQc, layTelegramQc, datTelegramQc, layGiaTokenQc, datGiaTokenQc,
   layPhienBanPromptQc, layPromptDangDungQc, datPromptDangDungQc, luuPhienBanPromptQc, layLichSuPromptQc,
   CAC_COT_TAI_KHOAN_GKE, layDanhSachTaiKhoanGke, layTaiKhoanGke, ghiTaiKhoanGke, xoaTaiKhoanGke,

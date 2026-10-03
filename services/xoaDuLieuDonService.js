@@ -37,6 +37,9 @@ async function xoaDuLieuDon(sttKey) {
   nhatKyDbService.xoaDongBoSheetSellerTheoDon(sttKey);
 
   trangThaiDbService.ghiDe(sttKey, { ...trangThaiDbService.RONG_MAC_DINH, DA_XOA: 'TRUE' });
+  // SAU ghiDe: chính lần ghi trên (đưa trạng thái về mặc định) cũng sinh 1 dòng lịch sử đổi trạng thái — xoá luôn (03/10/2026, AdminAI).
+  trangThaiDbService.xoaLichSuDoiTrangThaiTheoDon(sttKey);
+  nhatKyDbService.xoaAdminAiTheoDon(sttKey);
 }
 
 module.exports = { xoaDuLieuDon };

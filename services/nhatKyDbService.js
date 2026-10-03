@@ -266,6 +266,9 @@ function layQcLog({ loaiQc, ketQua, sttKey, danhGia, gioiHan = 200 } = {}) {
   return db.prepare(`SELECT *, (SELECT k.id FROM qc_kinh_nghiem k WHERE k.QcLogId = qc_log.id) AS KinhNghiemId
     FROM qc_log ${dk.length ? 'WHERE ' + dk.join(' AND ') : ''} ORDER BY id DESC LIMIT ${Math.min(Number(gioiHan) || 200, 1000)}`).all(ts);
 }
+// AdminAI (03/10/2026): các lần QC thật (bỏ chạy thử) từ mốc `tu`, cũ trước — chỉ cột cần cho luật/phân tích (không kèm ChiTiet nặng).
+const layQcLogTu = tu => db.prepare(`SELECT id, ThoiGian, STT_Key, LoaiQc, Model, KetQua, LyDo, LyDoKetLuan, CheDo, DanhGiaThucTe, DanhGiaLyDo, DanhGiaThoiGian
+  FROM qc_log WHERE CheDo != 'TEST' AND ThoiGian >= ? ORDER BY id`).all(tu);
 const layQcLogTheoId = id => db.prepare(`SELECT * FROM qc_log WHERE id = ?`).get(id);
 
 // ---------- Kinh nghiệm QC (02/10/2026, chỉ superadmin) — giải thích của Superadmin về lỗi AI, TỐI ĐA 1 kinh nghiệm / 1 dòng qc_log.
@@ -412,12 +415,104 @@ function thongKeDanhGiaQc(tuThoiGian = '') {
     GROUP BY 1, 2, 3, 4, 5 ORDER BY 1, 2, 3, 4, 5`).all({ tu: tuThoiGian });
 }
 
+// ---------- AdminAI (03/10/2026, theo yêu cầu người dùng — CHỈ superadmin, services/adminAi/*) ----------
+// Vấn đề: Khoa = "<luật>|<đối tượng>" duy nhất. TrangThai: MO | DA_XEM | BO_QUA | DA_DONG. TuDong = 1: luật kiểu TÌNH TRẠNG — tự
+// DA_DONG khi hết điều kiện, xuất hiện lại thì mở lại; 0: luật kiểu SỰ KIỆN — chỉ đóng khi người dùng bấm. BO_QUA giữ vĩnh viễn.
+db.exec(`CREATE TABLE IF NOT EXISTS admin_ai_van_de (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, Khoa TEXT NOT NULL UNIQUE, Luat TEXT NOT NULL, Muc TEXT NOT NULL DEFAULT '',
+  STT_Key TEXT NOT NULL DEFAULT '', MoTa TEXT NOT NULL DEFAULT '', ChiTiet TEXT NOT NULL DEFAULT '', TuDong INTEGER NOT NULL DEFAULT 1,
+  TrangThai TEXT NOT NULL DEFAULT 'MO', LanDau TEXT NOT NULL DEFAULT '', LanCuoi TEXT NOT NULL DEFAULT '', ThoiGianDong TEXT NOT NULL DEFAULT '',
+  NguoiXuLy TEXT NOT NULL DEFAULT '', DaGuiTelegram INTEGER NOT NULL DEFAULT 0
+)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_aai_vd_trang_thai ON admin_ai_van_de(TrangThai)`);
+// Ghi kết quả 1 lượt quét: dsMoi = [{ khoa, luat, muc, sttKey, moTa, chiTiet, tuDong }] của CÁC luật trong `luatDaChay`.
+// Vấn đề TỰ ĐỘNG đang mở thuộc các luật đó mà không còn trong dsMoi -> DA_DONG. -> số vấn đề mới mở.
+const ghiLuotQuetAdminAi = db.transaction((dsMoi, luatDaChay, bayGio) => {
+  const lay = db.prepare(`SELECT id, TrangThai FROM admin_ai_van_de WHERE Khoa = ?`);
+  let moi = 0;
+  for (const v of dsMoi) {
+    const cu = lay.get(v.khoa);
+    const chiTiet = JSON.stringify(v.chiTiet || {});
+    if (!cu) {
+      db.prepare(`INSERT INTO admin_ai_van_de (Khoa, Luat, Muc, STT_Key, MoTa, ChiTiet, TuDong, LanDau, LanCuoi) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        .run(v.khoa, v.luat, v.muc, v.sttKey || '', v.moTa, chiTiet, v.tuDong ? 1 : 0, bayGio, bayGio);
+      moi++;
+    } else if (cu.TrangThai === 'DA_DONG') {
+      // Sự kiện đã đóng (đã xem) thì không mở lại; tình trạng hết rồi xuất hiện lại -> mở lại như vấn đề mới.
+      if (!v.tuDong) continue;
+      db.prepare(`UPDATE admin_ai_van_de SET TrangThai = 'MO', Muc = ?, MoTa = ?, ChiTiet = ?, LanDau = ?, LanCuoi = ?, ThoiGianDong = '', NguoiXuLy = '', DaGuiTelegram = 0 WHERE id = ?`)
+        .run(v.muc, v.moTa, chiTiet, bayGio, bayGio, cu.id);
+      moi++;
+    } else {
+      db.prepare(`UPDATE admin_ai_van_de SET Muc = ?, MoTa = ?, ChiTiet = ?, LanCuoi = ? WHERE id = ?`).run(v.muc, v.moTa, chiTiet, bayGio, cu.id);
+    }
+  }
+  if (luatDaChay.length) {
+    const conKhoa = new Set(dsMoi.map(v => v.khoa));
+    const dangMo = db.prepare(`SELECT id, Khoa FROM admin_ai_van_de WHERE TuDong = 1 AND TrangThai IN ('MO', 'DA_XEM') AND Luat IN (${luatDaChay.map(() => '?').join(',')})`).all(...luatDaChay);
+    const dong = db.prepare(`UPDATE admin_ai_van_de SET TrangThai = 'DA_DONG', ThoiGianDong = ? WHERE id = ?`);
+    for (const r of dangMo) if (!conKhoa.has(r.Khoa)) dong.run(bayGio, r.id);
+  }
+  return moi;
+});
+// loc: { trangThai: 'MO'|'DA_XEM'|'BO_QUA'|'DA_DONG'|'' (''=đang mở + đã xem), luat } — mới nhất trước, tối đa 1000.
+function layVanDeAdminAi({ trangThai = '', luat = '' } = {}) {
+  const dk = [trangThai ? 'TrangThai = @trangThai' : `TrangThai IN ('MO', 'DA_XEM')`];
+  if (luat) dk.push('Luat = @luat');
+  return db.prepare(`SELECT * FROM admin_ai_van_de WHERE ${dk.join(' AND ')} ORDER BY LanCuoi DESC, id DESC LIMIT 1000`).all({ trangThai, luat })
+    .map(r => ({ ...r, ChiTiet: JSON.parse(r.ChiTiet || '{}') }));
+}
+const demVanDeAdminAi = () => db.prepare(`SELECT Luat, TrangThai, COUNT(*) AS soLuong FROM admin_ai_van_de GROUP BY 1, 2`).all();
+// Người dùng xử lý: DA_XEM | BO_QUA | MO (mở lại). Sự kiện bấm "Đã xem" -> DA_DONG luôn (không còn gì để theo dõi).
+function doiTrangThaiVanDeAdminAi(id, trangThai, nguoi, bayGio) {
+  const r = db.prepare(`SELECT TuDong FROM admin_ai_van_de WHERE id = ?`).get(id);
+  if (!r) return 0;
+  const tt = trangThai === 'DA_XEM' && !r.TuDong ? 'DA_DONG' : trangThai;
+  return db.prepare(`UPDATE admin_ai_van_de SET TrangThai = ?, NguoiXuLy = ?, ThoiGianDong = ? WHERE id = ?`).run(tt, nguoi, tt === 'DA_DONG' ? bayGio : '', id).changes;
+}
+const layVanDeChuaGuiTelegram = () => db.prepare(`SELECT * FROM admin_ai_van_de WHERE DaGuiTelegram = 0 AND TrangThai = 'MO' ORDER BY id`).all();
+const danhDauDaGuiTelegram = ids => db.transaction(() => ids.forEach(id => db.prepare(`UPDATE admin_ai_van_de SET DaGuiTelegram = 1 WHERE id = ?`).run(id)))();
+
+// Băm ảnh (dHash) để phát hiện ảnh trùng giữa các đơn. Cot: Anh_Da_San_Xuat_URL | Anh_Da_Dan_Tem_URL. Hash '' + Loi = không băm được.
+db.exec(`CREATE TABLE IF NOT EXISTS admin_ai_anh_hash (
+  STT_Key TEXT NOT NULL, Cot TEXT NOT NULL, Url TEXT NOT NULL, Hash TEXT NOT NULL DEFAULT '', Loi TEXT NOT NULL DEFAULT '', ThoiGian TEXT NOT NULL DEFAULT '',
+  PRIMARY KEY (STT_Key, Cot)
+)`);
+// Xoá dữ liệu đơn (xoaDuLieuDonService): mọi dấu vết AdminAI của đơn đó.
+const xoaAdminAiTheoDon = sttKey => db.transaction(() => {
+  db.prepare(`DELETE FROM admin_ai_van_de WHERE STT_Key = ?`).run(sttKey);
+  db.prepare(`DELETE FROM admin_ai_anh_hash WHERE STT_Key = ?`).run(sttKey);
+  db.prepare(`DELETE FROM admin_ai_phan_tich WHERE Loai = 'DIA_CHI' AND Khoa = ?`).run(sttKey);
+})();
+const layTatCaAnhHash = () => db.prepare(`SELECT * FROM admin_ai_anh_hash`).all();
+const ghiAnhHash = ({ sttKey, cot, url, hash, loi, thoiGian }) => db.prepare(`INSERT INTO admin_ai_anh_hash (STT_Key, Cot, Url, Hash, Loi, ThoiGian) VALUES (?, ?, ?, ?, ?, ?)
+  ON CONFLICT(STT_Key, Cot) DO UPDATE SET Url = excluded.Url, Hash = excluded.Hash, Loi = excluded.Loi, ThoiGian = excluded.ThoiGian`).run(sttKey, cot, url, hash || '', loi || '', thoiGian);
+
+// Kết quả phân tích AI. Loai: TONG_KET_QC | KINH_NGHIEM | LOI_SAN_XUAT | DIA_CHI (DIA_CHI: Khoa = STT_Key, DauVao = địa chỉ đã gửi AI).
+db.exec(`CREATE TABLE IF NOT EXISTS admin_ai_phan_tich (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, Loai TEXT NOT NULL, Khoa TEXT NOT NULL DEFAULT '', DauVao TEXT NOT NULL DEFAULT '', KetQua TEXT NOT NULL DEFAULT '',
+  Loi TEXT NOT NULL DEFAULT '', Model TEXT NOT NULL DEFAULT '', TokenVao TEXT NOT NULL DEFAULT '', TokenRa TEXT NOT NULL DEFAULT '', ThoiGian TEXT NOT NULL DEFAULT '', NguoiChay TEXT NOT NULL DEFAULT ''
+)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_aai_pt_loai_khoa ON admin_ai_phan_tich(Loai, Khoa)`);
+const COT_PHAN_TICH = ['Loai', 'Khoa', 'DauVao', 'KetQua', 'Loi', 'Model', 'TokenVao', 'TokenRa', 'ThoiGian', 'NguoiChay'];
+const ghiPhanTichAdminAi = d => Number(db.prepare(`INSERT INTO admin_ai_phan_tich (${COT_PHAN_TICH.join(', ')}) VALUES (${COT_PHAN_TICH.map(c => '@' + c).join(', ')})`)
+  .run(Object.fromEntries(COT_PHAN_TICH.map(c => [c, d[c] === undefined || d[c] === null ? '' : String(d[c])]))).lastInsertRowid);
+const layPhanTichMoiNhat = (loai, khoa = '') => db.prepare(`SELECT * FROM admin_ai_phan_tich WHERE Loai = ? AND Khoa = ? ORDER BY id DESC LIMIT 1`).get(loai, khoa) || null;
+const layPhanTichThanhCongMoiNhat = loai => db.prepare(`SELECT * FROM admin_ai_phan_tich WHERE Loai = ? AND Khoa = '' AND Loi = '' ORDER BY id DESC LIMIT 1`).get(loai) || null;
+const layPhanTichTheoId = id => db.prepare(`SELECT * FROM admin_ai_phan_tich WHERE id = ?`).get(id) || null;
+// Token theo (ngày, model) — giống thongKeTokenQc, để tính chi phí AdminAI.
+const thongKeTokenAdminAi = (tuThoiGian = '') => db.prepare(`SELECT substr(ThoiGian, 1, 10) AS Ky, Model, COUNT(*) AS soLan,
+    SUM(CAST(TokenVao AS INTEGER)) AS tokenVao, SUM(CAST(TokenRa AS INTEGER)) AS tokenRa
+  FROM admin_ai_phan_tich WHERE TokenVao != '' AND ThoiGian >= ? GROUP BY 1, 2 ORDER BY 1 DESC, 2`).all(tuThoiGian);
+
 module.exports = {
   layNote, layDanhSachNote, layTatCaTheNote, taoNote, suaNote, datAnhNote, xoaNote,
-  ghiQcLog, layQcLog, layQcLogTheoId, danhGiaQcLog, thongKeDanhGiaQc, thongKeTokenQc, layDongDaDanhGiaCoAi, maxQcLogId, layCclSauId, tongKetQcNgay,
+  ghiQcLog, layQcLog, layQcLogTheoId, layQcLogTu, danhGiaQcLog, thongKeDanhGiaQc, thongKeTokenQc, layDongDaDanhGiaCoAi, maxQcLogId, layCclSauId, tongKetQcNgay,
   taoKinhNghiem, suaKinhNghiem, doiTrangThaiKinhNghiem, layKinhNghiemTheoId, layDanhSachKinhNghiem, layKinhNghiemApDung, tangSoLanDungKinhNghiem, giuQuyenAutoQc, ketThucAutoQc, layTatCaAutoQc, donDepAutoQcDangChay,
   ghiNhieuDongBoSheetSeller, layNhatKyDongBoSheetSeller, layLoiDongBoDangCho, layDongBoGanNhat, xoaDongBoSheetSellerTheoDon,
   ghiLichSuHoatDong, ghiNhieuLichSuHoatDong, layTatCaLichSuHoatDong, xoaLichSuHoatDongTheoDon,
   ghiNhatKyQuetHangLoat, xoaNhatKyQuetHangLoatTheoDon,
   ghiLogsTracking, layTatCaLogsTracking, xoaLogsTrackingTheoDon,
+  ghiLuotQuetAdminAi, layVanDeAdminAi, demVanDeAdminAi, doiTrangThaiVanDeAdminAi, layVanDeChuaGuiTelegram, danhDauDaGuiTelegram,
+  xoaAdminAiTheoDon, layTatCaAnhHash, ghiAnhHash, ghiPhanTichAdminAi, layPhanTichMoiNhat, layPhanTichThanhCongMoiNhat, layPhanTichTheoId, thongKeTokenAdminAi,
 };

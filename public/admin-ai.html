@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AdminAI — Xưởng Thêu</title>
+<link rel="stylesheet" href="/css/style.css?v=107">
+<script src="/js/theme.js?v=104"></script>
+<style>
+/* AdminAI (03/10/2026) — style riêng trang này; khối thu gọn giống menu QC. */
+.aai-khoi { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-4); margin-bottom: var(--space-3); }
+.aai-khoi > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: var(--space-2); user-select: none; }
+.aai-khoi > summary::-webkit-details-marker { display: none; }
+.aai-khoi > summary::before { content: '▸'; font-size: 1.1rem; color: var(--color-text-muted); transition: transform .15s; }
+.aai-khoi[open] > summary::before { transform: rotate(90deg); }
+.aai-khoi > summary h3 { margin: 0; }
+.aai-khoi[open] > summary { margin-bottom: var(--space-3); }
+.aai-bang { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.aai-bang th, .aai-bang td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--color-border); vertical-align: top; }
+.aai-cuon { overflow-x: auto; }
+.aai-mo-ta { min-width: 260px; word-break: break-word; }
+.aai-muc { display: inline-block; font-weight: 700; font-size: 0.75rem; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.aai-muc.CAO { background: var(--color-danger-bg); color: var(--color-danger-text); }
+.aai-muc.TB { background: var(--color-warning-bg, #fef3c7); color: var(--color-warning-text, #92400e); }
+.aai-muc.THAP { background: var(--color-bg); color: var(--color-text-muted); border: 1px solid var(--color-border); }
+.aai-phu { font-size: 0.8rem; color: var(--color-text-muted); }
+.aai-dong { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: flex-end; margin: var(--space-2) 0; }
+.aai-dong label { display: block; margin-bottom: 4px; }
+.aai-dong input, .aai-dong select { min-width: 0; }
+.aai-luat { padding: var(--space-2) 0; border-top: 1px solid var(--color-border); }
+.aai-luat label { display: flex; gap: var(--space-2); align-items: flex-start; font-weight: 700; }
+.aai-luat label input { margin-top: 3px; }
+.aai-luat .aai-phu { margin-left: 24px; }
+.aai-nguong input { width: 90px; }
+.aai-so-lieu { background: var(--color-bg); border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); margin: 4px 0 8px; font-size: 0.82rem; }
+.aai-cot-gio { display: flex; align-items: flex-end; gap: 2px; height: 80px; margin-top: 6px; }
+.aai-cot-gio div { flex: 1; background: var(--color-primary, #2563eb); min-height: 1px; border-radius: 2px 2px 0 0; }
+.aai-nhan-gio { display: flex; gap: 2px; font-size: 0.65rem; color: var(--color-text-muted); }
+.aai-nhan-gio span { flex: 1; text-align: center; }
+.aai-the { border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: var(--space-3); margin-bottom: var(--space-3); }
+.aai-the h4 { margin: 0 0 var(--space-2); }
+.aai-tb { margin: var(--space-2) 0 0; }
+</style>
+</head>
+<body>
+<div id="nav"></div>
+<div class="page">
+  <h2>AdminAI</h2>
+  <p class="aai-phu" style="margin-top:0">Phát hiện lỗi vận hành và cảnh báo — <b>chỉ cảnh báo / đề xuất</b>, không tự sửa đơn, không đổi trạng thái, không sửa địa chỉ, không mua tracking. Mọi luật mặc định TẮT; luật cần ngưỡng chỉ chạy khi bạn đã nhập ngưỡng (xem số liệu thực tế trước khi chọn). Quét tự động mỗi 5 phút; Telegram dùng chung bot QC.</p>
+
+  <div class="aai-khoi" id="aai-tom-tat">Đang tải...</div>
+
+  <details class="aai-khoi" id="khoi-van-de">
+    <summary><h3>Vấn đề</h3></summary>
+    <div class="aai-dong">
+      <div><label for="vd-trang-thai">Trạng thái</label><select id="vd-trang-thai" onchange="taiVanDe()">
+        <option value="">Đang mở + Đã xem</option><option value="MO">Đang mở</option><option value="DA_XEM">Đã xem</option><option value="BO_QUA">Bỏ qua</option><option value="DA_DONG">Đã đóng</option></select></div>
+      <div><label for="vd-luat">Luật</label><select id="vd-luat" onchange="taiVanDe()"><option value="">Tất cả</option></select></div>
+    </div>
+    <div class="aai-cuon"><div id="vd-ds">Đang tải...</div></div>
+  </details>
+
+  <details class="aai-khoi" id="khoi-luat">
+    <summary><h3>Luật &amp; ngưỡng</h3></summary>
+    <p class="aai-phu" style="margin-top:0">Tick để bật luật. Ngưỡng để trống = luật đó chưa chạy. Bấm <b>Số liệu</b> để xem dữ liệu thực tế 30 ngày qua trước khi chọn — số liệu tự tính lại theo ngưỡng bạn đang gõ. Bấm <b>Lưu</b> ở cuối khối.</p>
+    <div id="luat-ds">Đang tải...</div>
+    <p style="margin-bottom:0"><button type="button" class="btn-hanh-dong" onclick="luuLuat(this)">Lưu luật &amp; ngưỡng</button> <span id="luat-tb"></span></p>
+  </details>
+
+  <details class="aai-khoi">
+    <summary><h3>Telegram &amp; báo cáo đầu ngày</h3></summary>
+    <p class="aai-phu" style="margin-top:0">Dùng chung bot + Chat ID của menu QC. Vấn đề mới: mỗi vấn đề báo 1 lần, mỗi lượt quét gộp thành tối đa 1 tin. Vấn đề đã "Bỏ qua" không báo lại.</p>
+    <div class="aai-dong">
+      <div><label for="bc-gio">Giờ gửi báo cáo đầu ngày (trống = tắt)</label><input type="time" id="bc-gio"></div>
+      <button type="button" class="btn-hanh-dong" onclick="luuBaoCao(this)">Lưu</button>
+      <button type="button" class="btn-hanh-dong phu" onclick="guiThuBaoCao(this)">Gửi thử ngay</button>
+    </div>
+    <p class="aai-tb" id="bc-tb"></p>
+  </details>
+
+  <details class="aai-khoi">
+    <summary><h3>Cấu hình AI (riêng cho AdminAI)</h3></summary>
+    <p class="aai-phu" style="margin-top:0">Dùng cho: AI rà địa chỉ (chỉ đơn bị luật "Dữ liệu giao hàng có vấn đề" gắn cờ), tổng kết lỗi QC, bản nháp kinh nghiệm, phân tích lỗi sản xuất. Tách riêng khỏi cấu hình QC. Giá token dùng chung bảng giá ở menu QC.</p>
+    <div class="aai-dong">
+      <div><label for="ai-ncc">Nhà cung cấp</label><select id="ai-ncc" onchange="hienCauHinhNcc()"></select></div>
+      <div><label for="ai-model">Model</label><input type="text" id="ai-model" placeholder="vd gemini-2.5-flash"></div>
+      <div style="flex:1 1 220px"><label for="ai-key">API key <span id="ai-key-che" class="aai-phu"></span></label><input type="password" id="ai-key" autocomplete="new-password" placeholder="Trống = giữ key đang lưu" style="width:100%;box-sizing:border-box"></div>
+      <button type="button" class="btn-hanh-dong" onclick="luuAi(this)">Lưu</button>
+      <button type="button" class="btn-hanh-dong phu" onclick="thuAi(this)">Thử kết nối</button>
+    </div>
+    <label style="display:flex;gap:8px;align-items:center;margin:var(--space-2) 0"><input type="checkbox" id="ai-dia-chi" onchange="luuAiDiaChi(this)"> Tự động AI rà địa chỉ cho đơn bị luật "Dữ liệu giao hàng có vấn đề" gắn cờ (tối đa 5 đơn / lượt quét, mỗi địa chỉ rà 1 lần)</label>
+    <p class="aai-tb" id="ai-tb"></p>
+    <div id="ai-chi-phi"></div>
+  </details>
+
+  <details class="aai-khoi">
+    <summary><h3>Phân tích AI</h3></summary>
+    <p class="aai-phu" style="margin-top:0">AI chỉ phân tích và đề xuất. Bản nháp kinh nghiệm bấm "Lưu thành kinh nghiệm" sẽ vào menu QC ở trạng thái <b>Chưa xác nhận</b> — bạn vẫn phải bấm Xác nhận ở đó thì mới được dùng.</p>
+    <div class="aai-dong">
+      <div><label for="lich-thu">Chạy tự động hằng tuần</label><select id="lich-thu"><option value="">Tắt</option><option value="1">Thứ 2</option><option value="2">Thứ 3</option><option value="3">Thứ 4</option><option value="4">Thứ 5</option><option value="5">Thứ 6</option><option value="6">Thứ 7</option><option value="0">Chủ nhật</option></select></div>
+      <div><label for="lich-gio">Giờ</label><input type="time" id="lich-gio"></div>
+      <button type="button" class="btn-hanh-dong" onclick="luuLich(this)">Lưu lịch</button> <span id="lich-tb"></span>
+    </div>
+    <div id="pt-ds">Đang tải...</div>
+  </details>
+</div>
+
+<script src="/js/icons.js?v=104"></script>
+<script src="/js/api.js?v=111"></script>
+<script>
+let tongQuan = null;
+let cauHinhAi = null;
+const soLieuDaTai = {}; // khoá ngưỡng -> số liệu
+const TEN_TT = { MO: 'Đang mở', DA_XEM: 'Đã xem', BO_QUA: 'Bỏ qua', DA_DONG: 'Đã đóng' };
+const TEN_MUC = { CAO: 'Cao', TB: 'TB', THAP: 'Thấp' };
+const gio = t => { const d = new Date(t); return isNaN(d) ? '' : d.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); };
+const linkDon = k => `<a href="/order.html?stt=${encodeURIComponent(k)}" target="_blank" rel="noopener" style="font-weight:700">${escapeHtml(k)}</a>`;
+const post = (url, body) => apiFetch(url, { method: 'POST', body: JSON.stringify(body || {}) });
+function tb(id, chu, loi) { const el = document.getElementById(id); el.textContent = chu; el.style.color = loi ? 'var(--color-danger-text)' : 'var(--color-success-text)'; }
+async function bam(nut, fn) { nut.disabled = true; try { await fn(); } finally { nut.disabled = false; } }
+
+(async () => {
+  const user = await requireLoginOrRedirect();
+  if (!user) return;
+  renderNav(user, 'admin-ai');
+  if (user.vaiTro !== 'superadmin') { document.querySelector('.page').innerHTML = '<p>Bạn không có quyền truy cập trang này.</p>'; return; }
+  await taiTongQuan();
+  await Promise.all([taiVanDe(), taiAi(), taiPhanTich()]);
+})();
+
+// veLaiForm = false: chỉ cập nhật dòng tóm tắt; 'luat': tóm tắt + khối luật — KHÔNG ghi đè ô ngưỡng / giờ báo cáo / lịch đang gõ dở (vd bấm Quét ngay trước khi Lưu).
+async function taiTongQuan(veLaiForm = true) {
+  tongQuan = await apiFetch('/admin-ai/tong-quan');
+  const q = tongQuan.lanQuetCuoi;
+  const mo = tongQuan.dem.filter(d => d.TrangThai === 'MO').reduce((t, d) => t + d.soLuong, 0);
+  const dangChay = tongQuan.luat.filter(l => l.hoatDong).length;
+  document.getElementById('aai-tom-tat').innerHTML = `
+    <div class="aai-dong" style="margin:0;align-items:center">
+      <div style="flex:1 1 300px"><b>${mo}</b> vấn đề đang mở · <b>${dangChay}</b>/${tongQuan.luat.length} luật đang chạy
+        <div class="aai-phu">Lần quét cuối: ${q ? `${gio(q.thoiGian)} (${q.giay}s, ${q.moi} vấn đề mới${Object.keys(q.loi).length ? `, luật lỗi: ${escapeHtml(Object.entries(q.loi).map(([k, v]) => `${k}: ${v}`).join('; '))}` : ''}${q.conChoBam ? `, còn ${q.conChoBam} ảnh chờ băm` : ''})` : 'chưa quét từ khi khởi động server'}
+          · Ảnh đã băm: ${tongQuan.anh.daBam}${tongQuan.anh.loi ? ` (lỗi ${tongQuan.anh.loi})` : ''}
+          ${tongQuan.coTelegram ? '' : ' · <span style="color:var(--color-danger-text)">Chưa có Chat ID Telegram (cấu hình ở menu QC) — sẽ không gửi tin.</span>'}</div></div>
+      <button type="button" class="btn-hanh-dong" onclick="quetNgay(this)">Quét ngay</button>
+    </div><p class="aai-tb" id="tt-tb" style="margin:0"></p>`;
+  if (!veLaiForm) return;
+  if (veLaiForm === 'luat') { veLuat(); return; } // sau khi Lưu luật: chỉ vẽ lại khối luật
+  document.getElementById('vd-luat').innerHTML = '<option value="">Tất cả</option>' + tongQuan.luat.map(l => `<option value="${l.ma}">${escapeHtml(l.ten)}</option>`).join('');
+  document.getElementById('bc-gio').value = tongQuan.gioBaoCao;
+  document.getElementById('lich-thu').value = String(tongQuan.lichPhanTich.thu ?? '');
+  document.getElementById('lich-gio').value = tongQuan.lichPhanTich.gio || '';
+  document.getElementById('ai-dia-chi').checked = tongQuan.aiRaDiaChi;
+  veLuat();
+}
+
+async function quetNgay(nut) {
+  await bam(nut, async () => {
+    try { const q = await post('/admin-ai/quet-ngay'); await taiTongQuan(false); await taiVanDe(); tb('tt-tb', `Đã quét: ${q.soVanDe} vấn đề, ${q.moi} mới.`); }
+    catch (e) { tb('tt-tb', e.message, true); }
+  });
+}
+
+// ---------------- Vấn đề ----------------
+async function taiVanDe() {
+  const tt = document.getElementById('vd-trang-thai').value;
+  const luat = document.getElementById('vd-luat').value;
+  let ds;
+  try { ds = await apiFetch(`/admin-ai/van-de?trangThai=${tt}&luat=${encodeURIComponent(luat)}`); } catch (e) { document.getElementById('vd-ds').textContent = e.message; return; }
+  const tenLuat = Object.fromEntries((tongQuan ? tongQuan.luat : []).map(l => [l.ma, l.ten]));
+  if (!ds.length) { document.getElementById('vd-ds').innerHTML = '<p class="aai-phu">Không có vấn đề nào.</p>'; return; }
+  document.getElementById('vd-ds').innerHTML = `<table class="aai-bang"><thead><tr><th>Mức</th><th>Luật</th><th>Đơn</th><th>Mô tả</th><th>Lần đầu</th><th>Lần cuối</th><th>Trạng thái</th><th></th></tr></thead><tbody>${ds.map(v => `
+    <tr><td><span class="aai-muc ${v.Muc}">${TEN_MUC[v.Muc] || escapeHtml(v.Muc)}</span></td>
+      <td>${escapeHtml(tenLuat[v.Luat] || v.Luat)}<div class="aai-phu">${v.TuDong ? 'tự đóng khi hết' : 'sự kiện'}</div></td>
+      <td>${v.STT_Key ? linkDon(v.STT_Key) : ''}</td>
+      <td class="aai-mo-ta">${escapeHtml(v.MoTa)}${chiTietThem(v)}</td>
+      <td>${gio(v.LanDau)}</td><td>${gio(v.LanCuoi)}</td>
+      <td>${TEN_TT[v.TrangThai] || v.TrangThai}${v.NguoiXuLy ? `<div class="aai-phu">${escapeHtml(v.NguoiXuLy)}</div>` : ''}</td>
+      <td style="white-space:nowrap">${nutVanDe(v)}</td></tr>`).join('')}</tbody></table>`;
+}
+function chiTietThem(v) {
+  let h = '';
+  const ct = v.ChiTiet || {};
+  if (ct.anh) h += `<div class="aai-phu">${ct.anh.map(a => `<a href="${escapeHtml(a.url)}" target="_blank" rel="noopener">Ảnh ${escapeHtml(a.sttKey)}</a>`).join(' · ')}</div>`;
+  if (ct.ds && ct.ds.length) h += `<div class="aai-phu">Đơn: ${ct.ds.slice(0, 30).map(linkDon).join(', ')}${ct.ds.length > 30 ? '…' : ''}</div>`;
+  if (v.ai) {
+    if (v.ai.loi) h += `<div class="aai-phu">AI rà địa chỉ lỗi: ${escapeHtml(v.ai.loi)}</div>`;
+    else if (v.ai.ketQua) h += `<div class="aai-phu" style="margin-top:4px"><b>AI rà địa chỉ:</b> ${escapeHtml(v.ai.ketQua.nhan_xet || '')}${(v.ai.ketQua.van_de || []).map(x => `<br>• <b>${escapeHtml(x.truong)}</b>: ${escapeHtml(x.mo_ta)} → ${escapeHtml(x.de_xuat)}`).join('')}</div>`;
+  }
+  return h;
+}
+function nutVanDe(v) {
+  const nut = (tt, chu) => `<button type="button" class="btn-hanh-dong phu" style="padding:2px 8px;font-size:0.8rem" onclick="doiTrangThai(${v.id}, '${tt}', this)">${chu}</button>`;
+  if (v.TrangThai === 'MO') return nut('DA_XEM', 'Đã xem') + ' ' + nut('BO_QUA', 'Bỏ qua');
+  if (v.TrangThai === 'DA_XEM') return nut('BO_QUA', 'Bỏ qua') + ' ' + nut('MO', 'Mở lại');
+  if (v.TrangThai === 'BO_QUA') return nut('MO', 'Mở lại');
+  return '';
+}
+async function doiTrangThai(id, tt, nut) {
+  if (tt === 'BO_QUA' && !confirm('Bỏ qua vấn đề này? Sẽ không báo lại vấn đề này cho đối tượng này nữa (vẫn mở lại được).')) return;
+  await bam(nut, async () => { try { await post(`/admin-ai/van-de/${id}/trang-thai`, { trangThai: tt }); await taiVanDe(); } catch (e) { alert(e.message); } });
+}
+
+// ---------------- Luật & ngưỡng ----------------
+function veLuat() {
+  const ng = Object.fromEntries(tongQuan.nguong.map(n => [n.khoa, n]));
+  const daVe = new Set();
+  const oNguong = khoa => {
+    const n = ng[khoa];
+    daVe.add(khoa);
+    return `<div class="aai-nguong" style="margin:6px 0 0 24px">
+      <div class="aai-dong" style="margin:0;align-items:center">
+        <span style="flex:1 1 240px">${escapeHtml(n.ten)}${n.soSanh ? ` <span class="aai-phu">(báo khi ${n.soSanh === '>' ? 'vượt quá' : n.soSanh === '>=' ? 'từ ngưỡng trở lên' : 'từ ngưỡng trở xuống'})</span>` : ''}</span>
+        <input type="text" inputmode="decimal" id="ng-${CSS.escape(khoa)}" data-khoa="${escapeHtml(khoa)}" value="${escapeHtml(String(n.giaTri))}" placeholder="trống" oninput="capNhatSoLieu('${escapeHtml(khoa)}')"> <span class="aai-phu">${escapeHtml(n.donVi)}</span>
+        <button type="button" class="btn-hanh-dong phu" style="padding:2px 8px;font-size:0.8rem" onclick="xemSoLieu('${escapeHtml(khoa)}', this)">Số liệu</button>
+      </div><div id="sl-${CSS.escape(khoa)}"></div></div>`;
+  };
+  let h = '';
+  for (const gd of [1, 2]) {
+    h += `<h4 style="margin:var(--space-3) 0 0">Giai đoạn ${gd}</h4>`;
+    for (const l of tongQuan.luat.filter(x => x.giaiDoan === gd)) {
+      const trangThai = l.hoatDong ? '<span style="color:var(--color-success-text)">● đang chạy</span>'
+        : l.bat ? `<span style="color:var(--color-danger-text)">● đã bật nhưng ${l.motTrong ? 'chưa có ngưỡng trạng thái nào' : 'thiếu ngưỡng'}</span>` : '<span class="aai-phu">○ tắt</span>';
+      h += `<div class="aai-luat"><label><input type="checkbox" data-luat="${l.ma}" ${l.bat ? 'checked' : ''}> <span>${escapeHtml(l.ten)} <span class="aai-muc ${l.muc}">${TEN_MUC[l.muc]}</span> ${trangThai}</span></label>
+        <div class="aai-phu">${escapeHtml(l.moTa)}${l.tuDong ? ' — tự đóng khi hết điều kiện.' : ' — sự kiện, đóng khi bấm "Đã xem".'}</div>
+        ${l.nguong.filter(k => !daVe.has(k)).map(oNguong).join('')}</div>`;
+    }
+  }
+  document.getElementById('luat-ds').innerHTML = h;
+  for (const k of Object.keys(soLieuDaTai)) capNhatSoLieu(k);
+}
+async function xemSoLieu(khoa, nut) {
+  const o = document.getElementById('sl-' + CSS.escape(khoa));
+  if (soLieuDaTai[khoa] && o.innerHTML) { o.innerHTML = ''; delete soLieuDaTai[khoa]; return; }
+  o.innerHTML = '<div class="aai-so-lieu">Đang tính số liệu...</div>';
+  await bam(nut, async () => {
+    try { soLieuDaTai[khoa] = await apiFetch('/admin-ai/so-lieu/' + encodeURIComponent(khoa)); capNhatSoLieu(khoa); }
+    catch (e) { o.innerHTML = `<div class="aai-so-lieu" style="color:var(--color-danger-text)">${escapeHtml(e.message)}</div>`; }
+  });
+}
+// Đếm lại theo ngưỡng ĐANG GÕ (chưa lưu) — cùng phép so sánh với luật thật.
+function capNhatSoLieu(khoa) {
+  const d = soLieuDaTai[khoa];
+  const o = document.getElementById('sl-' + CSS.escape(khoa));
+  if (!d || !o) return;
+  const v = Number(String(document.getElementById('ng-' + CSS.escape(khoa)).value).replace(',', '.'));
+  const coNguong = String(document.getElementById('ng-' + CSS.escape(khoa)).value).trim() !== '' && Number.isFinite(v);
+  const vuot = x => (d.soSanh === '>' ? x > v : d.soSanh === '>=' ? x >= v : x <= v);
+  let h = `<div>${escapeHtml(d.ghiChu)}</div>`;
+  if (d.theoGio) {
+    const max = Math.max(1, ...d.theoGio);
+    h += `<div class="aai-cot-gio">${d.theoGio.map((n, i) => `<div style="height:${Math.round((n / max) * 100)}%" title="${i}h: ${n} thao tác"></div>`).join('')}</div>
+      <div class="aai-nhan-gio">${d.theoGio.map((n, i) => `<span>${i}</span>`).join('')}</div>`;
+  } else if (d.soMau || d.hienTai.length) {
+    h += `<div style="margin-top:4px">${d.soMau} mẫu · giữa (P50) <b>${d.p50 ?? '—'}</b> · P75 <b>${d.p75 ?? '—'}</b> · P90 <b>${d.p90 ?? '—'}</b> · P95 <b>${d.p95 ?? '—'}</b> · cao nhất <b>${d.max ?? '—'}</b> ${escapeHtml(d.donVi)}</div>`;
+    if (d.hienTai.length && !d.soMau) h += `<div>Hiện tại: <b>${d.hienTai.join(', ')}</b> ${escapeHtml(d.donVi)}</div>`;
+    if (coNguong) h += `<div style="margin-top:4px">Với ngưỡng <b>${v}</b>: ${d.soMau ? `${d.mau.filter(vuot).length}/${d.soMau} mẫu 30 ngày qua lẽ ra bị báo; ` : ''}<b>${d.hienTai.filter(vuot).length}</b> trường hợp hiện tại sẽ bị báo.</div>`;
+  } else h += '<div style="margin-top:4px">Chưa có dữ liệu.</div>';
+  o.innerHTML = `<div class="aai-so-lieu">${h}</div>`;
+}
+async function luuLuat(nut) {
+  const luat = Object.fromEntries([...document.querySelectorAll('[data-luat]')].map(c => [c.dataset.luat, c.checked]));
+  const nguong = Object.fromEntries([...document.querySelectorAll('[data-khoa]')].map(i => [i.dataset.khoa, i.value.trim()]));
+  await bam(nut, async () => {
+    try { await post('/admin-ai/cai-dat', { luat, nguong }); await taiTongQuan('luat'); tb('luat-tb', 'Đã lưu. Áp dụng từ lượt quét kế tiếp (hoặc bấm "Quét ngay").'); }
+    catch (e) { tb('luat-tb', e.message, true); }
+  });
+}
+
+// ---------------- Telegram & báo cáo ----------------
+async function luuBaoCao(nut) {
+  await bam(nut, async () => { try { await post('/admin-ai/cai-dat', { gioBaoCao: document.getElementById('bc-gio').value }); tb('bc-tb', 'Đã lưu.'); } catch (e) { tb('bc-tb', e.message, true); } });
+}
+async function guiThuBaoCao(nut) {
+  await bam(nut, async () => { try { await post('/admin-ai/bao-cao/gui-thu'); tb('bc-tb', 'Đã gửi báo cáo vào Telegram.'); } catch (e) { tb('bc-tb', e.message, true); } });
+}
+
+// ---------------- Cấu hình AI ----------------
+async function taiAi() {
+  cauHinhAi = await apiFetch('/admin-ai/ai/cau-hinh');
+  document.getElementById('ai-ncc').innerHTML = cauHinhAi.dsNhaCungCap.map(n => `<option value="${n.ma}">${escapeHtml(n.ten)}</option>`).join('');
+  document.getElementById('ai-ncc').value = cauHinhAi.nhaCungCap;
+  hienCauHinhNcc();
+  const cp = await apiFetch('/admin-ai/ai/chi-phi').catch(() => []);
+  document.getElementById('ai-chi-phi').innerHTML = cp.length ? `<div class="aai-cuon"><table class="aai-bang"><thead><tr><th>Ngày</th><th>Model</th><th>Số lần</th><th>Token vào</th><th>Token ra</th><th>Chi phí (USD)</th></tr></thead><tbody>${cp.map(d => `<tr><td>${escapeHtml(d.Ky)}</td><td>${escapeHtml(d.Model)}</td><td>${d.soLan}</td><td>${d.tokenVao}</td><td>${d.tokenRa}</td><td>${d.chiPhi === null ? 'chưa có giá' : d.chiPhi.toFixed(4)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="aai-phu">Chưa có lần gọi AI nào của AdminAI (30 ngày).</p>';
+}
+function hienCauHinhNcc() {
+  const c = cauHinhAi.theoNcc[document.getElementById('ai-ncc').value] || {};
+  document.getElementById('ai-model').value = c.model || '';
+  document.getElementById('ai-key-che').textContent = c.coKey ? `(đang lưu: ${c.keyChe})` : '(chưa có)';
+  document.getElementById('ai-key').value = '';
+}
+async function luuAi(nut) {
+  await bam(nut, async () => {
+    try {
+      await post('/admin-ai/ai/cau-hinh', { nhaCungCap: document.getElementById('ai-ncc').value, model: document.getElementById('ai-model').value, apiKey: document.getElementById('ai-key').value });
+      await taiAi(); tb('ai-tb', 'Đã lưu.');
+    } catch (e) { tb('ai-tb', e.message, true); }
+  });
+}
+async function thuAi(nut) {
+  await bam(nut, async () => { try { await post('/admin-ai/ai/thu-ket-noi', { nhaCungCap: document.getElementById('ai-ncc').value }); tb('ai-tb', 'Kết nối OK.'); } catch (e) { tb('ai-tb', e.message, true); } });
+}
+async function luuAiDiaChi(o) {
+  try { await post('/admin-ai/cai-dat', { aiRaDiaChi: o.checked }); tb('ai-tb', 'Đã lưu.'); } catch (e) { o.checked = !o.checked; tb('ai-tb', e.message, true); }
+}
+
+// ---------------- Phân tích AI ----------------
+const TEN_PT = { TONG_KET_QC: 'Tổng kết lỗi QC (30 ngày)', KINH_NGHIEM: 'Bản nháp kinh nghiệm QC', LOI_SAN_XUAT: 'Phân tích lỗi sản xuất (30 ngày)' };
+let ketQuaPt = {};
+async function taiPhanTich() {
+  ketQuaPt = await apiFetch('/admin-ai/ai/ket-qua');
+  document.getElementById('pt-ds').innerHTML = Object.entries(TEN_PT).map(([loai, ten]) => {
+    const r = ketQuaPt[loai];
+    return `<div class="aai-the"><div class="aai-dong" style="margin:0;align-items:center"><h4 style="flex:1 1 200px;margin:0">${ten}</h4>
+      <button type="button" class="btn-hanh-dong" onclick="chayPt('${loai}', this)">Chạy phân tích</button></div>
+      ${r && r.loiSau ? `<div style="color:var(--color-danger-text)" class="aai-phu">Lần chạy ${gio(r.loiSau.thoiGian)} lỗi: ${escapeHtml(r.loiSau.loi)} — đang hiện kết quả trước đó.</div>` : ''}<div class="aai-phu">${r ? `Lần chạy gần nhất: ${gio(r.thoiGian)} · ${escapeHtml(r.nguoi)} · ${escapeHtml(r.model)}` : 'Chưa chạy lần nào.'}</div>
+      <div id="pt-${loai}">${r ? (r.loi ? `<p style="color:var(--color-danger-text)">${escapeHtml(r.loi)}</p>` : vePt(loai, r)) : ''}</div></div>`;
+  }).join('');
+}
+function vePt(loai, r) {
+  const kq = r.ketQua || {};
+  if (loai === 'TONG_KET_QC') return `<p>${escapeHtml(kq.nhan_xet || '')}</p>${(kq.nhom_loi || []).length ? `<div class="aai-cuon"><table class="aai-bang"><thead><tr><th>Nhóm lỗi</th><th>QC</th><th>Số ca</th><th>Mô tả</th><th>Ví dụ</th><th>Gợi ý</th></tr></thead><tbody>${kq.nhom_loi.map(n => `<tr><td><b>${escapeHtml(n.ten)}</b></td><td>${escapeHtml(n.loai_qc)}</td><td>${escapeHtml(String(n.so_ca ?? ''))}</td><td class="aai-mo-ta">${escapeHtml(n.mo_ta)}</td><td>${(n.vi_du_ma_don || []).map(linkDon).join(', ')}</td><td class="aai-mo-ta">${escapeHtml(n.goi_y)}</td></tr>`).join('')}</tbody></table></div>` : ''}`;
+  if (loai === 'KINH_NGHIEM') return (kq.de_xuat || []).length ? kq.de_xuat.map((d, i) => `<div style="border-top:1px solid var(--color-border);padding:8px 0">
+      <b>${escapeHtml(d.loai_qc)}</b> · ${d.pham_vi === 'TOAN_QC' ? 'Toàn bộ QC này' : 'Cùng loại sản phẩm'} · căn cứ log #${escapeHtml((d.can_cu_log_ids || []).join(', #'))}
+      <div class="aai-phu">AI sai: ${escapeHtml(d.ai_sai_gi)}</div><textarea id="kn-nd-${i}" maxlength="600" rows="3" style="width:100%;box-sizing:border-box;font-family:inherit">${escapeHtml(d.noi_dung)}</textarea><div class="aai-phu">Sửa được trước khi lưu — tối đa 600 ký tự (phần gửi cho AI QC).</div>
+      <button type="button" class="btn-hanh-dong phu" style="padding:2px 8px;font-size:0.8rem;margin-top:4px" onclick="luuKn(${r.id}, ${i}, this)">Lưu thành kinh nghiệm (Chưa xác nhận)</button> <span id="kn-tb-${i}"></span></div>`).join('')
+    : '<p class="aai-phu">AI không đề xuất kinh nghiệm nào.</p>';
+  if (loai === 'LOI_SAN_XUAT') {
+    const tk = r.thongKe || {};
+    const bang = (ten, ds) => (ds && ds.length ? `<div style="flex:1 1 200px"><b>${ten}</b><table class="aai-bang">${ds.map(([k, n]) => `<tr><td>${escapeHtml(k)}</td><td>${n}</td></tr>`).join('')}</table></div>` : '');
+    return `<p>Tổng: <b>${tk.tong || 0}</b> lần chuyển sang "LỖI SẢN XUẤT CẦN LÀM LẠI" (số liệu hệ thống đếm).</p>
+      <div class="aai-dong" style="align-items:flex-start">${bang('Người chạy máy', tk.theoNguoiChayMay)}${bang('Loại', tk.theoLoai)}${bang('Kích thước', tk.theoKichThuoc)}${bang('Xưởng', tk.theoXuong)}${bang('Tuần (từ thứ 2)', tk.theoTuan)}</div>
+      <p><b>Nhận xét AI</b></p><ul>${(kq.nhan_xet || []).map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ul>
+      <p><b>Đề xuất</b></p><ul>${(kq.de_xuat || []).map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ul>`;
+  }
+  return '';
+}
+async function chayPt(loai, nut) {
+  const o = document.getElementById('pt-' + loai);
+  await bam(nut, async () => {
+    o.innerHTML = '<p class="aai-phu">AI đang phân tích...</p>';
+    try { await post('/admin-ai/ai/chay/' + loai); await taiPhanTich(); await taiAi(); }
+    catch (e) { o.innerHTML = `<p style="color:var(--color-danger-text)">${escapeHtml(e.message)}</p>`; }
+  });
+}
+async function luuKn(phanTichId, viTri, nut) {
+  await bam(nut, async () => {
+    try { const r = await post('/admin-ai/ai/kinh-nghiem/luu', { phanTichId, viTri, noiDung: document.getElementById('kn-nd-' + viTri).value }); tb('kn-tb-' + viTri, `Đã lưu kinh nghiệm #${r.id} — vào menu QC để xem và Xác nhận.`); nut.remove(); }
+    catch (e) { tb('kn-tb-' + viTri, e.message, true); }
+  });
+}
+async function luuLich(nut) {
+  await bam(nut, async () => {
+    try { await post('/admin-ai/cai-dat', { lichPhanTich: { thu: document.getElementById('lich-thu').value, gio: document.getElementById('lich-gio').value } }); tb('lich-tb', 'Đã lưu.'); }
+    catch (e) { tb('lich-tb', e.message, true); }
+  });
+}
+</script>
+</body>
+</html>
