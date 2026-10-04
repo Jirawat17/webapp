@@ -184,8 +184,8 @@
 <!-- Popup "🎉 Vừa tự động mua tracking" đã BỎ (02/10/2026, theo yêu cầu người dùng) — chỉ bỏ hiển thị; dữ liệu, API,
      quy trình mua và bảng "Danh sách đơn tự động mua tracking" giữ nguyên. -->
 
-<script src="/js/icons.js?v=104"></script>
-<script src="/js/api.js?v=112"></script>
+<script src="/js/icons.js?v=105"></script>
+<script src="/js/api.js?v=113"></script>
 <script src="/js/suaThongTinGke.js?v=1"></script>
 <script>
 // Nhãn + class hiển thị cho từng trạng thái trả về từ services/trackingAutoService.js
@@ -488,7 +488,7 @@ async function taiDanhSach() {
             return `<tr>
               <td><a href="/order.html?stt=${encodeURIComponent(d.sttKey)}">${escapeHtml(d.sttKey)}</a></td>
               <td><span class="tk-trang-thai ${tt.lop}">${escapeHtml(tt.nhan)}</span>${d.soLanThu ? `<div style="font-size:0.78rem;color:var(--color-danger-text);margin-top:4px">Tự động thử ${d.soLanThu}/10 lần — ${escapeHtml(d.loiGanNhat)}</div>` : ''}</td>
-              <td>${escapeHtml(d.trackingId || '—')}</td>
+              <td>${escapeHtml(d.trackingId || '—')}${d.trackingId ? nutSaoChep(d.trackingId, 'Sao chép mã tracking') : ''}</td>
               <td>${escapeHtml(d.hangVanChuyen || '—')}</td>
               <td>${d.thoiGianSanXuat ? dinhDangNgayGioNganAnToan(d.thoiGianSanXuat) : '—'}</td>
               <td>${d.hanTuMua ? dinhDangNgayGioNganAnToan(d.hanTuMua) : '—'}</td>

@@ -62,6 +62,8 @@ const ICONS = {
   chevronDown: '<polyline points="6 9 12 15 18 9"/>',
   // Ngôi sao — dùng cho "Đơn ưu tiên" (nút bật/tắt nhanh trên thẻ + badge, xem style.css .uu-tien).
   star: '<polygon points="12 3 14.7 9.6 21.8 10.1 16.3 14.6 18.1 21.5 12 17.6 5.9 21.5 7.7 14.6 2.2 10.1 9.3 9.6 12 3"/>',
+  // 2 tờ giấy chồng nhau — nút sao chép nhanh (04/10/2026, xem public/js/api.js#nutSaoChep).
+  copy: '<rect x="8.5" y="8.5" width="11" height="12" rx="1.5"/><path d="M15.5 8.5V5a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 5v10A1.5 1.5 0 0 0 6 16.5h2.5"/>',
 };
 
 function icon(name, opts) {

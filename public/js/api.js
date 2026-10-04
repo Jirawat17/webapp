@@ -16,6 +16,32 @@ function escapeHtml(str) {
   }[ch]));
 }
 
+// Sao chép nhanh (04/10/2026, theo yêu cầu người dùng — mã đơn, địa chỉ, tracking). navigator.clipboard chỉ chạy trên
+// https/localhost và có thể bị từ chối -> dùng ô chữ ẩn + execCommand('copy'). Báo kết quả ngay trên nút trong 2 giây.
+async function saoChepNhanh(text, nut) {
+  let ok = false;
+  try { await navigator.clipboard.writeText(text); ok = true; } catch (e) {
+    const o = document.createElement('textarea');
+    o.value = text; o.setAttribute('readonly', ''); o.style.position = 'fixed'; o.style.opacity = '0';
+    document.body.appendChild(o); o.select();
+    try { ok = document.execCommand('copy'); } catch (e2) { ok = false; }
+    o.remove();
+  }
+  if (nut) {
+    if (nut.dataset.nhanGoc === undefined) nut.dataset.nhanGoc = nut.innerHTML;
+    nut.textContent = ok ? 'Đã sao chép' : 'Không sao chép được';
+    clearTimeout(nut._henKhoiPhuc);
+    nut._henKhoiPhuc = setTimeout(() => { nut.innerHTML = nut.dataset.nhanGoc; }, 2000);
+  }
+  return ok;
+}
+// Nút nhỏ sao chép 1 giá trị (đặt ngay sau giá trị đó). Giá trị nằm trong data-chep (đã escape), không ghép vào onclick.
+function nutSaoChep(giaTri, nhan = 'Sao chép') {
+  return `<button type="button" title="${escapeHtml(nhan)}" aria-label="${escapeHtml(nhan)}" data-chep="${escapeHtml(giaTri)}"
+    onclick="event.stopPropagation(); saoChepNhanh(this.dataset.chep, this)"
+    style="border:1px solid var(--color-border);background:transparent;border-radius:6px;padding:2px 6px;margin-left:6px;cursor:pointer;color:var(--color-text-muted);vertical-align:middle;line-height:1;font-size:0.78rem;font-family:inherit">${typeof icon === 'function' ? icon('copy', { size: 15 }) : 'Chép'}</button>`;
+}
+
 // Ảnh CŨ (trước khi có MinIO) lưu thẳng link Drive/Gemini/HTTP thường trong Sheet — trình duyệt KHÔNG
 // tải được link xem trước Drive hay trang chia sẻ Gemini làm <img src> trực tiếp (trả về trang HTML,
 // không phải file ảnh thật), nên phải đi qua proxy server tự nhận diện + tải hộ đúng nguồn (xem
