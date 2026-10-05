@@ -650,6 +650,14 @@ function laUuTien(row) {
   return String(row.DON_UU_TIEN || '').toUpperCase() === 'TRUE';
 }
 
+// Đơn "HOLD-Chờ xác nhận" (05/10/2026, theo yêu cầu người dùng) — theo cột RAW TINH_TRANG của Sheet. CHỈ để hiển thị (vòng
+// đỏ + nhãn ở danh sách/chi tiết đơn, xem public/css/style.css .vong-hold), không chặn thao tác nào. So khớp ĐÚNG chuỗi,
+// chỉ bỏ dấu cách 2 đầu; NFC để chữ Việt gõ dựng sẵn hay tổ hợp đều khớp.
+const TINH_TRANG_HOLD = 'HOLD-Chờ xác nhận'.normalize('NFC');
+function laDonHold(row) {
+  return String(row.TINH_TRANG || '').trim().normalize('NFC') === TINH_TRANG_HOLD;
+}
+
 // Sửa 1 lần lúc khởi động (bổ sung 25/09/2026, theo yêu cầu người dùng) — các đơn đã KẸT ở "Đã in mã"
 // dù đủ phôi + file (do lỗi cũ ở tinhTinhTrangTuDong, xem trên) được chuyển sang "ĐÃ SẴN SÀNG CHẠY MÁY".
 // Chỉ đọc/ghi SQLite (3 cột này đều ở trangThaiDbService), không tốn quota Sheets. Chạy lại mỗi lần
@@ -684,5 +692,5 @@ module.exports = {
   VAI_TRO_MENU_TRACKING, anCotTheoDoiMuaTracking,
   suaDonKetSanSang,
   TAB, KEY_COL, getAll, getByKey, getManyByKeys, update, filterForRole, ganTenKhachHang, tieuDeSanPham, danhSachViTriTheu,
-  layDanhSachXuong, locTheoXuong, coQuyenTheoXuong, phamViDon, laUuTien, lyDoDaMuaTracking, NHOM_LOC_TONG_QUAT,
+  layDanhSachXuong, locTheoXuong, coQuyenTheoXuong, phamViDon, laUuTien, laDonHold, lyDoDaMuaTracking, NHOM_LOC_TONG_QUAT,
 };

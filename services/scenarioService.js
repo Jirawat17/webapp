@@ -34,6 +34,7 @@ async function layDanhSachKichBan() {
       allowedRoles: r.Nguoi_Thuc_Hien
         ? r.Nguoi_Thuc_Hien.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
         : null, // null = mở cho mọi vai trò
+      nhapMaTay: String(r.Nhap_Ma_Tay || '').toUpperCase() === 'TRUE', // ô nhập mã thay camera (public/scan.html)
     }));
 }
 

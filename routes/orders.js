@@ -62,6 +62,7 @@ async function lamGiauDon(rows, banDoNhom, user) {
     NguoiVanHanh: r.TRANG_THAI_XUONG === TRANG_THAI_DANG_CHAY_MAY ? (r.NGUOI_CHAY_MAY || null) : null,
     NguoiVeFile: r.TRANG_THAI_VE_FILE === 'Đang vẽ file' ? (r.NGUOI_VE_FILE || null) : null,
     DonUuTien: orderService.laUuTien(r),
+    DonHold: orderService.laDonHold(r),
     NhomNhieuAo: banDoNhom ? donNhieuAoService.tomTatChoDon(r.STT_Key, banDoNhom.get(r.STT_Key)) : null,
     LyDoDaMuaTracking: orderService.lyDoDaMuaTracking(r, banDoNhom ? banDoNhom.get(r.STT_Key) : null),
   }));
@@ -1036,7 +1037,9 @@ router.post('/khoi-phuc-du-lieu-hang-loat', async (req, res) => {
 // bấm vào bị từ chối (qr.js cũng chặn lại lần nữa ở phía server, đây chỉ là để giao diện đỡ rối).
 async function layKichBanKeTiep(row, user) {
   const list = await scenarioService.layDanhSachKichBan();
-  return list.filter(s =>
+  // Bỏ kịch bản "Cho nhập mã tay" (05/10/2026): đó là bản sao dùng ô nhập mã thay camera ở màn Quét mã QR, cùng cấu hình
+  // với 1 kịch bản camera — để lại sẽ thành 2 nút "Chuyển sang..." giống hệt nhau ở Chi tiết đơn.
+  return list.filter(s => !s.nhapMaTay &&
     (!s.requireStatus || s.requireStatus === row[s.column]) &&
     scenarioService.duocPhepDung(s, user.vaiTro)
   );

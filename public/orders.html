@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=107">
+<link rel="stylesheet" href="/css/style.css?v=108">
 <script src="/js/theme.js?v=104"></script>
 </head>
 <body>
@@ -327,7 +327,7 @@
 </div>
 
 <script src="/js/icons.js?v=105"></script>
-<script src="/js/api.js?v=113"></script>
+<script src="/js/api.js?v=114"></script>
 <script src="/js/suaThongTinGke.js?v=1"></script>
 <script>
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
@@ -869,7 +869,7 @@ function renderDanhSachDon() {
     // (admin bị ẩn giá trị này, hoặc Xưởng chưa được gán màu) thì không thêm class/style gì.
     const xuongCard = lopVaStyleXuong(o.XUONG, mauTheoXuong);
     return `
-    <div class="order-card ${daChon ? 'da-chon' : ''} ${xuongCard.lop}" style="${xuongCard.style}" data-stt="${escapeHtml(o.STT_Key)}"
+    <div class="order-card ${o.DonHold ? 'vong-hold' : ''} ${daChon ? 'da-chon' : ''} ${xuongCard.lop}" style="${xuongCard.style}" data-stt="${escapeHtml(o.STT_Key)}"
          onclick="toggleChonDon('${escapeHtml(o.STT_Key)}', !donDaChonSet.has('${escapeHtml(o.STT_Key)}'))">
       <div class="cot-chon-the">
         <button type="button" class="btn-xem-the" title="Xem chi tiết đơn"
@@ -893,6 +893,7 @@ function renderDanhSachDon() {
         <div style="font-size:1.8rem;font-weight:700;line-height:1.1;margin:2px 0;color:var(--color-text)" title="Số lượng áo">SL: ${escapeHtml(o.SO_LUONG || '—')}</div>
         <div class="meta">${escapeHtml(o.TenKhachHang || '')} · Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgayNgan(o.NGAY_LEN_DON) : '—')}</div>
         <div class="badge-row">
+          ${nhanHold(o)}
           ${o.DonUuTien ? `<span class="badge trang-thai-danger">${icon('star', {size:14})} Ưu tiên</span>` : ''}
           ${nhanNhomNhieuAo(o.NhomNhieuAo)}
           <span class="badge ${lopTrangThai(o.TRANG_THAI_XUONG)}">${escapeHtml(o.TRANG_THAI_XUONG || '')}</span>

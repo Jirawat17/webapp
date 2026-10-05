@@ -605,6 +605,23 @@ select.chon-trang-thai-tieu-cuc { border-color: var(--color-warning-text); color
    trang chi tiết đơn không bị ảnh hưởng). */
 .order-card .tieu-de-the.uu-tien { display: inline-block; }
 
+/* Đơn "HOLD-Chờ xác nhận" (05/10/2026, theo yêu cầu người dùng; cờ DonHold, xem services/orderService.js#laDonHold) — vòng
+   đỏ quanh CẢ thẻ đơn (khác "Đơn ưu tiên" chỉ viền quanh tên) + quầng đỏ nhấp nháy phía trong.
+   - Vòng: outline đứng yên -> không đè viền màu Xưởng (.co-mau-xuong), viền/glow "đã chọn" (.da-chon) hay bóng hover.
+   - Nhấp nháy: CHỈ đổi opacity của lớp ::after riêng -> trình duyệt chạy trên GPU, không vẽ lại thẻ mỗi khung hình; không
+     đụng thuộc tính animation của chính thẻ nên hiệu ứng hiện lần lượt hienDanTu của .order-list vẫn nguyên. ::after nằm
+     TRONG thẻ (inset: 0) vì .order-card có overflow: hidden; pointer-events: none để bấm xuyên qua như thường.
+   - Màu theo --color-danger-text nên chế độ tối tự sáng hơn, không cần keyframes riêng. */
+@keyframes nhipHold { 50% { opacity: 0.15; } }
+.vong-hold { position: relative; outline: 3px solid var(--color-danger-text); outline-offset: 2px; }
+.vong-hold::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  box-shadow: inset 0 0 0 2px var(--color-danger-text), inset 0 0 14px 2px color-mix(in srgb, var(--color-danger-text) 55%, transparent);
+  animation: nhipHold 1.8s ease-in-out infinite;
+}
+/* Đầu trang chi tiết đơn (public/order.html): khối tên + hàng nhãn — chừa lề trong để vòng không dính sát chữ. */
+.dau-don.vong-hold { padding: 12px; border-radius: var(--radius-md); }
+
 /* Nút bật/tắt nhanh "Đơn ưu tiên" trên từng thẻ đơn (public/orders.html) — chỉ admin/ve_file thấy được
    (server-side gate, xem renderDanhSachDon()). Đặt cạnh checkbox chọn đơn, cùng kích thước 22px cho
    thẳng hàng. Xám nhạt khi CHƯA ưu tiên, đỏ đậm + nền mờ khi ĐÃ ưu tiên (.bat) — không chỉ dựa vào việc
@@ -1209,6 +1226,7 @@ body, .app-header, .order-card, .btn-hanh-dong, .badge, .mau-swatch, .tab-links 
   .btn-ten::after, .tong-so-the::after { display: none; }
   .badge-canh-bao.do, [data-theme="dark"] .badge-canh-bao.do { animation: none; }
   .uu-tien, [data-theme="dark"] .uu-tien { animation: none; }
+  .vong-hold::after { animation: none; }
   .skeleton-card { animation: none; }
   :is(.order-list, .chart-grid, .kich-ban-picker, .bang-chon-mau) > * { animation: none; opacity: 1; }
   .gon-song { display: none; }

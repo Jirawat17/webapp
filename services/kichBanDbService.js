@@ -27,7 +27,12 @@ db.exec(`CREATE TABLE IF NOT EXISTS cau_hinh_kich_ban (
   Nguoi_Thuc_Hien TEXT NOT NULL DEFAULT ''
 )`);
 
-const CAC_COT = ['Ten_Kich_Ban', 'Trang_Thai_Yeu_Cau', 'Trang_Thai_Sau', 'Cot', 'Nguoi_Thuc_Hien'];
+// Nhap_Ma_Tay (05/10/2026, theo yêu cầu người dùng): 'TRUE' = màn Quét mã QR dùng Ô NHẬP MÃ (gõ tay/máy quét mã vạch cầm
+// tay) thay cho camera — xem public/scan.html. CREATE TABLE IF NOT EXISTS không tự thêm cột cho DB đã có -> ALTER bên dưới.
+const CAC_COT = ['Ten_Kich_Ban', 'Trang_Thai_Yeu_Cau', 'Trang_Thai_Sau', 'Cot', 'Nguoi_Thuc_Hien', 'Nhap_Ma_Tay'];
+if (!db.prepare(`PRAGMA table_info(cau_hinh_kich_ban)`).all().some(c => c.name === 'Nhap_Ma_Tay')) {
+  db.exec(`ALTER TABLE cau_hinh_kich_ban ADD COLUMN Nhap_Ma_Tay TEXT NOT NULL DEFAULT ''`);
+}
 
 function layTatCa() {
   return db.prepare(`SELECT id, ${CAC_COT.join(', ')} FROM cau_hinh_kich_ban ORDER BY id`).all();

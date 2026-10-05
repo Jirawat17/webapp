@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn của tôi (Vẽ file) — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=107">
+<link rel="stylesheet" href="/css/style.css?v=108">
 <script src="/js/theme.js?v=104"></script>
 </head>
 <body>
@@ -224,7 +224,7 @@
 </div>
 
 <script src="/js/icons.js?v=105"></script>
-<script src="/js/api.js?v=113"></script>
+<script src="/js/api.js?v=114"></script>
 <script>
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
 // settings.html (superadmin), 3/5/7 không còn luôn đúng nên không hard-code vào nhãn hiển thị nữa.
@@ -464,7 +464,7 @@ function renderDanhSachCanVe() {
     // style.css .order-card.co-mau-xuong + public/js/api.js#lopVaStyleXuong).
     const xuongCard = lopVaStyleXuong(o.XUONG, mauTheoXuong);
     return `
-    <div class="order-card ${daChon ? 'da-chon' : ''} ${xuongCard.lop}" style="${xuongCard.style}" data-stt-can-ve="${escapeHtml(o.STT_Key)}"
+    <div class="order-card ${o.DonHold ? 'vong-hold' : ''} ${daChon ? 'da-chon' : ''} ${xuongCard.lop}" style="${xuongCard.style}" data-stt-can-ve="${escapeHtml(o.STT_Key)}"
          onclick="toggleChonDonCanVe('${escapeHtml(o.STT_Key)}', !donCanVeChonSet.has('${escapeHtml(o.STT_Key)}'))">
       <button type="button" class="btn-xem-the" title="Xem chi tiết đơn"
               aria-label="Xem chi tiết đơn ${escapeHtml(o.STT_Key)}"
@@ -479,6 +479,7 @@ function renderDanhSachCanVe() {
         <div style="font-size:1.8rem;font-weight:700;line-height:1.1;margin:2px 0;color:var(--color-text)" title="Số lượng áo">SL: ${escapeHtml(o.SO_LUONG || '—')}</div>
         <div class="meta">${escapeHtml(o.TenKhachHang || '')} · Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgayNgan(o.NGAY_LEN_DON) : '—')}</div>
         <div class="badge-row">
+          ${nhanHold(o)}
           ${o.DonUuTien ? `<span class="badge trang-thai-danger">${icon('star', {size:14})} Ưu tiên</span>` : ''}
           <span class="badge ${lopTrangThai(o.TRANG_THAI_XUONG)}">${escapeHtml(o.TRANG_THAI_XUONG || '')}</span>
           <span class="badge ${lopTrangThai(o.TRANG_THAI_PHOI)}">${escapeHtml(o.TRANG_THAI_PHOI || '')}</span>
@@ -700,7 +701,7 @@ function renderDanhSachToiVe() {
     // style.css .order-card.co-mau-xuong + public/js/api.js#lopVaStyleXuong).
     const xuongCard = lopVaStyleXuong(o.XUONG, mauTheoXuong);
     return `
-    <div class="order-card ${daChon ? 'da-chon' : ''} ${xuongCard.lop}" style="${xuongCard.style}" data-stt-toi-ve="${escapeHtml(o.STT_Key)}"
+    <div class="order-card ${o.DonHold ? 'vong-hold' : ''} ${daChon ? 'da-chon' : ''} ${xuongCard.lop}" style="${xuongCard.style}" data-stt-toi-ve="${escapeHtml(o.STT_Key)}"
          onclick="toggleChonDonToiVe('${escapeHtml(o.STT_Key)}', !donToiVeChonSet.has('${escapeHtml(o.STT_Key)}'))">
       <button type="button" class="btn-xem-the" title="Xem chi tiết đơn"
               aria-label="Xem chi tiết đơn ${escapeHtml(o.STT_Key)}"
@@ -715,6 +716,7 @@ function renderDanhSachToiVe() {
         <div style="font-size:1.8rem;font-weight:700;line-height:1.1;margin:2px 0;color:var(--color-text)" title="Số lượng áo">SL: ${escapeHtml(o.SO_LUONG || '—')}</div>
         <div class="meta">${escapeHtml(o.TenKhachHang || '')} · Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgayNgan(o.NGAY_LEN_DON) : '—')}</div>
         <div class="badge-row">
+          ${nhanHold(o)}
           ${o.DonUuTien ? `<span class="badge trang-thai-danger">${icon('star', {size:14})} Ưu tiên</span>` : ''}
           <span class="badge ${lopTrangThai(o.TRANG_THAI_XUONG)}">${escapeHtml(o.TRANG_THAI_XUONG || '')}</span>
           <span class="badge ${lopTrangThai(o.TRANG_THAI_PHOI)}">${escapeHtml(o.TRANG_THAI_PHOI || '')}</span>

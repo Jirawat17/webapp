@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kịch bản quét — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=107">
+<link rel="stylesheet" href="/css/style.css?v=108">
 <script src="/js/theme.js?v=104"></script>
 </head>
 <body>
@@ -41,6 +41,10 @@
       <input id="nguoi-thuc-hien" placeholder="VD: nguoi_lay_phoi, ve_file — để trống = mọi vai trò">
       <small style="color:var(--color-text-muted)">admin tự dùng được mọi kịch bản, trừ khi ô này có ghi <strong>superadmin</strong> — khi đó chỉ đúng các vai trò được ghi mới dùng được (vd ghi <code>superadmin</code> = chỉ superadmin).</small>
     </div>
+    <div class="truong">
+      <label><input type="checkbox" id="nhap-ma-tay"> Cho nhập mã tay (thay camera)</label>
+      <small style="color:var(--color-text-muted)">Bật thì màn Quét mã QR của kịch bản này KHÔNG mở camera mà hiện ô nhập mã đơn: gõ tay hoặc dùng máy quét mã vạch cầm tay, Enter là quét.</small>
+    </div>
     <button type="submit" class="btn-hanh-dong" id="nut-luu-kich-ban">Thêm kịch bản</button>
     <button type="button" class="btn-hanh-dong phu" id="nut-huy-sua" style="display:none">Huỷ sửa</button>
   </form>
@@ -49,7 +53,7 @@
 </div>
 
 <script src="/js/icons.js?v=105"></script>
-<script src="/js/api.js?v=113"></script>
+<script src="/js/api.js?v=114"></script>
 <script>
 let dangSuaId = null;
 
@@ -72,6 +76,7 @@ document.getElementById('form-kich-ban').onsubmit = async (e) => {
     trangThaiYeuCau: document.getElementById('trang-thai-yeu-cau').value.trim(),
     trangThaiSau: document.getElementById('trang-thai-sau').value.trim(),
     nguoiThucHien: document.getElementById('nguoi-thuc-hien').value.trim(),
+    nhapMaTay: document.getElementById('nhap-ma-tay').checked,
   };
   try {
     if (dangSuaId) {
@@ -102,7 +107,7 @@ const NHAN_COT = { TRANG_THAI_XUONG: 'Trạng thái chung', TRANG_THAI_PHOI: 'Ph
 async function taiDanhSach() {
   const list = await apiFetch('/kich-ban');
   document.getElementById('bang-kich-ban').innerHTML = `
-    <tr><th>Tên kịch bản</th><th>Cột</th><th>Trạng thái yêu cầu</th><th>Trạng thái sau</th><th>Vai trò</th><th></th><th></th></tr>
+    <tr><th>Tên kịch bản</th><th>Cột</th><th>Trạng thái yêu cầu</th><th>Trạng thái sau</th><th>Vai trò</th><th>Nhập mã tay</th><th></th><th></th></tr>
     ${list.map(k => `
       <tr>
         <td>${escapeHtml(k.Ten_Kich_Ban)}</td>
@@ -110,6 +115,7 @@ async function taiDanhSach() {
         <td>${escapeHtml(k.Trang_Thai_Yeu_Cau || '(không yêu cầu)')}</td>
         <td>${escapeHtml(k.Trang_Thai_Sau)}</td>
         <td>${escapeHtml(k.Nguoi_Thuc_Hien || '(mọi vai trò)')}</td>
+        <td>${k.Nhap_Ma_Tay === 'TRUE' ? 'Có' : ''}</td>
         <td><button class="btn-hanh-dong phu" onclick="suaKichBan(${k.id})">Sửa</button></td>
         <td><button class="btn-hanh-dong phu" data-ten="${escapeHtml(k.Ten_Kich_Ban)}" onclick="xoaKichBan(${k.id}, this.dataset.ten)">Xoá</button></td>
       </tr>`).join('')}`;
@@ -125,6 +131,7 @@ function suaKichBan(id) {
     document.getElementById('trang-thai-yeu-cau').value = k.Trang_Thai_Yeu_Cau || '';
     document.getElementById('trang-thai-sau').value = k.Trang_Thai_Sau;
     document.getElementById('nguoi-thuc-hien').value = k.Nguoi_Thuc_Hien || '';
+    document.getElementById('nhap-ma-tay').checked = k.Nhap_Ma_Tay === 'TRUE';
     document.getElementById('nut-luu-kich-ban').textContent = 'Cập nhật kịch bản';
     document.getElementById('nut-huy-sua').style.display = '';
     window.scrollTo({ top: 0, behavior: 'smooth' });

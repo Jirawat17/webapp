@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Quét QR — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=107">
+<link rel="stylesheet" href="/css/style.css?v=108">
 <script src="/js/theme.js?v=104"></script>
 <style>
 /* Tự ẩn header khi cuộn xuống, hiện lại khi cuộn lên — chỉ áp dụng riêng cho trang Quét QR
@@ -12,6 +12,11 @@
    thao tác trên điện thoại khi đang quét/chụp liên tục. */
 .app-header { transition: transform 0.25s ease; }
 .app-header.an-khi-cuon { transform: translateY(-100%); }
+/* Ô nhập mã của kịch bản "Cho nhập mã tay" (05/10/2026, theo yêu cầu người dùng) — cùng cỡ/kiểu ô "Nhập mã đơn" ở
+   public/order.html: gấp 3 cỡ ô mặc định, chữ xanh dương đậm cố định, chữ gợi ý xám thường, nút cao bằng ô. */
+#o-nhap-ma-kich-ban { width: 480px; max-width: calc(100vw - 2 * var(--space-4)); height: 63px; font-size: 40px; font-weight: 700; color: #1d4ed8; }
+#o-nhap-ma-kich-ban::placeholder { color: #757575; font-weight: 400; opacity: 1; }
+#o-nhap-ma-kich-ban + button { height: 63px; }
 </style>
 </head>
 <body>
@@ -28,6 +33,10 @@
   <div id="chon-kich-ban-wrap" style="display:none"></div>
 
   <div id="camera-wrap" style="display:none">
+    <form id="form-nhap-ma-kich-ban" onsubmit="nhapMaKichBan(event)" style="display:none;gap:4px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+      <input type="search" id="o-nhap-ma-kich-ban" placeholder="Nhập mã đơn..." aria-label="Nhập mã đơn để quét" autocomplete="off" enterkeyhint="go">
+      <button type="submit" class="btn-hanh-dong phu">Quét</button>
+    </form>
     <div class="khu-vuc-camera">
       <div class="camera-vien">
         <div id="qr-reader" style="border-radius:12px;overflow:hidden;"></div>
@@ -74,7 +83,7 @@
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="/js/icons.js?v=105"></script>
-<script src="/js/api.js?v=113"></script>
+<script src="/js/api.js?v=114"></script>
 <script>
 let user;
 // Mặc định mở vào "Quét kịch bản" (batch) khi vào trang — theo yêu cầu người dùng 05/09/2026, vì đây
@@ -224,6 +233,8 @@ async function capNhatManHinh() {
   document.getElementById('khu-xem-lai').style.display = 'none';
   document.getElementById('photo-wrap').style.display = 'none';
   document.getElementById('mo-ta-quet-chup-anh').style.display = 'none';
+  document.getElementById('form-nhap-ma-kich-ban').style.display = 'none';
+  document.querySelector('#camera-wrap .camera-vien').style.display = '';
   // Khung camera "Quét kịch bản" TỪNG rộng hơn, thấp hơn mặc định (.che-do-rong) — ĐÃ BỎ 09/09/2026,
   // theo yêu cầu người dùng: khung ngoài camera giờ chỉ to hơn khung quét QR ~10% ở MỌI chế độ, không
   // còn ngoại lệ nào (xem #qr-reader trong style.css).
@@ -265,7 +276,14 @@ async function capNhatManHinh() {
     renderDemNhom();
     renderDsDangQuet();
     renderKetQuaVuaQuet();
-    cameraCanChay = 'batch';
+    // Kịch bản "Cho nhập mã tay" (05/10/2026): ô nhập mã THAY camera — không bật camera, con trỏ sẵn trong ô.
+    if (kichBanDangChon.nhapMaTay) {
+      document.getElementById('form-nhap-ma-kich-ban').style.display = 'flex';
+      document.querySelector('#camera-wrap .camera-vien').style.display = 'none';
+      oNhapMaKichBanSanSang();
+    } else {
+      cameraCanChay = 'batch';
+    }
   } else {
     document.getElementById('khu-xem-lai').style.display = 'block';
     renderXemLai();
@@ -368,7 +386,7 @@ async function dieuChinhCamera(muonChay) {
   if (muonChay === 'lookup') await batDauCamera(xuLyQuetTraCuu);
   // "Quét kịch bản" TỪNG truyền aspectRatio 16/9 riêng (khung camera rộng-thấp) — ĐÃ BỎ 09/09/2026,
   // dùng chung đúng 1 cỡ khung mặc định (qrbox 260 + khung ngoài ~286px) như mọi chế độ khác.
-  else if (muonChay === 'batch') await batDauCamera(xuLyQuetKichBan);
+  else if (muonChay === 'batch') await batDauCamera(ma => xuLyQuetKichBan(ma)); // html5-qrcode gọi (mã, kếtQuả) — chỉ chuyển mã, tham số 2 dành cho ô nhập
   // "Chụp ảnh đã sản xuất" — bước quét QR SỐNG để xác định đơn, trước khi cho chụp ảnh
   // thật (xem docs/superpowers/specs/2026-09-07-tach-quet-chup-anh-design.md).
   else if (muonChay === 'photo_scan') await batDauCamera(xuLyQuetDeXacDinhDon);
@@ -483,8 +501,42 @@ async function xuLyQuetTraCuu(sttKey) {
   setTimeout(() => { dangXuLyQuet = false; }, 1500);
 }
 
-async function xuLyQuetKichBan(sttKey) {
+// Ô nhập mã (kịch bản "Cho nhập mã tay", 05/10/2026): Enter = đúng như vừa quét 1 mã bằng camera. Máy quét mã vạch cầm tay
+// gõ rất nhanh — mã nào tới khi mã trước chưa xử lý xong thì XẾP HÀNG chờ (camera thì bỏ qua lượt quét trùng, ô nhập thì
+// không được bỏ mã nào). Xử lý xong con trỏ quay lại ô (alert lỗi mạng cũng làm mất con trỏ).
+let hangDoiNhapMa = Promise.resolve();
+function oNhapMaKichBanSanSang() {
+  const o = document.getElementById('o-nhap-ma-kich-ban');
+  o.value = '';
+  o.focus();
+}
+function nhapMaKichBan(e) {
+  e.preventDefault();
+  const o = document.getElementById('o-nhap-ma-kich-ban');
+  const ma = o.value.trim();
+  o.value = '';
+  o.focus();
+  if (!ma) return;
+  const kichBanLucGo = kichBanDangChon; // ghi nhận NGAY lúc Enter — mã còn chờ trong hàng đợi mà đã đổi kịch bản thì bỏ
+  // .catch: 1 mã lỗi bất ngờ không được làm hỏng cả hàng đợi (promise bị reject -> mọi mã sau bị bỏ im lặng).
+  hangDoiNhapMa = hangDoiNhapMa
+    .then(() => xuLyQuetKichBan(ma, kichBanLucGo))
+    .catch(err => {
+      dangXuLyQuet = false;
+      hienThiToast('KHONG_TIM_THAY', `Lỗi khi xử lý mã ${ma}: ${err.message}`);
+      phatAmThanhKetQua('KHONG_TIM_THAY');
+    })
+    .then(() => o.focus());
+}
+
+// kichBanCuaMa: chỉ ô nhập truyền vào (kịch bản lúc gõ mã) — camera để null.
+async function xuLyQuetKichBan(sttKey, kichBanCuaMa = null) {
+  const tuONhap = !!kichBanCuaMa;
+  // Ô nhập: mã đã bị xoá khỏi ô nên KHÔNG được bỏ qua — khoá đang bị chỗ khác giữ (vd thao tác ở màn Xem lại, nhả sau
+  // 700ms) thì chờ nhả rồi xử lý. Camera vẫn bỏ qua như cũ (khung hình sau sẽ đọc lại mã).
+  if (tuONhap) while (dangXuLyQuet) await new Promise(r => setTimeout(r, 50));
   if (dangXuLyQuet) return;
+  if (tuONhap && kichBanCuaMa !== kichBanDangChon) return; // đã đổi sang kịch bản khác trong lúc mã chờ
 
   const daCo = dsQuet.find(x => x.sttKey === sttKey);
   if (daCo) {
@@ -504,6 +556,8 @@ async function xuLyQuetKichBan(sttKey) {
     dangXuLyQuet = false;
     return;
   }
+  // Mã từ ô nhập còn trong hàng đợi lúc người dùng đã đổi sang kịch bản khác -> kết quả không thuộc danh sách hiện tại, bỏ.
+  if (tuONhap && kichBanDangChon !== kichBanCuaMa) { dangXuLyQuet = false; return; }
 
   const item = {
     key: sttKey + '_' + Date.now(),
@@ -526,7 +580,9 @@ async function xuLyQuetKichBan(sttKey) {
   renderDsDangQuet();
   renderKetQuaVuaQuet();
 
-  setTimeout(() => { dangXuLyQuet = false; }, 700);
+  // Camera: khoá 700ms chống 1 mã bị đọc nhiều lần liên tiếp. Ô nhập: mở khoá ngay cho mã kế tiếp trong hàng đợi.
+  if (tuONhap) dangXuLyQuet = false;
+  else setTimeout(() => { dangXuLyQuet = false; }, 700);
 }
 
 function hienThiToast(loai, noiDung) {
@@ -624,6 +680,9 @@ function xoaKhoiDsQuet(key, tuManXemLai) {
 }
 
 document.getElementById('btn-dung-quet').onclick = async () => {
+  // Chờ các mã còn trong hàng đợi của ô nhập xử lý xong rồi mới sang Xem lại — nếu không, mã về muộn sẽ lọt vào bước
+  // "Xác nhận cập nhật" (tính lại từ dsQuet lúc bấm) mà người dùng chưa hề thấy trên màn Xem lại.
+  await hangDoiNhapMa;
   dangQuetKichBan = false;
   await capNhatManHinh();
 };

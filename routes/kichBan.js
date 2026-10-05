@@ -14,7 +14,7 @@ router.use(requireExactRole('superadmin'));
 const COT_HOP_LE = ['', 'TRANG_THAI_XUONG', 'TRANG_THAI_PHOI', 'TRANG_THAI_VE_FILE'];
 
 function chuanHoaDauVao(body) {
-  const { tenKichBan, trangThaiYeuCau, trangThaiSau, cot, nguoiThucHien } = body;
+  const { tenKichBan, trangThaiYeuCau, trangThaiSau, cot, nguoiThucHien, nhapMaTay } = body;
   if (!tenKichBan || !String(tenKichBan).trim()) throw new Error('Cần đặt tên kịch bản');
   if (!trangThaiSau || !String(trangThaiSau).trim()) throw new Error('Cần nhập Trạng thái sau (bắt buộc — đây là trạng thái đơn sẽ chuyển sang khi quét)');
   if (cot !== undefined && !COT_HOP_LE.includes(cot)) {
@@ -26,6 +26,7 @@ function chuanHoaDauVao(body) {
     Trang_Thai_Sau: String(trangThaiSau).trim(),
     Cot: cot || '',
     Nguoi_Thuc_Hien: nguoiThucHien ? String(nguoiThucHien).trim() : '',
+    Nhap_Ma_Tay: nhapMaTay === true ? 'TRUE' : '',
   };
 }
 

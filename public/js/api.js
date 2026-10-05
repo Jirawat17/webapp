@@ -151,6 +151,12 @@ function htmlTieuDeThe(o) {
     (dong2 ? `<strong class="size-mau-the">${escapeHtml(dong2)}</strong>` : '');
 }
 
+// Nhãn đơn "HOLD-Chờ xác nhận" (05/10/2026, theo yêu cầu người dùng) — cờ DonHold do server tính (services/orderService.js
+// #laDonHold, gắn ở routes/orders.js lamGiauDon, cùng chỗ DonUuTien). Vòng đỏ quanh thẻ/đầu trang chi tiết: style.css .vong-hold.
+function nhanHold(o) {
+  return o.DonHold ? `<span class="badge trang-thai-danger">${icon('alert', { size: 14 })} HOLD-Chờ xác nhận</span>` : '';
+}
+
 function lopVaStyleXuong(xuong, mauTheoXuong) {
   const mau = mauTheoXuong && mauTheoXuong[xuong];
   return mau ? { lop: 'co-mau-xuong', style: `--mau-xuong:${escapeHtml(mau)}` } : { lop: '', style: '' };
