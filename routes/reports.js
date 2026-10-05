@@ -260,6 +260,9 @@ router.get('/thong-ke-loi', async (req, res) => {
   // services/taiKhoanService.js#CAC_COT) — cùng lúc bỏ cột "Team" ở bảng chi tiết bên dưới.
   const theoLoai = {}, theoTuan = {};
   const chiTiet = [];
+  // theoDon (05/10/2026, theo yêu cầu người dùng — bấm ô "Tỷ lệ lỗi sản xuất" ở BĐK): mỗi đơn 1 dòng, số lần bị chuyển
+  // sang lỗi TRONG KỲ + lần gần nhất (vòng lặp đi từ mới -> cũ nên lần gặp đầu tiên là gần nhất). Không cắt 200 như chiTiet.
+  const theoDon = new Map();
   const locTheoNgaySapXep = [...locTheoNgay].sort((a, b) => (a.thoiGian < b.thoiGian ? 1 : -1)); // sắp theo chuỗi ISO gốc — mới nhất trước
   for (const l of locTheoNgaySapXep) {
     const don = banDoDon[l.sttKey];
@@ -269,6 +272,16 @@ router.get('/thong-ke-loi', async (req, res) => {
 
     theoLoai[loai] = (theoLoai[loai] || 0) + 1;
     theoTuan[nhanTuan] = (theoTuan[nhanTuan] || 0) + 1;
+
+    const daCo = theoDon.get(l.sttKey);
+    if (daCo) daCo.soLan++;
+    else {
+      theoDon.set(l.sttKey, {
+        sttKey: l.sttKey, soLan: 1, lanCuoi: dinhDangNgayGioNgan(d),
+        tieuDe: don ? orderService.tieuDeSanPham(don) : '', trangThai: don ? (don.TRANG_THAI_XUONG || '') : '',
+        khachHang: don ? (don.MA_KHACH_HANG || '') : '',
+      });
+    }
 
     chiTiet.push({
       sttKey: l.sttKey, loai, nguoiDung: l.nguoiDung || '(Không rõ)',
@@ -281,6 +294,7 @@ router.get('/thong-ke-loi', async (req, res) => {
     tongSoLoi: locTheoNgay.length,
     theoLoai, theoTuan,
     chiTiet: chiTiet.slice(0, 200),
+    theoDon: [...theoDon.values()],
   });
 });
 

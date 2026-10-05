@@ -101,10 +101,10 @@ router.get('/thong-ke', async (req, res) => {
     theoKhachHangChiTiet: thongKeTheoNhom(rows, r => maKhachTuSttKey(r.STT_Key), KHACH_KHONG_RO),
     theoLoaiSanPham: demTheo(rows, layLoai),
     theoTuan: demTheo(rows, tuanCuaDon),
+    // Chỉ còn "loại" chia theo khách — trạng thái/tuần đã chuyển sang biểu đồ TỔNG (theoTrangThai/theoTuan ở trên),
+    // 05/10/2026 theo yêu cầu người dùng; bỏ 2 lượt đếm thừa.
     chongTheoKhach: {
-      trangThai: demChongTheoKhach(rows, layTrangThai),
       loai: demChongTheoKhach(rows, layLoai),
-      tuan: demChongTheoKhach(rows, tuanCuaDon),
     },
   });
 });

@@ -57,6 +57,21 @@
 }
 .bdk-kpi-card::before { top:-1px; left:-1px; border-top:2px solid; border-left:2px solid; border-top-left-radius:6px; }
 .bdk-kpi-card::after { bottom:-1px; right:-1px; border-bottom:2px solid; border-right:2px solid; border-bottom-right-radius:6px; }
+/* Ô bấm được -> danh sách đơn (05/10/2026, theo yêu cầu người dùng) */
+.bdk-kpi-bam { cursor:pointer; transition: transform .15s ease, box-shadow .15s ease; }
+.bdk-kpi-bam:hover, .bdk-kpi-bam:focus-visible { transform: translateY(-2px); box-shadow: 0 0 26px rgba(126,232,250,0.28); outline: none; }
+.bdk-kpi-bam .bdk-kpi-nhan::after { content: " \203A"; }
+#bdk-hop-ds { max-width: min(860px, calc(100vw - 32px)); width: 100%; padding: 0; border: 1px solid rgba(126,232,250,0.4); border-radius: 10px;
+  background: #0b1a30; color: #cfe8ff; }
+#bdk-hop-ds::backdrop { background: rgba(0,0,0,0.6); }
+#bdk-hop-ds .bdk-hop-dau { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:14px 18px; border-bottom:1px solid rgba(126,232,250,0.2); }
+#bdk-hop-ds .bdk-hop-dau h3 { margin:0; color:#fff; font-size:1.05rem; }
+#bdk-hop-ds .bdk-hop-than { padding: 8px 18px 18px; max-height: 70vh; overflow:auto; }
+#bdk-hop-ds table { width:100%; border-collapse:collapse; font-size:0.88rem; }
+#bdk-hop-ds th, #bdk-hop-ds td { text-align:left; padding:7px 8px; border-bottom:1px solid rgba(126,232,250,0.12); vertical-align:top; }
+#bdk-hop-ds th { color:#8fb8d9; font-weight:600; position: sticky; top: 0; background: #0b1a30; }
+#bdk-hop-ds a { color:#7ee8fa; font-weight:700; }
+#bdk-hop-ds button { background: rgba(126,232,250,0.18); border:1px solid #7ee8fa; color:#fff; border-radius:6px; padding:6px 14px; cursor:pointer; }
 .bdk-kpi-nhan { font-size:0.72rem; text-transform:uppercase; letter-spacing:1px; color:#8fb8d9; margin-bottom:8px; }
 .bdk-kpi-so { font-size:2.1rem; font-weight:700; color:#fff; text-shadow:0 0 12px rgba(126,232,250,0.5); font-variant-numeric:tabular-nums; line-height:1; }
 .bdk-kpi-vang { border-color: rgba(255,215,107,0.4); }
@@ -139,19 +154,24 @@
       <div class="bdk-kpi-nhan">Cảnh báo Vàng</div>
       <div class="bdk-kpi-so" id="kpi-vang">0</div>
     </div>
-    <div class="bdk-kpi-card bdk-kpi-cam">
+    <div class="bdk-kpi-card bdk-kpi-cam bdk-kpi-bam" role="button" tabindex="0" data-ds="CAM" aria-label="Xem danh sách đơn Cảnh báo Cam">
       <div class="bdk-kpi-nhan">Cảnh báo Cam</div>
       <div class="bdk-kpi-so" id="kpi-cam">0</div>
     </div>
-    <div class="bdk-kpi-card bdk-kpi-do">
+    <div class="bdk-kpi-card bdk-kpi-do bdk-kpi-bam" role="button" tabindex="0" data-ds="DO" aria-label="Xem danh sách đơn Cảnh báo Đỏ">
       <div class="bdk-kpi-nhan">Cảnh báo Đỏ</div>
       <div class="bdk-kpi-so" id="kpi-do">0</div>
     </div>
-    <div class="bdk-kpi-card">
+    <div class="bdk-kpi-card bdk-kpi-bam" role="button" tabindex="0" data-ds="LOI" aria-label="Xem danh sách đơn lỗi sản xuất trong kỳ">
       <div class="bdk-kpi-nhan">Tỷ lệ lỗi sản xuất</div>
       <div class="bdk-kpi-so" id="kpi-ty-le-loi">0%</div>
     </div>
   </div>
+
+  <dialog id="bdk-hop-ds" aria-labelledby="bdk-hop-tieu-de">
+    <div class="bdk-hop-dau"><h3 id="bdk-hop-tieu-de"></h3><button type="button" onclick="document.getElementById('bdk-hop-ds').close()">Đóng</button></div>
+    <div class="bdk-hop-than" id="bdk-hop-than"></div>
+  </dialog>
 
   <div class="bdk-card bdk-full">
     <h3>Đang hoạt động ngay bây giờ</h3>
@@ -341,7 +361,54 @@ function moTaVaiTroVaViec(nguoiDangHD, demChayMay, demVeFile) {
   return nhanVaiTro;
 }
 
-async function taiBangDieuKhien() {
+// Bấm ô Cảnh báo Cam/Đỏ, Tỷ lệ lỗi sản xuất -> danh sách đơn (05/10/2026, theo yêu cầu người dùng). Cam/Đỏ: đơn ĐANG ở mức
+// đó (khớp số trên ô — /orders/thong-ke-nhanh?dsCanhBao). Lỗi: đơn bị chuyển sang lỗi TRONG KỲ đang chọn (khớp con số %
+// — /reports/thong-ke-loi .theoDon). Mã đơn mở chi tiết ở TAB MỚI để không mất màn BĐK.
+const TIEU_DE_DS = { CAM: 'Đơn Cảnh báo Cam', DO: 'Đơn Cảnh báo Đỏ', LOI: 'Đơn lỗi sản xuất trong kỳ' };
+function linkDon(ma) {
+  return `<a href="/order.html?stt=${encodeURIComponent(ma)}" target="_blank" rel="noopener">${escapeHtml(ma)}</a>`;
+}
+// luotMoDs: bấm ô khác khi danh sách trước chưa về -> bỏ kết quả cũ (không để danh sách cũ đè lên tiêu đề mới).
+// qsDaTai: tham số kỳ của lần tải BĐK gần nhất — danh sách lỗi dùng ĐÚNG kỳ đã tính ra con số % trên ô (không đọc ô ngày
+// "Tuỳ chọn" đang sửa dở mà chưa bấm "Áp dụng").
+let luotMoDs = 0;
+let qsDaTai = '';
+async function moDanhSachKpi(loai) {
+  const luot = ++luotMoDs;
+  const hop = document.getElementById('bdk-hop-ds'), than = document.getElementById('bdk-hop-than');
+  document.getElementById('bdk-hop-tieu-de').textContent = TIEU_DE_DS[loai];
+  than.innerHTML = '<p>Đang tải...</p>';
+  if (!hop.open) hop.showModal();
+  try {
+    if (loai === 'LOI') {
+      const { theoDon } = await apiFetch('/reports/thong-ke-loi?' + qsDaTai);
+      if (luot !== luotMoDs) return;
+      than.innerHTML = theoDon.length === 0 ? '<p>Không có đơn nào bị lỗi sản xuất trong kỳ này.</p>' : `
+        <p>${theoDon.length} đơn</p>
+        <table><tr><th>Mã đơn</th><th>Sản phẩm</th><th>Khách hàng</th><th>Trạng thái hiện tại</th><th>Số lần lỗi</th><th>Lỗi gần nhất</th></tr>
+        ${theoDon.map(d => `<tr><td>${linkDon(d.sttKey)}</td><td>${escapeHtml(d.tieuDe)}</td><td>${escapeHtml(d.khachHang)}</td>
+          <td>${escapeHtml(d.trangThai)}</td><td>${d.soLan}</td><td>${escapeHtml(d.lanCuoi)}</td></tr>`).join('')}</table>`;
+    } else {
+      const { danhSach } = await apiFetch('/orders/thong-ke-nhanh?dsCanhBao=' + loai);
+      if (luot !== luotMoDs) return;
+      than.innerHTML = danhSach.length === 0 ? '<p>Hiện không có đơn nào ở mức cảnh báo này.</p>' : `
+        <p>${danhSach.length} đơn</p>
+        <table><tr><th>Mã đơn</th><th>Sản phẩm</th><th>Khách hàng</th><th>Trạng thái</th></tr>
+        ${danhSach.map(d => `<tr><td>${linkDon(d.sttKey)}</td><td>${escapeHtml(d.tieuDe)}</td><td>${escapeHtml(d.khachHang)}</td>
+          <td>${escapeHtml(d.trangThai)}</td></tr>`).join('')}</table>`;
+    }
+  } catch (e) {
+    if (luot !== luotMoDs) return;
+    than.innerHTML = `<p style="color:#ff5e5e">Không tải được danh sách: ${escapeHtml(e.message)}</p>`;
+  }
+}
+document.querySelectorAll('.bdk-kpi-bam').forEach(o => {
+  o.onclick = () => moDanhSachKpi(o.dataset.ds);
+  o.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); moDanhSachKpi(o.dataset.ds); } };
+});
+
+// Tham số kỳ đang chọn (dùng chung cho tải BĐK và danh sách lỗi khi bấm ô).
+function qsKyDangChon() {
   const qs = new URLSearchParams();
   if (kyHienTai === 'tuy_chon') {
     const tu = document.getElementById('bdk-tu-ngay').value;
@@ -355,7 +422,12 @@ async function taiBangDieuKhien() {
       qs.set('denNgay', dinhDangYMD(khoang.den));
     }
   }
-  const qsStr = qs.toString();
+  return qs.toString();
+}
+
+async function taiBangDieuKhien() {
+  const qsStr = qsKyDangChon();
+  qsDaTai = qsStr;
 
   // Ghép 3 API đã có sẵn (không route mới) + /orders/thong-ke-nhanh để đếm cảnh báo hiện tại (KHÔNG
   // theo kỳ — "đơn nào đang trễ hạn" là ảnh chụp NGAY LÚC XEM, không phải việc xảy ra trong quá khứ) —

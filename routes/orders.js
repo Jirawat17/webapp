@@ -271,6 +271,16 @@ router.get('/thong-ke-nhanh', async (req, res) => {
   list = await lamGiauDon(list, null, req.session.user);
   list = locDonDangChayMayTheoNguoiVanHanh(list, req.session.user);
 
+  // ?dsCanhBao=CAM|DO|VANG (05/10/2026, theo yêu cầu người dùng — bấm ô Cảnh báo ở BĐK): trả DANH SÁCH đơn đúng mức đó,
+  // cùng phạm vi/cách tính với con số đếm bên dưới nên danh sách luôn khớp số trên ô.
+  if (['VANG', 'CAM', 'DO'].includes(req.query.dsCanhBao)) {
+    return res.json({
+      danhSach: list.filter(r => r.CanhBao === req.query.dsCanhBao).map(r => ({
+        sttKey: r.STT_Key, tieuDe: r.TieuDeSanPham, trangThai: r.TRANG_THAI_XUONG, khachHang: r.TenKhachHang || r.MA_KHACH_HANG || '',
+      })),
+    });
+  }
+
   const demCanhBao = { VANG: 0, CAM: 0, DO: 0 };
   const dangChayMay = {};
   const dangVeFile = {};

@@ -168,9 +168,11 @@ async function taiThongKe() {
 
   const tongDonTheoNhom = list => Object.fromEntries(list.map(n => [n.khachHang, n.tongDon]));
   veBieuDoCot('chart-khach-hang', 'Số đơn theo khách hàng', tongDonTheoNhom(stats.theoKhachHangChiTiet));
-  veBieuDoChong('chart-trangthai', 'Theo trạng thái (chia theo khách hàng)', stats.chongTheoKhach.trangThai);
+  // 05/10/2026 (theo yêu cầu người dùng): 2 biểu đồ dưới đây bỏ chia theo khách hàng, chỉ còn TỔNG tất cả khách (vẫn theo ô
+  // lọc khách/kỳ) — trạng thái: cột 1 màu (trục là các nhóm riêng, không phải thời gian); theo tuần: biểu đồ đường.
+  veBieuDoCot('chart-trangthai', 'Theo trạng thái (tất cả khách hàng)', stats.theoTrangThai);
   veBieuDoChong('chart-loai', 'Theo loại sản phẩm (chia theo khách hàng)', stats.chongTheoKhach.loai);
-  veBieuDoChong('chart-tuan', 'Đơn theo tuần — ngày lên đơn (chia theo khách hàng)', stats.chongTheoKhach.tuan, soSanhTuan);
+  veBieuDoDuong('chart-tuan', 'Đơn theo tuần — ngày lên đơn (tất cả khách hàng)', dienTuanTrong(stats.theoTuan), soSanhTuan);
   veBangTheoNhom('bang-theo-khach-hang-body', stats.theoKhachHangChiTiet);
 }
 
@@ -223,6 +225,44 @@ function veBieuDoCot(canvasId, title, dataObj) {
     options: {
       responsive: true,
       scales: { y: { grace: '12%' } }, // chừa chỗ cho số trên đỉnh cột cao nhất
+      plugins: {
+        title: { display: true, text: title, font: { size: 14 } },
+        legend: { display: false },
+        datalabels: { ...nhanSoTrenCot(), formatter: v => v },
+      },
+    },
+  });
+}
+
+// Server chỉ trả các tuần CÓ đơn — biểu đồ đường mà thiếu tuần thì nối thẳng qua, che mất tuần trống. Điền 0 cho mọi tuần
+// nằm giữa tuần đầu và tuần cuối. Số tuần cuối năm tính ĐÚNG công thức routes/dashboard.js#tuanCuaDon (ngày 31/12).
+function soTuanCuoiNam(nam) {
+  const dauNam = new Date(nam, 0, 1);
+  return Math.ceil(((new Date(nam, 11, 31) - dauNam) / 86400000 + dauNam.getDay() + 1) / 7);
+}
+function dienTuanTrong(theoTuan) {
+  const cacTuan = Object.keys(theoTuan).sort(soSanhTuan);
+  if (cacTuan.length < 2) return theoTuan;
+  const [namDau, tuanDau] = cacTuan[0].split('-W').map(Number);
+  const [namCuoi, tuanCuoi] = cacTuan[cacTuan.length - 1].split('-W').map(Number);
+  const kq = {};
+  for (let nam = namDau, tuan = tuanDau; nam < namCuoi || (nam === namCuoi && tuan <= tuanCuoi);) {
+    kq[`${nam}-W${tuan}`] = theoTuan[`${nam}-W${tuan}`] || 0;
+    if (++tuan > soTuanCuoiNam(nam)) { nam++; tuan = 1; }
+  }
+  return kq;
+}
+
+// Đường 1 màu (05/10/2026) — dùng cho số đơn theo tuần; ghi số tại từng điểm như biểu đồ cột.
+function veBieuDoDuong(canvasId, title, dataObj, soSanhNhan) {
+  const labels = Object.keys(dataObj);
+  if (soSanhNhan) labels.sort(soSanhNhan);
+  taoBieuDo(canvasId, {
+    type: 'line',
+    data: { labels, datasets: [{ label: title, data: labels.map(l => dataObj[l]), borderColor: '#4338ca', backgroundColor: '#4338ca', tension: 0.25, pointRadius: 4 }] },
+    options: {
+      responsive: true,
+      scales: { y: { beginAtZero: true, grace: '12%' } },
       plugins: {
         title: { display: true, text: title, font: { size: 14 } },
         legend: { display: false },
