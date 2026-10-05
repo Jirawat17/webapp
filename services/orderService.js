@@ -650,6 +650,24 @@ function laUuTien(row) {
   return String(row.DON_UU_TIEN || '').toUpperCase() === 'TRUE';
 }
 
+// Tra mã đơn GÕ TAY (05/10/2026, theo yêu cầu người dùng — seller lên đơn gõ lẫn dấu "." và "," trong mã, vd 10SON10.1 /
+// 10SON10,1): không phân biệt hoa/thường, coi "," = ".", bỏ dấu cách 2 đầu. Gõ đúng y mã nào thì lấy mã đó; không thì
+// chỉ nhận khi khớp ĐÚNG 1 đơn — khớp nhiều đơn thì trả danh sách để báo lỗi, KHÔNG tự chọn. `rows` phải được lọc phạm
+// vi Xưởng trước (không lộ đơn Xưởng khác). Dùng ở: ô "Nhập mã đơn" Chi tiết đơn (routes/orders.js GET /tra-ma) + ô
+// nhập mã kịch bản "Cho nhập mã tay" (routes/qr.js kiem-tra). Quét camera vẫn khớp chính xác (mã QR in từ mã gốc).
+function chuanHoaMaGoTay(ma) {
+  return String(ma || '').trim().toLowerCase().replace(/,/g, '.');
+}
+function timDonTheoMaGoTay(rows, ma) {
+  const nhap = String(ma || '').trim();
+  const dung = rows.find(r => r[KEY_COL] === nhap);
+  if (dung) return { row: dung };
+  const khoa = chuanHoaMaGoTay(nhap);
+  const khop = rows.filter(r => r[KEY_COL] && chuanHoaMaGoTay(r[KEY_COL]) === khoa);
+  if (khop.length === 1) return { row: khop[0] };
+  return { row: null, cacMaKhop: khop.map(r => r[KEY_COL]) };
+}
+
 // Đơn "HOLD-Chờ xác nhận" (05/10/2026, theo yêu cầu người dùng) — theo cột RAW TINH_TRANG của Sheet. CHỈ để hiển thị (vòng
 // đỏ + nhãn ở danh sách/chi tiết đơn, xem public/css/style.css .vong-hold), không chặn thao tác nào. So khớp ĐÚNG chuỗi,
 // chỉ bỏ dấu cách 2 đầu; NFC để chữ Việt gõ dựng sẵn hay tổ hợp đều khớp.
@@ -692,5 +710,5 @@ module.exports = {
   VAI_TRO_MENU_TRACKING, anCotTheoDoiMuaTracking,
   suaDonKetSanSang,
   TAB, KEY_COL, getAll, getByKey, getManyByKeys, update, filterForRole, ganTenKhachHang, tieuDeSanPham, danhSachViTriTheu,
-  layDanhSachXuong, locTheoXuong, coQuyenTheoXuong, phamViDon, laUuTien, laDonHold, lyDoDaMuaTracking, NHOM_LOC_TONG_QUAT,
+  layDanhSachXuong, locTheoXuong, coQuyenTheoXuong, phamViDon, laUuTien, laDonHold, timDonTheoMaGoTay, lyDoDaMuaTracking, NHOM_LOC_TONG_QUAT,
 };

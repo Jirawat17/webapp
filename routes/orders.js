@@ -1052,10 +1052,10 @@ router.get('/tra-ma', async (req, res) => {
   const ma = String(req.query.ma || '').trim();
   if (!ma) return res.status(400).json({ error: 'Chưa nhập mã đơn' });
   const { rows } = await orderService.getAll();
-  const thay = rows.filter(r => orderService.coQuyenTheoXuong(req.session.user, r));
-  const khopKhongPhanBietHoa = thay.filter(r => String(r.STT_Key || '').toLowerCase() === ma.toLowerCase());
-  // 2 mã chỉ khác hoa/thường (hiếm): gõ đúng y mã nào thì mở mã đó, còn lại coi như không tìm thấy (không đoán)
-  const row = thay.find(r => r.STT_Key === ma) || (khopKhongPhanBietHoa.length === 1 ? khopKhongPhanBietHoa[0] : null);
+  const thay = orderService.locTheoXuong(rows, req.session.user); // đọc Xưởng người dùng 1 lần, không phải mỗi dòng
+  // Không phân biệt hoa/thường, "," = "." (05/10/2026) — xem orderService.timDonTheoMaGoTay
+  const { row, cacMaKhop } = orderService.timDonTheoMaGoTay(thay, ma);
+  if (!row && cacMaKhop.length > 1) return res.status(404).json({ error: `Có ${cacMaKhop.length} đơn khớp: ${cacMaKhop.join(', ')} — gõ đúng mã` });
   if (!row) return res.status(404).json({ error: `Không tìm thấy đơn ${ma}` });
   res.json({ sttKey: row.STT_Key });
 });

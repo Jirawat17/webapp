@@ -168,24 +168,37 @@ router.post('/kich-ban/:scenarioId/quet', async (req, res) => {
 // ============================================================
 
 router.post('/kich-ban/:scenarioId/kiem-tra', async (req, res) => {
-  const { sttKey } = req.body;
+  let { sttKey } = req.body;
+  const { goTay, daCoTrongDs } = req.body;
   const user = req.session.user;
 
   if (!sttKey) return res.status(400).json({ error: 'Thiếu mã đơn hàng' });
 
-  const [scenario, { row }, banDoKhachHang] = await Promise.all([
+  // goTay (05/10/2026): mã từ Ô NHẬP (kịch bản "Cho nhập mã tay") — tra kiểu không phân biệt hoa/thường, "," = "."
+  // (orderService.timDonTheoMaGoTay) trên các đơn CÙNG Xưởng; tìm được thì đổi sttKey về MÃ GỐC để mọi bước sau (nhật ký,
+  // danh sách quét, xác nhận hàng loạt) dùng đúng mã trong Sheet. Camera vẫn tra chính xác như cũ.
+  const traDon = goTay
+    ? orderService.getAll().then(({ rows }) => orderService.timDonTheoMaGoTay(orderService.locTheoXuong(rows, user), sttKey))
+    : orderService.getByKey(sttKey); // qua cache — nhanh, đủ an toàn vì bước xác nhận sẽ đọc thật lại
+  const [scenario, { row, cacMaKhop }, banDoKhachHang] = await Promise.all([
     scenarioService.timKichBanTheoId(req.params.scenarioId),
-    orderService.getByKey(sttKey), // qua cache — nhanh, đủ an toàn vì bước xác nhận sẽ đọc thật lại
+    traDon,
     layBanDoTenKhachHang(), // gộp vào cùng lượt song song, không đợi xong scenario/order mới bắt đầu
   ]);
 
   if (!scenario) return res.status(404).json({ error: 'Không tìm thấy kịch bản' });
   if (!duocPhepDungKichBan(scenario, user)) return res.status(403).json({ error: 'Vai trò của bạn không được dùng kịch bản này' });
+  if (row) sttKey = row.STT_Key;
+  // Gõ khác kiểu viết (vd 10son10,1) cho 1 đơn ĐÃ có trong danh sách đang quét (daCoTrongDs = mã gốc phía trình duyệt
+  // đang giữ): trả TRUNG, KHÔNG ghi nhật ký — giống camera, mã trùng không bao giờ tới server.
+  if (goTay && row && Array.isArray(daCoTrongDs) && daCoTrongDs.includes(sttKey)) return res.json({ nhom: 'TRUNG', sttKey });
 
   // Đơn khác Xưởng coi như không tồn tại (bổ sung 13/09/2026) — dùng lại NGUYÊN nhóm/thông báo
   // KHONG_TIM_THAY, không lộ việc mã này CÓ tồn tại ở xưởng khác.
   if (!row || !orderService.coQuyenTheoXuong(user, row)) {
-    const lyDo = 'Không tìm thấy đơn hàng với mã này trong Sheet';
+    const lyDo = cacMaKhop && cacMaKhop.length > 1
+      ? `Có ${cacMaKhop.length} đơn khớp: ${cacMaKhop.join(', ')} — gõ đúng mã`
+      : 'Không tìm thấy đơn hàng với mã này trong Sheet';
     // Ghi cả `lyDo` vào chiTiet (bổ sung 12/09/2026, theo yêu cầu người dùng) — để
     // services/logService.js#layHoatDongCuaToi() có sẵn câu lý do dựng sẵn khi hiện lại ở tab "Lịch
     // sử" (public/hoat-dong.html), không phải suy luận/dựng lại câu chữ ở 1 nơi khác.

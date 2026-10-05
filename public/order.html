@@ -159,7 +159,7 @@ function dongNhomNhieuAo(n) {
   return `<tr><td>Nhóm DonNhieuAo</td><td>${nhanNhomNhieuAo(n)}<div style="margin-top:6px">${cacDon}</div>${loi.length ? `<p style="margin:6px 0 0;color:var(--color-danger-text)">${loi.map(escapeHtml).join('<br>')}</p>` : ''}</td></tr>`;
 }
 
-// Ô "Nhập mã đơn" (04/10/2026, theo yêu cầu người dùng): gõ ĐÚNG mã (không phân biệt hoa/thường) + Enter -> mở chi tiết
+// Ô "Nhập mã đơn" (04/10/2026, theo yêu cầu người dùng): gõ ĐÚNG mã (không phân biệt hoa/thường, "," = "." — 05/10/2026) + Enter -> mở chi tiết
 // đơn đó; sai -> báo không tìm thấy. Server tra và trả mã gốc (routes/orders.js GET /tra-ma). Hiện cả khi đơn đang mở báo lỗi.
 function htmlOTimMaDon() {
   return `<form onsubmit="moDonTheoMa(event)" style="display:inline-flex;gap:4px;align-items:center;flex-wrap:wrap">

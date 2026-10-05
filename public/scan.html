@@ -549,10 +549,19 @@ async function xuLyQuetKichBan(sttKey, kichBanCuaMa = null) {
   let ketQua;
   try {
     ketQua = await apiFetch(`/qr/kich-ban/${kichBanDangChon.id}/kiem-tra`, {
-      method: 'POST', body: JSON.stringify({ sttKey }),
+      method: 'POST', body: JSON.stringify(tuONhap ? { sttKey, goTay: true, daCoTrongDs: dsQuet.map(x => x.sttKey) } : { sttKey }),
     });
   } catch (e) {
     alert('Lỗi khi kiểm tra mã: ' + e.message);
+    dangXuLyQuet = false;
+    return;
+  }
+  // Ô nhập: server trả MÃ GỐC (gõ "10son10,1" -> "10SON10.1") — báo trùng theo mã gốc như khi quét camera.
+  // (server trả nhom TRUNG và không ghi nhật ký; vẫn so lại phía này phòng danh sách đổi trong lúc chờ)
+  const trungMaGoc = tuONhap && ketQua.sttKey && dsQuet.find(x => x.sttKey === ketQua.sttKey);
+  if (trungMaGoc || ketQua.nhom === 'TRUNG') {
+    hienThiToast('trung', `Mã ${ketQua.sttKey} đã có trong danh sách`);
+    if (trungMaGoc) nhayDong(trungMaGoc.key);
     dangXuLyQuet = false;
     return;
   }
