@@ -342,8 +342,12 @@ async function chayHangLoatSongSong(items, congViec) {
 // lọc — đã xác nhận với người dùng là san_xuat cũng được dùng dù không phụ trách phôi/vẽ file).
 // nguoi_lay_phoi đã bị chặn từ đầu file (router.use(khongPhaiNguoiLayPhoi)) — không cần kiểm tra lại
 // riêng ở đây nữa (bỏ đoạn kiểm tra trùng lặp 12/09/2026 lần 2).
+// chiKhiDangLa (07/10/2026, theo yêu cầu người dùng — nút IN ĐƠN / "IN DANH SÁCH PHÔI + IN ĐƠN"): CHỈ đổi đơn mà cột `cot`
+// ĐANG đúng giá trị này (đọc thật, mới nhất); đơn khác -> boQua, giữ nguyên trạng thái (in lại đơn đang sản xuất không bị
+// kéo lùi về "Đã in mã"). Không truyền -> như cũ, đổi mọi đơn.
 router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
-  const { sttKeys, trangThaiMoi } = req.body;
+  const { sttKeys, trangThaiMoi, chiKhiDangLa } = req.body;
+  const boQua = [];
   const cot = req.body.cot || 'TRANG_THAI_XUONG';
   const user = req.session.user;
 
@@ -390,6 +394,10 @@ router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
       }
 
       const trangThaiCu = row[cot];
+      if (chiKhiDangLa && trangThaiCu !== chiKhiDangLa) {
+        boQua.push({ sttKey, lyDo: `Đang "${trangThaiCu || '(trống)'}" — giữ nguyên` });
+        return;
+      }
       const ketQuaUpdate = await orderService.update(sttKey, {
         [cot]: trangThaiMoi,
         NguoiCapNhatCuoi: user.ten,
@@ -417,7 +425,7 @@ router.post('/chuyen-trang-thai-hang-loat', async (req, res) => {
     }
   }
 
-  res.json({ ok: true, thanhCong, loi });
+  res.json({ ok: true, thanhCong, loi, boQua });
 });
 
 // CHUYỂN TRẠNG THÁI THỦ CÔNG SUPERADMIN (bổ sung 25/09/2026, theo yêu cầu người dùng) — CHỈ superadmin,

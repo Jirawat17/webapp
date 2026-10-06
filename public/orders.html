@@ -1764,11 +1764,34 @@ async function themVaoDonHangLoat() {
 async function inDonDangChon(nut) {
   if (donDaChonSet.size === 0) { alert('Hãy chọn ít nhất 1 đơn muốn in.'); return; }
 
+  const danhSach = Array.from(donDaChonSet);
   const nhanGoc = nut.innerHTML;
   nut.disabled = true;
   nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 18 }) + ' Đang tạo file...';
 
-  await inDonHangLoatCoTienDo(nut, nhanGoc, { sttKeys: Array.from(donDaChonSet), ...layBoLocDangDung() });
+  const kq = await inDonHangLoatCoTienDo(nut, nhanGoc, { sttKeys: danhSach, ...layBoLocDangDung() });
+  if (kq.ok) await chuyenDaInMaSauKhiIn(danhSach);
+}
+
+// In ĐƠN xong (file đã tải về THÀNH CÔNG) -> chuyển "Chưa in mã" sang "Đã in mã" (07/10/2026, theo yêu cầu người dùng) — dùng
+// cho IN ĐƠN và IN ĐƠN TỪ FILE PHÔI. CHỈ đơn ĐANG "Chưa in mã" (server đọc trạng thái mới nhất, chiKhiDangLa); đơn đã ở bước sau
+// giữ nguyên — in lại đơn đang sản xuất không bị kéo lùi. In lỗi / bấm Dừng -> nơi gọi không gọi hàm này, không đổi gì.
+async function chuyenDaInMaSauKhiIn(sttKeys) {
+  let kq;
+  try {
+    kq = await apiFetch('/orders/chuyen-trang-thai-hang-loat', {
+      method: 'POST', body: JSON.stringify({ sttKeys, cot: 'TRANG_THAI_XUONG', trangThaiMoi: 'Đã in mã', chiKhiDangLa: 'Chưa in mã' }),
+    });
+  } catch (e) {
+    alert(`Đã in xong nhưng CHƯA chuyển được trạng thái "Đã in mã": ${e.message}`);
+    return;
+  }
+  let tb = `Đã in xong ${sttKeys.length} đơn.\n\n` +
+    `Chuyển "Chưa in mã" → "Đã in mã": ${kq.thanhCong.length} đơn.`;
+  if (kq.boQua.length) tb += `\nGiữ nguyên trạng thái (không ở "Chưa in mã"): ${kq.boQua.length} đơn.`;
+  if (kq.loi.length) tb += `\n\n✘ Không chuyển được (${kq.loi.length} đơn):\n` + kq.loi.map(l => `  - ${l.sttKey}: ${l.lyDo}`).join('\n');
+  alert(tb);
+  await taiDon();
 }
 
 // "IN ĐƠN TỪ FILE PHÔI" (29/09/2026, theo yêu cầu người dùng) — chọn file DSPhoiAoTongHop.pdf, server đọc các mã đơn
@@ -1807,7 +1830,8 @@ async function inDonTuFilePhoi(input) {
   }
   if (!kq.sttKeys.length) return xong();
   nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 18 }) + ' Đang tạo file...';
-  await inDonHangLoatCoTienDo(nut, nhanGoc, { sttKeys: kq.sttKeys, giuThuTu: true });
+  const kqIn = await inDonHangLoatCoTienDo(nut, nhanGoc, { sttKeys: kq.sttKeys, giuThuTu: true });
+  if (kqIn.ok) await chuyenDaInMaSauKhiIn(kq.sttKeys);
 }
 
 // Nút gộp "IN DANH SÁCH PHÔI + IN ĐƠN" (nhãn rút gọn 29/09/2026, chức năng giữ nguyên) — làm 1 lần cả 3 việc:
@@ -1819,7 +1843,7 @@ async function inMaPhoiDonDangChon(nut) {
   if (donDaChonSet.size === 0) { alert('Hãy chọn ít nhất 1 đơn muốn in.'); return; }
 
   const danhSach = Array.from(donDaChonSet);
-  if (!confirm(`Đánh dấu ${danhSach.length} đơn đã chọn thành "Đã in mã", đồng thời in file PDF đơn và file PDF danh sách phôi. Tiếp tục?`)) return;
+  if (!confirm(`In file PDF đơn và file PDF danh sách phôi cho ${danhSach.length} đơn đã chọn, đồng thời chuyển các đơn đang "Chưa in mã" sang "Đã in mã" (đơn đã ở bước sau giữ nguyên trạng thái). Tiếp tục?`)) return;
 
   const nhanGoc = nut.innerHTML;
   nut.disabled = true;
@@ -1831,11 +1855,14 @@ async function inMaPhoiDonDangChon(nut) {
   let daHuyDoiTrangThai = false;
   const thanhTienDoTrangThai = taoThanhTienDo(nut, { onHuy: () => { daHuyDoiTrangThai = true; } });
   thanhTienDoTrangThai.capNhat(0, danhSach.length);
+  // CHỈ đơn ĐANG "Chưa in mã" (07/10/2026, theo yêu cầu người dùng — trước đây đổi MỌI đơn đã chọn, kéo lùi cả đơn đang sản
+  // xuất về "Đã in mã"): server đọc trạng thái mới nhất, đơn khác trả về boQua và giữ nguyên.
+  const giuNguyen = [];
   const ketQuaTrangThai = await chayHangLoatCoTienDo(
     danhSach,
     sttKey => apiFetch('/orders/chuyen-trang-thai-hang-loat', {
-      method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], cot: 'TRANG_THAI_XUONG', trangThaiMoi: 'Đã in mã' }),
-    }),
+      method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], cot: 'TRANG_THAI_XUONG', trangThaiMoi: 'Đã in mã', chiKhiDangLa: 'Chưa in mã' }),
+    }).then(kq => { giuNguyen.push(...(kq.boQua || [])); return kq; }),
     { onTienDo: (hienTai, tong) => thanhTienDoTrangThai.capNhat(hienTai, tong), kiemTraHuy: () => daHuyDoiTrangThai }
   );
   thanhTienDoTrangThai.xoa();
@@ -1852,9 +1879,12 @@ async function inMaPhoiDonDangChon(nut) {
   // Alert tổng kết — ghi rõ đơn nào OK/chưa OK ở bước đổi trạng thái (bước duy nhất xử lý TỪNG đơn
   // riêng nên có được danh sách này); 2 bước in PDF xử lý theo cả lô/bảng tổng hợp nên chỉ báo được
   // thành công/lỗi của CẢ FILE, không tách được theo từng đơn (xem spec 2026-09-05, mục 4).
-  let thongBao = `KẾT QUẢ:\n\n1) Đổi trạng thái "Đã in mã" — ${ketQuaTrangThai.thanhCong.length}/${danhSach.length} đơn OK`;
+  let thongBao = `KẾT QUẢ:\n\n1) Đổi "Chưa in mã" → "Đã in mã" — ${ketQuaTrangThai.thanhCong.length} đơn OK`;
   if (ketQuaTrangThai.thanhCong.length > 0) {
     thongBao += `:\n   ✔ OK: ${ketQuaTrangThai.thanhCong.join(', ')}`;
+  }
+  if (giuNguyen.length > 0) {
+    thongBao += `\n   • Giữ nguyên trạng thái (không ở "Chưa in mã") ${giuNguyen.length} đơn: ${giuNguyen.map(g => g.sttKey).join(', ')}`;
   }
   if (ketQuaTrangThai.loi.length > 0) {
     thongBao += `\n   ✘ Chưa OK (${ketQuaTrangThai.loi.length} đơn):\n` +

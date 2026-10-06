@@ -1,6 +1,9 @@
 // Xuất Excel MUA TRACKING THỦ CÔNG theo mẫu GKE (02/10/2026, theo yêu cầu người dùng) — menu Tracking.
-// Mẫu: assets/gke/mau-len-don-gke.xlsx (bản sao "File lên đơn mẫu.xlsx" người dùng cung cấp). Người dùng chốt:
-//   - Chỉ giữ sheet "bản mẫu" (4 dòng đầu không được xoá, 24 cột, dữ liệu từ dòng 5); xoá 3 sheet còn lại.
+// Mẫu: assets/gke/mau-len-don-gke.xlsx — từ file người dùng ĐÃ UPLOAD OK lên GKE (06/10/2026), bỏ dòng đơn, chỉ còn 4 dòng
+// tiêu đề. Người dùng chốt (06/10/2026): xuất GIỐNG file OK đó —
+//   - Giữ đủ 4 sheet như file mẫu; dữ liệu ghi vào sheet "bản mẫu" từ dòng 5, file dừng đúng ở dòng đơn cuối (không dòng thừa).
+//   - Ô không có dữ liệu bỏ TRỐNG HẲN (không ghi chuỗi rỗng); định dạng ô giữ General như mẫu.
+//   - export_declared và import_hscode luôn để trống; import_declared = "Tên hàng khai báo" của tài khoản GKE (Settings).
 //   - street = DIA_CHI_TEN_DUONG (dòng 1), address = DIA_CHI_TEN_DUONG_2 (dòng 2) — dòng 2 trống thì để trống + cảnh báo.
 //   - Mỗi tài khoản GKE 1 file (service_code / khai báo hải quan theo đúng tài khoản của đơn).
 //   - Thiếu SĐT -> "0000000000", thiếu Bang/Tỉnh -> để trống (GIỐNG API) + cảnh báo.
@@ -50,6 +53,8 @@ function kiemTraDon(row, rows) {
     const thieuCh = [['serviceCode', 'Mã dịch vụ (service code)'], ['customsDeclaredPrice', 'Giá khai báo'], ['customsItemName', 'Tên hàng khai báo'], ['customsCurrency', 'Loại tiền khai báo']]
       .filter(([k]) => !cauHinh[k]).map(([, n]) => n);
     if (thieuCh.length) lyDo.push(`Tài khoản GKE "${cauHinh.ten}" thiếu cấu hình: ${thieuCh.join(', ')} — cập nhật ở Settings.`);
+    // Giá phải là SỐ (vd "10 USD", "10,5" -> NaN, ghi vào Excel thành <v>NaN</v> làm HỎNG file) — giống chốt cân nặng bên dưới.
+    else if (!(Number(cauHinh.customsDeclaredPrice) > 0)) lyDo.push(`Tài khoản GKE "${cauHinh.ten}": Giá khai báo "${cauHinh.customsDeclaredPrice}" không phải số hợp lệ (vd 10 hoặc 10.5) — sửa ở Settings.`);
   }
   const thieu = [['TEN', 'Tên người nhận'], ['MA_ZIPCODE', 'ZIP code'], ['DIA_CHI_TEN_TP', 'Thành phố'], ['DIA_CHI_TEN_DUONG', 'Địa chỉ (dòng 1)']]
     .filter(([k]) => !String(rowGke[k] || '').trim()).map(([, n]) => n);
@@ -68,6 +73,8 @@ function kiemTraDon(row, rows) {
     soLuong = conLai.reduce((t, r) => t + (Number(r.SO_LUONG) || 1), 0);
     canhBao.push(`Nhóm DonNhieuAo ${nhom.goc}: 1 tracking cho cả nhóm, cân nặng tổng ${canNang} kg, số lượng tổng ${soLuong}.`);
   }
+  // Settings thiếu "cân nặng mỗi áo" (và đơn không có TRONG_LUONG) -> NaN: ghi vào Excel thành <v>NaN</v>, file HỎNG không mở được.
+  if (!(canNang > 0)) { lyDo.push(`Không tính được cân nặng — tài khoản GKE "${cauHinh.ten}" chưa có "cân nặng mỗi áo" ở Settings.`); return kq; }
   const sdt = s('SDT') || SDT_MAC_DINH;
   if (!s('SDT')) canhBao.push(`Thiếu SĐT — điền "${SDT_MAC_DINH}" (giống mua qua API).`);
   if (!s('DIA_CHI_BANG')) canhBao.push('Thiếu Bang/Tỉnh — để trống (cột bắt buộc, GKE có thể từ chối).');
@@ -88,8 +95,8 @@ function kiemTraDon(row, rows) {
     'consignee_info.country': maQg, 'consignee_info.postcode': zip, 'consignee_info.province': s('DIA_CHI_BANG'),
     'consignee_info.city': s('DIA_CHI_TEN_TP'), 'consignee_info.street': s('DIA_CHI_TEN_DUONG'), 'consignee_info.address': s('DIA_CHI_TEN_DUONG_2'),
     'parcel_list.weight': canNang,
-    export_declared: cauHinh.customsItemName, export_price: gia, export_price_currency: cauHinh.customsCurrency,
-    import_declared: cauHinh.customsItemName, import_hscode: cauHinh.customsHsCode || '', import_price: gia, import_price_currency: cauHinh.customsCurrency,
+    export_declared: '', export_price: gia, export_price_currency: cauHinh.customsCurrency, // export_declared để trống như file OK
+    import_declared: cauHinh.customsItemName, import_hscode: '', import_price: gia, import_price_currency: cauHinh.customsCurrency,
     qty: soLuong,
   };
   return kq;
@@ -137,21 +144,20 @@ async function taoFile(sttKeys, taiKhoanId, user, bayGio = new Date()) {
   await wb.xlsx.readFile(DUONG_DAN_MAU);
   const ws = wb.getWorksheet(TEN_SHEET);
   if (!ws) throw new Error(`File mẫu GKE thiếu sheet "${TEN_SHEET}".`);
-  for (const khac of wb.worksheets.filter(w => w.id !== ws.id)) wb.removeWorksheet(khac.id);
   // Vị trí cột theo mã trường dòng 4 — thiếu mã nào thì báo lỗi, không đoán.
   const viTri = {};
   ws.getRow(4).eachCell((c, i) => { viTri[String(c.value || '').trim()] = i; });
   const thieuCot = COT.filter(k => !viTri[k]);
   if (thieuCot.length) throw new Error(`File mẫu GKE thiếu cột: ${thieuCot.join(', ')}.`);
-  // Xoá trắng các dòng ví dụ ("Mã order"...) từ dòng 5 — spliceRows() của exceljs KHÔNG xoá được dòng ở sheet này (đã thử).
-  for (let r = DONG_DU_LIEU_DAU; r <= ws.rowCount; r++) ws.getRow(r).eachCell({ includeEmpty: true }, c => { c.value = null; });
+  // Mẫu chỉ được có 4 dòng tiêu đề — còn dòng nào khác thì file xuất sẽ có dòng thừa (GKE đọc thành đơn) -> báo lỗi, không đoán.
+  if (ws.rowCount >= DONG_DU_LIEU_DAU) throw new Error(`File mẫu GKE còn ${ws.rowCount - DONG_DU_LIEU_DAU + 1} dòng dưới tiêu đề — mẫu chỉ được có 4 dòng đầu.`);
   don.forEach((d, i) => {
     const hang = ws.getRow(DONG_DU_LIEU_DAU + i);
     for (const k of COT) {
       const v = d.duLieu[k];
-      // Số chỉ cho cân nặng / giá / số lượng; còn lại (ZIP, SĐT, HS...) ghi CHUỖI để Excel không bỏ số 0 đầu / đổi dạng số.
-      hang.getCell(viTri[k]).value = typeof v === 'number' ? v : String(v ?? '');
-      if (typeof v !== 'number') hang.getCell(viTri[k]).numFmt = '@';
+      // Số chỉ cho cân nặng / giá / số lượng; còn lại (ZIP, SĐT...) ghi CHUỖI nên Excel không bỏ số 0 đầu. Trống -> không ghi ô.
+      if (typeof v === 'number') hang.getCell(viTri[k]).value = v;
+      else if (String(v ?? '').trim()) hang.getCell(viTri[k]).value = String(v).trim();
     }
     hang.commit();
   });

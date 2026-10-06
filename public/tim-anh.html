@@ -489,13 +489,30 @@ function veBangTai() {
       <span id="ta-tien-do-tai" class="ta-muted"></span>
       <button type="button" class="btn-hanh-dong phu" id="ta-nut-csv" style="display:none" onclick="taiBangKetQuaCsv()">Tải bảng kết quả (.csv)</button></p>
     <p class="ta-muted" style="margin-top:0">Chỉ tải các dòng <b>Khớp</b> và các dòng bạn đã gõ mã đơn. Dòng không khớp mà để trống mã sẽ không tải lên.</p>
+    ${dong.some(coTheGoTay) ? `<p style="margin-top:0"><button type="button" class="btn-hanh-dong phu" onclick="tichTatCaNgoaiSheet()">Tích tất cả "lưu dù mã không có trong Sheet"</button>
+      <span class="ta-muted">— chỉ các dòng đã gõ mã; bấm lần nữa để bỏ tích.</span></p>` : ''}
     <div class="ta-cuon"><table class="bang-xem-truoc ta-bang-tai"><thead><tr><th>#</th><th>File (đường dẫn)</th><th>Loại</th><th>Mã đơn</th><th>Trạng thái</th></tr></thead><tbody>
     ${dong.map((d, i) => `<tr><td>${i + 1}</td><td class="dd" title="${escapeHtml(d.duongDan)}">${escapeHtml(d.duongDan)}</td><td>${escapeHtml(d.loai || '—')}</td>
       <td>${coTheGoTay(d) ? `<input type="text" id="ta-go-${i}" placeholder="gõ mã" value="${escapeHtml(d.goTay || '')}" oninput="phienTai.dong[${i}].goTay = this.value.trim()">
-          <label class="ta-muted" style="display:block"><input type="checkbox" ${d.xacNhan ? 'checked' : ''} onchange="phienTai.dong[${i}].xacNhan = this.checked"> lưu dù mã không có trong Sheet</label>`
+          <label class="ta-muted" style="display:block"><input type="checkbox" id="ta-xn-${i}" ${d.xacNhan ? 'checked' : ''} onchange="phienTai.dong[${i}].xacNhan = this.checked"> lưu dù mã không có trong Sheet</label>`
         : escapeHtml(d.sttKey || '')}</td>
       <td id="ta-tt-${i}">${moTaKhop(d)}</td></tr>`).join('')}
     </tbody></table></div>`;
+}
+
+// Nút "Tích tất cả" (06/10/2026, theo yêu cầu người dùng): tích "lưu dù mã không có trong Sheet" cho mọi dòng ĐÃ GÕ MÃ, chưa
+// tải. Dòng chưa gõ mã bỏ qua (tích cũng không tải được — không biết thuộc đơn nào). Tất cả đã tích sẵn -> bấm lại để bỏ tích.
+// Sửa thẳng ô tích trên trang (không vẽ lại bảng để không mất chỗ đang cuộn / ô đang gõ).
+function tichTatCaNgoaiSheet() {
+  const ds = phienTai.dong.map((d, i) => ({ d, i })).filter(({ d }) => coTheGoTay(d) && d.goTay && !d.daXuLy);
+  if (!ds.length) { thongBao('Chưa có dòng nào được gõ mã — gõ mã đơn trước rồi mới tích.', true); return; }
+  const tich = !ds.every(({ d }) => d.xacNhan);
+  for (const { d, i } of ds) {
+    d.xacNhan = tich;
+    const o = document.getElementById('ta-xn-' + i);
+    if (o) o.checked = tich;
+  }
+  thongBao(`${tich ? 'Đã tích' : 'Đã bỏ tích'} "lưu dù mã không có trong Sheet" cho ${ds.length} dòng đã gõ mã.`);
 }
 
 async function taiLenThuVien() {
