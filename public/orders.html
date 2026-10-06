@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=108">
+<link rel="stylesheet" href="/css/style.css?v=109">
 <script src="/js/theme.js?v=104"></script>
 </head>
 <body>
@@ -349,7 +349,7 @@
 </div>
 
 <script src="/js/icons.js?v=105"></script>
-<script src="/js/api.js?v=115"></script>
+<script src="/js/api.js?v=116"></script>
 <script src="/js/suaThongTinGke.js?v=1"></script>
 <script>
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
@@ -957,7 +957,7 @@ function renderDanhSachDon() {
     // (admin bị ẩn giá trị này, hoặc Xưởng chưa được gán màu) thì không thêm class/style gì.
     const xuongCard = lopVaStyleXuong(o.XUONG, mauTheoXuong);
     return `
-    <div class="order-card ${o.DonHold ? 'vong-hold' : ''} ${daChon ? 'da-chon' : ''} ${xuongCard.lop}" style="${xuongCard.style}" data-stt="${escapeHtml(o.STT_Key)}"
+    <div class="order-card ${o.DonHold ? 'vong-hold' : ''} ${o.TinhTrangDacBiet ? 'the-canh-bao-vang' : ''} ${daChon ? 'da-chon' : ''} ${xuongCard.lop}" style="${xuongCard.style}" data-stt="${escapeHtml(o.STT_Key)}"
          onclick="toggleChonDon('${escapeHtml(o.STT_Key)}', !donDaChonSet.has('${escapeHtml(o.STT_Key)}'))">
       <div class="cot-chon-the">
         <button type="button" class="btn-xem-the" title="Xem chi tiết đơn"

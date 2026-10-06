@@ -622,6 +622,23 @@ select.chon-trang-thai-tieu-cuc { border-color: var(--color-warning-text); color
 /* Đầu trang chi tiết đơn (public/order.html): khối tên + hàng nhãn — chừa lề trong để vòng không dính sát chữ. */
 .dau-don.vong-hold { padding: 12px; border-radius: var(--radius-md); }
 
+/* Đơn cảnh báo theo TINH_TRANG — HOLD/CANCELLED/REFUNDED (07/10/2026, theo yêu cầu người dùng; cờ TinhTrangDacBiet, xem
+   services/orderService.js#loaiTinhTrangDacBiet): NỀN VÀNG cả thẻ + nhấp nháy vàng sáng <-> vàng nhạt.
+   - Nền vàng ĐÈ màu nền theo Xưởng (.co-mau-xuong) và nền "đã chọn" (.da-chon) — đặt SAU 2 quy tắc đó; thẻ đang chọn vẫn giữ viền.
+   - Nhấp nháy: lớp ::before (vàng đậm hơn) nằm DƯỚI nội dung (z-index -1 trong isolation) và CHỈ đổi opacity -> GPU, không vẽ lại
+     thẻ, không đổi kích thước/vị trí, bấm xuyên qua (pointer-events none). ::after đã dành cho .vong-hold (HOLD vẫn có vòng đỏ).
+   - Chế độ tối: vàng hổ phách tối để chữ trắng vẫn đọc được. */
+@keyframes nhipVang { 50% { opacity: 0; } }
+.the-canh-bao-vang { position: relative; isolation: isolate; }
+.order-card.the-canh-bao-vang, .dau-don.the-canh-bao-vang { background: #fef08a; }
+.the-canh-bao-vang::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+  background: #facc15; animation: nhipVang 1.6s ease-in-out infinite;
+}
+[data-theme="dark"] .order-card.the-canh-bao-vang, [data-theme="dark"] .dau-don.the-canh-bao-vang { background: #4a3a05; }
+[data-theme="dark"] .the-canh-bao-vang::before { background: #7a5f00; }
+.dau-don.the-canh-bao-vang { padding: 12px; border-radius: var(--radius-md); }
+
 /* Nút bật/tắt nhanh "Đơn ưu tiên" trên từng thẻ đơn (public/orders.html) — chỉ admin/ve_file thấy được
    (server-side gate, xem renderDanhSachDon()). Đặt cạnh checkbox chọn đơn, cùng kích thước 22px cho
    thẳng hàng. Xám nhạt khi CHƯA ưu tiên, đỏ đậm + nền mờ khi ĐÃ ưu tiên (.bat) — không chỉ dựa vào việc
@@ -1227,6 +1244,7 @@ body, .app-header, .order-card, .btn-hanh-dong, .badge, .mau-swatch, .tab-links 
   .badge-canh-bao.do, [data-theme="dark"] .badge-canh-bao.do { animation: none; }
   .uu-tien, [data-theme="dark"] .uu-tien { animation: none; }
   .vong-hold::after { animation: none; }
+  .the-canh-bao-vang::before { animation: none; opacity: 0; }
   .skeleton-card { animation: none; }
   :is(.order-list, .chart-grid, .kich-ban-picker, .bang-chon-mau) > * { animation: none; opacity: 1; }
   .gon-song { display: none; }

@@ -153,8 +153,12 @@ function htmlTieuDeThe(o) {
 
 // Nhãn đơn "HOLD-Chờ xác nhận" (05/10/2026, theo yêu cầu người dùng) — cờ DonHold do server tính (services/orderService.js
 // #laDonHold, gắn ở routes/orders.js lamGiauDon, cùng chỗ DonUuTien). Vòng đỏ quanh thẻ/đầu trang chi tiết: style.css .vong-hold.
+// Mở rộng 07/10/2026: cả CANCELLED / REFUNDED theo TINH_TRANG (cờ TinhTrangDacBiet do server tính) — nhãn ghi NGUYÊN VĂN giá trị
+// TINH_TRANG trong Sheet (không phải trạng thái sản xuất CANCELLED_Đã hủy/REFUNDED_Hoàn đơn — 2 khái niệm độc lập).
 function nhanHold(o) {
-  return o.DonHold ? `<span class="badge trang-thai-danger">${icon('alert', { size: 14 })} HOLD-Chờ xác nhận</span>` : '';
+  if (!o.TinhTrangDacBiet && !o.DonHold) return '';
+  const chu = o.TinhTrangDacBiet === 'HOLD' || o.DonHold ? 'HOLD-Chờ xác nhận' : String(o.TINH_TRANG || o.TinhTrangDacBiet).trim();
+  return `<span class="badge trang-thai-danger" title="TINH_TRANG (khách cập nhật trên Sheet)">${icon('alert', { size: 14 })} ${escapeHtml(chu)}</span>`;
 }
 
 function lopVaStyleXuong(xuong, mauTheoXuong) {

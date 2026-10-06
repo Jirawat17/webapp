@@ -63,6 +63,7 @@ async function lamGiauDon(rows, banDoNhom, user) {
     NguoiVeFile: r.TRANG_THAI_VE_FILE === 'Đang vẽ file' ? (r.NGUOI_VE_FILE || null) : null,
     DonUuTien: orderService.laUuTien(r),
     DonHold: orderService.laDonHold(r),
+    TinhTrangDacBiet: orderService.loaiTinhTrangDacBiet(r), // HOLD/CANCELLED/REFUNDED theo TINH_TRANG (nền vàng nhấp nháy + lên đầu)
     // Số mũi chỉ (07/10/2026) — CHỈ admin/superadmin/ve_file (cùng nhóm được sửa, xem VAI_TRO_SUA_SO_MUI).
     ...(VAI_TRO_SUA_SO_MUI.includes(user && user.vaiTro) ? (s => ({ SoMuiChi: s.so, SoMuiChiTrangThai: s.trangThai, SoMuiChiNguyenVan: s.nguyenVan }))(orderService.docSoMuiChi(r)) : {}),
     NhomNhieuAo: banDoNhom ? donNhieuAoService.tomTatChoDon(r.STT_Key, banDoNhom.get(r.STT_Key)) : null,
@@ -146,7 +147,11 @@ function sapXepDon(list, kieu) {
     default:
       soSanh = (a, b) => -soSanhNgayTang(a, b);
   }
+  // Thứ tự nhóm (07/10/2026, theo yêu cầu người dùng): đơn cảnh báo TINH_TRANG (HOLD/CANCELLED/REFUNDED) -> Đơn ưu tiên -> đơn thường;
+  // kiểu sắp đang chọn chỉ quyết định thứ tự BÊN TRONG từng nhóm. Sắp ở đây (server, sau khi lọc) nên đúng với mọi bộ lọc/lượt cuộn.
   return daSap.sort((a, b) => {
+    const chenhLechCanhBao = (b.TinhTrangDacBiet ? 1 : 0) - (a.TinhTrangDacBiet ? 1 : 0);
+    if (chenhLechCanhBao !== 0) return chenhLechCanhBao;
     const chenhLechUuTien = soSanhUuTienTruoc(a, b);
     return chenhLechUuTien !== 0 ? chenhLechUuTien : soSanh(a, b);
   });

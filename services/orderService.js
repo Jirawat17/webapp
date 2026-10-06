@@ -650,6 +650,18 @@ function laUuTien(row) {
   return String(row.DON_UU_TIEN || '').toUpperCase() === 'TRUE';
 }
 
+// Đơn cảnh báo theo TINH_TRANG của khách (07/10/2026, theo yêu cầu người dùng) — CHỈ dựa vào cột RAW TINH_TRANG của Sheet, ĐỘC LẬP
+// với trạng thái sản xuất TRANG_THAI_XUONG (không đổi/không đọc nó). -> 'HOLD' | 'CANCELLED' | 'REFUNDED' | null.
+// HOLD: đúng quy tắc laDonHold. CANCELLED/REFUNDED: bỏ dấu cách 2 đầu, không phân biệt hoa/thường, khớp cả giá trị BẮT ĐẦU bằng mã
+// (vd "CANCELLED_Đã hủy" nếu Sheet có ghi kiểu đó). App không bao giờ ghi cột này.
+function loaiTinhTrangDacBiet(row) {
+  if (laDonHold(row)) return 'HOLD';
+  const v = String(row.TINH_TRANG || '').trim().toUpperCase();
+  if (v.startsWith('CANCELLED')) return 'CANCELLED';
+  if (v.startsWith('REFUNDED')) return 'REFUNDED';
+  return null;
+}
+
 // Số mũi chỉ (07/10/2026, theo yêu cầu người dùng) — NƠI DUY NHẤT đọc số mũi của 1 đơn (danh sách, bộ lọc, Chi tiết đơn dùng chung).
 // Nguồn: ô GhiChuTinhGia (Sheet); vừa lưu trong app < 30 phút mà Sheet chưa kịp đổi (IMPORTRANGE trễ) -> bản trong app
 // SO_MUI_CHI_NOI_BO. Chỉ nhận ô có ĐÚNG 1 số: "50000", "50.000", "50,000" (ngăn hàng nghìn), "50000 mũi". Nội dung khác
@@ -727,5 +739,5 @@ module.exports = {
   VAI_TRO_MENU_TRACKING, anCotTheoDoiMuaTracking,
   suaDonKetSanSang,
   TAB, KEY_COL, getAll, getByKey, getManyByKeys, update, filterForRole, ganTenKhachHang, tieuDeSanPham, danhSachViTriTheu,
-  layDanhSachXuong, locTheoXuong, coQuyenTheoXuong, phamViDon, laUuTien, laDonHold, timDonTheoMaGoTay, docSoMuiChi, lyDoDaMuaTracking, NHOM_LOC_TONG_QUAT,
+  layDanhSachXuong, locTheoXuong, coQuyenTheoXuong, phamViDon, laUuTien, laDonHold, loaiTinhTrangDacBiet, timDonTheoMaGoTay, docSoMuiChi, lyDoDaMuaTracking, NHOM_LOC_TONG_QUAT,
 };

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn của tôi — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=108">
+<link rel="stylesheet" href="/css/style.css?v=109">
 <script src="/js/theme.js?v=104"></script>
 </head>
 <body>
@@ -197,7 +197,7 @@
 </div>
 
 <script src="/js/icons.js?v=105"></script>
-<script src="/js/api.js?v=115"></script>
+<script src="/js/api.js?v=116"></script>
 <script>
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
 // settings.html (superadmin), 3/5/7 không còn luôn đúng nên không hard-code vào nhãn hiển thị nữa.
@@ -414,7 +414,7 @@ function renderDanhSachSanSang() {
     // sang đây, xem style.css .order-card.co-mau-xuong + public/js/api.js#lopVaStyleXuong).
     const xuongCard = lopVaStyleXuong(o.XUONG, mauTheoXuong);
     return `
-    <div class="order-card ${o.DonHold ? 'vong-hold' : ''} ${daChon ? 'da-chon' : ''} ${xuongCard.lop}" style="${xuongCard.style}" data-stt-san-sang="${escapeHtml(o.STT_Key)}"
+    <div class="order-card ${o.DonHold ? 'vong-hold' : ''} ${o.TinhTrangDacBiet ? 'the-canh-bao-vang' : ''} ${daChon ? 'da-chon' : ''} ${xuongCard.lop}" style="${xuongCard.style}" data-stt-san-sang="${escapeHtml(o.STT_Key)}"
          onclick="toggleChonDonSanSang('${escapeHtml(o.STT_Key)}', !donSanSangChonSet.has('${escapeHtml(o.STT_Key)}'))">
       <button type="button" class="btn-xem-the" title="Xem chi tiết đơn"
               aria-label="Xem chi tiết đơn ${escapeHtml(o.STT_Key)}"
@@ -671,7 +671,7 @@ function renderDanhSachDangChay(coLocNaoDangChon) {
     // style.css .order-card.co-mau-xuong + public/js/api.js#lopVaStyleXuong).
     const xuongCard = lopVaStyleXuong(o.XUONG, mauTheoXuong);
     return `
-    <div class="order-card ${o.DonHold ? 'vong-hold' : ''} ${xuongCard.lop}" style="${xuongCard.style}" onclick="location.href='/order.html?stt=${encodeURIComponent(o.STT_Key)}'">
+    <div class="order-card ${o.DonHold ? 'vong-hold' : ''} ${o.TinhTrangDacBiet ? 'the-canh-bao-vang' : ''} ${xuongCard.lop}" style="${xuongCard.style}" onclick="location.href='/order.html?stt=${encodeURIComponent(o.STT_Key)}'">
       ${o.DUONG_DAN_URL || o.MOCKUP
         ? `<div class="nhom-anh-dai-dien">${urlAnhHienThiList(o.DUONG_DAN_URL || o.MOCKUP).map(src => `<img src="${escapeHtml(src)}" alt="" loading="lazy" onerror="this.remove()">`).join('')}</div>`
         : ''}

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Chi tiết đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=108">
+<link rel="stylesheet" href="/css/style.css?v=109">
 <script src="/js/theme.js?v=104"></script>
 <style>
 /* Ô "Nhập mã đơn" (04/10/2026, theo yêu cầu người dùng): gấp 3 cỡ cũ (160x21px, chữ 13,3px) cả rộng, cao, cỡ chữ; chữ gõ vào
@@ -24,7 +24,7 @@
 </div>
 
 <script src="/js/icons.js?v=105"></script>
-<script src="/js/api.js?v=115"></script>
+<script src="/js/api.js?v=116"></script>
 <script>
 const sttKey = new URLSearchParams(location.search).get('stt');
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
@@ -223,7 +223,7 @@ async function taiChiTiet() {
   const viTri = (don.ViTriTheu || []).map(escapeHtml).join(' · ') || '—';
 
   document.getElementById('don-hang').innerHTML = `
-    <div class="dau-don ${don.DonHold ? 'vong-hold' : ''}" style="margin-bottom:16px">
+    <div class="dau-don ${don.DonHold ? 'vong-hold' : ''} ${don.TinhTrangDacBiet ? 'the-canh-bao-vang' : ''}" style="margin-bottom:16px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
       <h2 style="margin:0" class="${don.DonUuTien ? 'uu-tien' : ''}">${escapeHtml(don.TieuDeSanPham || don.STT_Key)}${nutSaoChep(don.STT_Key, 'Sao chép mã đơn')}</h2>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
