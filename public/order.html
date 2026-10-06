@@ -24,7 +24,7 @@
 </div>
 
 <script src="/js/icons.js?v=105"></script>
-<script src="/js/api.js?v=114"></script>
+<script src="/js/api.js?v=115"></script>
 <script>
 const sttKey = new URLSearchParams(location.search).get('stt');
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
@@ -122,7 +122,22 @@ function dongGhiChuNoiBo(don) {
 function dongGhiChu(don) {
   return `<tr><td><strong>Ghi chú</strong></td><td><strong>${escapeHtml(don.GHI_CHU || '')}</strong></td></tr>
     <tr><td><strong>Ghi chú xưởng</strong></td><td><strong>${escapeHtml(don.GHI_CHU_XUONG || '')}</strong></td></tr>
-    ${dongGhiChuNoiBo(don)}`;
+    ${dongGhiChuNoiBo(don)}
+    ${dongSoMuiChi(don)}`;
+}
+
+// Số mũi chỉ (07/10/2026, theo yêu cầu người dùng) — 1 dòng ngay dưới "Ghi chú xưởng" trong bảng thông tin, ô nhập + Lưu ngay trong dòng.
+// CHỈ admin/superadmin/ve_file (server routes/orders.js POST /:sttKey/so-mui-chi cũng chặn); vai trò khác không có dòng này.
+function dongSoMuiChi(don) {
+  if (!['admin', 'superadmin', 've_file'].includes(user.vaiTro)) return '';
+  return `<tr><td><strong>Số mũi chỉ</strong></td><td>
+      <form onsubmit="luuSoMuiChi(event)" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input type="text" id="so-mui-chi" inputmode="numeric" maxlength="7" autocomplete="off" placeholder="Nhập số mũi chỉ..." aria-label="Số mũi chỉ"
+          value="${escapeHtml(soMuiChiHienThi(don))}" style="width:160px;padding:6px 10px;border-radius:8px;border:1px solid var(--color-border);font:inherit;font-weight:700">
+        <button type="submit" class="btn-hanh-dong phu">${icon('check')} Lưu</button>
+      </form>
+      <small id="so-mui-chi-tb" role="status" style="color:var(--color-text-muted)"></small>
+    </td></tr>`;
 }
 
 function renderBangThongTin(don, viTri) {
@@ -743,6 +758,40 @@ async function bamNutTrangThai(nut, btn) {
     alert(e.message);
   }
   await taiChiTiet();
+}
+
+// Số mũi chỉ (07/10/2026): bản chính là ô GhiChuTinhGia trong Sheet Seller (đọc lại qua RAW -> Don_Hang_ALL, trễ vài phút). Vừa lưu
+// xong (< 30 phút) mà Sheet chưa kịp đổi -> hiện bản trong app (SO_MUI_CHI_NOI_BO); sau đó luôn theo Sheet (ai sửa thẳng trên Sheet
+// vẫn thấy đúng).
+const SO_MUI_CHO_SHEET_MS = 30 * 60 * 1000;
+function soMuiChiHienThi(don) {
+  return don.SoMuiChiNguyenVan || ''; // server tính (services/orderService.js#docSoMuiChi) — 1 quy tắc cho cả danh sách/bộ lọc
+}
+async function luuSoMuiChi(e) {
+  e.preventDefault();
+  const o = document.getElementById('so-mui-chi'), tb = document.getElementById('so-mui-chi-tb');
+  const nhap = o.value.trim();
+  if (nhap && !(/^\d+$/.test(nhap) && Number(nhap) >= 1 && Number(nhap) <= 1000000)) {
+    tb.style.color = 'var(--color-danger-text)';
+    tb.textContent = 'Số mũi chỉ phải là số nguyên từ 1 đến 1.000.000 (không chữ, không số âm, không số lẻ).';
+    o.focus();
+    return;
+  }
+  const nut = e.target.querySelector('button');
+  nut.disabled = true;
+  try {
+    const kq = await apiFetch('/orders/' + encodeURIComponent(sttKey) + '/so-mui-chi', { method: 'POST', body: JSON.stringify({ soMui: nhap }) });
+    donHienTai.SO_MUI_CHI_NOI_BO = kq.soMui;
+    donHienTai.SO_MUI_CHI_LUC = new Date().toISOString();
+    o.value = kq.soMui;
+    tb.style.color = 'var(--color-success-text)';
+    tb.textContent = kq.soMui ? `Đã lưu số mũi chỉ: ${Number(kq.soMui).toLocaleString('en-US')}` : 'Đã xoá số mũi chỉ.';
+  } catch (err) {
+    tb.style.color = 'var(--color-danger-text)';
+    tb.textContent = /Không thể lưu số mũi chỉ/.test(err.message || '') ? err.message : `Không thể lưu số mũi chỉ. Vui lòng thử lại. (${err.message})`;
+  } finally {
+    nut.disabled = false;
+  }
 }
 
 async function luuGhiChu() {

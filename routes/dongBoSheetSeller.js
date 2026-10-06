@@ -37,7 +37,8 @@ router.post('/day-lai', requireExactRole('superadmin'), async (req, res) => {
     const r = theoKey.get(sttKey);
     const giaTri = r && giaTriHienTai(r, loai);
     if (!r) khongGhi.push({ sttKey, loai, ok: false, lyDo: 'Không còn đơn này trong Don_Hang_ALL.' });
-    else if (!giaTri) khongGhi.push({ sttKey, loai, ok: false, lyDo: loai in sheetSellerService.COT_THEO_LOAI ? 'Trong app chưa có giá trị để ghi (chưa có tracking/trạng thái vận chuyển).' : `Loại không hợp lệ: ${loai}` });
+    else if (!giaTri) khongGhi.push({ sttKey, loai, ok: false, lyDo: loai === 'SO_MUI' ? 'Số mũi chỉ không đẩy lại tự động — nhập và Lưu lại ở trang Chi tiết đơn.'
+      : loai in sheetSellerService.COT_THEO_LOAI ? 'Trong app chưa có giá trị để ghi (chưa có tracking/trạng thái vận chuyển).' : `Loại không hợp lệ: ${loai}` });
     else canGhi.push({ sttKey, loai, giaTri });
   }
   const ketQua = await sheetSellerService.ghiHangLoat(canGhi, req.session.user);

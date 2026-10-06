@@ -650,6 +650,23 @@ function laUuTien(row) {
   return String(row.DON_UU_TIEN || '').toUpperCase() === 'TRUE';
 }
 
+// Số mũi chỉ (07/10/2026, theo yêu cầu người dùng) — NƠI DUY NHẤT đọc số mũi của 1 đơn (danh sách, bộ lọc, Chi tiết đơn dùng chung).
+// Nguồn: ô GhiChuTinhGia (Sheet); vừa lưu trong app < 30 phút mà Sheet chưa kịp đổi (IMPORTRANGE trễ) -> bản trong app
+// SO_MUI_CHI_NOI_BO. Chỉ nhận ô có ĐÚNG 1 số: "50000", "50.000", "50,000" (ngăn hàng nghìn), "50000 mũi". Nội dung khác
+// ("thêu 2 mặt 50000", "12.5") -> KHONG_DOC, không đoán. -> { trangThai: 'CHUA'|'CO'|'KHONG_DOC', so: number|null, nguyenVan }
+const SO_MUI_CHO_SHEET_MS = 30 * 60 * 1000;
+const MAU_SO_MUI = /^(\d{1,3}(?:[.,]\d{3})+|\d+)\s*(?:mũi)?$/i;
+function docSoMuiChi(row, bayGio = Date.now()) {
+  const sheet = String(row.GhiChuTinhGia || '').trim();
+  const luc = Date.parse(row.SO_MUI_CHI_LUC || '');
+  const app = String(row.SO_MUI_CHI_NOI_BO || '').trim();
+  const nguyenVan = (luc && bayGio - luc < SO_MUI_CHO_SHEET_MS && sheet !== app) ? app : sheet;
+  if (!nguyenVan) return { trangThai: 'CHUA', so: null, nguyenVan };
+  const m = MAU_SO_MUI.exec(nguyenVan.normalize('NFC'));
+  if (!m) return { trangThai: 'KHONG_DOC', so: null, nguyenVan };
+  return { trangThai: 'CO', so: Number(m[1].replace(/[.,]/g, '')), nguyenVan };
+}
+
 // Tra mã đơn GÕ TAY (05/10/2026, theo yêu cầu người dùng — seller lên đơn gõ lẫn dấu "." và "," trong mã, vd 10SON10.1 /
 // 10SON10,1): không phân biệt hoa/thường, coi "," = ".", bỏ dấu cách 2 đầu. Gõ đúng y mã nào thì lấy mã đó; không thì
 // chỉ nhận khi khớp ĐÚNG 1 đơn — khớp nhiều đơn thì trả danh sách để báo lỗi, KHÔNG tự chọn. `rows` phải được lọc phạm
@@ -710,5 +727,5 @@ module.exports = {
   VAI_TRO_MENU_TRACKING, anCotTheoDoiMuaTracking,
   suaDonKetSanSang,
   TAB, KEY_COL, getAll, getByKey, getManyByKeys, update, filterForRole, ganTenKhachHang, tieuDeSanPham, danhSachViTriTheu,
-  layDanhSachXuong, locTheoXuong, coQuyenTheoXuong, phamViDon, laUuTien, laDonHold, timDonTheoMaGoTay, lyDoDaMuaTracking, NHOM_LOC_TONG_QUAT,
+  layDanhSachXuong, locTheoXuong, coQuyenTheoXuong, phamViDon, laUuTien, laDonHold, timDonTheoMaGoTay, docSoMuiChi, lyDoDaMuaTracking, NHOM_LOC_TONG_QUAT,
 };

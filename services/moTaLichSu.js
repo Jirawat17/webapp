@@ -22,7 +22,7 @@ const NHAN_MOC_ANH = {
   da_san_xuat: 'ĐÃ SẢN XUẤT', da_dan_tem: 'ĐÃ DÁN TEM',
   ve_file: 'file thêu', ve_file_2: 'file thêu thứ 2', ve_file_3: 'file thêu thứ 3',
 };
-const NHAN_LOAI_SHEET = { GHI_CHU: 'ghi chú xưởng', TRACKING: 'tracking', DELIVERED: 'Delivered' };
+const NHAN_LOAI_SHEET = { GHI_CHU: 'ghi chú xưởng', TRACKING: 'tracking', DELIVERED: 'Delivered', SO_MUI: 'Số mũi chỉ' };
 const HANH_DONG_MO = new Set([
   'QUET_TRA_CUU', 'QUET_TRA_CUU_LOI', 'QUET_LOI', 'QUET_SAI_TRANG_THAI', 'QUET_CHAN_DON_KET_THUC',
   'QUET_KIEM_TRA_OK', 'QUET_KIEM_TRA_SAI_TRANG_THAI', 'QUET_KIEM_TRA_KHONG_TIM_THAY', 'QUET_KIEM_TRA_CHAN_DON_KET_THUC',
@@ -189,6 +189,10 @@ function moTaLichSu(dong, { anXuong = false, xuongDuocThay = [] } = {}) {
         ? `đã ghi vào Sheet Seller (tab "${sh.tab}", dòng ${sh.dong})`
         : `CHƯA ghi được vào Sheet Seller — ${sh.lyDo || 'không rõ lý do'}`;
       return kq(`sửa ghi chú xưởng — ${ketQuaSheet}`, [doi('Ghi chú xưởng', c.tu, c.sang)]);
+    }
+    case 'SUA_SO_MUI_CHI': { // 07/10/2026 — routes/orders.js POST /:sttKey/so-mui-chi (chỉ ghi lịch sử khi Sheet Seller đã ghi OK)
+      const sh = c.sheet || {};
+      return kq(`sửa số mũi chỉ — đã ghi vào Sheet Seller (cột GhiChuTinhGia, tab "${sh.tab}", dòng ${sh.dong})`, [doi('Số mũi chỉ', c.tu, c.sang)]);
     }
     case 'XUAT_EXCEL_GKE':
       return kq(`xuất Excel mua tracking thủ công GKE (${c.tenFile || '?'}${c.soDon > 1 ? `, cùng ${c.soDon} đơn` : ''}) — CHƯA phải đã mua tracking`);

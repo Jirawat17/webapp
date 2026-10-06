@@ -227,6 +227,26 @@
           <option value="0">Đơn thường</option>
         </select>
       </div>
+      <!-- Số mũi chỉ (07/10/2026, theo yêu cầu người dùng) — CHỈ admin/superadmin/ve_file (ẩn với vai trò khác; server cũng bỏ qua).
+           Giá trị "a-b" = khoảng (tính cả 2 đầu), "> 50.000" = "50001-". "Tuỳ chọn khoảng" hiện 2 ô Từ/Đến. -->
+      <div class="truong" id="truong-loc-so-mui" style="display:none">
+        <label for="loc-so-mui">Số mũi chỉ</label>
+        <select id="loc-so-mui">
+          <option value="">Tất cả</option>
+          <option value="CHUA">Chưa nhập số mũi</option>
+          <option value="CO">Có số mũi</option>
+          <option value="KHONG_DOC">Có nội dung nhưng không phải số</option>
+          <option value="0-10000">≤ 10.000</option>
+          <option value="10001-30000">10.001 – 30.000</option>
+          <option value="30001-50000">30.001 – 50.000</option>
+          <option value="50001-">&gt; 50.000</option>
+          <option value="TUY_CHON">Tuỳ chọn khoảng…</option>
+        </select>
+        <div id="khoang-so-mui" style="display:none;gap:6px;margin-top:6px">
+          <input type="number" id="loc-so-mui-tu" min="0" step="1" placeholder="Từ" aria-label="Số mũi từ" style="width:50%">
+          <input type="number" id="loc-so-mui-den" min="0" step="1" placeholder="Đến" aria-label="Số mũi đến" style="width:50%">
+        </div>
+      </div>
       <div class="truong">
         <label for="loc-canh-bao">Mức cảnh báo</label>
         <select id="loc-canh-bao">
@@ -259,6 +279,8 @@
     Chọn tất cả đơn đang hiển thị
   </label>
 
+  <!-- "Đang lọc" (07/10/2026, theo yêu cầu người dùng): liệt kê MỌI bộ lọc đang bật, bấm × bỏ riêng bộ lọc đó (vedongDangLoc). -->
+  <div id="dong-dang-loc" class="badge-row" style="display:none;margin:0 0 10px;align-items:center"></div>
   <div id="danh-sach-don" class="order-list"></div>
 </div>
 
@@ -327,7 +349,7 @@
 </div>
 
 <script src="/js/icons.js?v=105"></script>
-<script src="/js/api.js?v=114"></script>
+<script src="/js/api.js?v=115"></script>
 <script src="/js/suaThongTinGke.js?v=1"></script>
 <script>
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
@@ -394,6 +416,15 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   document.getElementById('loc-hang-van-chuyen').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-quoc-gia-tracking').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-tinh-trang').onchange = () => { boChonTatCaDon(); taiDon(); };
+  // Số mũi chỉ (07/10/2026): chỉ 3 vai trò; "Tuỳ chọn khoảng" chờ nhập Từ/Đến (đổi ô -> tải lại).
+  if (VAI_TRO_SO_MUI.includes(user.vaiTro)) document.getElementById('truong-loc-so-mui').style.display = '';
+  document.getElementById('loc-so-mui').onchange = () => {
+    hienKhoangSoMui();
+    if (document.getElementById('loc-so-mui').value !== 'TUY_CHON') { document.getElementById('loc-so-mui-tu').value = ''; document.getElementById('loc-so-mui-den').value = ''; }
+    boChonTatCaDon(); taiDon();
+  };
+  document.getElementById('loc-so-mui-tu').onchange = () => { boChonTatCaDon(); taiDon(); };
+  document.getElementById('loc-so-mui-den').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-kh').oninput = debounce(() => { boChonTatCaDon(); taiDon(); }, 400);
   document.getElementById('loc-ma-tracking').oninput = debounce(() => { boChonTatCaDon(); taiDon(); }, 400);
   document.getElementById('loc-tu-ngay').onchange = () => {
@@ -698,7 +729,27 @@ function veCanhBaoThuCong() {
     </div>`;
 }
 
-const CAC_O_LOC = ['loc-tong-quat', 'loc-trang-thai', 'loc-phoi', 'loc-ve-file', 'loc-canh-bao', 'loc-xuong', 'loc-uu-tien', 'loc-don-nhieu-ao', 'loc-da-mua-tracking', 'loc-nhom-hang', 'loc-don-hang-loat', 'loc-loai', 'loc-kich-thuoc', 'loc-hang-van-chuyen', 'loc-mau-sac', 'loc-quoc-gia-tracking', 'loc-tinh-trang', 'loc-kh', 'loc-ma-tracking', 'loc-tu-ngay', 'loc-den-ngay'];
+// Số mũi chỉ (07/10/2026): 2 ô Từ/Đến là PHẦN PHỤ của ô "loc-so-mui" (chỉ dùng khi chọn "Tuỳ chọn khoảng") — xoá cùng mọi ô lọc
+// nhưng không đếm riêng vào "Lọc (N)".
+const VAI_TRO_SO_MUI = ['admin', 'superadmin', 've_file'];
+const O_PHU_SO_MUI = ['loc-so-mui-tu', 'loc-so-mui-den'];
+function hienKhoangSoMui() {
+  document.getElementById('khoang-so-mui').style.display = document.getElementById('loc-so-mui').value === 'TUY_CHON' ? 'flex' : 'none';
+}
+// -> { soMui } | { soMuiTu, soMuiDen } | {} theo ô đang chọn.
+function thamSoSoMui() {
+  const v = document.getElementById('loc-so-mui').value;
+  if (!v) return {};
+  if (['CHUA', 'CO', 'KHONG_DOC'].includes(v)) return { soMui: v };
+  const [tu, den] = v === 'TUY_CHON'
+    ? [document.getElementById('loc-so-mui-tu').value.trim(), document.getElementById('loc-so-mui-den').value.trim()]
+    : v.split('-');
+  const kq = {};
+  if (/^\d+$/.test(tu || '')) kq.soMuiTu = tu;
+  if (/^\d+$/.test(den || '')) kq.soMuiDen = den;
+  return kq;
+}
+const CAC_O_LOC = ['loc-so-mui', ...O_PHU_SO_MUI, 'loc-tong-quat', 'loc-trang-thai', 'loc-phoi', 'loc-ve-file', 'loc-canh-bao', 'loc-xuong', 'loc-uu-tien', 'loc-don-nhieu-ao', 'loc-da-mua-tracking', 'loc-nhom-hang', 'loc-don-hang-loat', 'loc-loai', 'loc-kich-thuoc', 'loc-hang-van-chuyen', 'loc-mau-sac', 'loc-quoc-gia-tracking', 'loc-tinh-trang', 'loc-kh', 'loc-ma-tracking', 'loc-tu-ngay', 'loc-den-ngay'];
 
 // Tìm nhanh theo mã đơn: mọi bộ lọc khác về "Tất cả" (sắp xếp giữ nguyên) rồi tải lại; ô trống = danh sách đầy đủ.
 // maDonDangTim = mã ĐÃ tìm (bấm Tìm/Enter) — taiDon() lọc theo biến này, không theo chữ đang gõ dở trong ô.
@@ -718,11 +769,47 @@ function xoaTatCaLoc() {
   taiDon();
 }
 
+// Dòng "Đang lọc" (07/10/2026) — mỗi ô lọc đang có giá trị thành 1 nhãn "Tên ô: giá trị ×" (tên lấy từ <label>, giá trị lấy chữ của
+// lựa chọn đang chọn), cùng mã đang tìm nhanh. × bỏ RIÊNG ô đó (các ô khác giữ nguyên) rồi tải lại.
+function veDongDangLoc() {
+  const el = document.getElementById('dong-dang-loc');
+  const nhan = [];
+  if (maDonDangTim) nhan.push({ id: 'TIM_NHANH', chu: `Mã đơn: ${maDonDangTim}` });
+  for (const id of CAC_O_LOC) {
+    if (O_PHU_SO_MUI.includes(id)) continue;
+    const o = document.getElementById(id);
+    if (!o.value) continue;
+    const ten = (document.querySelector(`label[for="${id}"]`) || {}).textContent || id;
+    let giaTri = o.tagName === 'SELECT' ? o.options[o.selectedIndex].text : o.value;
+    if (id === 'loc-so-mui' && o.value === 'TUY_CHON') {
+      const t = thamSoSoMui(), f = v => Number(v).toLocaleString('vi-VN');
+      giaTri = t.soMuiTu && t.soMuiDen ? `${f(t.soMuiTu)} – ${f(t.soMuiDen)}` : t.soMuiTu ? `≥ ${f(t.soMuiTu)}` : t.soMuiDen ? `≤ ${f(t.soMuiDen)}` : 'chưa nhập khoảng';
+    }
+    nhan.push({ id, chu: `${ten.trim()}: ${giaTri}` });
+  }
+  el.style.display = nhan.length ? 'flex' : 'none';
+  el.innerHTML = nhan.length ? '<span class="meta" style="font-weight:600">Đang lọc:</span>' + nhan.map(n =>
+    `<span class="badge trang-thai-info" style="gap:4px">${escapeHtml(n.chu)}
+      <button type="button" onclick="boMotLoc('${n.id}')" aria-label="Bỏ lọc ${escapeHtml(n.chu)}" title="Bỏ lọc này"
+        style="border:0;background:none;cursor:pointer;font-weight:800;padding:0 2px;color:inherit">×</button></span>`).join('') : '';
+}
+function boMotLoc(id) {
+  if (id === 'TIM_NHANH') { document.getElementById('tim-nhanh-ma-don').value = ''; maDonDangTim = ''; }
+  else {
+    document.getElementById(id).value = '';
+    if (id === 'loc-so-mui') { O_PHU_SO_MUI.forEach(x => { document.getElementById(x).value = ''; }); hienKhoangSoMui(); }
+  }
+  boChonTatCaDon();
+  taiDon();
+}
+
 function capNhatNhanNutLoc() {
   const coGiaTri = id => document.getElementById(id).value;
-  const soLuong = CAC_O_LOC.filter(coGiaTri).length;
+  const soLuong = CAC_O_LOC.filter(id => !O_PHU_SO_MUI.includes(id)).filter(coGiaTri).length;
   document.getElementById('btn-mo-loc').innerHTML = icon('filter', { size: 16 }) + ' Lọc' + (soLuong ? ` (${soLuong})` : '');
   capNhatNutNangCao();
+  hienKhoangSoMui();
+  veDongDangLoc();
 }
 
 function capNhatNutNangCao() {
@@ -732,7 +819,7 @@ function capNhatNutNangCao() {
 }
 
 // Khối lọc "Nâng cao" (29/09/2026) — bấm để hiện/ẩn 12 ô lọc ít dùng.
-const CAC_O_LOC_NANG_CAO = ['loc-tong-quat', 'loc-ma-tracking', 'loc-da-mua-tracking', 'loc-don-nhieu-ao', 'loc-loai', 'loc-kich-thuoc', 'loc-mau-sac', 'loc-hang-van-chuyen', 'loc-quoc-gia-tracking', 'loc-tinh-trang', 'loc-uu-tien', 'loc-canh-bao'];
+const CAC_O_LOC_NANG_CAO = ['loc-so-mui', 'loc-tong-quat', 'loc-ma-tracking', 'loc-da-mua-tracking', 'loc-don-nhieu-ao', 'loc-loai', 'loc-kich-thuoc', 'loc-mau-sac', 'loc-hang-van-chuyen', 'loc-quoc-gia-tracking', 'loc-tinh-trang', 'loc-uu-tien', 'loc-canh-bao'];
 function batTatLocNangCao() {
   const khoi = document.getElementById('khoi-loc-nang-cao');
   const mo = khoi.style.display === 'none';
@@ -816,6 +903,7 @@ async function taiDon() {
   if (tuNgay) qs.set('tuNgay', tuNgay);
   if (denNgay) qs.set('denNgay', denNgay);
   if (sapXep) qs.set('sapXep', sapXep);
+  Object.entries(thamSoSoMui()).forEach(([k, v]) => qs.set(k, v));
 
   let list;
   try {
@@ -891,6 +979,7 @@ function renderDanhSachDon() {
       <div class="thong-tin">
         ${htmlTieuDeThe(o)}
         <div style="font-size:1.8rem;font-weight:700;line-height:1.1;margin:2px 0;color:var(--color-text)" title="Số lượng áo">SL: ${escapeHtml(o.SO_LUONG || '—')}</div>
+        ${o.SoMuiChi != null ? `<div class="meta" title="Số mũi chỉ" style="font-size:0.85rem;${o.SoMuiChi > 50000 ? 'font-weight:800;color:var(--color-text)' : ''}">Mũi: ${o.SoMuiChi.toLocaleString('en-US')}</div>` : ''}
         <div class="meta">${escapeHtml(o.TenKhachHang || '')} · Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgayNgan(o.NGAY_LEN_DON) : '—')}</div>
         <div class="badge-row">
           ${nhanHold(o)}

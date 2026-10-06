@@ -77,6 +77,11 @@ const CAC_COT = [
   // đọc lại qua RAW -> Don_Hang_ALL. KHÔNG đặt tên GHI_CHU_XUONG ở đây: cột SQLite cùng tên sẽ ĐÈ giá trị
   // Sheet khi gộp dữ liệu (orderService.js#getAll), che mất ghi chú Seller đã nhập.
   'GHI_CHU_XUONG_NOI_BO',
+  // SO_MUI_CHI_NOI_BO / SO_MUI_CHI_LUC (07/10/2026, theo yêu cầu người dùng) — bản trong app của "Số mũi chỉ" + lúc lưu. CHỈ ghi
+  // sau khi ghi vào ô GhiChuTinhGia của Sheet Seller THÀNH CÔNG (routes/orders.js POST /:sttKey/so-mui-chi); order.html hiện bản
+  // này trong ~30 phút đầu nếu Don_Hang_ALL chưa kịp cập nhật. Không đặt tên GhiChuTinhGia: sẽ đè giá trị Sheet khi gộp dữ liệu.
+  'SO_MUI_CHI_NOI_BO',
+  'SO_MUI_CHI_LUC',
   // CanhBaoDaGui: không nằm trong danh sách 31 cột người dùng liệt kê (có thể chỉ là sót khi liệt kê) —
   // nhưng rà code xác nhận đây CŨNG là cột app tự ghi (services/canhBaoJob.js, cờ chống spam Telegram),
   // không thuộc RAW/A:AM lẫn AN:BR người dùng mô tả. Xếp vào đây theo đúng tiêu chí "app tự ghi" đã

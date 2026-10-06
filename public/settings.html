@@ -231,7 +231,7 @@
 </div>
 
 <script src="/js/icons.js?v=105"></script>
-<script src="/js/api.js?v=114"></script>
+<script src="/js/api.js?v=115"></script>
 <script>
 (async () => {
   const user = await requireLoginOrRedirect();
@@ -329,7 +329,8 @@ async function taiConfigSeller(kiemTra) {
         <td><small>${escapeHtml(d.spreadsheetId)}</small></td>
         ${kiemTra ? `<td>${d.ok
           ? '<span style="color:#16a34a;font-weight:700">OK</span>'
-          : `<span style="color:var(--color-danger-text);font-weight:700">${escapeHtml(d.loi || 'Lỗi')}</span>`}</td>` : ''}
+          : `<span style="color:var(--color-danger-text);font-weight:700">${escapeHtml(d.loi || 'Lỗi')}</span>`}${d.canhBao
+          ? `<br><small style="color:var(--color-warning-text);font-weight:600">${escapeHtml(d.canhBao)}</small>` : ''}</td>` : ''}
       </tr>`).join('')}
     </table></div>`;
   } catch (e) {

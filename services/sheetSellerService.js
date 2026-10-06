@@ -22,9 +22,15 @@ const { layTeam } = require('./donNhieuAoService');
 
 const TAB_CONFIG = 'CONFIG';
 const COT_CONFIG = { team: 'TEAM', sheet: 'Spreadsheet ID', tab: 'Tab' };
-const COT_THEO_LOAI = { GHI_CHU: ['GHI_CHU_XUONG'], TRACKING: ['TRACKING_ID2', 'HANG_VAN_CHUYEN2'], DELIVERED: ['Delivered'] };
-const NHAN_LOAI = { GHI_CHU: 'Ghi chú xưởng', TRACKING: 'Tracking', DELIVERED: 'Delivered' };
-const COT_CAN_CO = ['STT_Key', ...Object.values(COT_THEO_LOAI).flat()];
+// SO_MUI (07/10/2026, theo yêu cầu người dùng): ô "Số mũi chỉ" ở Chi tiết đơn ghi vào cột GhiChuTinhGia (người dùng xác nhận
+// cột này chỉ dùng cho số mũi — ghi thẳng số, routes/orders.js POST /:sttKey/so-mui-chi).
+const COT_THEO_LOAI = { GHI_CHU: ['GHI_CHU_XUONG'], TRACKING: ['TRACKING_ID2', 'HANG_VAN_CHUYEN2'], DELIVERED: ['Delivered'], SO_MUI: ['GhiChuTinhGia'] };
+const NHAN_LOAI = { GHI_CHU: 'Ghi chú xưởng', TRACKING: 'Tracking', DELIVERED: 'Delivered', SO_MUI: 'Số mũi chỉ' };
+// Kiểm tra cấu hình (Settings): thiếu cột BẮT BUỘC -> lỗi cả dòng; thiếu cột chỉ dùng cho "Số mũi chỉ" -> CHỈ cảnh báo (ghi chú/
+// tracking/Delivered của tab đó vẫn ghi bình thường, chỉ riêng lưu số mũi của team đó sẽ báo lỗi).
+const LOAI_TUY_CHON = ['SO_MUI'];
+const COT_CAN_CO = ['STT_Key', ...Object.entries(COT_THEO_LOAI).filter(([l]) => !LOAI_TUY_CHON.includes(l)).flatMap(([, c]) => c)];
+const COT_TUY_CHON = LOAI_TUY_CHON.flatMap(l => COT_THEO_LOAI[l]);
 
 const tachSpreadsheetId = v => {
   const m = /\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/.exec(String(v || ''));
@@ -217,7 +223,9 @@ async function kiemTraConfig({ kiemTraSheet = false } = {}) {
     try {
       const { headers } = await docTab(client, c.spreadsheetId, c.tab, '!1:1');
       const thieuCot = COT_CAN_CO.filter(x => !headers.includes(x));
-      dong.push({ ...c, ok: thieuCot.length === 0, thieuCot, loi: thieuCot.length ? `Thiếu cột: ${thieuCot.join(', ')}` : '' });
+      const thieuTuyChon = COT_TUY_CHON.filter(x => !headers.includes(x));
+      dong.push({ ...c, ok: thieuCot.length === 0, thieuCot, loi: thieuCot.length ? `Thiếu cột: ${thieuCot.join(', ')}` : '',
+        canhBao: thieuTuyChon.length ? `Thiếu cột ${thieuTuyChon.join(', ')} — chưa lưu được Số mũi chỉ cho team này` : '' });
     } catch (err) {
       dong.push({ ...c, ok: false, loi: moTaLoiGoogle(err, c.spreadsheetId, c.tab) });
     }

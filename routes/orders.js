@@ -63,6 +63,8 @@ async function lamGiauDon(rows, banDoNhom, user) {
     NguoiVeFile: r.TRANG_THAI_VE_FILE === 'Đang vẽ file' ? (r.NGUOI_VE_FILE || null) : null,
     DonUuTien: orderService.laUuTien(r),
     DonHold: orderService.laDonHold(r),
+    // Số mũi chỉ (07/10/2026) — CHỈ admin/superadmin/ve_file (cùng nhóm được sửa, xem VAI_TRO_SUA_SO_MUI).
+    ...(VAI_TRO_SUA_SO_MUI.includes(user && user.vaiTro) ? (s => ({ SoMuiChi: s.so, SoMuiChiTrangThai: s.trangThai, SoMuiChiNguyenVan: s.nguyenVan }))(orderService.docSoMuiChi(r)) : {}),
     NhomNhieuAo: banDoNhom ? donNhieuAoService.tomTatChoDon(r.STT_Key, banDoNhom.get(r.STT_Key)) : null,
     LyDoDaMuaTracking: orderService.lyDoDaMuaTracking(r, banDoNhom ? banDoNhom.get(r.STT_Key) : null),
   }));
@@ -196,6 +198,14 @@ router.get('/', async (req, res) => {
   // kichThuoc/mauSac/hangVanChuyen ở trên.
   if (quocGiaTracking) list = list.filter(r => r.QUOC_GIA_TRACKING === quocGiaTracking);
   if (tinhTrang) list = list.filter(r => r.TINH_TRANG === tinhTrang);
+  // Số mũi chỉ (07/10/2026): soMui=CHUA|CO|KHONG_DOC, soMuiTu/soMuiDen = khoảng (tính cả 2 đầu; "> 50.000" = soMuiTu 50001).
+  // Chỉ vai trò được xem số mũi; vai trò khác gửi lên thì bỏ qua (trường SoMuiChi không được gắn cho họ).
+  if (VAI_TRO_SUA_SO_MUI.includes(req.session.user.vaiTro)) {
+    if (['CHUA', 'CO', 'KHONG_DOC'].includes(req.query.soMui)) list = list.filter(r => r.SoMuiChiTrangThai === req.query.soMui);
+    const soNguyen = v => (/^\d+$/.test(String(v || '')) ? Number(v) : null);
+    const tu = soNguyen(req.query.soMuiTu), den = soNguyen(req.query.soMuiDen);
+    if (tu !== null || den !== null) list = list.filter(r => r.SoMuiChi !== null && r.SoMuiChi !== undefined && (tu === null || r.SoMuiChi >= tu) && (den === null || r.SoMuiChi <= den));
+  }
   if (canhBao) list = list.filter(r => r.CanhBao === canhBao);
   // Lọc theo Xưởng/Ưu tiên (bổ sung 13/09/2026, theo yêu cầu người dùng — chỉ hiện ô lọc này ở giao
   // diện cho admin, xem public/orders.html) — KHÔNG cần chặn riêng ở đây cho vai trò khác: san_xuat/
@@ -1138,7 +1148,8 @@ const TRUONG_DUOC_SUA = {
 // GHI_CHU_XUONG là cột Sheet (app không ghi được qua đây), sửa qua route này sẽ "lưu" giả mà không đi đâu.
 // THOI_GIAN_SAN_XUAT (29/09/2026) — mốc tính giờ TỰ ĐỘNG MUA TRACKING (tốn tiền thật), chỉ orderService tự ghi khi
 // đơn chuyển sang "Đã sản xuất"; cho sửa tay qua đây là cho phép ép hệ thống mua sớm.
-const TRUONG_CAM_SUA = ['STT_Key', '_row', 'NguoiCapNhatCuoi', 'ThoiGianCapNhatCuoi', 'TenKhachHang', 'TieuDeSanPham', 'ViTriTheu', 'CanhBao', 'XUONG', 'DON_UU_TIEN', 'DA_XOA', 'GHI_CHU_XUONG', 'GHI_CHU_XUONG_NOI_BO', 'THOI_GIAN_SAN_XUAT', 'THOI_GIAN_VE_FILE', 'THOI_GIAN_DAN_TEM', 'THOI_GIAN_DOI_TRANG_THAI', 'NGUOI_DOI_TRANG_THAI', 'TRANG_THAI_TRUOC_DO', 'DA_MUA_TRACKING',
+// GhiChuTinhGia / SO_MUI_CHI_* (07/10/2026) — CHỈ qua POST /:sttKey/so-mui-chi (kiểm tra vai trò + số hợp lệ + ghi Sheet Seller).
+const TRUONG_CAM_SUA = ['GhiChuTinhGia', 'SO_MUI_CHI_NOI_BO', 'SO_MUI_CHI_LUC', 'STT_Key', '_row', 'NguoiCapNhatCuoi', 'ThoiGianCapNhatCuoi', 'TenKhachHang', 'TieuDeSanPham', 'ViTriTheu', 'CanhBao', 'XUONG', 'DON_UU_TIEN', 'DA_XOA', 'GHI_CHU_XUONG', 'GHI_CHU_XUONG_NOI_BO', 'THOI_GIAN_SAN_XUAT', 'THOI_GIAN_VE_FILE', 'THOI_GIAN_DAN_TEM', 'THOI_GIAN_DOI_TRANG_THAI', 'NGUOI_DOI_TRANG_THAI', 'TRANG_THAI_TRUOC_DO', 'DA_MUA_TRACKING',
   'TU_MUA_SO_LAN_THU', 'TU_MUA_CHE_DO', 'TU_MUA_LOI_GAN_NHAT', 'TU_MUA_THOI_GIAN_THU', 'THONG_TIN_GKE_CHO_DON_LOI'];
 
 // Ghi chú xưởng (28/09/2026, theo yêu cầu người dùng): LUÔN lưu bản trong app (GHI_CHU_XUONG_NOI_BO) rồi ghi vào
@@ -1164,6 +1175,50 @@ router.post('/:sttKey/ghi-chu-xuong', async (req, res) => {
   });
   res.json({ ok: true, sheet: { ok: kq.ok, lyDo: kq.lyDo, tab: kq.tab, dong: kq.dong } });
 });
+
+// Số mũi chỉ (07/10/2026, theo yêu cầu người dùng): CHỈ admin/superadmin/ve_file (chặn ở đây, không chỉ ẩn ô trên trang). Ghi vào ô
+// GhiChuTinhGia của Sheet Seller (người dùng xác nhận cột chỉ dùng cho số mũi). Số nguyên 1..1.000.000, hoặc trống để xoá.
+// Ghi Sheet TRƯỚC: lỗi -> trả lỗi, KHÔNG lưu gì trong app, KHÔNG báo đã lưu. Thành công -> lưu bản trong app (hiện ngay
+// trong lúc IMPORTRANGE chưa đưa giá trị mới về Don_Hang_ALL) + lịch sử.
+const VAI_TRO_SUA_SO_MUI = ['admin', 'superadmin', 've_file'];
+const SO_MUI_TOI_DA = 1000000;
+// Hàng đợi theo đơn: 2 người lưu cùng lúc cho CÙNG đơn -> lượt sau chờ lượt trước xong HẲN (ghi Sheet + lưu bản app), nên Sheet và
+// bản app luôn cùng giá trị của người lưu sau. Không dùng khoá của orderService.update (lượt này gọi update bên trong -> tự chờ mình).
+const _hangDoiSoMui = new Map();
+function xepHangSoMui(sttKey, congViec) {
+  const luot = (_hangDoiSoMui.get(sttKey) || Promise.resolve()).catch(() => {}).then(congViec);
+  _hangDoiSoMui.set(sttKey, luot);
+  luot.catch(() => {}).finally(() => { if (_hangDoiSoMui.get(sttKey) === luot) _hangDoiSoMui.delete(sttKey); });
+  return luot;
+}
+router.post('/:sttKey/so-mui-chi', async (req, res) => {
+  const user = req.session.user;
+  if (!VAI_TRO_SUA_SO_MUI.includes(user.vaiTro)) return res.status(403).json({ error: 'Vai trò này không được sửa số mũi chỉ' });
+  const nhap = String(req.body.soMui == null ? '' : req.body.soMui).trim();
+  if (nhap && !(/^\d+$/.test(nhap) && Number(nhap) >= 1 && Number(nhap) <= SO_MUI_TOI_DA)) {
+    return res.status(400).json({ error: `Số mũi chỉ phải là số nguyên từ 1 đến ${SO_MUI_TOI_DA.toLocaleString('vi-VN')} (không chữ, không số âm, không số lẻ).` });
+  }
+  const soMui = nhap ? String(Number(nhap)) : ''; // bỏ số 0 ở đầu
+  const sttKey = req.params.sttKey;
+  await xepHangSoMui(sttKey, () => luuSoMuiChi(req, res, user, sttKey, soMui));
+});
+async function luuSoMuiChi(req, res, user, sttKey, soMui) {
+  const { headers, row } = await orderService.getByKey(sttKey, { fresh: true });
+  if (!row || !orderService.coQuyenTheoXuong(user, row)) return res.status(404).json({ error: 'Không tìm thấy đơn hàng: ' + sttKey });
+
+  const [kq] = await sheetSellerService.ghiHangLoat([{ sttKey, loai: 'SO_MUI', giaTri: { GhiChuTinhGia: soMui } }], user, { ghiLichSu: false });
+  if (!kq.ok) return res.status(502).json({ error: `Không thể lưu số mũi chỉ. Vui lòng thử lại. (Lý do: ${kq.lyDo})` });
+
+  await orderService.update(sttKey, {
+    SO_MUI_CHI_NOI_BO: soMui, SO_MUI_CHI_LUC: new Date().toISOString(),
+    NguoiCapNhatCuoi: user.ten, ThoiGianCapNhatCuoi: new Date().toISOString(),
+  }, user, { donDaDoc: { headers, row } });
+  await ghiLog({
+    nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'SUA_SO_MUI_CHI', sttKey,
+    chiTiet: { tu: kq.thayDoi.length ? kq.thayDoi[0].tu : (row.GhiChuTinhGia || ''), sang: soMui, sheet: sheetSellerService.chiTietLichSu(kq) },
+  });
+  res.json({ ok: true, soMui, sheet: { tab: kq.tab, dong: kq.dong } });
+}
 
 // 2 nút lớn ở Chi tiết đơn (28/09/2026, theo yêu cầu người dùng) — mỗi nút chuyển TRANG_THAI_XUONG đúng 1 bước cố định:
 //   BAT_DAU_CHAY_MAY: chỉ san_xuat — người bấm thành người chạy máy (orderService.update tự ghi NGUOI_CHAY_MAY).

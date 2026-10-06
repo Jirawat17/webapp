@@ -441,7 +441,7 @@ function hienHopDo({ tieuDe = [], moTa = '', ma = [], danhSach = [] }) {
 // Danh sách "Chưa ghi được sang Sheet Seller" (28/09/2026) — dùng CHUNG ở Trung tâm hành động và Settings.
 // ds: từ /api/dong-bo-sheet-seller/loi-dang-cho (hoặc Trung tâm hành động .loiSheetSeller). choDayLai: chỉ
 // superadmin (server cũng chặn). Sau khi đẩy lại, gọi taiLai() do trang truyền vào để vẽ lại.
-const NHAN_LOAI_SHEET_SELLER = { GHI_CHU: 'Ghi chú xưởng', TRACKING: 'Tracking', DELIVERED: 'Delivered' };
+const NHAN_LOAI_SHEET_SELLER = { GHI_CHU: 'Ghi chú xưởng', TRACKING: 'Tracking', DELIVERED: 'Delivered', SO_MUI: 'Số mũi chỉ' };
 const tgNgan = iso => { const d = new Date(iso); return isNaN(d) ? String(iso || '') : d.toLocaleString('vi-VN'); };
 function htmlLoiSheetSeller(ds, choDayLai) {
   if (!ds || !ds.length) return '<p style="color:var(--color-text-muted)">Không có lần ghi nào sang Sheet Seller đang lỗi.</p>';
