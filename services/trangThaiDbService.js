@@ -87,6 +87,9 @@ const CAC_COT = [
   // Ghi ở orderService.js#dongBoCanhBaoTinhTrang mỗi lần đọc Sheet, chỉ khi đổi.
   'CANH_BAO_TT_LOAI',
   'CANH_BAO_TT_TU',
+  // MOC_VAO_TRANG_THAI (07/10/2026, theo yêu cầu người dùng — cảnh báo Vàng/Cam/Đỏ tính giờ từ "trạng thái đầu vào"): JSON
+  // {trạng thái TRANG_THAI_XUONG: lúc đơn VÀO trạng thái đó lần gần nhất}. Chỉ ghiDe() tự ghi, xem capNhatMocVaoTrangThai().
+  'MOC_VAO_TRANG_THAI',
   // CanhBaoDaGui: không nằm trong danh sách 31 cột người dùng liệt kê (có thể chỉ là sót khi liệt kê) —
   // nhưng rà code xác nhận đây CŨNG là cột app tự ghi (services/canhBaoJob.js, cờ chống spam Telegram),
   // không thuộc RAW/A:AM lẫn AN:BR người dùng mô tả. Xếp vào đây theo đúng tiêu chí "app tự ghi" đã
@@ -233,6 +236,18 @@ db.exec(`CREATE TABLE IF NOT EXISTS lich_su_doi_trang_thai (
 )`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_lsdtt_thoi_gian ON lich_su_doi_trang_thai(ThoiGian)`);
 const cauGhiLichSuDoi = db.prepare(`INSERT INTO lich_su_doi_trang_thai (ThoiGian, STT_Key, Cot, Tu, Sang, Nguoi) VALUES (?, ?, ?, ?, ?, ?)`);
+// Dựng MOC_VAO_TRANG_THAI từ nhật ký trên (07/10/2026, người dùng chốt) cho đơn CHƯA có mốc nhưng đã đổi TRANG_THAI_XUONG từ khi
+// có nhật ký — phát lại đúng thứ tự, cùng quy tắc với ghiDe(). Chạy mỗi lần nạp module nhưng chỉ đụng đơn MOC rỗng: từ khi có cột này
+// mọi lần đổi đều qua ghiDe() ghi mốc luôn, nên sau lần đầu gần như không còn gì để dựng.
+db.transaction(() => {
+  const ds = db.prepare(`SELECT l.STT_Key, l.Tu, l.Sang, l.ThoiGian FROM lich_su_doi_trang_thai l
+    JOIN trang_thai_don t ON t.stt_key = l.STT_Key
+    WHERE l.Cot = 'TRANG_THAI_XUONG' AND t.MOC_VAO_TRANG_THAI = '' ORDER BY l.id`).all();
+  const theoMa = new Map();
+  for (const d of ds) theoMa.set(d.STT_Key, capNhatMocVaoTrangThai(theoMa.get(d.STT_Key) || '', d.Tu, d.Sang, d.ThoiGian));
+  const ghi = db.prepare(`UPDATE trang_thai_don SET MOC_VAO_TRANG_THAI = ? WHERE stt_key = ?`);
+  for (const [k, v] of theoMa) ghi.run(v, k);
+})();
 // -> [{ ThoiGian, STT_Key, Cot, Tu, Sang, Nguoi }] từ mốc `tu` (ISO giờ VN), cũ trước.
 const layLichSuDoiTrangThaiTu = tu => db.prepare(`SELECT ThoiGian, STT_Key, Cot, Tu, Sang, Nguoi FROM lich_su_doi_trang_thai WHERE ThoiGian >= ? ORDER BY id`).all(tu);
 // tuyChon.nguoi: tên người thực hiện (orderService.update truyền user.ten); không truyền thì lấy NguoiCapNhatCuoi trong updates.
@@ -249,6 +264,9 @@ function ghiDe(sttKey, updates, tuyChon = {}) {
         NGUOI_DOI_TRANG_THAI: tuyChon.nguoi || updates.NguoiCapNhatCuoi || '',
         TRANG_THAI_TRUOC_DO: JSON.stringify(Object.fromEntries(daDoi.map(c => [c, cu[c]]))) };
       lichSu = daDoi.map(c => [updates.THOI_GIAN_DOI_TRANG_THAI, key, c, cu[c], moi[c], updates.NGUOI_DOI_TRANG_THAI]);
+      if (daDoi.includes('TRANG_THAI_XUONG')) {
+        updates.MOC_VAO_TRANG_THAI = capNhatMocVaoTrangThai(cu.MOC_VAO_TRANG_THAI, cu.TRANG_THAI_XUONG, moi.TRANG_THAI_XUONG, updates.THOI_GIAN_DOI_TRANG_THAI);
+      }
     }
   }
   // .sort() — xem lý do bắt buộc ở comment layPreparedGhiDe() trên.
@@ -258,6 +276,26 @@ function ghiDe(sttKey, updates, tuyChon = {}) {
   const giaTri = cot.map(c => (updates[c] === undefined || updates[c] === null) ? '' : String(updates[c]));
   layPreparedGhiDe(cot).run(key, ...giaTri);
   for (const d of lichSu) cauGhiLichSuDoi.run(...d);
+}
+
+// Ghi lúc đơn vào trạng thái mới; đơn đi LÙI (vd làm lại sau lỗi) thì xoá mốc của các trạng thái phía SAU trạng thái mới —
+// đó là mốc của lượt trước, để lại sẽ làm đồng hồ cảnh báo tính từ lượt cũ. Trạng thái ngoài pipeline (LỖI...) không xoá gì.
+// Chưa có mốc nào = lần đổi ĐẦU TIÊN được biết -> trạng thái cũ đã vào từ trước, không rõ lúc nào: ghi '' (alertService tính từ ngày
+// lên đơn, người dùng chốt 07/10/2026).
+function capNhatMocVaoTrangThai(jsonCu, trangThaiCu, trangThaiMoi, luc) {
+  const { chiSoTinhTrang } = require('../data/pipelineTinhTrang');
+  let moc = null;
+  try { moc = jsonCu ? JSON.parse(jsonCu) : null; } catch (e) { /* dữ liệu hỏng -> làm lại từ đầu */ }
+  if (!moc || typeof moc !== 'object') moc = trangThaiCu ? { [trangThaiCu]: '' } : {};
+  const idxMoi = chiSoTinhTrang(trangThaiMoi);
+  if (idxMoi !== null) {
+    for (const tt of Object.keys(moc)) {
+      const i = chiSoTinhTrang(tt);
+      if (i !== null && i > idxMoi) delete moc[tt];
+    }
+  }
+  moc[trangThaiMoi] = luc;
+  return JSON.stringify(moc);
 }
 
 // [[sttKey, updates], ...] trong 1 giao dịch — dùng khi hệ thống tự ghi hàng loạt (orderService.js#tuGanXuongTheoTeam).

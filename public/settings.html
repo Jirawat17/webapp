@@ -62,22 +62,9 @@
   <!-- Thời gian cảnh báo tự động (bổ sung 23/09/2026, theo yêu cầu người dùng) — thay 3 ngưỡng ngày
        hard-code 3/5/7 trong services/alertService.js#tinhMucCanhBao. -->
   <h3 style="margin-top:var(--space-6)">Thời gian cảnh báo tự động</h3>
-  <p>Số ngày kể từ ngày lên đơn mà vẫn chưa tiến triển đủ thì phát cảnh báo (badge trên đơn hàng + Telegram). Phải tăng dần: Vàng &lt; Cam &lt; Đỏ.</p>
-  <div class="bao-cao-form">
-    <div class="truong">
-      <label for="nguong-vang">Vàng · chưa "Sẵn sàng chạy máy" (ngày)</label>
-      <input type="number" id="nguong-vang" min="1" step="1">
-    </div>
-    <div class="truong">
-      <label for="nguong-cam">Cam · chưa "Đã sản xuất" (ngày)</label>
-      <input type="number" id="nguong-cam" min="1" step="1">
-    </div>
-    <div class="truong">
-      <label for="nguong-do">Đỏ · chưa ship (ngày)</label>
-      <input type="number" id="nguong-do" min="1" step="1">
-    </div>
-    <button type="button" class="btn-hanh-dong" id="btn-luu-canh-bao" style="justify-self:start">Lưu</button>
-  </div>
+  <p>Đơn đã vào <b>trạng thái đầu vào</b> quá số ngày mà vẫn chưa tới <b>trạng thái đầu ra</b> thì phát cảnh báo (badge trên đơn hàng, ô KPI ở BĐK, Telegram). Tắt 1 mức = tắt hẳn mức đó ở mọi nơi. Đơn trúng nhiều mức hiện mức cao nhất (Đỏ &gt; Cam &gt; Vàng).</p>
+  <div id="ds-cau-hinh-canh-bao" style="display:grid; gap:var(--space-3)"></div>
+  <button type="button" class="btn-hanh-dong" id="btn-luu-canh-bao" style="margin-top:var(--space-3)">Lưu</button>
   <p id="thong-bao-canh-bao" style="display:none"></p>
 
   <!-- Tỷ lệ nén ảnh (bổ sung 23/09/2026, theo yêu cầu người dùng) — CHỈ áp dụng cho 2 chế độ chụp ảnh
@@ -231,7 +218,7 @@
 </div>
 
 <script src="/js/icons.js?v=105"></script>
-<script src="/js/api.js?v=117"></script>
+<script src="/js/api.js?v=118"></script>
 <script>
 (async () => {
   const user = await requireLoginOrRedirect();
@@ -686,11 +673,22 @@ async function ganTaiKhoanGke(xuong, taiKhoanId) {
   } catch (e) { thongBaoGke('Lỗi khi gán: ' + e.message, true); await taiTaiKhoanGke(); }
 }
 
+// 07/10/2026: mỗi mức = bật/tắt + đầu vào ('' = từ ngày lên đơn) + đầu ra + số ngày. Server kiểm tra lại (routes/canhBao.js).
+const MUC_CANH_BAO_CAI_DAT = [['VANG', 'Vàng'], ['CAM', 'Cam'], ['DO', 'Đỏ']];
 async function taiNguongCanhBao() {
-  const nguong = await apiFetch('/canh-bao/nguong');
-  document.getElementById('nguong-vang').value = nguong.VANG;
-  document.getElementById('nguong-cam').value = nguong.CAM;
-  document.getElementById('nguong-do').value = nguong.DO;
+  const { cauHinh, trangThai } = await apiFetch('/canh-bao/nguong');
+  const tuyChon = (chon, coNgayLenDon) => (coNgayLenDon ? [['', '(Từ ngày lên đơn)']] : []).concat(trangThai.map(t => [t, t]))
+    .map(([v, nhan]) => `<option value="${escapeHtml(v)}" ${v === chon ? 'selected' : ''}>${escapeHtml(nhan)}</option>`).join('');
+  document.getElementById('ds-cau-hinh-canh-bao').innerHTML = MUC_CANH_BAO_CAI_DAT.map(([m, ten]) => {
+    const ch = cauHinh[m];
+    return `<div class="bao-cao-form">
+      <div class="truong"><label for="canh-bao-bat-${m}">${ten}</label>
+        <label style="font-weight:400"><input type="checkbox" id="canh-bao-bat-${m}" ${ch.bat ? 'checked' : ''}> Bật</label></div>
+      <div class="truong"><label for="canh-bao-vao-${m}">Trạng thái đầu vào</label><select id="canh-bao-vao-${m}">${tuyChon(ch.vao, true)}</select></div>
+      <div class="truong"><label for="canh-bao-ra-${m}">Trạng thái đầu ra</label><select id="canh-bao-ra-${m}">${tuyChon(ch.ra, false)}</select></div>
+      <div class="truong"><label for="canh-bao-ngay-${m}">Số ngày</label><input type="number" id="canh-bao-ngay-${m}" min="1" step="1" value="${ch.soNgay}" style="width:6em"></div>
+    </div>`;
+  }).join('');
 }
 
 async function luuNguongCanhBao() {
@@ -701,11 +699,12 @@ async function luuNguongCanhBao() {
   try {
     await apiFetch('/canh-bao/nguong', {
       method: 'POST',
-      body: JSON.stringify({
-        NGUONG_VANG: document.getElementById('nguong-vang').value,
-        NGUONG_CAM: document.getElementById('nguong-cam').value,
-        NGUONG_DO: document.getElementById('nguong-do').value,
-      }),
+      body: JSON.stringify(Object.fromEntries(MUC_CANH_BAO_CAI_DAT.map(([m]) => [m, {
+        bat: document.getElementById(`canh-bao-bat-${m}`).checked,
+        vao: document.getElementById(`canh-bao-vao-${m}`).value,
+        ra: document.getElementById(`canh-bao-ra-${m}`).value,
+        soNgay: Number(document.getElementById(`canh-bao-ngay-${m}`).value),
+      }]))),
     });
     thongBao.style.display = 'block';
     thongBao.style.color = '#16a34a';

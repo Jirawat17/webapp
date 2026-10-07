@@ -103,15 +103,25 @@ db.exec(`CREATE TABLE IF NOT EXISTS cai_dat_canh_bao (
   NGUONG_DO TEXT NOT NULL DEFAULT ''
 )`);
 
-function layCaiDatCanhBao() {
-  return db.prepare(`SELECT NGUONG_VANG, NGUONG_CAM, NGUONG_DO FROM cai_dat_canh_bao WHERE id = 1`).get()
-    || { NGUONG_VANG: '', NGUONG_CAM: '', NGUONG_DO: '' };
+// VAO_/RA_/BAT_<mức> (07/10/2026, theo yêu cầu người dùng): trạng thái đầu vào ('' = tính từ ngày lên đơn), trạng thái đầu ra
+// ('' = mặc định cũ), bật/tắt ('0' = tắt, còn lại = bật). Rỗng hết = đúng hành vi cũ, xem services/alertService.js#layCauHinhCanhBao.
+const CAC_COT_CANH_BAO = ['VANG', 'CAM', 'DO'].flatMap(m => [`NGUONG_${m}`, `VAO_${m}`, `RA_${m}`, `BAT_${m}`]);
+{
+  const daCo = new Set(db.prepare(`PRAGMA table_info(cai_dat_canh_bao)`).all().map(c => c.name));
+  for (const cot of CAC_COT_CANH_BAO) {
+    if (!daCo.has(cot)) db.exec(`ALTER TABLE cai_dat_canh_bao ADD COLUMN ${cot} TEXT NOT NULL DEFAULT ''`);
+  }
 }
-function datCaiDatCanhBao({ NGUONG_VANG, NGUONG_CAM, NGUONG_DO }) {
+
+function layCaiDatCanhBao() {
+  return db.prepare(`SELECT ${CAC_COT_CANH_BAO.join(', ')} FROM cai_dat_canh_bao WHERE id = 1`).get()
+    || Object.fromEntries(CAC_COT_CANH_BAO.map(c => [c, '']));
+}
+function datCaiDatCanhBao(giaTri) {
   db.prepare(`
-    INSERT INTO cai_dat_canh_bao (id, NGUONG_VANG, NGUONG_CAM, NGUONG_DO) VALUES (1, ?, ?, ?)
-    ON CONFLICT(id) DO UPDATE SET NGUONG_VANG = excluded.NGUONG_VANG, NGUONG_CAM = excluded.NGUONG_CAM, NGUONG_DO = excluded.NGUONG_DO
-  `).run(String(NGUONG_VANG), String(NGUONG_CAM), String(NGUONG_DO));
+    INSERT INTO cai_dat_canh_bao (id, ${CAC_COT_CANH_BAO.join(', ')}) VALUES (1, ${CAC_COT_CANH_BAO.map(() => '?').join(', ')})
+    ON CONFLICT(id) DO UPDATE SET ${CAC_COT_CANH_BAO.map(c => `${c} = excluded.${c}`).join(', ')}
+  `).run(...CAC_COT_CANH_BAO.map(c => String(giaTri[c] ?? '')));
 }
 
 // ---------- CaiDatNenAnh — chất lượng nén JPEG + cạnh dài tối đa, riêng cho 2 chế độ chụp ảnh ở

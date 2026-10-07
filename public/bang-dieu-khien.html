@@ -228,11 +228,16 @@
     <h3>Xu hướng đơn theo tuần</h3>
     <canvas id="chart-tuan"></canvas>
   </div>
+
+  <div class="bdk-card bdk-full">
+    <h3>Xu hướng đơn theo ngày</h3>
+    <canvas id="chart-ngay"></canvas>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="/js/icons.js?v=105"></script>
-<script src="/js/api.js?v=117"></script>
+<script src="/js/api.js?v=118"></script>
 <script>
 let kyHienTai = 'toan_bo';
 let user;
@@ -520,6 +525,7 @@ async function taiBangDieuKhien() {
   const demTheoKhachHang = Object.fromEntries((thongKe.theoKhachHangChiTiet || []).map(k => [k.khachHang, k.tongDon]));
   veBieuDoCot('chart-khach-hang', topN(demTheoKhachHang, 8));
   veBieuDoDuong('chart-tuan', thongKe.theoTuan);
+  veBieuDoDuong('chart-ngay', thongKe.theoNgay);
 }
 
 function huyBieuDoCu(id) {

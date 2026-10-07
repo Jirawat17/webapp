@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const orderService = require('../services/orderService');
-const { parseNgay } = require('../services/dateUtils');
+const { parseNgay, thoiGianVNISOString } = require('../services/dateUtils');
 const { requireLogin } = require('../middleware/auth');
 
 router.use(requireLogin);
@@ -48,6 +48,29 @@ function tuanCuaDon(r) {
   const dauNam = new Date(d.getFullYear(), 0, 1);
   const soTuan = Math.ceil(((d - dauNam) / 86400000 + dauNam.getDay() + 1) / 7);
   return `${d.getFullYear()}-W${soTuan}`;
+}
+
+// Số đơn theo NGÀY lên đơn (07/10/2026, theo yêu cầu người dùng — biểu đồ "Xu hướng đơn theo ngày" ở BĐK + TK): nhãn DD/MM/YYYY
+// theo thứ tự thời gian, điền 0 cho MỌI ngày trống giữa ngày đầu và ngày cuối (đường liền mạch). Hiện tất cả các ngày của kỳ đang lọc.
+// CHỈ tính ngày hợp lệ từ 01/01/2026 tới hôm nay (người dùng chốt) — 1 ô gõ sai (vd "45000" -> năm 45000) không được kéo vòng điền 0
+// ra hàng triệu ngày làm treo server.
+function demTheoNgay(rows) {
+  const dem = new Map();
+  // "Hôm nay" theo giờ VN (container chạy UTC: 0h-7h sáng VN server vẫn là hôm qua) — cùng kiểu ngày local như parseNgay trả về.
+  const cuoiHomNay = parseNgay(thoiGianVNISOString());
+  cuoiHomNay.setHours(23, 59, 59, 999);
+  for (const r of rows) {
+    const d = parseNgay(r.NGAY_LEN_DON);
+    if (d && d.getFullYear() >= 2026 && d <= cuoiHomNay) dem.set(d.toDateString(), (dem.get(d.toDateString()) || 0) + 1);
+  }
+  const cacNgay = [...dem.keys()].map(k => new Date(k)).sort((a, b) => a - b);
+  const kq = {};
+  if (!cacNgay.length) return kq;
+  for (const d = new Date(cacNgay[0]); d <= cacNgay[cacNgay.length - 1]; d.setDate(d.getDate() + 1)) {
+    const nhan = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+    kq[nhan] = dem.get(d.toDateString()) || 0;
+  }
+  return kq;
 }
 
 router.get('/thong-ke', async (req, res) => {
@@ -101,6 +124,7 @@ router.get('/thong-ke', async (req, res) => {
     theoKhachHangChiTiet: thongKeTheoNhom(rows, r => maKhachTuSttKey(r.STT_Key), KHACH_KHONG_RO),
     theoLoaiSanPham: demTheo(rows, layLoai),
     theoTuan: demTheo(rows, tuanCuaDon),
+    theoNgay: demTheoNgay(rows),
     // Chỉ còn "loại" chia theo khách — trạng thái/tuần đã chuyển sang biểu đồ TỔNG (theoTrangThai/theoTuan ở trên),
     // 05/10/2026 theo yêu cầu người dùng; bỏ 2 lượt đếm thừa.
     chongTheoKhach: {
