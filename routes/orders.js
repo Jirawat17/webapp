@@ -62,8 +62,10 @@ async function lamGiauDon(rows, banDoNhom, user) {
     NguoiVanHanh: r.TRANG_THAI_XUONG === TRANG_THAI_DANG_CHAY_MAY ? (r.NGUOI_CHAY_MAY || null) : null,
     NguoiVeFile: r.TRANG_THAI_VE_FILE === 'Đang vẽ file' ? (r.NGUOI_VE_FILE || null) : null,
     DonUuTien: orderService.laUuTien(r),
-    DonHold: orderService.laDonHold(r),
-    TinhTrangDacBiet: orderService.loaiTinhTrangDacBiet(r), // HOLD/CANCELLED/REFUNDED theo TINH_TRANG (nền vàng nhấp nháy + lên đầu)
+    // Cảnh báo TINH_TRANG (07/10/2026): DonHold/TinhTrangDacBiet = cảnh báo CÒN HẠN 21 ngày (vòng đỏ HOLD, nền vàng nhấp nháy, lên đầu
+    // danh sách); TinhTrangNhan = loại theo TINH_TRANG hiện tại — nhãn vẫn hiện sau khi hết hạn.
+    ...(conHan => ({ DonHold: conHan === 'HOLD', TinhTrangDacBiet: conHan }))(orderService.canhBaoTinhTrangConHan(r)),
+    TinhTrangNhan: orderService.loaiTinhTrangDacBiet(r),
     // Số mũi chỉ (07/10/2026) — CHỈ admin/superadmin/ve_file (cùng nhóm được sửa, xem VAI_TRO_SUA_SO_MUI).
     ...(VAI_TRO_SUA_SO_MUI.includes(user && user.vaiTro) ? (s => ({ SoMuiChi: s.so, SoMuiChiTrangThai: s.trangThai, SoMuiChiNguyenVan: s.nguyenVan }))(orderService.docSoMuiChi(r)) : {}),
     NhomNhieuAo: banDoNhom ? donNhieuAoService.tomTatChoDon(r.STT_Key, banDoNhom.get(r.STT_Key)) : null,

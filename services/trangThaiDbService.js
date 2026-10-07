@@ -82,6 +82,11 @@ const CAC_COT = [
   // này trong ~30 phút đầu nếu Don_Hang_ALL chưa kịp cập nhật. Không đặt tên GhiChuTinhGia: sẽ đè giá trị Sheet khi gộp dữ liệu.
   'SO_MUI_CHI_NOI_BO',
   'SO_MUI_CHI_LUC',
+  // CANH_BAO_TT_LOAI / CANH_BAO_TT_TU (07/10/2026, theo yêu cầu người dùng) — cảnh báo TINH_TRANG HOLD/CANCELLED/REFUNDED chỉ kéo
+  // dài 21 ngày: LOAI = loại app đang thấy ('' = bình thường), TU = lúc app PHÁT HIỆN loại đó (Sheet không cho biết lúc khách sửa).
+  // Ghi ở orderService.js#dongBoCanhBaoTinhTrang mỗi lần đọc Sheet, chỉ khi đổi.
+  'CANH_BAO_TT_LOAI',
+  'CANH_BAO_TT_TU',
   // CanhBaoDaGui: không nằm trong danh sách 31 cột người dùng liệt kê (có thể chỉ là sót khi liệt kê) —
   // nhưng rà code xác nhận đây CŨNG là cột app tự ghi (services/canhBaoJob.js, cờ chống spam Telegram),
   // không thuộc RAW/A:AM lẫn AN:BR người dùng mô tả. Xếp vào đây theo đúng tiêu chí "app tự ghi" đã
@@ -119,6 +124,21 @@ for (const cot of CAC_COT) {
     db.exec(`ALTER TABLE trang_thai_don ADD COLUMN ${cot} TEXT NOT NULL DEFAULT ''`);
   }
 }
+
+// Mốc "đã khởi tạo cảnh báo TINH_TRANG 21 ngày" (07/10/2026) — LƯU TRONG DB (không phải cờ trong bộ nhớ: script chạy riêng hay lần ghi
+// lỗi sẽ làm mất). Chưa có mốc = lần đồng bộ đầu tiên kể từ khi bật tính năng -> đơn ĐANG sẵn HOLD/CANCELLED/REFUNDED coi như đã cảnh
+// báo đủ (người dùng chốt). Mốc chỉ được ghi CÙNG GIAO DỊCH với lần ghi đó (ghiCanhBaoTinhTrang) — ghi lỗi thì lần sau vẫn là "lần đầu".
+db.exec(`CREATE TABLE IF NOT EXISTS meta_he_thong (khoa TEXT PRIMARY KEY, gia_tri TEXT NOT NULL DEFAULT '')`);
+const KHOA_MOC_CANH_BAO_TT = 'CANH_BAO_TT_DA_KHOI_TAO';
+function daKhoiTaoCanhBaoTinhTrang() {
+  return !!db.prepare(`SELECT 1 FROM meta_he_thong WHERE khoa = ?`).get(KHOA_MOC_CANH_BAO_TT);
+}
+const ghiCanhBaoTinhTrang = db.transaction((ds, ghiMocKhoiTao) => {
+  ds.forEach(([sttKey, updates]) => ghiDe(sttKey, updates));
+  if (ghiMocKhoiTao) {
+    db.prepare(`INSERT OR REPLACE INTO meta_he_thong (khoa, gia_tri) VALUES (?, ?)`).run(KHOA_MOC_CANH_BAO_TT, new Date().toISOString());
+  }
+});
 
 // 2 cột "trạng thái 2 nấc" (TRANG_THAI_PHOI/TRANG_THAI_VE_FILE) LUÔN có 1 giá trị nghiệp vụ thật theo
 // pipeline (data/pipelineTinhTrang.js) — không có khái niệm "chưa biết"/trống hợp lệ như các cột khác
@@ -267,4 +287,4 @@ function layDonDoiTrangThaiTu(tu) {
     .all(tu).map(({ stt_key, ...r }) => ({ STT_Key: stt_key, ...apDungMacDinhThat(r) }));
 }
 
-module.exports = { CAC_COT, RONG_MAC_DINH, layTheoKey, layTatCa, ghiDe, ghiDeNhieu, demTheoXuong, dsKeyTheoXuong, doiTenXuongHangLoat, layDonDoiTrangThaiTu, layLichSuDoiTrangThaiTu };
+module.exports = { CAC_COT, RONG_MAC_DINH, layTheoKey, layTatCa, ghiDe, ghiDeNhieu, daKhoiTaoCanhBaoTinhTrang, ghiCanhBaoTinhTrang, demTheoXuong, dsKeyTheoXuong, doiTenXuongHangLoat, layDonDoiTrangThaiTu, layLichSuDoiTrangThaiTu };

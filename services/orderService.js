@@ -55,6 +55,7 @@ async function getAll({ fresh = false, ttlMs = 10000 } = {}) {
     .filter(r => r.DA_XOA !== 'TRUE');
   tuGanXuongTheoTeam(rowsGop);
   dongBoDaMuaTracking(rowsGop);
+  dongBoCanhBaoTinhTrang(rowsGop);
   return { headers, rows: rowsGop };
 }
 
@@ -662,6 +663,49 @@ function loaiTinhTrangDacBiet(row) {
   return null;
 }
 
+// Cảnh báo TINH_TRANG tối đa 21 ngày (07/10/2026, theo yêu cầu người dùng). Mốc = lúc app PHÁT HIỆN loại cảnh báo (mỗi lần đọc Sheet,
+// kể cả từ tác vụ định kỳ) — đổi sang loại cảnh báo KHÁC (HOLD -> CANCELLED) hoặc về bình thường rồi cảnh báo lại thì TÍNH LẠI 21 ngày.
+// Lần đầu triển khai: đơn đang sẵn cảnh báo -> mốc rất cũ = coi như đã hết hạn. Chỉ ghi SQLite khi đổi (cùng cách DA_MUA_TRACKING).
+const CANH_BAO_TT_SO_NGAY = 21;
+const MOC_CANH_BAO_DA_HET_HAN = '2000-01-01T00:00:00.000Z';
+function dongBoCanhBaoTinhTrang(rows) {
+  const khoiTao = !trangThaiDbService.daKhoiTaoCanhBaoTinhTrang();
+  const bayGio = new Date().toISOString();
+  // Gộp theo mã đơn TRƯỚC (Sheet có thể có 2 dòng cùng STT_Key — chúng dùng chung 1 bản ghi SQLite): mã có ít nhất 1 dòng cảnh báo ->
+  // lấy loại của dòng cảnh báo ĐẦU TIÊN; ghi tối đa 1 lần/mã. Không gộp thì 2 dòng ghi đè nhau mỗi lần đọc, mốc 21 ngày đặt lại mãi.
+  const theoMa = new Map();
+  for (const r of rows) {
+    const ma = String(r[KEY_COL]).trim();
+    const loai = loaiTinhTrangDacBiet(r) || '';
+    if (!theoMa.has(ma)) theoMa.set(ma, { loai, dong: [r] });
+    else {
+      const m = theoMa.get(ma);
+      m.dong.push(r);
+      if (!m.loai && loai) m.loai = loai;
+    }
+  }
+  const canGhi = [];
+  for (const [ma, { loai, dong }] of theoMa) {
+    if ((dong[0].CANH_BAO_TT_LOAI || '') === loai) continue;
+    const tu = loai ? (khoiTao ? MOC_CANH_BAO_DA_HET_HAN : bayGio) : '';
+    canGhi.push([ma, { CANH_BAO_TT_LOAI: loai, CANH_BAO_TT_TU: tu }]);
+    dong.forEach(r => { r.CANH_BAO_TT_LOAI = loai; r.CANH_BAO_TT_TU = tu; });
+  }
+  if (canGhi.length === 0 && !khoiTao) return;
+  try {
+    trangThaiDbService.ghiCanhBaoTinhTrang(canGhi, khoiTao);
+  } catch (err) {
+    console.error('[Orders] Lỗi đồng bộ cảnh báo TINH_TRANG:', err.message);
+  }
+}
+// Loại cảnh báo CÒN HẠN (null nếu không cảnh báo hoặc đã quá 21 ngày kể từ lúc phát hiện) — dùng cho nền vàng/vòng đỏ/đẩy lên đầu.
+function canhBaoTinhTrangConHan(row, bayGio = Date.now()) {
+  const loai = loaiTinhTrangDacBiet(row);
+  if (!loai || row.CANH_BAO_TT_LOAI !== loai) return null;
+  const tu = Date.parse(row.CANH_BAO_TT_TU || '');
+  return tu && bayGio - tu < CANH_BAO_TT_SO_NGAY * 86400000 ? loai : null;
+}
+
 // Số mũi chỉ (07/10/2026, theo yêu cầu người dùng) — NƠI DUY NHẤT đọc số mũi của 1 đơn (danh sách, bộ lọc, Chi tiết đơn dùng chung).
 // Nguồn: ô GhiChuTinhGia (Sheet); vừa lưu trong app < 30 phút mà Sheet chưa kịp đổi (IMPORTRANGE trễ) -> bản trong app
 // SO_MUI_CHI_NOI_BO. Chỉ nhận ô có ĐÚNG 1 số: "50000", "50.000", "50,000" (ngăn hàng nghìn), "50000 mũi". Nội dung khác
@@ -739,5 +783,5 @@ module.exports = {
   VAI_TRO_MENU_TRACKING, anCotTheoDoiMuaTracking,
   suaDonKetSanSang,
   TAB, KEY_COL, getAll, getByKey, getManyByKeys, update, filterForRole, ganTenKhachHang, tieuDeSanPham, danhSachViTriTheu,
-  layDanhSachXuong, locTheoXuong, coQuyenTheoXuong, phamViDon, laUuTien, laDonHold, loaiTinhTrangDacBiet, timDonTheoMaGoTay, docSoMuiChi, lyDoDaMuaTracking, NHOM_LOC_TONG_QUAT,
+  layDanhSachXuong, locTheoXuong, coQuyenTheoXuong, phamViDon, laUuTien, laDonHold, loaiTinhTrangDacBiet, canhBaoTinhTrangConHan, timDonTheoMaGoTay, docSoMuiChi, lyDoDaMuaTracking, NHOM_LOC_TONG_QUAT,
 };

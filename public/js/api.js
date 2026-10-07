@@ -155,10 +155,12 @@ function htmlTieuDeThe(o) {
 // #laDonHold, gắn ở routes/orders.js lamGiauDon, cùng chỗ DonUuTien). Vòng đỏ quanh thẻ/đầu trang chi tiết: style.css .vong-hold.
 // Mở rộng 07/10/2026: cả CANCELLED / REFUNDED theo TINH_TRANG (cờ TinhTrangDacBiet do server tính) — nhãn ghi NGUYÊN VĂN giá trị
 // TINH_TRANG trong Sheet (không phải trạng thái sản xuất CANCELLED_Đã hủy/REFUNDED_Hoàn đơn — 2 khái niệm độc lập).
+// 21 ngày (07/10/2026): nhãn theo TinhTrangNhan (vẫn hiện sau khi hết hạn cảnh báo); còn hạn (TinhTrangDacBiet) -> đỏ, hết hạn -> vàng nhạt.
 function nhanHold(o) {
-  if (!o.TinhTrangDacBiet && !o.DonHold) return '';
-  const chu = o.TinhTrangDacBiet === 'HOLD' || o.DonHold ? 'HOLD-Chờ xác nhận' : String(o.TINH_TRANG || o.TinhTrangDacBiet).trim();
-  return `<span class="badge trang-thai-danger" title="TINH_TRANG (khách cập nhật trên Sheet)">${icon('alert', { size: 14 })} ${escapeHtml(chu)}</span>`;
+  if (!o.TinhTrangNhan) return '';
+  const chu = o.TinhTrangNhan === 'HOLD' ? 'HOLD-Chờ xác nhận' : String(o.TINH_TRANG || o.TinhTrangNhan).trim();
+  const conHan = !!o.TinhTrangDacBiet;
+  return `<span class="badge ${conHan ? 'trang-thai-danger' : 'trang-thai-warning'}" title="TINH_TRANG (khách cập nhật trên Sheet)${conHan ? '' : ' — đã hết 21 ngày cảnh báo'}">${icon('alert', { size: 14 })} ${escapeHtml(chu)}</span>`;
 }
 
 function lopVaStyleXuong(xuong, mauTheoXuong) {
