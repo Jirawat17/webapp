@@ -4,18 +4,8 @@
     {
       "name": "webapp",
       "runtimeExecutable": "node",
-      "runtimeArgs": [
-        "server.js"
-      ],
+      "runtimeArgs": ["server.js"],
       "port": 3000
-    },
-    {
-      "name": "stub-dot4",
-      "runtimeExecutable": "node",
-      "runtimeArgs": [
-        "C:/Users/ADMIN/AppData/Local/Temp/claude/D--n8n-data-webapp/491d9c7d-161f-4db7-9bae-b4c406b43c90/scratchpad/server-stub-dot4.js"
-      ],
-      "port": 3073
     }
   ]
 }
