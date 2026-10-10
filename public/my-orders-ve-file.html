@@ -224,7 +224,7 @@
 </div>
 
 <script src="/js/icons.js?v=105"></script>
-<script src="/js/api.js?v=118"></script>
+<script src="/js/api.js?v=119"></script>
 <script>
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
 // settings.html (superadmin), 3/5/7 không còn luôn đúng nên không hard-code vào nhãn hiển thị nữa.
@@ -292,7 +292,19 @@ const CAC_O_LOC_TV = ['loc-trang-thai-tv', 'loc-phoi-tv', 'loc-kh-tv', 'loc-tu-n
   ganSuKienLocSapXep('-cv', taiDonCanVe, boChonTatCaDonCanVe);
   ganSuKienLocSapXep('-tv', taiDonToiVe, boChonTatCaDonToiVe);
 
+  // G1 (10/10/2026): nhớ bộ lọc/sắp xếp/số thẻ/vị trí cuộn của CẢ 2 mục (cùng 1 trang, 1 thanh cuộn).
+  const hauToDong = ['-cv', '-tv'].flatMap(h => ['loc-trang-thai', 'loc-loai', 'loc-kich-thuoc', 'loc-mau-sac', 'loc-hang-van-chuyen'].map(id => id + h));
+  const nho = nhoDanhSach('my-orders-ve-file', {
+    cacO: [...CAC_O_LOC_CV, ...CAC_O_LOC_TV, 'loc-hang-loat-cv', 'loc-hang-loat-tv', 'sap-xep-cv', 'sap-xep-tv', 'loc-nguoi-ve-file'],
+    cacOChonDong: [...hauToDong, 'loc-nguoi-ve-file'],
+    laySo: () => ({ cv: soDangHienThiCanVe, tv: soDangHienThiToiVe }),
+  });
+  nho.khoiPhucO();
   await Promise.all([taiDonCanVe(), taiDonToiVe(), taiDsNhanVienVeFile]);
+  nho.khoiPhucCuon(({ cv, tv }) => {
+    if (danhSachCanVe.length && cv > soDangHienThiCanVe) { soDangHienThiCanVe = cv; renderDanhSachCanVe(); }
+    if (danhSachToiVe.length && tv > soDangHienThiToiVe) { soDangHienThiToiVe = tv; renderDanhSachToiVe(); }
+  });
 })();
 
 // Gắn onchange/oninput cho đúng bộ ô lọc + Chỉ đơn hàng loạt + Sắp xếp của 1 mục — dùng chung cho cả
@@ -493,6 +505,7 @@ function renderDanhSachCanVe() {
   }).join('') + (conLai > 0
     ? `<button type="button" class="btn-hanh-dong phu" style="grid-column:1/-1" onclick="soDangHienThiCanVe+=SO_DON_MOI_LUOT;renderDanhSachCanVe()">Xem thêm (còn ${conLai} đơn)</button>`
     : '');
+  chenGoiYEmbVaoThe(el, 'data-stt-can-ve'); // A1 — chạy nền, không chặn vẽ thẻ
 
   capNhatCheckboxChonTatCaCanVe();
   capNhatThanhHanhDongCanVe();
@@ -722,6 +735,7 @@ function renderDanhSachToiVe() {
           <span class="badge ${lopTrangThai(o.TRANG_THAI_PHOI)}">${escapeHtml(o.TRANG_THAI_PHOI || '')}</span>
           ${dangLaAdmin && o.NguoiVeFile ? `
             <span class="badge trang-thai-info">${icon('users', {size:14})} Đang vẽ: <strong>${escapeHtml(o.NguoiVeFile)}</strong></span>` : ''}
+          ${nhanDaNhan(o.NhanLau && o.NhanLau.VE_FILE)}
           ${o.CanhBao ? `
             <span class="badge badge-canh-bao ${o.CanhBao.toLowerCase()}">
               ${icon('alert')} ${escapeHtml(NHAN_CANH_BAO[o.CanhBao] || o.CanhBao)}
@@ -732,6 +746,8 @@ function renderDanhSachToiVe() {
   }).join('') + (conLai > 0
     ? `<button type="button" class="btn-hanh-dong phu" style="grid-column:1/-1" onclick="soDangHienThiToiVe+=SO_DON_MOI_LUOT;renderDanhSachToiVe()">Xem thêm (còn ${conLai} đơn)</button>`
     : '');
+  chenGoiYEmbVaoThe(el, 'data-stt-toi-ve'); // A1 — chạy nền, không chặn vẽ thẻ
+  el.insertAdjacentHTML('afterbegin', htmlNhacNhanLau(danhSachToiVe, 'VE_FILE', 'vẽ', user.ten)); // Y6
 
   capNhatCheckboxChonTatCaToiVe();
   capNhatThanhHanhDongToiVe();

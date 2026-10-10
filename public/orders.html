@@ -349,7 +349,7 @@
 </div>
 
 <script src="/js/icons.js?v=105"></script>
-<script src="/js/api.js?v=118"></script>
+<script src="/js/api.js?v=119"></script>
 <script src="/js/suaThongTinGke.js?v=1"></script>
 <script>
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
@@ -499,8 +499,11 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
       // Mã DHLXX tăng dần, không tái dùng (donHangLoatDbService.js) → số lớn hơn = nhóm mới hơn.
       const soCuaMa = n => Number(String(n.maDonHangLoat).replace(/\D/g, '')) || 0;
       const cacTen = [...new Set([...nhoms].sort((a, b) => soCuaMa(b) - soCuaMa(a)).map(n => n.tenNhom).filter(Boolean))];
-      document.getElementById('loc-don-hang-loat').innerHTML = '<option value="">Tất cả đơn hàng loạt</option>' +
+      const sel = document.getElementById('loc-don-hang-loat');
+      const dangChon = sel.value; // giữ giá trị vừa khôi phục (G1) — danh sách về sau lượt tải đầu
+      sel.innerHTML = '<option value="">Tất cả đơn hàng loạt</option>' +
         cacTen.map(ten => `<option value="${escapeHtml(ten)}">${escapeHtml(ten)}</option>`).join('');
+      sel.value = dangChon;
       document.getElementById('truong-loc-don-hang-loat').style.display = 'flex';
     }).catch(() => {}); // im lặng bỏ qua — không có Đơn hàng loạt nào cũng là trạng thái bình thường
   }
@@ -624,7 +627,18 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
     document.getElementById('khoi-mua-va-in-label').style.display = 'contents';
   }
 
-  taiDon();
+  // G1 (10/10/2026): khôi phục bộ lọc/sắp xếp/tìm nhanh TRƯỚC lượt tải đầu, số thẻ + vị trí cuộn SAU khi vẽ.
+  // Ô tìm nhanh: lưu mã ĐÃ tìm (maDonDangTim), không lưu chữ gõ dở chưa bấm Enter — listener này đăng ký TRƯỚC nên chạy trước lúc lưu.
+  addEventListener('pagehide', () => { document.getElementById('tim-nhanh-ma-don').value = maDonDangTim; });
+  const nho = nhoDanhSach('orders', {
+    cacO: ['tim-nhanh-ma-don', ...CAC_O_LOC, 'sap-xep'],
+    cacOChonDong: ['loc-trang-thai', 'loc-loai', 'loc-kich-thuoc', 'loc-mau-sac', 'loc-hang-van-chuyen', 'loc-quoc-gia-tracking', 'loc-tinh-trang', 'loc-don-hang-loat'],
+    laySo: () => soDonDangHienThi,
+  });
+  nho.khoiPhucO();
+  maDonDangTim = document.getElementById('tim-nhanh-ma-don').value.trim();
+  await taiDon();
+  nho.khoiPhucCuon(so => { if (danhSachHienTai.length && so > soDonDangHienThi) { soDonDangHienThi = so; renderDanhSachDon(); } });
 })();
 
 function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }

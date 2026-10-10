@@ -100,6 +100,22 @@ async function layTrungTamHanhDong(user) {
     loiTrackingGke,
     // Chưa ghi được sang Sheet Seller (28/09/2026) — lần ghi gần nhất theo (đơn, loại) đang lỗi; Đẩy lại chỉ superadmin.
     loiSheetSeller: require('./nhatKyDbService').layLoiDongBoDangCho().filter(d => trongPhamVi(d.STT_Key)),
+    // Y6 / L2 (11/10/2026): bỏ mục đã đánh dấu "Đã xử lý" với đúng giá trị hiện tại (C2).
+    ...layCanhBaoVanHanh(rows),
+  };
+}
+
+function layCanhBaoVanHanh(rows) {
+  const vanHanh = require('./vanHanhService');
+  const { daGiaoThanhCongGke } = require('./trackingAutoService');
+  const cauHinh = vanHanh.layCauHinh();
+  return {
+    nhanQuaLau: vanHanh.locDaXuLy('NHAN_LAU', vanHanh.donDangNhan(rows, cauHinh.y6).filter(vanHanh.canNhac), vanHanh.khoaY6, vanHanh.giaTriY6)
+      .map(d => ({ ...d, khoa: vanHanh.khoaY6(d), giaTri: vanHanh.giaTriY6(d) })),
+    vanChuyenBatThuong: vanHanh.locDaXuLy('VAN_CHUYEN',
+      vanHanh.vanChuyenBatThuong(rows, cauHinh.l2, r => daGiaoThanhCongGke(r.MA_NODE_TRACKING, r.MA_TRANG_THAI_NODE_TRACKING)), vanHanh.khoaL2, vanHanh.giaTriL2)
+      .map(d => ({ ...d, khoa: vanHanh.khoaL2(d), giaTri: vanHanh.giaTriL2(d) })),
+    nguongNhan: cauHinh.y6,
   };
 }
 

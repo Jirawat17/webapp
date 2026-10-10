@@ -90,6 +90,11 @@ const CAC_COT = [
   // MOC_VAO_TRANG_THAI (07/10/2026, theo yêu cầu người dùng — cảnh báo Vàng/Cam/Đỏ tính giờ từ "trạng thái đầu vào"): JSON
   // {trạng thái TRANG_THAI_XUONG: lúc đơn VÀO trạng thái đó lần gần nhất}. Chỉ ghiDe() tự ghi, xem capNhatMocVaoTrangThai().
   'MOC_VAO_TRANG_THAI',
+  // Y6 (11/10/2026): lúc NHẬN vẽ file / chạy máy (orderService.update đóng dấu, kể cả admin chỉ định người khác).
+  'THOI_GIAN_NHAN_VE_FILE', 'THOI_GIAN_NHAN_CHAY_MAY',
+  // L2 (11/10/2026): lúc mua tracking (TRACKING_ID đổi sang giá trị mới khác rỗng) và lúc TRANG_THAI_TRACKING ĐỔI giá trị — ghiDe() tự
+  // đóng dấu (mọi đường ghi đều qua đây). Đơn đang có tracking lúc triển khai: mốc = lúc triển khai (người dùng chốt 11/10/2026).
+  'THOI_GIAN_MUA_TRACKING', 'THOI_GIAN_DOI_TRANG_THAI_TRACKING',
   // CanhBaoDaGui: không nằm trong danh sách 31 cột người dùng liệt kê (có thể chỉ là sót khi liệt kê) —
   // nhưng rà code xác nhận đây CŨNG là cột app tự ghi (services/canhBaoJob.js, cờ chống spam Telegram),
   // không thuộc RAW/A:AM lẫn AN:BR người dùng mô tả. Xếp vào đây theo đúng tiêu chí "app tự ghi" đã
@@ -248,11 +253,37 @@ db.transaction(() => {
   const ghi = db.prepare(`UPDATE trang_thai_don SET MOC_VAO_TRANG_THAI = ? WHERE stt_key = ?`);
   for (const [k, v] of theoMa) ghi.run(v, k);
 })();
+// Khởi tạo mốc 1 LẦN khi triển khai Y6/L2 (11/10/2026), đánh dấu trong meta_he_thong (cùng giao dịch):
+//  - L2: đơn đang có tracking mà chưa có mốc -> mốc = lúc triển khai (người dùng chốt: kiện kẹt từ trước được báo sau N ngày).
+//  - Y6: đơn đang "Đang vẽ file"/"Đang chạy máy" mà chưa có mốc nhận -> lần chuyển sang trạng thái đó GẦN NHẤT trong nhật ký đổi trạng
+//    thái (có từ 03/10/2026); không có -> để trống = "không rõ lúc nhận".
+db.transaction(() => {
+  const KHOA = 'Y6_L2_DA_KHOI_TAO';
+  if (db.prepare(`SELECT 1 FROM meta_he_thong WHERE khoa = ?`).get(KHOA)) return;
+  const bayGio = require('./dateUtils').thoiGianVNISOString();
+  db.prepare(`UPDATE trang_thai_don SET THOI_GIAN_MUA_TRACKING = ? WHERE TRACKING_ID != '' AND THOI_GIAN_MUA_TRACKING = ''`).run(bayGio);
+  db.prepare(`UPDATE trang_thai_don SET THOI_GIAN_DOI_TRANG_THAI_TRACKING = ? WHERE TRACKING_ID != '' AND THOI_GIAN_DOI_TRANG_THAI_TRACKING = ''`).run(bayGio);
+  for (const [cotTT, giaTri, cotMoc] of [['TRANG_THAI_VE_FILE', 'Đang vẽ file', 'THOI_GIAN_NHAN_VE_FILE'], ['TRANG_THAI_XUONG', 'Đang chạy máy', 'THOI_GIAN_NHAN_CHAY_MAY']]) {
+    db.prepare(`UPDATE trang_thai_don SET ${cotMoc} = COALESCE((SELECT l.ThoiGian FROM lich_su_doi_trang_thai l
+        WHERE l.STT_Key = trang_thai_don.stt_key AND l.Cot = ? AND l.Sang = ? ORDER BY l.id DESC LIMIT 1), '')
+      WHERE ${cotTT} = ? AND ${cotMoc} = ''`).run(cotTT, giaTri, giaTri);
+  }
+  db.prepare(`INSERT OR REPLACE INTO meta_he_thong (khoa, gia_tri) VALUES (?, ?)`).run(KHOA, bayGio);
+})();
 // -> [{ ThoiGian, STT_Key, Cot, Tu, Sang, Nguoi }] từ mốc `tu` (ISO giờ VN), cũ trước.
 const layLichSuDoiTrangThaiTu = tu => db.prepare(`SELECT ThoiGian, STT_Key, Cot, Tu, Sang, Nguoi FROM lich_su_doi_trang_thai WHERE ThoiGian >= ? ORDER BY id`).all(tu);
 // tuyChon.nguoi: tên người thực hiện (orderService.update truyền user.ten); không truyền thì lấy NguoiCapNhatCuoi trong updates.
 function ghiDe(sttKey, updates, tuyChon = {}) {
   const key = chuanHoaKey(sttKey);
+  // L2: mốc mua tracking / đổi trạng thái tracking (chỉ khi giá trị THẬT SỰ đổi).
+  if (updates.TRACKING_ID !== undefined || updates.TRANG_THAI_TRACKING !== undefined) {
+    const cu = layTheoKey(key);
+    const bayGio = require('./dateUtils').thoiGianVNISOString();
+    const tid = updates.TRACKING_ID === undefined ? undefined : String(updates.TRACKING_ID ?? '');
+    if (tid && tid !== cu.TRACKING_ID && updates.THOI_GIAN_MUA_TRACKING === undefined) updates = { ...updates, THOI_GIAN_MUA_TRACKING: bayGio };
+    const tt = updates.TRANG_THAI_TRACKING === undefined ? undefined : String(updates.TRANG_THAI_TRACKING ?? '');
+    if (tt !== undefined && tt !== cu.TRANG_THAI_TRACKING) updates = { ...updates, THOI_GIAN_DOI_TRANG_THAI_TRACKING: bayGio };
+  }
   // Mốc đổi trạng thái: so với giá trị đang lưu (đã áp mặc định thật — '' và 'Chưa in mã' là CÙNG 1 trạng thái).
   let lichSu = [];
   if (COT_TRANG_THAI_THEO_DOI.some(c => updates[c] !== undefined)) {

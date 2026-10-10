@@ -41,7 +41,7 @@
 </div>
 
 <script src="/js/icons.js?v=105"></script>
-<script src="/js/api.js?v=118"></script>
+<script src="/js/api.js?v=119"></script>
 <script>
 function dinhDangThoiGian(iso) {
   const d = new Date(iso);
@@ -95,6 +95,48 @@ function veKhoiDonNhieuAo(loi, huy) {
   }</div>`;
 }
 
+// Y6 / L2 (11/10/2026): dòng có nút thao tác (không bọc cả dòng trong <a> như dongDon — nút trong link sẽ mở đơn khi bấm).
+function dongCoNut(sttKey, phuHtml, nutHtml) {
+  return `<div class="ttha-dong"><a class="stt" href="/order.html?stt=${encodeURIComponent(sttKey)}">${escapeHtml(sttKey)}</a>
+    <span class="phu" style="flex:1">${phuHtml}</span><span style="display:flex;gap:6px;flex-wrap:wrap">${nutHtml}</span></div>`;
+}
+const NHAN_NHAN = { VE_FILE: 'Đang vẽ file', CHAY_MAY: 'Đang chạy máy' };
+function nutDaXuLy(loai, d) {
+  return `<button type="button" class="btn-hanh-dong phu" onclick='danhDauDaXuLy(${JSON.stringify(loai)}, ${escapeHtml(JSON.stringify(d.khoa))}, ${escapeHtml(JSON.stringify(d.giaTri))}, this)'>Đã xử lý</button>`;
+}
+function veKhoiNhanQuaLau(ds) {
+  if (ds.length === 0) return khoiRong('Không có đơn nào nhận quá lâu.');
+  return `<div class="ttha-danh-sach">${ds.map(d => dongCoNut(d.sttKey,
+    `${NHAN_NHAN[d.loai]} · ${escapeHtml(d.nguoi || '?')} · ${d.soGio === null ? 'không rõ lúc nhận' : `đã nhận ${Math.floor(d.soGio)} giờ`}`,
+    `<button type="button" class="btn-hanh-dong" onclick='thuHoiDon(${escapeHtml(JSON.stringify(d.sttKey))}, ${JSON.stringify(d.loai)}, this)'>Thu hồi</button>${nutDaXuLy('NHAN_LAU', d)}`)).join('')}</div>`;
+}
+const NHAN_QUY_TAC = { R1: 'Chưa được quét nhận', R2: 'Đứng yên', R3: 'Trạng thái bất thường' };
+function veKhoiVanChuyen(ds) {
+  if (ds.length === 0) return khoiRong('Không có kiện nào bất thường.');
+  return `<div class="ttha-danh-sach">${ds.map(d => dongCoNut(d.sttKey,
+    `${escapeHtml(d.trackingId)} · ${d.quyTac.map(q => NHAN_QUY_TAC[q.ma] + (q.soNgay !== null ? ` ${q.soNgay} ngày` : '')).join(', ')}${d.trangThai ? ' · ' + escapeHtml(d.trangThai) : ''}`,
+    nutDaXuLy('VAN_CHUYEN', d))).join('')}</div>`;
+}
+async function danhDauDaXuLy(loai, khoa, giaTri, nut) {
+  nut.disabled = true;
+  try { await apiFetch('/trung-tam-hanh-dong/da-xu-ly', { method: 'POST', body: JSON.stringify({ loai, khoa, giaTri }) }); await taiTrungTamHanhDong(); }
+  catch (e) { alert('Lỗi: ' + e.message); nut.disabled = false; }
+}
+// Thu hồi (chỉ admin bấm, người dùng chốt): vẽ file -> "Chưa vẽ file"; chạy máy -> "ĐÃ SẴN SÀNG CHẠY MÁY". Qua route đổi trạng thái sẵn có
+// (đủ mọi kiểm tra hiện tại); chiKhiDangLa = chỉ đổi nếu đơn VẪN đang ở trạng thái đã nhận. Người nhận cũ giữ làm dấu vết.
+const THU_HOI = { VE_FILE: ['TRANG_THAI_VE_FILE', 'Đang vẽ file', 'Chưa vẽ file'], CHAY_MAY: ['TRANG_THAI_XUONG', 'Đang chạy máy', 'ĐÃ SẴN SÀNG CHẠY MÁY'] };
+async function thuHoiDon(sttKey, loai, nut) {
+  const [cot, dangLa, veTrangThai] = THU_HOI[loai];
+  if (!confirm(`Thu hồi đơn ${sttKey}: "${dangLa}" -> "${veTrangThai}"?`)) return;
+  nut.disabled = true;
+  try {
+    const kq = await apiFetch('/orders/chuyen-trang-thai-hang-loat', { method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], cot, trangThaiMoi: veTrangThai, chiKhiDangLa: dangLa }) });
+    if (kq.loi && kq.loi.length) alert('Không thu hồi được: ' + kq.loi.map(l => l.lyDo).join('; '));
+    else if (kq.boQua && kq.boQua.length) alert('Đơn không còn ở "' + dangLa + '" — bỏ qua.');
+    await taiTrungTamHanhDong();
+  } catch (e) { alert('Lỗi: ' + e.message); nut.disabled = false; }
+}
+
 let nguoiDung; // người đang đăng nhập — nút Đẩy lại chỉ cho superadmin
 async function taiTrungTamHanhDong() {
   const khu = document.getElementById('khu-noi-dung');
@@ -121,6 +163,16 @@ async function taiTrungTamHanhDong() {
     <div class="ttha-khoi">
       <h3>Đơn ưu tiên chưa xử lý <span class="ttha-dem">${kq.uuTienChuaXuLy.length}</span></h3>
       ${veKhoiUuTien(kq.uuTienChuaXuLy)}
+    </div>
+    <div class="ttha-khoi">
+      <h3>Đơn nhận quá lâu <span class="ttha-dem">${kq.nhanQuaLau.filter(d => d.quaHan).length}</span>${(n => n ? ` <span style="font-size:0.85rem;font-weight:400;color:var(--color-text-muted)">+ ${n} không rõ lúc nhận</span>` : '')(kq.nhanQuaLau.filter(d => d.khongRo).length)}</h3>
+      <p style="color:var(--color-text-muted);margin-top:-4px">Vẽ file quá ${kq.nguongNhan.gioVe} giờ${kq.nguongNhan.batVe ? '' : ' (đang tắt)'}, chạy máy quá ${kq.nguongNhan.gioChay} giờ${kq.nguongNhan.batChay ? '' : ' (đang tắt)'} — chỉnh ở Settings. Đơn được nhận lại thì nhắc hiện lại.</p>
+      ${veKhoiNhanQuaLau(kq.nhanQuaLau)}
+    </div>
+    <div class="ttha-khoi">
+      <h3>Vận chuyển bất thường <span class="ttha-dem">${kq.vanChuyenBatThuong.length}</span></h3>
+      <p style="color:var(--color-text-muted);margin-top:-4px">Đã "Đã xử lý" mà trạng thái tracking đổi tiếp và vẫn bất thường thì hiện lại.</p>
+      ${veKhoiVanChuyen(kq.vanChuyenBatThuong)}
     </div>
     <div class="ttha-khoi">
       <h3>Lỗi tự động mua tracking GKE (48 giờ gần đây) <span class="ttha-dem">${kq.loiTrackingGke.length}</span></h3>

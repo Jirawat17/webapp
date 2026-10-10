@@ -145,6 +145,25 @@ function tomTatChoDon(sttKey, nhom) {
   };
 }
 
+// F1 (11/10/2026, theo yêu cầu người dùng — spec 2026-10-04-21-tinh-nang-design.md mục 6): quét 1 áo của đơn nhiều áo sang
+// "Đã sản xuất" / "ĐÃ DÁN TEM" mà áo khác trong nhóm còn đứng TRƯỚC trạng thái đó -> cảnh báo (KHÔNG chặn lượt quét).
+// Áo CANCELLED/REFUNDED bỏ khỏi nhóm; áo ngoài pipeline (LỖI SẢN XUẤT CẦN LÀM LẠI) hoặc trống = chưa đủ (người dùng chốt).
+// -> null | { goc, tong, thanhVien: [{ sttKey, trangThai, du }], chuaDu: [sttKey] }
+const TRANG_THAI_CANH_BAO_NHOM = ['Đã sản xuất', 'ĐÃ DÁN TEM'];
+const TRANG_THAI_BO_KHOI_NHOM = ['CANCELLED_Đã hủy', 'REFUNDED_Hoàn đơn'];
+function canhBaoNhomChuaDu(sttKey, trangThaiDich, nhom) {
+  if (!nhom || !TRANG_THAI_CANH_BAO_NHOM.includes(trangThaiDich)) return null;
+  const idxDich = chiSoTinhTrang(trangThaiDich);
+  const ds = nhom.thanhVien.filter(r => !TRANG_THAI_BO_KHOI_NHOM.includes(r.TRANG_THAI_XUONG));
+  const du = r => r.STT_Key === sttKey || (chiSoTinhTrang(r.TRANG_THAI_XUONG) ?? -1) >= idxDich;
+  const chuaDu = ds.filter(r => !du(r)).map(r => r.STT_Key);
+  if (!chuaDu.length) return null;
+  return {
+    goc: nhom.goc, tong: ds.length, chuaDu,
+    thanhVien: ds.map(r => ({ sttKey: r.STT_Key, trangThai: r.STT_Key === sttKey ? trangThaiDich : (r.TRANG_THAI_XUONG || ''), du: du(r) })),
+  };
+}
+
 // Lỗi dữ liệu cho TOÀN BỘ đơn — dùng cho Trung tâm hành động. Gồm cả lỗi của từng nhóm (lỗi chặn +
 // cảnh báo) lẫn 2 trường hợp KHÔNG tự tạo được nhóm: đơn mang hậu tố của 1 gốc nhưng OrderID khác/trống.
 function danhSachLoiDuLieu(rows) {
@@ -180,5 +199,6 @@ function danhSachLoiDuLieu(rows) {
 }
 
 module.exports = {
+  canhBaoNhomChuaDu, TRANG_THAI_CANH_BAO_NHOM,
   TRANG_THAI_HUY, cacDonChuaSanXuat, phanTichStt, layTeam, khoaNhom, xayDungBanDoNhom, layNhomCuaDon, tomTatChoDon, danhSachLoiDuLieu,
 };

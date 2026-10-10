@@ -51,6 +51,8 @@ app.use('/api/logs', require('./routes/logs'));
 app.use('/api/qc', require('./routes/qc')); // AI QC (30/09/2026) — CHỈ superadmin
 app.use('/api/notes', require('./routes/notes')); // Notes (02/10/2026) — CHỈ superadmin
 app.use('/api/thu-vien', require('./routes/thuVien')); // Tìm ảnh — thư viện thiết kế thêu (03/10/2026)
+app.use('/api/van-hanh', require('./routes/vanHanh')); // Cấu hình cảnh báo vận hành Y6/L2 + Telegram vận hành (11/10/2026) — CHỈ superadmin
+app.use('/api/bao-loi', require('./routes/baoLoi')); // Y20 Báo lỗi app (11/10/2026)
 
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -82,6 +84,8 @@ require('./services/qc/qcTelegramService').batDauLichTelegramQc();
 require('./services/thuVien/xuLyService').batDauVongXuLy();
 // Giai đoạn 3: quét DUONG_DAN_URL mỗi 10 phút — TẮT theo mặc định, superadmin bật ở menu Tìm ảnh (services/thuVien/dongBoSheetService.js).
 require('./services/thuVien/dongBoSheetService').batDauLichQuetSheet();
+require('./services/thuVien/goiYEmbService').batDauLichGoiY(); // A1 (11/10/2026): gợi ý "Có EMB sẵn" mỗi 10 phút
+require('./services/vanHanhService').batDauLichVanHanh(); // Y6 + L2 (11/10/2026): tổng hợp Telegram vận hành 8 giờ sáng
 
 // Bật lịch backup SQLite (bổ sung 22/09/2026, theo yêu cầu người dùng — data/ trước đây không có
 // cơ chế backup nào, xem services/backupDbService.js).

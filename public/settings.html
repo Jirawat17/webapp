@@ -67,6 +67,29 @@
   <button type="button" class="btn-hanh-dong" id="btn-luu-canh-bao" style="margin-top:var(--space-3)">Lưu</button>
   <p id="thong-bao-canh-bao" style="display:none"></p>
 
+  <!-- Cảnh báo vận hành (11/10/2026, theo yêu cầu người dùng): Telegram vận hành (C3), Y6 đơn nhận quá lâu, L2 vận chuyển bất thường. -->
+  <h3 style="margin-top:var(--space-6)">Cảnh báo vận hành</h3>
+  <p>Hiện ở Trung tâm hành động; nếu có chat Telegram vận hành thì gửi 1 tin tổng hợp lúc 8 giờ sáng (báo lỗi app gửi ngay).</p>
+  <div class="bao-cao-form">
+    <div class="truong" style="flex:1;min-width:240px"><label for="vh-telegram">Chat Telegram vận hành (để trống = không gửi)</label><input id="vh-telegram" placeholder="vd -1001234567890"></div>
+    <button type="button" class="btn-hanh-dong phu" id="btn-vh-gui-thu">Gửi thử</button>
+  </div>
+  <h4>Đơn nhận quá lâu</h4>
+  <div class="bao-cao-form">
+    <div class="truong"><label><input type="checkbox" id="vh-bat-ve"> Nhắc "Đang vẽ file" quá (giờ)</label><input type="number" id="vh-gio-ve" min="1" step="1" style="width:7em"></div>
+    <div class="truong"><label><input type="checkbox" id="vh-bat-chay"> Nhắc "Đang chạy máy" quá (giờ)</label><input type="number" id="vh-gio-chay" min="1" step="1" style="width:7em"></div>
+  </div>
+  <h4>Vận chuyển bất thường</h4>
+  <div class="bao-cao-form">
+    <div class="truong"><label><input type="checkbox" id="vh-bat-r1"> Đã mua tracking mà GKE chưa có sự kiện quá (ngày)</label><input type="number" id="vh-ngay-r1" min="1" step="1" style="width:7em"></div>
+    <div class="truong"><label><input type="checkbox" id="vh-bat-r2"> Trạng thái tracking không đổi quá (ngày)</label><input type="number" id="vh-ngay-r2" min="1" step="1" style="width:7em"></div>
+  </div>
+  <p style="margin-bottom:4px"><label><input type="checkbox" id="vh-bat-r3"> Cảnh báo khi trạng thái tracking là một trong các giá trị được tích dưới đây</label>
+    <span style="color:var(--color-text-muted)">(lấy từ dữ liệu thật đang có, kèm số đơn — app không cài sẵn mã GKE nào)</span></p>
+  <div id="vh-ds-r3" style="display:flex;flex-wrap:wrap;gap:6px 16px;max-height:240px;overflow:auto;padding:8px;border:1px solid var(--color-border);border-radius:var(--radius-md)"></div>
+  <button type="button" class="btn-hanh-dong" id="btn-luu-van-hanh" style="margin-top:var(--space-3)">Lưu</button>
+  <p id="thong-bao-van-hanh" style="display:none"></p>
+
   <!-- Tỷ lệ nén ảnh (bổ sung 23/09/2026, theo yêu cầu người dùng) — CHỈ áp dụng cho 2 chế độ chụp ảnh
        ở scan.html (Chụp ảnh đã sản xuất / Chụp ảnh ĐÃ DÁN TEM), không ảnh hưởng upload ảnh ở order.html
        (xem public/js/api.js#nenAnhTruocKhiTaiLen). -->
@@ -218,7 +241,7 @@
 </div>
 
 <script src="/js/icons.js?v=105"></script>
-<script src="/js/api.js?v=118"></script>
+<script src="/js/api.js?v=119"></script>
 <script>
 (async () => {
   const user = await requireLoginOrRedirect();
@@ -233,6 +256,9 @@
   renderBangMau();
   renderCongTacCheDoToi();
   await taiNguongCanhBao();
+  await taiCauHinhVanHanh();
+  document.getElementById('btn-luu-van-hanh').onclick = luuCauHinhVanHanh;
+  document.getElementById('btn-vh-gui-thu').onclick = guiThuVanHanh;
   await taiCauHinhNenAnh();
   await taiMauXuong(); await taiTaiKhoanGke(); await taiTeamXuong(); await taiNhomHang();
   document.getElementById('btn-them-loai-hang').onclick = themLoaiHangMoi;
@@ -675,6 +701,42 @@ async function ganTaiKhoanGke(xuong, taiKhoanId) {
 
 // 07/10/2026: mỗi mức = bật/tắt + đầu vào ('' = từ ngày lên đơn) + đầu ra + số ngày. Server kiểm tra lại (routes/canhBao.js).
 const MUC_CANH_BAO_CAI_DAT = [['VANG', 'Vàng'], ['CAM', 'Cam'], ['DO', 'Đỏ']];
+// Cảnh báo vận hành (11/10/2026) — routes/vanHanh.js. R3: danh sách = trạng thái thật đang có + các giá trị đã tích trước đó (dù hiện 0 đơn).
+async function taiCauHinhVanHanh() {
+  const { cauHinh: c, trangThaiTracking } = await apiFetch('/van-hanh/cau-hinh');
+  document.getElementById('vh-telegram').value = c.telegramChat;
+  document.getElementById('vh-bat-ve').checked = c.y6.batVe; document.getElementById('vh-gio-ve').value = c.y6.gioVe;
+  document.getElementById('vh-bat-chay').checked = c.y6.batChay; document.getElementById('vh-gio-chay').value = c.y6.gioChay;
+  document.getElementById('vh-bat-r1').checked = c.l2.batR1; document.getElementById('vh-ngay-r1').value = c.l2.ngayR1;
+  document.getElementById('vh-bat-r2').checked = c.l2.batR2; document.getElementById('vh-ngay-r2').value = c.l2.ngayR2;
+  document.getElementById('vh-bat-r3').checked = c.l2.batR3;
+  const ds = [...trangThaiTracking];
+  for (const g of c.l2.trangThaiR3) if (!ds.some(x => x.giaTri === g)) ds.push({ giaTri: g, soDon: 0 });
+  document.getElementById('vh-ds-r3').innerHTML = ds.length ? ds.map(x => `<label style="font-weight:400"><input type="checkbox" class="vh-r3" value="${escapeHtml(x.giaTri)}" ${c.l2.trangThaiR3.includes(x.giaTri) ? 'checked' : ''}> ${escapeHtml(x.giaTri)} <span style="color:var(--color-text-muted)">(${x.soDon})</span></label>`).join('')
+    : '<span style="color:var(--color-text-muted)">Chưa có đơn nào có trạng thái tracking.</span>';
+}
+function thongBaoVanHanh(chu, loi) {
+  const tb = document.getElementById('thong-bao-van-hanh');
+  tb.style.display = 'block'; tb.style.color = loi ? 'var(--color-primary)' : '#16a34a'; tb.textContent = chu;
+}
+async function luuCauHinhVanHanh() {
+  const so = id => Number(document.getElementById(id).value);
+  const bat = id => document.getElementById(id).checked;
+  try {
+    await apiFetch('/van-hanh/cau-hinh', { method: 'POST', body: JSON.stringify({
+      telegramChat: document.getElementById('vh-telegram').value.trim(),
+      y6: { batVe: bat('vh-bat-ve'), gioVe: so('vh-gio-ve'), batChay: bat('vh-bat-chay'), gioChay: so('vh-gio-chay') },
+      l2: { batR1: bat('vh-bat-r1'), ngayR1: so('vh-ngay-r1'), batR2: bat('vh-bat-r2'), ngayR2: so('vh-ngay-r2'), batR3: bat('vh-bat-r3'),
+        trangThaiR3: [...document.querySelectorAll('.vh-r3:checked')].map(x => x.value) },
+    }) });
+    thongBaoVanHanh('Đã lưu.');
+  } catch (e) { thongBaoVanHanh('Lỗi: ' + e.message, true); }
+}
+async function guiThuVanHanh() {
+  try { await apiFetch('/van-hanh/gui-thu', { method: 'POST' }); thongBaoVanHanh('Đã gửi tin thử — kiểm tra chat Telegram (nhớ bấm Lưu trước nếu vừa đổi Chat ID).'); }
+  catch (e) { thongBaoVanHanh('Lỗi: ' + e.message, true); }
+}
+
 async function taiNguongCanhBao() {
   const { cauHinh, trangThai } = await apiFetch('/canh-bao/nguong');
   const tuyChon = (chon, coNgayLenDon) => (coNgayLenDon ? [['', '(Từ ngày lên đơn)']] : []).concat(trangThai.map(t => [t, t]))

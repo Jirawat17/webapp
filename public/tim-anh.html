@@ -10,6 +10,8 @@
 /* Tìm ảnh (03/10/2026) — thư viện thiết kế thêu. GĐ1: hàng chờ, nhập Excel, cần xử lý. GĐ2: tìm kiếm, tải lên thư viện. */
 .ta-khoi { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-4); margin-bottom: var(--space-4); }
 .ta-khoi h3 { margin-top: 0; }
+/* A3 (11/10/2026): kéo ảnh qua khối "Tìm thiết kế" -> viền nét đứt. */
+#ta-tim.ta-keo-qua { outline: 3px dashed var(--color-primary); outline-offset: -6px; }
 .ta-so { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); margin: var(--space-2) 0; }
 .ta-so div { min-width: 110px; }
 .ta-so b { display: block; font-size: 1.25rem; }
@@ -73,7 +75,14 @@
     <div class="ta-hang">
       <div class="truong"><label for="ta-anh-tim">Hoặc tải 1 ảnh PNG/JPG lên để tìm (ảnh này KHÔNG được lưu vào thư viện)</label><input type="file" id="ta-anh-tim" accept="image/png,image/jpeg"></div>
       <button type="button" class="btn-hanh-dong" id="ta-nut-tim-anh" onclick="timTheoAnh()">TÌM THIẾT KẾ TƯƠNG TỰ</button>
+      <button type="button" class="btn-hanh-dong phu" onclick="document.getElementById('ta-chup-anh').click()">Chụp ảnh</button>
+      <input type="file" id="ta-chup-anh" accept="image/*" capture="environment" hidden onchange="if (this.files[0]) timTheoAnh(this.files[0]); this.value = ''">
     </div>
+    <div class="ta-hang">
+      <div class="truong" style="flex:1;min-width:240px"><label for="ta-link-tim">Hoặc dán link ảnh (Drive, Gemini, URL)</label><input type="url" id="ta-link-tim" placeholder="https://..." autocomplete="off" onkeydown="if (event.key === 'Enter') timTheoLink()"></div>
+      <button type="button" class="btn-hanh-dong" id="ta-nut-tim-link" onclick="timTheoLink()">Tìm theo link</button>
+    </div>
+    <p class="ta-muted" style="margin:0">Mẹo: <b>Ctrl+V</b> để dán ảnh vừa chụp màn hình/sao chép (khi không gõ trong ô chữ), hoặc <b>kéo thả</b> ảnh vào khung này.</p>
     <p class="ta-muted" style="margin:0">Khi tìm theo ảnh mà ô "Mã đơn" có mã, mã đó là <b>đơn mới đang vẽ</b>: bỏ khỏi kết quả và dùng để ghi quyết định. Điểm % chỉ để tham khảo. Khi superadmin đã chọn ngưỡng (đo trên ảnh thật ở mục "Đo ngưỡng"), kết quả được gắn nhóm; trước đó chỉ <b>Trùng file</b> (giống hệt từng byte) là chắc chắn.</p>
     <div id="ta-ket-qua-tim"></div>
   </div>
@@ -152,7 +161,7 @@
 </div>
 
 <script src="/js/icons.js?v=105"></script>
-<script src="/js/api.js?v=118"></script>
+<script src="/js/api.js?v=119"></script>
 <script>
 const MB = b => (b < 1048576 ? Math.round(b / 1024) + ' KB' : (b / 1048576).toFixed(1) + ' MB');
 const GB = b => (b / 1073741824).toFixed(1) + ' GB';
@@ -352,25 +361,77 @@ async function traTheoMa(ma) {
   if (d.png.length) veKetQuaTim();
 }
 
-async function timTheoAnh() {
+// A3 (11/10/2026): `tep` = ảnh dán (Ctrl+V) / kéo thả / chụp; không truyền thì lấy ô chọn file như cũ. Cùng route tim-theo-anh.
+async function timTheoAnh(tep) {
   const input = document.getElementById('ta-anh-tim');
   const el = document.getElementById('ta-ket-qua-tim');
-  if (!input.files[0]) { el.innerHTML = '<p class="ta-chua">Chọn 1 ảnh trước.</p>'; return; }
+  const file = tep || input.files[0];
+  if (!file) { el.innerHTML = '<p class="ta-chua">Chọn 1 ảnh trước.</p>'; return; }
   const nut = document.getElementById('ta-nut-tim-anh');
   nut.disabled = true; el.innerHTML = '<p>Đang tính và so sánh...</p>';
   const fd = new FormData();
-  fd.append('anh', input.files[0], input.files[0].name);
+  fd.append('anh', file, file.name || 'anh-dan.png');
   const sttKeyMoi = document.getElementById('ta-ma').value.trim();
   if (sttKeyMoi) fd.append('sttKeyMoi', sttKeyMoi);
   let d;
   try { d = await apiFetch('/thu-vien/tim-theo-anh', { method: 'POST', body: fd, headers: {} }); } catch (e) { el.innerHTML = `<p class="ta-chua">${escapeHtml(e.message)}</p>`; nut.disabled = false; return; }
   nut.disabled = false;
-  kqTim = { tuongTu: d.tuongTu, sttKeyMoi: d.sttKeyMoi, quyetDinh: d.quyetDinh, trang: 0, nhieuMau: false, nguong: d.nguong };
-  el.innerHTML = `<h4 style="margin-bottom:0">Kết quả cho ảnh <i>${escapeHtml(input.files[0].name)}</i>${d.sttKeyMoi ? ` — đơn mới <b>${escapeHtml(d.sttKeyMoi)}</b>` : ''} <span class="ta-muted">(so ${d.tongSoSanh} file)</span></h4>
+  veKetQuaTimMoi(d, `ảnh <i>${escapeHtml(tep ? (tep.name && tep.name !== 'image.png' ? tep.name : 'vừa dán/chụp') : file.name)}</i>`);
+}
+
+async function timTheoLink() {
+  const url = document.getElementById('ta-link-tim').value.trim();
+  const el = document.getElementById('ta-ket-qua-tim');
+  if (!url) { el.innerHTML = '<p class="ta-chua">Dán 1 link trước.</p>'; return; }
+  const nut = document.getElementById('ta-nut-tim-link');
+  nut.disabled = true; el.innerHTML = '<p>Đang tải ảnh từ link và so sánh (link Gemini/thư mục Drive có thể mất tới 1 phút)...</p>';
+  let d;
+  try {
+    d = await apiFetch('/thu-vien/tim-theo-link', { method: 'POST', body: JSON.stringify({ url, sttKeyMoi: document.getElementById('ta-ma').value.trim() }) });
+  } catch (e) { el.innerHTML = `<p class="ta-chua">${escapeHtml(e.message)}</p>`; nut.disabled = false; return; }
+  nut.disabled = false;
+  veKetQuaTimMoi(d, `link${d.soAnhTuLink > 1 ? ` (${d.soAnhTuLink} ảnh)` : ''}`,
+    d.boQua && d.boQua.length ? `<p class="ta-muted">Bỏ qua: ${d.boQua.map(escapeHtml).join('; ')}</p>` : '');
+}
+
+function veKetQuaTimMoi(d, moTaNguon, them = '') {
+  const el = document.getElementById('ta-ket-qua-tim');
+  kqTim = { tuongTu: d.tuongTu, sttKeyMoi: d.sttKeyMoi, quyetDinh: d.quyetDinh, trang: 0, nhieuMau: (d.soAnhTuLink || 1) > 1, nguong: d.nguong };
+  el.innerHTML = `<h4 style="margin-bottom:0">Kết quả cho ${moTaNguon}${d.sttKeyMoi ? ` — đơn mới <b>${escapeHtml(d.sttKeyMoi)}</b>` : ''} <span class="ta-muted">(so ${d.tongSoSanh} file)</span></h4>
+    ${them}
     ${d.khongTinhDuocHash ? '<p class="ta-chua">Không tính được đặc trưng hình ảnh (ảnh trống/hỏng) — chỉ so được trùng file.</p>' : ''}
     <div id="ta-luoi-kq"></div>`;
   veKetQuaTim();
 }
+
+// Dán ảnh (Ctrl+V) ở bất kỳ đâu trên trang — trừ khi đang gõ trong ô chữ; kéo thả ảnh vào khối "Tìm thiết kế".
+// Chỉ khi khối tìm đang hiện (vai trò được dùng). Lấy ẢNH ĐẦU TIÊN.
+const anhDauTien = files => [...(files || [])].find(f => /^image\//.test(f.type));
+document.addEventListener('paste', e => {
+  const khoi = document.getElementById('ta-tim');
+  if (!khoi || khoi.style.display === 'none') return;
+  const t = e.target;
+  if (t && (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && !['file', 'checkbox', 'radio', 'button'].includes(t.type)) || t.isContentEditable)) return;
+  const anh = anhDauTien(e.clipboardData && e.clipboardData.files);
+  if (!anh) return;
+  e.preventDefault();
+  khoi.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  timTheoAnh(anh);
+});
+(() => {
+  const khoi = document.getElementById('ta-tim');
+  if (!khoi) return;
+  khoi.addEventListener('dragover', e => { if ([...e.dataTransfer.types].includes('Files')) { e.preventDefault(); khoi.classList.add('ta-keo-qua'); } });
+  khoi.addEventListener('dragleave', e => { if (!khoi.contains(e.relatedTarget)) khoi.classList.remove('ta-keo-qua'); });
+  khoi.addEventListener('drop', e => {
+    khoi.classList.remove('ta-keo-qua');
+    if (![...e.dataTransfer.types].includes('Files')) return;
+    e.preventDefault(); // không để trình duyệt tự mở file vừa thả (rời khỏi trang)
+    const anh = anhDauTien(e.dataTransfer.files);
+    if (anh) timTheoAnh(anh);
+    else document.getElementById('ta-ket-qua-tim').innerHTML = '<p class="ta-chua">Chỉ thả được file ảnh (PNG/JPG).</p>';
+  });
+})();
 
 function veKetQuaTim() {
   const el = document.getElementById('ta-luoi-kq');

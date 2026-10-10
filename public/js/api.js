@@ -76,6 +76,13 @@ function urlAnhHienThiList(rawUrl, chieuRong = CHIEU_RONG_ANH_THU_NHO) {
   return laThuMucDrive ? [goc + '&index=0', goc + '&index=1'] : [goc + '&index=0'];
 }
 
+// Y20 (11/10/2026): ghi lại 20 lỗi JavaScript + 10 lần gọi API lỗi gần nhất kể từ lúc mở trang — gửi kèm khi nhân viên bấm "Báo lỗi".
+const _loiJsGanDay = [], _loiApiGanDay = [];
+const _ghiVaoDs = (ds, x, toiDa) => { ds.push({ luc: new Date().toISOString(), ...x }); if (ds.length > toiDa) ds.shift(); };
+// Cắt ngắn từng dòng để 20 + 10 lỗi luôn nằm gọn trong giới hạn gửi báo lỗi (routes/baoLoi.js, 200KB).
+addEventListener('error', e => _ghiVaoDs(_loiJsGanDay, { loi: String(e.message || 'Lỗi').slice(0, 1000), noi: `${e.filename || ''}:${e.lineno || ''}:${e.colno || ''}`.slice(0, 300) }, 20));
+addEventListener('unhandledrejection', e => _ghiVaoDs(_loiJsGanDay, { loi: 'Promise: ' + String((e.reason && (e.reason.stack || e.reason.message)) || e.reason).slice(0, 500) }, 20));
+
 async function apiFetch(url, options = {}) {
   const res = await fetch(API + url, {
     credentials: 'include',
@@ -83,8 +90,97 @@ async function apiFetch(url, options = {}) {
     ...options,
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || 'Có lỗi xảy ra');
+  if (!res.ok) {
+    if (url !== '/bao-loi') _ghiVaoDs(_loiApiGanDay, { url: String(url).slice(0, 300), ma: res.status, loi: String(data.error || '').slice(0, 300) }, 10);
+    throw new Error(data.error || 'Có lỗi xảy ra');
+  }
   return data;
+}
+
+// Y20 "Báo lỗi app" (11/10/2026, theo yêu cầu người dùng): khung báo lỗi mở từ nút trên thanh menu (mọi vai trò). Mô tả bắt buộc; ảnh
+// màn hình tuỳ chọn (dán Ctrl+V, chọn file, chụp trên điện thoại); tự gửi kèm trang, trình duyệt, cỡ màn hình, lỗi JS/API gần nhất.
+let _anhBaoLoi = null;
+const NHAN_TRANG_THAI_BAO_LOI = { MOI: 'Mới', DANG_XU_LY: 'Đang xử lý', DA_XONG: 'Đã xong' };
+function moBaoLoi() {
+  let hop = document.getElementById('hop-bao-loi');
+  if (!hop) {
+    hop = document.createElement('dialog');
+    hop.id = 'hop-bao-loi';
+    hop.style.cssText = 'width:min(560px,calc(100vw - 32px));max-height:calc(100vh - 32px);padding:16px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface);color:var(--color-text)';
+    hop.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3 style="margin:0">Báo lỗi app</h3>
+        <button type="button" class="btn-hanh-dong phu" onclick="document.getElementById('hop-bao-loi').close()">Đóng</button></div>
+      <p style="margin:6px 0;color:var(--color-text-muted);font-size:0.85rem">Trang đang mở, trình duyệt và lỗi kỹ thuật gần nhất được gửi kèm tự động.</p>
+      <label for="bao-loi-mo-ta" style="font-weight:700">Mô tả lỗi (bắt buộc)</label>
+      <textarea id="bao-loi-mo-ta" rows="4" maxlength="4000" style="width:100%;margin:4px 0 8px" placeholder="Bạn đang làm gì thì gặp lỗi? Lỗi hiện ra thế nào?"></textarea>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button type="button" class="btn-hanh-dong phu" onclick="document.getElementById('bao-loi-chon-anh').click()">Chọn ảnh</button>
+        <button type="button" class="btn-hanh-dong phu" onclick="document.getElementById('bao-loi-chup-anh').click()">Chụp ảnh</button>
+        <span style="font-size:0.85rem;color:var(--color-text-muted)">hoặc Ctrl+V để dán ảnh chụp màn hình</span>
+        <input type="file" id="bao-loi-chon-anh" accept="image/png,image/jpeg" hidden onchange="datAnhBaoLoi(this.files[0]); this.value = ''">
+        <input type="file" id="bao-loi-chup-anh" accept="image/*" capture="environment" hidden onchange="datAnhBaoLoi(this.files[0]); this.value = ''">
+      </div>
+      <div id="bao-loi-xem-anh" style="margin:8px 0"></div>
+      <button type="button" class="btn-hanh-dong" id="bao-loi-gui" onclick="guiBaoLoi()">Gửi báo lỗi</button>
+      <p id="bao-loi-thong-bao" role="status" style="margin:8px 0 0"></p>
+      <h4 style="margin:16px 0 6px">Báo lỗi gần đây của bạn</h4>
+      <div id="bao-loi-cua-toi" style="font-size:0.85rem"></div>`;
+    hop.addEventListener('paste', e => {
+      const anh = [...((e.clipboardData && e.clipboardData.files) || [])].find(f => /^image\//.test(f.type));
+      if (anh) { e.preventDefault(); datAnhBaoLoi(anh); }
+    });
+    document.body.appendChild(hop);
+  }
+  document.getElementById('bao-loi-thong-bao').textContent = '';
+  hop.showModal();
+  taiBaoLoiCuaToi();
+}
+function datAnhBaoLoi(file) {
+  const el = document.getElementById('bao-loi-xem-anh');
+  _anhBaoLoi = file && /^image\/(png|jpeg)$/.test(file.type) ? file : null;
+  if (file && !_anhBaoLoi) { el.innerHTML = '<span style="color:var(--color-danger-text)">Chỉ nhận ảnh PNG hoặc JPEG.</span>'; return; }
+  if (_anhBaoLoi && _anhBaoLoi.size > 5 * 1024 * 1024) { _anhBaoLoi = null; el.innerHTML = '<span style="color:var(--color-danger-text)">Ảnh quá lớn (tối đa 5MB).</span>'; return; }
+  el.innerHTML = _anhBaoLoi ? `<img src="${URL.createObjectURL(_anhBaoLoi)}" alt="" style="max-width:100%;max-height:200px;border-radius:6px;display:block">
+    <button type="button" class="btn-hanh-dong phu" style="margin-top:4px" onclick="datAnhBaoLoi(null)">Bỏ ảnh</button>` : '';
+}
+async function guiBaoLoi() {
+  const moTa = document.getElementById('bao-loi-mo-ta').value.trim();
+  const tb = document.getElementById('bao-loi-thong-bao');
+  if (!moTa) { tb.style.color = 'var(--color-danger-text)'; tb.textContent = 'Hãy mô tả lỗi trước khi gửi.'; return; }
+  const nut = document.getElementById('bao-loi-gui');
+  nut.disabled = true;
+  const fd = new FormData();
+  fd.append('moTa', moTa);
+  // Kích thước luôn nhỏ (< ~40KB): từng lỗi đã cắt ngắn lúc ghi (_ghiVaoDs ở trên), server còn tự giới hạn từng trường (routes/baoLoi.js).
+  fd.append('thongTin', JSON.stringify({
+    trang: location.pathname + location.search, gio: new Date().toISOString(), trinhDuyet: navigator.userAgent,
+    manHinh: `${innerWidth}x${innerHeight} (màn hình ${screen.width}x${screen.height}, tỉ lệ ${devicePixelRatio})`,
+    loiJs: _loiJsGanDay, loiApi: _loiApiGanDay,
+  }));
+  if (_anhBaoLoi) fd.append('anh', _anhBaoLoi, _anhBaoLoi.name || 'anh.png');
+  try {
+    const kq = await apiFetch('/bao-loi', { method: 'POST', body: fd, headers: {} });
+    tb.style.color = 'var(--color-success-text)';
+    tb.textContent = `Đã gửi báo lỗi #${kq.id}. Cảm ơn bạn!${kq.loiAnh ? ' (' + kq.loiAnh + ')' : ''}`;
+    document.getElementById('bao-loi-mo-ta').value = '';
+    datAnhBaoLoi(null);
+    taiBaoLoiCuaToi();
+  } catch (e) {
+    tb.style.color = 'var(--color-danger-text)';
+    tb.textContent = 'Lỗi: ' + e.message;
+  } finally {
+    nut.disabled = false;
+  }
+}
+async function taiBaoLoiCuaToi() {
+  const el = document.getElementById('bao-loi-cua-toi');
+  try {
+    const ds = await apiFetch('/bao-loi/cua-toi');
+    el.innerHTML = ds.length ? ds.map(b => `<div style="padding:6px 0;border-top:1px solid var(--color-border)">
+        <b>#${b.id}</b> · ${escapeHtml(String(b.luc).slice(0, 16).replace('T', ' '))} · <b>${escapeHtml(NHAN_TRANG_THAI_BAO_LOI[b.trangThai] || b.trangThai)}</b>
+        <div>${escapeHtml(b.moTa.slice(0, 200))}</div>${b.ghiChu ? `<div style="color:var(--color-text-muted)">Phản hồi: ${escapeHtml(b.ghiChu)}</div>` : ''}</div>`).join('')
+      : '<span style="color:var(--color-text-muted)">Chưa có.</span>';
+  } catch (e) { el.textContent = ''; }
 }
 
 // Dùng ở đầu mỗi trang cần đăng nhập — tự chuyển về trang login nếu chưa có session
@@ -294,13 +390,15 @@ function renderNav(user, active) {
   // right (bản trong .app-header, ẩn/hiện theo chính .app-header) và .tab-links-user (bản trong
   // .tab-links, style.css tự bật/tắt riêng theo breakpoint) — gộp chung 1 class sẽ khiến CSS ẩn/hiện
   // NHẦM cả 2 bản cùng lúc thay vì đúng 1 bản theo màn hình.
-  const noiDungNguoiDung = `
+  // Y20: máy tính có chữ "Báo lỗi"; header điện thoại (.app-header) CHỈ icon — hàng tên + vai trò + Thoát đã gần kín bề ngang.
+  const noiDungNguoiDung = coChuBaoLoi => `
     <span class="nav-user">${escapeHtml(user.ten)} · ${escapeHtml(NHAN_VAI_TRO[user.vaiTro] || user.vaiTro)}</span>
+    <button class="icon-btn ${coChuBaoLoi ? 'icon-btn-nhan' : ''}" onclick="moBaoLoi()" title="Báo lỗi app" aria-label="Báo lỗi app">${icon('alert')}${coChuBaoLoi ? '<span>Báo lỗi</span>' : ''}</button>
     <button class="icon-btn icon-btn-nhan" onclick="dangXuat()">${icon('logout')}<span>Thoát</span></button>`;
   nav.innerHTML = `
     <header class="app-header">
       <a href="${trangChu}" class="brand">${icon('logo', { size: 26 })}<span>Xưởng Thêu</span></a>
-      <div class="header-right">${noiDungNguoiDung}</div>
+      <div class="header-right">${noiDungNguoiDung(false)}</div>
     </header>
     <nav class="tab-links" aria-label="Điều hướng chính">
       <div class="tab-links-menu">
@@ -309,8 +407,132 @@ function renderNav(user, active) {
             <span class="nav-icon-tile">${icon(l.icon, { size: 20 })}</span><span>${l.label}</span>
           </a>`).join('')}
       </div>
-      <div class="header-right tab-links-user">${noiDungNguoiDung}</div>
+      <div class="header-right tab-links-user">${noiDungNguoiDung(true)}</div>
     </nav>`;
+  // Header điện thoại (11/10/2026): tên + vai trò dài thì cắt bằng "…" thay vì đẩy nút Báo lỗi/Thoát ra ngoài màn hình (trước đó
+  // .nav-user không xuống dòng nên tên dài làm cả trang bị cuộn ngang). Đặt thẳng style — không đụng style.css dùng chung.
+  const phaiHeader = nav.querySelector('.app-header .header-right');
+  phaiHeader.style.minWidth = '0';
+  Object.assign(phaiHeader.querySelector('.nav-user').style, { minWidth: '0', overflow: 'hidden', textOverflow: 'ellipsis' });
+  nav.querySelector('.app-header .brand').style.flexShrink = '0';
+  phaiHeader.querySelectorAll('button').forEach(b => { b.style.flexShrink = '0'; });
+  canChoTenHeader();
+  // Đo lại khi font Noto Sans (font-display: swap) tải xong và khi đổi cỡ/xoay màn hình — đăng ký 1 lần dù renderNav gọi nhiều lần.
+  if (!window._daNgheCanChoTen) {
+    window._daNgheCanChoTen = true;
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(canChoTenHeader);
+    let hen;
+    addEventListener('resize', () => { clearTimeout(hen); hen = setTimeout(canChoTenHeader, 150); });
+  }
+}
+// Tên vẫn bị cắt -> ẩn chữ "Xưởng Thêu" cạnh logo (chỉ trang trí) để nhường chỗ cho tên — dùng chung máy vẫn biết ai đang đăng nhập.
+// Hiện lại chữ trước rồi mới đo (màn rộng ra thì chữ quay lại). Máy tính .app-header ẩn (đo ra 0) nên không ẩn gì.
+function canChoTenHeader() {
+  const chuBrand = document.querySelector('#nav .app-header .brand > span');
+  const ten = document.querySelector('#nav .app-header .nav-user');
+  if (!chuBrand || !ten) return;
+  chuBrand.style.display = '';
+  if (ten.scrollWidth > ten.clientWidth) chuBrand.style.display = 'none';
+}
+
+// G1 (10/10/2026, theo yêu cầu người dùng): nhớ bộ lọc, sắp xếp, số thẻ đã "Xem thêm" và vị trí cuộn của 1 trang danh sách — RIÊNG
+// từng tab (sessionStorage: 2 tab lọc khác nhau không đè nhau, tab mới = trống). Ghi lúc rời trang (pagehide — bấm vào chi tiết đơn,
+// bấm menu, tải lại), nên "Xoá lọc" rồi rời trang thì lần sau cũng trống. Ô <select> có lựa chọn đổ theo dữ liệu (cacOChonDong) lưu
+// KÈM danh sách lựa chọn: các trang chỉ đổ lại những ô này khi KHÔNG lọc gì, không lưu thì giá trị khôi phục không có lựa chọn để chọn.
+// Không nhớ đơn đang tích chọn (người dùng chốt — tránh in/chuyển nhầm đơn chọn từ trước).
+function nhoDanhSach(khoa, { cacO, cacOChonDong = [], laySo }) {
+  const k = 'nhoDanhSach:' + khoa;
+  let daLuu = null;
+  try { daLuu = JSON.parse(sessionStorage.getItem(k) || 'null'); } catch (e) { /* bị chặn/hỏng -> như chưa lưu */ }
+  try { if (daLuu) history.scrollRestoration = 'manual'; } catch (e) { /* trình duyệt cũ */ }
+  const o = id => document.getElementById(id);
+  addEventListener('pagehide', () => {
+    try {
+      sessionStorage.setItem(k, JSON.stringify({
+        giaTri: Object.fromEntries(cacO.filter(o).map(id => [id, o(id).type === 'checkbox' ? o(id).checked : o(id).value])),
+        luaChon: Object.fromEntries(cacOChonDong.filter(o).map(id => [id, [...o(id).options].map(x => [x.value, x.text])])),
+        so: laySo(), cuon: scrollY,
+      }));
+    } catch (e) { /* bỏ qua */ }
+  });
+  return {
+    // Gọi TRƯỚC lượt tải đầu (sau khi trang đã đổ các ô chọn cố định như Xưởng).
+    khoiPhucO() {
+      if (!daLuu) return;
+      for (const [id, ds] of Object.entries(daLuu.luaChon || {})) {
+        if (o(id)) o(id).innerHTML = ds.map(([v, t]) => `<option value="${escapeHtml(v)}">${escapeHtml(t)}</option>`).join('');
+      }
+      for (const [id, v] of Object.entries(daLuu.giaTri || {})) {
+        if (!o(id)) continue;
+        if (o(id).type === 'checkbox') o(id).checked = !!v; else o(id).value = v;
+      }
+    },
+    // Gọi SAU lượt tải đầu: datSo(soDaLuu) mở lại đủ số thẻ, rồi cuộn về chỗ cũ. Chỉ chạy 1 lần.
+    khoiPhucCuon(datSo) {
+      if (!daLuu) return;
+      const { so, cuon } = daLuu;
+      daLuu = null;
+      if (so) datSo(so);
+      scrollTo(0, cuon || 0); // gọi ngay: datSo đã vẽ xong (đồng bộ), trình duyệt tự tính bố cục khi cuộn
+    },
+  };
+}
+
+// Link từ dữ liệu (Sheet Seller do seller nhập) đặt vào href (11/10/2026): CHỈ http(s) hoặc đường dẫn nội bộ "/..." — chặn
+// `javascript:`/`data:`... (escapeHtml không chặn được, bấm vào là chạy mã trong phiên đăng nhập của nhân viên). Không hợp lệ -> ''.
+function urlAnToan(u) {
+  const s = String(u || '').trim();
+  return /^https?:\/\//i.test(s) || /^\/(?!\/)/.test(s) ? s : '';
+}
+// <a> mở tab mới tới url (đã qua urlAnToan); url không hợp lệ -> chữ thường kèm gợi ý, KHÔNG bấm được. noiDung là HTML đã an toàn.
+function linkAnToan(url, noiDung) {
+  const an = urlAnToan(url);
+  return an ? `<a href="${escapeHtml(an)}" target="_blank" rel="noopener">${noiDung}</a>`
+    : `<span title="Link không hợp lệ (chỉ nhận link http/https)" style="color:var(--color-text-muted)">${noiDung} (link không hợp lệ)</span>`;
+}
+
+// A1 (11/10/2026): nhãn "Có EMB sẵn" — g = { sttKey, embId, nhom, phanTramAnh, phanTramHinhDang } từ POST /thu-vien/tom-tat-don.
+// Điểm hiển thị đúng điểm đo (chỉ đổi dấu chấm thành phẩy). "So sánh" mở Tìm ảnh tra theo đơn đang vẽ.
+function htmlGoiYEmb(sttKeyDangVe, g) {
+  if (!g) return '';
+  const pct = v => String(v).replace('.', ',') + '%';
+  const muc = g.nhom === 'TRUNG_FILE' ? 'Trùng file' : g.nhom === 'ANH_GIONG' ? `Ảnh ${pct(g.phanTramAnh)}` : `Hình dạng ${pct(g.phanTramHinhDang)}`;
+  return `<div class="badge-row" style="align-items:center" onclick="event.stopPropagation()">
+    <span class="badge trang-thai-success" style="white-space:normal;height:auto;text-align:left">${icon('check', { size: 14 })} Có EMB sẵn: đơn ${escapeHtml(g.sttKey)} · ${escapeHtml(muc)}</span>
+    <a href="/tim-anh.html?stt=${encodeURIComponent(sttKeyDangVe)}" target="_blank" rel="noopener">So sánh</a>
+    <a href="/api/thu-vien/file/${Number(g.embId)}?tai=1">Tải EMB</a>
+  </div>`;
+}
+// Gọi sau khi vẽ thẻ: lấy gợi ý cho các thẻ đang hiện, chèn vào .thong-tin của từng thẻ (thuocTinh = tên data-attribute mang mã).
+async function chenGoiYEmbVaoThe(khung, thuocTinh) {
+  const cacThe = [...khung.querySelectorAll(`[${thuocTinh}]`)];
+  if (!cacThe.length) return;
+  const keys = cacThe.map(t => t.getAttribute(thuocTinh));
+  const kq = {};
+  for (let i = 0; i < keys.length; i += 500) { // API nhận tối đa 500 mã/lần; lô lỗi thì bỏ riêng lô đó, các lô khác vẫn hiện
+    try { Object.assign(kq, await apiFetch('/thu-vien/tom-tat-don', { method: 'POST', body: JSON.stringify({ keys: keys.slice(i, i + 500) }) })); } catch (e) { /* bỏ lô này */ }
+  }
+  for (const the of cacThe) {
+    const k = the.getAttribute(thuocTinh);
+    const noi = the.querySelector('.thong-tin');
+    if (!kq[k] || !noi || !the.isConnected) continue;
+    noi.querySelector('.goi-y-emb')?.remove();
+    noi.insertAdjacentHTML('beforeend', `<div class="goi-y-emb">${htmlGoiYEmb(k, kq[k].goiY)}</div>`);
+  }
+}
+
+// Y6 (11/10/2026): nhãn "Đã nhận X giờ" trên thẻ đơn đang vẽ/đang chạy (n = o.NhanLau.VE_FILE | CHAY_MAY) — cam khi quá ngưỡng.
+function nhanDaNhan(n) {
+  if (!n) return '';
+  const chu = n.soGio === null ? 'Không rõ lúc nhận' : `Đã nhận ${Math.floor(n.soGio)} giờ`;
+  return `<span class="badge ${n.quaHan ? 'trang-thai-warning' : 'trang-thai-info'}" title="${n.quaHan ? `Quá ${n.nguongGio} giờ` : ''}">${icon('navActivity', { size: 14 })} ${chu}</span>`;
+}
+// Dòng nhắc đầu mục cho CHÍNH người nhận: "Bạn có 2 đơn đang vẽ quá 24 giờ" (chèn đầu lưới thẻ).
+function htmlNhacNhanLau(ds, loai, viec, tenToi) {
+  const qua = ds.filter(o => o.NhanLau && o.NhanLau[loai] && o.NhanLau[loai].quaHan && o.NhanLau[loai].nguoi === tenToi);
+  if (!qua.length) return '';
+  return `<div style="grid-column:1/-1;padding:8px 12px;border-radius:var(--radius-md);background:var(--color-warning-bg);color:var(--color-warning-text);font-weight:700">
+    ${icon('alert', { size: 16 })} Bạn có ${qua.length} đơn đang ${viec} quá ${qua[0].NhanLau[loai].nguongGio} giờ — làm tiếp hoặc báo quản lý để chuyển người khác.</div>`;
 }
 
 // Khối skeleton dùng khi đang tải dữ liệu — thay cho chữ "Đang tải..." khô khan

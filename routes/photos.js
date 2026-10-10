@@ -113,7 +113,8 @@ router.post('/kiem-tra', async (req, res) => {
   }
 
   const [daGanKH] = await orderService.ganTenKhachHang([row]);
-  res.json({ sttKey: row.STT_Key, tieuDe: orderService.tieuDeSanPham(row), tenKhachHang: daGanKH.TenKhachHang });
+  const nhomNhieuAo = chuyenTuDong ? await orderService.canhBaoNhomKhiQuet(row, chuyenTuDong.chuyenSang) : null; // F1
+  res.json({ sttKey: row.STT_Key, tieuDe: orderService.tieuDeSanPham(row), tenKhachHang: daGanKH.TenKhachHang, nhomNhieuAo });
 });
 
 // Vì mã đơn đã lấy từ bước quét QR ngay trước đó trong cùng luồng thao tác (sttKey gửi kèm trong

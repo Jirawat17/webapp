@@ -9,6 +9,7 @@ const trangThaiDbService = require('../services/trangThaiDbService');
 const donHangLoatService = require('../services/donHangLoatService');
 const taiSanService = require('../services/taiSanService');
 const alertService = require('../services/alertService');
+const vanHanhService = require('../services/vanHanhService');
 const scenarioService = require('../services/scenarioService');
 const { parseNgay } = require('../services/dateUtils');
 const { DANH_SACH_TRANG_THAI_BAO_CAO, TRANG_THAI_PHOI_VALUES, TRANG_THAI_VE_FILE_VALUES, khopGiaTriLoc, chiSoTinhTrang } = require('../data/pipelineTinhTrang');
@@ -54,6 +55,7 @@ const { NHOM_LOC_TONG_QUAT } = orderService; // LỌC TỔNG QUÁT — 3 nhóm t
 // user: người xem — vai trò không có menu Tracking không nhận 4 cột theo dõi mua tracking (orderService.anCotTheoDoiMuaTracking).
 async function lamGiauDon(rows, banDoNhom, user) {
   const daGanKH = await orderService.ganTenKhachHang(rows);
+  const nguongNhan = vanHanhService.layCauHinh().y6; // Y6 (11/10/2026) — đọc 1 lần cho cả danh sách
   return daGanKH.map(r => ({
     ...orderService.anCotTheoDoiMuaTracking(r, user),
     TieuDeSanPham: orderService.tieuDeSanPham(r),
@@ -61,6 +63,10 @@ async function lamGiauDon(rows, banDoNhom, user) {
     CanhBao: alertService.tinhMucCanhBao(r),
     NguoiVanHanh: r.TRANG_THAI_XUONG === TRANG_THAI_DANG_CHAY_MAY ? (r.NGUOI_CHAY_MAY || null) : null,
     NguoiVeFile: r.TRANG_THAI_VE_FILE === 'Đang vẽ file' ? (r.NGUOI_VE_FILE || null) : null,
+    // Y6 (11/10/2026): đơn đang được nhận -> { VE_FILE|CHAY_MAY: { nguoi, soGio (null = không rõ lúc nhận), quaHan } } cho thẻ "Đã nhận X giờ".
+    NhanLau: (ds => ds.length ? Object.fromEntries(ds.map(d => [d.loai, {
+      nguoi: d.nguoi, soGio: d.soGio, quaHan: d.quaHan, nguongGio: d.loai === 'VE_FILE' ? nguongNhan.gioVe : nguongNhan.gioChay,
+    }])) : null)(vanHanhService.donDangNhan([r], nguongNhan)),
     DonUuTien: orderService.laUuTien(r),
     // Cảnh báo TINH_TRANG (07/10/2026): DonHold/TinhTrangDacBiet = cảnh báo CÒN HẠN 21 ngày (vòng đỏ HOLD, nền vàng nhấp nháy, lên đầu
     // danh sách); TinhTrangNhan = loại theo TINH_TRANG hiện tại — nhãn vẫn hiện sau khi hết hạn.
@@ -1156,7 +1162,7 @@ const TRUONG_DUOC_SUA = {
 // THOI_GIAN_SAN_XUAT (29/09/2026) — mốc tính giờ TỰ ĐỘNG MUA TRACKING (tốn tiền thật), chỉ orderService tự ghi khi
 // đơn chuyển sang "Đã sản xuất"; cho sửa tay qua đây là cho phép ép hệ thống mua sớm.
 // GhiChuTinhGia / SO_MUI_CHI_* (07/10/2026) — CHỈ qua POST /:sttKey/so-mui-chi (kiểm tra vai trò + số hợp lệ + ghi Sheet Seller).
-const TRUONG_CAM_SUA = ['MOC_VAO_TRANG_THAI', 'GhiChuTinhGia', 'SO_MUI_CHI_NOI_BO', 'SO_MUI_CHI_LUC', 'STT_Key', '_row', 'NguoiCapNhatCuoi', 'ThoiGianCapNhatCuoi', 'TenKhachHang', 'TieuDeSanPham', 'ViTriTheu', 'CanhBao', 'XUONG', 'DON_UU_TIEN', 'DA_XOA', 'GHI_CHU_XUONG', 'GHI_CHU_XUONG_NOI_BO', 'THOI_GIAN_SAN_XUAT', 'THOI_GIAN_VE_FILE', 'THOI_GIAN_DAN_TEM', 'THOI_GIAN_DOI_TRANG_THAI', 'NGUOI_DOI_TRANG_THAI', 'TRANG_THAI_TRUOC_DO', 'DA_MUA_TRACKING',
+const TRUONG_CAM_SUA = ['THOI_GIAN_NHAN_VE_FILE', 'THOI_GIAN_NHAN_CHAY_MAY', 'THOI_GIAN_MUA_TRACKING', 'THOI_GIAN_DOI_TRANG_THAI_TRACKING', 'MOC_VAO_TRANG_THAI', 'GhiChuTinhGia', 'SO_MUI_CHI_NOI_BO', 'SO_MUI_CHI_LUC', 'STT_Key', '_row', 'NguoiCapNhatCuoi', 'ThoiGianCapNhatCuoi', 'TenKhachHang', 'TieuDeSanPham', 'ViTriTheu', 'CanhBao', 'XUONG', 'DON_UU_TIEN', 'DA_XOA', 'GHI_CHU_XUONG', 'GHI_CHU_XUONG_NOI_BO', 'THOI_GIAN_SAN_XUAT', 'THOI_GIAN_VE_FILE', 'THOI_GIAN_DAN_TEM', 'THOI_GIAN_DOI_TRANG_THAI', 'NGUOI_DOI_TRANG_THAI', 'TRANG_THAI_TRUOC_DO', 'DA_MUA_TRACKING',
   'TU_MUA_SO_LAN_THU', 'TU_MUA_CHE_DO', 'TU_MUA_LOI_GAN_NHAT', 'TU_MUA_THOI_GIAN_THU', 'THONG_TIN_GKE_CHO_DON_LOI'];
 
 // Ghi chú xưởng (28/09/2026, theo yêu cầu người dùng): LUÔN lưu bản trong app (GHI_CHU_XUONG_NOI_BO) rồi ghi vào

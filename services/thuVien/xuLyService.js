@@ -183,6 +183,7 @@ async function luuMotFile({ buffer, sttKey, nguon, tenFileGoc = '', urlGoc = '',
   db.capNhatFile(id, { ms_xu_ly: Date.now() - batDau });
   baoHoatDong();
   kiemTraDiemDo();
+  require('./goiYEmbService').tinhLaiSau(sttKey); // A1: require muộn — goiYEmbService kéo theo orderService
   return { ketQua: 'DA_LUU', id };
 }
 
@@ -219,6 +220,7 @@ async function luuEmb({ buffer, sttKey, tenFileGoc = '', nguoiTaiLen = '' }) {
     throw new Error('Không ghi được lên MinIO: ' + err.message);
   }
   db.datBanChinhEmb(sttKey, id);
+  db.xoaGoiYEmb(sttKey); // A1: đơn đã có EMB -> bỏ gợi ý "Có EMB sẵn" của chính nó
   return { ketQua: 'DA_LUU', id };
 }
 

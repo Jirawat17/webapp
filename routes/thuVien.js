@@ -5,7 +5,7 @@ const xuLy = require('../services/thuVien/xuLyService');
 const { nhapExcel, guiFileKetQua } = require('../services/thuVien/nhapExcelService');
 const { timTuongTu } = require('../services/thuVien/timKiemService');
 const { taoTapMa, themMa, chuanHoaMa, khopSttKey } = require('../services/thuVien/khopTenFile');
-const { nhanDangKieuAnh } = require('../services/anhNguonService');
+const { nhanDangKieuAnh, taiDsAnh } = require('../services/anhNguonService');
 const dongBoSheet = require('../services/thuVien/dongBoSheetService');
 const nguongService = require('../services/thuVien/nguongService');
 const { thongKeThuVien } = require('../services/thuVien/thongKeService');
@@ -174,7 +174,8 @@ router.get('/don/:sttKey', requireRole(...VAI_TRO_MENU), async (req, res) => {
   const png = files.filter(f => f.loai === 'PNG');
   const emb = files.filter(f => f.loai === 'EMB').sort((a, b) => b.so_thu_tu - a.so_thu_tu);
   let tim = null;
-  if (png.length) {
+  // ?chiFile=1 (11/10/2026, U2 Đối chiếu ảnh ở chi tiết đơn): chỉ cần danh sách file — bỏ lượt tìm tương tự (tốn CPU).
+  if (png.length && !req.query.chiFile) {
     const tenTheoId = new Map(png.map(f => [f.id, tenLuu(f)]));
     const mau = db.dsChiMucPng(png.map(f => f.id)).map(h => ({ sha256: h.sha256, dhash: h.dhash, dhashHinhDang: h.dhash_hinh_dang, nhan: tenTheoId.get(h.id) }));
     tim = timTuongTu({ mau, boQuaStt: new Set([sttKey]), duocXem: xem });
@@ -196,15 +197,21 @@ router.get('/don/:sttKey', requireRole(...VAI_TRO_MENU), async (req, res) => {
 
 // Tìm theo 1 ảnh tải lên — ảnh chỉ nằm trong bộ nhớ, KHÔNG lưu vào thư viện. sttKeyMoi (tuỳ chọn): đơn mới đang vẽ — bỏ đơn
 // đó khỏi kết quả và dùng để ghi quyết định.
+// sttKeyMoi gõ tay -> mã thật trong phạm vi người xem; lỗi thì đã trả 400/404 và trả về undefined.
+function docSttKeyMoi(req, res, tapMa, xem) {
+  const t = timMaCoThat(req.body?.sttKeyMoi, tapMa.tap);
+  if (t.nhieu) { loi(res, loiNhieuMa(t.ma, t.nhieu, xem)); return undefined; }
+  if (t.ma && !xem(t.ma)) { loi(res, 'Mã đơn ngoài phạm vi bạn được xem.', 404); return undefined; }
+  return t.ma || '';
+}
+
 router.post('/tim-theo-anh', requireRole(...VAI_TRO_MENU), uploadFile.single('anh'), async (req, res) => {
   if (!req.file) return loi(res, 'Chưa chọn ảnh.');
   if (!nhanDangKieuAnh(req.file.buffer)) return loi(res, 'Chỉ nhận ảnh PNG hoặc JPEG.');
   const tapMa = await layTapMa();
   const xem = duocXemDon(req.session.user);
-  const t = timMaCoThat(req.body?.sttKeyMoi, tapMa.tap);
-  if (t.nhieu) return loi(res, loiNhieuMa(t.ma, t.nhieu, xem));
-  const sttKeyMoi = t.ma;
-  if (sttKeyMoi && !xem(sttKeyMoi)) return loi(res, 'Mã đơn ngoài phạm vi bạn được xem.', 404);
+  const sttKeyMoi = docSttKeyMoi(req, res, tapMa, xem);
+  if (sttKeyMoi === undefined) return;
   let h;
   try { h = await xuLy.tinhHashAnhTam(req.file.buffer); } catch (err) { return loi(res, 'Không xử lý được ảnh: ' + err.message, 500); }
   const tim = timTuongTu({ mau: [{ ...h, nhan: tenGoc(req.file) }], boQuaStt: new Set(sttKeyMoi ? [sttKeyMoi] : []), duocXem: xem });
@@ -215,6 +222,63 @@ router.post('/tim-theo-anh', requireRole(...VAI_TRO_MENU), uploadFile.single('an
     nguong: nguongService.layNguong(),
     quyetDinh: sttKeyMoi ? db.dsQuyetDinhCuaDon(sttKeyMoi) : [],
   });
+});
+
+// A3 (11/10/2026, theo yêu cầu người dùng — spec 2026-10-04-21-tinh-nang-design.md mục 3): tìm theo LINK ảnh khách gửi (Drive file/thư
+// mục, Gemini, URL thường). Tải qua anhNguonService (đã chặn địa chỉ nội bộ, trần 50MB, hạn 60 giây/ảnh); thư mục lấy tối đa 5 ảnh,
+// mỗi ảnh là 1 mẫu so sánh. Ảnh không phải PNG/JPEG hoặc > 30MB bỏ qua kèm lý do. Hạn tổng 90 giây (dưới mức 100 giây của
+// Cloudflare). Ảnh chỉ nằm trong bộ nhớ, KHÔNG lưu vào thư viện. Link ảnh của chính app (/api/photos/file/...) bị từ chối: đường
+// tải đó đọc thẳng MinIO, không qua kiểm tra Xưởng của người xem.
+const HAN_TIM_THEO_LINK_MS = 90000;
+const KICH_THUOC_ANH_TIM_TOI_DA = 30 * 1024 * 1024;
+router.post('/tim-theo-link', requireRole(...VAI_TRO_MENU), async (req, res) => {
+  const url = String(req.body?.url || '').trim();
+  if (!/^https?:\/\/\S+$/i.test(url)) return loi(res, 'Dán 1 link http(s) của ảnh hoặc thư mục Drive.');
+  if (storageService.proxyUrlToObjectKey(url)) return loi(res, 'Link ảnh của app không dùng ở đây — hãy mở đơn đó rồi tra theo mã.');
+  const tapMa = await layTapMa();
+  const xem = duocXemDon(req.session.user);
+  const sttKeyMoi = docSttKeyMoi(req, res, tapMa, xem);
+  if (sttKeyMoi === undefined) return;
+  let hen;
+  const ds = await Promise.race([
+    taiDsAnh(url, { gioiHan: 5 }),
+    new Promise(r => { hen = setTimeout(() => r(null), HAN_TIM_THEO_LINK_MS); }),
+  ]).finally(() => clearTimeout(hen));
+  if (ds === null) return loi(res, 'Link tải quá lâu, hãy tải ảnh về rồi dán vào.');
+  if (!ds.length) return loi(res, 'Không tải được ảnh nào từ link này (link hỏng, chưa chia sẻ quyền xem, hoặc không phải ảnh).');
+  const mau = [], boQua = [];
+  for (const [i, buf] of ds.slice(0, 5).entries()) {
+    const nhan = ds.length > 1 ? `Ảnh ${i + 1}` : 'Ảnh từ link';
+    if (!nhanDangKieuAnh(buf)) { boQua.push(`${nhan}: không phải PNG/JPEG`); continue; }
+    if (buf.length > KICH_THUOC_ANH_TIM_TOI_DA) { boQua.push(`${nhan}: lớn hơn 30MB`); continue; }
+    try { mau.push({ ...(await xuLy.tinhHashAnhTam(buf)), nhan }); } catch (err) { boQua.push(`${nhan}: không xử lý được (${err.message})`); }
+  }
+  if (!mau.length) return loi(res, 'Không có ảnh dùng được: ' + boQua.join('; '));
+  const tim = timTuongTu({ mau, boQuaStt: new Set(sttKeyMoi ? [sttKeyMoi] : []), duocXem: xem });
+  console.log(`[ThuVien] Tìm theo link (${mau.length} ảnh): so ${tim.tongSoSanh} file, ${tim.ms}ms`);
+  res.json({
+    sttKeyMoi, tuongTu: boSungKetQua(tim.ketQua, tapMa.maSheet), tongSoSanh: tim.tongSoSanh, soAnhTuLink: mau.length, boQua,
+    khongTinhDuocHash: mau.every(h => !h.dhash && !h.dhashHinhDang),
+    nguong: nguongService.layNguong(),
+    quyetDinh: sttKeyMoi ? db.dsQuyetDinhCuaDon(sttKeyMoi) : [],
+  });
+});
+
+// C1 tối thiểu (11/10/2026, cho A1): gợi ý "Có EMB sẵn" của nhiều đơn 1 lần. Chỉ trả đơn người gọi được xem VÀ gợi ý có đơn cũ
+// cũng trong phạm vi được xem (không lộ mã đơn Xưởng khác). -> { sttKey: { goiY: {...} } }
+router.post('/tom-tat-don', requireRole(...VAI_TRO_MENU), (req, res) => {
+  const keys = Array.isArray(req.body?.keys) ? req.body.keys.map(k => String(k).trim()).filter(Boolean) : [];
+  if (keys.length > 500) return loi(res, 'Tối đa 500 mã mỗi lần.');
+  const xem = duocXemDon(req.session.user);
+  const goiY = db.layGoiYEmbCacDon(keys.filter(xem));
+  const emb = db.embChinhCuaCacDon([...goiY.values()].map(g => g.stt_key_khop));
+  const kq = {};
+  for (const [k, g] of goiY) {
+    const e = emb.get(g.stt_key_khop);
+    if (!xem(g.stt_key_khop) || !e) continue; // EMB đơn cũ vừa bị thay/xoá -> chờ lượt tính sau
+    kq[k] = { goiY: { sttKey: g.stt_key_khop, embId: e.id, embPhienBan: e.so_thu_tu, nhom: g.nhom, phanTramAnh: g.phan_tram_anh, phanTramHinhDang: g.phan_tram_hinh_dang } };
+  }
+  res.json(kq);
 });
 
 // Ghi quyết định của người vẽ cho 1 thiết kế cũ — CHỈ ghi nhận, không đổi đơn hay file nào.

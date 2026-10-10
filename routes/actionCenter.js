@@ -15,4 +15,18 @@ router.get('/danh-sach', requireRole(), async (req, res) => {
   }
 });
 
+// C2 (11/10/2026): đánh dấu "Đã xử lý" cho 1 cảnh báo Y6 (NHAN_LAU) / L2 (VAN_CHUYEN). giaTri = giá trị đang thấy lúc bấm — dữ liệu
+// đổi tiếp thì cảnh báo hiện lại. Kiểm phạm vi Xưởng theo mã đơn (khoá bắt đầu bằng mã đơn).
+router.post('/da-xu-ly', requireRole(), (req, res) => {
+  const { loai, khoa, giaTri, ghiChu } = req.body || {};
+  if (!['NHAN_LAU', 'VAN_CHUYEN'].includes(loai) || !khoa) return res.status(400).json({ error: 'Thiếu loại/khoá cảnh báo' });
+  const sttKey = String(khoa).split('|')[0];
+  if (!require('../services/orderService').phamViDon(req.session.user)(sttKey)) return res.status(404).json({ error: 'Không tìm thấy đơn' });
+  require('../services/nhatKyDbService').danhDauDaXuLy({
+    loai, khoa: String(khoa), giaTri: String(giaTri ?? ''), nguoi: req.session.user.ten,
+    luc: require('../services/dateUtils').thoiGianVNISOString(), ghiChu: String(ghiChu || '').slice(0, 500),
+  });
+  res.json({ ok: true });
+});
+
 module.exports = router;

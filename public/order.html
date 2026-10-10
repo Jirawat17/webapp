@@ -15,6 +15,14 @@
 #tim-ma-don + button { height: 63px; }
 /* Đơn HOLD: khối đầu trang có thêm lề trong 12px mỗi bên (style.css .dau-don.vong-hold) — trừ tiếp để ô không tràn ra ngoài vòng đỏ. */
 .dau-don.vong-hold #tim-ma-don { max-width: calc(100vw - 2 * var(--space-4) - 24px); }
+/* U2 Đối chiếu ảnh (11/10/2026): khung lưới — điện thoại 2 cột, máy tính 5 cột (Thiết kế, Mockup, File thêu, Đã sản xuất, Dán tem). */
+#hop-doi-chieu { width: min(1400px, calc(100vw - 2 * var(--space-4))); max-width: none; max-height: calc(100vh - 2 * var(--space-4)); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); }
+#hop-doi-chieu::backdrop { background: rgba(0, 0, 0, 0.55); }
+.luoi-doi-chieu { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+@media (min-width: 900px) { .luoi-doi-chieu { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+.luoi-doi-chieu h4 { margin: 0 0 6px; font-size: 0.95rem; }
+.luoi-doi-chieu img { display: block; width: 100%; max-height: 360px; object-fit: contain; background: #e4e4e7; border-radius: var(--radius-sm); margin-bottom: 6px; }
+.luoi-doi-chieu .o-trong { padding: var(--space-4) 0; text-align: center; color: var(--color-text-muted); border: 1px dashed var(--color-border); border-radius: var(--radius-sm); }
 </style>
 </head>
 <body>
@@ -24,7 +32,7 @@
 </div>
 
 <script src="/js/icons.js?v=105"></script>
-<script src="/js/api.js?v=118"></script>
+<script src="/js/api.js?v=119"></script>
 <script>
 const sttKey = new URLSearchParams(location.search).get('stt');
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
@@ -229,6 +237,7 @@ async function taiChiTiet() {
       <h2 style="margin:0" class="${don.DonUuTien ? 'uu-tien' : ''}">${escapeHtml(don.TieuDeSanPham || don.STT_Key)}${nutSaoChep(don.STT_Key, 'Sao chép mã đơn')}</h2>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         ${htmlOTimMaDon()}
+        <button type="button" class="btn-hanh-dong phu" onclick="moDoiChieuAnh(this)">${icon('file')} Đối chiếu ảnh</button>
         <button type="button" class="btn-hanh-dong phu" onclick="inDonHang(this)">${icon('printer')} IN ĐƠN</button>
       </div>
     </div>
@@ -255,14 +264,14 @@ async function taiChiTiet() {
         ${dsAnh.length ? `<div class="nhom-anh-mau">${dsAnh.map(src => `<img class="anh-mau" src="${escapeHtml(src)}" alt="Ảnh mẫu/mockup" loading="lazy" onerror="this.remove()">`).join('')}</div>` : ''}
         ${(user.vaiTro !== 'nguoi_lay_phoi' && (don.DUONG_DAN_URL || don.MOCKUP)) || don.Anh_File_Theu_URL || don.Anh_File_Theu_URL_2 || don.Anh_File_Theu_URL_3 || don.Anh_Da_San_Xuat_URL || don.Anh_Dong_Goi_URL ? `
         <div class="danh-sach-link-anh">
-          ${user.vaiTro !== 'nguoi_lay_phoi' && don.DUONG_DAN_URL ? `<a href="${escapeHtml(don.DUONG_DAN_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh PNG</a>` : ''}
-          ${user.vaiTro !== 'nguoi_lay_phoi' && don.MOCKUP ? `<a href="${escapeHtml(don.MOCKUP)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh Mockup</a>` : ''}
-          ${don.Anh_File_Theu_URL ? `<a href="${escapeHtml(don.Anh_File_Theu_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh file thêu</a>` : ''}
-          ${don.Anh_File_Theu_URL_2 ? `<a href="${escapeHtml(don.Anh_File_Theu_URL_2)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh File Thêu 2</a>` : ''}
-          ${don.Anh_File_Theu_URL_3 ? `<a href="${escapeHtml(don.Anh_File_Theu_URL_3)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh File Thêu 3</a>` : ''}
-          ${don.Anh_Da_San_Xuat_URL ? `<a href="${escapeHtml(don.Anh_Da_San_Xuat_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh đã sản xuất</a>` : ''}
-          ${don.Anh_Da_Dan_Tem_URL ? `<a href="${escapeHtml(don.Anh_Da_Dan_Tem_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh ĐÃ DÁN TEM</a>` : ''}
-          ${don.Anh_Dong_Goi_URL ? `<a href="${escapeHtml(don.Anh_Dong_Goi_URL)}" target="_blank" rel="noopener">${icon('file', {size:14})} Ảnh đóng gói</a>` : ''}
+          ${user.vaiTro !== 'nguoi_lay_phoi' && don.DUONG_DAN_URL ? linkAnToan(don.DUONG_DAN_URL, `${icon('file', {size:14})} Ảnh PNG`) : ''}
+          ${user.vaiTro !== 'nguoi_lay_phoi' && don.MOCKUP ? linkAnToan(don.MOCKUP, `${icon('file', {size:14})} Ảnh Mockup`) : ''}
+          ${don.Anh_File_Theu_URL ? linkAnToan(don.Anh_File_Theu_URL, `${icon('file', {size:14})} Ảnh file thêu`) : ''}
+          ${don.Anh_File_Theu_URL_2 ? linkAnToan(don.Anh_File_Theu_URL_2, `${icon('file', {size:14})} Ảnh File Thêu 2`) : ''}
+          ${don.Anh_File_Theu_URL_3 ? linkAnToan(don.Anh_File_Theu_URL_3, `${icon('file', {size:14})} Ảnh File Thêu 3`) : ''}
+          ${don.Anh_Da_San_Xuat_URL ? linkAnToan(don.Anh_Da_San_Xuat_URL, `${icon('file', {size:14})} Ảnh đã sản xuất`) : ''}
+          ${don.Anh_Da_Dan_Tem_URL ? linkAnToan(don.Anh_Da_Dan_Tem_URL, `${icon('file', {size:14})} Ảnh ĐÃ DÁN TEM`) : ''}
+          ${don.Anh_Dong_Goi_URL ? linkAnToan(don.Anh_Dong_Goi_URL, `${icon('file', {size:14})} Ảnh đóng gói`) : ''}
         </div>` : ''}
         <div id="khu-vuc-emb" style="margin:8px 0"></div>
         <table class="info-table">
@@ -292,6 +301,59 @@ async function taiChiTiet() {
   taiKhoiEmb();
 }
 
+// U2 Đối chiếu ảnh (11/10/2026, theo yêu cầu người dùng — spec 2026-10-04-21-tinh-nang-design.md mục 11): xem cạnh nhau mọi ảnh của
+// đơn. Không thêm API: ảnh đi qua proxy sẵn có (kiểm quyền như cũ). Thiết kế: ảnh thu nhỏ trong thư viện Tìm ảnh (tối đa 6, chỉ
+// vai trò dùng thư viện) nếu có, không thì DUONG_DAN_URL qua anh-ngoai. nguoi_lay_phoi thấy ảnh thiết kế/mockup nhưng KHÔNG có
+// link mở bản gốc (giữ quy tắc hiện có). Bấm ảnh = mở bản gốc ở tab mới.
+async function moDoiChieuAnh(nut) {
+  const don = donHienTai;
+  if (!don) return;
+  const duocMoGocThietKe = user.vaiTro !== 'nguoi_lay_phoi';
+  const tuLink = (url, moGoc = true) => urlAnhHienThiList(url, 800).map(src => ({ src, goc: moGoc ? urlAnToan(url) : '' }));
+  let thietKe = tuLink(don.DUONG_DAN_URL, duocMoGocThietKe);
+  if (['ve_file', 'admin', 'superadmin'].includes(user.vaiTro)) {
+    nut.disabled = true;
+    try {
+      const d = await apiFetch('/thu-vien/don/' + encodeURIComponent(don.STT_Key) + '?chiFile=1');
+      const png = d.png.filter(f => f.coThumb).slice(0, 6);
+      if (png.length) thietKe = png.map(f => ({ src: '/api/thu-vien/thumb/' + f.id, goc: '/api/thu-vien/file/' + f.id }));
+    } catch (e) { /* thư viện lỗi -> dùng link Sheet */ }
+    nut.disabled = false;
+  }
+  const cot = [
+    ['Thiết kế', thietKe],
+    ['Mockup', tuLink(don.MOCKUP, duocMoGocThietKe)],
+    ['File thêu', [don.Anh_File_Theu_URL, don.Anh_File_Theu_URL_2, don.Anh_File_Theu_URL_3].flatMap(u => tuLink(u))],
+    ['Đã sản xuất', tuLink(don.Anh_Da_San_Xuat_URL)],
+    ['Đã dán tem / đóng gói', [don.Anh_Da_Dan_Tem_URL, don.Anh_Dong_Goi_URL].flatMap(u => tuLink(u))],
+  ];
+  const anh = a => {
+    const img = `<img src="${escapeHtml(a.src)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;o-trong&quot;>Không tải được ảnh</div>'">`;
+    return a.goc ? `<a href="${escapeHtml(a.goc)}" target="_blank" rel="noopener">${img}</a>` : img;
+  };
+  let hop = document.getElementById('hop-doi-chieu');
+  if (!hop) {
+    hop = document.createElement('dialog');
+    hop.id = 'hop-doi-chieu';
+    // Bấm ra NGOÀI khung = đóng. Không so e.target === hop: bấm vào lề trong (padding) của khung cũng có target là hop.
+    // Kéo chuột (vd bôi đen chữ) từ trong khung ra ngoài rồi thả cũng sinh "click" ngoài khung -> chỉ đóng khi lúc BẤM XUỐNG cũng ở ngoài.
+    const ngoaiKhung = e => { const r = hop.getBoundingClientRect(); return e.target === hop && (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom); };
+    let bamXuongNgoai = false;
+    hop.addEventListener('mousedown', e => { bamXuongNgoai = ngoaiKhung(e); });
+    hop.addEventListener('click', e => { if (bamXuongNgoai && ngoaiKhung(e)) hop.close(); bamXuongNgoai = false; });
+    document.body.appendChild(hop);
+  }
+  hop.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:var(--space-3)">
+      <h3 style="margin:0">Đối chiếu ảnh · ${escapeHtml(don.STT_Key)}</h3>
+      <button type="button" class="btn-hanh-dong phu" onclick="document.getElementById('hop-doi-chieu').close()">Đóng</button>
+    </div>
+    <div class="luoi-doi-chieu">
+      ${cot.map(([ten, ds]) => `<div><h4>${ten}</h4>${ds.length ? ds.map(anh).join('') : '<div class="o-trong">Chưa có ảnh</div>'}</div>`).join('')}
+    </div>`;
+  hop.showModal();
+}
+
 // Khối "File EMB" (03/10/2026, thư viện "Tìm ảnh" — docs/superpowers/specs/2026-10-03-thu-vien-tim-anh-design.md mục 13).
 // Ai xem được đơn đều thấy trạng thái; tải về / tải lên chỉ ve_file, admin, superadmin (server kiểm lại). Không gắn với đổi trạng thái.
 async function taiKhoiEmb() {
@@ -311,6 +373,14 @@ async function taiKhoiEmb() {
       <a href="/tim-anh.html?stt=${encodeURIComponent(sttKey)}">Tìm thiết kế tương tự</a>` : ''}
     ${d.cu.length && d.duocTai ? `<span style="color:var(--color-text-muted)">Bản cũ: ${d.cu.map(x => `<a href="/api/thu-vien/file/${x.id}?tai=1">v${x.so_thu_tu}</a> (${escapeHtml(ngay(x.ngay_luu))})`).join(', ')}</span>` : ''}
   </div>`;
+  // A1 (11/10/2026): đơn chưa có EMB mà có gợi ý "Có EMB sẵn" -> hiện ngay dưới (chỉ vai trò dùng thư viện).
+  if (!c && d.duocTaiLen) {
+    const ma = (donHienTai && donHienTai.STT_Key) || sttKey;
+    try {
+      const kq = await apiFetch('/thu-vien/tom-tat-don', { method: 'POST', body: JSON.stringify({ keys: [ma] }) });
+      if (kq[ma]) el.insertAdjacentHTML('beforeend', htmlGoiYEmb(ma, kq[ma].goiY));
+    } catch (e) { /* không có gợi ý cũng không sao */ }
+  }
 }
 
 async function taiLenEmb(input) {

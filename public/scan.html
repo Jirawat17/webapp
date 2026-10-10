@@ -83,7 +83,7 @@
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="/js/icons.js?v=105"></script>
-<script src="/js/api.js?v=118"></script>
+<script src="/js/api.js?v=119"></script>
 <script>
 let user;
 // Mặc định mở vào "Quét kịch bản" (batch) khi vào trang — theo yêu cầu người dùng 05/09/2026, vì đây
@@ -370,6 +370,12 @@ function phatAmThanhKetQua(nhom) {
     phatBeep(520, 130, 0, 'square');
     phatBeep(520, 130, 190, 'square');
     if (navigator.vibrate) navigator.vibrate([120, 90, 120]); // rung 2 nhịp ngắn
+  } else if (nhom === 'CANH_BAO_NHOM') {
+    // F1 (11/10/2026): đơn nhiều áo chưa đủ — 3 tiếng sine 660Hz ngắn đều nhau (khác hẳn 4 âm trên), phát SAU tiếng OK.
+    phatBeep(660, 90, 0, 'sine');
+    phatBeep(660, 90, 150, 'sine');
+    phatBeep(660, 90, 300, 'sine');
+    if (navigator.vibrate) navigator.vibrate([80, 60, 80, 60, 80]);
   } else if (nhom === 'KHONG_TIM_THAY') {
     // Sóng vuông, trầm hơn, dài hơn, 3 tiếng dồn dập — nặng nhất trong 3 kết quả, không thể nhầm với OK
     phatBeep(220, 160, 0, 'square');
@@ -578,12 +584,14 @@ async function xuLyQuetKichBan(sttKey, kichBanCuaMa = null) {
     trangThaiHienTai: ketQua.trangThaiHienTai || '',
     trangThaiYeuCau: ketQua.trangThaiYeuCau || '',
     trangThaiSau: ketQua.trangThaiSau || '',
+    nhomNhieuAo: ketQua.nhomNhieuAo || null,
     daXuLy: false,
   };
   dsQuet.unshift(item);
 
   hienThiToast(item.nhom, item.tieuDe || item.sttKey);
   phatAmThanhKetQua(item.nhom);
+  if (item.nhomNhieuAo) setTimeout(() => phatAmThanhKetQua('CANH_BAO_NHOM'), 350);
 
   renderDemNhom();
   renderDsDangQuet();
@@ -632,7 +640,17 @@ function renderDemNhom() {
 function noiDungDongQuet(item) {
   return `
         <strong>${escapeHtml(item.tieuDe || item.sttKey)}</strong>
-        <div class="ly-do">${escapeHtml(item.lyDo || (item.nhom === 'OK' ? `Sẽ chuyển: ${item.trangThaiHienTai} → ${item.trangThaiSau}` : ''))}</div>`;
+        <div class="ly-do">${escapeHtml(item.lyDo || (item.nhom === 'OK' ? `Sẽ chuyển: ${item.trangThaiHienTai} → ${item.trangThaiSau}` : ''))}</div>
+        ${htmlCanhBaoNhom(item.nhomNhieuAo)}`;
+}
+
+// F1 (11/10/2026): khung vàng "Nhóm 9F13 (3 áo): 9F13.1 ✓ Đã sản xuất · 9F13,2 ✗ Đang chạy máy" — chỉ cảnh báo, không chặn.
+// Màu cố định (vàng đậm/chữ nâu) đọc được cả nền sáng lẫn tối.
+function htmlCanhBaoNhom(n) {
+  if (!n) return '';
+  return `<div style="margin-top:6px;padding:8px 10px;border:3px solid #eab308;background:#fef9c3;color:#713f12;border-radius:8px;font-weight:600;line-height:1.5">
+    ⚠️ Nhóm ${escapeHtml(n.goc)} (${n.tong} áo) chưa đủ: ${n.thanhVien.map(t => `${escapeHtml(t.sttKey)} ${t.du ? '✓' : '✗'} ${escapeHtml(t.trangThai || '(trống)')}`).join(' · ')}
+  </div>`;
 }
 
 function renderDsDangQuet() {
@@ -672,7 +690,8 @@ function renderKetQuaVuaQuet() {
     <div class="hang-tren"><span class="icon-lon">${nhanIconNhom(item.nhom)}</span><strong>${escapeHtml(nhanTenNhom(item.nhom))}</strong></div>
     <div class="tieu-de-lon">${escapeHtml(item.tieuDe || item.sttKey)}</div>
     ${item.tenKhachHang ? `<div class="dong-khach-hang">Khách hàng: ${escapeHtml(item.tenKhachHang)}</div>` : ''}
-    <div class="dong-trang-thai">${dongTrangThai}</div>`;
+    <div class="dong-trang-thai">${dongTrangThai}</div>
+    ${htmlCanhBaoNhom(item.nhomNhieuAo)}`;
 }
 
 function nhayDong(key) {
@@ -844,9 +863,10 @@ async function xuLyQuetDeXacDinhDon(sttKeyThoDoc) {
     const ketQua = await apiFetch('/photos/kiem-tra', {
       method: 'POST', body: JSON.stringify({ sttKey: sttKeyThoDoc, moc: cauHinh.moc }),
     });
-    donDaXacDinhChoAnh = { sttKey: ketQua.sttKey || sttKeyThoDoc, tieuDe: ketQua.tieuDe, tenKhachHang: ketQua.tenKhachHang };
+    donDaXacDinhChoAnh = { sttKey: ketQua.sttKey || sttKeyThoDoc, tieuDe: ketQua.tieuDe, tenKhachHang: ketQua.tenKhachHang, nhomNhieuAo: ketQua.nhomNhieuAo || null };
     hienThiToast('OK', ketQua.tieuDe || sttKeyThoDoc);
     phatAmThanhKetQua('OK');
+    if (ketQua.nhomNhieuAo) setTimeout(() => phatAmThanhKetQua('CANH_BAO_NHOM'), 350);
     await capNhatManHinh();
   } catch (err) {
     hienThiToast('SAI_TRANG_THAI', err.message);
@@ -961,7 +981,8 @@ function renderThongTinDonChoAnh() {
   if (!donDaXacDinhChoAnh) { el.innerHTML = ''; return; }
   el.innerHTML = `
     <div class="tieu-de-lon">${escapeHtml(donDaXacDinhChoAnh.tieuDe || donDaXacDinhChoAnh.sttKey)}</div>
-    ${donDaXacDinhChoAnh.tenKhachHang ? `<div class="dong-khach-hang">Khách hàng: ${escapeHtml(donDaXacDinhChoAnh.tenKhachHang)}</div>` : ''}`;
+    ${donDaXacDinhChoAnh.tenKhachHang ? `<div class="dong-khach-hang">Khách hàng: ${escapeHtml(donDaXacDinhChoAnh.tenKhachHang)}</div>` : ''}
+    ${htmlCanhBaoNhom(donDaXacDinhChoAnh.nhomNhieuAo)}`;
 }
 
 function hienThiToastAnh(loai, noiDung) {

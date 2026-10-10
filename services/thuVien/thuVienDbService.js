@@ -256,7 +256,7 @@ function dsChiMucPng(ids) {
   for (let i = 0; i < ids.length; i += 500) { const lo = ids.slice(i, i + 500); kq.push(...db.prepare(`${sql} AND id IN (${lo.map(() => '?').join(',')})`).all(...lo)); }
   return kq;
 }
-const COT_HIEN_THI = `id, loai, stt_key, so_thu_tu, la_ban_chinh, ten_file_goc, nguon, url_goc, ngay_luu, nguoi_tai_len, kich_thuoc, thumb_key, object_key, trang_thai`;
+const COT_HIEN_THI = `id, loai, stt_key, so_thu_tu, la_ban_chinh, ten_file_goc, nguon, url_goc, drive_file_id, ngay_luu, nguoi_tai_len, kich_thuoc, thumb_key, object_key, trang_thai`;
 function layFileTheoIds(ids) {
   if (!ids.length) return [];
   return db.prepare(`SELECT ${COT_HIEN_THI} FROM tv_file WHERE id IN (${ids.map(() => '?').join(',')})`).all(...ids);
@@ -408,8 +408,37 @@ function trangKetQuaLo(loId, sau = { dong: -1, rowid: -1 }, gioiHan = 2000) {
     WHERE d.lo_id = ? AND (d.dong, d.rowid) > (?, ?) ORDER BY d.dong, d.rowid LIMIT ?`).all(loId, sau.dong, sau.rowid, gioiHan);
 }
 
+// A1 (11/10/2026) — gợi ý "Có EMB sẵn" cho đơn cần vẽ: 1 dòng/đơn, ghi đè mỗi lần tính (services/thuVien/goiYEmbService.js).
+db.exec(`CREATE TABLE IF NOT EXISTS tv_goi_y_emb (
+  stt_key TEXT PRIMARY KEY,
+  file_mau_id INTEGER NOT NULL, file_khop_id INTEGER NOT NULL, stt_key_khop TEXT NOT NULL, emb_id INTEGER NOT NULL,
+  nhom TEXT NOT NULL, phan_tram_anh REAL, phan_tram_hinh_dang REAL, tinh_luc TEXT NOT NULL
+)`);
+function ghiGoiYEmb(g) {
+  db.prepare(`INSERT OR REPLACE INTO tv_goi_y_emb (stt_key, file_mau_id, file_khop_id, stt_key_khop, emb_id, nhom, phan_tram_anh, phan_tram_hinh_dang, tinh_luc)
+    VALUES (@stt_key, @file_mau_id, @file_khop_id, @stt_key_khop, @emb_id, @nhom, @phan_tram_anh, @phan_tram_hinh_dang, @tinh_luc)`)
+    .run({ ...g, tinh_luc: thoiGianVNISOString() });
+}
+function xoaGoiYEmb(sttKey) { db.prepare(`DELETE FROM tv_goi_y_emb WHERE stt_key = ?`).run(sttKey); }
+// Xoá gợi ý của mọi đơn KHÔNG còn trong tập cần tính (đã vẽ xong, đã có EMB, hết PNG...).
+function xoaGoiYEmbNgoai(giuLai) {
+  const xoa = db.prepare(`DELETE FROM tv_goi_y_emb WHERE stt_key = ?`);
+  db.transaction(() => { for (const k of db.prepare(`SELECT stt_key FROM tv_goi_y_emb`).pluck().all()) if (!giuLai.has(k)) xoa.run(k); })();
+}
+function layGoiYEmbCacDon(sttKeys) {
+  const kq = new Map();
+  const stmt = db.prepare(`SELECT * FROM tv_goi_y_emb WHERE stt_key = ?`);
+  for (const k of new Set(sttKeys)) { const r = stmt.get(k); if (r) kq.set(k, r); }
+  return kq;
+}
+// Mã đơn có EMB đã lưu xong -> Set.
+function dsMaCoEmbXong() {
+  return new Set(db.prepare(`SELECT DISTINCT stt_key FROM tv_file WHERE loai = 'EMB' AND trang_thai = 'XONG'`).pluck().all());
+}
+
 module.exports = {
   DUONG_DAN_DB,
+  ghiGoiYEmb, xoaGoiYEmb, xoaGoiYEmbNgoai, layGoiYEmbCacDon, dsMaCoEmbXong,
   layPhienBanChiMuc, layIdDoiSauPhienBan, dsChiMucPng, layFileTheoIds, dsFileCuaDon, embChinhCuaCacDon, dsMaTrongThuVien, demViecChuaXongCuaDon,
   datBanChinhEmb, themQuyetDinh, dsQuyetDinhCuaDon,
   layNguonDon, ghiNguonDon, luuCapDanhGia, dsCapDanhGia, xoaCapDanhGia, layPngNgauNhien,

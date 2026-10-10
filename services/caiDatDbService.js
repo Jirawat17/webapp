@@ -413,7 +413,19 @@ db.exec(`CREATE TABLE IF NOT EXISTS qc_auto_moc (id INTEGER PRIMARY KEY CHECK (i
 db.prepare(`INSERT OR IGNORE INTO qc_auto_moc (id, MocApDung) VALUES (1, ?)`).run(new Date().toISOString());
 const layMocApDungAutoQc = () => (db.prepare(`SELECT MocApDung FROM qc_auto_moc WHERE id = 1`).get() || {}).MocApDung || '';
 
+// ---------- CaiDatVanHanh (11/10/2026, theo yêu cầu người dùng) — chat Telegram vận hành (C3), ngưỡng Y6 (đơn nhận quá lâu) và L2
+// (vận chuyển bất thường). Khoá/giá trị; khoá chưa có = dùng mặc định trong services/vanHanhService.js#MAC_DINH.
+db.exec(`CREATE TABLE IF NOT EXISTS cai_dat_van_hanh (Khoa TEXT PRIMARY KEY, GiaTri TEXT NOT NULL DEFAULT '')`);
+function layCaiDatVanHanh() {
+  return Object.fromEntries(db.prepare(`SELECT Khoa, GiaTri FROM cai_dat_van_hanh`).all().map(r => [r.Khoa, r.GiaTri]));
+}
+const datCaiDatVanHanh = db.transaction(giaTri => {
+  const ghi = db.prepare(`INSERT INTO cai_dat_van_hanh (Khoa, GiaTri) VALUES (?, ?) ON CONFLICT(Khoa) DO UPDATE SET GiaTri = excluded.GiaTri`);
+  for (const [k, v] of Object.entries(giaTri)) ghi.run(k, String(v ?? ''));
+});
+
 module.exports = {
+  layCaiDatVanHanh, datCaiDatVanHanh,
   layCauHinhQc, datCauHinhQc, layMocApDungAutoQc, layTelegramQc, datTelegramQc, layGiaTokenQc, datGiaTokenQc,
   layPhienBanPromptQc, layPromptDangDungQc, datPromptDangDungQc, luuPhienBanPromptQc, layLichSuPromptQc,
   CAC_COT_TAI_KHOAN_GKE, layDanhSachTaiKhoanGke, layTaiKhoanGke, ghiTaiKhoanGke, xoaTaiKhoanGke,

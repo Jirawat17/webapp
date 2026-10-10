@@ -15,6 +15,9 @@ services:
       # Bên trong container luôn nghe cổng 3000; .env có thể để PORT=3000 cho chạy local,
       # host mapping "3000:3000" bên dưới vẫn vào đúng.
       - PORT=3000
+      # Giờ Việt Nam cho "hôm nay"/số ngày cảnh báo/log (10/10/2026). Node có sẵn dữ liệu múi giờ (ICU), không cần tzdata.
+      # Đổi biến này phải `docker compose up -d` (tạo lại container), restart không nhận.
+      - TZ=Asia/Ho_Chi_Minh
     volumes:
       # Key Service Account không nén vào image — mount lúc chạy
       - ./service-account.json:/app/service-account.json:ro

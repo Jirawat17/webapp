@@ -435,6 +435,14 @@ async function capNhatThat(sttKey, updates, user, tuyChon) {
     updatesDaTinh.GHI_CHU_VE_FILE = '';
   }
 
+  // Y6 (11/10/2026): lúc NHẬN — vừa chuyển sang "Đang chạy máy"/"Đang vẽ file", HOẶC admin chỉ định/đổi người khác trong lúc đang ở
+  // trạng thái đó (người nhận mới -> tính lại giờ). Mốc dùng cho nhắc "đơn nhận quá lâu" (services/vanHanhService.js).
+  const sangTrangThaiNhan = (cotTT, giaTri, cotNguoi) =>
+    (updatesDaTinh[cotTT] === giaTri && row[cotTT] !== giaTri) ||
+    ((updatesDaTinh[cotTT] ?? row[cotTT]) === giaTri && updatesDaTinh[cotNguoi] !== undefined && updatesDaTinh[cotNguoi] !== row[cotNguoi]);
+  if (sangTrangThaiNhan('TRANG_THAI_XUONG', 'Đang chạy máy', 'NGUOI_CHAY_MAY')) updatesDaTinh.THOI_GIAN_NHAN_CHAY_MAY = thoiGianVNISOString();
+  if (sangTrangThaiNhan('TRANG_THAI_VE_FILE', 'Đang vẽ file', 'NGUOI_VE_FILE')) updatesDaTinh.THOI_GIAN_NHAN_VE_FILE = thoiGianVNISOString();
+
   // Đơn VỪA chuyển sang "Đã in mã" (từ 1 giá trị KHÁC) — ghi lại THỜI ĐIỂM này (bổ sung 09/09/2026). Từng là
   // mốc tính giờ của job tự động mua tracking; từ 29/09/2026 job dùng THOI_GIAN_SAN_XUAT bên dưới, mốc này chỉ
   // còn lưu để tra cứu.
@@ -663,6 +671,21 @@ function loaiTinhTrangDacBiet(row) {
   return null;
 }
 
+// F1 (11/10/2026): cảnh báo đơn nhiều áo chưa đủ cho 1 lượt quét sang `trangThaiDich` — đọc nhóm từ getAll() (có cache), chỉ khi
+// trạng thái đích nằm trong danh sách cần cảnh báo. Lỗi đọc -> null (chỉ là cảnh báo, không được làm hỏng lượt quét).
+// Nhận DÒNG đơn (không chỉ mã): đơn không có OrderID / mã không đúng dạng nhóm thì bỏ qua ngay, không đọc toàn bộ đơn (quét camera liên tục).
+async function canhBaoNhomKhiQuet(row, trangThaiDich) {
+  if (!row || !donNhieuAoService.TRANG_THAI_CANH_BAO_NHOM.includes(trangThaiDich) || !donNhieuAoService.khoaNhom(row)) return null;
+  const sttKey = row.STT_Key;
+  try {
+    const { rows } = await getAll();
+    return donNhieuAoService.canhBaoNhomChuaDu(sttKey, trangThaiDich, donNhieuAoService.layNhomCuaDon(sttKey, rows));
+  } catch (err) {
+    console.error('[F1] Không đọc được nhóm nhiều áo:', err.message);
+    return null;
+  }
+}
+
 // Cảnh báo TINH_TRANG tối đa 21 ngày (07/10/2026, theo yêu cầu người dùng). Mốc = lúc app PHÁT HIỆN loại cảnh báo (mỗi lần đọc Sheet,
 // kể cả từ tác vụ định kỳ) — đổi sang loại cảnh báo KHÁC (HOLD -> CANCELLED) hoặc về bình thường rồi cảnh báo lại thì TÍNH LẠI 21 ngày.
 // Lần đầu triển khai: đơn đang sẵn cảnh báo -> mốc rất cũ = coi như đã hết hạn. Chỉ ghi SQLite khi đổi (cùng cách DA_MUA_TRACKING).
@@ -783,5 +806,5 @@ module.exports = {
   VAI_TRO_MENU_TRACKING, anCotTheoDoiMuaTracking,
   suaDonKetSanSang,
   TAB, KEY_COL, getAll, getByKey, getManyByKeys, update, filterForRole, ganTenKhachHang, tieuDeSanPham, danhSachViTriTheu,
-  layDanhSachXuong, locTheoXuong, coQuyenTheoXuong, phamViDon, laUuTien, laDonHold, loaiTinhTrangDacBiet, canhBaoTinhTrangConHan, timDonTheoMaGoTay, docSoMuiChi, lyDoDaMuaTracking, NHOM_LOC_TONG_QUAT,
+  layDanhSachXuong, locTheoXuong, coQuyenTheoXuong, phamViDon, laUuTien, laDonHold, loaiTinhTrangDacBiet, canhBaoTinhTrangConHan, canhBaoNhomKhiQuet, timDonTheoMaGoTay, docSoMuiChi, lyDoDaMuaTracking, NHOM_LOC_TONG_QUAT,
 };

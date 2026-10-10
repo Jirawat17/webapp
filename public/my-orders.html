@@ -197,7 +197,7 @@
 </div>
 
 <script src="/js/icons.js?v=105"></script>
-<script src="/js/api.js?v=118"></script>
+<script src="/js/api.js?v=119"></script>
 <script>
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
 // settings.html (superadmin), 3/5/7 không còn luôn đúng nên không hard-code vào nhãn hiển thị nữa.
@@ -266,7 +266,19 @@ const CAC_O_LOC_DC = ['loc-kh', 'loc-tu-ngay', 'loc-den-ngay', 'loc-canh-bao', '
   ganSuKienLocSapXep('-ss', taiDonSanSang, boChonTatCaDonSanSang);
   ganSuKienLocSapXep('', taiDon, null);
 
+  // G1 (10/10/2026): nhớ bộ lọc/sắp xếp/số thẻ/vị trí cuộn của CẢ 2 mục (cùng 1 trang, 1 thanh cuộn).
+  const hauToDong = ['-ss', ''].flatMap(h => ['loc-loai', 'loc-kich-thuoc', 'loc-mau-sac', 'loc-hang-van-chuyen'].map(id => id + h));
+  const nho = nhoDanhSach('my-orders', {
+    cacO: [...CAC_O_LOC_SS, ...CAC_O_LOC_DC, 'loc-hang-loat-ss', 'loc-hang-loat', 'sap-xep-ss', 'sap-xep', 'loc-nguoi-van-hanh'],
+    cacOChonDong: [...hauToDong, 'loc-nguoi-van-hanh'],
+    laySo: () => ({ ss: soDangHienThiSanSang, dc: soDangHienThiDangChay }),
+  });
+  nho.khoiPhucO();
   await Promise.all([taiDonSanSang(), taiDon(), taiDsNhanVienSanSang]);
+  nho.khoiPhucCuon(({ ss, dc }) => {
+    if (danhSachSanSang.length && ss > soDangHienThiSanSang) { soDangHienThiSanSang = ss; renderDanhSachSanSang(); }
+    if (danhSachDangChay.length && dc > soDangHienThiDangChay) { soDangHienThiDangChay = dc; renderDanhSachDangChay(true); }
+  });
 })();
 
 // Gắn onchange/oninput cho đúng bộ 8 ô lọc + Chỉ đơn hàng loạt + Sắp xếp của 1 mục — dùng chung cho
@@ -687,6 +699,7 @@ function renderDanhSachDangChay(coLocNaoDangChon) {
             <span class="badge trang-thai-danger" style="white-space:normal;max-width:100%">${icon('alert', {size:14})} ${escapeHtml(NHAN_NGUOI_VAN_HANH_KHONG_RO)}</span>` : ''}
           ${laAdmin && o.NguoiVanHanh ? `
             <span class="badge trang-thai-info">${icon('users', {size:14})} Đang vận hành: <strong>${escapeHtml(o.NguoiVanHanh)}</strong></span>` : ''}
+          ${nhanDaNhan(o.NhanLau && o.NhanLau.CHAY_MAY)}
           ${o.CanhBao ? `
             <span class="badge badge-canh-bao ${o.CanhBao.toLowerCase()}">
               ${icon('alert')} ${escapeHtml(NHAN_CANH_BAO[o.CanhBao] || o.CanhBao)}
@@ -697,6 +710,7 @@ function renderDanhSachDangChay(coLocNaoDangChon) {
   }).join('') + (conLai > 0
     ? `<button type="button" class="btn-hanh-dong phu" style="grid-column:1/-1" onclick="soDangHienThiDangChay+=SO_DON_MOI_LUOT;renderDanhSachDangChay(${JSON.stringify(!!coLocNaoDangChon)})">Xem thêm (còn ${conLai} đơn)</button>`
     : '');
+  el.insertAdjacentHTML('afterbegin', htmlNhacNhanLau(danhSachDangChay, 'CHAY_MAY', 'chạy máy', user.ten)); // Y6
 }
 </script>
 </body>

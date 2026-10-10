@@ -412,7 +412,46 @@ function thongKeDanhGiaQc(tuThoiGian = '') {
     GROUP BY 1, 2, 3, 4, 5 ORDER BY 1, 2, 3, 4, 5`).all({ tu: tuThoiGian });
 }
 
+// ---------- C2 (11/10/2026): cảnh báo đã đánh dấu "Đã xử lý" ở Trung tâm hành động. 1 dòng/(loại, khoá) — đánh dấu lại thì ghi đè.
+// gia_tri = giá trị dữ liệu LÚC đánh dấu; dữ liệu đổi (khác gia_tri) thì cảnh báo hiện lại (services/vanHanhService.js#locDaXuLy).
+db.exec(`CREATE TABLE IF NOT EXISTS canh_bao_da_xu_ly (
+  loai TEXT NOT NULL, khoa TEXT NOT NULL, gia_tri TEXT NOT NULL DEFAULT '', nguoi TEXT NOT NULL DEFAULT '', luc TEXT NOT NULL,
+  ghi_chu TEXT NOT NULL DEFAULT '', PRIMARY KEY (loai, khoa)
+)`);
+function danhDauDaXuLy({ loai, khoa, giaTri, nguoi, luc, ghiChu = '' }) {
+  db.prepare(`INSERT OR REPLACE INTO canh_bao_da_xu_ly (loai, khoa, gia_tri, nguoi, luc, ghi_chu) VALUES (?, ?, ?, ?, ?, ?)`)
+    .run(loai, khoa, String(giaTri ?? ''), nguoi || '', luc, ghiChu || '');
+}
+function layDaXuLy(loai) {
+  return new Map(db.prepare(`SELECT * FROM canh_bao_da_xu_ly WHERE loai = ?`).all(loai).map(r => [r.khoa, r]));
+}
+
+// ---------- Y20 (11/10/2026): báo lỗi app từ nhân viên. thong_tin = JSON (trang, trình duyệt, màn hình, lỗi JS, lỗi API).
+db.exec(`CREATE TABLE IF NOT EXISTS bao_loi_app (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, luc TEXT NOT NULL, nguoi TEXT NOT NULL, vai_tro TEXT NOT NULL DEFAULT '', trang TEXT NOT NULL DEFAULT '',
+  mo_ta TEXT NOT NULL, anh_key TEXT NOT NULL DEFAULT '', thong_tin TEXT NOT NULL DEFAULT '{}',
+  trang_thai TEXT NOT NULL DEFAULT 'MOI', ghi_chu_xu_ly TEXT NOT NULL DEFAULT ''
+)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_bao_loi_nguoi ON bao_loi_app(nguoi, luc)`);
+function themBaoLoi(b) {
+  return Number(db.prepare(`INSERT INTO bao_loi_app (luc, nguoi, vai_tro, trang, mo_ta, thong_tin) VALUES (?, ?, ?, ?, ?, ?)`)
+    .run(b.luc, b.nguoi, b.vaiTro || '', b.trang || '', b.moTa, b.thongTin || '{}').lastInsertRowid);
+}
+function ganAnhBaoLoi(id, anhKey) { db.prepare(`UPDATE bao_loi_app SET anh_key = ? WHERE id = ?`).run(anhKey, id); }
+function demBaoLoiTu(nguoi, tuLuc) { return db.prepare(`SELECT COUNT(*) FROM bao_loi_app WHERE nguoi = ? AND luc >= ?`).pluck().get(nguoi, tuLuc); }
+function layBaoLoi(id) { return db.prepare(`SELECT * FROM bao_loi_app WHERE id = ?`).get(id); }
+function dsBaoLoi({ nguoi, trangThai, gioiHan = 200 } = {}) {
+  const dk = [], ts = [];
+  if (nguoi) { dk.push('nguoi = ?'); ts.push(nguoi); }
+  if (trangThai) { dk.push('trang_thai = ?'); ts.push(trangThai); }
+  return db.prepare(`SELECT * FROM bao_loi_app ${dk.length ? 'WHERE ' + dk.join(' AND ') : ''} ORDER BY id DESC LIMIT ?`).all(...ts, gioiHan);
+}
+function capNhatBaoLoi(id, { trangThai, ghiChu }) {
+  db.prepare(`UPDATE bao_loi_app SET trang_thai = ?, ghi_chu_xu_ly = ? WHERE id = ?`).run(trangThai, ghiChu || '', id);
+}
+
 module.exports = {
+  danhDauDaXuLy, layDaXuLy, themBaoLoi, ganAnhBaoLoi, demBaoLoiTu, layBaoLoi, dsBaoLoi, capNhatBaoLoi,
   layNote, layDanhSachNote, layTatCaTheNote, taoNote, suaNote, datAnhNote, xoaNote,
   ghiQcLog, layQcLog, layQcLogTheoId, danhGiaQcLog, thongKeDanhGiaQc, thongKeTokenQc, layDongDaDanhGiaCoAi, maxQcLogId, layCclSauId, tongKetQcNgay,
   taoKinhNghiem, suaKinhNghiem, doiTrangThaiKinhNghiem, layKinhNghiemTheoId, layDanhSachKinhNghiem, layKinhNghiemApDung, tangSoLanDungKinhNghiem, giuQuyenAutoQc, ketThucAutoQc, layTatCaAutoQc, donDepAutoQcDangChay,

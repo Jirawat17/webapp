@@ -16,6 +16,7 @@ const { laAdmin, laSuperAdmin } = require('../middleware/auth');
 const { parseNgay, dinhDangNgay, dinhDangNgayGioVN, dinhDangNgayGioNgan, bienGioiNgayVN, thoiGianVNISOString } = require('../services/dateUtils');
 const { taoQRCodeBuffer, KICH_THUOC_QR_CHUAN_DPI_MM } = require('../services/qrService');
 const { taiDsAnh } = require('../services/anhNguonService');
+const { layAnhThietKeTuThuVien } = require('../services/thuVien/anhInDonService');
 const { DANH_SACH_TRANG_THAI_BAO_CAO, GIA_TRI_LOC_TRONG, khopGiaTriLoc } = require('../data/pipelineTinhTrang');
 const { requireLogin } = require('../middleware/auth');
 
@@ -598,7 +599,11 @@ async function taiAnhChoDon(don) {
   const t0 = Date.now();
   const [qr, dsMau, dsMockup] = await Promise.all([
     doThoiGian('QR ' + don.STT_Key, () => taoQRCodeBuffer(don.STT_Key || '', 300)),
-    doThoiGian('DUONG_DAN_URL ' + don.STT_Key, () => taiDsAnh(don.DUONG_DAN_URL)),
+    // B2 (11/10/2026): thư viện Tìm ảnh trước (đủ mọi link hiện tại), không thì tải như cũ. MOCKUP giữ cách cũ (thư viện không lưu).
+    doThoiGian('DUONG_DAN_URL ' + don.STT_Key, async () => {
+      const tuThuVien = await layAnhThietKeTuThuVien(don);
+      return tuThuVien ? tuThuVien.map(a => a.buffer) : taiDsAnh(don.DUONG_DAN_URL);
+    }),
     doThoiGian('MOCKUP ' + don.STT_Key, () => taiDsAnh(don.MOCKUP)),
   ]);
   console.log(`[IN ĐƠN] ${don.STT_Key}: tổng ${Date.now() - t0}ms`);

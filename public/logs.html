@@ -21,6 +21,20 @@
 <div id="nav"></div>
 <div class="page">
   <h2>Logs</h2>
+  <!-- Y20 (11/10/2026): 2 tab — log server (như cũ) và báo lỗi từ nhân viên. -->
+  <div style="display:flex;gap:8px;margin-bottom:var(--space-3)">
+    <button type="button" class="btn-hanh-dong" id="nut-tab-log" onclick="chonTabLogs('log')">Log server</button>
+    <button type="button" class="btn-hanh-dong phu" id="nut-tab-bao-loi" onclick="chonTabLogs('bao-loi')">Báo lỗi từ nhân viên</button>
+  </div>
+  <div id="tab-bao-loi" style="display:none">
+    <div class="bao-cao-form">
+      <div class="truong"><label for="loc-bao-loi">Trạng thái</label>
+        <select id="loc-bao-loi" onchange="taiBaoLoiNhanVien()"><option value="">Tất cả</option><option value="MOI">Mới</option><option value="DANG_XU_LY">Đang xử lý</option><option value="DA_XONG">Đã xong</option></select></div>
+      <button type="button" class="btn-hanh-dong" onclick="taiBaoLoiNhanVien()">Làm mới</button>
+    </div>
+    <div id="ds-bao-loi" style="display:grid;gap:var(--space-3);margin-top:var(--space-3)"></div>
+  </div>
+  <div id="tab-log">
   <p>Log console của server (console.log/warn/error) — chỉ giữ tối đa ~5MB gần nhất, tự xoay vòng.</p>
   <div class="bao-cao-form">
     <div class="truong">
@@ -34,10 +48,11 @@
     <button type="button" class="btn-hanh-dong" id="btn-lam-moi-log">Làm mới</button>
   </div>
   <pre id="khoi-log">Đang tải...</pre>
+  </div>
 </div>
 
 <script src="/js/icons.js?v=105"></script>
-<script src="/js/api.js?v=118"></script>
+<script src="/js/api.js?v=119"></script>
 <script>
 let toanBoDong = [];
 
@@ -56,6 +71,44 @@ let toanBoDong = [];
   await taiLog();
 })();
 
+function chonTabLogs(tab) {
+  document.getElementById('tab-log').style.display = tab === 'log' ? '' : 'none';
+  document.getElementById('tab-bao-loi').style.display = tab === 'bao-loi' ? '' : 'none';
+  document.getElementById('nut-tab-log').className = 'btn-hanh-dong' + (tab === 'log' ? '' : ' phu');
+  document.getElementById('nut-tab-bao-loi').className = 'btn-hanh-dong' + (tab === 'bao-loi' ? '' : ' phu');
+  if (tab === 'bao-loi') taiBaoLoiNhanVien();
+}
+async function taiBaoLoiNhanVien() {
+  const el = document.getElementById('ds-bao-loi');
+  el.innerHTML = skeletonList(3);
+  let ds;
+  try { ds = await apiFetch('/bao-loi?trangThai=' + encodeURIComponent(document.getElementById('loc-bao-loi').value)); }
+  catch (e) { el.innerHTML = `<p>Lỗi: ${escapeHtml(e.message)}</p>`; return; }
+  if (!ds.length) { el.innerHTML = '<p style="color:var(--color-text-muted)">Chưa có báo lỗi nào.</p>'; return; }
+  el.innerHTML = ds.map(b => `
+    <div class="ta-the" style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--space-3)">
+      <div><b>#${b.id}</b> · ${escapeHtml(String(b.luc).slice(0, 16).replace('T', ' '))} · <b>${escapeHtml(b.nguoi)}</b> (${escapeHtml(NHAN_VAI_TRO[b.vaiTro] || b.vaiTro)})
+        · <a href="${escapeHtml(urlAnToan(b.trang))}" target="_blank" rel="noopener">${escapeHtml(b.trang || '?')}</a></div>
+      <div style="white-space:pre-wrap;margin:6px 0">${escapeHtml(b.moTa)}</div>
+      ${b.coAnh ? `<a href="/api/bao-loi/${b.id}/anh" target="_blank" rel="noopener"><img src="/api/bao-loi/${b.id}/anh" alt="Ảnh báo lỗi" loading="lazy" style="max-width:320px;max-height:220px;border-radius:6px;display:block"></a>` : ''}
+      <details style="margin:6px 0"><summary>Thông tin kỹ thuật (${(b.thongTin.loiJs || []).length} lỗi JS, ${(b.thongTin.loiApi || []).length} lỗi API)</summary>
+        <pre style="white-space:pre-wrap;word-break:break-word;font-size:0.78rem">${escapeHtml(JSON.stringify(b.thongTin, null, 2))}</pre></details>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <select id="tt-bao-loi-${b.id}">${['MOI', 'DANG_XU_LY', 'DA_XONG'].map(t => `<option value="${t}" ${t === b.trangThai ? 'selected' : ''}>${NHAN_TRANG_THAI_BAO_LOI[t]}</option>`).join('')}</select>
+        <input id="gc-bao-loi-${b.id}" value="${escapeHtml(b.ghiChu || '')}" placeholder="Ghi chú xử lý (nhân viên thấy được)" style="flex:1;min-width:200px">
+        <button type="button" class="btn-hanh-dong" onclick="luuBaoLoi(${b.id}, this)">Lưu</button>
+      </div>
+    </div>`).join('');
+}
+async function luuBaoLoi(id, nut) {
+  nut.disabled = true;
+  try {
+    await apiFetch('/bao-loi/' + id, { method: 'POST', body: JSON.stringify({ trangThai: document.getElementById('tt-bao-loi-' + id).value, ghiChu: document.getElementById('gc-bao-loi-' + id).value }) });
+    nut.textContent = 'Đã lưu';
+    setTimeout(() => { nut.textContent = 'Lưu'; }, 1500);
+  } catch (e) { alert('Lỗi: ' + e.message); }
+  nut.disabled = false;
+}
 async function taiLog() {
   const khoi = document.getElementById('khoi-log');
   khoi.textContent = 'Đang tải...';

@@ -11,6 +11,7 @@ const { taiAnh } = require('./anhNguonService');
 const { layChiTietAnhThuMucDrive, taiFileDriveTheoId } = require('./driveService');
 const { dinhDangNgay } = require('./dateUtils');
 const nhatKyDbService = require('./nhatKyDbService');
+const { layAnhThietKeTuThuVien } = require('./thuVien/anhInDonService');
 
 const FONT_REGULAR = path.join(__dirname, '..', 'fonts', 'NotoSans-Regular.ttf');
 const FONT_BOLD = path.join(__dirname, '..', 'fonts', 'NotoSans-Bold.ttf');
@@ -99,7 +100,17 @@ async function taiAnhCuaDon(don) {
     const anh = [];
     if (!giaTriO) anh.push({ link: '', loi: `Đơn không có link ${nhan} (ô ${cot} trống)` });
     else if (links.length === 0) anh.push({ link: giaTriO, loi: `Ô ${cot} không chứa link http(s) hợp lệ` });
-    for (const link of links) anh.push(...await taiMotLink(link));
+    // B2 (11/10/2026): ảnh thiết kế lấy từ thư viện Tìm ảnh nếu đủ mọi link — phiếu vẫn in LINK GỐC (link /api/thu-vien cần
+    // đăng nhập, team ngoài không mở được). File trong thư mục Drive in link riêng của file + link thư mục, như cách cũ.
+    const tuThuVien = cot === 'DUONG_DAN_URL' && links.length ? await layAnhThietKeTuThuVien(don) : null;
+    if (tuThuVien) {
+      for (const a of tuThuVien) {
+        const trongThuMuc = a.driveFileId && /\/folders\//.test(a.urlGoc);
+        anh.push(await xuLyAnh(trongThuMuc
+          ? { link: `https://drive.google.com/file/d/${a.driveFileId}/view`, linkThuMuc: a.urlGoc, ten: a.ten }
+          : { link: a.urlGoc }, a.buffer));
+      }
+    } else for (const link of links) anh.push(...await taiMotLink(link));
     ketQua.push({ nhan, anh });
   }
   return ketQua;

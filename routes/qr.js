@@ -153,7 +153,8 @@ router.post('/kich-ban/:scenarioId/quet', async (req, res) => {
     trangThaiCu: giaTriHienTai, trangThaiMoi: scenario.setStatus, ketQua: 'THANH_CONG',
   }));
 
-  res.json({ ok: true, don: await lamGiauDon(updated, user) });
+  const nhomNhieuAo = scenario.column === 'TRANG_THAI_XUONG' ? await orderService.canhBaoNhomKhiQuet(row, scenario.setStatus) : null; // F1
+  res.json({ ok: true, don: await lamGiauDon(updated, user), nhomNhieuAo });
 });
 
 // ============================================================
@@ -272,7 +273,8 @@ router.post('/kich-ban/:scenarioId/kiem-tra', async (req, res) => {
     nguoiQuet: user.ten, tenKichBan: scenario.label, sttKey,
     trangThaiCu: giaTriHienTai, trangThaiMoi: scenario.setStatus, ketQua: 'KIEM_TRA_OK',
   }));
-  res.json({ nhom: 'OK', sttKey, tieuDe, tenKhachHang, trangThaiHienTai: giaTriHienTai, trangThaiSau: scenario.setStatus });
+  const nhomNhieuAo = scenario.column === 'TRANG_THAI_XUONG' ? await orderService.canhBaoNhomKhiQuet(row, scenario.setStatus) : null; // F1
+  res.json({ nhom: 'OK', sttKey, tieuDe, tenKhachHang, trangThaiHienTai: giaTriHienTai, trangThaiSau: scenario.setStatus, nhomNhieuAo });
 });
 
 // Xác nhận cập nhật hàng loạt — chỉ gọi cho các mã đã kiểm tra OK ở bước quét.
