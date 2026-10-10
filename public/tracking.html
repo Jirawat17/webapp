@@ -197,6 +197,8 @@ const NHAN_TRANG_THAI = {
   DANG_CHO: { nhan: 'Đang chờ đủ giờ', lop: 'dang-cho' },
   // DonNhieuAo (bổ sung 26/09/2026): đơn con chưa có tracking — chờ đơn ".1" mua rồi tự gán.
   CHO_DON_MUA_NHOM: { nhan: 'Chờ đơn .1 của nhóm mua', lop: 'dang-cho' },
+  // 12/10/2026: đơn ".2" trở lên chưa ghép được nhóm (OrderID trống/khác đơn ".1") — không tự mua; sửa OrderID cho khớp đơn ".1".
+  DON_CON_CHUA_GHEP_NHOM: { nhan: 'Đơn con nhiều áo chưa ghép được nhóm — không tự mua (kiểm tra OrderID với đơn .1)', lop: 'thieu-du-lieu' },
   LOI_NHOM: { nhan: 'Lỗi dữ liệu DonNhieuAo', lop: 'thieu-du-lieu' },
   // Tài khoản GKE theo Xưởng (bổ sung 27/09/2026): Xưởng của đơn chưa gán tài khoản / đơn chưa gán Xưởng.
   THIEU_TAI_KHOAN_GKE: { nhan: 'Chưa có tài khoản GKE cho Xưởng', lop: 'thieu-du-lieu' },

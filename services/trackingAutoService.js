@@ -56,6 +56,10 @@ function thoiDiemDenHan(r, cauHinh) {
 // (xepHangMuaTracking) + job không chạy chồng lượt -> không đếm trùng.
 const SO_LAN_THU_TU_DONG_TOI_DA = 10;
 const CHE_DO_THU_CONG = 'THU_CONG';
+// Đơn con của đơn nhiều áo (hậu tố ".2", ",3"... — 12/10/2026, theo yêu cầu người dùng): KHÔNG BAO GIỜ tự mua riêng, kể cả khi chưa ghép
+// được nhóm (OrderID trống/khác đơn ".1" -> trước đây bị coi là đơn lẻ và tự mua, lỗi 10 lần thì hiện ở khung cảnh báo mua thủ công).
+// Kiện dùng tracking của đơn ".1"; nhóm lỗi dữ liệu hiện ở Trung tâm hành động (DonNhieuAo cần xử lý). Vẫn mua tay được nếu thật sự cần.
+const laDonConNhieuAo = r => { const p = donNhieuAoService.phanTichStt(r.STT_Key); return !!p && p.thuTu !== null && p.thuTu >= 2; };
 
 // Sửa dữ liệu gửi GKE cho đơn đã chuyển mua thủ công (01/10/2026, theo yêu cầu người dùng). Cột THONG_TIN_GKE_CHO_DON_LOI
 // (SQLite) = JSON {cột: giá trị}; chỉ 7 cột người nhận dưới đây, CHỈ dùng khi gửi GKE — Sheet giữ nguyên.
@@ -644,6 +648,7 @@ async function chayQuetTuDongMuaTracking() {
     if (r.TRACKING_ID) return false; // đã có tracking thật (kể cả mã Seller đã chép — orderService#dongBoTrackingSeller)
     if (String(r.TRACKING_ID2 || '').trim() && !r.TAM_THOI) return false; // Seller đã điền mã (đơn chưa chép được, vd đã kết thúc) — không mua thêm
     if (r.TU_MUA_CHE_DO === CHE_DO_THU_CONG) return false; // đã thử đủ 10 lần — chỉ còn mua tay
+    if (laDonConNhieuAo(r)) return false; // đơn ".2" trở lên — dùng tracking của đơn ".1"
     // DonNhieuAo: chỉ đơn mua (".1") — tính giờ theo mốc của CHÍNH đơn đó.
     const nhom = banDoNhom.get(r.STT_Key);
     if (nhom && (nhom.loiChan.length || nhom.donMua.STT_Key !== r.STT_Key)) return false;
@@ -845,6 +850,7 @@ async function layDanhSachDonAutoTracking(user) {
       const nhom = banDoNhom.get(r.STT_Key);
       let trangThai;
       if (daCoTrackingThat) trangThai = 'DA_MUA';
+      else if (laDonConNhieuAo(r) && !(nhom && !nhom.loiChan.length)) trangThai = 'DON_CON_CHUA_GHEP_NHOM';
       else if (r.TU_MUA_CHE_DO === CHE_DO_THU_CONG) trangThai = 'CHUYEN_THU_CONG';
       else if (nhom && nhom.loiChan.length) trangThai = 'LOI_NHOM';
       else if (nhom && nhom.donMua.STT_Key !== r.STT_Key) trangThai = 'CHO_DON_MUA_NHOM';
@@ -877,7 +883,7 @@ async function layDonChuyenThuCong(user) {
   const { rows } = await orderService.getAll();
   return orderService.locTheoXuong(rows, user)
     // BO_QUA_CANH_BAO_THU_CONG (11/10/2026): superadmin đã bấm "Bỏ qua" -> không hiện lại ở khung cảnh báo (vẫn mua tay được).
-    .filter(r => r.TU_MUA_CHE_DO === CHE_DO_THU_CONG && !r.TRACKING_ID && !TRANG_THAI_KHONG_CAN_MUA.includes(r.TRANG_THAI_XUONG) && !r.BO_QUA_CANH_BAO_THU_CONG)
+    .filter(r => r.TU_MUA_CHE_DO === CHE_DO_THU_CONG && !r.TRACKING_ID && !TRANG_THAI_KHONG_CAN_MUA.includes(r.TRANG_THAI_XUONG) && !r.BO_QUA_CANH_BAO_THU_CONG && !laDonConNhieuAo(r))
     .map(r => {
       const sua = docThongTinGke(r);
       return {
