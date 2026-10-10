@@ -15,13 +15,14 @@
 #tim-ma-don + button { height: 63px; }
 /* Đơn HOLD: khối đầu trang có thêm lề trong 12px mỗi bên (style.css .dau-don.vong-hold) — trừ tiếp để ô không tràn ra ngoài vòng đỏ. */
 .dau-don.vong-hold #tim-ma-don { max-width: calc(100vw - 2 * var(--space-4) - 24px); }
-/* U2 Đối chiếu ảnh (11/10/2026): khung lưới — điện thoại 2 cột, máy tính 5 cột (Thiết kế, Mockup, File thêu, Đã sản xuất, Dán tem). */
-#hop-doi-chieu { width: min(1400px, calc(100vw - 2 * var(--space-4))); max-width: none; max-height: calc(100vh - 2 * var(--space-4)); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); }
+/* U2 Đối chiếu ảnh (11/10/2026): khung lưới 5 mục (Thiết kế, Mockup, File thêu, Đã sản xuất, Dán tem). 12/10/2026 (theo yêu cầu người dùng):
+   ảnh to hơn 50% — cột tối thiểu 315px (~1,5 x cột cũ ~210px ở khung 1110px), cao tối đa 540px (cũ 360px); màn không đủ rộng cho 5 cột
+   thì tự xuống hàng thay vì thu nhỏ ảnh (điện thoại: 1 cột). Khung rộng tối đa 1700px để màn lớn vẫn xếp đủ 5 cột trên 1 hàng. */
+#hop-doi-chieu { width: min(1700px, calc(100vw - 2 * var(--space-4))); max-width: none; max-height: calc(100vh - 2 * var(--space-4)); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); }
 #hop-doi-chieu::backdrop { background: rgba(0, 0, 0, 0.55); }
-.luoi-doi-chieu { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
-@media (min-width: 900px) { .luoi-doi-chieu { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+.luoi-doi-chieu { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 315px), 1fr)); gap: var(--space-3); }
 .luoi-doi-chieu h4 { margin: 0 0 6px; font-size: 0.95rem; }
-.luoi-doi-chieu img { display: block; width: 100%; max-height: 360px; object-fit: contain; background: #e4e4e7; border-radius: var(--radius-sm); margin-bottom: 6px; }
+.luoi-doi-chieu img { display: block; width: 100%; max-height: 540px; object-fit: contain; background: #e4e4e7; border-radius: var(--radius-sm); margin-bottom: 6px; }
 .luoi-doi-chieu .o-trong { padding: var(--space-4) 0; text-align: center; color: var(--color-text-muted); border: 1px dashed var(--color-border); border-radius: var(--radius-sm); }
 </style>
 </head>
@@ -32,7 +33,7 @@
 </div>
 
 <script src="/js/icons.js?v=105"></script>
-<script src="/js/api.js?v=119"></script>
+<script src="/js/api.js?v=120"></script>
 <script>
 const sttKey = new URLSearchParams(location.search).get('stt');
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
@@ -164,7 +165,10 @@ function renderBangThongTin(don, viTri) {
     <tr><td>Ngày lên đơn</td><td>${don.NGAY_LEN_DON ? dinhDangNgay(don.NGAY_LEN_DON) : ''}</td></tr>
     <tr><td>Địa chỉ giao hàng</td><td>${dongDiaChi(don)}</td></tr>
     <tr><td>Hãng vận chuyển</td><td>${escapeHtml(don.HANG_VAN_CHUYEN || '')}</td></tr>
-    <tr><td>Mã tracking</td><td>${escapeHtml(don.TRACKING_ID || '')}${don.TRACKING_ID ? nutSaoChep(don.TRACKING_ID, 'Sao chép mã tracking') : ''}${don.TRACKING_CHUNG_CUA ? ` <span style="color:var(--color-text-faint)">(dùng chung của ${escapeHtml(don.TRACKING_CHUNG_CUA)})</span>` : ''}</td></tr>
+    <tr><td>Mã tracking</td><td>${escapeHtml(don.TRACKING_ID || '')}${don.TRACKING_ID ? nutSaoChep(don.TRACKING_ID, 'Sao chép mã tracking') : ''}${don.TRACKING_CHUNG_CUA ? ` <span style="color:var(--color-text-faint)">(dùng chung của ${escapeHtml(don.TRACKING_CHUNG_CUA)})</span>` : ''}${don.TRACKING_ID && don.NGUON_TRACKING === 'SELLER' ? ' <span style="color:var(--color-text-faint)">(Seller cung cấp — lấy từ TRACKING_ID2)</span>' : ''}</td></tr>
+    ${don.BO_QUA_CANH_BAO_THU_CONG && user.vaiTro === 'superadmin' ? `
+    <tr><td>Cảnh báo mua thủ công</td><td>Đã bỏ qua (${escapeHtml(String(don.BO_QUA_CANH_BAO_THU_CONG).split('|')[0])}, ${escapeHtml(String(don.BO_QUA_CANH_BAO_THU_CONG).split('|')[1] || '').slice(0, 16).replace('T', ' ')})
+      <button type="button" class="btn-hanh-dong phu" style="padding:4px 10px;font-size:0.82rem" onclick='boQuaCanhBaoThuCong(this, ${escapeHtml(JSON.stringify(don.STT_Key))}, false)'>Hiện lại cảnh báo</button></td></tr>` : ''}
     <tr><td>Đã mua Tracking</td><td><strong>${escapeHtml(don.DA_MUA_TRACKING || '')}</strong> <span style="color:var(--color-text-faint)">— ${escapeHtml(don.LyDoDaMuaTracking || '')}</span></td></tr>
     <tr><td>Mã IOSS</td><td>${escapeHtml(don.MA_IOSS || '')}</td></tr>
     ${don.TRACKING_ID && don.TRANG_THAI_TRACKING ? `

@@ -380,6 +380,7 @@ function renderNav(user, active) {
 
   const nav = document.getElementById('nav');
   if (!nav) return;
+  window.__nguoiDung = user; // để các hàm dùng chung biết vai trò người đang xem (vd nút "Bỏ qua" chỉ superadmin)
 
   const trangChu = trangChuTheoVaiTro(user.vaiTro);
   // Tên/vai trò + nút đăng xuất — 2 BẢN có chủ đích (bổ sung 09/09/2026, theo yêu cầu người dùng, tham
@@ -533,6 +534,23 @@ function htmlNhacNhanLau(ds, loai, viec, tenToi) {
   if (!qua.length) return '';
   return `<div style="grid-column:1/-1;padding:8px 12px;border-radius:var(--radius-md);background:var(--color-warning-bg);color:var(--color-warning-text);font-weight:700">
     ${icon('alert', { size: 16 })} Bạn có ${qua.length} đơn đang ${viec} quá ${qua[0].NhanLau[loai].nguongGio} giờ — làm tiếp hoặc báo quản lý để chuyển người khác.</div>`;
+}
+
+// "Bỏ qua" cảnh báo đơn chuyển mua tracking thủ công (11/10/2026, theo yêu cầu người dùng) — CHỈ superadmin (server kiểm lại). Dùng ở khung
+// cảnh báo của Danh sách đơn hàng và trang Tracking; mỗi trang tự có taiCanhBaoThuCong() để vẽ lại sau khi bấm.
+function htmlNutBoQuaCanhBao(sttKey) {
+  if (!window.__nguoiDung || window.__nguoiDung.vaiTro !== 'superadmin') return '';
+  return `<button type="button" class="btn-hanh-dong phu" style="padding:4px 10px;font-size:0.82rem" title="Không hiện đơn này ở khung cảnh báo nữa (vẫn mua tay được; hiện lại ở Chi tiết đơn)"
+    onclick='boQuaCanhBaoThuCong(this, ${escapeHtml(JSON.stringify(sttKey))}, true)'>Bỏ qua</button>`;
+}
+async function boQuaCanhBaoThuCong(nut, sttKey, boQua) {
+  if (boQua && !confirm(`Bỏ qua cảnh báo mua tracking thủ công của đơn ${sttKey}? Đơn sẽ không hiện ở khung cảnh báo nữa (hiện lại được ở Chi tiết đơn).`)) return;
+  nut.disabled = true;
+  try {
+    await apiFetch('/tracking/bo-qua-canh-bao', { method: 'POST', body: JSON.stringify({ sttKey, boQua }) });
+    if (typeof taiCanhBaoThuCong === 'function' && boQua) await taiCanhBaoThuCong();
+    else location.reload();
+  } catch (e) { alert('Lỗi: ' + e.message); nut.disabled = false; }
 }
 
 // Khối skeleton dùng khi đang tải dữ liệu — thay cho chữ "Đang tải..." khô khan

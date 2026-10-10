@@ -543,8 +543,20 @@ async function inLabelChoDon(sttKey, user) {
       throw new Error('Đơn chưa có mã tracking thật — dùng nút "MUA TRACKING và IN LABEL" thay vì "IN LABEL".');
     }
 
+    // Tracking Seller (11/10/2026): chỉ in label GKE cho đơn US/UK/GB (người dùng chốt); GKE không có vận đơn -> báo rõ nguồn Seller.
+    const laSeller = donLayTem.NGUON_TRACKING === orderService.NGUON_TRACKING_SELLER;
+    if (laSeller && !gkeService.duocMuaTrackingTheoQuocGia(donLayTem)) {
+      throw new Error('Tracking do Seller cung cấp — chỉ in label GKE cho đơn gửi US/UK (GB).');
+    }
     const cauHinhGke = gkeService.layCauHinhGkeChoDon(donLayTem);
-    const ketQuaTem = await ghiChuNhomLenTem(await gkeService.layTemIn(donLayTem, cauHinhGke, { laLanDauSauKhiTao: false }, nhatKy), nhom);
+    let temGke;
+    try {
+      temGke = await gkeService.layTemIn(donLayTem, cauHinhGke, { laLanDauSauKhiTao: false }, nhatKy);
+    } catch (err) {
+      if (laSeller) throw new Error(`GKE không có vận đơn cho đơn ${donLayTem.STT_Key} (tracking do Seller cung cấp): ${err.message}`);
+      throw err;
+    }
+    const ketQuaTem = await ghiChuNhomLenTem(temGke, nhom);
     await ghiDaInLabel(sttKey, user);
 
     ghiLogTrackingVaoDb({
@@ -629,7 +641,8 @@ async function chayQuetTuDongMuaTracking() {
   const banDoNhom = donNhieuAoService.xayDungBanDoNhom(rows);
 
   const donDuDieuKien = rows.filter(r => {
-    if (r.TRACKING_ID) return false; // đã có tracking thật
+    if (r.TRACKING_ID) return false; // đã có tracking thật (kể cả mã Seller đã chép — orderService#dongBoTrackingSeller)
+    if (String(r.TRACKING_ID2 || '').trim() && !r.TAM_THOI) return false; // Seller đã điền mã (đơn chưa chép được, vd đã kết thúc) — không mua thêm
     if (r.TU_MUA_CHE_DO === CHE_DO_THU_CONG) return false; // đã thử đủ 10 lần — chỉ còn mua tay
     // DonNhieuAo: chỉ đơn mua (".1") — tính giờ theo mốc của CHÍNH đơn đó.
     const nhom = banDoNhom.get(r.STT_Key);
@@ -714,9 +727,18 @@ async function capNhatTrangThaiTrackingChoDon(sttKey, { gomDelivered } = {}) {
   const donTra = rows.find(r => r.STT_Key === keyTra);
   if (!donTra) return { ok: false, lyDo: `Không tìm thấy đơn ${keyTra} (đơn mua tracking của nhóm)` };
   const cauHinhGke = gkeService.layCauHinhGkeChoDon(donTra); // tài khoản ĐÃ tạo vận đơn
-  const lichSu = await gkeService.layLichSuTrackingGke(keyTra, cauHinhGke, []);
+  const laSeller = donTra.NGUON_TRACKING === orderService.NGUON_TRACKING_SELLER;
+  let lichSu;
+  try {
+    lichSu = await gkeService.layLichSuTrackingGke(keyTra, cauHinhGke, []);
+  } catch (err) {
+    if (laSeller) throw new Error(`GKE không có vận đơn cho đơn ${keyTra} (tracking do Seller cung cấp): ${err.message}`);
+    throw err;
+  }
   if (lichSu.length === 0) {
-    return { ok: false, lyDo: 'GKE chưa có sự kiện tracking nào cho đơn này (có thể vừa tạo nhãn, chưa được đơn vị vận chuyển quét nhận).' };
+    return { ok: false, lyDo: laSeller
+      ? `GKE không có vận đơn / sự kiện cho đơn ${keyTra} (tracking do Seller cung cấp).`
+      : 'GKE chưa có sự kiện tracking nào cho đơn này (có thể vừa tạo nhãn, chưa được đơn vị vận chuyển quét nhận).' };
   }
 
   const suKienMoiNhat = lichSu[lichSu.length - 1];
@@ -749,7 +771,9 @@ async function chayQuetCapNhatTrangThaiTracking() {
   const { rows } = await orderService.getAll();
   // Bỏ đơn dùng chung tracking (DonNhieuAo) — cập nhật theo đơn ".1" của nó (xem capNhatTrangThaiTrackingChoDon).
   const donCoTracking = rows.filter(r => r.TRACKING_ID && !r.TRACKING_CHUNG_CUA);
-  const donCanQuet = donCoTracking.filter(r => !daGiaoThanhCongGke(r.MA_NODE_TRACKING, r.MA_TRANG_THAI_NODE_TRACKING));
+  const donCanQuet = donCoTracking.filter(r => !daGiaoThanhCongGke(r.MA_NODE_TRACKING, r.MA_TRANG_THAI_NODE_TRACKING)
+    // Tracking Seller của đơn đã kết thúc: GKE có thể không bao giờ báo "đã giao" -> không quét mãi (người dùng chốt 11/10/2026).
+    && !(r.NGUON_TRACKING === orderService.NGUON_TRACKING_SELLER && TRANG_THAI_KHONG_CAN_MUA.includes(r.TRANG_THAI_XUONG)));
 
   let soDaCapNhat = 0;
   const gomDelivered = [];
@@ -834,6 +858,7 @@ async function layDanhSachDonAutoTracking(user) {
         sttKey: r.STT_Key,
         trangThai,
         trackingId: daCoTrackingThat ? r.TRACKING_ID : '',
+        nguonSeller: daCoTrackingThat && r.NGUON_TRACKING === orderService.NGUON_TRACKING_SELLER,
         hangVanChuyen: daCoTrackingThat ? (r.HANG_VAN_CHUYEN || '') : '',
         hanTuMua: !daCoTrackingThat && han !== null ? new Date(han).toISOString() : '',
         soLanThu: daCoTrackingThat ? 0 : Number(r.TU_MUA_SO_LAN_THU) || 0,
@@ -851,7 +876,8 @@ const TRANG_THAI_KHONG_CAN_MUA = ['CANCELLED_Đã hủy', 'REFUNDED_Hoàn đơn'
 async function layDonChuyenThuCong(user) {
   const { rows } = await orderService.getAll();
   return orderService.locTheoXuong(rows, user)
-    .filter(r => r.TU_MUA_CHE_DO === CHE_DO_THU_CONG && !r.TRACKING_ID && !TRANG_THAI_KHONG_CAN_MUA.includes(r.TRANG_THAI_XUONG))
+    // BO_QUA_CANH_BAO_THU_CONG (11/10/2026): superadmin đã bấm "Bỏ qua" -> không hiện lại ở khung cảnh báo (vẫn mua tay được).
+    .filter(r => r.TU_MUA_CHE_DO === CHE_DO_THU_CONG && !r.TRACKING_ID && !TRANG_THAI_KHONG_CAN_MUA.includes(r.TRANG_THAI_XUONG) && !r.BO_QUA_CANH_BAO_THU_CONG)
     .map(r => {
       const sua = docThongTinGke(r);
       return {

@@ -54,6 +54,7 @@ async function getAll({ fresh = false, ttlMs = 10000 } = {}) {
     // trong file trên) nhưng với TOÀN BỘ app (danh sách, dashboard, báo cáo...) coi như đã biến mất.
     .filter(r => r.DA_XOA !== 'TRUE');
   tuGanXuongTheoTeam(rowsGop);
+  dongBoTrackingSeller(rowsGop);
   dongBoDaMuaTracking(rowsGop);
   dongBoCanhBaoTinhTrang(rowsGop);
   return { headers, rows: rowsGop };
@@ -76,6 +77,7 @@ function tinhDaMuaTracking(r) {
 function lyDoDaMuaTracking(r, nhom) {
   let lyDo;
   if (r.TRACKING_ID && r.TRACKING_CHUNG_CUA) lyDo = `Dùng chung tracking của đơn ${r.TRACKING_CHUNG_CUA} (DonNhieuAo) — đơn này không mua riêng.`;
+  else if (r.TRACKING_ID && r.NGUON_TRACKING === NGUON_TRACKING_SELLER) lyDo = 'Theo mã tracking Seller điền trong Sheet (TRACKING_ID2) — đã chép vào cột Tracking, hệ thống không mua.';
   else if (r.TRACKING_ID) lyDo = 'Đơn có mã tracking riêng trong hệ thống (TRACKING_ID).';
   else if (String(r.TRACKING_ID2 || '').trim()) lyDo = 'Theo mã tracking Seller điền trong Sheet (TRACKING_ID2) — hệ thống không mua.';
   else if (r.TAM_THOI) lyDo = 'Đã tạo vận đơn GKE nhưng đang chờ tem — chưa có mã tracking.';
@@ -84,6 +86,74 @@ function lyDoDaMuaTracking(r, nhom) {
     lyDo += ` Nhóm cùng OrderID ${nhom.orderId} chưa xác định được đơn ".1" (${nhom.loiChan.join(' ')}) nên mỗi đơn tính riêng theo mã của chính nó.`;
   }
   return lyDo;
+}
+
+// Tracking do Seller điền (11/10/2026, theo yêu cầu người dùng): đơn CHƯA kết thúc có mã Seller (TRACKING_ID2) mà app chưa có tracking ->
+// chép vào TRACKING_ID / HANG_VAN_CHUYEN (từ HANG_VAN_CHUYEN2), đánh dấu NGUON_TRACKING = 'SELLER' -> không tự mua, không hiện ở khung cảnh
+// báo mua thủ công, không tính L2; vẫn in label / quét trạng thái GKE (tài khoản GKE của Xưởng — gkeService#layCauHinhGkeChoDon).
+//  - Seller sửa/xoá mã -> cập nhật/xoá theo, CHỈ với tracking nguồn Seller. Tracking app đã mua / nhập tay KHÔNG bao giờ bị ghi đè.
+//  - Đơn nhiều áo (nhóm hợp lệ): mã của đơn mua (".1"), không có thì mã đơn đầu tiên trong nhóm có mã -> ghi vào đơn mua và dùng
+//    chung cho cả nhóm (TRACKING_CHUNG_CUA), như tracking app mua. Nhóm lỗi -> từng đơn tự lấy mã của chính nó.
+//  - Bỏ qua: đơn đã kết thúc (huỷ/hoàn/đã giao — không quét GKE vô ích), đơn đang chờ tem GKE (TAM_THOI — app đang mua dở).
+// Ghi thẳng SQLite (như dongBoDaMuaTracking — không qua update() để không đọc lại getAll), chỉ khi đổi; mỗi đơn đổi ghi 1 dòng lịch sử.
+const NGUON_TRACKING_SELLER = 'SELLER';
+const COT_TRANG_THAI_GKE = ['TRANG_THAI_TRACKING', 'THOI_GIAN_CAP_NHAT_TRACKING', 'MA_NODE_TRACKING', 'MA_TRANG_THAI_NODE_TRACKING'];
+function dongBoTrackingSeller(rows) {
+  const maSeller = r => String(r.TRACKING_ID2 || '').trim();
+  // getAll gọi rất thường xuyên — không có đơn nào liên quan thì thôi, khỏi dựng bản đồ nhóm.
+  if (!rows.some(r => (maSeller(r) && !r.TRACKING_ID) || r.NGUON_TRACKING === NGUON_TRACKING_SELLER)) return;
+  const { TRANG_THAI_KET_THUC } = require('../data/pipelineTinhTrang');
+  const banDoNhom = donNhieuAoService.xayDungBanDoNhom(rows);
+  const khoa = r => String(r[KEY_COL]).trim();
+  const canGhi = new Map();
+  const lichSu = [];
+  const ghi = (r, updates) => {
+    if (Object.entries(updates).every(([k, v]) => String(r[k] || '') === v)) return;
+    if ((r.TRACKING_ID || '') !== updates.TRACKING_ID) lichSu.push({ sttKey: khoa(r), tu: r.TRACKING_ID || '', sang: updates.TRACKING_ID });
+    canGhi.set(khoa(r), { ...(canGhi.get(khoa(r)) || {}), ...updates });
+    Object.assign(r, updates);
+  };
+  // Đổi mã -> xoá trạng thái GKE của mã cũ (thuộc kiện khác).
+  const theoMa = (r, ma, hang, them = {}) => ({
+    TRACKING_ID: ma, HANG_VAN_CHUYEN: hang, NGUON_TRACKING: ma ? NGUON_TRACKING_SELLER : '', ...them,
+    ...((r.TRACKING_ID || '') !== ma ? Object.fromEntries(COT_TRANG_THAI_GKE.map(c => [c, ''])) : {}),
+  });
+  const apDung = (dich, nguon, cacCon) => {
+    if (dich.TRACKING_ID && dich.NGUON_TRACKING !== NGUON_TRACKING_SELLER) return; // app đã mua / nhập tay
+    if (dich.TAM_THOI || TRANG_THAI_KET_THUC.includes(dich.TRANG_THAI_XUONG)) return;
+    const ma = nguon ? maSeller(nguon) : '';
+    if (!ma && dich.NGUON_TRACKING !== NGUON_TRACKING_SELLER) return; // chưa có gì để chép / xoá
+    const hang = ma ? String(nguon.HANG_VAN_CHUYEN2 || '').trim() : '';
+    ghi(dich, theoMa(dich, ma, hang));
+    for (const con of cacCon) {
+      if (con === dich || con.TRANG_THAI_XUONG === donNhieuAoService.TRANG_THAI_HUY) continue;
+      if (con.TRACKING_ID && con.NGUON_TRACKING !== NGUON_TRACKING_SELLER) continue;
+      if (!ma && con.NGUON_TRACKING !== NGUON_TRACKING_SELLER) continue;
+      ghi(con, theoMa(con, ma, hang, { TRACKING_CHUNG_CUA: ma ? khoa(dich) : '' }));
+    }
+  };
+  const daXet = new Set();
+  for (const r of rows) {
+    if (daXet.has(khoa(r))) continue;
+    const nhom = banDoNhom.get(r.STT_Key);
+    if (nhom && nhom.donMua && !nhom.loiChan.length) {
+      nhom.thanhVien.forEach(x => daXet.add(khoa(x)));
+      apDung(nhom.donMua, [nhom.donMua, ...nhom.thanhVien].find(x => maSeller(x)) || null, nhom.thanhVien);
+    } else {
+      daXet.add(khoa(r));
+      apDung(r, maSeller(r) ? r : null, []);
+    }
+  }
+  if (canGhi.size === 0) return;
+  try {
+    trangThaiDbService.ghiDeNhieu([...canGhi]);
+    require('./logService').ghiLogNhieu(lichSu.map(d => ({
+      nguoiDung: 'Hệ thống', vaiTro: 'he_thong', hanhDong: 'TRACKING_TU_SELLER', sttKey: d.sttKey,
+      chiTiet: { tu: d.tu, sang: d.sang, moTa: d.sang ? 'Lấy mã tracking Seller điền trong Sheet (TRACKING_ID2)' : 'Seller đã xoá mã tracking trong Sheet' },
+    })));
+  } catch (err) {
+    console.error('[Orders] Lỗi đồng bộ tracking Seller:', err.message);
+  }
 }
 
 // Ghi lại DA_MUA_TRACKING cho đơn nào đang lệch — cùng khuôn tuGanXuongTheoTeam: bắt được cả thay đổi phía Sheet
@@ -434,6 +504,10 @@ async function capNhatThat(sttKey, updates, user, tuyChon) {
     updatesDaTinh.NGUOI_VE_FILE = (user && user.ten) || '';
     updatesDaTinh.GHI_CHU_VE_FILE = '';
   }
+
+  // Tracking Seller (11/10/2026): mọi lần ghi TRACKING_ID qua đây (app mua, sao xuống nhóm, sửa tay) = không còn là mã Seller -> bỏ
+  // đánh dấu nguồn, để đồng bộ mã Seller (dongBoTrackingSeller) không bao giờ ghi đè.
+  if (updatesDaTinh.TRACKING_ID !== undefined && updatesDaTinh.NGUON_TRACKING === undefined) updatesDaTinh.NGUON_TRACKING = '';
 
   // Y6 (11/10/2026): lúc NHẬN — vừa chuyển sang "Đang chạy máy"/"Đang vẽ file", HOẶC admin chỉ định/đổi người khác trong lúc đang ở
   // trạng thái đó (người nhận mới -> tính lại giờ). Mốc dùng cho nhắc "đơn nhận quá lâu" (services/vanHanhService.js).
@@ -793,7 +867,7 @@ function suaDonKetSanSang() {
 // 4 cột theo dõi TỰ ĐỘNG mua tracking (30/09/2026, trackingAutoService.js#ghiNhanLanThuTuDong) — CHỈ vai trò có menu Tracking
 // được thấy (yêu cầu người dùng: chặn cả ở API). Gỡ khỏi dữ liệu đơn trả về cho vai trò khác (routes/orders.js, routes/qr.js).
 // + THONG_TIN_GKE_CHO_DON_LOI (01/10/2026): dữ liệu sửa tay gửi GKE — cùng nhóm, cùng quyền xem.
-const COT_THEO_DOI_MUA_TRACKING = ['TU_MUA_SO_LAN_THU', 'TU_MUA_CHE_DO', 'TU_MUA_LOI_GAN_NHAT', 'TU_MUA_THOI_GIAN_THU', 'THONG_TIN_GKE_CHO_DON_LOI'];
+const COT_THEO_DOI_MUA_TRACKING = ['TU_MUA_SO_LAN_THU', 'TU_MUA_CHE_DO', 'TU_MUA_LOI_GAN_NHAT', 'TU_MUA_THOI_GIAN_THU', 'THONG_TIN_GKE_CHO_DON_LOI', 'BO_QUA_CANH_BAO_THU_CONG'];
 const VAI_TRO_MENU_TRACKING = ['admin', 'superadmin', 've_file'];
 function anCotTheoDoiMuaTracking(row, user) {
   if (user && VAI_TRO_MENU_TRACKING.includes(user.vaiTro)) return row;
@@ -803,7 +877,7 @@ function anCotTheoDoiMuaTracking(row, user) {
 }
 
 module.exports = {
-  VAI_TRO_MENU_TRACKING, anCotTheoDoiMuaTracking,
+  VAI_TRO_MENU_TRACKING, anCotTheoDoiMuaTracking, NGUON_TRACKING_SELLER,
   suaDonKetSanSang,
   TAB, KEY_COL, getAll, getByKey, getManyByKeys, update, filterForRole, ganTenKhachHang, tieuDeSanPham, danhSachViTriTheu,
   layDanhSachXuong, locTheoXuong, coQuyenTheoXuong, phamViDon, laUuTien, laDonHold, loaiTinhTrangDacBiet, canhBaoTinhTrangConHan, canhBaoNhomKhiQuet, timDonTheoMaGoTay, docSoMuiChi, lyDoDaMuaTracking, NHOM_LOC_TONG_QUAT,

@@ -169,6 +169,22 @@ router.get('/canh-bao-thu-cong', coMenuTracking, async (req, res) => {
   res.json(await layDonChuyenThuCong(req.session.user));
 });
 
+// "Bỏ qua" cảnh báo đơn chuyển mua thủ công (11/10/2026, theo yêu cầu người dùng) — CHỈ superadmin. boQua=false = "Hiện lại cảnh báo"
+// (ở Chi tiết đơn, phòng bấm nhầm). Chỉ ẩn khỏi khung cảnh báo; không đổi trạng thái mua, vẫn mua tay được.
+router.post('/bo-qua-canh-bao', requireExactRole('superadmin'), async (req, res) => {
+  const { sttKey, boQua } = req.body || {};
+  const user = req.session.user;
+  const { row } = await orderService.getByKey(String(sttKey || ''), { fresh: true });
+  if (!row) return res.status(404).json({ error: 'Không tìm thấy đơn hàng' });
+  const giaTri = boQua === false ? '' : `${user.ten}|${require('../services/dateUtils').thoiGianVNISOString()}`;
+  require('../services/trangThaiDbService').ghiDe(row.STT_Key, { BO_QUA_CANH_BAO_THU_CONG: giaTri });
+  require('../services/logService').ghiLog({
+    nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: giaTri ? 'BO_QUA_CANH_BAO_MUA_THU_CONG' : 'HIEN_LAI_CANH_BAO_MUA_THU_CONG', sttKey: row.STT_Key,
+    chiTiet: { moTa: giaTri ? 'Bỏ qua cảnh báo đơn chuyển mua tracking thủ công' : 'Hiện lại cảnh báo đơn chuyển mua tracking thủ công' },
+  }).catch(err => console.error('[Tracking] Lỗi ghi log nền:', err.message));
+  res.json({ ok: true });
+});
+
 // XUẤT EXCEL MUA TRACKING THỦ CÔNG theo mẫu GKE (02/10/2026) — CHỈ ĐỌC, không đổi trạng thái đơn, không gửi gì sang GKE.
 // Logic + quy tắc: services/trackingExcelGkeService.js. Quyền: như menu Tracking; admin chỉ đơn Xưởng mình.
 const trackingExcelGke = require('../services/trackingExcelGkeService');

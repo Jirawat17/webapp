@@ -104,7 +104,9 @@ const loiChung = thongBao => Object.assign(new Error(thongBao), { loiChung: true
 // Không xác định được -> throw lỗi rõ ràng (không dùng tài khoản Xưởng khác thay thế).
 function layCauHinhGkeChoDon(row) {
   let id = row.TAI_KHOAN_GKE;
-  if (!id && (row.TRACKING_ID || row.TAM_THOI)) id = ID_TAI_KHOAN_CU;
+  // Tracking Seller (NGUON_TRACKING = 'SELLER', 11/10/2026): app không tạo vận đơn này -> tra theo tài khoản GKE gán cho Xưởng (người dùng
+  // chốt), KHÔNG rơi về tài khoản cũ như đơn app mua trước khi có cột TAI_KHOAN_GKE.
+  if (!id && (row.TRACKING_ID || row.TAM_THOI) && row.NGUON_TRACKING !== 'SELLER') id = ID_TAI_KHOAN_CU;
   if (!id) {
     if (!row.XUONG) throw loiChung(`[tài khoản GKE] Đơn ${row.STT_Key} chưa gán Xưởng — không xác định được tài khoản GKE để dùng.`);
     id = caiDatDbService.layGanTaiKhoanGke()[row.XUONG];

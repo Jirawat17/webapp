@@ -115,6 +115,14 @@ function moTaLichSu(dong, { anXuong = false, xuongDuocThay = [] } = {}) {
       return kq(`cho tự động mua tracking thử lại (đặt lại ${c.soLanThu || 0} lần đã thử)`);
     case 'IN_LABEL':
       return kq(`in label${c.trackingNum ? ` (tracking ${c.trackingNum})` : ''}`);
+    // Tracking Seller + Bỏ qua cảnh báo mua thủ công (11/10/2026).
+    case 'TRACKING_TU_SELLER':
+      return kq(c.sang ? 'lấy mã tracking Seller điền trong Sheet (TRACKING_ID2) — hệ thống không mua' : 'Seller đã xoá mã tracking trong Sheet — bỏ mã đã lấy',
+        [doi('Mã tracking', c.tu || undefined, c.sang || '(trống)')]);
+    case 'BO_QUA_CANH_BAO_MUA_THU_CONG':
+      return kq('bỏ qua cảnh báo đơn chuyển mua tracking thủ công');
+    case 'HIEN_LAI_CANH_BAO_MUA_THU_CONG':
+      return kq('hiện lại cảnh báo đơn chuyển mua tracking thủ công');
     case 'DUNG_CHUNG_TRACKING':
       return kq(`gán tracking chung của đơn ${c.donMua || '?'} (nhóm DonNhieuAo ${c.nhom || '?'})`,
         [doi('Mã tracking', undefined, c.trackingNum), doi('Hãng vận chuyển', undefined, c.hangVanChuyen)]);

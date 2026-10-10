@@ -95,6 +95,10 @@ const CAC_COT = [
   // L2 (11/10/2026): lúc mua tracking (TRACKING_ID đổi sang giá trị mới khác rỗng) và lúc TRANG_THAI_TRACKING ĐỔI giá trị — ghiDe() tự
   // đóng dấu (mọi đường ghi đều qua đây). Đơn đang có tracking lúc triển khai: mốc = lúc triển khai (người dùng chốt 11/10/2026).
   'THOI_GIAN_MUA_TRACKING', 'THOI_GIAN_DOI_TRANG_THAI_TRACKING',
+  // NGUON_TRACKING (11/10/2026, theo yêu cầu người dùng): 'SELLER' = TRACKING_ID chép từ mã Seller điền trong Sheet (TRACKING_ID2) —
+  // orderService.js#dongBoTrackingSeller tự ghi/cập nhật/xoá; '' = app mua hoặc nhập tay. BO_QUA_CANH_BAO_THU_CONG: "người|lúc"
+  // superadmin bấm "Bỏ qua" ở khung cảnh báo đơn chuyển mua thủ công — đơn không hiện lại ở khung đó (trống = hiện bình thường).
+  'NGUON_TRACKING', 'BO_QUA_CANH_BAO_THU_CONG',
   // CanhBaoDaGui: không nằm trong danh sách 31 cột người dùng liệt kê (có thể chỉ là sót khi liệt kê) —
   // nhưng rà code xác nhận đây CŨNG là cột app tự ghi (services/canhBaoJob.js, cờ chống spam Telegram),
   // không thuộc RAW/A:AM lẫn AN:BR người dùng mô tả. Xếp vào đây theo đúng tiêu chí "app tự ghi" đã

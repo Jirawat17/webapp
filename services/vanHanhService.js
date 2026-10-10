@@ -62,7 +62,8 @@ function vanChuyenBatThuong(rows, l2, daGiao, bayGio = Date.now()) {
   const kq = [];
   for (const r of rows) {
     // Đơn dùng chung tracking (DonNhieuAo) xét theo đơn mua — tránh báo trùng 1 kiện nhiều lần.
-    if (!r.TRACKING_ID || r.TRACKING_CHUNG_CUA || TRANG_THAI_KHONG_XET_L2.includes(r.TRANG_THAI_XUONG) || daGiao(r)) continue;
+    // Tracking do Seller cung cấp (NGUON_TRACKING 'SELLER', 11/10/2026): không xét — người dùng chốt, tránh báo sai "chưa được quét nhận".
+    if (!r.TRACKING_ID || r.TRACKING_CHUNG_CUA || r.NGUON_TRACKING === 'SELLER' || TRANG_THAI_KHONG_XET_L2.includes(r.TRANG_THAI_XUONG) || daGiao(r)) continue;
     const tt = String(r.TRANG_THAI_TRACKING || '').trim();
     const quyTac = [];
     const ngayMua = gioTu(r.THOI_GIAN_MUA_TRACKING, bayGio);
