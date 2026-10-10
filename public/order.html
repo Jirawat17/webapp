@@ -17,12 +17,14 @@
 .dau-don.vong-hold #tim-ma-don { max-width: calc(100vw - 2 * var(--space-4) - 24px); }
 /* U2 Đối chiếu ảnh (11/10/2026): khung lưới 5 mục (Thiết kế, Mockup, File thêu, Đã sản xuất, Dán tem). 12/10/2026 (theo yêu cầu người dùng):
    ảnh to hơn 50% — cột tối thiểu 315px (~1,5 x cột cũ ~210px ở khung 1110px), cao tối đa 540px (cũ 360px); màn không đủ rộng cho 5 cột
-   thì tự xuống hàng thay vì thu nhỏ ảnh (điện thoại: 1 cột). Khung rộng tối đa 1700px để màn lớn vẫn xếp đủ 5 cột trên 1 hàng. */
-#hop-doi-chieu { width: min(1700px, calc(100vw - 2 * var(--space-4))); max-width: none; max-height: calc(100vh - 2 * var(--space-4)); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); }
+   thì tự xuống hàng thay vì thu nhỏ ảnh (điện thoại: 1 cột). 12/10/2026 lần 2 (người dùng chốt): khung RỘNG HẾT màn hình (chừa lề 16px),
+   cột giãn đều theo bề ngang (auto-fit — không để cột trống); mỗi ảnh cao tối đa bằng chiều cao màn hình trừ phần tiêu đề, để luôn thấy
+   trọn 1 ảnh mà không phải cuộn. Nhiều ảnh thiết kế vẫn xếp dọc trong cột (cuộn khung để xem tiếp). */
+#hop-doi-chieu { width: calc(100vw - 2 * var(--space-4)); max-width: none; max-height: calc(100vh - 2 * var(--space-4)); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); }
 #hop-doi-chieu::backdrop { background: rgba(0, 0, 0, 0.55); }
-.luoi-doi-chieu { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 315px), 1fr)); gap: var(--space-3); }
+.luoi-doi-chieu { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 315px), 1fr)); gap: var(--space-3); }
 .luoi-doi-chieu h4 { margin: 0 0 6px; font-size: 0.95rem; }
-.luoi-doi-chieu img { display: block; width: 100%; max-height: 540px; object-fit: contain; background: #e4e4e7; border-radius: var(--radius-sm); margin-bottom: 6px; }
+.luoi-doi-chieu img { display: block; width: 100%; max-height: calc(100vh - 2 * var(--space-4) - 110px); object-fit: contain; background: #e4e4e7; border-radius: var(--radius-sm); margin-bottom: 6px; }
 .luoi-doi-chieu .o-trong { padding: var(--space-4) 0; text-align: center; color: var(--color-text-muted); border: 1px dashed var(--color-border); border-radius: var(--radius-sm); }
 </style>
 </head>
