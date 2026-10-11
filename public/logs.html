@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Logs — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=109">
+<link rel="stylesheet" href="/css/style.css?v=110">
 <script src="/js/theme.js?v=104"></script>
 <style>
 /* Font đơn cách + cỡ nhỏ để hiện nhiều dòng — cùng tinh thần .tk-logs ở tracking.html, khai riêng ở đây
@@ -115,11 +115,22 @@ async function taiLog() {
   try {
     const soDong = document.getElementById('so-dong-log').value;
     const ketQua = await apiFetch('/logs?soDong=' + encodeURIComponent(soDong));
-    toanBoDong = (ketQua.text || '').split('\n');
+    toanBoDong = (ketQua.text || '').split('\n').map(gioVietNam);
     renderLog();
   } catch (e) {
     khoi.textContent = 'Lỗi: ' + e.message;
   }
+}
+
+// File log ghi giờ UTC ("[2026-10-11T16:00:02.075Z]", services/logCapture.js) — CHỈ đổi lúc hiển thị sang giờ Việt Nam
+// "[11/10/2026 23:00:02]" (11/10/2026, theo yêu cầu người dùng), dòng cũ lẫn mới; file giữ nguyên. VN không đổi giờ mùa hè -> +7 cố định.
+function gioVietNam(dong) {
+  return dong.replace(/^\[(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z)\]/, (goc, iso) => {
+    const t = new Date(Date.parse(iso) + 7 * 3600 * 1000);
+    if (isNaN(t)) return goc;
+    const h = n => String(n).padStart(2, '0');
+    return `[${h(t.getUTCDate())}/${h(t.getUTCMonth() + 1)}/${t.getUTCFullYear()} ${h(t.getUTCHours())}:${h(t.getUTCMinutes())}:${h(t.getUTCSeconds())}]`;
+  });
 }
 
 // textContent (KHÔNG innerHTML) — log có thể chứa bất kỳ ký tự nào (kể cả trông giống thẻ HTML nếu 1

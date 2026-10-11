@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Chi tiết đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=109">
+<link rel="stylesheet" href="/css/style.css?v=110">
 <script src="/js/theme.js?v=104"></script>
 <style>
 /* Ô "Nhập mã đơn" (04/10/2026, theo yêu cầu người dùng): gấp 3 cỡ cũ (160x21px, chữ 13,3px) cả rộng, cao, cỡ chữ; chữ gõ vào
@@ -422,6 +422,21 @@ function capNhatMauChonTrangThai(select) {
   select.classList.toggle('chon-trang-thai-tieu-cuc', !laTichCuc);
 }
 
+// Chú thích 1 dòng; bấm (hoặc rê chuột) để xem đầy đủ (11/10/2026, theo yêu cầu người dùng — đỡ phải kéo trang).
+function chuThich(ngan, day) {
+  return `<details class="chu-thich"><summary title="${escapeHtml(day)}">${escapeHtml(ngan)} ⓘ</summary>${escapeHtml(day)}</details>`;
+}
+
+// Các loại ảnh tải ở trang chi tiết — moc khớp routes/photos.js. chiAdmin: ve_file không thấy (giữ đúng quyền cũ).
+// "Ảnh file thêu" (26/08/2026) chỉ lưu ảnh, không đụng trạng thái; 2/3 thêm 24/09/2026 (không bắt buộc).
+const LOAI_ANH_TAI_LEN = [
+  { moc: 've_file', ten: 'Ảnh file thêu (sau khi vẽ file)', ghiChu: 'cần cột Anh_File_Theu_URL trong Sheet — nếu chưa có, thao tác này sẽ báo lỗi.' },
+  { moc: 've_file_2', ten: 'Ảnh File Thêu 2 (không bắt buộc)', ghiChu: 'cần cột Anh_File_Theu_URL_2 trong Sheet — nếu chưa có, thao tác này sẽ báo lỗi.' },
+  { moc: 've_file_3', ten: 'Ảnh File Thêu 3 (không bắt buộc)', ghiChu: 'cần cột Anh_File_Theu_URL_3 trong Sheet — nếu chưa có, thao tác này sẽ báo lỗi.' },
+  { moc: 'da_san_xuat', ten: 'Ảnh đã sản xuất (ngay khi chạy máy xong)', chiAdmin: true, ghiChu: 'cần cột Anh_Da_San_Xuat_URL trong Sheet. Chỉ dùng được khi đơn đang ở "Đang chạy máy" — tải ảnh xong sẽ TỰ ĐỘNG chuyển đơn sang "Đã sản xuất". san_xuat/nguoi_lay_phoi nên dùng màn "Chụp ảnh đã sản xuất" ở trang Quét QR thay vì đây (nhanh hơn, không cần mở từng đơn).' },
+  { moc: 'da_dan_tem', ten: 'Ảnh ĐÃ DÁN TEM (sau khi dán tem lên kiện hàng)', chiAdmin: true, ghiChu: 'cần cột Anh_Da_Dan_Tem_URL trong Sheet. Chỉ dùng được khi đơn đang ở "Đã sản xuất" VÀ đã có thông tin Tracking (mua trước ở khối "Vận chuyển (GKE)" ở trên hoặc menu Tracking) — tải ảnh xong sẽ TỰ ĐỘNG chuyển đơn sang "ĐÃ DÁN TEM". Bản thân việc tải ảnh này không tạo mã tracking. san_xuat/nguoi_lay_phoi nên dùng màn "Chụp ảnh ĐÃ DÁN TEM" ở trang Quét QR thay vì đây (nhanh hơn, không cần mở từng đơn).' },
+];
+
 function renderKhuVucThaoTac(don) {
   const el = document.getElementById('khu-vuc-thao-tac');
   let html = '';
@@ -444,10 +459,10 @@ function renderKhuVucThaoTac(don) {
     // Nút chuyển giai đoạn — đọc từ chính tab CauHinhKichBan (dùng chung logic với quét QR),
     // không hardcode nút theo vai trò vì Sheet không định nghĩa vai trò cho từng kịch bản.
     if (don.kichBanKeTiep && don.kichBanKeTiep.length > 0) {
-      html += don.kichBanKeTiep.map(kb => `
+      html += `<div class="hang-nut">${don.kichBanKeTiep.map(kb => `
         <button class="btn-hanh-dong" onclick="chuyenGiaiDoan('${kb.id}', this)">
           ${icon('arrowRight')} Chuyển sang: ${escapeHtml(kb.label)}
-        </button>`).join('');
+        </button>`).join('')}</div>`;
     } else {
       html += '<p>Không có kịch bản nào áp dụng được cho trạng thái hiện tại (kiểm tra tab CauHinhKichBan).</p>';
     }
@@ -481,7 +496,7 @@ function renderKhuVucThaoTac(don) {
       </select>
       <div id="canh-bao-to-hop"></div>
       <button id="nut-luu-trang-thai" class="btn-hanh-dong phu" onclick="luuTrangThaiThuCong()">${icon('check')} Lưu trạng thái</button>
-      <p style="margin:0;font-size:0.8rem;color:var(--color-text-faint)">Nếu cả Phôi và Vẽ file cùng chuyển sang "Đã..." trong khi Trạng thái chung đang là "Đã in mã", hệ thống tự chuyển Trạng thái chung sang "ĐÃ SẴN SÀNG CHẠY MÁY".</p>
+      ${chuThich('Đủ Phôi + Vẽ file khi "Đã in mã" → tự sang SẴN SÀNG', 'Nếu cả Phôi và Vẽ file cùng chuyển sang "Đã..." trong khi Trạng thái chung đang là "Đã in mã", hệ thống tự chuyển Trạng thái chung sang "ĐÃ SẴN SÀNG CHẠY MÁY".')}
     </div>`;
 
   // Admin chỉ định người chạy máy NGAY tại trang chi tiết — cơ chế thứ 2 song song với việc chọn
@@ -491,23 +506,29 @@ function renderKhuVucThaoTac(don) {
   if (laAdmin(user.vaiTro)) {
     html += `
       <div class="upload-box">
-        <label for="chi-dinh-nguoi-chay-may">${icon('users', { size: 18 })} Chỉ định người chạy máy</label>
-        <select id="chi-dinh-nguoi-chay-may">
-          <option value="">Chọn người sản xuất...</option>
-          ${dsSanXuatDangHoatDong.map(u => `<option value="${escapeHtml(u.Ten)}" ${u.Ten === don.NGUOI_CHAY_MAY ? 'selected' : ''}>${escapeHtml(u.Ten)}</option>`).join('')}
-        </select>
-        <button class="btn-hanh-dong" onclick="apDungChiDinhNguoiChayMayChiTiet(this)">${icon('check')} Chỉ định chạy máy</button>
-        <p style="margin:0;font-size:0.8rem;color:var(--color-text-faint)">Chuyển đơn này sang "Đang chạy máy" và ghi nhận người được chỉ định (ghi chú "Admin chỉ định").</p>
-      </div>
-      <div class="upload-box">
-        <label for="chi-dinh-nguoi-ve-file">${icon('users', { size: 18 })} Chỉ định người vẽ file</label>
-        <select id="chi-dinh-nguoi-ve-file">
-          <option value="">Chọn người vẽ file...</option>
-          ${dsVeFileDangHoatDong.map(u => `<option value="${escapeHtml(u.Ten)}" ${u.Ten === don.NGUOI_VE_FILE ? 'selected' : ''}>${escapeHtml(u.Ten)}</option>`).join('')}
-        </select>
-        <button class="btn-hanh-dong" onclick="apDungChiDinhNguoiVeFileChiTiet(this)">${icon('check')} Chỉ định vẽ file</button>
-        <p style="margin:0;font-size:0.8rem;color:var(--color-text-faint)">Chuyển đơn này sang "Đang vẽ file" và ghi nhận người được chỉ định (ghi chú "Admin chỉ định").</p>
+        <label>${icon('users', { size: 18 })} Chỉ định người</label>
+        <div class="hang-chon">
+          <select id="chi-dinh-nguoi-chay-may" aria-label="Người chạy máy">
+            <option value="">Chọn người chạy máy...</option>
+            ${dsSanXuatDangHoatDong.map(u => `<option value="${escapeHtml(u.Ten)}" ${u.Ten === don.NGUOI_CHAY_MAY ? 'selected' : ''}>${escapeHtml(u.Ten)}</option>`).join('')}
+          </select>
+          <button class="btn-hanh-dong" onclick="apDungChiDinhNguoiChayMayChiTiet(this)">${icon('check')} Chạy máy</button>
+        </div>
+        <div class="hang-chon">
+          <select id="chi-dinh-nguoi-ve-file" aria-label="Người vẽ file">
+            <option value="">Chọn người vẽ file...</option>
+            ${dsVeFileDangHoatDong.map(u => `<option value="${escapeHtml(u.Ten)}" ${u.Ten === don.NGUOI_VE_FILE ? 'selected' : ''}>${escapeHtml(u.Ten)}</option>`).join('')}
+          </select>
+          <button class="btn-hanh-dong" onclick="apDungChiDinhNguoiVeFileChiTiet(this)">${icon('check')} Vẽ file</button>
+        </div>
+        ${chuThich('Chuyển đơn sang "Đang chạy máy" / "Đang vẽ file"', 'Nút "Chạy máy": chuyển đơn này sang "Đang chạy máy" và ghi nhận người được chỉ định. Nút "Vẽ file": chuyển đơn này sang "Đang vẽ file" và ghi nhận người được chỉ định. Cả hai đều ghi chú "Admin chỉ định".')}
       </div>`;
+  }
+
+  // Khối "Vận chuyển (GKE)" (gộp 11/10/2026, theo yêu cầu người dùng — trước là 2 khối riêng "Mua tracking GKE thủ công"
+  // và "In label vận chuyển (GKE)"); điều kiện hiện từng phần GIỮ NGUYÊN như cũ.
+  let vanChuyen = '', chuThichVanChuyen = [], tomTatVanChuyen = [];
+  if (laAdmin(user.vaiTro)) {
 
     // Mua tracking GKE THỦ CÔNG (bổ sung 09/09/2026) — chỉ hiện khi đơn CHƯA có tracking thật. Không
     // cần đợi đủ giờ sau "Đã sản xuất" như job tự động — bấm là mua
@@ -515,89 +536,56 @@ function renderKhuVucThaoTac(don) {
     // (danh sách đơn tự động mua tracking). Từ 12/09/2026 lần 14, TRACKING_ID không còn khi nào mang giá
     // trị placeholder "chờ tem" nữa (chuyển sang cột TAM_THOI) nên chỉ cần kiểm tra rỗng/không rỗng.
     if (!don.TRACKING_ID && laDonConNhieuAo(don)) {
-      html += `
-      <div class="upload-box">
-        <label>${icon('package', { size: 18 })} Mua tracking GKE thủ công</label>
-        <p style="margin:0;font-size:0.85rem">Đơn thuộc nhóm DonNhieuAo ${escapeHtml(don.NhomNhieuAo.goc)} — dùng chung tracking của <strong>${escapeHtml(don.NhomNhieuAo.donMua || '(chưa xác định)')}</strong>, không mua riêng. Tracking tự gán sau khi đơn đó mua.</p>
-      </div>`;
+      vanChuyen += `<p style="margin:0;font-size:0.85rem">Đơn thuộc nhóm DonNhieuAo ${escapeHtml(don.NhomNhieuAo.goc)} — dùng chung tracking của <strong>${escapeHtml(don.NhomNhieuAo.donMua || '(chưa xác định)')}</strong>, không mua riêng. Tracking tự gán sau khi đơn đó mua.</p>`;
     } else if (!don.TRACKING_ID) {
-      html += `
-      <div class="upload-box">
-        <label>${icon('package', { size: 18 })} Mua tracking GKE thủ công</label>
-        <button class="btn-hanh-dong" onclick="muaTrackingThuCongChiTiet(this)">${icon('package')} Mua tracking ngay</button>
-        <p style="margin:0;font-size:0.8rem;color:var(--color-text-faint)">Tạo vận đơn GKE thật + lấy mã tracking cho đơn này ngay bây giờ, không cần đợi tự động hoặc quét QR. Cấu hình GKE chỉnh ở menu "Tracking".</p>
-      </div>`;
+      vanChuyen += `<div class="hang-nut"><button class="btn-hanh-dong" onclick="muaTrackingThuCongChiTiet(this)">${icon('package')} Mua tracking ngay</button></div>`;
+      tomTatVanChuyen.push('Mua ngay, không cần đợi tự động');
+      chuThichVanChuyen.push('"Mua tracking ngay": tạo vận đơn GKE thật + lấy mã tracking cho đơn này ngay bây giờ, không cần đợi tự động hoặc quét QR. Cấu hình GKE chỉnh ở menu "Tracking".');
     }
   }
 
   // "IN LABEL"/"MUA TRACKING và IN LABEL" (bổ sung 09/09/2026 lần 2, theo yêu cầu người dùng) — mở
-  // RỘNG hơn khối "Mua tracking GKE thủ công" ở trên (chỉ admin): admin/ve_file, CHỈ chặn
+  // RỘNG hơn phần "Mua tracking ngay" ở trên (chỉ admin): admin/ve_file, CHỈ chặn
   // nguoi_lay_phoi (nguoi_lay_phoi thực ra không vào được trang này qua menu — chặn thêm ở đây cho
   // chắc). "IN LABEL" (chỉ in, không mua) CHỈ hiện khi đơn ĐÃ có tracking thật — đơn chưa có thì chỉ
   // hiện nút gộp (tránh bấm nhầm vào nút không chạy được, đã xác nhận với người dùng). Bỏ san_xuat
   // khỏi khối này 12/09/2026 (theo yêu cầu người dùng, gộp cùng lúc ẩn khu vực thao tác không cần
   // thiết cho vai trò này) — trước đó san_xuat cũng thấy được.
   if (user.vaiTro !== 'nguoi_lay_phoi' && user.vaiTro !== 'san_xuat' && don.NhomNhieuAo && !don.NhomNhieuAo.laDonIn) {
-    html += `
-      <div class="upload-box">
-        <label>${icon('printer', { size: 18 })} In label vận chuyển (GKE)</label>
-        <p style="margin:0;font-size:0.85rem">Cả nhóm DonNhieuAo ${escapeHtml(don.NhomNhieuAo.goc)} dùng 1 tem — in label ở đơn <strong>${escapeHtml(don.NhomNhieuAo.donIn || '(chưa xác định)')}</strong> khi cả nhóm đã "Đã sản xuất".</p>
-      </div>`;
+    vanChuyen += `<p style="margin:0;font-size:0.85rem">Cả nhóm DonNhieuAo ${escapeHtml(don.NhomNhieuAo.goc)} dùng 1 tem — in label ở đơn <strong>${escapeHtml(don.NhomNhieuAo.donIn || '(chưa xác định)')}</strong> khi cả nhóm đã "Đã sản xuất".</p>`;
   } else if (user.vaiTro !== 'nguoi_lay_phoi' && user.vaiTro !== 'san_xuat') {
     const daCoTrackingThat = !!don.TRACKING_ID;
-    html += `
-      <div class="upload-box">
-        <label>${icon('printer', { size: 18 })} In label vận chuyển (GKE)</label>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
+    vanChuyen += `
+        <div class="hang-nut">
           ${daCoTrackingThat ? `<button class="btn-hanh-dong phu" onclick="apDungInLabelChiTiet(this)">${icon('printer')} IN LABEL</button>` : ''}
           <button class="btn-hanh-dong" onclick="apDungMuaVaInLabelChiTiet(this)">${icon('printer')} MUA TRACKING và IN LABEL</button>
-        </div>
-        <p style="margin:0;font-size:0.8rem;color:var(--color-text-faint)">Chỉ dùng được khi đơn đang "Đã sản xuất" hoặc "ĐÃ DÁN TEM". Khổ giấy mặc định 100x150mm theo máy in đang đặt mặc định trên máy tính này.</p>
-      </div>`;
+        </div>`;
+    tomTatVanChuyen.push('In label khi đơn "Đã sản xuất" / "ĐÃ DÁN TEM"');
+    chuThichVanChuyen.push('In label: chỉ dùng được khi đơn đang "Đã sản xuất" hoặc "ĐÃ DÁN TEM". Khổ giấy mặc định 100x150mm theo máy in đang đặt mặc định trên máy tính này.');
   }
+  if (vanChuyen) html += `
+      <div class="upload-box">
+        <label>${icon('package', { size: 18 })} Vận chuyển (GKE)</label>
+        ${vanChuyen}
+        ${chuThichVanChuyen.length ? chuThich(tomTatVanChuyen.join(' · '), chuThichVanChuyen.join(' ')) : ''}
+      </div>`;
 
-  // Ảnh "File thêu" (bổ sung 26/08/2026) — ve_file upload sau khi vẽ file xong, để san_xuat xem
-  // trước khi chọn chỉ thêu. Thuần lưu ảnh, KHÔNG đụng gì tới trạng thái (khác với "Chụp ảnh hoàn
-  // thành" bên dưới).
-  // Ảnh file thêu 2/3 (bổ sung 24/09/2026, theo yêu cầu người dùng) — không phải đơn nào cũng cần đủ
-  // 2-3 ảnh nên tách các ô/nút tải ĐỘC LẬP (không bắt buộc tải đủ, không phụ thuộc thứ tự) thay vì gộp
-  // chung 1 ô chọn nhiều ảnh — cùng khuôn moc/cột riêng (ve_file_2/_3 -> Anh_File_Theu_URL_2/_3, xem
-  // routes/photos.js) như ảnh 1, chỉ khác tên cột lưu.
+  // Ảnh file thêu 1/2/3 (ve_file + admin; thuần lưu ảnh, KHÔNG đụng trạng thái) và ảnh Đã sản xuất / ĐÃ DÁN TEM (chỉ admin;
+  // tự chuyển trạng thái) — mỗi lần tải 1 ảnh vào đúng cột của loại đã chọn, không bắt buộc đủ, không theo thứ tự.
   if (user.vaiTro === 've_file' || laAdmin(user.vaiTro)) {
+    // 1 khối "Tải ảnh" (gộp 11/10/2026, theo yêu cầu người dùng — trước là 5 khối riêng). Bắt buộc chọn loại ảnh
+    // (không chọn sẵn) vì "Đã sản xuất"/"ĐÃ DÁN TEM" tự chuyển trạng thái đơn — tránh tải nhầm cột.
+    const dsLoaiAnh = LOAI_ANH_TAI_LEN.filter(l => !l.chiAdmin || laAdmin(user.vaiTro));
     html += `
       <div class="upload-box">
-        <label for="anh-ve-file">${icon('camera', { size: 18 })} Ảnh file thêu (sau khi vẽ file)</label>
-        <input type="file" accept="image/*" capture="environment" id="anh-ve-file">
-        <button class="btn-hanh-dong" onclick="taiAnh('ve_file')">${icon('download')} Tải ảnh lên</button>
-        <p style="margin:0;font-size:0.8rem">Cần cột <code>Anh_File_Theu_URL</code> trong Sheet — nếu chưa có, thao tác này sẽ báo lỗi.</p>
-      </div>
-      <div class="upload-box">
-        <label for="anh-ve-file-2">${icon('camera', { size: 18 })} Ảnh File Thêu 2 (không bắt buộc)</label>
-        <input type="file" accept="image/*" capture="environment" id="anh-ve-file-2">
-        <button class="btn-hanh-dong" onclick="taiAnh('ve_file_2')">${icon('download')} Tải ảnh lên</button>
-        <p style="margin:0;font-size:0.8rem">Cần cột <code>Anh_File_Theu_URL_2</code> trong Sheet — nếu chưa có, thao tác này sẽ báo lỗi.</p>
-      </div>
-      <div class="upload-box">
-        <label for="anh-ve-file-3">${icon('camera', { size: 18 })} Ảnh File Thêu 3 (không bắt buộc)</label>
-        <input type="file" accept="image/*" capture="environment" id="anh-ve-file-3">
-        <button class="btn-hanh-dong" onclick="taiAnh('ve_file_3')">${icon('download')} Tải ảnh lên</button>
-        <p style="margin:0;font-size:0.8rem">Cần cột <code>Anh_File_Theu_URL_3</code> trong Sheet — nếu chưa có, thao tác này sẽ báo lỗi.</p>
-      </div>`;
-  }
-
-  if (laAdmin(user.vaiTro)) {
-    html += `
-      <div class="upload-box">
-        <label for="anh-da-san-xuat">${icon('camera', { size: 18 })} Ảnh đã sản xuất (ngay khi chạy máy xong)</label>
-        <input type="file" accept="image/*" capture="environment" id="anh-da-san-xuat">
-        <button class="btn-hanh-dong" onclick="taiAnh('da_san_xuat')">${icon('download')} Tải ảnh lên</button>
-        <p style="margin:0;font-size:0.8rem">Cần cột <code>Anh_Da_San_Xuat_URL</code> trong Sheet. Chỉ dùng được khi đơn đang ở "Đang chạy máy" — tải ảnh xong sẽ TỰ ĐỘNG chuyển đơn sang "Đã sản xuất". san_xuat/nguoi_lay_phoi nên dùng màn "Chụp ảnh đã sản xuất" ở trang Quét QR thay vì đây (nhanh hơn, không cần mở từng đơn).</p>
-      </div>
-      <div class="upload-box">
-        <label for="anh-da-dan-tem">${icon('camera', { size: 18 })} Ảnh ĐÃ DÁN TEM (sau khi dán tem lên kiện hàng)</label>
-        <input type="file" accept="image/*" capture="environment" id="anh-da-dan-tem">
-        <button class="btn-hanh-dong" onclick="taiAnh('da_dan_tem')">${icon('download')} Tải ảnh lên</button>
-        <p style="margin:0;font-size:0.8rem">Cần cột <code>Anh_Da_Dan_Tem_URL</code> trong Sheet. Chỉ dùng được khi đơn đang ở "Đã sản xuất" VÀ đã có thông tin Tracking (mua trước ở khối "In label vận chuyển (GKE)" ở trên hoặc menu Tracking) — tải ảnh xong sẽ TỰ ĐỘNG chuyển đơn sang "ĐÃ DÁN TEM". Bản thân việc tải ảnh này không tạo mã tracking. san_xuat/nguoi_lay_phoi nên dùng màn "Chụp ảnh ĐÃ DÁN TEM" ở trang Quét QR thay vì đây (nhanh hơn, không cần mở từng đơn).</p>
+        <label for="loai-anh">${icon('camera', { size: 18 })} Tải ảnh</label>
+        <select id="loai-anh">
+          <option value="">Chọn loại ảnh...</option>
+          ${dsLoaiAnh.map(l => `<option value="${l.moc}">${escapeHtml(l.ten)}</option>`).join('')}
+        </select>
+        <input type="file" accept="image/*" capture="environment" id="anh-tai-len" aria-label="Chọn ảnh">
+        <div class="hang-nut"><button class="btn-hanh-dong" onclick="taiAnh(this)">${icon('download')} Tải ảnh lên</button></div>
+        ${chuThich(dsLoaiAnh.some(l => l.chiAdmin) ? 'Ảnh Đã sản xuất / ĐÃ DÁN TEM tự chuyển trạng thái đơn' : 'Chỉ lưu ảnh, không đổi trạng thái đơn', dsLoaiAnh.map(l => `${l.ten}: ${l.ghiChu}`).join(' · '))}
       </div>`;
     // Khối "Ảnh đóng gói" (Anh_Dong_Goi_URL) ĐÃ XOÁ 09/09/2026 lần 3 cùng lúc xoá trạng thái "Đã đóng
     // gói" (theo yêu cầu người dùng).
@@ -938,9 +926,16 @@ async function inDonHang(btn) {
   }
 }
 
-async function taiAnh(moc) {
-  const input = document.getElementById('anh-' + moc.replace(/_/g, '-'));
+async function taiAnh(nut) {
+  const moc = document.getElementById('loai-anh').value;
+  const input = document.getElementById('anh-tai-len');
+  if (!moc) return alert('Chưa chọn loại ảnh');
   if (!input.files[0]) return alert('Chưa chọn ảnh');
+  if (nut.disabled) return; // chặn bấm 2 lần khi đang tải (ảnh Đã sản xuất / ĐÃ DÁN TEM tự chuyển trạng thái)
+  nut.disabled = true;
+  try { await guiAnh(moc, input); } finally { nut.disabled = false; }
+}
+async function guiAnh(moc, input) {
 
   // Nén ảnh trước khi upload (bổ sung 21/09/2026, theo yêu cầu người dùng — xem api.js#nenAnhTruocKhiTaiLen)
   // — cùng lý do đã áp dụng ở scan.html: ảnh camera gốc thường vài MB, nén trước giúp upload nhanh hơn.

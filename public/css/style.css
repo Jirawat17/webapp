@@ -705,7 +705,20 @@ select.chon-trang-thai-tieu-cuc { border-color: var(--color-warning-text); color
 .info-table td:first-child, .info-table th:first-child { color: var(--color-text-muted); width: 42%; }
 .info-table tr:last-child td { border-bottom: none; }
 
-#khu-vuc-thao-tac { margin: var(--space-4) 0; display: flex; flex-direction: column; gap: var(--space-2); }
+/* Lưới khối thao tác (11/10/2026): màn rộng 2-3 khối/hàng, điện thoại 1 cột; nút nhỏ gọn vừa chữ (trừ 2 nút lớn). */
+#khu-vuc-thao-tac { margin: var(--space-4) 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: var(--space-2); align-items: start; }
+#khu-vuc-thao-tac > :not(.upload-box) { grid-column: 1 / -1; }
+#khu-vuc-thao-tac .btn-hanh-dong { padding: 8px 14px; min-height: 0; font-size: 14.5px; }
+@media (pointer: coarse) { #khu-vuc-thao-tac .btn-hanh-dong { min-height: var(--tap-min); } } /* điện thoại/máy tính bảng: giữ cỡ chạm tối thiểu */
+#khu-vuc-thao-tac .upload-box > .btn-hanh-dong { align-self: flex-start; }
+#khu-vuc-thao-tac .hang-nut { display: flex; gap: 8px; flex-wrap: wrap; }
+#khu-vuc-thao-tac .hang-chon { display: flex; gap: 8px; align-items: center; }
+#khu-vuc-thao-tac .hang-chon select { flex: 1; min-width: 0; }
+#khu-vuc-thao-tac .hang-chon .btn-hanh-dong { flex-shrink: 0; min-width: 112px; }
+.chu-thich { font-size: 0.8rem; color: var(--color-text-faint); }
+.chu-thich summary { cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; list-style: none; }
+.chu-thich summary::-webkit-details-marker { display: none; }
+.chu-thich[open] summary { white-space: normal; margin-bottom: 4px; }
 .btn-hanh-dong {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   padding: 14px; font-size: 15.5px; font-weight: 700; border-radius: var(--radius-md); border: none;
