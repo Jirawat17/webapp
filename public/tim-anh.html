@@ -88,10 +88,10 @@
   </div>
 
   <div id="ta-tai-len" class="ta-khoi" style="display:none">
-    <h3>Tải lên thư viện (PNG, EMB)</h3>
+    <h3>Tải lên/Upload thư viện (PNG, EMB)</h3>
     <p class="ta-muted" style="margin-top:0">Chọn <b>cả thư mục</b> (máy tính, Chrome/Edge) hoặc <b>từng file</b>. Hệ thống đọc mã đơn trong tên file (vd <code>10LH72.png</code>, <code>10LH72_2.png</code>, <code>10LH72.emb</code>); tên file không có mã thì xét tên thư mục chứa nó. <b>.png .jpg .jpeg</b> vào thư viện ảnh; <b>.emb</b> là file EMB của đơn (bản mới thành bản chính, bản cũ vẫn giữ). Tối đa 30MB/file. Xem trước bảng khớp rồi mới tải lên.</p>
-    <button type="button" class="btn-hanh-dong" onclick="document.getElementById('ta-chon-thu-muc').click()">Chọn thư mục</button>
-    <button type="button" class="btn-hanh-dong phu" onclick="document.getElementById('ta-chon-file').click()">Chọn file</button>
+    <button type="button" class="btn-hanh-dong" onclick="document.getElementById('ta-chon-thu-muc').click()"><span class="icon-cho" data-icon="upload"></span> Tải lên/Upload cả thư mục</button>
+    <button type="button" class="btn-hanh-dong phu" onclick="document.getElementById('ta-chon-file').click()"><span class="icon-cho" data-icon="upload"></span> Tải lên/Upload từng file</button>
     <input type="file" id="ta-chon-thu-muc" webkitdirectory multiple hidden onchange="xemTruoc([...this.files]); this.value = ''">
     <input type="file" id="ta-chon-file" multiple accept=".png,.jpg,.jpeg,.emb" hidden onchange="xemTruoc([...this.files]); this.value = ''">
     <div id="ta-xem-truoc"></div>
@@ -160,8 +160,8 @@
   </div>
 </div>
 
-<script src="/js/icons.js?v=105"></script>
-<script src="/js/api.js?v=120"></script>
+<script src="/js/icons.js?v=106"></script>
+<script src="/js/api.js?v=122"></script>
 <script>
 const MB = b => (b < 1048576 ? Math.round(b / 1024) + ' KB' : (b / 1048576).toFixed(1) + ' MB');
 const GB = b => (b / 1073741824).toFixed(1) + ' GB';
@@ -179,6 +179,8 @@ let user;
   }
   document.getElementById('ta-tim').style.display = '';
   document.getElementById('ta-tai-len').style.display = '';
+  document.querySelectorAll('.icon-cho').forEach(s => { s.outerHTML = icon(s.dataset.icon, { size: 16 }); });
+  if (location.hash === '#ta-tai-len') document.getElementById('ta-tai-len').scrollIntoView(); // từ nút "Tải lên/Upload nhiều đơn" (12/10/2026)
   document.getElementById('ta-nguong').style.display = '';
   if (laSuperAdmin(user.vaiTro)) { document.getElementById('ta-nguong-sa').style.display = ''; tinhGoiY(false); }
   const maTuUrl = new URLSearchParams(location.search).get('stt');
@@ -349,8 +351,9 @@ async function traTheoMa(ma) {
         ${d.trongSheet !== false ? `<a href="/order.html?stt=${encodeURIComponent(d.sttKey)}" target="_blank" rel="noopener">Mở chi tiết đơn</a>` : ''}</p>
       <p>PNG thiết kế: ${d.png.length ? `<span class="ta-co">ĐÃ CÓ (${d.png.length} file)</span>` : '<span class="ta-chua">CHƯA CÓ</span>'}
         ${d.soLinkDangCho ? ` · <span class="ta-muted">đang chờ sao chép ${d.soLinkDangCho} link</span>` : ''}</p>
-      <p>File EMB: ${e ? `<span class="ta-co">ĐÃ CÓ</span> ${escapeHtml(e.ten)} · phiên bản ${e.so_thu_tu} · ${escapeHtml(ngay(e.ngay_luu))}${e.nguoi_tai_len ? ' · ' + escapeHtml(e.nguoi_tai_len) : ''}
-          · <a href="${urlFile(e.id, true)}">Tải EMB</a>${d.embCu.length ? ` <span class="ta-muted">(+${d.embCu.length} bản cũ: ${d.embCu.map(c => `<a href="${urlFile(c.id, true)}">v${c.so_thu_tu}</a>`).join(', ')})</span>` : ''}`
+      <p>File EMB: ${e ? `<span class="ta-co">ĐÃ CÓ${(d.dsEmbChinh || []).length > 1 ? ` ${d.dsEmbChinh.length} file` : ''}</span>
+          ${(d.dsEmbChinh || [e]).map(c => `<span style="display:inline-block">${escapeHtml(c.ten)} · phiên bản ${c.so_thu_tu} · ${escapeHtml(ngay(c.ngay_luu))}${c.nguoi_tai_len ? ' · ' + escapeHtml(c.nguoi_tai_len) : ''}
+          · <a href="${urlFile(c.id, true)}">${icon('download', { size: 14 })} Tải về/Download</a></span>`).join(' ; ')}${d.embCu.length ? ` <span class="ta-muted">(+${d.embCu.length} bản cũ — Tải về/Download: ${d.embCu.map(c => `<a href="${urlFile(c.id, true)}" title="${escapeHtml(c.ten)}">v${c.so_thu_tu}</a>`).join(', ')})</span>` : ''}`
         : '<span class="ta-chua">CHƯA TÌM THẤY file EMB liên kết với đơn này</span>'}</p>
       ${d.png.length ? `<div class="ta-luoi-anh">${d.png.map(f => `<figure><a href="${urlFile(f.id)}" target="_blank" rel="noopener">${f.coThumb ? `<img src="/api/thu-vien/thumb/${f.id}" alt="" loading="lazy">` : '<div style="width:104px;height:104px;border:1px dashed var(--color-border)"></div>'}</a>
         <figcaption title="${escapeHtml(f.ten)}">${escapeHtml(f.tenLuu)}</figcaption></figure>`).join('')}</div>` : ''}
@@ -451,7 +454,7 @@ function veKetQuaTim() {
       <div class="ten" title="${escapeHtml(r.ten)}">${escapeHtml(r.tenLuu)}${r.ten !== r.tenLuu ? ` <span class="ta-muted">(${escapeHtml(r.ten)})</span>` : ''}</div>
       <div class="diem"><span>Ảnh <b>${pct(r.phanTramAnh)}</b></span><span>Hình dạng <b>${pct(r.phanTramHinhDang)}</b></span></div>
       ${kqTim.nhieuMau && r.soVoi ? `<div class="ta-muted">giống nhất với ${escapeHtml(r.soVoi)}</div>` : ''}
-      <div>EMB: ${r.emb ? `<span class="ta-co">CÓ</span> ${escapeHtml(r.emb.ten)} · <a href="${urlFile(r.emb.id, true)}">Tải EMB</a>` : '<span class="ta-chua">Chưa tìm thấy</span>'}</div>
+      <div>EMB: ${r.emb ? `<span class="ta-co">CÓ</span> ${escapeHtml(r.emb.ten)} · <a href="${urlFile(r.emb.id, true)}">${icon('download', { size: 14 })} Tải về/Download</a>${r.emb.soChinh > 1 ? ` <span class="ta-muted">(+${r.emb.soChinh - 1} file — xem ở "Xem tất cả file của đơn")</span>` : ''}` : '<span class="ta-chua">Chưa tìm thấy</span>'}</div>
       <div class="ta-muted">${escapeHtml(ngay(r.ngay_luu))} · ${escapeHtml(NHAN_NGUON[r.nguon] || r.nguon)}${r.url_goc ? ` · <a href="${escapeHtml(r.url_goc)}" target="_blank" rel="noopener noreferrer">link gốc</a>` : ''}</div>
       <div class="thao-tac"><a href="${urlFile(r.id, true)}">Tải PNG</a>${r.trongSheet !== false ? `<a href="/order.html?stt=${encodeURIComponent(r.stt_key)}" target="_blank" rel="noopener">Chi tiết đơn</a>` : ''}</div>
       ${kqTim.sttKeyMoi ? `<div class="quyet-dinh">${qd ? `<div class="ta-muted">Đã ghi: <b>${escapeHtml(NHAN_QD[qd.quyet_dinh] || qd.quyet_dinh)}</b> (${escapeHtml(qd.nguoi)}, ${escapeHtml(ngay(qd.thoi_gian))})</div>` : ''}
@@ -524,7 +527,8 @@ async function xemTruoc(files) {
     sheetCuLuc = sheetCuLuc || r.sheetCuLuc;
     daKhop += lo.length;
   }
-  phienTai = { dong, dangTai: false, dung: false, khongDocDuocSheet, sheetCuLuc };
+  // loTai: 1 mã cho CẢ phiên chọn file (không tạo lại mỗi lần bấm) — Dừng rồi tải tiếp / thử lại dòng lỗi vẫn cùng 1 bộ file chính.
+  phienTai = { dong, dangTai: false, dung: false, khongDocDuocSheet, sheetCuLuc, loTai: 'tv' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8) };
   veBangTai();
 }
 
@@ -545,7 +549,7 @@ function veBangTai() {
     ${phienTai.khongDocDuocSheet ? '<div class="ta-canh-bao">Không đọc được danh sách đơn từ Sheet lúc này — chỉ khớp được với mã đã có trong thư viện. Có thể thử lại sau.</div>' : ''}
     ${phienTai.sheetCuLuc ? `<div class="ta-canh-bao">Không đọc được Sheet lúc này — đang khớp theo danh sách đơn đọc lúc <b>${escapeHtml(gio(phienTai.sheetCuLuc))}</b> (đơn tạo sau lúc đó chưa có). Có thể thử lại sau.</div>` : ''}
     <p>${dong.length} file: ${Object.entries(dem).map(([k, n]) => `${escapeHtml(NHAN_KHOP[k] || k)}: <b>${n}</b>`).join(' · ')}</p>
-    <p><button type="button" class="btn-hanh-dong" id="ta-nut-tai-len" onclick="taiLenThuVien()">Xác nhận tải lên</button>
+    <p><button type="button" class="btn-hanh-dong" id="ta-nut-tai-len" onclick="taiLenThuVien()">${icon('upload', { size: 16 })} Xác nhận Tải lên/Upload</button>
       <button type="button" class="btn-hanh-dong phu" id="ta-nut-dung-tai" style="display:none" onclick="phienTai.dung = true; this.disabled = true">Dừng</button>
       <span id="ta-tien-do-tai" class="ta-muted"></span>
       <button type="button" class="btn-hanh-dong phu" id="ta-nut-csv" style="display:none" onclick="taiBangKetQuaCsv()">Tải bảng kết quả (.csv)</button></p>
@@ -577,7 +581,22 @@ function tichTatCaNgoaiSheet() {
 }
 
 async function taiLenThuVien() {
-  const dsTai = phienTai.dong.map((d, i) => ({ d, i })).filter(({ d }) => !d.daXuLy && (d.trangThai === 'KHOP' || (coTheGoTay(d) && d.goTay)));
+  // Đơn có >= 2 file EMB trong phiên chọn file này (12/10/2026; tính CẢ dòng đã tải ở lần bấm trước): các file đó là 1 bộ (loTai của
+  // phiên) — cùng thành file chính của đơn. File EMB đã có sẵn (Trùng) của đơn đó gửi kèm để vào bộ (server dùng lại file cũ, không
+  // lưu thêm) — không thì nó rơi khỏi bộ file chính. Cần ít nhất 1 file MỚI (cả bộ đều trùng = không có gì thay đổi).
+  const maCuaDong = d => (d.trangThai === 'KHOP' || d.trangThai === 'TRUNG') ? d.sttKey : (coTheGoTay(d) && d.goTay ? d.goTay : '');
+  const boEmb = new Map(); // mã đơn -> { tong, moi }
+  for (const d of phienTai.dong) {
+    const ma = d.loai === 'EMB' && maCuaDong(d);
+    if (!ma) continue;
+    const b = boEmb.get(ma) || { tong: 0, moi: 0 };
+    b.tong++; if (d.trangThai !== 'TRUNG') b.moi++;
+    boEmb.set(ma, b);
+  }
+  const laLuotNhieuEmb = d => { const b = d.loai === 'EMB' && boEmb.get(maCuaDong(d)); return !!b && b.tong >= 2 && b.moi >= 1; };
+  const loTai = phienTai.loTai;
+  const dsTai = phienTai.dong.map((d, i) => ({ d, i })).filter(({ d }) => !d.daXuLy
+    && (d.trangThai === 'KHOP' || (coTheGoTay(d) && d.goTay) || (d.trangThai === 'TRUNG' && laLuotNhieuEmb(d))));
   if (!dsTai.length) { thongBao('Không có file nào để tải lên (cần dòng Khớp hoặc dòng đã gõ mã).', true); return; }
   if (!confirm(`Tải lên ${dsTai.length} file vào thư viện?`)) return;
   phienTai.dangTai = true; phienTai.dung = false;
@@ -592,12 +611,14 @@ async function taiLenThuVien() {
     fd.append('file', d.file, d.ten);
     fd.append('duongDan', d.duongDan);
     if (coTheGoTay(d)) { fd.append('sttKeyGoTay', d.goTay); if (d.xacNhan) fd.append('xacNhanNgoaiSheet', '1'); }
+    if (laLuotNhieuEmb(d)) fd.append('loTai', loTai);
     let kq;
     try {
       const r = await apiFetch('/thu-vien/upload', { method: 'POST', body: fd, headers: {} });
       kq = r.ketQua;
-      d.kq = kq === 'DA_LUU' ? `<span class="ta-co">Đã lưu</span> vào ${escapeHtml(r.sttKey)}` : kq === 'TRUNG' ? `Trùng — ${escapeHtml(r.lyDo)}` : `<span class="ta-chua">Bỏ qua</span> — ${escapeHtml(r.lyDo)}`;
-      d.ketQuaChu = kq === 'DA_LUU' ? `Đã lưu vào ${r.sttKey}` : (kq === 'TRUNG' ? 'Trùng' : 'Bỏ qua') + ' — ' + r.lyDo;
+      // DA_LUU có lyDo khi EMB vào bộ nhiều file của đơn (thay file cùng tên / thêm vào bộ / dùng lại file cũ) — hiện để người tải biết.
+      d.kq = kq === 'DA_LUU' ? `<span class="ta-co">Đã lưu</span> vào ${escapeHtml(r.sttKey)}${r.lyDo ? ` — ${escapeHtml(r.lyDo)}` : ''}` : kq === 'TRUNG' ? `Trùng — ${escapeHtml(r.lyDo)}` : `<span class="ta-chua">Bỏ qua</span> — ${escapeHtml(r.lyDo)}`;
+      d.ketQuaChu = kq === 'DA_LUU' ? `Đã lưu vào ${r.sttKey}${r.lyDo ? ' — ' + r.lyDo : ''}` : (kq === 'TRUNG' ? 'Trùng' : 'Bỏ qua') + ' — ' + r.lyDo;
       d.daXuLy = true;
     } catch (e) {
       kq = 'LOI';
@@ -610,7 +631,9 @@ async function taiLenThuVien() {
   }
   phienTai.dangTai = false;
   nut.disabled = false; nutDung.style.display = 'none';
-  tienDo.textContent = `${phienTai.dung ? 'Đã dừng. ' : 'Xong. '}Đã lưu ${dem.DA_LUU}, trùng ${dem.TRUNG}, bỏ qua ${dem.BO_QUA}, lỗi ${dem.LOI}.`;
+  const boThieu = phienTai.dong.some(d => laLuotNhieuEmb(d) && !d.daXuLy);
+  tienDo.textContent = `${phienTai.dung ? 'Đã dừng. ' : 'Xong. '}Đã lưu ${dem.DA_LUU}, trùng ${dem.TRUNG}, bỏ qua ${dem.BO_QUA}, lỗi ${dem.LOI}.`
+    + (boThieu ? ' ⚠ Có đơn nhiều file EMB CHƯA tải đủ bộ — bấm "Xác nhận Tải lên/Upload" lần nữa để tải nốt (cùng bộ, không tách).' : '');
   document.getElementById('ta-nut-csv').style.display = '';
 }
 

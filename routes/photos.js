@@ -98,17 +98,17 @@ router.post('/kiem-tra', async (req, res) => {
 
   const { row } = await orderService.getByKey(sttKey, { fresh: true });
   // Đơn khác Xưởng coi như không tồn tại (bổ sung 13/09/2026).
-  if (!row || !orderService.coQuyenTheoXuong(user, row)) return res.status(404).json({ error: 'Không tìm thấy đơn hàng: ' + sttKey });
+  if (!row || !orderService.coQuyenTheoXuong(user, row)) return res.status(404).json({ error: 'Không tìm thấy đơn hàng: ' + sttKey, nghiepVu: true });
 
   const chuyenTuDong = MOC_TU_DONG_CHUYEN_TRANG_THAI[moc];
   if (chuyenTuDong && row.TRANG_THAI_XUONG !== chuyenTuDong.yeuCau) {
     return res.status(400).json({
-      error: `Đơn "${sttKey}" đang ở trạng thái "${row.TRANG_THAI_XUONG}" — chỉ chụp ảnh được khi đơn đang ở "${chuyenTuDong.yeuCau}".`,
+      error: `Đơn "${sttKey}" đang ở trạng thái "${row.TRANG_THAI_XUONG}" — chỉ chụp ảnh được khi đơn đang ở "${chuyenTuDong.yeuCau}".`, nghiepVu: true,
     });
   }
   if (chuyenTuDong && chuyenTuDong.chuyenSang === 'ĐÃ DÁN TEM' && thieuTrackingThat(row)) {
     return res.status(400).json({
-      error: `Đơn "${sttKey}" chưa có thông tin Tracking (mã vận đơn thật) — phải mua tracking trước khi chuyển sang "ĐÃ DÁN TEM".`,
+      error: `Đơn "${sttKey}" chưa có thông tin Tracking (mã vận đơn thật) — phải mua tracking trước khi chuyển sang "ĐÃ DÁN TEM".`, nghiepVu: true,
     });
   }
 
@@ -154,17 +154,17 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
   const { headers, row } = await orderService.getByKey(sttKey, { ttlMs: 30000 });
   const tSauDocDon = Date.now();
   // Đơn khác Xưởng coi như không tồn tại (bổ sung 13/09/2026).
-  if (!row || !orderService.coQuyenTheoXuong(user, row)) return res.status(404).json({ error: 'Không tìm thấy đơn hàng: ' + sttKey });
+  if (!row || !orderService.coQuyenTheoXuong(user, row)) return res.status(404).json({ error: 'Không tìm thấy đơn hàng: ' + sttKey, nghiepVu: true });
 
   const chuyenTuDong = MOC_TU_DONG_CHUYEN_TRANG_THAI[moc];
   if (chuyenTuDong && row.TRANG_THAI_XUONG !== chuyenTuDong.yeuCau) {
     return res.status(400).json({
-      error: `Đơn "${sttKey}" đang ở trạng thái "${row.TRANG_THAI_XUONG}" — chỉ chụp ảnh được khi đơn đang ở "${chuyenTuDong.yeuCau}".`,
+      error: `Đơn "${sttKey}" đang ở trạng thái "${row.TRANG_THAI_XUONG}" — chỉ chụp ảnh được khi đơn đang ở "${chuyenTuDong.yeuCau}".`, nghiepVu: true,
     });
   }
   if (chuyenTuDong && chuyenTuDong.chuyenSang === 'ĐÃ DÁN TEM' && thieuTrackingThat(row)) {
     return res.status(400).json({
-      error: `Đơn "${sttKey}" chưa có thông tin Tracking (mã vận đơn thật) — phải mua tracking trước khi chuyển sang "ĐÃ DÁN TEM".`,
+      error: `Đơn "${sttKey}" chưa có thông tin Tracking (mã vận đơn thật) — phải mua tracking trước khi chuyển sang "ĐÃ DÁN TEM".`, nghiepVu: true,
     });
   }
 
@@ -200,7 +200,8 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
     // headers/row đã đọc thật ở trên (dòng 53), khỏi đọc lại lần nữa (xem orderService.update)
     updated = await orderService.update(sttKey, updates, user, { quaAnh: true, donDaDoc: { headers, row } });
   } catch (err) {
-    return res.status(400).json({ error: err.message });
+    // orderService.update từ chối = dữ liệu đơn không cho đổi (vd trạng thái vừa đổi ở nơi khác) -> nghiệp vụ, xem Logs_UploadAnh
+    return res.status(400).json({ error: err.message, nghiepVu: true });
   }
 
   ghiLog({
@@ -212,7 +213,8 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
     `[Photos] Upload ${sttKey}/${moc}: đọc đơn ${tSauDocDon - tBatDau}ms, MinIO ${tSauMinio - tSauDocDon}ms, ` +
     `ghi cập nhật ${Date.now() - tSauMinio}ms, TỔNG ${Date.now() - tBatDau}ms, ảnh ${(req.file.size / 1024).toFixed(0)}KB`
   );
-  res.json({ ok: true, url, don: updated });
+  // thoiGian (12/10/2026, Logs_UploadAnh): mốc máy chủ trả về để trang Quét QR tách "gửi qua mạng" = tổng phía máy − máy chủ.
+  res.json({ ok: true, url, don: updated, thoiGian: { docDon: tSauDocDon - tBatDau, minio: tSauMinio - tSauDocDon, ghi: Date.now() - tSauMinio, tong: Date.now() - tBatDau } });
 });
 
 // Proxy đọc ảnh từ MinIO — URL dạng /api/photos/file/orders/{sttKey}/{ten-file}.

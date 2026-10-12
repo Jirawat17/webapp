@@ -450,8 +450,77 @@ function capNhatBaoLoi(id, { trangThai, ghiChu }) {
   db.prepare(`UPDATE bao_loi_app SET trang_thai = ?, ghi_chu_xu_ly = ? WHERE id = ?`).run(trangThai, ghiChu || '', id);
 }
 
+// ---------- Logs_UploadAnh (12/10/2026): mọi thao tác ở menu Quét QR + thiết bị/phiên bản app (routes/nhatKyQuet.js). Giữ 90 ngày.
+db.exec(`CREATE TABLE IF NOT EXISTS logs_upload_anh (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, luc TEXT NOT NULL, nguoi TEXT NOT NULL, vai_tro TEXT NOT NULL DEFAULT '', xuong TEXT NOT NULL DEFAULT '',
+  su_kien TEXT NOT NULL, che_do TEXT NOT NULL DEFAULT '', stt_key TEXT NOT NULL DEFAULT '', ket_qua TEXT NOT NULL DEFAULT '', loi TEXT NOT NULL DEFAULT '',
+  tong_ms INTEGER, cham INTEGER NOT NULL DEFAULT 0, chi_tiet TEXT NOT NULL DEFAULT '{}',
+  he_dieu_hanh TEXT NOT NULL DEFAULT '', trinh_duyet TEXT NOT NULL DEFAULT '', may TEXT NOT NULL DEFAULT '', phien_ban_app TEXT NOT NULL DEFAULT '',
+  thong_tin TEXT NOT NULL DEFAULT '{}'
+)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_logs_upload_anh_luc ON logs_upload_anh(luc)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_logs_upload_anh_thoat ON logs_upload_anh(su_kien, nguoi, stt_key)`);
+// chi_tiet hỏng (dữ liệu cũ/ghi tay) không được làm hỏng truy vấn json_extract của cả bảng tổng hợp
+const SQL_CT = `CASE WHEN json_valid(chi_tiet) THEN chi_tiet ELSE '{}' END`;
+const SO_NGAY_GIU_LOGS_UPLOAD_ANH = 90;
+let lanDonLogsUploadAnh = 0;
+const ghiNhieuLogsUploadAnh = db.transaction(ds => {
+  const st = db.prepare(`INSERT INTO logs_upload_anh (luc, nguoi, vai_tro, xuong, su_kien, che_do, stt_key, ket_qua, loi, tong_ms, cham, chi_tiet,
+      he_dieu_hanh, trinh_duyet, may, phien_ban_app, thong_tin)
+    VALUES (@luc, @nguoi, @vaiTro, @xuong, @suKien, @cheDo, @sttKey, @ketQua, @loi, @tongMs, @cham, @chiTiet, @heDieuHanh, @trinhDuyet, @may, @phienBanApp, @thongTin)`);
+  // Ảnh đã bị ghi "thoát giữa chừng" lúc trang tạm cất, rồi người dùng quay lại và ảnh tải xong (chi_tiet.sauThoat) -> xoá dòng THOAT
+  // gần nhất của đúng người + đơn đó, để 1 ảnh không bị đếm cả "thoát" lẫn "chụp" (scan.html#pagehide).
+  // CHỈ dòng THOAT tạm (chi_tiet.tamCat — ghi lúc trang bị cất) trong 6 giờ gần đây: không xoá nhầm 1 lượt thoát THẬT của hôm trước.
+  const xoaThoat = db.prepare(`DELETE FROM logs_upload_anh WHERE id = (SELECT id FROM logs_upload_anh
+    WHERE su_kien = 'THOAT_GIUA_CHUNG' AND nguoi = ? AND stt_key = ? AND luc >= ? AND json_extract(${SQL_CT}, '$.tamCat') = 1
+    ORDER BY id DESC LIMIT 1)`);
+  const moc6Gio = new Date(Date.now() + 7 * 3600000 - 6 * 3600000).toISOString().slice(0, 19); // giờ VN, so chuỗi với luc (...+07:00)
+  for (const d of ds) {
+    if (d.suKien === 'CHUP_ANH' && /"sauThoat":true/.test(d.chiTiet)) xoaThoat.run(d.nguoi, d.sttKey, moc6Gio);
+    st.run(d);
+  }
+  // Dọn dòng cũ hơn 90 ngày — tối đa 1 lần/giờ (không cần job riêng). So chuỗi được: luc luôn dạng ...+07:00.
+  if (Date.now() - lanDonLogsUploadAnh > 3600 * 1000) {
+    lanDonLogsUploadAnh = Date.now();
+    const moc = new Date(Date.now() - SO_NGAY_GIU_LOGS_UPLOAD_ANH * 86400000 + 7 * 3600000).toISOString().slice(0, 10);
+    db.prepare(`DELETE FROM logs_upload_anh WHERE luc < ?`).run(moc);
+  }
+});
+// Nhóm kết quả (12/10/2026, rà soát): KY_THUAT = lỗi kỹ thuật (mạng/máy chủ/camera, ảnh chưa tải xong đã thoát) — phần dùng để so
+// máy/trình duyệt; NGHIEP_VU = máy chạy đúng nhưng đơn không hợp lệ (sai trạng thái, không tìm thấy, trùng); BO_NGANG = người dùng
+// bấm Quét lại sau khi đã xác định đơn. SQL dưới đây là NƠI DUY NHẤT định nghĩa nhóm (danh sách trả kèm cột nhom_kq).
+const SQL_NHOM_KQ = `CASE WHEN ket_qua = 'LOI' OR su_kien = 'THOAT_GIUA_CHUNG' THEN 'KY_THUAT'
+  WHEN ket_qua IN ('SAI_TRANG_THAI', 'KHONG_TIM_THAY', 'TRUNG', 'CO_DON_LOI') THEN 'NGHIEP_VU' WHEN ket_qua = 'BO_NGANG' THEN 'BO_NGANG' ELSE '' END`;
+// Lọc: tu/den = 'YYYY-MM-DD' (ngày VN, đến hết ngày "den"); nguoi khớp chính xác; nhomKq = KY_THUAT/NGHIEP_VU/BO_NGANG; chiCham = lượt chụp chậm.
+function dieuKienLogsUploadAnh({ tu, den, nguoi, suKien, nhomKq, chiCham } = {}) {
+  const dk = [], ts = [];
+  if (/^\d{4}-\d{2}-\d{2}$/.test(tu || '')) { dk.push('luc >= ?'); ts.push(tu); }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(den || '')) { dk.push('luc < ?'); ts.push(den + 'T99'); }
+  if (nguoi) { dk.push('nguoi = ?'); ts.push(nguoi); }
+  if (suKien) { dk.push('su_kien = ?'); ts.push(suKien); }
+  if (['KY_THUAT', 'NGHIEP_VU', 'BO_NGANG'].includes(nhomKq)) { dk.push(`(${SQL_NHOM_KQ}) = ?`); ts.push(nhomKq); }
+  if (chiCham) dk.push('cham = 1');
+  return { where: dk.length ? 'WHERE ' + dk.join(' AND ') : '', ts };
+}
+function dsLogsUploadAnh(loc = {}) {
+  const { where, ts } = dieuKienLogsUploadAnh(loc);
+  return db.prepare(`SELECT *, ${SQL_NHOM_KQ} AS nhom_kq FROM logs_upload_anh ${where} ORDER BY id DESC LIMIT ?`).all(...ts, loc.gioiHan || 500);
+}
+// Nguồn cho bảng tổng hợp: chỉ các cột cần + số đo rút bằng json_extract (không JSON.parse từng dòng ở Node), duyệt từng dòng
+// (không nạp cả khoảng ngày vào bộ nhớ, không cắt bớt dòng cũ).
+function duyetTongHopLogsUploadAnh(loc = {}) {
+  const { where, ts } = dieuKienLogsUploadAnh(loc);
+  // json_valid chỉ tính 1 lần/dòng (cột ct của truy vấn con). "LIMIT -1 OFFSET 0" chặn SQLite gộp truy vấn con vào truy vấn ngoài
+  // (gộp thì biểu thức ct bị chép lại vào từng json_extract) mà vẫn duyệt từng dòng, không dựng bảng tạm.
+  return db.prepare(`SELECT nguoi, he_dieu_hanh, trinh_duyet, may, su_kien, ket_qua, tong_ms, nhom_kq,
+      json_extract(ct, '$.msNen') ms_nen, json_extract(ct, '$.msGui') ms_gui, json_extract(ct, '$.msMayChu') ms_may_chu,
+      json_extract(ct, '$.msKiemTra') ms_kiem_tra, json_extract(ct, '$.msTimMa') ms_tim_ma
+    FROM (SELECT nguoi, he_dieu_hanh, trinh_duyet, may, su_kien, ket_qua, tong_ms, ${SQL_NHOM_KQ} AS nhom_kq, ${SQL_CT} AS ct
+      FROM logs_upload_anh ${where} LIMIT -1 OFFSET 0)`).iterate(...ts); // chỉ các cột cần (không kéo loi/thong_tin qua truy vấn con)
+}
+
 module.exports = {
-  danhDauDaXuLy, layDaXuLy, themBaoLoi, ganAnhBaoLoi, demBaoLoiTu, layBaoLoi, dsBaoLoi, capNhatBaoLoi,
+  ghiNhieuLogsUploadAnh, dsLogsUploadAnh, duyetTongHopLogsUploadAnh, danhDauDaXuLy, layDaXuLy, themBaoLoi, ganAnhBaoLoi, demBaoLoiTu, layBaoLoi, dsBaoLoi, capNhatBaoLoi,
   layNote, layDanhSachNote, layTatCaTheNote, taoNote, suaNote, datAnhNote, xoaNote,
   ghiQcLog, layQcLog, layQcLogTheoId, danhGiaQcLog, thongKeDanhGiaQc, thongKeTokenQc, layDongDaDanhGiaCoAi, maxQcLogId, layCclSauId, tongKetQcNgay,
   taoKinhNghiem, suaKinhNghiem, doiTrangThaiKinhNghiem, layKinhNghiemTheoId, layDanhSachKinhNghiem, layKinhNghiemApDung, tangSoLanDungKinhNghiem, giuQuyenAutoQc, ketThucAutoQc, layTatCaAutoQc, donDepAutoQcDangChay,

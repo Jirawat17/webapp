@@ -92,7 +92,8 @@ async function apiFetch(url, options = {}) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     if (url !== '/bao-loi') _ghiVaoDs(_loiApiGanDay, { url: String(url).slice(0, 300), ma: res.status, loi: String(data.error || '').slice(0, 300) }, 10);
-    throw new Error(data.error || 'Có lỗi xảy ra');
+    // status + nghiepVu (máy chủ đánh dấu đơn không hợp lệ): nơi gọi phân biệt từ chối nghiệp vụ với lỗi kỹ thuật (Logs_UploadAnh)
+    throw Object.assign(new Error(data.error || 'Có lỗi xảy ra'), { status: res.status, nghiepVu: !!data.nghiepVu });
   }
   return data;
 }
@@ -501,7 +502,7 @@ function htmlGoiYEmb(sttKeyDangVe, g) {
   return `<div class="badge-row" style="align-items:center" onclick="event.stopPropagation()">
     <span class="badge trang-thai-success" style="white-space:normal;height:auto;text-align:left">${icon('check', { size: 14 })} Có EMB sẵn: đơn ${escapeHtml(g.sttKey)} · ${escapeHtml(muc)}</span>
     <a href="/tim-anh.html?stt=${encodeURIComponent(sttKeyDangVe)}" target="_blank" rel="noopener">So sánh</a>
-    <a href="/api/thu-vien/file/${Number(g.embId)}?tai=1">Tải EMB</a>
+    <a href="/api/thu-vien/file/${Number(g.embId)}?tai=1">${icon('download', { size: 14 })} Tải về/Download EMB</a>
   </div>`;
 }
 // Gọi sau khi vẽ thẻ: lấy gợi ý cho các thẻ đang hiện, chèn vào .thong-tin của từng thẻ (thuocTinh = tên data-attribute mang mã).
@@ -787,14 +788,20 @@ let lyDoKhongNenGanNhat = null;
 // tuyChon (bổ sung 23/09/2026, theo yêu cầu người dùng — menu Thiết lập/Tỷ lệ nén ảnh, CHỈ áp dụng cho
 // 2 chế độ chụp ảnh ở scan.html) — cho phép override 2 hằng số mặc định ở trên theo cấu hình superadmin
 // đã lưu. order.html gọi hàm này KHÔNG truyền tham số thứ 2 → giữ nguyên hành vi cũ (2 hằng số mặc định).
+// tuyChon.thongSo (12/10/2026, Logs_UploadAnh ở scan.html): object RIÊNG của lượt gọi, hàm điền kích thước gốc/sau nén, thời gian
+// giải mã / vẽ / xuất JPEG và lý do không nén (khongNen). Không dùng biến toàn cục: scan.html nén ngầm nhiều ảnh CHỒNG nhau.
 async function nenAnhTruocKhiTaiLen(file, tuyChon = {}) {
   const canhDaiToiDa = tuyChon.canhDaiToiDa || CANH_DAI_NHAT_TOI_DA_KHI_NEN_ANH;
   const chatLuongJpeg = tuyChon.chatLuongJpeg || CHAT_LUONG_JPEG_KHI_NEN_ANH;
+  const ts = tuyChon.thongSo || {};
+  const khongNen = lyDo => { lyDoKhongNenGanNhat = lyDo; ts.khongNen = lyDo; return file; };
   lyDoKhongNenGanNhat = null;
-  if (!file || !file.type || !file.type.startsWith('image/')) { lyDoKhongNenGanNhat = 'Không phải file ảnh'; return file; }
-  if (file.size <= BO_QUA_NEN_NEU_DA_NHO_HON) { lyDoKhongNenGanNhat = 'Ảnh đã nhỏ sẵn (bỏ qua)'; return file; }
+  if (!file || !file.type || !file.type.startsWith('image/')) return khongNen('Không phải file ảnh');
+  if (file.size <= BO_QUA_NEN_NEU_DA_NHO_HON) return khongNen('Ảnh đã nhỏ sẵn (bỏ qua)');
   try {
+    const t0 = performance.now();
     const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    const t1 = performance.now();
     const tyLe = Math.min(1, canhDaiToiDa / Math.max(bitmap.width, bitmap.height));
     const rong = Math.round(bitmap.width * tyLe);
     const cao = Math.round(bitmap.height * tyLe);
@@ -803,18 +810,20 @@ async function nenAnhTruocKhiTaiLen(file, tuyChon = {}) {
     canvas.width = rong;
     canvas.height = cao;
     canvas.getContext('2d').drawImage(bitmap, 0, 0, rong, cao);
+    const t2 = performance.now();
+    Object.assign(ts, { rongGoc: bitmap.width, caoGoc: bitmap.height, rong, cao, msGiaiMa: Math.round(t1 - t0), msVe: Math.round(t2 - t1) });
     bitmap.close();
 
     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', chatLuongJpeg));
-    if (!blob) { lyDoKhongNenGanNhat = 'canvas.toBlob() trả về rỗng'; return file; }
-    if (blob.size >= file.size) { lyDoKhongNenGanNhat = `Nén không hiệu quả (${(blob.size/1024).toFixed(0)}KB >= gốc)`; return file; }
+    ts.msXuat = Math.round(performance.now() - t2);
+    if (!blob) return khongNen('canvas.toBlob() trả về rỗng');
+    if (blob.size >= file.size) return khongNen(`Nén không hiệu quả (${(blob.size/1024).toFixed(0)}KB >= gốc)`);
 
     const tenFileMoi = String(file.name || 'anh').replace(/\.[^.]+$/, '') + '.jpg';
     return new File([blob], tenFileMoi, { type: 'image/jpeg' });
   } catch (e) {
-    lyDoKhongNenGanNhat = 'Lỗi: ' + e.message;
     console.error('[Nén ảnh] Lỗi khi nén, dùng ảnh gốc:', e.message);
-    return file;
+    return khongNen('Lỗi: ' + e.message);
   }
 }
 

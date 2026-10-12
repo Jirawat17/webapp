@@ -467,6 +467,31 @@ const taoPng = async (hat, w = 120) => sharp({ create: { width: w, height: w, ch
   assert.deepStrictEqual(db2.prepare(`SELECT la_ban_chinh FROM tv_file WHERE stt_key = 'EMBDUA' ORDER BY so_thu_tu`).pluck().all(), [0, 1],
     'bản chính = v2 dù v1 lưu xong sau');
 
+  // ---- EMB nhiều file chính cho 1 đơn (12/10/2026): bộ theo loTai, 1 file vào bộ = thay cùng tên / thêm; trùng tên trong bộ -> từ chối ----
+  const chinh = ma => db.dsEmbChinh(ma).map(f => f.ten_file_goc).sort().join('|');
+  const luu = (nd, ten, loTai) => xuLy.luuEmb({ buffer: emb(nd), sttKey: 'EMBBO', tenFileGoc: ten, loTai });
+  await luu('bo-1', 'EMBBO.emb');
+  await luu('bo-2', 'khac.emb'); assert.strictEqual(chinh('EMBBO'), 'khac.emb', '0-1 file chính: file lẻ thay như cũ');
+  await luu('bo-3', 'MẶT TRƯỚC.emb', 'lotA0001'); await luu('bo-4', 'tay.emb', 'lotA0001');
+  assert.strictEqual(chinh('EMBBO'), 'MẶT TRƯỚC.emb|tay.emb', 'bộ 2 file đều chính, bộ trước thành bản cũ');
+  let r = await luu('bo-5', 'mặt trước.emb');
+  assert.strictEqual(r.hanhDong, 'THAY_CUNG_TEN'); assert.strictEqual(chinh('EMBBO'), 'mặt trước.emb|tay.emb', 'thay đúng file cùng tên (chữ có dấu)');
+  r = await luu('bo-6', 'nguc.emb');
+  assert.strictEqual(r.hanhDong, 'THEM_VAO_BO'); assert.strictEqual(chinh('EMBBO'), 'mặt trước.emb|nguc.emb|tay.emb');
+  await luu('bo-7', 'a.emb', 'lotB0002'); await luu('bo-8', 'a.emb', 'lotB0002');
+  r = await luu('bo-9', 'A.emb');
+  assert.strictEqual(r.ketQua, 'BO_QUA', 'bộ có 2 file cùng tên -> từ chối, không đoán'); assert.strictEqual(chinh('EMBBO'), 'a.emb|a.emb');
+  await luu('bo-10', 'x.emb', 'lotC0003'); r = await luu('bo-7', 'a.emb', 'lotC0003'); // file đã có trong lượt mới -> dùng lại
+  assert.strictEqual(r.ketQua, 'DA_LUU'); assert.strictEqual(chinh('EMBBO'), 'a.emb|x.emb', 'file trùng được đưa vào bộ mới');
+  assert.strictEqual(db.embChinhCuaCacDon(['EMBBO']).get('EMBBO').so_chinh, 2);
+  // 2 lượt tải 1 file CÙNG TÊN vào bộ chạy chồng nhau: chốt sau tách cả file của lượt trước -> bộ không có 2 file cùng tên
+  await luu('bo-11', 'y.emb', 'lotC0003');
+  const upGoc2 = storage.uploadImageBuffer;
+  storage.uploadImageBuffer = async (buf, key, ct) => { await new Promise(r => setTimeout(r, 50)); return upGoc2(buf, key, ct); };
+  await Promise.all([luu('bo-12', 'Y.emb'), luu('bo-13', 'y.emb')]);
+  storage.uploadImageBuffer = upGoc2;
+  assert.strictEqual(chinh('EMBBO').toLowerCase(), 'a.emb|x.emb|y.emb', 'chồng nhau vẫn chỉ còn 1 y.emb trong bộ: ' + chinh('EMBBO'));
+
   // ---- quyết định: chỉ ghi nhận ----
   const fCu = db2.prepare(`SELECT id FROM tv_file WHERE stt_key = 'TKTRANG'`).pluck().get();
   db.themQuyetDinh({ sttKeyMoi: 'TKGOC', fileId: fCu, quyetDinh: 'TAI_SU_DUNG', ghiChu: 'đổi màu chỉ', nguoi: 'Ve' });
@@ -701,6 +726,17 @@ const taoPng = async (hat, w = 120) => sharp({ create: { width: w, height: w, ch
   assert.strictEqual((await api('/emb/RTKHONGCO', formFile(Buffer.from('emb-route-1'), 'a.emb', { xacNhanNgoaiSheet: '1' }))).body.ketQua, 'DA_LUU');
   const rEmbHoa = await api('/emb/AB9', formFile(Buffer.from('emb-route-2'), 'b.emb'));
   assert.strictEqual(rEmbHoa.body.ketQua, 'DA_LUU'); assert.strictEqual(rEmbHoa.body.sttKey, 'Ab9');
+  // EMB nhiều file (12/10/2026) qua route: cùng loTai -> cả bộ là file chính; loTai sai định dạng -> coi như 1 file
+  for (const [nd, ten] of [['emb-bo-1', 'SH1_truoc.emb'], ['emb-bo-2', 'SH1_tay.emb']]) {
+    assert.strictEqual((await api('/upload', formFile(Buffer.from(nd), ten, { duongDan: ten, loTai: 'tvRoute01' }))).body.ketQua, 'DA_LUU');
+  }
+  assert.deepStrictEqual((await api('/emb/SH1')).body.dsChinh.map(f => f.ten).sort(), ['SH1_tay.emb', 'SH1_truoc.emb']);
+  assert.strictEqual((await api('/emb/SH1', formFile(Buffer.from('emb-bo-3'), 'SH1_tay.emb'))).body.lyDo.startsWith('Đã THAY'), true);
+  assert.strictEqual((await api('/emb/SH1', formFile(Buffer.from('emb-bo-4'), 'khac.emb', { loTai: 'x y' }))).body.ketQua, 'DA_LUU');
+  assert.deepStrictEqual((await api('/emb/SH1')).body.dsChinh.map(f => f.ten).sort(), ['SH1_tay.emb', 'SH1_truoc.emb', 'khac.emb'], 'loTai sai -> 1 file, thêm vào bộ');
+  // chi tiết đơn chỉ gửi TÊN file khi xem trước: tên không mang mã thì không khớp (dù thư mục mang mã)
+  const rTen = await api('/xem-truoc', json({ files: [{ ten: 'tay.emb', duongDan: 'tay.emb' }, { ten: 'tay.emb', duongDan: 'SH1/tay.emb' }, { ten: 'SH1_tay.emb', duongDan: 'SH1_tay.emb' }] }));
+  assert.deepStrictEqual(rTen.body.ketQua.map(k => k.trangThai === 'KHOP' ? k.sttKey : k.trangThai), ['KHONG_KHOP', 'SH1', 'SH1']);
   // (3)+(14) Quét ngay: công tắc TẮT phải xác nhận; trả lời ngay, quét chạy nền; đang quét thì 409
   assert.strictEqual(dongBo.dangBat(), false);
   const rQ0 = await api('/tu-dong-sheet/quet-ngay', json({}));

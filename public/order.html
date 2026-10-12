@@ -34,8 +34,8 @@
   <div class="skeleton-list"><div class="skeleton-card" style="height:220px"></div></div>
 </div>
 
-<script src="/js/icons.js?v=105"></script>
-<script src="/js/api.js?v=120"></script>
+<script src="/js/icons.js?v=106"></script>
+<script src="/js/api.js?v=122"></script>
 <script>
 const sttKey = new URLSearchParams(location.search).get('stt');
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
@@ -368,19 +368,25 @@ async function taiKhoiEmb() {
   let d;
   try { d = await apiFetch('/thu-vien/emb/' + encodeURIComponent(sttKey)); } catch (e) { el.innerHTML = ''; return; }
   const ngay = s => String(s || '').slice(0, 16).replace('T', ' ');
-  const c = d.chinh;
+  // Đơn có thể có NHIỀU file EMB chính (tải lên cùng 1 lượt, 12/10/2026) — mỗi file 1 dòng, có nút Tải về/Download riêng.
+  const ds = d.dsChinh || (d.chinh ? [d.chinh] : []);
+  embChinhHienTai = ds;
   el.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:0.9rem">
     <span>${icon('file', {size:14})} <strong>File EMB:</strong>
-      ${c ? `<span style="color:var(--color-success-text);font-weight:700">ĐÃ CÓ</span> ${escapeHtml(c.ten)} · phiên bản ${c.so_thu_tu} · ${escapeHtml(ngay(c.ngay_luu))}${c.nguoi_tai_len ? ' · ' + escapeHtml(c.nguoi_tai_len) : ''}`
+      ${ds.length ? `<span style="color:var(--color-success-text);font-weight:700">ĐÃ CÓ${ds.length > 1 ? ` ${ds.length} file` : ''}</span>`
         : '<span style="color:var(--color-danger-text);font-weight:700">Chưa tìm thấy file EMB liên kết</span>'}</span>
-    ${c && d.duocTai ? `<a href="/api/thu-vien/file/${c.id}?tai=1">${icon('download', {size:14})} Tải EMB</a>` : ''}
-    ${d.duocTaiLen ? `<button type="button" class="btn-hanh-dong phu" onclick="document.getElementById('chon-emb').click()">${icon('download', {size:14})} Tải lên EMB</button>
-      <input type="file" id="chon-emb" accept=".emb" hidden onchange="taiLenEmb(this)">
+    ${ds.map(c => `<span>${escapeHtml(c.ten)} · phiên bản ${c.so_thu_tu} · ${escapeHtml(ngay(c.ngay_luu))}${c.nguoi_tai_len ? ' · ' + escapeHtml(c.nguoi_tai_len) : ''}
+      ${d.duocTai ? ` · <a href="/api/thu-vien/file/${c.id}?tai=1">${icon('download', {size:14})} Tải về/Download</a>` : ''}</span>`).join('')}
+    ${d.duocTaiLen ? `<button type="button" class="btn-hanh-dong phu" onclick="document.getElementById('chon-emb').click()" title="Chọn 1 hoặc nhiều file .emb (giữ Ctrl để chọn nhiều)">${icon('upload', {size:14})} Tải lên/Upload</button>
+      <input type="file" id="chon-emb" accept=".emb" multiple hidden onchange="taiLenEmb(this)">
+      <input type="file" id="chon-emb-thu-muc" webkitdirectory multiple hidden onchange="taiLenEmb(this)">
+      <a href="javascript:void(0)" onclick="document.getElementById('chon-emb-thu-muc').click()">Chọn cả thư mục</a>
+      <a href="/tim-anh.html#ta-tai-len">${icon('upload', {size:14})} Tải lên/Upload nhiều đơn</a>
       <a href="/tim-anh.html?stt=${encodeURIComponent(sttKey)}">Tìm thiết kế tương tự</a>` : ''}
-    ${d.cu.length && d.duocTai ? `<span style="color:var(--color-text-muted)">Bản cũ: ${d.cu.map(x => `<a href="/api/thu-vien/file/${x.id}?tai=1">v${x.so_thu_tu}</a> (${escapeHtml(ngay(x.ngay_luu))})`).join(', ')}</span>` : ''}
+    ${d.cu.length && d.duocTai ? `<span style="color:var(--color-text-muted)">Bản cũ (Tải về/Download): ${d.cu.map(x => `<a href="/api/thu-vien/file/${x.id}?tai=1" title="${escapeHtml(x.ten)}">v${x.so_thu_tu}</a> (${escapeHtml(ngay(x.ngay_luu))})`).join(', ')}</span>` : ''}
   </div>`;
   // A1 (11/10/2026): đơn chưa có EMB mà có gợi ý "Có EMB sẵn" -> hiện ngay dưới (chỉ vai trò dùng thư viện).
-  if (!c && d.duocTaiLen) {
+  if (!ds.length && d.duocTaiLen) {
     const ma = (donHienTai && donHienTai.STT_Key) || sttKey;
     try {
       const kq = await apiFetch('/thu-vien/tom-tat-don', { method: 'POST', body: JSON.stringify({ keys: [ma] }) });
@@ -389,13 +395,30 @@ async function taiKhoiEmb() {
   }
 }
 
+// Tải lên EMB (12/10/2026, theo yêu cầu người dùng): chọn 1 file -> như cũ (tên file tuỳ ý). Chọn NHIỀU file hoặc cả thư mục ->
+// chỉ nhận file .emb có TÊN FILE khớp đúng mã đơn này (khớp ở server, cùng quy tắc menu Tìm ảnh), các file khác bỏ qua + báo
+// danh sách; các file nhận cùng thành file chính của đơn (1 lượt — lượt EMB đang có thành bản cũ, không xoá).
+let embChinhHienTai = []; // các file EMB chính đang hiện (taiKhoiEmb) — để câu xác nhận tải 1 file nói đúng điều sẽ xảy ra
 async function taiLenEmb(input) {
-  const f = input.files[0];
+  const files = [...input.files];
+  const laThuMuc = input.id === 'chon-emb-thu-muc';
   input.value = '';
-  if (!f) return;
+  if (!files.length) return;
+  if (files.length > 1 || laThuMuc) return taiLenNhieuEmb(files);
+  const f = files[0];
   if (!/\.emb$/i.test(f.name)) { alert('Chỉ nhận file .emb'); return; }
   if (f.size > 30 * 1048576) { alert('File quá lớn (tối đa 30MB).'); return; }
-  if (!confirm(`Tải "${f.name}" lên làm file EMB của đơn ${sttKey}? Bản EMB cũ (nếu có) vẫn được giữ lại.`)) return;
+  // Đọc lại bộ file chính NGAY trước khi hỏi (người khác có thể vừa đổi bộ sau khi trang mở); lỗi thì dùng bản đang hiện.
+  try { const d = await apiFetch('/thu-vien/emb/' + encodeURIComponent(sttKey)); embChinhHienTai = d.dsChinh || []; } catch (e) { /* dùng bản đang hiện */ }
+  const ss = s => String(s || '').normalize('NFC').trim().toLowerCase(); // cùng cách so tên với server (xuLyService#tenSoSanh)
+  const n = embChinhHienTai.length, dsCungTen = embChinhHienTai.filter(c => ss(c.ten) === ss(f.name)), cungTen = dsCungTen[0];
+  if (n >= 2 && dsCungTen.length >= 2) { // cùng quy tắc với server (xuLyService#luuEmb) — không biết thay file nào
+    alert(`Bộ file chính của đơn ${sttKey} đang có ${dsCungTen.length} file cùng tên "${f.name}" — không biết thay file nào. Tải lại CẢ BỘ (chọn nhiều file cùng lúc) để thay.`);
+    return;
+  }
+  if (!confirm(n >= 2
+    ? `Đơn ${sttKey} đang có ${n} file EMB chính. "${f.name}" sẽ ${cungTen ? `THAY file cùng tên "${cungTen.ten}" (file đó thành bản cũ)` : 'được THÊM vào bộ'}; các file chính khác giữ nguyên.`
+    : `Tải "${f.name}" lên làm file EMB của đơn ${sttKey}? Bản EMB cũ (nếu có) vẫn được giữ lại.`)) return;
   const gui = xacNhan => {
     const fd = new FormData();
     fd.append('file', f, f.name);
@@ -409,8 +432,59 @@ async function taiLenEmb(input) {
       if (!confirm(`${kq.lyDo} Vẫn lưu file EMB vào đơn ${sttKey}?`)) return;
       kq = await gui(true);
     }
-    alert(kq.ketQua === 'DA_LUU' ? 'Đã lưu file EMB.' : (kq.lyDo || 'Không lưu.'));
+    alert(kq.ketQua === 'DA_LUU' ? (kq.lyDo || 'Đã lưu file EMB.') : (kq.lyDo || 'Không lưu.'));
   } catch (e) { alert('Tải lên EMB lỗi: ' + e.message); }
+  taiKhoiEmb();
+}
+
+async function taiLenNhieuEmb(files) {
+  const ma = (donHienTai && donHienTai.STT_Key) || sttKey;
+  const dsEmb = files.filter(f => /\.emb$/i.test(f.name));
+  if (!dsEmb.length) { alert('Không có file .emb nào trong các file đã chọn.'); return; }
+  if (dsEmb.length > 500) { alert('Tối đa 500 file .emb mỗi lần.'); return; }
+  let khop;
+  try { // chỉ gửi TÊN file (không gửi thư mục) — đúng quy tắc "tên file chứa mã đơn"
+    khop = await apiFetch('/thu-vien/xem-truoc', { method: 'POST', body: JSON.stringify({ files: dsEmb.map(f => ({ ten: f.name, duongDan: f.name, kichThuoc: f.size })) }) });
+  } catch (e) { alert('Không kiểm tra được tên file: ' + e.message); return; }
+  const nhan = [], boQua = [], nhieuMa = [];
+  const GHI_CHU_BO_QUA = { QUA_LON: ' (quá 30MB)', KHONG_QUYEN: ' (mã đơn ngoài phạm vi Xưởng của bạn)', KHOP: ' (mang mã đơn khác)', TRUNG: ' (mang mã đơn khác)' };
+  dsEmb.forEach((f, i) => {
+    const k = khop.ketQua[i] || {};
+    if (k.sttKey === ma && (k.trangThai === 'KHOP' || k.trangThai === 'TRUNG')) nhan.push(f);
+    else if (k.trangThai === 'NHIEU') nhieuMa.push(f.name); // tên khớp nhiều mã đơn — không đoán, báo đổi tên cho rõ
+    else boQua.push(f.name + (GHI_CHU_BO_QUA[k.trangThai] || ''));
+  });
+  const soKhongPhaiEmb = files.length - dsEmb.length;
+  const dongBoQua = (boQua.length ? `\n\nBỏ qua ${boQua.length} file không mang mã ${ma}: ${boQua.slice(0, 15).join(', ')}${boQua.length > 15 ? ', …' : ''}` : '')
+    + (nhieuMa.length ? `\n\nBỏ qua ${nhieuMa.length} file có tên khớp NHIỀU mã đơn (đổi tên file cho rõ mã rồi chọn lại): ${nhieuMa.slice(0, 15).join(', ')}${nhieuMa.length > 15 ? ', …' : ''}` : '');
+  if (!nhan.length) { alert(`Không có file .emb nào có tên chứa mã đơn ${ma}.${dongBoQua}`); return; }
+  if (!confirm(`Tải lên ${nhan.length} file EMB vào đơn ${ma}: ${nhan.map(f => f.name).join(', ')}.\n`
+    + `${nhan.length > 1 ? 'Các file này cùng là file chính của đơn; ' : ''}EMB đang có (nếu có) chuyển thành bản cũ, không bị xoá.${dongBoQua}`
+    + `${soKhongPhaiEmb ? `\n(${soKhongPhaiEmb} file không phải .emb cũng bỏ qua.)` : ''}`)) return;
+  const loTai = nhan.length > 1 ? 'emb' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8) : '';
+  const ketQua = [];
+  let xacNhan = false, coLoi = false;
+  for (const f of nhan) {
+    const gui = () => {
+      const fd = new FormData();
+      fd.append('file', f, f.name);
+      if (loTai) fd.append('loTai', loTai);
+      if (xacNhan) fd.append('xacNhanNgoaiSheet', '1');
+      return apiFetch('/thu-vien/emb/' + encodeURIComponent(sttKey), { method: 'POST', body: fd, headers: {} });
+    };
+    try {
+      let kq = await gui();
+      if (kq.ketQua === 'CAN_XAC_NHAN') {
+        if (!confirm(`${kq.lyDo} Vẫn lưu file EMB vào đơn ${ma}?`)) break;
+        xacNhan = true;
+        kq = await gui();
+      }
+      ketQua.push(`${f.name}: ${kq.ketQua === 'DA_LUU' ? 'đã lưu' : (kq.lyDo || 'không lưu')}`);
+    } catch (e) { coLoi = true; ketQua.push(`${f.name}: LỖI — ${e.message}`); }
+  }
+  // Lượt nhiều file lỗi giữa chừng: bộ file chính của đơn đang THIẾU (bộ cũ đã thành bản cũ) — báo rõ cách sửa.
+  alert(`Kết quả tải lên EMB đơn ${ma}:\n${ketQua.join('\n')}`
+    + (coLoi && loTai ? `\n\n⚠ BỘ FILE CHÍNH CHƯA ĐỦ — chọn lại TOÀN BỘ ${nhan.length} file và tải lên lần nữa (file đã lưu được dùng lại, không lưu trùng).` : ''));
   taiKhoiEmb();
 }
 

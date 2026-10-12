@@ -138,6 +138,13 @@ function xacDinhMa(nhap, tapMa, daXacNhan, xem) {
 }
 
 const tenLuu = f => f.object_key.split('/').pop();
+// Mã lượt tải nhiều file EMB do trình duyệt tạo (12/10/2026) — chỉ nhận chuỗi ký tự an toàn, sai thì coi như tải 1 file.
+const docLoTai = v => (/^[A-Za-z0-9_-]{6,40}$/.test(String(v || '')) ? String(v) : null);
+// EMB của 1 đơn -> { chinh: [các file chính, số phiên bản giảm dần], cu: [bản cũ] } (1 đơn có thể có nhiều file chính, 12/10/2026).
+function chiaEmb(files) {
+  const emb = files.filter(f => f.loai === 'EMB').sort((a, b) => b.so_thu_tu - a.so_thu_tu);
+  return { chinh: emb.filter(f => f.la_ban_chinh), cu: emb.filter(f => !f.la_ban_chinh) };
+}
 function hienThiFile(f) {
   return {
     id: f.id, loai: f.loai, so_thu_tu: f.so_thu_tu, la_ban_chinh: !!f.la_ban_chinh, ten: f.ten_file_goc || tenLuu(f), tenLuu: tenLuu(f),
@@ -154,7 +161,7 @@ function boSungKetQua(ketQua, maSheet) {
     const e = emb.get(r.stt_key);
     return {
       ...r, ...hienThiFile(theoId.get(r.id)), nhom: nguongService.phanNhom(r, nguong),
-      emb: e ? { id: e.id, ten: e.ten_file_goc || `phiên bản ${e.so_thu_tu}`, so_thu_tu: e.so_thu_tu } : null,
+      emb: e ? { id: e.id, ten: e.ten_file_goc || `phiên bản ${e.so_thu_tu}`, so_thu_tu: e.so_thu_tu, soChinh: e.so_chinh } : null,
       trongSheet: maSheet ? maSheet.has(r.stt_key) : null,
     };
   });
@@ -172,7 +179,7 @@ router.get('/don/:sttKey', requireRole(...VAI_TRO_MENU), async (req, res) => {
   if (!xem(sttKey)) return loi(res, 'Không tìm thấy đơn này trong phạm vi bạn được xem.', 404);
   const files = db.dsFileCuaDon(sttKey);
   const png = files.filter(f => f.loai === 'PNG');
-  const emb = files.filter(f => f.loai === 'EMB').sort((a, b) => b.so_thu_tu - a.so_thu_tu);
+  const emb = chiaEmb(files);
   let tim = null;
   // ?chiFile=1 (11/10/2026, U2 Đối chiếu ảnh ở chi tiết đơn): chỉ cần danh sách file — bỏ lượt tìm tương tự (tốn CPU).
   if (png.length && !req.query.chiFile) {
@@ -185,8 +192,9 @@ router.get('/don/:sttKey', requireRole(...VAI_TRO_MENU), async (req, res) => {
     sttKey,
     trongSheet: maSheet ? maSheet.has(sttKey) : null,
     png: png.map(hienThiFile),
-    embChinh: emb[0] ? hienThiFile(emb[0]) : null,
-    embCu: emb.slice(1).map(hienThiFile),
+    embChinh: emb.chinh[0] ? hienThiFile(emb.chinh[0]) : null,
+    dsEmbChinh: emb.chinh.map(hienThiFile),
+    embCu: emb.cu.map(hienThiFile),
     soLinkDangCho: db.demViecChuaXongCuaDon(sttKey),
     quyetDinh: db.dsQuyetDinhCuaDon(sttKey),
     tuongTu: tim ? boSungKetQua(tim.ketQua, maSheet) : [],
@@ -337,6 +345,7 @@ router.post('/upload', requireRole(...VAI_TRO_MENU), uploadFile.single('file'), 
   const tapMa = await layTapMa();
   const xem = duocXemDon(req.session.user);
   const k = khopSttKey(String(req.body?.duongDan || ten), tapMa.tap);
+  const loTai = loai === 'EMB' ? docLoTai(req.body?.loTai) : null;
   let sttKey = k.ketQua === 'KHOP' ? k.sttKey : '';
   if (!sttKey) {
     const goTay = String(req.body?.sttKeyGoTay || '').trim();
@@ -351,7 +360,7 @@ router.post('/upload', requireRole(...VAI_TRO_MENU), uploadFile.single('file'), 
   let kq;
   try {
     const chung = { buffer: req.file.buffer, sttKey, tenFileGoc: ten, nguoiTaiLen: req.session.user.ten };
-    kq = loai === 'PNG' ? await xuLy.luuMotFile({ ...chung, nguon: 'UPLOAD' }) : await xuLy.luuEmb(chung);
+    kq = loai === 'PNG' ? await xuLy.luuMotFile({ ...chung, nguon: 'UPLOAD' }) : await xuLy.luuEmb({ ...chung, loTai });
   } catch (err) {
     console.error('[ThuVien] Tải lên thất bại:', ten, '-', err.message);
     return loi(res, err.message, 502);
@@ -368,11 +377,12 @@ router.post('/upload', requireRole(...VAI_TRO_MENU), uploadFile.single('file'), 
 router.get('/emb/:sttKey', (req, res) => {
   const sttKey = String(req.params.sttKey || '').trim();
   if (!sttKey || !duocXemDon(req.session.user)(sttKey)) return loi(res, 'Không tìm thấy đơn.', 404);
-  const emb = db.dsFileCuaDon(sttKey).filter(f => f.loai === 'EMB').sort((a, b) => b.so_thu_tu - a.so_thu_tu);
+  const emb = chiaEmb(db.dsFileCuaDon(sttKey));
   const duocThaoTac = laVaiTroMenu(req.session.user);
   res.json({
-    chinh: emb[0] ? hienThiFile(emb[0]) : null,
-    cu: emb.slice(1).map(hienThiFile),
+    chinh: emb.chinh[0] ? hienThiFile(emb.chinh[0]) : null,
+    dsChinh: emb.chinh.map(hienThiFile),
+    cu: emb.cu.map(hienThiFile),
     duocTai: duocThaoTac, duocTaiLen: duocThaoTac,
   });
 });
@@ -389,7 +399,7 @@ router.post('/emb/:sttKey', requireRole(...VAI_TRO_MENU), uploadFile.single('fil
   if (!xem(sttKey)) return loi(res, 'Không tìm thấy đơn.', 404);
   if (m.canXacNhan) return res.json({ ketQua: 'CAN_XAC_NHAN', lyDo: `${m.canXacNhan}.` });
   let kq;
-  try { kq = await xuLy.luuEmb({ buffer: req.file.buffer, sttKey, tenFileGoc: ten, nguoiTaiLen: req.session.user.ten }); } catch (err) {
+  try { kq = await xuLy.luuEmb({ buffer: req.file.buffer, sttKey, tenFileGoc: ten, nguoiTaiLen: req.session.user.ten, loTai: docLoTai(req.body?.loTai) }); } catch (err) {
     console.error('[ThuVien] Tải lên EMB thất bại:', sttKey, '-', err.message);
     return loi(res, err.message, 502);
   }
@@ -589,7 +599,12 @@ async function phatObject(res, objectKey, tenTai) {
   // Không đặt Cache-Control max-age: máy dùng chung, đổi tài khoản thì trình duyệt sẽ phát lại ảnh đã cache mà không hỏi
   // server -> lọt qua kiểm tra quyền theo Xưởng (đã gặp khi thử 03/10/2026).
   const headers = { 'Cache-Control': 'no-store' };
-  if (tenTai) headers['Content-Disposition'] = `attachment; filename="${tenTai}"`;
+  // Tên có dấu tiếng Việt (12/10/2026): filename*=UTF-8 (RFC 5987) cho trình duyệt hiện đúng tên gốc; filename="" là bản ASCII dự phòng.
+  if (tenTai) {
+    const ascii = tenTai.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').replace(/[^\x20-\x7E]|["\\]/g, '_');
+    const utf8 = encodeURIComponent(tenTai).replace(/['()*]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+    headers['Content-Disposition'] = `attachment; filename="${ascii}"; filename*=UTF-8''${utf8}`;
+  }
   try {
     await storageService.guiObjectQuaHttp(res, objectKey, { headers }); // timeout + đóng đúng kết nối khi MinIO đứt/treo giữa chừng
   } catch (err) {
@@ -602,8 +617,20 @@ async function phatObject(res, objectKey, tenTai) {
 router.get('/file/:id', requireRole(...VAI_TRO_MENU), async (req, res) => {
   const f = db.layFile(Number(req.params.id));
   if (!f || !duocXemDon(req.session.user)(f.stt_key)) return loi(res, 'Không tìm thấy file.', 404);
-  // EMB bản chính tải về đặt tên <STT_Key>.emb (spec mục 5); bản cũ giữ tên phiên bản <STT_Key>_v<n>.emb.
-  const tenTai = f.loai === 'EMB' && f.la_ban_chinh ? `${xuLy.lamSachKey(f.stt_key)}.emb` : f.object_key.split('/').pop();
+  // EMB bản chính tải về đặt tên <STT_Key>.emb (spec mục 5); bản cũ tên <STT_Key>_v<n>.emb theo SỐ PHIÊN BẢN đang hiển thị
+  // (không lấy tên object: file được dùng lại trong lượt mới đã đổi số phiên bản, xem thuVienDbService#duaEmbVaoLoTai).
+  // Đơn có NHIỀU file chính (12/10/2026): giữ tên file gốc (vd 10U71_tay áo.emb — biết file nào là phần nào), bỏ ký tự cấm trong
+  // tên file; tên gốc không có mã đơn thì thêm <STT_Key>_ phía trước; 2 file chính trùng tên gốc thì thêm _v<n> cho khỏi đè nhau.
+  let tenTai = f.object_key.split('/').pop();
+  if (f.loai === 'EMB') {
+    const k = xuLy.lamSachKey(f.stt_key);
+    tenTai = `${k}_v${f.so_thu_tu}.emb`;
+    const bo = f.la_ban_chinh ? db.dsEmbChinh(f.stt_key) : [];
+    const coBan = x => String(x.ten_file_goc || '').replace(/[\x00-\x1f\\/:*?"<>|]+/g, '_').replace(/\.emb$/i, '').trim();
+    const goc = coBan(f);
+    if (f.la_ban_chinh) tenTai = bo.length <= 1 || !goc ? `${k}.emb`
+      : `${goc.toUpperCase().includes(k.toUpperCase()) ? '' : k + '_'}${goc}${bo.some(x => x.id !== f.id && coBan(x).toLowerCase() === goc.toLowerCase()) ? `_v${f.so_thu_tu}` : ''}.emb`;
+  }
   await phatObject(res, f.object_key, req.query.tai || f.loai === 'EMB' ? tenTai : '');
 });
 

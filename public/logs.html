@@ -25,6 +25,34 @@
   <div style="display:flex;gap:8px;margin-bottom:var(--space-3)">
     <button type="button" class="btn-hanh-dong" id="nut-tab-log" onclick="chonTabLogs('log')">Log server</button>
     <button type="button" class="btn-hanh-dong phu" id="nut-tab-bao-loi" onclick="chonTabLogs('bao-loi')">Báo lỗi từ nhân viên</button>
+    <button type="button" class="btn-hanh-dong phu" id="nut-tab-upload-anh" onclick="chonTabLogs('upload-anh')">Logs_UploadAnh</button>
+  </div>
+  <!-- Logs_UploadAnh (12/10/2026): mọi thao tác ở menu Quét QR + thiết bị/phiên bản app (routes/nhatKyQuet.js), giữ 90 ngày. -->
+  <div id="tab-upload-anh" style="display:none">
+    <p style="margin-top:0;color:var(--color-text-muted)">Mọi thao tác ở menu Quét QR: mở camera, quét QR, chụp + tải ảnh, xác nhận hàng loạt, quét lại, thoát khi ảnh chưa tải xong.
+      Lượt chụp <b>chậm</b> = từ lúc có ảnh tới lúc tải xong quá 8 giây (tô vàng); <b>lỗi kỹ thuật</b> tô đỏ; <b>sai đơn</b> (máy chạy đúng, đơn không hợp lệ) tô xám. Giữ 90 ngày.</p>
+    <div class="bao-cao-form">
+      <div class="truong"><label for="ua-tu">Từ ngày</label><input type="date" id="ua-tu"></div>
+      <div class="truong"><label for="ua-den">Đến ngày</label><input type="date" id="ua-den"></div>
+      <div class="truong"><label for="ua-nguoi">Người dùng</label><input id="ua-nguoi" placeholder="Tên đúng như đăng nhập"></div>
+      <div class="truong"><label for="ua-su-kien">Sự kiện</label>
+        <select id="ua-su-kien"><option value="">Tất cả</option><option value="CHUP_ANH">Chụp + tải ảnh</option><option value="QUET_QR">Quét QR</option>
+          <option value="MO_CAMERA">Mở camera</option><option value="XAC_NHAN_HANG_LOAT">Xác nhận hàng loạt</option><option value="QUET_LAI">Quét lại (bỏ ngang)</option>
+          <option value="THOAT_GIUA_CHUNG">Thoát khi ảnh chưa tải xong</option></select></div>
+      <div class="truong"><label for="ua-nhom-kq">Kết quả</label>
+        <select id="ua-nhom-kq"><option value="">Tất cả</option><option value="KY_THUAT">Lỗi kỹ thuật (mạng/máy chủ/camera, thoát khi chưa tải xong)</option>
+          <option value="NGHIEP_VU">Sai đơn (sai trạng thái / không tìm thấy / trùng)</option><option value="BO_NGANG">Quét lại (bỏ ngang)</option></select></div>
+      <label style="align-self:end"><input type="checkbox" id="ua-chi-cham"> Chỉ lượt chụp chậm</label>
+      <button type="button" class="btn-hanh-dong" onclick="taiLogsUploadAnh()">Làm mới</button>
+      <button type="button" class="btn-hanh-dong phu" onclick="xuatCsvUploadAnh()">Xuất CSV</button>
+    </div>
+    <h3 style="margin-bottom:4px">Tổng hợp
+      <select id="ua-nhom" onchange="taiTongHopUploadAnh()" style="font-size:0.9rem;margin-left:8px">
+        <option value="thiet-bi">theo hệ điều hành + trình duyệt</option><option value="nguoi">theo người dùng</option></select></h3>
+    <p style="margin:0 0 6px;font-size:0.82rem;color:var(--color-text-muted)">Thời gian trung bình (giây) của các lượt chụp THÀNH CÔNG. "Tổng chụp" = từ lúc có ảnh tới lúc tải xong; "10% chậm nhất" = mốc mà 10% số lượt chậm hơn.</p>
+    <div style="overflow-x:auto"><table class="info-table" id="ua-tong-hop" style="font-size:0.85rem"></table></div>
+    <h3 style="margin-bottom:4px">Chi tiết <span id="ua-dem" style="font-size:0.85rem;font-weight:400;color:var(--color-text-muted)"></span></h3>
+    <div style="overflow-x:auto"><table class="info-table" id="ua-chi-tiet" style="font-size:0.8rem"></table></div>
   </div>
   <div id="tab-bao-loi" style="display:none">
     <div class="bao-cao-form">
@@ -51,8 +79,8 @@
   </div>
 </div>
 
-<script src="/js/icons.js?v=105"></script>
-<script src="/js/api.js?v=120"></script>
+<script src="/js/icons.js?v=106"></script>
+<script src="/js/api.js?v=122"></script>
 <script>
 let toanBoDong = [];
 
@@ -74,9 +102,102 @@ let toanBoDong = [];
 function chonTabLogs(tab) {
   document.getElementById('tab-log').style.display = tab === 'log' ? '' : 'none';
   document.getElementById('tab-bao-loi').style.display = tab === 'bao-loi' ? '' : 'none';
+  document.getElementById('tab-upload-anh').style.display = tab === 'upload-anh' ? '' : 'none';
   document.getElementById('nut-tab-log').className = 'btn-hanh-dong' + (tab === 'log' ? '' : ' phu');
   document.getElementById('nut-tab-bao-loi').className = 'btn-hanh-dong' + (tab === 'bao-loi' ? '' : ' phu');
+  document.getElementById('nut-tab-upload-anh').className = 'btn-hanh-dong' + (tab === 'upload-anh' ? '' : ' phu');
   if (tab === 'bao-loi') taiBaoLoiNhanVien();
+  if (tab === 'upload-anh') {
+    const o = document.getElementById('ua-tu');
+    if (!o.value) { // mặc định 7 ngày gần nhất (ngày Việt Nam)
+      const vn = d => new Date(d.getTime() + 7 * 3600000).toISOString().slice(0, 10);
+      o.value = vn(new Date(Date.now() - 6 * 86400000)); document.getElementById('ua-den').value = vn(new Date());
+    }
+    taiLogsUploadAnh();
+  }
+}
+
+// ---------- Logs_UploadAnh ----------
+const NHAN_SU_KIEN_UA = { MO_CAMERA: 'Mở camera', QUET_QR: 'Quét QR', CHUP_ANH: 'Chụp + tải ảnh', XAC_NHAN_HANG_LOAT: 'Xác nhận hàng loạt', QUET_LAI: 'Quét lại', THOAT_GIUA_CHUNG: 'Thoát giữa chừng' };
+const NHAN_CHE_DO_UA = { batch: 'Quét kịch bản', lookup: 'Tra cứu', photo_san_xuat: 'Ảnh đã sản xuất', photo_da_dan_tem: 'Ảnh ĐÃ DÁN TEM' };
+let dsUploadAnh = [];
+const giayUA = ms => (ms == null || ms === '' ? '—' : (ms / 1000).toFixed(1).replace('.', ','));
+function locUploadAnh() {
+  const v = id => document.getElementById(id);
+  return new URLSearchParams({ tu: v('ua-tu').value, den: v('ua-den').value, nguoi: v('ua-nguoi').value.trim(), suKien: v('ua-su-kien').value,
+    nhomKq: v('ua-nhom-kq').value, chiCham: v('ua-chi-cham').checked ? '1' : '' }).toString();
+}
+async function taiLogsUploadAnh() {
+  taiTongHopUploadAnh();
+  const bang = document.getElementById('ua-chi-tiet');
+  bang.innerHTML = '<tr><td>Đang tải...</td></tr>';
+  try { dsUploadAnh = (await apiFetch('/nhat-ky-quet?gioiHan=1000&' + locUploadAnh())).ds; }
+  catch (e) { bang.innerHTML = `<tr><td>Lỗi: ${escapeHtml(e.message)}</td></tr>`; return; }
+  document.getElementById('ua-dem').textContent = `(${dsUploadAnh.length}${dsUploadAnh.length >= 1000 ? '+ — chỉ hiện 1000 dòng mới nhất' : ''} dòng)`;
+  if (!dsUploadAnh.length) { bang.innerHTML = '<tr><td>Không có dòng nào.</td></tr>'; return; }
+  bang.innerHTML = `<tr><th>Giờ</th><th>Người</th><th>Sự kiện</th><th>Chế độ</th><th>Mã đơn</th><th>Kết quả</th><th>Tổng (s)</th><th>Chi tiết</th><th>Thiết bị</th></tr>`
+    + dsUploadAnh.map(r => {
+      // nhom_kq do máy chủ tính (nhatKyDbService.js#SQL_NHOM_KQ — nơi duy nhất định nghĩa nhóm kết quả)
+      const nen = r.nhom_kq === 'KY_THUAT' ? 'background:rgba(220,38,38,0.12)' : r.cham ? 'background:rgba(245,158,11,0.18)'
+        : r.nhom_kq ? 'background:rgba(120,120,120,0.10)' : '';
+      return `<tr style="${nen}"><td style="white-space:nowrap">${escapeHtml(String(r.luc).slice(5, 19).replace('T', ' '))}</td><td>${escapeHtml(r.nguoi)}</td>
+        <td>${escapeHtml(NHAN_SU_KIEN_UA[r.su_kien] || r.su_kien)}</td><td>${escapeHtml(NHAN_CHE_DO_UA[r.che_do] || r.che_do)}</td><td>${escapeHtml(r.stt_key)}</td>
+        <td>${escapeHtml(r.ket_qua)}${r.loi ? `<div style="color:var(--color-danger-text)">${escapeHtml(r.loi)}</div>` : ''}</td>
+        <td style="text-align:right">${giayUA(r.tong_ms)}</td><td>${escapeHtml(moTaChiTietUA(r))}</td>
+        <td>${escapeHtml([r.he_dieu_hanh, r.trinh_duyet, r.may].filter(Boolean).join(' · '))}${r.phien_ban_app ? ` <span style="color:var(--color-text-muted)">(app v${escapeHtml(r.phien_ban_app)})</span>` : ''}</td></tr>`;
+    }).join('');
+}
+function moTaChiTietUA(r) {
+  let c = {}; try { c = JSON.parse(r.chi_tiet || '{}'); } catch (e) { /* bỏ */ }
+  const p = [];
+  if (c.nguon === 'NHAP_TAY') p.push('gõ tay');
+  if (c.msTimMa != null) p.push(`tìm mã ${giayUA(c.msTimMa)}s`);
+  if (c.msKiemTra != null) p.push(`kiểm tra ${giayUA(c.msKiemTra)}s`);
+  if (c.msCamera != null) p.push(`camera ${giayUA(c.msCamera)}s`);
+  if (c.msNen != null) p.push(`nén ${giayUA(c.msNen)}s${c.msGiaiMa != null ? ` (giải mã ${giayUA(c.msGiaiMa)}, vẽ ${giayUA(c.msVe)}, xuất ${giayUA(c.msXuat)})` : ''}`
+    + ` ${c.kbGoc}→${c.kbSauNen}KB${c.rongGoc ? ` ${c.rongGoc}x${c.caoGoc}→${c.rong}x${c.cao}` : ''}${c.loaiFile ? ' ' + c.loaiFile : ''}${c.khongNen ? ` [không nén: ${c.khongNen}]` : ''}`);
+  if (c.msGui != null) p.push(`gửi ${giayUA(c.msGui)}s${c.kbMoiGiay ? ` (${c.kbMoiGiay}KB/s)` : ''}`);
+  if (c.msGuiVaCho != null) p.push(`gửi+chờ máy chủ ${giayUA(c.msGuiVaCho)}s`);
+  if (c.msMayChu != null) p.push(`máy chủ ${giayUA(c.msMayChu)}s`);
+  if (c.mang && c.mang.loai) p.push(`mạng ${c.mang.loai}${c.mang.mbps != null ? ' ~' + c.mang.mbps + 'Mbps' : ''}`);
+  if (c.soLanThu > 1) p.push(`thử ${c.soLanThu} lần`);
+  if (c.soDon != null) p.push(`${c.thanhCong}/${c.soDon} đơn OK`);
+  if (c.giaiDoan) p.push(`đang ${c.giaiDoan === 'gui' ? 'gửi' : 'nén'} thì thoát`);
+  // Máy chủ đã rút gọn dòng quá dài (routes/nhatKyQuet.js#chiTietGon) — báo rõ để không hiểu nhầm là "không đo được"
+  if (c.catBot) p.push(`[bị rút gọn${Array.isArray(c.catBot) && c.catBot.length ? ': ' + c.catBot.join(', ') : ''}]`);
+  return p.join(' · ');
+}
+async function taiTongHopUploadAnh() {
+  const bang = document.getElementById('ua-tong-hop');
+  const theoNguoi = document.getElementById('ua-nhom').value === 'nguoi';
+  let ds;
+  try { ds = await apiFetch(`/nhat-ky-quet/tong-hop?nhom=${theoNguoi ? 'nguoi' : 'thiet-bi'}&` + locUploadAnh()); }
+  catch (e) { bang.innerHTML = `<tr><td>Lỗi: ${escapeHtml(e.message)}</td></tr>`; return; }
+  if (!ds.length) { bang.innerHTML = '<tr><td>Chưa có dữ liệu trong khoảng này.</td></tr>'; return; }
+  bang.innerHTML = `<tr><th>${theoNguoi ? 'Người dùng' : 'Hệ điều hành · Trình duyệt'}</th><th>Lượt</th><th>Lỗi kỹ thuật</th><th>Sai đơn</th><th>Quét lại</th><th>Lượt chụp OK</th><th>Tổng chụp TB</th><th>10% chậm nhất</th>
+      <th>Nén TB</th><th>Gửi TB</th><th>Máy chủ TB</th><th>Kiểm tra QR TB</th><th>Tìm mã TB</th><th>Mở camera TB</th><th>${theoNguoi ? 'Máy' : 'Người / máy'}</th></tr>`
+    + ds.map(g => `<tr><td><b>${escapeHtml(g.nhom)}</b></td><td>${g.soLuot}</td>
+      <td style="${g.soLoiKyThuat ? 'color:var(--color-danger-text);font-weight:700' : ''}">${g.soLoiKyThuat} (${Math.round(g.soLoiKyThuat * 100 / g.soLuot)}%)</td>
+      <td>${g.soNghiepVu}</td><td>${g.soBoNgang}</td><td>${g.soChup}</td>
+      <td style="${g.tbChup > 8000 ? 'color:var(--color-danger-text);font-weight:700' : ''}">${giayUA(g.tbChup)}</td><td>${giayUA(g.p90Chup)}</td>
+      <td>${giayUA(g.tbNen)}</td><td>${giayUA(g.tbGui)}</td><td>${giayUA(g.tbMayChu)}</td><td>${giayUA(g.tbKiemTra)}</td><td>${giayUA(g.tbTimMa)}</td><td>${giayUA(g.tbMoCamera)}</td>
+      <td style="font-size:0.78rem">${theoNguoi ? '' : g.soNguoi + ' người'}${g.dsMay.length ? (theoNguoi ? '' : ' · ') + escapeHtml(g.dsMay.join(', ')) : ''}</td></tr>`).join('');
+}
+// CSV có BOM (Excel đọc đúng tiếng Việt); ô bắt đầu bằng = + - @ thêm ' để Excel không hiểu là công thức.
+async function xuatCsvUploadAnh() {
+  // Tải lại theo bộ lọc hiện tại, tối đa 20000 dòng (bảng trên trang chỉ hiện 1000 dòng mới nhất).
+  let ds;
+  try { ds = (await apiFetch('/nhat-ky-quet?gioiHan=20000&' + locUploadAnh())).ds; } catch (e) { alert('Lỗi: ' + e.message); return; }
+  if (!ds.length) { alert('Không có dòng nào trong bộ lọc này.'); return; }
+  if (ds.length >= 20000 && !confirm('Khoảng này có hơn 20000 dòng — file CSV chỉ chứa 20000 dòng MỚI NHẤT. Thu hẹp khoảng ngày để lấy đủ. Vẫn xuất?')) return;
+  const o = v => `"${String(v ?? '').replace(/^[=+\-@\t\r]/, "'$&").replace(/"/g, '""')}"`;
+  const cot = ['luc', 'nguoi', 'vai_tro', 'xuong', 'su_kien', 'che_do', 'stt_key', 'ket_qua', 'nhom_kq', 'loi', 'tong_ms', 'cham', 'he_dieu_hanh', 'trinh_duyet', 'may', 'phien_ban_app', 'chi_tiet', 'thong_tin'];
+  const csv = '\ufeff' + [cot.join(','), ...ds.map(r => cot.map(k => o(r[k])).join(','))].join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = `Logs_UploadAnh_${document.getElementById('ua-tu').value}_${document.getElementById('ua-den').value}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 }
 async function taiBaoLoiNhanVien() {
   const el = document.getElementById('ds-bao-loi');

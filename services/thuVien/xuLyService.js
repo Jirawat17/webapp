@@ -201,15 +201,32 @@ function giuChoHoacTrung(thongTin, taoObjectKey) {
 // Lưu 1 file EMB (giai đoạn 2, spec mục 13). Mỗi phiên bản 1 object RIÊNG, không bao giờ ghi đè: thu-vien/<k>/<k>_v<n>.emb;
 // bản mới nhất là bản chính (la_ban_chinh = 1), các bản trước giữ làm lịch sử. Tải về luôn đặt tên <STT_Key>.emb.
 // (Bản thiết kế đầu: bản chính ở <k>.emb + chép bản cũ sang _v<n> — đổi sang key bất biến cho đơn giản và không cần key tạm.)
-async function luuEmb({ buffer, sttKey, tenFileGoc = '', nguoiTaiLen = '' }) {
+// loTai (12/10/2026): mã lượt tải nhiều file EMB cho CÙNG đơn — cả lượt đều là bản chính (thuVienDbService.js#tinhLaiBanChinhEmb).
+// Không có loTai = 1 file như cũ. File trong lượt trùng EMB đã có -> đưa file đó vào lượt (không phải "Trùng, bỏ qua").
+async function luuEmb({ buffer, sttKey, tenFileGoc = '', nguoiTaiLen = '', loTai = null }) {
   if (!buffer || !buffer.length) return { ketQua: 'BO_QUA', lyDo: 'File rỗng' };
   if (buffer.length > KICH_THUOC_TOI_DA) return { ketQua: 'BO_QUA', lyDo: `Quá 30MB (${(buffer.length / 1048576).toFixed(1)}MB)` };
   const sha256 = crypto.createHash('sha256').update(buffer).digest('hex');
   const daCo = db.timFileTheoSha(sttKey, 'EMB', sha256);
+  if (daCo && loTai && daCo.trang_thai === 'XONG') {
+    if (daCo.lo_tai !== loTai) db.duaEmbVaoLoTai(sttKey, daCo.id, loTai);
+    return { ketQua: 'DA_LUU', lyDo: 'File này đã có trong thư viện — dùng lại làm file chính của lượt này', id: daCo.id };
+  }
   if (daCo) return { ketQua: 'TRUNG', lyDo: `Trùng EMB đã có (phiên bản ${daCo.so_thu_tu})`, id: daCo.id };
+  // 1 file (không loTai) vào đơn đang có >= 2 file chính (12/10/2026, người dùng chọn): KHÔNG thay cả bộ — thay file cùng tên,
+  // tên khác thì thêm vào bộ. Bộ có >= 2 file CÙNG tên đó -> không biết thay file nào -> từ chối (tải lại cả bộ).
+  // Đơn có 0-1 file chính: như cũ (file mới là bản chính, bản trước thành bản cũ). hanhDong cho trang báo đúng điều đã làm.
+  const boHienTai = loTai ? [] : db.dsEmbChinh(sttKey);
+  const vaoBo = boHienTai.length >= 2 && !!boHienTai[0].lo_tai;
+  const cungTen = vaoBo ? boHienTai.filter(x => db.tenSoSanh(x.ten_file_goc) === db.tenSoSanh(tenFileGoc)) : [];
+  if (cungTen.length >= 2) {
+    return { ketQua: 'BO_QUA', lyDo: `Bộ file chính của đơn đang có ${cungTen.length} file cùng tên "${tenFileGoc}" — không biết thay file nào. Tải lại CẢ BỘ (chọn nhiều file cùng lúc) để thay.` };
+  }
+  if (vaoBo) loTai = boHienTai[0].lo_tai;
+  const hanhDong = loTai && vaoBo ? (cungTen.length ? 'THAY_CUNG_TEN' : 'THEM_VAO_BO') : (loTai ? 'BO_MOI' : 'BAN_CHINH_MOI');
   const k = lamSachKey(sttKey);
   const { id, objectKey } = giuChoHoacTrung(
-    { loai: 'EMB', sttKey, tenFileGoc, nguon: 'UPLOAD', sha256, kichThuoc: buffer.length, nguoiTaiLen },
+    { loai: 'EMB', sttKey, tenFileGoc, nguon: 'UPLOAD', sha256, kichThuoc: buffer.length, nguoiTaiLen, loTai },
     n => `${PREFIX}${k}/${k}_v${n}.emb`
   );
   if (!id) return { ketQua: 'TRUNG', lyDo: 'Trùng EMB vừa được lưu (cùng lúc từ nơi khác)' };
@@ -219,9 +236,12 @@ async function luuEmb({ buffer, sttKey, tenFileGoc = '', nguoiTaiLen = '' }) {
     db.xoaFileDangLuu(id);
     throw new Error('Không ghi được lên MinIO: ' + err.message);
   }
-  db.datBanChinhEmb(sttKey, id);
+  db.datBanChinhEmb(sttKey, id, vaoBo);
   db.xoaGoiYEmb(sttKey); // A1: đơn đã có EMB -> bỏ gợi ý "Có EMB sẵn" của chính nó
-  return { ketQua: 'DA_LUU', id };
+  const soChinh = boHienTai.length + (cungTen.length ? 0 : 1); // chỉ dùng cho THAY/THÊM (bộ lúc đọc trước khi lưu)
+  const lyDo = hanhDong === 'THAY_CUNG_TEN' ? `Đã THAY file cùng tên "${cungTen[0].ten_file_goc}" (file đó thành bản cũ) — đơn có ${soChinh} file EMB chính.`
+    : hanhDong === 'THEM_VAO_BO' ? `Đã THÊM vào bộ — đơn có ${soChinh} file EMB chính.` : '';
+  return { ketQua: 'DA_LUU', id, hanhDong, lyDo };
 }
 
 // Hash của 1 ảnh tải lên để TÌM (không lưu) — chạy ở tiến trình con như lúc lưu. -> { sha256, dhash, dhashHinhDang }

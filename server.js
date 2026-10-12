@@ -22,6 +22,7 @@ app.use(session({
 // Ghi nhận "còn đang hoạt động" cho mọi request đã đăng nhập — phục vụ Bảng điều khiển admin, xem
 // services/presenceService.js. Đặt sau session, trước mọi route, để áp dụng cho toàn bộ API.
 const { ghiNhanHoatDong } = require('./services/presenceService');
+app.use('/api', require('./services/logCapture').ghiLuotApi); // ghi lượt API bị từ chối/lỗi/chậm vào Logs (11/10/2026)
 app.use((req, res, next) => {
   if (req.session.user) ghiNhanHoatDong(req.session.user);
   next();
@@ -53,12 +54,15 @@ app.use('/api/notes', require('./routes/notes')); // Notes (02/10/2026) — CH�
 app.use('/api/thu-vien', require('./routes/thuVien')); // Tìm ảnh — thư viện thiết kế thêu (03/10/2026)
 app.use('/api/van-hanh', require('./routes/vanHanh')); // Cấu hình cảnh báo vận hành Y6/L2 + Telegram vận hành (11/10/2026) — CHỈ superadmin
 app.use('/api/bao-loi', require('./routes/baoLoi')); // Y20 Báo lỗi app (11/10/2026)
+app.use('/api/nhat-ky-quet', require('./routes/nhatKyQuet')); // Logs_UploadAnh — thao tác menu Quét QR (12/10/2026)
 
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Middleware xử lý lỗi tập trung — mọi lỗi throw/reject trong route đều rơi vào đây
 app.use((err, req, res, next) => {
-  console.error(err);
+  // Lượt /api: in stack CÙNG dòng [API] (có tên người dùng) ở services/logCapture.js#ghiLuotApi; ngoài /api thì in như cũ.
+  if (res.locals.coGhiLuotApi) res.locals.loiStack = (err && err.stack) || String(err);
+  else console.error(err);
   res.status(500).json({ error: err.message || 'Lỗi máy chủ, vui lòng thử lại' });
 });
 

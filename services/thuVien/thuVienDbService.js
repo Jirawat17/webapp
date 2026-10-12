@@ -107,6 +107,13 @@ CREATE TABLE IF NOT EXISTS tv_cap_danh_gia (
 );
 `);
 
+// Nhiều file EMB CHÍNH cho 1 đơn (12/10/2026, theo yêu cầu người dùng — vd file mặt trước + file tay áo): các file tải lên
+// CÙNG 1 lượt mang chung lo_tai và đều là bản chính; lượt sau thay cả lượt trước (lượt trước thành bản cũ, không xoá).
+// NULL = lượt chỉ 1 file (mọi dữ liệu cũ) — mỗi file tự là 1 lượt (so khớp bằng COALESCE(lo_tai, 'f' || id)).
+if (!db.prepare(`PRAGMA table_info(tv_file)`).all().some(c => c.name === 'lo_tai')) {
+  db.exec(`ALTER TABLE tv_file ADD COLUMN lo_tai TEXT`);
+}
+
 // viec_id thêm sau bản đầu (03/10/2026, rà soát) — bảng tạo từ bản cũ chưa có cột: thêm + điền 1 lần (chạy lại vô hại).
 if (!db.prepare(`PRAGMA table_info(tv_lo_dong)`).all().some(c => c.name === 'viec_id')) {
   db.exec(`ALTER TABLE tv_lo_dong ADD COLUMN viec_id INTEGER`);
@@ -194,9 +201,9 @@ const giuChoFile = db.transaction((thongTin, taoObjectKey) => {
   const soThuTu = m + 1;
   const objectKey = taoObjectKey(soThuTu);
   const { lastInsertRowid } = db.prepare(`INSERT INTO tv_file (loai, stt_key, so_thu_tu, object_key, ten_file_goc, nguon, url_goc,
-      drive_file_id, sha256, kich_thuoc, nguoi_tai_len, ngay_luu, trang_thai)
-    VALUES (@loai, @sttKey, @soThuTu, @objectKey, @tenFileGoc, @nguon, @urlGoc, @driveFileId, @sha256, @kichThuoc, @nguoiTaiLen, @ngayLuu, 'DANG_LUU')`)
-    .run({ tenFileGoc: '', urlGoc: '', driveFileId: '', nguoiTaiLen: '', ...thongTin, soThuTu, objectKey, ngayLuu: thoiGianVNISOString() });
+      drive_file_id, sha256, kich_thuoc, nguoi_tai_len, ngay_luu, trang_thai, lo_tai)
+    VALUES (@loai, @sttKey, @soThuTu, @objectKey, @tenFileGoc, @nguon, @urlGoc, @driveFileId, @sha256, @kichThuoc, @nguoiTaiLen, @ngayLuu, 'DANG_LUU', @loTai)`)
+    .run({ tenFileGoc: '', urlGoc: '', driveFileId: '', nguoiTaiLen: '', loTai: null, ...thongTin, soThuTu, objectKey, ngayLuu: thoiGianVNISOString() });
   return { id: Number(lastInsertRowid), soThuTu, objectKey };
 });
 
@@ -267,8 +274,10 @@ function dsFileCuaDon(sttKey) {
 // EMB bản chính của nhiều đơn 1 lần -> Map stt_key -> { id, ten_file_goc, so_thu_tu, ngay_luu }.
 function embChinhCuaCacDon(sttKeys) {
   const kq = new Map();
-  const stmt = db.prepare(`SELECT id, stt_key, ten_file_goc, so_thu_tu, ngay_luu FROM tv_file
-    WHERE stt_key = ? AND loai = 'EMB' AND trang_thai = 'XONG' ORDER BY la_ban_chinh DESC, so_thu_tu DESC LIMIT 1`);
+  // so_chinh: số file EMB chính của đơn (lượt tải nhiều file, 12/10/2026) — nơi hiển thị ghi "+N file".
+  const stmt = db.prepare(`SELECT id, stt_key, ten_file_goc, so_thu_tu, ngay_luu,
+      (SELECT COUNT(*) FROM tv_file x WHERE x.stt_key = tv_file.stt_key AND x.loai = 'EMB' AND x.trang_thai = 'XONG' AND x.la_ban_chinh = 1) so_chinh
+    FROM tv_file WHERE stt_key = ? AND loai = 'EMB' AND trang_thai = 'XONG' ORDER BY la_ban_chinh DESC, so_thu_tu DESC LIMIT 1`);
   for (const k of new Set(sttKeys)) { const r = stmt.get(k); if (r) kq.set(k, r); }
   return kq;
 }
@@ -278,13 +287,40 @@ function dsMaTrongThuVien() {
 function demViecChuaXongCuaDon(sttKey) {
   return db.prepare(`SELECT COUNT(*) FROM tv_hang_cho WHERE stt_key = ? AND trang_thai IN ('CHO', 'DANG_CHAY', 'LOI')`).pluck().get(sttKey);
 }
-// EMB vừa ghi MinIO xong -> XONG; bản chính = phiên bản SỐ LỚN NHẤT đã lưu xong, các bản khác là lịch sử (KHÔNG xoá bản nào).
-// Không lấy "bản vừa lưu xong" làm bản chính: 2 lần tải lên chồng nhau (v3 chậm, v4 nhanh) thì v3 xong sau sẽ cướp bản chính,
-// lệch với nơi hiển thị lấy số phiên bản lớn nhất.
-const datBanChinhEmb = db.transaction((sttKey, id) => {
+// EMB vừa ghi MinIO xong -> XONG; bản chính = CẢ LƯỢT TẢI (lo_tai) chứa phiên bản SỐ LỚN NHẤT đã lưu xong, các bản khác là lịch sử
+// (KHÔNG xoá bản nào). Không lấy "bản vừa lưu xong" làm bản chính: 2 lần tải lên chồng nhau (v3 chậm, v4 nhanh) thì v3 xong sau sẽ
+// cướp bản chính, lệch với nơi hiển thị lấy số phiên bản lớn nhất.
+function tinhLaiBanChinhEmb(sttKey) {
+  db.prepare(`UPDATE tv_file SET la_ban_chinh = (COALESCE(lo_tai, 'f' || id) = (SELECT COALESCE(lo_tai, 'f' || id) FROM tv_file
+      WHERE stt_key = @k AND loai = 'EMB' AND trang_thai = 'XONG' ORDER BY so_thu_tu DESC LIMIT 1)) WHERE stt_key = @k AND loai = 'EMB'`).run({ k: sttKey });
+}
+// Tên file để so "cùng tên" (so ở JS — LOWER của SQLite không đổi chữ có dấu; NFC vì tên từ máy Mac có thể ở dạng NFD).
+const tenSoSanh = s => String(s || '').normalize('NFC').trim().toLowerCase();
+// thayCungTen (tải 1 file vào đơn đang có >= 2 file chính — file mới đã được gán sẵn lo_tai của bộ đó, xem xuLyService#luuEmb):
+// MỌI file khác trong bộ CÙNG TÊN với file mới bị tách khỏi bộ -> thành bản cũ. Tìm ngay trong transaction lúc chốt (không dùng
+// danh sách đọc trước khi ghi MinIO): 2 lượt tải cùng tên chạy chồng nhau thì lượt chốt sau tách cả file của lượt trước.
+const datBanChinhEmb = db.transaction((sttKey, id, thayCungTen = false) => {
   db.prepare(`UPDATE tv_file SET trang_thai = 'XONG' WHERE id = ?`).run(id);
-  db.prepare(`UPDATE tv_file SET la_ban_chinh = (id = (SELECT id FROM tv_file WHERE stt_key = @k AND loai = 'EMB' AND trang_thai = 'XONG'
-      ORDER BY so_thu_tu DESC LIMIT 1)) WHERE stt_key = @k AND loai = 'EMB'`).run({ k: sttKey });
+  if (thayCungTen) {
+    const moi = db.prepare(`SELECT lo_tai, ten_file_goc FROM tv_file WHERE id = ?`).get(id);
+    const tach = db.prepare(`UPDATE tv_file SET lo_tai = NULL WHERE id = ?`);
+    for (const x of db.prepare(`SELECT id, ten_file_goc FROM tv_file WHERE stt_key = ? AND loai = 'EMB' AND trang_thai = 'XONG' AND lo_tai = ? AND id != ?`).all(sttKey, moi.lo_tai, id)) {
+      if (tenSoSanh(x.ten_file_goc) === tenSoSanh(moi.ten_file_goc)) tach.run(x.id);
+    }
+  }
+  tinhLaiBanChinhEmb(sttKey);
+});
+// Các file EMB chính đang có của 1 đơn (nhẹ — không đọc cả PNG như dsFileCuaDon).
+function dsEmbChinh(sttKey) {
+  return db.prepare(`SELECT id, ten_file_goc, so_thu_tu, lo_tai FROM tv_file WHERE stt_key = ? AND loai = 'EMB' AND trang_thai = 'XONG' AND la_ban_chinh = 1
+    ORDER BY so_thu_tu DESC`).all(sttKey);
+}
+// File trong lượt tải nhiều file trùng 1 EMB đã có của đơn (vd chọn lại cả bộ, chỉ 1 file sửa): đưa file đã có vào lượt mới —
+// cấp số phiên bản mới nhất để lượt mới là lượt chính, file vẫn là object cũ trên MinIO (không tải lại, không xoá gì).
+const duaEmbVaoLoTai = db.transaction((sttKey, id, loTai) => {
+  const { m } = db.prepare(`SELECT COALESCE(MAX(so_thu_tu), 0) m FROM tv_file WHERE stt_key = ? AND loai = 'EMB'`).get(sttKey);
+  db.prepare(`UPDATE tv_file SET so_thu_tu = ?, lo_tai = ? WHERE id = ?`).run(m + 1, loTai, id);
+  tinhLaiBanChinhEmb(sttKey);
 });
 function themQuyetDinh({ sttKeyMoi, fileId, quyetDinh, ghiChu, nguoi }) {
   db.prepare(`INSERT INTO tv_quyet_dinh (stt_key_moi, file_id, quyet_dinh, ghi_chu, nguoi, thoi_gian) VALUES (?, ?, ?, ?, ?, ?)`)
@@ -440,7 +476,7 @@ module.exports = {
   DUONG_DAN_DB,
   ghiGoiYEmb, xoaGoiYEmb, xoaGoiYEmbNgoai, layGoiYEmbCacDon, dsMaCoEmbXong,
   layPhienBanChiMuc, layIdDoiSauPhienBan, dsChiMucPng, layFileTheoIds, dsFileCuaDon, embChinhCuaCacDon, dsMaTrongThuVien, demViecChuaXongCuaDon,
-  datBanChinhEmb, themQuyetDinh, dsQuyetDinhCuaDon,
+  datBanChinhEmb, duaEmbVaoLoTai, dsEmbChinh, tenSoSanh, themQuyetDinh, dsQuyetDinhCuaDon,
   layNguonDon, ghiNguonDon, luuCapDanhGia, dsCapDanhGia, xoaCapDanhGia, layPngNgauNhien,
   thongKeTheoDon, shaTrungNhieuDon, viecChuaXongTheoDon,
   layCaiDat, datCaiDat,

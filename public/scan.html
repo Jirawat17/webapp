@@ -82,8 +82,8 @@
 </div>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="/js/icons.js?v=105"></script>
-<script src="/js/api.js?v=120"></script>
+<script src="/js/icons.js?v=106"></script>
+<script src="/js/api.js?v=122"></script>
 <script>
 let user;
 // Mặc định mở vào "Quét kịch bản" (batch) khi vào trang — theo yêu cầu người dùng 05/09/2026, vì đây
@@ -144,6 +144,108 @@ let dsDaChupTheoMoc = { photo_san_xuat: [], photo_da_dan_tem: [] };
 // ĐÚNG 1 đơn đang chờ ảnh trước tải xong, không khoá gì giữa các đơn khác nhau.
 const dsUploadDangCho = new Set();
 
+// ============================================================
+// Logs_UploadAnh (12/10/2026, theo yêu cầu người dùng): ghi MỌI thao tác ở trang này (mở camera, quét QR, chụp + tải ảnh, xác nhận
+// hàng loạt, quét lại, thoát khi ảnh chưa tải xong) kèm thiết bị + phiên bản app -> routes/nhatKyQuet.js, xem ở Logs > Logs_UploadAnh.
+// Gom lô 3 giây rồi gửi 1 lần; lỗi gửi log thì bỏ qua im lặng (log KHÔNG được làm phiền/chậm người dùng). Không gửi nội dung ảnh.
+// ============================================================
+const PHIEN_BAN_APP = ((document.querySelector('script[src*="/js/api.js"]') || {}).src || '').match(/[?&]v=(\d+)/)?.[1] || '';
+let thietBiLog = null; // gán khi layThietBiLog() xong (Promise thietBiLogSan bên dưới)
+const hangDoiLog = [];
+let henGuiLog = null;
+let tSanSangQuet = performance.now(); // mốc camera sẵn sàng / vừa nhả khoá quét — đo "thời gian tìm mã" (gồm cả lúc người dùng đưa máy vào mã)
+let cameraDaMo = false; // camera đang chạy thật (mở thành công) — không thì "thời gian tìm mã" vô nghĩa, ghi trống
+const msTimMaHienTai = () => (cameraDaMo ? Math.round(performance.now() - tSanSangQuet) : null);
+const luotDangTai = new Map(); // sttKey -> bản ghi CHUP_ANH đang tải — đóng trang giữa chừng thì ghi THOAT_GIUA_CHUNG
+
+// Hệ điều hành / trình duyệt / đời máy. User-Agent của Chrome Android đã bị "đóng băng" (Android 10; K) -> hỏi thêm Client Hints
+// (chỉ Chrome/Edge/Samsung có). iPhone không cho biết đời máy; Safari iOS mới có thể không báo đúng số iOS.
+async function layThietBiLog() {
+  const ua = navigator.userAgent;
+  const khop = (re, i = 1) => (ua.match(re) || [])[i] || '';
+  let os = 'Khác', osVer = '', br = 'Khác', brVer = '', may = '';
+  if (/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) {
+    os = /iPhone|iPod/.test(ua) ? 'iOS' : 'iPadOS';
+    osVer = khop(/OS (\d+[_.]\d+)/).replace('_', '.') || khop(/Version\/(\d+(\.\d+)?)/);
+  } else if (/Android/.test(ua)) { os = 'Android'; osVer = khop(/Android (\d+(\.\d+)?)/); may = khop(/Android [^;)]+; ([^;)]+?)(?: Build[^;)]*)?\)/); }
+  else if (/Windows/.test(ua)) os = 'Windows';
+  else if (/Mac OS X/.test(ua)) os = 'macOS';
+  else if (/Linux|CrOS/.test(ua)) os = 'Linux';
+  const TRINH_DUYET = [[/EdgA?\/(\d+(\.\d+)?)/, 'Edge'], [/SamsungBrowser\/(\d+(\.\d+)?)/, 'Samsung Internet'], [/(?:OPR|OPT)\/(\d+(\.\d+)?)/, 'Opera'],
+    [/Zalo[^\/]*\/(\d+(\.\d+)?)/i, 'Zalo'], [/FBAV\/(\d+(\.\d+)?)/, 'Facebook'], [/CriOS\/(\d+(\.\d+)?)/, 'Chrome'], [/FxiOS\/(\d+(\.\d+)?)/, 'Firefox'],
+    [/Firefox\/(\d+(\.\d+)?)/, 'Firefox'], [/Chrome\/(\d+(\.\d+)?)/, 'Chrome'], [/Version\/(\d+(\.\d+)?).*Safari/, 'Safari']];
+  for (const [re, ten] of TRINH_DUYET) { const m = ua.match(re); if (m) { br = ten; brVer = m[1]; break; } }
+  try {
+    const h = await navigator.userAgentData?.getHighEntropyValues?.(['platformVersion', 'model', 'fullVersionList']);
+    if (h) {
+      if (os === 'Android' && h.platformVersion) osVer = h.platformVersion.split('.').slice(0, 2).join('.');
+      if (h.model) may = h.model;
+      const b = (h.fullVersionList || []).find(x => !/Not|Chromium/i.test(x.brand));
+      if (b && br === 'Chrome') brVer = b.version.split('.').slice(0, 2).join('.');
+    }
+  } catch (e) { /* trình duyệt không cho -> dùng User-Agent */ }
+  if (may === 'K') may = '';
+  return { os, osVer, br, brVer, may, ram: navigator.deviceMemory || null, cpu: navigator.hardwareConcurrency || null,
+    manHinh: `${screen.width}x${screen.height}@${window.devicePixelRatio || 1}`,
+    standalone: !!(window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true };
+}
+// Lấy thông tin thiết bị NGAY khi tải trang; mọi lô log CHỜ promise này (tối đa 2 giây) — máy cũ trả Client Hints chậm, không chờ
+// thì vài sự kiện đầu (mở camera, mã đầu tiên) rơi vào nhóm "? · ?" đúng lúc cần đo máy chậm.
+const thietBiLogSan = layThietBiLog().then(tb => (thietBiLog = tb)).catch(() => (thietBiLog = {}));
+// Lỗi do máy chủ đánh dấu nghiepVu (đơn không hợp lệ: sai trạng thái, không tìm thấy, chưa có tracking...) -> nhóm "Sai đơn".
+// Mọi lỗi khác (mất mạng, hết phiên 401, file không phải ảnh, máy chủ 5xx...) -> lỗi kỹ thuật ('LOI').
+const ketQuaLoi = (err, nhanNghiepVu) => (err && err.nghiepVu ? nhanNghiepVu : 'LOI');
+function mangHienTai() {
+  const c = navigator.connection;
+  return c ? { loai: c.effectiveType || '', mbps: c.downlink ?? null } : null;
+}
+function ghiLogQuet(suKien) {
+  hangDoiLog.push({ ...suKien, cheDo: suKien.cheDo || mode, _t: Date.now() });
+  clearTimeout(henGuiLog);
+  henGuiLog = setTimeout(guiLogQuet, 3000);
+}
+async function guiLogQuet(beacon = false, hoiPhienBan = false) {
+  if (!beacon && !thietBiLog) await Promise.race([thietBiLogSan, new Promise(r => setTimeout(r, 2000))]);
+  if (!hangDoiLog.length && !hoiPhienBan) return; // vd pagehide đã gửi hết bằng sendBeacon trong lúc chờ thông tin thiết bị
+  const goi = hangDoiLog.splice(0, 30);
+  const body = JSON.stringify({ phienBanApp: PHIEN_BAN_APP, thietBi: thietBiLog || {}, suKien: goi.map(({ _t, ...s }) => ({ ...s, cachMs: Date.now() - _t })) });
+  if (beacon) { try { navigator.sendBeacon('/api/nhat-ky-quet', new Blob([body], { type: 'application/json' })); } catch (e) { /* bỏ */ } return; }
+  try {
+    const r = await fetch('/api/nhat-ky-quet', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, credentials: 'include', keepalive: true });
+    if (r.ok) nhacBanMoi((await r.json()).phienBanMoiNhat);
+  } catch (e) { /* mất mạng: bỏ lô này */ }
+  if (hangDoiLog.length) setTimeout(guiLogQuet, 500);
+}
+// Tab Quét QR mở suốt ca nhiều ngày không tải lại -> chạy bản cũ. Máy chủ báo số mới nhất mỗi lần gửi log -> hiện thanh nhắc.
+function nhacBanMoi(moiNhat) {
+  if (!moiNhat || !PHIEN_BAN_APP || moiNhat === PHIEN_BAN_APP || document.getElementById('thanh-ban-moi')) return;
+  const el = document.createElement('button');
+  el.id = 'thanh-ban-moi';
+  el.type = 'button';
+  el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:2000;padding:10px;border:0;background:#f59e0b;color:#111;font-weight:700;font-size:15px;cursor:pointer';
+  el.textContent = '⟳ Có bản mới của app — bấm để tải lại trang';
+  el.onclick = () => {
+    if (dsUploadDangCho.size && !confirm(`Còn ${dsUploadDangCho.size} ảnh đang tải lên — tải lại trang bây giờ sẽ làm hỏng các ảnh đó. Vẫn tải lại?`)) return;
+    location.reload();
+  };
+  document.body.appendChild(el);
+}
+// Đóng tab / chuyển trang khi ảnh còn đang tải -> ghi lại (người dùng thoát giữa chừng), gửi bằng sendBeacon (vẫn đi khi trang đóng).
+// Trang chỉ TẠM CẤT (bfcache, e.persisted) vẫn ghi THOAT — trình duyệt có thể xoá hẳn trang cất mà không quay lại (hay gặp trên iOS),
+// khi đó không còn cơ hội ghi gì. Nếu người dùng quay lại và ảnh vẫn tải xong, dòng CHUP_ANH mang sauThoat để máy chủ xoá dòng THOAT
+// tương ứng (routes/nhatKyQuet.js) — không đếm 1 ảnh 2 lần.
+window.addEventListener('pagehide', e => {
+  for (const [sttKey, l] of luotDangTai) {
+    if (l.daBaoThoat) continue;
+    l.daBaoThoat = true;
+    ghiLogQuet({ suKien: 'THOAT_GIUA_CHUNG', cheDo: l.cheDo, sttKey, ketQua: 'BO_NGANG', tongMs: Math.round(performance.now() - l.tCoAnh),
+      chiTiet: { giaiDoan: l.giaiDoan || 'nen', tamCat: e.persisted } });
+  }
+  if (!e.persisted) luotDangTai.clear();
+  clearTimeout(henGuiLog);
+  while (hangDoiLog.length) guiLogQuet(true);
+});
+
 document.getElementById('mode-lookup').innerHTML = icon('scan') + ' Quét mã QR xem thông tin 1 đơn';
 document.getElementById('mode-batch').innerHTML = icon('check') + ' Quét kịch bản';
 document.getElementById('mode-photo-san-xuat').innerHTML = icon('camera', { size: 18 }) + ' ' + CAU_HINH_ANH.photo_san_xuat.nhanTab;
@@ -188,6 +290,7 @@ function doiMode(moiMode) {
   user = await requireLoginOrRedirect();
   if (!user) return;
   renderNav(user, 'scan');
+  guiLogQuet(false, true); // lô rỗng: chỉ để hỏi phiên bản mới nhất
   await taiKichBan();
   await taiCauHinhNenAnh();
   capNhatManHinh();
@@ -420,12 +523,16 @@ async function batDauCamera(onScan, qrboxSize, tuyChon = {}) {
     console.log('[Camera] Trình duyệt không hỗ trợ Permissions API cho camera — bỏ qua bước kiểm tra này (không phải lỗi).');
   }
 
+  const tMoCamera = performance.now();
   for (let lan = 0; lan <= soLanThuLai; lan++) {
     const gioBatDau = Date.now();
     try {
       await scanner.start({ facingMode }, { fps: 10, qrbox: qrboxSize || 260, ...(aspectRatio ? { aspectRatio } : {}) }, onScan);
       capNhatHoTroFlash();
       console.log(`[Camera] Mở camera thành công sau ${Date.now() - gioBatDau}ms (facingMode=${facingMode})`);
+      tSanSangQuet = performance.now();
+      cameraDaMo = true;
+      ghiLogQuet({ suKien: 'MO_CAMERA', ketQua: 'OK', tongMs: Math.round(tSanSangQuet - tMoCamera), chiTiet: { soLanThu: lan + 1 } });
       return;
     } catch (err) {
       console.error(`[Camera] Lỗi mở camera (lần ${lan + 1}/${soLanThuLai + 1}, sau ${Date.now() - gioBatDau}ms) — tên lỗi: "${err && err.name}":`, err);
@@ -434,6 +541,8 @@ async function batDauCamera(onScan, qrboxSize, tuyChon = {}) {
         await new Promise(r => setTimeout(r, 700));
         continue;
       }
+      ghiLogQuet({ suKien: 'MO_CAMERA', ketQua: 'LOI', loi: `${(err && err.name) || ''} ${String((err && err.message) || err)}`.trim(),
+        tongMs: Math.round(performance.now() - tMoCamera), chiTiet: { soLanThu: lan + 1 } });
       const goiY = laLoiCameraDangBanRoi(err)
         ? 'Camera đang được app/tab khác dùng — đóng hết ứng dụng/tab khác đang mở camera (Zoom, Teams, Windows Camera, tab trình duyệt khác...) rồi thử lại.'
         : 'Hãy cho phép quyền camera cho trang web này trong trình duyệt.';
@@ -448,6 +557,7 @@ async function dungCamera() {
   if (scanner) {
     try { await scanner.stop(); } catch (e) {}
   }
+  cameraDaMo = false;
   cameraDangChayCho = null;
   denFlashBat = false;
   document.getElementById('btn-flash').hidden = true;
@@ -489,9 +599,11 @@ async function xuLyQuetTraCuu(sttKey) {
   if (dangXuLyQuet) return;
   dangXuLyQuet = true;
   const el = document.getElementById('ket-qua-tra-cuu');
+  const msTimMa = msTimMaHienTai(), tKiemTra = performance.now();
 
   try {
     const don = await apiFetch('/qr/tra-cuu/' + encodeURIComponent(sttKey));
+    ghiLogQuet({ suKien: 'QUET_QR', sttKey, ketQua: 'OK', chiTiet: { nguon: 'CAMERA', msTimMa, msKiemTra: Math.round(performance.now() - tKiemTra) } });
     el.innerHTML = `<div class="ket-qua-box">
       ${icon('package')}
       <div>
@@ -502,9 +614,11 @@ async function xuLyQuetTraCuu(sttKey) {
     </div>`;
   } catch (e) {
     el.innerHTML = `<div class="ket-qua-box loi">${icon('alert')} ${escapeHtml(e.message)}</div>`;
+    ghiLogQuet({ suKien: 'QUET_QR', sttKey, ketQua: ketQuaLoi(e, 'KHONG_TIM_THAY'), loi: e.message,
+      chiTiet: { nguon: 'CAMERA', msTimMa, msKiemTra: Math.round(performance.now() - tKiemTra) } });
   }
 
-  setTimeout(() => { dangXuLyQuet = false; }, 1500);
+  setTimeout(() => { dangXuLyQuet = false; tSanSangQuet = performance.now(); }, 1500);
 }
 
 // Ô nhập mã (kịch bản "Cho nhập mã tay", 05/10/2026): Enter = đúng như vừa quét 1 mã bằng camera. Máy quét mã vạch cầm tay
@@ -552,16 +666,22 @@ async function xuLyQuetKichBan(sttKey, kichBanCuaMa = null) {
   }
 
   dangXuLyQuet = true;
+  const msTimMa = tuONhap ? null : msTimMaHienTai(), tKiemTra = performance.now();
+  const logQuet = (ketQuaLog, them = {}) => ghiLogQuet({ suKien: 'QUET_QR', sttKey: them.sttKey || sttKey, ketQua: ketQuaLog, loi: them.loi || '',
+    chiTiet: { nguon: tuONhap ? 'NHAP_TAY' : 'CAMERA', msTimMa, msKiemTra: Math.round(performance.now() - tKiemTra), kichBan: kichBanDangChon && kichBanDangChon.id } });
   let ketQua;
   try {
     ketQua = await apiFetch(`/qr/kich-ban/${kichBanDangChon.id}/kiem-tra`, {
       method: 'POST', body: JSON.stringify(tuONhap ? { sttKey, goTay: true, daCoTrongDs: dsQuet.map(x => x.sttKey) } : { sttKey }),
     });
   } catch (e) {
+    logQuet('LOI', { loi: e.message });
     alert('Lỗi khi kiểm tra mã: ' + e.message);
     dangXuLyQuet = false;
+    tSanSangQuet = performance.now();
     return;
   }
+  logQuet(ketQua.nhom || 'OK', { sttKey: ketQua.sttKey, loi: ketQua.nhom !== 'OK' ? ketQua.lyDo || '' : '' });
   // Ô nhập: server trả MÃ GỐC (gõ "10son10,1" -> "10SON10.1") — báo trùng theo mã gốc như khi quét camera.
   // (server trả nhom TRUNG và không ghi nhật ký; vẫn so lại phía này phòng danh sách đổi trong lúc chờ)
   const trungMaGoc = tuONhap && ketQua.sttKey && dsQuet.find(x => x.sttKey === ketQua.sttKey);
@@ -569,6 +689,7 @@ async function xuLyQuetKichBan(sttKey, kichBanCuaMa = null) {
     hienThiToast('trung', `Mã ${ketQua.sttKey} đã có trong danh sách`);
     if (trungMaGoc) nhayDong(trungMaGoc.key);
     dangXuLyQuet = false;
+    tSanSangQuet = performance.now();
     return;
   }
   // Mã từ ô nhập còn trong hàng đợi lúc người dùng đã đổi sang kịch bản khác -> kết quả không thuộc danh sách hiện tại, bỏ.
@@ -599,7 +720,7 @@ async function xuLyQuetKichBan(sttKey, kichBanCuaMa = null) {
 
   // Camera: khoá 700ms chống 1 mã bị đọc nhiều lần liên tiếp. Ô nhập: mở khoá ngay cho mã kế tiếp trong hàng đợi.
   if (tuONhap) dangXuLyQuet = false;
-  else setTimeout(() => { dangXuLyQuet = false; }, 700);
+  else setTimeout(() => { dangXuLyQuet = false; tSanSangQuet = performance.now(); }, 700);
 }
 
 function hienThiToast(loai, noiDung) {
@@ -796,6 +917,7 @@ async function xacNhanCapNhatHangLoat() {
   // Gọi tuần tự từng mã 1 (thay vì gửi cả danh sách trong 1 request) để hiện được tiến độ thật —
   // xem chayHangLoatCoTienDo()/taoThanhTienDo() trong api.js. API vẫn y hệt, chỉ đổi cách gọi.
   let daHuy = false;
+  const tXacNhan = performance.now();
   const thanhTienDo = taoThanhTienDo(btn, { onHuy: () => { daHuy = true; } });
   thanhTienDo.capNhat(0, nhomOK.length);
 
@@ -807,6 +929,9 @@ async function xacNhanCapNhatHangLoat() {
     { onTienDo: (hienTai, tong) => thanhTienDo.capNhat(hienTai, tong), kiemTraHuy: () => daHuy }
   );
   thanhTienDo.xoa();
+  ghiLogQuet({ suKien: 'XAC_NHAN_HANG_LOAT', ketQua: res.daHuy ? 'HUY' : res.loi.length ? 'CO_DON_LOI' : 'OK', // đơn bị máy chủ từ chối = nghiệp vụ tongMs: Math.round(performance.now() - tXacNhan),
+    loi: res.loi.slice(0, 3).map(l => `${l.sttKey}: ${l.lyDo}`).join(' | '),
+    chiTiet: { kichBan: kichBanDangChon && kichBanDangChon.id, soDon: nhomOK.length, thanhCong: res.thanhCong.length, soLoi: res.loi.length } });
 
   dsQuet = dsQuet.filter(x => !res.thanhCong.includes(x.sttKey));
 
@@ -858,31 +983,42 @@ async function xuLyQuetDeXacDinhDon(sttKeyThoDoc) {
   if (dangXuLyQuet) return;
   dangXuLyQuet = true;
   const cauHinh = CAU_HINH_ANH[mode];
+  const msTimMa = msTimMaHienTai(), tKiemTra = performance.now();
 
   try {
     const ketQua = await apiFetch('/photos/kiem-tra', {
       method: 'POST', body: JSON.stringify({ sttKey: sttKeyThoDoc, moc: cauHinh.moc }),
     });
-    donDaXacDinhChoAnh = { sttKey: ketQua.sttKey || sttKeyThoDoc, tieuDe: ketQua.tieuDe, tenKhachHang: ketQua.tenKhachHang, nhomNhieuAo: ketQua.nhomNhieuAo || null };
+    const msKiemTra = Math.round(performance.now() - tKiemTra);
+    ghiLogQuet({ suKien: 'QUET_QR', sttKey: ketQua.sttKey || sttKeyThoDoc, ketQua: 'OK', chiTiet: { nguon: 'CAMERA', msTimMa, msKiemTra } });
+    // log: bản ghi CHUP_ANH của lượt này — đi tiếp qua bấm chụp -> có ảnh -> nén -> gửi (taiAnhLenNgam).
+    donDaXacDinhChoAnh = { sttKey: ketQua.sttKey || sttKeyThoDoc, tieuDe: ketQua.tieuDe, tenKhachHang: ketQua.tenKhachHang, nhomNhieuAo: ketQua.nhomNhieuAo || null,
+      log: { cheDo: mode, msTimMa, msKiemTra, tXacDinh: performance.now() } };
     hienThiToast('OK', ketQua.tieuDe || sttKeyThoDoc);
     phatAmThanhKetQua('OK');
     if (ketQua.nhomNhieuAo) setTimeout(() => phatAmThanhKetQua('CANH_BAO_NHOM'), 350);
     await capNhatManHinh();
   } catch (err) {
+    ghiLogQuet({ suKien: 'QUET_QR', sttKey: sttKeyThoDoc, ketQua: ketQuaLoi(err, 'SAI_TRANG_THAI'), loi: err.message, chiTiet: { nguon: 'CAMERA', msTimMa, msKiemTra: Math.round(performance.now() - tKiemTra) } });
     hienThiToast('SAI_TRANG_THAI', err.message);
     phatAmThanhKetQua('SAI_TRANG_THAI');
   }
 
-  setTimeout(() => { dangXuLyQuet = false; }, 700);
+  setTimeout(() => { dangXuLyQuet = false; tSanSangQuet = performance.now(); }, 700);
 }
 
 // Bấm "Quét lại" ở trạng thái [Sẵn sàng chụp] — quay về [Đang quét], KHÔNG upload gì.
 document.getElementById('btn-quet-lai-chup-anh').onclick = async () => {
+  if (donDaXacDinhChoAnh && donDaXacDinhChoAnh.log) {
+    ghiLogQuet({ suKien: 'QUET_LAI', sttKey: donDaXacDinhChoAnh.sttKey, ketQua: 'BO_NGANG', tongMs: Math.round(performance.now() - donDaXacDinhChoAnh.log.tXacDinh),
+      chiTiet: { daBamChup: !!donDaXacDinhChoAnh.log.tBamChup } });
+  }
   donDaXacDinhChoAnh = null;
   await capNhatManHinh();
 };
 
 document.getElementById('btn-chup-anh').onclick = () => {
+  if (donDaXacDinhChoAnh && donDaXacDinhChoAnh.log) donDaXacDinhChoAnh.log.tBamChup = performance.now();
   document.getElementById('input-chup-anh').value = ''; // reset để chọn lại đúng ảnh mới chụp, kể cả khi trùng tên file với lần trước
   document.getElementById('input-chup-anh').click();
 };
@@ -900,23 +1036,39 @@ document.getElementById('input-chup-anh').addEventListener('change', async (e) =
 // render lại để khối "Danh sách đã chụp" tự cập nhật, dù người dùng có thể đã quét sang đơn khác hoặc
 // đổi mode trong lúc chờ (renderDsDaChup()/renderDemNhomAnh() luôn đọc đúng dsDaChupTheoMoc[mode] hiện
 // tại — vô hại nếu mode đã đổi, chỉ là redraw lại đúng màn hình đang hiện, lịch sử vẫn đúng khi quay lại).
-async function taiAnhLenNgam(sttKey, cauHinh, file, dong) {
+async function taiAnhLenNgam(sttKey, cauHinh, file, dong, log) {
   // Nén ảnh (bổ sung 21/09/2026) — DỜI VÀO ĐÂY, chạy ngầm cùng upload (bổ sung 23/09/2026, theo yêu
   // cầu người dùng: quay lại [Đang quét] vẫn còn chậm dù upload đã chạy ngầm). Ảnh gốc từ điện thoại/
   // iPad đời mới có thể tới 12-48MP — createImageBitmap() phải giải mã NGUYÊN độ phân giải gốc trước
   // khi canvas mới vẽ xuống kích thước nhỏ hơn, tốn tới vài giây trên máy yếu/đang tải nặng (vừa đóng
   // camera). Trước đây bước này vẫn await() trong xuLyChupAnh() TRƯỚC KHI cho quét đơn tiếp theo — dời
   // vào đây để KHÔNG còn bước nào (nén lẫn upload) chặn quay lại màn hình quét sau khi bấm chụp.
+  luotDangTai.set(sttKey, log);
   const tNen0 = performance.now();
-  const fileDaNen = await nenAnhTruocKhiTaiLen(file, cauHinhNenAnh);
+  const thongSoNen = {}; // object RIÊNG của lượt này (ảnh nén ngầm chồng nhau — không đọc biến toàn cục của api.js)
+  const fileDaNen = await nenAnhTruocKhiTaiLen(file, { ...cauHinhNenAnh, thongSo: thongSoNen });
   const tNen1 = performance.now();
-  const lyDoKhongNen = lyDoKhongNenGanNhat; // biến khai báo ở api.js (let top-level, cùng phạm vi toàn cục giữa các thẻ <script> không phải module) — null nếu nén thành công bình thường, xem chú thích ở api.js#nenAnhTruocKhiTaiLen
-
-  // Đo tạm THỜI GIAN TRUYỀN THẬT (bổ sung 23/09/2026, theo yêu cầu người dùng — log server chỉ đo từ
-  // lúc Express NHẬN XONG file, không thấy được thời gian ảnh đi từ máy người dùng lên server, vốn có
-  // thể là phần chậm nhất trên mạng yếu). In thẳng vào ghiChu hiển thị trên màn hình (không cần mở
-  // console — máy tính bảng/điện thoại khó bật devtools) để đối chiếu trực tiếp với log server.
-  // XOÁ đoạn đo này sau khi xác định xong nguyên nhân, không phải tính năng vĩnh viễn.
+  log.giaiDoan = 'gui';
+  // Dòng "[đo: nén ..., gửi+chờ ...]" tạm hiện trên màn hình (23/09/2026) ĐÃ BỎ 12/10/2026 — số đo giờ ghi vào Logs_UploadAnh.
+  const ghiLogChup = (ketQua, them) => {
+    luotDangTai.delete(sttKey);
+    const msGuiVaCho = Math.round(performance.now() - tGuiDi0);
+    const msMayChu = them.thoiGian ? them.thoiGian.tong : null;
+    ghiLogQuet({ suKien: 'CHUP_ANH', cheDo: log.cheDo, sttKey, ketQua, loi: them.loi || '', tongMs: Math.round(performance.now() - log.tCoAnh),
+      chiTiet: {
+        msTimMa: log.msTimMa, msKiemTra: log.msKiemTra,
+        msXacDinhDenBamChup: log.tBamChup ? Math.round(log.tBamChup - log.tXacDinh) : null,
+        msCamera: log.tBamChup ? Math.round(log.tCoAnh - log.tBamChup) : null, // mở camera máy + chụp + bấm "Dùng ảnh"
+        loaiFile: file.type || '', kbGoc: Math.round(file.size / 1024), kbSauNen: Math.round(fileDaNen.size / 1024),
+        msNen: Math.round(tNen1 - tNen0), ...thongSoNen,
+        // Có mốc máy chủ (lượt thành công): tách gửi qua mạng; không có (lượt lỗi) thì chỉ biết tổng gửi + máy chủ xử lý.
+        msGui: msMayChu != null ? Math.max(0, msGuiVaCho - msMayChu) : null, msGuiVaCho: msMayChu != null ? null : msGuiVaCho,
+        msMayChu, mayChu: them.thoiGian || null,
+        kbMoiGiay: msMayChu != null && msGuiVaCho - msMayChu > 0 ? Math.round(fileDaNen.size / 1024 / ((msGuiVaCho - msMayChu) / 1000)) : null,
+        mang: mangHienTai(),
+        sauThoat: !!log.daBaoThoat, // đã ghi THOAT lúc trang bị cất rồi quay lại — máy chủ xoá dòng THOAT đó
+      } });
+  };
   const form = new FormData();
   form.append('photo', fileDaNen);
   form.append('sttKey', sttKey);
@@ -926,22 +1078,21 @@ async function taiAnhLenNgam(sttKey, cauHinh, file, dong) {
   try {
     const res = await fetch('/api/photos/upload', { method: 'POST', body: form, credentials: 'include' });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
-    const tGuiDi1 = performance.now();
+    if (!res.ok) throw Object.assign(new Error(data.error), { status: res.status, nghiepVu: !!data.nghiepVu });
 
     const don = data.don || {};
-    const doDo = `[đo: nén ${((tNen1 - tNen0) / 1000).toFixed(1)}s ${(file.size / 1024).toFixed(0)}→${(fileDaNen.size / 1024).toFixed(0)}KB${lyDoKhongNen ? ' (KHÔNG nén: ' + lyDoKhongNen + ')' : ''}, gửi+chờ ${((tGuiDi1 - tGuiDi0) / 1000).toFixed(1)}s]`;
+    ghiLogChup('OK', { thoiGian: data.thoiGian });
     dong.trangThai = 'ok';
-    dong.ghiChu = `${don.TenKhachHang || ''} — ${cauHinh.yeuCau} → ${cauHinh.chuyenSang} ${doDo}`;
-    hienThiToastAnh('ok', `${don.STT_Key || sttKey}${don.TenKhachHang ? ' · ' + don.TenKhachHang : ''} — đã chuyển sang "${cauHinh.chuyenSang}" ${doDo}`);
+    dong.ghiChu = `${don.TenKhachHang || ''} — ${cauHinh.yeuCau} → ${cauHinh.chuyenSang}`;
+    hienThiToastAnh('ok', `${don.STT_Key || sttKey}${don.TenKhachHang ? ' · ' + don.TenKhachHang : ''} — đã chuyển sang "${cauHinh.chuyenSang}"`);
     phatAmThanhKetQua('OK');
   } catch (err) {
     // Lỗi upload thật (mất mạng, server từ chối vì đơn vừa đổi trạng thái...) — đơn đã quay lại [Đang
     // quét] từ lúc bấm chụp, người dùng cần quét lại QR đơn này để thử chụp lại (khác hành vi cũ — cũ
     // giữ nguyên màn hình [Sẵn sàng chụp] để bấm lại ngay, không còn hợp lý khi ảnh đã tải ngầm).
-    const doDoLoi = `[đo: nén ${((tNen1 - tNen0) / 1000).toFixed(1)}s ${(file.size / 1024).toFixed(0)}→${(fileDaNen.size / 1024).toFixed(0)}KB${lyDoKhongNen ? ' (KHÔNG nén: ' + lyDoKhongNen + ')' : ''}, gửi+chờ ${((performance.now() - tGuiDi0) / 1000).toFixed(1)}s]`;
+    ghiLogChup(ketQuaLoi(err, 'SAI_TRANG_THAI'), { loi: err.message });
     dong.trangThai = 'canh-bao';
-    dong.ghiChu = `${err.message} ${doDoLoi}`;
+    dong.ghiChu = err.message;
     hienThiToastAnh('canh-bao', `${sttKey}: ${err.message}`);
     phatAmThanhKetQua('SAI_TRANG_THAI');
   } finally {
@@ -955,6 +1106,7 @@ async function xuLyChupAnh(file) {
   if (!donDaXacDinhChoAnh) { alert('Chưa xác định được đơn — quét lại mã QR trước khi chụp.'); return; }
   const cauHinh = CAU_HINH_ANH[mode];
   const sttKey = donDaXacDinhChoAnh.sttKey;
+  const log = { ...(donDaXacDinhChoAnh.log || { cheDo: mode, tXacDinh: performance.now() }), tCoAnh: performance.now(), giaiDoan: 'nen' };
 
   if (dsUploadDangCho.has(sttKey)) {
     alert(`Đơn ${sttKey} vừa chụp xong, ảnh trước đang tải lên — đợi 1 chút rồi quét lại nếu cần chụp thêm.`);
@@ -971,7 +1123,7 @@ async function xuLyChupAnh(file) {
   donDaXacDinhChoAnh = null;
   await capNhatManHinh();
 
-  taiAnhLenNgam(sttKey, cauHinh, file, dong);
+  taiAnhLenNgam(sttKey, cauHinh, file, dong, log);
 }
 
 // Hiện thông tin đơn đã xác định ở trạng thái [Sẵn sàng chụp] — dùng lại đúng class

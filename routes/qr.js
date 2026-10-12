@@ -55,7 +55,7 @@ router.get('/tra-cuu/:sttKey', async (req, res) => {
   // tìm thấy" thật, không lộ việc mã này CÓ tồn tại ở xưởng khác.
   if (!row || !orderService.coQuyenTheoXuong(user, row)) {
     ghiKhongCho(ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_TRA_CUU_LOI', sttKey, chiTiet: 'Không tìm thấy đơn' }));
-    return res.status(404).json({ error: 'Không tìm thấy đơn hàng với mã: ' + sttKey });
+    return res.status(404).json({ error: 'Không tìm thấy đơn hàng với mã: ' + sttKey, nghiepVu: true }); // nghiepVu: Logs_UploadAnh
   }
 
   ghiKhongCho(ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_TRA_CUU', sttKey }));
@@ -87,7 +87,7 @@ router.post('/kich-ban/:scenarioId/quet', async (req, res) => {
   // tìm thấy" thật.
   if (!row || !orderService.coQuyenTheoXuong(user, row)) {
     ghiKhongCho(ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'QUET_LOI', sttKey, chiTiet: { scenario: scenario.label, loi: 'Không tìm thấy đơn' } }));
-    return res.status(404).json({ error: 'Không tìm thấy đơn hàng với mã: ' + sttKey });
+    return res.status(404).json({ error: 'Không tìm thấy đơn hàng với mã: ' + sttKey, nghiepVu: true }); // nghiepVu: Logs_UploadAnh
   }
 
   // Kịch bản thao tác trên ĐÚNG cột đã khai báo (Cot trong CauHinhKichBan) — mặc định TRANG_THAI_XUONG
