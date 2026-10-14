@@ -89,11 +89,18 @@ async function apiFetch(url, options = {}) {
     headers: { 'Content-Type': 'application/json' },
     ...options,
   });
-  const data = await res.json().catch(() => ({}));
+  // 200 mà nội dung KHÔNG phải JSON (14/10/2026): wifi có trang đăng nhập chặn giữa / trang kiểm tra của Cloudflare trả HTML mã 200 —
+  // trước đây thành {} và nơi gọi tưởng thành công (vd tải ảnh báo ✅ dù ảnh chưa tới máy chủ). Coi như lỗi mạng (không có status).
+  let data;
+  try { data = await res.json(); } catch (e) {
+    if (res.ok) throw new Error('Máy chủ trả về dữ liệu không đọc được (mạng có thể đang bị chặn bởi trang đăng nhập wifi) — chưa lưu gì.');
+    data = {};
+  }
   if (!res.ok) {
     if (url !== '/bao-loi') _ghiVaoDs(_loiApiGanDay, { url: String(url).slice(0, 300), ma: res.status, loi: String(data.error || '').slice(0, 300) }, 10);
     // status + nghiepVu (máy chủ đánh dấu đơn không hợp lệ): nơi gọi phân biệt từ chối nghiệp vụ với lỗi kỹ thuật (Logs_UploadAnh)
-    throw Object.assign(new Error(data.error || 'Có lỗi xảy ra'), { status: res.status, nghiepVu: !!data.nghiepVu });
+    throw Object.assign(new Error(data.error || (res.status >= 500 ? `Máy chủ lỗi ${res.status}` : 'Có lỗi xảy ra')),
+      { status: res.status, nghiepVu: !!data.nghiepVu, duLieu: data });
   }
   return data;
 }
@@ -790,6 +797,147 @@ let lyDoKhongNenGanNhat = null;
 // đã lưu. order.html gọi hàm này KHÔNG truyền tham số thứ 2 → giữ nguyên hành vi cũ (2 hằng số mặc định).
 // tuyChon.thongSo (12/10/2026, Logs_UploadAnh ở scan.html): object RIÊNG của lượt gọi, hàm điền kích thước gốc/sau nén, thời gian
 // giải mã / vẽ / xuất JPEG và lý do không nén (khongNen). Không dùng biến toàn cục: scan.html nén ngầm nhiều ảnh CHỒNG nhau.
+// Giải mã ảnh để nén (14/10/2026, theo Logs_UploadAnh 13/10: 84% ảnh KHÔNG nén được — Safari iOS/iPadOS 15 báo "Type error",
+// Samsung A05 báo "The source image could not be decoded" ở createImageBitmap(file, ...), nên gửi nguyên ảnh 2–3MB, có lượt 54–128s).
+// Thử createImageBitmap trước (nhanh, tự xoay theo EXIF); lỗi thì giải mã bằng thẻ <img> — Safari 13.4+/Chrome 81+ tự xoay theo
+// EXIF cả khi vẽ <img> lên canvas. Cả 2 cách đều lỗi -> ném lỗi gộp cả 2 lý do (nơi gọi gửi ảnh gốc như cũ, log ghi rõ lý do).
+// ts.cachGiaiMa = 'bitmap' | 'img' (+ ts.loiBitmap) để Logs_UploadAnh biết đường nào đã dùng trên từng loại máy.
+// Ma trận vẽ cho cờ xoay EXIF 5–8 (ảnh gốc nằm ngang, cần xoay 90° để đứng) — (w, h) là kích thước canvas ĐÍCH đã đúng chiều.
+const MA_TRAN_XOAY_EXIF = {
+  2: w => [-1, 0, 0, 1, w, 0], // lật ngang
+  3: (w, h) => [-1, 0, 0, -1, w, h], // xoay 180°
+  4: (w, h) => [1, 0, 0, -1, 0, h], // lật dọc
+  5: () => [0, 1, 1, 0, 0, 0],
+  6: w => [0, 1, -1, 0, w, 0],
+  7: (w, h) => [0, -1, -1, 0, w, h],
+  8: (w, h) => [0, -1, 1, 0, 0, h],
+};
+// Trình duyệt có TỰ xoay ảnh theo EXIF khi vẽ <img> lên canvas không — DÒ 1 LẦN bằng đúng thao tác dùng thật (không đoán theo kích
+// thước: ảnh vuông rộng = cao, và cờ 2–4 không đổi kích thước). Ảnh mẫu 16×8 nửa TRÁI đỏ, nửa phải xanh, gắn cờ xoay 6 (xoay 90° chiều
+// kim đồng hồ): trình duyệt có xoay -> vẽ ra 8×16, cả nửa TRÊN đỏ; không xoay -> 16×8, nửa PHẢI xanh. Lấy mẫu ở GÓC TRÊN BÊN PHẢI (xa
+// ranh đỏ/xanh bị nén nhoè): đỏ = có xoay, xanh = không. Dò lỗi BẤT KỲ bước nào (kể cả toBlob) hoặc quá 3 giây (trang đang ẩn có thể
+// hoãn toBlob) -> lượt đó coi như CÓ xoay (mọi trình duyệt hiện hành đều xoay) — không bao giờ để bước dò làm hỏng hay treo việc nén.
+// CHỈ nhớ kết quả dò THẬT: hết giờ thì lượt dò vẫn chạy tiếp và tự lưu khi xong (ảnh sau dùng được); lỗi thì ảnh sau dò lại.
+// Lượt dò TREO hẳn (trình duyệt không bao giờ gọi lại toBlob/onload): sau lần hết giờ đầu, các ảnh sau dùng NGAY mặc định, không chờ thêm
+// 3 giây mỗi ảnh; treo quá 30 giây thì bỏ lượt đó, ảnh kế tiếp dò lại từ đầu. Dò LỖI (vd trình duyệt chặn đọc điểm ảnh canvas) thì
+// 30 giây sau mới dò lại — máy lỗi cố định không phải chạy lại cả lượt dò cho từng ảnh.
+// ts.doXoay (Logs_UploadAnh): 'that' = kết quả dò thật | 'loi' (lượt dò này lỗi) | 'loi-nho' (lỗi trong 30 giây trước, không dò)
+// | 'het-gio' = đang dùng mặc định "có xoay".
+let _trinhDuyetXoayExif = null; // true/false — kết quả dò thật
+let _dangDoXoayExif = null; // { hua, batDau, daHetGio } — lượt dò đang chạy; các ảnh nén chồng nhau dùng chung, không dò chồng
+let _loiDoXoayLuc = -Infinity; // performance.now() lúc lượt dò gần nhất bị LỖI
+async function trinhDuyetTuXoayExif(ts = {}) {
+  if (_trinhDuyetXoayExif !== null) { ts.doXoay = 'that'; return _trinhDuyetXoayExif; }
+  if (performance.now() - _loiDoXoayLuc < 30000) { ts.doXoay = 'loi-nho'; return true; } // lỗi đã nhớ, ảnh này không dò
+  if (_dangDoXoayExif && performance.now() - _dangDoXoayExif.batDau > 30000) _dangDoXoayExif = null; // treo quá lâu -> dò lại
+  if (_dangDoXoayExif && _dangDoXoayExif.daHetGio) { ts.doXoay = 'het-gio'; return true; }
+  if (!_dangDoXoayExif) {
+    const moi = { batDau: performance.now(), daHetGio: false };
+    moi.hua = doTrinhDuyetXoayExif()
+      .then(kq => { _trinhDuyetXoayExif = kq; return { kq, cach: 'that' }; },
+        () => { if (_dangDoXoayExif === moi) _loiDoXoayLuc = performance.now(); return { kq: true, cach: 'loi' }; }) // lượt đã bỏ: không chặn lượt mới
+      .finally(() => { if (_dangDoXoayExif === moi) _dangDoXoayExif = null; }); // lượt cũ đã bị bỏ thì không xoá lượt mới
+    _dangDoXoayExif = moi;
+  }
+  const luot = _dangDoXoayExif;
+  let hen;
+  const { kq, cach } = await Promise.race([
+    luot.hua,
+    new Promise(r => { hen = setTimeout(() => { luot.daHetGio = true; r({ kq: true, cach: 'het-gio' }); }, 3000); }),
+  ]);
+  clearTimeout(hen);
+  ts.doXoay = cach;
+  return kq;
+}
+async function doTrinhDuyetXoayExif() {
+  const c = document.createElement('canvas'); c.width = 16; c.height = 8;
+  const g = c.getContext('2d');
+  g.fillStyle = '#f00'; g.fillRect(0, 0, 8, 8);
+  g.fillStyle = '#00f'; g.fillRect(8, 0, 8, 8);
+  const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 1));
+  if (!blob) throw new Error('toBlob rỗng');
+  const jpeg = new Uint8Array(await blob.arrayBuffer());
+  const app1 = [0xFF, 0xE1, 0x00, 0x22, 0x45, 0x78, 0x69, 0x66, 0x00, 0x00, 0x4D, 0x4D, 0x00, 0x2A, 0x00, 0x00, 0x00, 0x08, 0x00, 0x01,
+    0x01, 0x12, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+  const url = URL.createObjectURL(new Blob([jpeg.slice(0, 2), new Uint8Array(app1), jpeg.slice(2)], { type: 'image/jpeg' }));
+  try {
+    const img = await new Promise((xong, loi) => { const a = new Image(); a.onload = () => xong(a); a.onerror = loi; a.src = url; });
+    const cv = document.createElement('canvas'); cv.width = img.naturalWidth; cv.height = img.naturalHeight;
+    const gg = cv.getContext('2d'); gg.drawImage(img, 0, 0);
+    const [r, , b] = gg.getImageData(cv.width - 3, 2, 1, 1).data; // góc trên bên phải
+    return r > b;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+// Đọc cờ xoay EXIF (thẻ 0x0112) trong khối APP1 đầu file JPEG — chỉ đọc tối đa 256KB đầu. -> 1..8, hoặc null (không phải JPEG /
+// không có EXIF / không có thẻ xoay / cấu trúc lạ).
+async function docHuongExif(file) {
+  const v = new DataView(await file.slice(0, 256 * 1024).arrayBuffer());
+  if (v.byteLength < 4 || v.getUint16(0) !== 0xFFD8) return null;
+  for (let i = 2; i + 4 <= v.byteLength && v.getUint8(i) === 0xFF;) {
+    const ma = v.getUint8(i + 1);
+    if (ma === 0xDA) return null; // tới dữ liệu ảnh (SOS) — không có EXIF phía trước
+    if (ma === 0xE1 && i + 18 <= v.byteLength && v.getUint32(i + 4) === 0x45786966) { // "Exif"
+      const goc = i + 10, le = v.getUint16(goc) === 0x4949;
+      const ifd = goc + v.getUint32(goc + 4, le);
+      const soMuc = ifd + 2 <= v.byteLength ? v.getUint16(ifd, le) : 0;
+      for (let k = 0; k < soMuc && ifd + 14 + k * 12 <= v.byteLength; k++) {
+        const o = ifd + 2 + k * 12;
+        if (v.getUint16(o, le) === 0x0112) return v.getUint16(o + 8, le);
+      }
+      return null;
+    }
+    i += 2 + v.getUint16(i + 2);
+  }
+  return null;
+}
+
+async function giaiMaAnhDeNen(file, ts) {
+  try {
+    const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    ts.cachGiaiMa = 'bitmap';
+    return bitmap;
+  } catch (loiBitmap) {
+    ts.loiBitmap = String(loiBitmap && loiBitmap.message || loiBitmap).slice(0, 120);
+  }
+  const url = URL.createObjectURL(file);
+  try {
+    // onload, KHÔNG dùng img.decode(): thử trên Chrome, decode() không xong khi trang đang ẩn (document.hidden — vd đang ở app camera
+    // của máy) còn onload vẫn chạy. Quá 20 giây thì bỏ, gửi ảnh gốc — nén không bao giờ được chặn việc gửi ảnh.
+    const img = await new Promise((xong, loi) => {
+      const anh = new Image();
+      const hen = setTimeout(() => loi(new Error('giải mã quá 20 giây')), 20000);
+      anh.onload = () => { clearTimeout(hen); xong(anh); };
+      anh.onerror = () => { clearTimeout(hen); loi(new Error('trình duyệt không đọc được ảnh')); };
+      anh.src = url;
+    });
+    ts.cachGiaiMa = 'img';
+    // Chiều xoay EXIF: trình duyệt KHÔNG tự xoay khi vẽ (dò 1 lần — trinhDuyetTuXoayExif) và ảnh có cờ 2–8 -> app tự xoay/lật khi vẽ.
+    // Không đọc được EXIF (không phải JPEG, EXIF lạ) -> vẽ như thường.
+    const huong = await docHuongExif(file).catch(() => null);
+    const tuXoay = MA_TRAN_XOAY_EXIF[huong] && !(await trinhDuyetTuXoayExif(ts)) ? huong : 0;
+    ts.huongExif = huong;
+    if (tuXoay) ts.tuXoayExif = true;
+    const doiChieu = tuXoay >= 5; // xoay 90°: ảnh gốc nằm ngang -> đứng (đổi rộng/cao)
+    const [rong, cao] = doiChieu ? [img.naturalHeight, img.naturalWidth] : [img.naturalWidth, img.naturalHeight];
+    // Cùng "hình dạng" ImageBitmap mà nơi gọi dùng: width/height (đã đúng chiều), ve() vẽ đúng chiều, close() giải phóng blob URL.
+    return {
+      width: rong, height: cao,
+      ve: (ctx, w, h) => {
+        if (tuXoay) ctx.setTransform(...MA_TRAN_XOAY_EXIF[tuXoay](w, h));
+        ctx.drawImage(img, 0, 0, doiChieu ? h : w, doiChieu ? w : h);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+      },
+      close: () => URL.revokeObjectURL(url),
+    };
+  } catch (loiImg) {
+    URL.revokeObjectURL(url);
+    throw new Error(`${ts.loiBitmap} | <img>: ${String(loiImg && loiImg.message || loiImg).slice(0, 120)}`);
+  }
+}
+
 async function nenAnhTruocKhiTaiLen(file, tuyChon = {}) {
   const canhDaiToiDa = tuyChon.canhDaiToiDa || CANH_DAI_NHAT_TOI_DA_KHI_NEN_ANH;
   const chatLuongJpeg = tuyChon.chatLuongJpeg || CHAT_LUONG_JPEG_KHI_NEN_ANH;
@@ -800,7 +948,7 @@ async function nenAnhTruocKhiTaiLen(file, tuyChon = {}) {
   if (file.size <= BO_QUA_NEN_NEU_DA_NHO_HON) return khongNen('Ảnh đã nhỏ sẵn (bỏ qua)');
   try {
     const t0 = performance.now();
-    const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    const bitmap = await giaiMaAnhDeNen(file, ts);
     const t1 = performance.now();
     const tyLe = Math.min(1, canhDaiToiDa / Math.max(bitmap.width, bitmap.height));
     const rong = Math.round(bitmap.width * tyLe);
@@ -809,7 +957,8 @@ async function nenAnhTruocKhiTaiLen(file, tuyChon = {}) {
     const canvas = document.createElement('canvas');
     canvas.width = rong;
     canvas.height = cao;
-    canvas.getContext('2d').drawImage(bitmap, 0, 0, rong, cao);
+    const ctx = canvas.getContext('2d');
+    if (bitmap.ve) bitmap.ve(ctx, rong, cao); else ctx.drawImage(bitmap, 0, 0, rong, cao);
     const t2 = performance.now();
     Object.assign(ts, { rongGoc: bitmap.width, caoGoc: bitmap.height, rong, cao, msGiaiMa: Math.round(t1 - t0), msVe: Math.round(t2 - t1) });
     bitmap.close();

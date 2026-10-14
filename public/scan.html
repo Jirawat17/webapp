@@ -83,7 +83,7 @@
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=122"></script>
+<script src="/js/api.js?v=123"></script>
 <script>
 let user;
 // Mặc định mở vào "Quét kịch bản" (batch) khi vào trang — theo yêu cầu người dùng 05/09/2026, vì đây
@@ -226,6 +226,7 @@ function nhacBanMoi(moiNhat) {
   el.textContent = '⟳ Có bản mới của app — bấm để tải lại trang';
   el.onclick = () => {
     if (dsUploadDangCho.size && !confirm(`Còn ${dsUploadDangCho.size} ảnh đang tải lên — tải lại trang bây giờ sẽ làm hỏng các ảnh đó. Vẫn tải lại?`)) return;
+    daDongYRoiTrang = true; // đã hỏi ở trên — không hỏi lần 2 ở beforeunload
     location.reload();
   };
   document.body.appendChild(el);
@@ -234,6 +235,14 @@ function nhacBanMoi(moiNhat) {
 // Trang chỉ TẠM CẤT (bfcache, e.persisted) vẫn ghi THOAT — trình duyệt có thể xoá hẳn trang cất mà không quay lại (hay gặp trên iOS),
 // khi đó không còn cơ hội ghi gì. Nếu người dùng quay lại và ảnh vẫn tải xong, dòng CHUP_ANH mang sauThoat để máy chủ xoá dòng THOAT
 // tương ứng (routes/nhatKyQuet.js) — không đếm 1 ảnh 2 lần.
+// Hỏi lại trước khi rời trang khi còn ảnh đang tải / đang chờ gửi lại (14/10/2026 — Logs_UploadAnh 13/10: 10V25 bị đóng trang giữa lúc
+// gửi, ảnh mất). Trình duyệt tự hiện hộp hỏi mặc định; Safari iOS có thể bỏ qua — khi đó vẫn ghi THOAT như dưới.
+let daDongYRoiTrang = false;
+window.addEventListener('beforeunload', e => {
+  if (!dsUploadDangCho.size || daDongYRoiTrang) return;
+  e.preventDefault();
+  e.returnValue = '';
+});
 window.addEventListener('pagehide', e => {
   for (const [sttKey, l] of luotDangTai) {
     if (l.daBaoThoat) continue;
@@ -488,7 +497,31 @@ function phatAmThanhKetQua(nhom) {
   }
 }
 
-async function dieuChinhCamera(muonChay) {
+// Bật/tắt camera XẾP HÀNG (14/10/2026, theo Logs_UploadAnh 13/10: bấm đổi chế độ khi camera đang mở dở -> html5-qrcode báo "Cannot
+// transition to a new state, already under transition" / "Cannot clear while scan is ongoing", camera CŨ không tắt được và vẫn gọi hàm
+// quét của chế độ chụp ảnh khi đã sang "Tra cứu" -> lỗi "cauHinh.moc" liên tục). Chỉ 1 lượt bật/tắt chạy tại 1 thời điểm; bấm dồn dập
+// trong lúc đang chạy thì chỉ nhớ chế độ MUỐN cuối cùng, xong lượt hiện tại mới chuyển thẳng tới đó (bỏ qua các chế độ trung gian).
+// Giới hạn: lượt đang chờ hộp xin quyền camera (getUserMedia) không huỷ được — đổi chế độ sẽ có hiệu lực ngay khi người dùng trả lời.
+let cameraMuonChay = null, luotDieuChinhCamera = null;
+function dieuChinhCamera(muonChay) {
+  cameraMuonChay = muonChay;
+  if (!luotDieuChinhCamera) {
+    luotDieuChinhCamera = (async () => {
+      try {
+        let muon;
+        do {
+          muon = cameraMuonChay;
+          // Lỗi 1 lượt không được làm mất chế độ người dùng bấm TRONG LÚC lượt đó chạy — bắt lỗi từng lượt, vòng vẫn chạy tiếp tới chế độ cuối.
+          try { await dieuChinhCameraThat(muon); } catch (err) { console.error('[Camera] Lỗi đổi camera:', err); }
+        } while (muon !== cameraMuonChay);
+      } finally {
+        luotDieuChinhCamera = null;
+      }
+    })();
+  }
+  return luotDieuChinhCamera;
+}
+async function dieuChinhCameraThat(muonChay) {
   if (muonChay === cameraDangChayCho) return;
   if (cameraDangChayCho !== null) await dungCamera();
   cameraDangChayCho = muonChay;
@@ -548,6 +581,7 @@ async function batDauCamera(onScan, qrboxSize, tuyChon = {}) {
         : 'Hãy cho phép quyền camera cho trang web này trong trình duyệt.';
       document.getElementById('ket-qua-tra-cuu').innerHTML =
         `<div class="ket-qua-box loi">${icon('alert')} Không mở được camera: ${escapeHtml(String(err))}. ${goiY}</div>`;
+      cameraDangChayCho = null; // không mở được -> bấm lại đúng chế độ đó sẽ thử mở lại (trước đây coi như đang chạy, bấm không có tác dụng)
       return;
     }
   }
@@ -980,9 +1014,10 @@ async function tiepTucQuet() {
 // Quét được mã trong trạng thái [Đang quét] — kiểm tra đơn đủ điều kiện chụp TRƯỚC khi cho chụp ảnh
 // thật (tránh lãng phí 1 lần chụp cho đơn sai trạng thái/không tồn tại).
 async function xuLyQuetDeXacDinhDon(sttKeyThoDoc) {
+  const cauHinh = CAU_HINH_ANH[mode];
+  if (!cauHinh) return; // phòng thêm: mã đọc từ camera của chế độ chụp ảnh tới muộn khi đã đổi sang chế độ khác — bỏ qua
   if (dangXuLyQuet) return;
   dangXuLyQuet = true;
-  const cauHinh = CAU_HINH_ANH[mode];
   const msTimMa = msTimMaHienTai(), tKiemTra = performance.now();
 
   try {
@@ -1036,6 +1071,27 @@ document.getElementById('input-chup-anh').addEventListener('change', async (e) =
 // render lại để khối "Danh sách đã chụp" tự cập nhật, dù người dùng có thể đã quét sang đơn khác hoặc
 // đổi mode trong lúc chờ (renderDsDaChup()/renderDemNhomAnh() luôn đọc đúng dsDaChupTheoMoc[mode] hiện
 // tại — vô hại nếu mode đã đổi, chỉ là redraw lại đúng màn hình đang hiện, lịch sử vẫn đúng khi quay lại).
+// Chờ trước mỗi lần tự gửi lại ảnh lỗi mạng (3 lần gửi lại, tổng ~26 giây chờ) — xem vòng gửi trong taiAnhLenNgam.
+const CHO_GUI_LAI_ANH_MS = [3000, 8000, 15000];
+// Hạn mỗi lần gửi (kết nối di động treo không báo lỗi thì không bao giờ tới lượt gửi lại) = 60 giây + thời gian đẩy file ở 10KB/s —
+// TÍNH THEO DUNG LƯỢNG vì hạn tính cả lúc đang đẩy dữ liệu lên: ảnh đã nén ~250KB -> ~85s; ảnh GỐC 3MB (máy không nén được) -> ~6 phút,
+// vẫn hơn hẳn lượt chậm nhất đã thấy thành công trong Logs 13/10 (3MB mất ~128s, mạng ~25KB/s) — không cắt ngang lượt chậm mà vẫn chạy.
+const hanGuiAnhMs = soByte => 60000 + Math.round(soByte / 10240 * 1000);
+// Qua apiFetch (cùng xử lý lỗi + ghi lỗi API gần nhất cho "Báo lỗi app"); headers rỗng để trình duyệt tự đặt multipart cho FormData.
+async function guiAnhMotLan(form, soByte) {
+  const han = hanGuiAnhMs(soByte);
+  const huy = new AbortController();
+  const hen = setTimeout(() => huy.abort(), han);
+  try {
+    return await apiFetch('/photos/upload', { method: 'POST', body: form, headers: {}, signal: huy.signal });
+  } catch (err) {
+    if (huy.signal.aborted) throw new Error(`quá ${Math.round(han / 1000)} giây không phản hồi`); // không có status -> được gửi lại
+    throw err;
+  } finally {
+    clearTimeout(hen);
+  }
+}
+
 async function taiAnhLenNgam(sttKey, cauHinh, file, dong, log) {
   // Nén ảnh (bổ sung 21/09/2026) — DỜI VÀO ĐÂY, chạy ngầm cùng upload (bổ sung 23/09/2026, theo yêu
   // cầu người dùng: quay lại [Đang quét] vẫn còn chậm dù upload đã chạy ngầm). Ảnh gốc từ điện thoại/
@@ -1052,7 +1108,8 @@ async function taiAnhLenNgam(sttKey, cauHinh, file, dong, log) {
   // Dòng "[đo: nén ..., gửi+chờ ...]" tạm hiện trên màn hình (23/09/2026) ĐÃ BỎ 12/10/2026 — số đo giờ ghi vào Logs_UploadAnh.
   const ghiLogChup = (ketQua, them) => {
     luotDangTai.delete(sttKey);
-    const msGuiVaCho = Math.round(performance.now() - tGuiDi0);
+    const msTongGui = Math.round(performance.now() - tGuiDi0); // gồm cả các lần gửi lỗi + thời gian chờ gửi lại
+    const msGuiVaCho = Math.round(performance.now() - tLanGuiCuoi0); // riêng lần gửi cuối
     const msMayChu = them.thoiGian ? them.thoiGian.tong : null;
     ghiLogQuet({ suKien: 'CHUP_ANH', cheDo: log.cheDo, sttKey, ketQua, loi: them.loi || '', tongMs: Math.round(performance.now() - log.tCoAnh),
       chiTiet: {
@@ -1062,11 +1119,13 @@ async function taiAnhLenNgam(sttKey, cauHinh, file, dong, log) {
         loaiFile: file.type || '', kbGoc: Math.round(file.size / 1024), kbSauNen: Math.round(fileDaNen.size / 1024),
         msNen: Math.round(tNen1 - tNen0), ...thongSoNen,
         // Có mốc máy chủ (lượt thành công): tách gửi qua mạng; không có (lượt lỗi) thì chỉ biết tổng gửi + máy chủ xử lý.
-        msGui: msMayChu != null ? Math.max(0, msGuiVaCho - msMayChu) : null, msGuiVaCho: msMayChu != null ? null : msGuiVaCho,
+        msGui: msMayChu != null ? Math.max(0, msGuiVaCho - msMayChu) : null, msGuiVaCho: msMayChu != null ? null : msTongGui,
         msMayChu, mayChu: them.thoiGian || null,
         kbMoiGiay: msMayChu != null && msGuiVaCho - msMayChu > 0 ? Math.round(fileDaNen.size / 1024 / ((msGuiVaCho - msMayChu) / 1000)) : null,
         mang: mangHienTai(),
         sauThoat: !!log.daBaoThoat, // đã ghi THOAT lúc trang bị cất rồi quay lại — máy chủ xoá dòng THOAT đó
+        soLanGui, // > 1 = đã tự gửi lại vì lỗi mạng / máy chủ; msGui / kbMoiGiay chỉ tính lần gửi cuối
+        msTongGui: soLanGui > 1 ? msTongGui : null, // từ lần gửi đầu tới khi xong, gồm cả lần lỗi + chờ
       } });
   };
   const form = new FormData();
@@ -1075,15 +1134,34 @@ async function taiAnhLenNgam(sttKey, cauHinh, file, dong, log) {
   form.append('moc', cauHinh.moc);
 
   const tGuiDi0 = performance.now();
+  let soLanGui = 0;
+  let tLanGuiCuoi0 = tGuiDi0; // mốc bắt đầu lần gửi CUỐI — số đo tốc độ mạng chỉ tính lần đó, không tính lần lỗi + thời gian chờ
   try {
-    const res = await fetch('/api/photos/upload', { method: 'POST', body: form, credentials: 'include' });
-    const data = await res.json();
-    if (!res.ok) throw Object.assign(new Error(data.error), { status: res.status, nghiepVu: !!data.nghiepVu });
+    // Tự gửi lại (14/10/2026, theo Logs_UploadAnh 13/10: ảnh 10U88.1 lỗi "Failed to fetch" trên mạng yếu, ảnh tải ngầm nên người dùng
+    // đã sang đơn khác, không chụp lại -> đơn thiếu ảnh). CHỈ lỗi mạng (không có mã HTTP) / máy chủ 5xx (Cloudflare 502/524...);
+    // lỗi nghiệp vụ 4xx (sai trạng thái, hết phiên...) báo ngay như cũ. Gửi lại đúng file đã nén, không nén lại.
+    let data;
+    for (;;) {
+      soLanGui++;
+      tLanGuiCuoi0 = performance.now();
+      try {
+        data = await guiAnhMotLan(form, fileDaNen.size);
+        break;
+      } catch (err) {
+        // Lần trước thực ra ĐÃ lưu (mất phản hồi giữa đường) -> lần gửi lại bị từ chối vì đơn đã sang đúng trạng thái đích
+        // (routes/photos.js trả trangThaiHienTai — không dò chữ trong câu báo lỗi).
+        if (soLanGui > 1 && err.nghiepVu && err.duLieu && err.duLieu.trangThaiHienTai === cauHinh.chuyenSang) { data = { daLuuLanTruoc: true }; break; }
+        if ((err.status && err.status < 500) || soLanGui > CHO_GUI_LAI_ANH_MS.length) throw err;
+        dong.ghiChu = `Mạng chập chờn — tự gửi lại lần ${soLanGui + 1}/${CHO_GUI_LAI_ANH_MS.length + 1}... (đừng đóng trang)`;
+        renderDsDaChup();
+        await new Promise(r => setTimeout(r, CHO_GUI_LAI_ANH_MS[soLanGui - 1]));
+      }
+    }
 
     const don = data.don || {};
     ghiLogChup('OK', { thoiGian: data.thoiGian });
     dong.trangThai = 'ok';
-    dong.ghiChu = `${don.TenKhachHang || ''} — ${cauHinh.yeuCau} → ${cauHinh.chuyenSang}`;
+    dong.ghiChu = `${don.TenKhachHang || ''} — ${cauHinh.yeuCau} → ${cauHinh.chuyenSang}${data.daLuuLanTruoc ? ' (đã lưu từ lần gửi trước)' : ''}`;
     hienThiToastAnh('ok', `${don.STT_Key || sttKey}${don.TenKhachHang ? ' · ' + don.TenKhachHang : ''} — đã chuyển sang "${cauHinh.chuyenSang}"`);
     phatAmThanhKetQua('OK');
   } catch (err) {
@@ -1092,8 +1170,9 @@ async function taiAnhLenNgam(sttKey, cauHinh, file, dong, log) {
     // giữ nguyên màn hình [Sẵn sàng chụp] để bấm lại ngay, không còn hợp lý khi ảnh đã tải ngầm).
     ghiLogChup(ketQuaLoi(err, 'SAI_TRANG_THAI'), { loi: err.message });
     dong.trangThai = 'canh-bao';
-    dong.ghiChu = err.message;
-    hienThiToastAnh('canh-bao', `${sttKey}: ${err.message}`);
+    // Lỗi kỹ thuật sau khi đã tự gửi lại hết lượt: nói rõ ảnh CHƯA lưu (dòng đỏ ở lại trong "Danh sách đã chụp").
+    dong.ghiChu = err.nghiepVu ? err.message : `CHƯA LƯU ẢNH (đã thử ${soLanGui} lần: ${err.message}) — quét lại mã đơn để chụp lại.`;
+    hienThiToastAnh('canh-bao', `${sttKey}: ${dong.ghiChu}`);
     phatAmThanhKetQua('SAI_TRANG_THAI');
   } finally {
     dsUploadDangCho.delete(sttKey);
@@ -1155,6 +1234,9 @@ function themDongDaChup(item) {
 function renderDemNhomAnh() {
   const el = document.getElementById('dem-nhom-anh');
   const ds = dsDaChupTheoMoc[mode];
+  // Ảnh tải ngầm xong / gửi lại khi người dùng đã sang chế độ không chụp ảnh (Tra cứu, Kịch bản) — không có khối này để vẽ (14/10/2026:
+  // trước đây lỗi "reading 'filter'" ở đây, và trong vòng tự gửi lại sẽ làm dừng gửi lại giữa chừng).
+  if (!ds) return;
   const soDangTai = ds.filter(x => x.trangThai === 'dang-tai').length;
   const soOK = ds.filter(x => x.trangThai === 'ok').length;
   const soCanhBao = ds.filter(x => x.trangThai === 'canh-bao').length;
@@ -1172,6 +1254,7 @@ function renderDemNhomAnh() {
 function renderDsDaChup() {
   const el = document.getElementById('ds-da-chup');
   const ds = dsDaChupTheoMoc[mode];
+  if (!ds) return; // chế độ không chụp ảnh — xem renderDemNhomAnh
   if (ds.length === 0) { el.innerHTML = '<p style="color:var(--color-text-faint)">Chưa chụp ảnh nào.</p>'; return; }
   const ICON_THEO_TRANG_THAI = {
     ok: '✅', 'canh-bao': '⚠️',

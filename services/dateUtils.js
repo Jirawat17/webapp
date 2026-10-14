@@ -55,15 +55,23 @@ function dinhDangNgay(giaTri) {
 // Ngày+giờ ngắn gọn theo đúng yêu cầu: "24-08 23:48:34" (DD-MM HH:mm:ss) — không có năm, đủ ngắn
 // để đặt trong dòng log/lịch sử mà không chiếm quá nhiều chỗ. Dùng cho timeline lịch sử thay đổi,
 // cột "Thời gian" trong bảng báo cáo. Nhận vào ISO string (từ Sheet) hoặc Date object.
+// Giờ "24" (13/10/2026, phát hiện qua Logs_UploadAnh: "2026-10-13T24:29:50" thay vì "T00:29:50"): `hour12: false` trên ICU của
+// production (node:20-alpine) ra chu kỳ h24 — 00:xx thành 24:xx, CÙNG ngày; new Date() đọc chuỗi đó ra Invalid Date (lọc/sắp xếp/tính
+// giờ sai cho mọi mốc ghi trong 0h–1h sáng). Dùng hourCycle 'h23' + chặn thêm "24" -> "00" phòng ICU khác vẫn trả 24.
+const gio00 = (phan, type) => {
+  const v = phan.find(p => p.type === type)?.value;
+  return type === 'hour' && v === '24' ? '00' : v;
+};
+
 function dinhDangNgayGioNgan(d) {
   const obj = d instanceof Date ? d : new Date(d);
   if (isNaN(obj)) return '';
   const phan = new Intl.DateTimeFormat('vi-VN', {
     timeZone: 'Asia/Ho_Chi_Minh',
     day: '2-digit', month: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
   }).formatToParts(obj);
-  const lay = (type) => phan.find(p => p.type === type)?.value || '00';
+  const lay = (type) => gio00(phan, type) || '00';
   return `${lay('day')}-${lay('month')} ${lay('hour')}:${lay('minute')}:${lay('second')}`;
 }
 
@@ -75,9 +83,9 @@ function dinhDangNgayGioVN(d = new Date()) {
   const phan = new Intl.DateTimeFormat('vi-VN', {
     timeZone: 'Asia/Ho_Chi_Minh',
     day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit', hour12: false,
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
   }).formatToParts(obj);
-  const lay = (type) => phan.find(p => p.type === type)?.value || '';
+  const lay = (type) => gio00(phan, type) || '';
   return `${lay('day')}/${lay('month')}/${lay('year')} ${lay('hour')}:${lay('minute')}`;
 }
 
@@ -91,9 +99,9 @@ function thoiGianVNISOString(d = new Date()) {
   const phan = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Ho_Chi_Minh',
     year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
   }).formatToParts(d);
-  const lay = (type) => phan.find(p => p.type === type)?.value;
+  const lay = (type) => gio00(phan, type);
   const ms = String(d.getMilliseconds()).padStart(3, '0');
   return `${lay('year')}-${lay('month')}-${lay('day')}T${lay('hour')}:${lay('minute')}:${lay('second')}.${ms}+07:00`;
 }

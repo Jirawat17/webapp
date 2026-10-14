@@ -104,6 +104,7 @@ router.post('/kiem-tra', async (req, res) => {
   if (chuyenTuDong && row.TRANG_THAI_XUONG !== chuyenTuDong.yeuCau) {
     return res.status(400).json({
       error: `Đơn "${sttKey}" đang ở trạng thái "${row.TRANG_THAI_XUONG}" — chỉ chụp ảnh được khi đơn đang ở "${chuyenTuDong.yeuCau}".`, nghiepVu: true,
+      trangThaiHienTai: row.TRANG_THAI_XUONG, // scan.html: = trạng thái đích khi gửi lại ảnh -> lần gửi trước đã lưu (mất phản hồi)
     });
   }
   if (chuyenTuDong && chuyenTuDong.chuyenSang === 'ĐÃ DÁN TEM' && thieuTrackingThat(row)) {
@@ -160,6 +161,7 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
   if (chuyenTuDong && row.TRANG_THAI_XUONG !== chuyenTuDong.yeuCau) {
     return res.status(400).json({
       error: `Đơn "${sttKey}" đang ở trạng thái "${row.TRANG_THAI_XUONG}" — chỉ chụp ảnh được khi đơn đang ở "${chuyenTuDong.yeuCau}".`, nghiepVu: true,
+      trangThaiHienTai: row.TRANG_THAI_XUONG, // scan.html: = trạng thái đích khi gửi lại ảnh -> lần gửi trước đã lưu (mất phản hồi)
     });
   }
   if (chuyenTuDong && chuyenTuDong.chuyenSang === 'ĐÃ DÁN TEM' && thieuTrackingThat(row)) {
