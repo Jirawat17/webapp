@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Chi tiết đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=110">
+<link rel="stylesheet" href="/css/style.css?v=111">
 <script src="/js/theme.js?v=104"></script>
 <style>
 /* Ô "Nhập mã đơn" (04/10/2026, theo yêu cầu người dùng): gấp 3 cỡ cũ (160x21px, chữ 13,3px) cả rộng, cao, cỡ chữ; chữ gõ vào
@@ -35,7 +35,7 @@
 </div>
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=124"></script>
+<script src="/js/api.js?v=125"></script>
 <script>
 const sttKey = new URLSearchParams(location.search).get('stt');
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
@@ -268,7 +268,7 @@ async function taiChiTiet() {
     <div class="${user.vaiTro === 'san_xuat' ? '' : 'chi-tiet-layout'}">
       <div>
         ${dsAnh.length ? `<div class="nhom-anh-mau">${dsAnh.map(src => `<img class="anh-mau" src="${escapeHtml(src)}" alt="Ảnh mẫu/mockup" loading="lazy" onerror="this.remove()">`).join('')}</div>` : ''}
-        ${(user.vaiTro !== 'nguoi_lay_phoi' && (don.DUONG_DAN_URL || don.MOCKUP)) || don.Anh_File_Theu_URL || don.Anh_File_Theu_URL_2 || don.Anh_File_Theu_URL_3 || don.Anh_Da_San_Xuat_URL || don.Anh_Dong_Goi_URL ? `
+        ${(user.vaiTro !== 'nguoi_lay_phoi' && (don.DUONG_DAN_URL || don.MOCKUP)) || don.Anh_File_Theu_URL || don.Anh_File_Theu_URL_2 || don.Anh_File_Theu_URL_3 || don.Anh_Da_San_Xuat_URL || don.Anh_Da_San_Xuat_URL_2 || don.Anh_Dong_Goi_URL ? `
         <div class="danh-sach-link-anh">
           ${user.vaiTro !== 'nguoi_lay_phoi' && don.DUONG_DAN_URL ? linkAnToan(don.DUONG_DAN_URL, `${icon('file', {size:14})} Ảnh PNG`) : ''}
           ${user.vaiTro !== 'nguoi_lay_phoi' && don.MOCKUP ? linkAnToan(don.MOCKUP, `${icon('file', {size:14})} Ảnh Mockup`) : ''}
@@ -276,6 +276,7 @@ async function taiChiTiet() {
           ${don.Anh_File_Theu_URL_2 ? linkAnToan(don.Anh_File_Theu_URL_2, `${icon('file', {size:14})} Ảnh File Thêu 2`) : ''}
           ${don.Anh_File_Theu_URL_3 ? linkAnToan(don.Anh_File_Theu_URL_3, `${icon('file', {size:14})} Ảnh File Thêu 3`) : ''}
           ${don.Anh_Da_San_Xuat_URL ? linkAnToan(don.Anh_Da_San_Xuat_URL, `${icon('file', {size:14})} Ảnh đã sản xuất`) : ''}
+          ${don.Anh_Da_San_Xuat_URL_2 ? linkAnToan(don.Anh_Da_San_Xuat_URL_2, `${icon('file', {size:14})} Ảnh đã sản xuất 2`) : ''}
           ${don.Anh_Da_Dan_Tem_URL ? linkAnToan(don.Anh_Da_Dan_Tem_URL, `${icon('file', {size:14})} Ảnh ĐÃ DÁN TEM`) : ''}
           ${don.Anh_Dong_Goi_URL ? linkAnToan(don.Anh_Dong_Goi_URL, `${icon('file', {size:14})} Ảnh đóng gói`) : ''}
         </div>` : ''}
@@ -330,7 +331,7 @@ async function moDoiChieuAnh(nut) {
     ['Thiết kế', thietKe],
     ['Mockup', tuLink(don.MOCKUP, duocMoGocThietKe)],
     ['File thêu', [don.Anh_File_Theu_URL, don.Anh_File_Theu_URL_2, don.Anh_File_Theu_URL_3].flatMap(u => tuLink(u))],
-    ['Đã sản xuất', tuLink(don.Anh_Da_San_Xuat_URL)],
+    ['Đã sản xuất', [don.Anh_Da_San_Xuat_URL, don.Anh_Da_San_Xuat_URL_2].flatMap(u => tuLink(u))],
     ['Đã dán tem / đóng gói', [don.Anh_Da_Dan_Tem_URL, don.Anh_Dong_Goi_URL].flatMap(u => tuLink(u))],
   ];
   const anh = a => {
@@ -504,11 +505,11 @@ function chuThich(ngan, day) {
 // Các loại ảnh tải ở trang chi tiết — moc khớp routes/photos.js. chiAdmin: ve_file không thấy (giữ đúng quyền cũ).
 // "Ảnh file thêu" (26/08/2026) chỉ lưu ảnh, không đụng trạng thái; 2/3 thêm 24/09/2026 (không bắt buộc).
 const LOAI_ANH_TAI_LEN = [
-  { moc: 've_file', ten: 'Ảnh file thêu (sau khi vẽ file)', ghiChu: 'cần cột Anh_File_Theu_URL trong Sheet — nếu chưa có, thao tác này sẽ báo lỗi.' },
-  { moc: 've_file_2', ten: 'Ảnh File Thêu 2 (không bắt buộc)', ghiChu: 'cần cột Anh_File_Theu_URL_2 trong Sheet — nếu chưa có, thao tác này sẽ báo lỗi.' },
-  { moc: 've_file_3', ten: 'Ảnh File Thêu 3 (không bắt buộc)', ghiChu: 'cần cột Anh_File_Theu_URL_3 trong Sheet — nếu chưa có, thao tác này sẽ báo lỗi.' },
-  { moc: 'da_san_xuat', ten: 'Ảnh đã sản xuất (ngay khi chạy máy xong)', chiAdmin: true, ghiChu: 'cần cột Anh_Da_San_Xuat_URL trong Sheet. Chỉ dùng được khi đơn đang ở "Đang chạy máy" — tải ảnh xong sẽ TỰ ĐỘNG chuyển đơn sang "Đã sản xuất". san_xuat/nguoi_lay_phoi nên dùng màn "Chụp ảnh đã sản xuất" ở trang Quét QR thay vì đây (nhanh hơn, không cần mở từng đơn).' },
-  { moc: 'da_dan_tem', ten: 'Ảnh ĐÃ DÁN TEM (sau khi dán tem lên kiện hàng)', chiAdmin: true, ghiChu: 'cần cột Anh_Da_Dan_Tem_URL trong Sheet. Chỉ dùng được khi đơn đang ở "Đã sản xuất" VÀ đã có thông tin Tracking (mua trước ở khối "Vận chuyển (GKE)" ở trên hoặc menu Tracking) — tải ảnh xong sẽ TỰ ĐỘNG chuyển đơn sang "ĐÃ DÁN TEM". Bản thân việc tải ảnh này không tạo mã tracking. san_xuat/nguoi_lay_phoi nên dùng màn "Chụp ảnh ĐÃ DÁN TEM" ở trang Quét QR thay vì đây (nhanh hơn, không cần mở từng đơn).' },
+  { moc: 've_file', ten: 'Ảnh file thêu (sau khi vẽ file)', ghiChu: 'chỉ lưu ảnh, không đổi trạng thái đơn; tải lại sẽ thay ảnh cũ.' },
+  { moc: 've_file_2', ten: 'Ảnh File Thêu 2 (không bắt buộc)', ghiChu: 'chỉ lưu ảnh, không đổi trạng thái đơn; tải lại sẽ thay ảnh cũ.' },
+  { moc: 've_file_3', ten: 'Ảnh File Thêu 3 (không bắt buộc)', ghiChu: 'chỉ lưu ảnh, không đổi trạng thái đơn; tải lại sẽ thay ảnh cũ.' },
+  { moc: 'da_san_xuat', ten: 'Ảnh đã sản xuất (ngay khi chạy máy xong)', chiAdmin: true, ghiChu: 'chọn 1 hoặc 2 ảnh cùng lúc (tối đa 2 ảnh/đơn). Chỉ dùng được khi đơn đang ở "Đang chạy máy" — tải xong cả lượt sẽ TỰ ĐỘNG chuyển đơn sang "Đã sản xuất". san_xuat/nguoi_lay_phoi nên dùng màn "Chụp ảnh đã sản xuất" ở trang Quét QR thay vì đây (nhanh hơn, không cần mở từng đơn).' },
+  { moc: 'da_dan_tem', ten: 'Ảnh ĐÃ DÁN TEM (sau khi dán tem lên kiện hàng)', chiAdmin: true, ghiChu: 'chỉ dùng được khi đơn đang ở "Đã sản xuất" VÀ đã có thông tin Tracking (mua trước ở khối "Vận chuyển (GKE)" ở trên hoặc menu Tracking) — tải ảnh xong sẽ TỰ ĐỘNG chuyển đơn sang "ĐÃ DÁN TEM". Bản thân việc tải ảnh này không tạo mã tracking. san_xuat/nguoi_lay_phoi nên dùng màn "Chụp ảnh ĐÃ DÁN TEM" ở trang Quét QR thay vì đây (nhanh hơn, không cần mở từng đơn).' },
 ];
 
 function renderKhuVucThaoTac(don) {
@@ -653,7 +654,7 @@ function renderKhuVucThaoTac(don) {
     html += `
       <div class="upload-box">
         <label for="loai-anh">${icon('camera', { size: 18 })} Tải ảnh</label>
-        <select id="loai-anh">
+        <select id="loai-anh" onchange="document.getElementById('anh-tai-len').multiple = this.value === 'da_san_xuat'">
           <option value="">Chọn loại ảnh...</option>
           ${dsLoaiAnh.map(l => `<option value="${l.moc}">${escapeHtml(l.ten)}</option>`).join('')}
         </select>
@@ -1005,28 +1006,37 @@ async function taiAnh(nut) {
   const input = document.getElementById('anh-tai-len');
   if (!moc) return alert('Chưa chọn loại ảnh');
   if (!input.files[0]) return alert('Chưa chọn ảnh');
+  // Ảnh đã sản xuất: 1 hoặc 2 ảnh cùng lúc (14/10/2026, theo yêu cầu người dùng); loại khác 1 ảnh.
+  const toiDa = moc === 'da_san_xuat' ? 2 : 1;
+  if (input.files.length > toiDa) return alert(`Chỉ chọn tối đa ${toiDa} ảnh cho loại này (đang chọn ${input.files.length}).`);
   if (nut.disabled) return; // chặn bấm 2 lần khi đang tải (ảnh Đã sản xuất / ĐÃ DÁN TEM tự chuyển trạng thái)
   nut.disabled = true;
-  try { await guiAnh(moc, input); } finally { nut.disabled = false; }
+  try { await guiAnh(moc, [...input.files]); } finally { nut.disabled = false; }
 }
-async function guiAnh(moc, input) {
-
-  // Nén ảnh trước khi upload (bổ sung 21/09/2026, theo yêu cầu người dùng — xem api.js#nenAnhTruocKhiTaiLen)
-  // — cùng lý do đã áp dụng ở scan.html: ảnh camera gốc thường vài MB, nén trước giúp upload nhanh hơn.
-  const fileDaNen = await nenAnhTruocKhiTaiLen(input.files[0]);
-
-  const form = new FormData();
-  form.append('photo', fileDaNen);
-  form.append('sttKey', sttKey);
-  form.append('moc', moc);
-
+async function guiAnh(moc, dsFile) {
+  // Ảnh đã sản xuất 2 ảnh: gửi ảnh 1 (chưa chuyển trạng thái) rồi ảnh 2 (chuyển "Đã sản xuất") — xem routes/photos.js#soAnhSanXuatLuotNay.
+  let daLuu = 0;
   try {
-    const res = await fetch('/api/photos/upload', { method: 'POST', body: form, credentials: 'include' });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
-    alert('Đã tải ảnh lên!');
-    await taiChiTiet();
-  } catch (e) { alert(e.message); }
+    for (let i = 0; i < dsFile.length; i++) {
+      // Nén ảnh trước khi upload (bổ sung 21/09/2026, theo yêu cầu người dùng — xem api.js#nenAnhTruocKhiTaiLen)
+      // — cùng lý do đã áp dụng ở scan.html: ảnh camera gốc thường vài MB, nén trước giúp upload nhanh hơn.
+      const fileDaNen = await nenAnhTruocKhiTaiLen(dsFile[i]);
+      const form = new FormData();
+      form.append('photo', fileDaNen);
+      form.append('sttKey', sttKey);
+      form.append('moc', moc);
+      form.append('viTri', String(i + 1));
+      form.append('xong', i === dsFile.length - 1 ? '1' : '0');
+      const res = await fetch('/api/photos/upload', { method: 'POST', body: form, credentials: 'include' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      daLuu++;
+    }
+    alert(dsFile.length > 1 ? `Đã tải ${dsFile.length} ảnh lên!` : 'Đã tải ảnh lên!');
+  } catch (e) {
+    alert(daLuu ? `Đã lưu ảnh 1 nhưng ảnh 2 lỗi: ${e.message}\nĐơn CHƯA chuyển trạng thái — chọn lại cả 2 ảnh rồi tải lại.` : e.message);
+  }
+  await taiChiTiet();
 }
 </script>
 </body>

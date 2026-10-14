@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Trung tâm hành động — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=110">
+<link rel="stylesheet" href="/css/style.css?v=111">
 <script src="/js/theme.js?v=104"></script>
 <style>
 /* Trang chính mới sau đăng nhập cho admin (bổ sung 14/09/2026, xem
@@ -13,9 +13,6 @@
    (khác BĐK cố tình luôn tối kiểu HUD — trang này là danh sách việc cần làm hằng ngày, không phải màn
    hình "trình chiếu" riêng). Màu sắc cảnh báo dùng LẠI nguyên .badge-canh-bao có sẵn trong style.css. */
 .ttha-lien-ket-bdk { font-size: 0.9rem; white-space: nowrap; }
-.ttha-khoi { margin-bottom: var(--space-5); }
-.ttha-khoi h3 { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-.ttha-dem { font-size: 0.78rem; font-weight: 700; color: var(--color-text-muted); background: var(--color-bg); border-radius: 999px; padding: 2px 10px; }
 .ttha-rong { color: var(--color-text-muted); font-size: 0.9rem; padding: 10px 0; }
 .ttha-danh-sach { display: flex; flex-direction: column; gap: 8px; }
 .ttha-dong {
@@ -26,6 +23,39 @@
 .ttha-dong:hover { border-color: var(--color-primary); }
 .ttha-dong .stt { font-weight: 700; }
 .ttha-dong .phu { font-size: 0.82rem; color: var(--color-text-muted); display: flex; align-items: center; gap: 6px; }
+/* Mỗi mục là 1 thanh bấm mở ra (14/10/2026, theo yêu cầu người dùng) — số việc cần xử lý IN ĐẬM, CỠ LỚN bên phải; mục 0 việc mờ đi.
+   <details> gốc của trình duyệt: không cần JS để mở/đóng, bàn phím/đọc màn hình dùng được sẵn. */
+.ttha-khoi { margin-bottom: var(--space-3); }
+.ttha-khoi > summary {
+  list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 16px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface);
+  font-weight: 600; font-size: 1.05rem;
+}
+.ttha-khoi > summary::-webkit-details-marker { display: none; }
+.ttha-khoi > summary:hover { border-color: var(--color-primary); }
+.ttha-khoi > summary h3 { margin: 0; font-size: inherit; font-weight: inherit; } /* giữ vai trò heading cho trình đọc màn hình */
+.ttha-khoi > summary .ttha-tieu-de::before { content: '▸'; display: inline-block; width: 1.2em; color: var(--color-text-muted); }
+.ttha-khoi[open] > summary .ttha-tieu-de::before { content: '▾'; }
+.ttha-khoi > summary small { font-weight: 400; font-size: 0.85rem; color: var(--color-text-muted); }
+.ttha-so { font-size: 2rem; font-weight: 800; line-height: 1; min-width: 2ch; text-align: right; color: var(--color-danger-text); }
+.ttha-khoi.rong > summary { opacity: 0.55; }
+.ttha-khoi.rong .ttha-so { color: var(--color-text-muted); }
+.ttha-than { padding: 12px 4px 4px; }
+.ttha-mo-ta { color: var(--color-text-muted); margin: 0 0 10px; }
+/* Đơn nhận quá lâu: tô nền theo mức cảnh báo trễ hạn của đơn (14/10/2026) — cùng màu .badge-canh-bao ở style.css. */
+.ttha-dong.muc-do { background: var(--color-danger-bg); border-color: var(--color-danger-text); }
+.ttha-dong.muc-cam { background: var(--color-cam-bg); border-color: var(--color-cam-text); }
+.ttha-dong.muc-vang { background: var(--color-warning-bg); border-color: var(--color-warning-text); }
+/* ĐƠN CẦN CHECK (14/10/2026) — chỉ superadmin. */
+.dcc-form { display: grid; gap: 8px; margin-bottom: 14px; }
+.dcc-form textarea { width: 100%; box-sizing: border-box; font: inherit; }
+.dcc-the { padding: 12px 14px; border: 1px solid var(--color-border); border-left: 4px solid var(--color-danger-text); border-radius: var(--radius-md); background: var(--color-surface); }
+.dcc-the.da-check { border-left-color: var(--color-text-muted); }
+.dcc-the + .dcc-the { margin-top: 8px; }
+.dcc-don { font-size: 0.88rem; margin: 2px 0; }
+.dcc-noi-dung { white-space: pre-wrap; margin: 8px 0 4px; }
+.dcc-ghi-chu { white-space: pre-wrap; margin: 4px 0; padding: 6px 10px; border-radius: var(--radius-md); background: var(--color-warning-bg); color: var(--color-warning-text); }
+.dcc-meta { font-size: 0.8rem; color: var(--color-text-muted); margin-top: 6px; }
 </style>
 </head>
 <body>
@@ -35,13 +65,13 @@
     <h2>Trung tâm hành động</h2>
     <a class="ttha-lien-ket-bdk" href="/bang-dieu-khien.html">Xem thống kê chi tiết (BĐK) →</a>
   </div>
-  <p style="color:var(--color-text-muted); margin-top:0;">Danh sách việc cần xử lý ngay — bấm vào 1 dòng để mở đơn tương ứng.</p>
+  <p style="color:var(--color-text-muted); margin-top:0;">Danh sách việc cần xử lý ngay — bấm vào từng mục để xem chi tiết, bấm vào 1 dòng để mở đơn tương ứng.</p>
 
   <div id="khu-noi-dung"></div>
 </div>
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=124"></script>
+<script src="/js/api.js?v=125"></script>
 <script>
 function dinhDangThoiGian(iso) {
   const d = new Date(iso);
@@ -96,19 +126,22 @@ function veKhoiDonNhieuAo(loi, huy) {
 }
 
 // Y6 / L2 (11/10/2026): dòng có nút thao tác (không bọc cả dòng trong <a> như dongDon — nút trong link sẽ mở đơn khi bấm).
-function dongCoNut(sttKey, phuHtml, nutHtml) {
-  return `<div class="ttha-dong"><a class="stt" href="/order.html?stt=${encodeURIComponent(sttKey)}">${escapeHtml(sttKey)}</a>
+function dongCoNut(sttKey, phuHtml, nutHtml, lop = '') {
+  return `<div class="ttha-dong ${lop}"><a class="stt" href="/order.html?stt=${encodeURIComponent(sttKey)}">${escapeHtml(sttKey)}</a>
     <span class="phu" style="flex:1">${phuHtml}</span><span style="display:flex;gap:6px;flex-wrap:wrap">${nutHtml}</span></div>`;
 }
 const NHAN_NHAN = { VE_FILE: 'Đang vẽ file', CHAY_MAY: 'Đang chạy máy' };
 function nutDaXuLy(loai, d) {
   return `<button type="button" class="btn-hanh-dong phu" onclick='danhDauDaXuLy(${JSON.stringify(loai)}, ${escapeHtml(JSON.stringify(d.khoa))}, ${escapeHtml(JSON.stringify(d.giaTri))}, this)'>Đã xử lý</button>`;
 }
+// mucCanhBao (14/10/2026): mức cảnh báo trễ hạn của đơn (Đỏ/Cam/Vàng như Danh sách đơn) — nhãn + tô nền dòng; giữ thứ tự cũ.
+const NHAN_MUC_CANH_BAO = { DO: 'Đỏ', CAM: 'Cam', VANG: 'Vàng' };
 function veKhoiNhanQuaLau(ds) {
   if (ds.length === 0) return khoiRong('Không có đơn nào nhận quá lâu.');
   return `<div class="ttha-danh-sach">${ds.map(d => dongCoNut(d.sttKey,
-    `${NHAN_NHAN[d.loai]} · ${escapeHtml(d.nguoi || '?')} · ${d.soGio === null ? 'không rõ lúc nhận' : `đã nhận ${Math.floor(d.soGio)} giờ`}`,
-    `<button type="button" class="btn-hanh-dong" onclick='thuHoiDon(${escapeHtml(JSON.stringify(d.sttKey))}, ${JSON.stringify(d.loai)}, this)'>Thu hồi</button>${nutDaXuLy('NHAN_LAU', d)}`)).join('')}</div>`;
+    `${d.mucCanhBao ? `<span class="badge-canh-bao ${d.mucCanhBao.toLowerCase()}">Cảnh báo ${NHAN_MUC_CANH_BAO[d.mucCanhBao]}</span>` : ''}${NHAN_NHAN[d.loai]} · ${escapeHtml(d.nguoi || '?')} · ${d.soGio === null ? 'không rõ lúc nhận' : `đã nhận ${Math.floor(d.soGio)} giờ`}`,
+    `<button type="button" class="btn-hanh-dong" onclick='thuHoiDon(${escapeHtml(JSON.stringify(d.sttKey))}, ${JSON.stringify(d.loai)}, this)'>Thu hồi</button>${nutDaXuLy('NHAN_LAU', d)}`,
+    d.mucCanhBao ? 'muc-' + d.mucCanhBao.toLowerCase() : '')).join('')}</div>`;
 }
 const NHAN_QUY_TAC = { R1: 'Chưa được quét nhận', R2: 'Đứng yên', R3: 'Trạng thái bất thường' };
 function veKhoiVanChuyen(ds) {
@@ -138,47 +171,172 @@ async function thuHoiDon(sttKey, loai, nut) {
 }
 
 let nguoiDung; // người đang đăng nhập — nút Đẩy lại chỉ cho superadmin
+let kqGanNhat = null; // dữ liệu lần tải gần nhất (nút Sửa của ĐƠN CẦN CHECK đọc lại từ đây)
+
+// Mục đang mở — nhớ trên máy này (localStorage; trình duyệt chặn thì mọi mục đóng như mặc định).
+const KHOA_DANG_MO = 'ttha-dang-mo';
+function dsDangMo() {
+  try { return new Set(JSON.parse(localStorage.getItem(KHOA_DANG_MO) || '[]')); } catch (e) { return new Set(); }
+}
+function luuDangMo(khoa, mo) {
+  try {
+    const s = dsDangMo();
+    if (mo) s.add(khoa); else s.delete(khoa);
+    localStorage.setItem(KHOA_DANG_MO, JSON.stringify([...s]));
+  } catch (e) { /* không lưu được — bỏ qua */ }
+}
+// 1 mục = 1 thanh bấm mở ra; so = số việc cần xử lý (IN ĐẬM, CỠ LỚN). dangMo = dsDangMo() đọc 1 lần mỗi lần vẽ.
+function khoi(dangMo, khoa, tieuDe, so, than, { moSan = false, phu = '' } = {}) {
+  return `<details class="ttha-khoi${so ? '' : ' rong'}" data-khoa="${khoa}"${moSan || dangMo.has(khoa) ? ' open' : ''}>
+    <summary><h3 class="ttha-tieu-de">${tieuDe}${phu}</h3><span class="ttha-so">${so}</span></summary>
+    <div class="ttha-than">${than}</div>
+  </details>`;
+}
+
 async function taiTrungTamHanhDong() {
   const khu = document.getElementById('khu-noi-dung');
-  khu.innerHTML = skeletonList(4);
+  const giuForm = docFormDcc(); // vẽ lại cả trang (sau Đã xử lý / Bỏ qua...) không làm mất ghi chú đang gõ dở
+  if (!kqGanNhat) khu.innerHTML = skeletonList(4);
   const kq = await apiFetch('/trung-tam-hanh-dong/danh-sach');
-  khu.innerHTML = `
-    <div class="ttha-khoi">
-      <h3>Chưa ghi được sang Sheet Seller <span class="ttha-dem">${kq.loiSheetSeller.length}</span></h3>
-      <p style="color:var(--color-text-muted);margin-top:-4px">Ghi chú xưởng / tracking / Delivered chưa có trên Sheet của Seller. Sửa nguyên nhân (quyền Sheet, CONFIG, cột, mã đơn…) rồi Đẩy lại${laSuperAdmin(nguoiDung.vaiTro) ? '' : ' — chỉ superadmin đẩy lại được'}. Chi tiết và nhật ký: Settings.</p>
-      ${htmlLoiSheetSeller(kq.loiSheetSeller, laSuperAdmin(nguoiDung.vaiTro))}
+  kqGanNhat = kq;
+  const laSA = laSuperAdmin(nguoiDung.vaiTro);
+  const soNhanLau = kq.nhanQuaLau.filter(d => d.quaHan).length;
+  const soKhongRo = kq.nhanQuaLau.filter(d => d.khongRo).length;
+  // Mục đang mở: đọc localStorage 1 lần. ĐƠN CẦN CHECK không nhớ qua lần vào trang (tự mở khi có ghi chú) — chỉ giữ trong phiên này.
+  const dangMo = dsDangMo();
+  if (dccMoTrongPhien) dangMo.add('don-can-check'); else dangMo.delete('don-can-check');
+  const kh = (...a) => khoi(dangMo, ...a);
+  // Thứ tự (14/10/2026, theo yêu cầu người dùng): ĐƠN CẦN CHECK đầu tiên (chỉ superadmin, tự mở khi có ghi chú), "Chưa ghi được sang
+  // Sheet Seller" xuống cuối.
+  khu.innerHTML = [
+    laSA && kq.donCanCheck ? kh('don-can-check', 'ĐƠN CẦN CHECK', kq.donCanCheck.length, veKhoiDonCanCheck(kq.donCanCheck), { moSan: kq.donCanCheck.length > 0 }) : '',
+    kh('don-nhieu-ao', 'DonNhieuAo cần xử lý', kq.loiDonNhieuAo.length + kq.nhomHuyConTracking.length, veKhoiDonNhieuAo(kq.loiDonNhieuAo, kq.nhomHuyConTracking)),
+    kh('huy-gan-day', 'Đơn mới huỷ (48 giờ gần đây)', kq.huyGanDay.length, veKhoiHuy(kq.huyGanDay)),
+    kh('loi-san-xuat', 'Đơn LỖI SẢN XUẤT CẦN LÀM LẠI', kq.loiSanXuat.length, veKhoiLoiSanXuat(kq.loiSanXuat)),
+    kh('uu-tien', 'Đơn ưu tiên chưa xử lý', kq.uuTienChuaXuLy.length, veKhoiUuTien(kq.uuTienChuaXuLy)),
+    kh('nhan-qua-lau', 'Đơn nhận quá lâu', soNhanLau,
+      `<p class="ttha-mo-ta">Vẽ file quá ${kq.nguongNhan.gioVe} giờ${kq.nguongNhan.batVe ? '' : ' (đang tắt)'}, chạy máy quá ${kq.nguongNhan.gioChay} giờ${kq.nguongNhan.batChay ? '' : ' (đang tắt)'} — chỉnh ở Settings. Đơn được nhận lại thì nhắc hiện lại. Màu dòng = mức cảnh báo trễ hạn của đơn (Đỏ / Cam / Vàng).</p>${veKhoiNhanQuaLau(kq.nhanQuaLau)}`,
+      { phu: soKhongRo ? ` <small>+ ${soKhongRo} không rõ lúc nhận</small>` : '' }),
+    kh('van-chuyen', 'Vận chuyển bất thường', kq.vanChuyenBatThuong.length,
+      `<p class="ttha-mo-ta">Đã "Đã xử lý" mà trạng thái tracking đổi tiếp và vẫn bất thường thì hiện lại.</p>${veKhoiVanChuyen(kq.vanChuyenBatThuong)}`),
+    kh('loi-tracking-gke', 'Lỗi tự động mua tracking GKE (48 giờ gần đây)', kq.loiTrackingGke.length, veKhoiLoiTracking(kq.loiTrackingGke)),
+    kh('sheet-seller', 'Chưa ghi được sang Sheet Seller', kq.loiSheetSeller.length,
+      `<p class="ttha-mo-ta">Ghi chú xưởng / tracking / Delivered chưa có trên Sheet của Seller. Sửa nguyên nhân (quyền Sheet, CONFIG, cột, mã đơn…) rồi Đẩy lại, hoặc Bỏ qua lỗi không cần xử lý (lỗi lần mới của đơn đó sẽ hiện lại)${laSA ? '' : ' — chỉ superadmin đẩy lại / bỏ qua được'}. Chi tiết và nhật ký: Settings.</p>${htmlLoiSheetSeller(kq.loiSheetSeller, laSA)}`),
+  ].join('');
+  // 'toggle' chạy cả khi mục được vẽ ra đã mở sẵn — mục thường thì ghi lại đúng trạng thái đang có (vô hại); ĐƠN CẦN CHECK chỉ nhớ trong
+  // phiên, KHÔNG ghi localStorage (tự mở vì có ghi chú không được thành "đã mở" vĩnh viễn khi hết ghi chú).
+  khu.querySelectorAll('details.ttha-khoi').forEach(d => d.addEventListener('toggle', () => {
+    if (d.dataset.khoa === 'don-can-check') dccMoTrongPhien = d.open; else luuDangMo(d.dataset.khoa, d.open);
+  }));
+  ghiFormDcc(giuForm);
+  if (dccXemDaCheck) xemDaCheck(null); // đang xem danh sách đã check thì vẽ lại cả danh sách đó
+}
+
+// ---------- ĐƠN CẦN CHECK (14/10/2026, theo yêu cầu người dùng — chỉ superadmin) ----------
+let dccDangSua = null; // id ghi chú đang sửa (null = đang tạo mới)
+let dccMoTrongPhien = false; // mục ĐƠN CẦN CHECK đang mở (chỉ trong phiên trang này)
+let dccXemDaCheck = false; // đã bấm "Xem các ghi chú đã check" — giữ danh sách đó qua các lần vẽ lại trang
+function veKhoiDonCanCheck(ds) {
+  return `<div class="dcc-form">
+      <textarea id="dcc-ma" rows="1" placeholder="Mã đơn * — nhiều mã cách nhau bằng dấu cách hoặc xuống dòng" aria-label="Mã đơn"></textarea>
+      <textarea id="dcc-noi-dung" rows="3" placeholder="Nội dung cần kiểm tra *" aria-label="Nội dung cần kiểm tra"></textarea>
+      <textarea id="dcc-ghi-chu" rows="2" placeholder="Ghi chú quan trọng (không bắt buộc)" aria-label="Ghi chú quan trọng"></textarea>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button type="button" class="btn-hanh-dong" id="dcc-nut-luu" onclick="luuDonCanCheck(this)">Lưu ghi chú</button>
+        <button type="button" class="btn-hanh-dong phu" id="dcc-nut-huy" onclick="huySuaDcc()" hidden>Huỷ sửa</button>
+      </div>
     </div>
-    <div class="ttha-khoi">
-      <h3>DonNhieuAo cần xử lý <span class="ttha-dem">${kq.loiDonNhieuAo.length + kq.nhomHuyConTracking.length}</span></h3>
-      ${veKhoiDonNhieuAo(kq.loiDonNhieuAo, kq.nhomHuyConTracking)}
-    </div>
-    <div class="ttha-khoi">
-      <h3>Đơn mới huỷ (48 giờ gần đây) <span class="ttha-dem">${kq.huyGanDay.length}</span></h3>
-      ${veKhoiHuy(kq.huyGanDay)}
-    </div>
-    <div class="ttha-khoi">
-      <h3>Đơn LỖI SẢN XUẤT CẦN LÀM LẠI <span class="ttha-dem">${kq.loiSanXuat.length}</span></h3>
-      ${veKhoiLoiSanXuat(kq.loiSanXuat)}
-    </div>
-    <div class="ttha-khoi">
-      <h3>Đơn ưu tiên chưa xử lý <span class="ttha-dem">${kq.uuTienChuaXuLy.length}</span></h3>
-      ${veKhoiUuTien(kq.uuTienChuaXuLy)}
-    </div>
-    <div class="ttha-khoi">
-      <h3>Đơn nhận quá lâu <span class="ttha-dem">${kq.nhanQuaLau.filter(d => d.quaHan).length}</span>${(n => n ? ` <span style="font-size:0.85rem;font-weight:400;color:var(--color-text-muted)">+ ${n} không rõ lúc nhận</span>` : '')(kq.nhanQuaLau.filter(d => d.khongRo).length)}</h3>
-      <p style="color:var(--color-text-muted);margin-top:-4px">Vẽ file quá ${kq.nguongNhan.gioVe} giờ${kq.nguongNhan.batVe ? '' : ' (đang tắt)'}, chạy máy quá ${kq.nguongNhan.gioChay} giờ${kq.nguongNhan.batChay ? '' : ' (đang tắt)'} — chỉnh ở Settings. Đơn được nhận lại thì nhắc hiện lại.</p>
-      ${veKhoiNhanQuaLau(kq.nhanQuaLau)}
-    </div>
-    <div class="ttha-khoi">
-      <h3>Vận chuyển bất thường <span class="ttha-dem">${kq.vanChuyenBatThuong.length}</span></h3>
-      <p style="color:var(--color-text-muted);margin-top:-4px">Đã "Đã xử lý" mà trạng thái tracking đổi tiếp và vẫn bất thường thì hiện lại.</p>
-      ${veKhoiVanChuyen(kq.vanChuyenBatThuong)}
-    </div>
-    <div class="ttha-khoi">
-      <h3>Lỗi tự động mua tracking GKE (48 giờ gần đây) <span class="ttha-dem">${kq.loiTrackingGke.length}</span></h3>
-      ${veKhoiLoiTracking(kq.loiTrackingGke)}
-    </div>
-  `;
+    ${ds.length ? ds.map(g => htmlGhiChuCheck(g, false)).join('') : khoiRong('Chưa có đơn nào cần check.')}
+    <p style="margin-top:12px"><button type="button" class="btn-hanh-dong phu" onclick="xemDaCheck(this)">Xem các ghi chú đã check</button></p>
+    <div id="dcc-da-check"></div>`;
+}
+function htmlGhiChuCheck(g, daCheck) {
+  const don = g.don.map(d => `<div class="dcc-don"><a href="/order.html?stt=${encodeURIComponent(d.sttKey)}"><strong>${escapeHtml(d.sttKey)}</strong></a>
+    ${d.tonTai ? ` · ${escapeHtml(d.tieuDe || '')}${d.tenKhachHang ? ' · ' + escapeHtml(d.tenKhachHang) : ''} · <em>${escapeHtml(d.trangThai || '(chưa có trạng thái)')}</em>${d.xuong ? ' · Xưởng ' + escapeHtml(d.xuong) : ''}`
+      : ' · <span style="color:var(--color-danger-text)">không còn đơn này</span>'}</div>`).join('');
+  return `<div class="dcc-the${daCheck ? ' da-check' : ''}">
+    ${don}
+    <div class="dcc-noi-dung"><strong>Cần kiểm tra:</strong> ${escapeHtml(g.noi_dung)}</div>
+    ${g.ghi_chu ? `<div class="dcc-ghi-chu"><strong>Ghi chú quan trọng:</strong> ${escapeHtml(g.ghi_chu)}</div>` : ''}
+    ${daCheck ? `<div class="dcc-noi-dung"><strong>Đã check</strong> bởi ${escapeHtml(g.nguoi_check)} lúc ${escapeHtml(dinhDangThoiGian(g.luc_check))}${g.ket_qua_check ? `: ${escapeHtml(g.ket_qua_check)}` : ''}</div>` : ''}
+    <div class="dcc-meta">Ghi bởi ${escapeHtml(g.nguoi_tao)} lúc ${escapeHtml(dinhDangThoiGian(g.luc_tao))}${g.nguoi_sua ? ` · sửa bởi ${escapeHtml(g.nguoi_sua)} lúc ${escapeHtml(dinhDangThoiGian(g.luc_sua))}` : ''}</div>
+    ${daCheck ? '' : `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+      <button type="button" class="btn-hanh-dong phu" onclick="suaGhiChuDcc(${g.id})">Sửa</button>
+      <button type="button" class="btn-hanh-dong" onclick="daCheckDcc(${g.id}, this)">Đã check</button></div>`}
+  </div>`;
+}
+function docFormDcc() {
+  const ma = document.getElementById('dcc-ma');
+  return ma ? { ma: ma.value, noiDung: document.getElementById('dcc-noi-dung').value, ghiChu: document.getElementById('dcc-ghi-chu').value } : null;
+}
+function ghiFormDcc(v) {
+  const ma = document.getElementById('dcc-ma');
+  if (!ma) return;
+  if (v) { ma.value = v.ma; document.getElementById('dcc-noi-dung').value = v.noiDung; document.getElementById('dcc-ghi-chu').value = v.ghiChu; }
+  document.getElementById('dcc-nut-luu').textContent = dccDangSua ? 'Lưu sửa' : 'Lưu ghi chú';
+  document.getElementById('dcc-nut-huy').hidden = !dccDangSua;
+}
+async function luuDonCanCheck(nut) {
+  const v = docFormDcc();
+  const sttKeys = v.ma.split(/[\s;]+/).filter(Boolean); // không tách theo dấu phẩy: mã đơn có thể chứa phẩy (máy chủ tự xử lý "A1,B2")
+  nut.disabled = true;
+  try {
+    await apiFetch(dccDangSua ? `/trung-tam-hanh-dong/don-can-check/${dccDangSua}` : '/trung-tam-hanh-dong/don-can-check',
+      { method: dccDangSua ? 'PUT' : 'POST', body: JSON.stringify({ sttKeys, noiDung: v.noiDung, ghiChu: v.ghiChu }) });
+    dccDangSua = null;
+    ghiFormDcc({ ma: '', noiDung: '', ghiChu: '' });
+    await taiTrungTamHanhDong();
+  } catch (e) {
+    if (dccDangSua && e.status === 404) {
+      // Ghi chú đang sửa vừa được người khác bấm Đã check — thoát chế độ sửa, GIỮ chữ đã gõ; bấm Lưu lần nữa = tạo ghi chú mới.
+      dccDangSua = null;
+      ghiFormDcc(null);
+      alert('Ghi chú này vừa được người khác bấm "Đã check" nên không sửa được nữa. Nội dung bạn gõ vẫn còn — bấm "Lưu ghi chú" để lưu thành ghi chú mới.');
+      await taiTrungTamHanhDong();
+    } else {
+      alert('Lỗi: ' + e.message);
+    }
+  } finally {
+    nut.disabled = false;
+  }
+}
+function suaGhiChuDcc(id) {
+  const g = (kqGanNhat.donCanCheck || []).find(x => x.id === id);
+  if (!g) return;
+  dccDangSua = id;
+  ghiFormDcc({ ma: g.stt_keys.join(' '), noiDung: g.noi_dung, ghiChu: g.ghi_chu });
+  document.getElementById('dcc-ma').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+function huySuaDcc() {
+  dccDangSua = null;
+  ghiFormDcc({ ma: '', noiDung: '', ghiChu: '' });
+}
+async function daCheckDcc(id, nut) {
+  const ketQua = prompt('Đánh dấu ĐÃ CHECK. Kết quả kiểm tra (không bắt buộc):', '');
+  if (ketQua === null) return;
+  nut.disabled = true;
+  try {
+    await apiFetch(`/trung-tam-hanh-dong/don-can-check/${id}/da-check`, { method: 'POST', body: JSON.stringify({ ketQua }) });
+    if (dccDangSua === id) huySuaDcc();
+    await taiTrungTamHanhDong();
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
+    nut.disabled = false;
+  }
+}
+async function xemDaCheck(nut) { // nut null = vẽ lại sau khi trang tự tải lại
+  const el = document.getElementById('dcc-da-check');
+  if (!el) return;
+  dccXemDaCheck = true;
+  if (nut) nut.disabled = true;
+  try {
+    const ds = await apiFetch('/trung-tam-hanh-dong/don-can-check?daCheck=1');
+    el.innerHTML = ds.length ? `<h4 style="margin:8px 0">Đã check (${ds.length} gần nhất)</h4>${ds.map(g => htmlGhiChuCheck(g, true)).join('')}` : khoiRong('Chưa có ghi chú nào đã check.');
+  } catch (e) {
+    el.innerHTML = `<p style="color:var(--color-danger-text)">Không tải được: ${escapeHtml(e.message)}</p>`;
+  } finally {
+    if (nut) nut.disabled = false;
+  }
 }
 
 (async () => {

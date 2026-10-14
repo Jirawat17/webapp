@@ -15,6 +15,19 @@ router.get('/loi-dang-cho', requireRole(), (req, res) => {
   res.json(nhatKyDbService.layLoiDongBoDangCho().filter(d => trongPhamVi(d.STT_Key)));
 });
 
+// "Bỏ qua" 1 lỗi đang chờ (14/10/2026, theo yêu cầu người dùng) — CHỈ superadmin (cùng quyền Đẩy lại). Ghi nhận đúng LẦN lỗi hiện tại
+// (id dòng lỗi): đơn đó ghi lỗi lần mới thì hiện lại (nhatKyDbService.js#layLoiDongBoDangCho).
+router.post('/bo-qua', requireExactRole('superadmin'), (req, res) => {
+  const { sttKey, loai } = req.body || {};
+  const loi = nhatKyDbService.layLoiDongBoDangCho().find(d => d.STT_Key === sttKey && d.Loai === loai);
+  if (!loi) return res.status(404).json({ error: 'Lỗi này không còn trong danh sách (đã ghi lại được hoặc đã bỏ qua).' });
+  nhatKyDbService.danhDauDaXuLy({
+    loai: 'SHEET_SELLER', khoa: `${sttKey}|${loai}`, giaTri: String(loi.id), nguoi: req.session.user.ten,
+    luc: require('../services/dateUtils').thoiGianVNISOString(),
+  });
+  res.json({ ok: true });
+});
+
 // Giá trị HIỆN TẠI trong app để đẩy lại (không dùng lại giá trị cũ lúc lỗi).
 function giaTriHienTai(r, loai) {
   if (loai === 'GHI_CHU') return { GHI_CHU_XUONG: r.GHI_CHU_XUONG_NOI_BO || '' };

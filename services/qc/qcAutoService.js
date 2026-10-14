@@ -27,7 +27,7 @@ const QUY_TAC = {
   },
   QC2: {
     trangThai: r => ['Đã sản xuất', 'ĐÃ DÁN TEM', 'DELIVERED_Đã giao đến khách'].includes(r.TRANG_THAI_XUONG),
-    cotAnh: ['Anh_Da_San_Xuat_URL'], cotMoc: 'THOI_GIAN_SAN_XUAT', moTa: 'Đã sản xuất',
+    cotAnh: ['Anh_Da_San_Xuat_URL', 'Anh_Da_San_Xuat_URL_2'], cotMoc: 'THOI_GIAN_SAN_XUAT', moTa: 'Đã sản xuất',
   },
   QC3: {
     trangThai: r => ['ĐÃ DÁN TEM', 'DELIVERED_Đã giao đến khách'].includes(r.TRANG_THAI_XUONG),

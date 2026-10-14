@@ -645,11 +645,26 @@ function htmlLoiSheetSeller(ds, choDayLai) {
         <td style="color:var(--color-danger-text)">${escapeHtml(d.LyDo)}</td>
         <td>${escapeHtml(tgNgan(d.ThoiGian))}<br><small>${d.SoLanLoi} lần lỗi · ${escapeHtml(d.NguoiDung)}</small></td>
         ${choDayLai ? `<td><button type="button" class="btn-hanh-dong phu" data-stt="${escapeHtml(d.STT_Key)}" data-loai="${escapeHtml(d.Loai)}"
-          onclick="dayLaiSheetSeller([{ sttKey: this.dataset.stt, loai: this.dataset.loai }], this)">Đẩy lại</button></td>` : ''}
+          onclick="dayLaiSheetSeller([{ sttKey: this.dataset.stt, loai: this.dataset.loai }], this)">Đẩy lại</button>
+          <button type="button" class="btn-hanh-dong phu" data-stt="${escapeHtml(d.STT_Key)}" data-loai="${escapeHtml(d.Loai)}"
+          onclick="boQuaLoiSheetSeller(this.dataset.stt, this.dataset.loai, this)">Bỏ qua</button></td>` : ''}
       </tr>`).join('')}
     </table></div>`;
 }
 let _taiLaiSauDayLai = null; // trang đăng ký hàm vẽ lại (datTaiLaiSauDayLai)
+// "Bỏ qua" 1 lỗi ghi Sheet Seller (14/10/2026, theo yêu cầu người dùng — chỉ superadmin): ẩn khỏi danh sách lỗi đang chờ và khỏi
+// "Đẩy lại tất cả"; đơn đó ghi lỗi lần mới thì hiện lại (routes/dongBoSheetSeller.js POST /bo-qua).
+async function boQuaLoiSheetSeller(sttKey, loai, btn) {
+  if (!confirm(`Bỏ qua lỗi ghi Sheet Seller của đơn ${sttKey} (${NHAN_LOAI_SHEET_SELLER[loai] || loai})? Lỗi này sẽ không hiện ở đây nữa — nếu đơn lại ghi lỗi lần mới thì hiện lại.`)) return;
+  btn.disabled = true;
+  try {
+    await apiFetch('/dong-bo-sheet-seller/bo-qua', { method: 'POST', body: JSON.stringify({ sttKey, loai }) });
+    if (_taiLaiSauDayLai) await _taiLaiSauDayLai();
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
+    btn.disabled = false;
+  }
+}
 function datTaiLaiSauDayLai(fn) { _taiLaiSauDayLai = fn; }
 // items: [{ sttKey, loai }] hoặc null = đẩy lại TẤT CẢ lỗi đang chờ. Đẩy lại dùng giá trị HIỆN TẠI trong app.
 async function dayLaiSheetSeller(items, btn) {

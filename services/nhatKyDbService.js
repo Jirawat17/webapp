@@ -165,7 +165,11 @@ function layLoiDongBoDangCho() {
     WHERE d.KetQua = 'LOI' ORDER BY d.id DESC`).all();
   const demLoi = db.prepare(`SELECT COUNT(*) AS c FROM dong_bo_sheet_seller WHERE STT_Key = ? AND Loai = ? AND KetQua = 'LOI'
     AND id > COALESCE((SELECT MAX(id) FROM dong_bo_sheet_seller WHERE STT_Key = ? AND Loai = ? AND KetQua = 'OK'), 0)`);
-  return moiNhat.map(d => ({ ...d, SoLanLoi: demLoi.get(d.STT_Key, d.Loai, d.STT_Key, d.Loai).c }));
+  // "Bỏ qua" (14/10/2026, theo yêu cầu người dùng — Trung tâm hành động): ẩn đúng LẦN lỗi đã bỏ qua (gia_tri = id dòng lỗi); đơn đó ghi
+  // lỗi lần MỚI (id mới) thì hiện lại. Bị bỏ qua thì cũng không nằm trong "Đẩy lại tất cả". Nhật ký đầy đủ vẫn ở Settings.
+  const boQua = layDaXuLy('SHEET_SELLER');
+  return moiNhat.filter(d => (boQua.get(`${d.STT_Key}|${d.Loai}`) || {}).gia_tri !== String(d.id))
+    .map(d => ({ ...d, SoLanLoi: demLoi.get(d.STT_Key, d.Loai, d.STT_Key, d.Loai).c }));
 }
 // Lần ghi GẦN NHẤT của 1 đơn theo 1 loại (vd ghi chú xưởng) — null nếu chưa từng ghi.
 const cauDongBoGanNhat = db.prepare(`SELECT ThoiGian, KetQua, LyDo, GiaTriSau FROM dong_bo_sheet_seller WHERE STT_Key = ? AND Loai = ? ORDER BY id DESC LIMIT 1`);
@@ -426,6 +430,37 @@ function layDaXuLy(loai) {
   return new Map(db.prepare(`SELECT * FROM canh_bao_da_xu_ly WHERE loai = ?`).all(loai).map(r => [r.khoa, r]));
 }
 
+// ---------- ĐƠN CẦN CHECK (14/10/2026, theo yêu cầu người dùng — Trung tâm hành động, CHỈ superadmin): ghi chú nhanh 1 hay nhiều đơn
+// cần kiểm tra cho các superadmin khác xem. stt_keys = JSON mảng mã đơn. "Đã check" thì rời danh sách nhưng vẫn lưu (xem lại được).
+db.exec(`CREATE TABLE IF NOT EXISTS don_can_check (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, stt_keys TEXT NOT NULL DEFAULT '[]', noi_dung TEXT NOT NULL, ghi_chu TEXT NOT NULL DEFAULT '',
+  nguoi_tao TEXT NOT NULL, luc_tao TEXT NOT NULL, nguoi_sua TEXT NOT NULL DEFAULT '', luc_sua TEXT NOT NULL DEFAULT '',
+  da_check INTEGER NOT NULL DEFAULT 0, nguoi_check TEXT NOT NULL DEFAULT '', luc_check TEXT NOT NULL DEFAULT '', ket_qua_check TEXT NOT NULL DEFAULT ''
+)`);
+const docDonCanCheck = r => {
+  let dsMa = [];
+  try { dsMa = JSON.parse(r.stt_keys); } catch (e) { /* hỏng -> rỗng */ }
+  return { ...r, stt_keys: Array.isArray(dsMa) ? dsMa : [] };
+};
+function themDonCanCheck({ sttKeys, noiDung, ghiChu, nguoi, luc }) {
+  return db.prepare(`INSERT INTO don_can_check (stt_keys, noi_dung, ghi_chu, nguoi_tao, luc_tao) VALUES (?, ?, ?, ?, ?)`)
+    .run(JSON.stringify(sttKeys), noiDung, ghiChu || '', nguoi, luc).lastInsertRowid;
+}
+// Chỉ sửa / check ghi chú CHƯA check — trả số dòng đã đổi (0 = không có hoặc đã check).
+function suaDonCanCheck(id, { sttKeys, noiDung, ghiChu, nguoi, luc }) {
+  return db.prepare(`UPDATE don_can_check SET stt_keys = ?, noi_dung = ?, ghi_chu = ?, nguoi_sua = ?, luc_sua = ? WHERE id = ? AND da_check = 0`)
+    .run(JSON.stringify(sttKeys), noiDung, ghiChu || '', nguoi, luc, id).changes;
+}
+function danhDauDaCheck(id, { nguoi, luc, ketQua }) {
+  return db.prepare(`UPDATE don_can_check SET da_check = 1, nguoi_check = ?, luc_check = ?, ket_qua_check = ? WHERE id = ? AND da_check = 0`)
+    .run(nguoi, luc, ketQua || '', id).changes;
+}
+// daCheck false: đang chờ (mới nhất trước); true: đã check gần nhất trước, tối đa gioiHan dòng.
+function layDonCanCheck(daCheck = false, gioiHan = 200) {
+  return db.prepare(`SELECT * FROM don_can_check WHERE da_check = ? ORDER BY ${daCheck ? 'luc_check DESC, id DESC' : 'id DESC'} LIMIT ?`)
+    .all(daCheck ? 1 : 0, gioiHan).map(docDonCanCheck);
+}
+
 // ---------- Y20 (11/10/2026): báo lỗi app từ nhân viên. thong_tin = JSON (trang, trình duyệt, màn hình, lỗi JS, lỗi API).
 db.exec(`CREATE TABLE IF NOT EXISTS bao_loi_app (
   id INTEGER PRIMARY KEY AUTOINCREMENT, luc TEXT NOT NULL, nguoi TEXT NOT NULL, vai_tro TEXT NOT NULL DEFAULT '', trang TEXT NOT NULL DEFAULT '',
@@ -520,7 +555,7 @@ function duyetTongHopLogsUploadAnh(loc = {}) {
 }
 
 module.exports = {
-  ghiNhieuLogsUploadAnh, dsLogsUploadAnh, duyetTongHopLogsUploadAnh, danhDauDaXuLy, layDaXuLy, themBaoLoi, ganAnhBaoLoi, demBaoLoiTu, layBaoLoi, dsBaoLoi, capNhatBaoLoi,
+  ghiNhieuLogsUploadAnh, dsLogsUploadAnh, duyetTongHopLogsUploadAnh, danhDauDaXuLy, layDaXuLy, themDonCanCheck, suaDonCanCheck, danhDauDaCheck, layDonCanCheck, themBaoLoi, ganAnhBaoLoi, demBaoLoiTu, layBaoLoi, dsBaoLoi, capNhatBaoLoi,
   layNote, layDanhSachNote, layTatCaTheNote, taoNote, suaNote, datAnhNote, xoaNote,
   ghiQcLog, layQcLog, layQcLogTheoId, danhGiaQcLog, thongKeDanhGiaQc, thongKeTokenQc, layDongDaDanhGiaCoAi, maxQcLogId, layCclSauId, tongKetQcNgay,
   taoKinhNghiem, suaKinhNghiem, doiTrangThaiKinhNghiem, layKinhNghiemTheoId, layDanhSachKinhNghiem, layKinhNghiemApDung, tangSoLanDungKinhNghiem, giuQuyenAutoQc, ketThucAutoQc, layTatCaAutoQc, donDepAutoQcDangChay,

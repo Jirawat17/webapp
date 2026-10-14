@@ -8,8 +8,9 @@ const orderService = require('../services/orderService');
 const storageService = require('../services/storageService');
 const { taiDsAnh, nhanDangKieuAnh } = require('../services/anhNguonService');
 const { ghiLog } = require('../services/logService');
-const { requireLogin, requireExactRole } = require('../middleware/auth');
+const { requireLogin, requireExactRole, laAdmin } = require('../middleware/auth');
 const { layCaiDatNenAnh, datCaiDatNenAnh } = require('../services/caiDatDbService');
+const { thoiGianVNISOString } = require('../services/dateUtils');
 
 router.use(requireLogin);
 
@@ -80,6 +81,23 @@ function thieuTrackingThat(row) {
   return !row.TRACKING_ID;
 }
 
+// ẢNH ĐÃ SẢN XUẤT — TỐI ĐA 2 ẢNH/ĐƠN (14/10/2026, theo yêu cầu người dùng). Đơn chỉ chuyển "Đã sản xuất" khi chụp XONG CẢ LƯỢT:
+//   - ảnh 1 (viTri 1): ghi Anh_Da_San_Xuat_URL, XOÁ ảnh 2 cũ (nếu có), đóng dấu THOI_GIAN_ANH_SAN_XUAT; xong=0 -> đơn vẫn "Đang chạy máy".
+//   - ảnh 2 (viTri 2): chỉ khi đã có ảnh 1 CỦA LƯỢT NÀY; ghi Anh_Da_San_Xuat_URL_2.
+//   - xong: gửi kèm ảnh (xong=1 — mặc định, giữ đúng hành vi cũ 1 ảnh) hoặc POST /hoan-tat-san-xuat (nút "Xong" / quét đơn tiếp theo).
+// "Ảnh 1 của lượt này" = có ảnh 1, đóng dấu SAU lúc đơn vào "Đang chạy máy" lần gần nhất (MOC_VAO_TRANG_THAI) — ảnh của lượt
+// chạy máy TRƯỚC (đơn làm lại sau lỗi) không tính, chụp lại từ ảnh 1 như mới (người dùng chốt: quét lại đơn đang chụp dở thì GIỮ
+// ảnh 1, cho chụp tiếp). Ảnh cũ chưa có dấu thời gian (trước 14/10/2026) cũng không tính.
+const SO_ANH_SAN_XUAT_TOI_DA = 2;
+const TRANG_THAI_DUOC_THAY_ANH_SX = 'Đã sản xuất'; // admin thay ảnh đã sản xuất (POST /upload thay=1) — người dùng chốt: chỉ trạng thái này
+function soAnhSanXuatLuotNay(row) {
+  if (row.TRANG_THAI_XUONG !== 'Đang chạy máy' || !row.Anh_Da_San_Xuat_URL || !row.THOI_GIAN_ANH_SAN_XUAT) return 0;
+  let vaoLuc = '';
+  try { vaoLuc = (JSON.parse(row.MOC_VAO_TRANG_THAI || '{}') || {})['Đang chạy máy'] || ''; } catch (e) { /* hỏng -> coi như không rõ */ }
+  if (vaoLuc && row.THOI_GIAN_ANH_SAN_XUAT < vaoLuc) return 0; // cùng định dạng thoiGianVNISOString -> so chuỗi được
+  return row.Anh_Da_San_Xuat_URL_2 ? 2 : 1;
+}
+
 // Kiểm tra ĐỦ ĐIỀU KIỆN chụp ảnh cho 1 đơn — KHÔNG cần file ảnh. Dùng NGAY SAU khi quét QR sống để
 // xác định đơn (public/scan.html, mode photo_san_xuat/photo_da_dan_tem — xem
 // docs/superpowers/specs/2026-09-07-tach-quet-chup-anh-design.md), TRƯỚC KHI mở camera chụp thật —
@@ -115,7 +133,8 @@ router.post('/kiem-tra', async (req, res) => {
 
   const [daGanKH] = await orderService.ganTenKhachHang([row]);
   const nhomNhieuAo = chuyenTuDong ? await orderService.canhBaoNhomKhiQuet(row, chuyenTuDong.chuyenSang) : null; // F1
-  res.json({ sttKey: row.STT_Key, tieuDe: orderService.tieuDeSanPham(row), tenKhachHang: daGanKH.TenKhachHang, nhomNhieuAo });
+  res.json({ sttKey: row.STT_Key, tieuDe: orderService.tieuDeSanPham(row), tenKhachHang: daGanKH.TenKhachHang, nhomNhieuAo,
+    ...(moc === 'da_san_xuat' ? { soAnhLuotNay: soAnhSanXuatLuotNay(row) } : {}) });
 });
 
 // Vì mã đơn đã lấy từ bước quét QR ngay trước đó trong cùng luồng thao tác (sttKey gửi kèm trong
@@ -158,7 +177,16 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
   if (!row || !orderService.coQuyenTheoXuong(user, row)) return res.status(404).json({ error: 'Không tìm thấy đơn hàng: ' + sttKey, nghiepVu: true });
 
   const chuyenTuDong = MOC_TU_DONG_CHUYEN_TRANG_THAI[moc];
-  if (chuyenTuDong && row.TRANG_THAI_XUONG !== chuyenTuDong.yeuCau) {
+  // THAY ảnh đã sản xuất (14/10/2026, theo yêu cầu người dùng — chỉ trang Chi tiết đơn): admin/superadmin, đơn ĐANG "Đã sản xuất". Thay cả
+  // lượt (ảnh 1 xoá ảnh 2 cũ), KHÔNG đổi trạng thái / THOI_GIAN_SAN_XUAT (mốc tự mua tracking), không tự chạy lại QC2; link cũ ghi trong
+  // lịch sử đơn (urlCu).
+  const thayAnh = moc === 'da_san_xuat' && req.body.thay === '1';
+  if (thayAnh && !laAdmin(user.vaiTro)) return res.status(403).json({ error: 'Chỉ admin được thay ảnh đã sản xuất' });
+  if (thayAnh && row.TRANG_THAI_XUONG !== TRANG_THAI_DUOC_THAY_ANH_SX) {
+    return res.status(400).json({ error: `Đơn "${sttKey}" đang ở trạng thái "${row.TRANG_THAI_XUONG}" — chỉ thay ảnh đã sản xuất được khi đơn đang ở "${TRANG_THAI_DUOC_THAY_ANH_SX}".`,
+      nghiepVu: true, trangThaiHienTai: row.TRANG_THAI_XUONG });
+  }
+  if (!thayAnh && chuyenTuDong && row.TRANG_THAI_XUONG !== chuyenTuDong.yeuCau) {
     return res.status(400).json({
       error: `Đơn "${sttKey}" đang ở trạng thái "${row.TRANG_THAI_XUONG}" — chỉ chụp ảnh được khi đơn đang ở "${chuyenTuDong.yeuCau}".`, nghiepVu: true,
       trangThaiHienTai: row.TRANG_THAI_XUONG, // scan.html: = trạng thái đích khi gửi lại ảnh -> lần gửi trước đã lưu (mất phản hồi)
@@ -174,6 +202,16 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
   if (!req.file.mimetype || !req.file.mimetype.startsWith('image/')) {
     return res.status(400).json({ error: 'File gửi lên không phải là ảnh' });
   }
+
+  // Ảnh đã sản xuất 1/2 + có chuyển trạng thái luôn không (xem soAnhSanXuatLuotNay). Không gửi -> ảnh 1 + chuyển luôn (hành vi cũ).
+  const viTri = req.body.viTri === '2' ? 2 : 1;
+  const xong = req.body.xong !== '0' && !thayAnh; // thay ảnh: không bao giờ đổi trạng thái
+  if (moc !== 'da_san_xuat' && (viTri !== 1 || req.body.xong === '0')) return res.status(400).json({ error: 'Mốc ảnh này chỉ có 1 ảnh' });
+  // Ảnh 2 phải thuộc đúng lượt có ảnh 1. Thay ảnh: ảnh 1 MỚI đã lưu sau lúc đơn sang "Đã sản xuất" (THOI_GIAN_ANH_SAN_XUAT > THOI_GIAN_SAN_XUAT).
+  const loiAnh2 = r => (viTri !== 2 ? null
+    : thayAnh ? ((r.THOI_GIAN_ANH_SAN_XUAT || '') > (r.THOI_GIAN_SAN_XUAT || '') ? null : `Đơn "${sttKey}": thay ảnh 2 phải đi cùng ảnh 1 mới — chọn lại cả 2 ảnh.`)
+    : soAnhSanXuatLuotNay(r) < 1 ? `Đơn "${sttKey}" chưa có ảnh đã sản xuất thứ 1 của lượt chụp này — chụp ảnh 1 trước.` : null);
+  if (moc === 'da_san_xuat' && loiAnh2(row)) return res.status(400).json({ error: loiAnh2(row), nghiepVu: true });
 
   // Ảnh lưu trên MinIO theo cấu trúc orders/{sttKey}/{uuid}-{tenFile} — mỗi đơn 1 "folder" ảo.
   // Sheet chỉ lưu URL proxy ổn định qua API của app; ảnh gốc là object riêng tư + presign khi cần.
@@ -192,7 +230,11 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
   const tSauMinio = Date.now();
 
   const updates = { [cotAnh]: url, NguoiCapNhatCuoi: user.ten, ThoiGianCapNhatCuoi: now.toISOString() };
-  if (chuyenTuDong) updates.TRANG_THAI_XUONG = chuyenTuDong.chuyenSang;
+  if (moc === 'da_san_xuat') {
+    if (viTri === 2) { delete updates[cotAnh]; updates.Anh_Da_San_Xuat_URL_2 = url; }
+    else { updates.Anh_Da_San_Xuat_URL_2 = ''; updates.THOI_GIAN_ANH_SAN_XUAT = thoiGianVNISOString(); } // ảnh 1 = bắt đầu lượt mới
+  }
+  if (chuyenTuDong && xong) updates.TRANG_THAI_XUONG = chuyenTuDong.chuyenSang;
 
   let updated;
   try {
@@ -200,7 +242,11 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
     // chụp ảnh QR hợp lệ mà orderService.update() bắt buộc phải đi qua cho trạng thái này (xem
     // kiemTraCongAnhBatBuoc trong orderService.js).
     // headers/row đã đọc thật ở trên (dòng 53), khỏi đọc lại lần nữa (xem orderService.update)
-    updated = await orderService.update(sttKey, updates, user, { quaAnh: true, donDaDoc: { headers, row } });
+    // Ảnh đã sản xuất: kiểm tra LẠI trong lượt khoá theo đơn (trạng thái + ảnh 1 của lượt) — ảnh 1 và ảnh 2 có thể tới sát nhau.
+    updated = await orderService.update(sttKey, updates, user, {
+      quaAnh: true, donDaDoc: { headers, row },
+      ...(moc === 'da_san_xuat' ? { yeuCauDangLa: { TRANG_THAI_XUONG: thayAnh ? TRANG_THAI_DUOC_THAY_ANH_SX : chuyenTuDong.yeuCau }, kiemTraDon: loiAnh2 } : {}),
+    });
   } catch (err) {
     // orderService.update từ chối = dữ liệu đơn không cho đổi (vd trạng thái vừa đổi ở nơi khác) -> nghiệp vụ, xem Logs_UploadAnh
     return res.status(400).json({ error: err.message, nghiepVu: true });
@@ -208,7 +254,10 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
 
   ghiLog({
     nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'UPLOAD_ANH',
-    sttKey, chiTiet: { moc, url, ...(chuyenTuDong ? { tu: chuyenTuDong.yeuCau, sang: chuyenTuDong.chuyenSang } : {}) },
+    sttKey, chiTiet: { moc, url, ...(viTri === 2 ? { viTri } : {}),
+      ...(thayAnh ? { thayAnh: true, urlCu: row[viTri === 2 ? 'Anh_Da_San_Xuat_URL_2' : 'Anh_Da_San_Xuat_URL'] || '',
+        ...(viTri === 1 && row.Anh_Da_San_Xuat_URL_2 ? { urlCu2: row.Anh_Da_San_Xuat_URL_2 } : {}) } : {}),
+      ...(chuyenTuDong && xong ? { tu: chuyenTuDong.yeuCau, sang: chuyenTuDong.chuyenSang } : {}) },
   }).catch(err => console.error('[Photos] Lỗi ghi log nền:', err.message));
 
   console.log(
@@ -217,6 +266,37 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
   );
   // thoiGian (12/10/2026, Logs_UploadAnh): mốc máy chủ trả về để trang Quét QR tách "gửi qua mạng" = tổng phía máy − máy chủ.
   res.json({ ok: true, url, don: updated, thoiGian: { docDon: tSauDocDon - tBatDau, minio: tSauMinio - tSauDocDon, ghi: Date.now() - tSauMinio, tong: Date.now() - tBatDau } });
+});
+
+// "Xong đơn này" (14/10/2026) — chụp xong lượt ảnh đã sản xuất mà không gửi kèm ảnh cuối: nút Xong ở scan.html, hoặc tự gọi khi quét
+// sang đơn tiếp theo. Cần đơn đang "Đang chạy máy" và đã có ảnh 1 của lượt này (xem soAnhSanXuatLuotNay).
+router.post('/hoan-tat-san-xuat', async (req, res) => {
+  const { sttKey } = req.body;
+  const user = req.session.user;
+  if (!sttKey) return res.status(400).json({ error: 'Thiếu mã đơn hàng' });
+  const { yeuCau, chuyenSang } = MOC_TU_DONG_CHUYEN_TRANG_THAI.da_san_xuat;
+  const { headers, row } = await orderService.getByKey(sttKey, { ttlMs: 30000 }); // cột SQLite luôn mới, xem /upload
+  if (!row || !orderService.coQuyenTheoXuong(user, row)) return res.status(404).json({ error: 'Không tìm thấy đơn hàng: ' + sttKey, nghiepVu: true });
+  if (row.TRANG_THAI_XUONG !== yeuCau) {
+    return res.status(400).json({ error: `Đơn "${sttKey}" đang ở trạng thái "${row.TRANG_THAI_XUONG}" — không còn ở "${yeuCau}".`, nghiepVu: true,
+      trangThaiHienTai: row.TRANG_THAI_XUONG });
+  }
+  const loiChuaCoAnh = r => (soAnhSanXuatLuotNay(r) < 1 ? `Đơn "${sttKey}" chưa có ảnh đã sản xuất của lượt chụp này — chụp ảnh trước khi bấm Xong.` : null);
+  if (loiChuaCoAnh(row)) return res.status(400).json({ error: loiChuaCoAnh(row), nghiepVu: true });
+
+  let updated;
+  try {
+    updated = await orderService.update(sttKey, { TRANG_THAI_XUONG: chuyenSang, NguoiCapNhatCuoi: user.ten, ThoiGianCapNhatCuoi: new Date().toISOString() },
+      user, { quaAnh: true, donDaDoc: { headers, row }, yeuCauDangLa: { TRANG_THAI_XUONG: yeuCau }, kiemTraDon: loiChuaCoAnh });
+  } catch (err) {
+    return res.status(400).json({ error: err.message, nghiepVu: true });
+  }
+  // Cùng HanhDong UPLOAD_ANH (moc da_san_xuat, tu/sang) như khi ảnh tự chuyển trạng thái — báo cáo / lịch sử / chỉ tiêu đọc y như cũ.
+  ghiLog({
+    nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'UPLOAD_ANH',
+    sttKey, chiTiet: { moc: 'da_san_xuat', hoanTat: true, soAnh: soAnhSanXuatLuotNay(row), tu: yeuCau, sang: chuyenSang },
+  }).catch(err => console.error('[Photos] Lỗi ghi log nền:', err.message));
+  res.json({ ok: true, don: updated });
 });
 
 // Proxy đọc ảnh từ MinIO — URL dạng /api/photos/file/orders/{sttKey}/{ten-file}.

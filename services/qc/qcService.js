@@ -574,13 +574,17 @@ const anhFileTheu = row => COT_FILE_THEU.map((c, i) => row[c] && { ten: `file_th
 // Ảnh cần kiểm: ảnh đã sản xuất. File thêu gửi kèm chỉ để đối chiếu — sản phẩm khác Design là FAIL kể cả khi giống File thêu.
 const QC2 = {
   loai: 'QC2',
-  anhCanKiem: row => (row.Anh_Da_San_Xuat_URL ? [{ ten: 'san_pham', nguon: 'ảnh đã sản xuất', url: row.Anh_Da_San_Xuat_URL }] : []),
+  // Ảnh đã sản xuất thứ 2 (14/10/2026, theo yêu cầu người dùng — tối đa 2 ảnh/đơn, QC kiểm cả 2): tên "san_pham_2", chỉ khi có.
+  anhCanKiem: row => [
+    row.Anh_Da_San_Xuat_URL && { ten: 'san_pham', nguon: 'ảnh đã sản xuất', url: row.Anh_Da_San_Xuat_URL },
+    row.Anh_Da_San_Xuat_URL_2 && { ten: 'san_pham_2', nguon: 'ảnh đã sản xuất 2', url: row.Anh_Da_San_Xuat_URL_2 },
+  ].filter(Boolean),
   thieuAnh: 'Đơn chưa có ảnh đã sản xuất.',
   anhPhu: anhFileTheu,
   hangMuc: ['design', 'text', 'chi_tiet', 'color', 'position', 'huong', 'size', 'loi_san_xuat'],
   batBuoc: ['design', 'text', 'chi_tiet', 'position', 'loi_san_xuat'],
   mauPrompt: () => [
-    ...dauPrompt('Bạn là nhân viên QC của xưởng thêu, nhiệm vụ: kiểm tra SẢN PHẨM THÊU THỰC TẾ (ảnh "san_pham") có đúng yêu cầu đơn hàng hay không.'),
+    ...dauPrompt('Bạn là nhân viên QC của xưởng thêu, nhiệm vụ: kiểm tra SẢN PHẨM THÊU THỰC TẾ (ảnh "san_pham", và "san_pham_2" nếu có — 2 ảnh chụp CÙNG 1 sản phẩm, xét kết hợp cả 2) có đúng yêu cầu đơn hàng hay không.'),
     '2. Yêu cầu CHÍNH là Design + Mockup + các ghi chú (ghi_chu, ghi_chu_xuong, ghi_chu_ve_file, ghi_chu_chay_may). File thêu chỉ để đối chiếu thêm: sản phẩm khác Design là FAIL kể cả khi giống File thêu — khi đó ghi rõ trong issues "lỗi có thể từ File thêu".',
     '3. Kiểm tra checked_items (PASS / FAIL / CAN_CHECK_LAI): design (đúng thiết kế), text (ĐỌC TỪNG KÝ TỰ: thiếu, sai, thừa ký tự — rất quan trọng), chi_tiet (thiếu/thừa chi tiết), color (màu chỉ/màu áo), position (vị trí thêu so với vi_tri_theu/ghi chú/mockup), huong (xoay/lật), size (kích thước/tỷ lệ — chỉ khi dữ liệu có số đo rõ, nếu không thì CAN_CHECK_LAI), loi_san_xuat (lỗi thêu nhìn thấy được: bung chỉ, nhăn, lệch, sót chỉ...).',
     '4. Nếu Design và Mockup khác nhau: nêu rõ khác biệt, xem ghi chú để biết bên nào là yêu cầu chính thức; không đủ căn cứ -> CAN_CHECK_LAI. Nhiều ảnh cùng có thể là Design mà không xác định được ảnh chính -> CAN_CHECK_LAI.',

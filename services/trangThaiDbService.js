@@ -28,6 +28,9 @@ const CAC_COT = [
   // THỨ 2 và THỨ 3, độc lập với nhau, xem routes/photos.js COT_ANH_THEO_MOC) — tự thêm cột qua cơ chế
   // bên dưới, không cần migrate tay.
   'Anh_File_Theu_URL', 'Anh_File_Theu_URL_2', 'Anh_File_Theu_URL_3', 'Anh_Da_San_Xuat_URL', 'TRONG_LUONG', 'TRANG_THAI_XUONG', 'Anh_Da_Dan_Tem_URL',
+  // Anh_Da_San_Xuat_URL_2 / THOI_GIAN_ANH_SAN_XUAT (14/10/2026, theo yêu cầu người dùng — tối đa 2 ảnh đã sản xuất mỗi đơn, đơn chỉ
+  // chuyển "Đã sản xuất" khi chụp xong cả lượt): ảnh thứ 2 + lúc lưu ẢNH 1 của lượt đang chụp (routes/photos.js#soAnhSanXuatLuotNay).
+  'Anh_Da_San_Xuat_URL_2', 'THOI_GIAN_ANH_SAN_XUAT',
   'NGUOI_VE_FILE', 'GHI_CHU_VE_FILE', 'NGUOI_CHAY_MAY', 'GHI_CHU_CHAY_MAY', 'HASH_ANH_MAU', 'NHOM_HANG_LOAT',
   'AUTO_TRACKING', 'THOI_GIAN_IN_MA', 'IN_LABEL', 'THOI_GIAN_IN_LABEL', 'DON_UU_TIEN', 'TAM_THOI',
   // THOI_GIAN_SAN_XUAT (29/09/2026) — lần gần nhất đơn chuyển sang "Đã sản xuất"; mốc tính giờ tự động mua

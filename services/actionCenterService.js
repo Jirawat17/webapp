@@ -88,6 +88,7 @@ function layNhomHuyConTracking(rows, huyGanDay) {
 async function layTrungTamHanhDong(user) {
   const { rows: tatCa } = await orderService.getAll();
   const rows = orderService.locTheoXuong(tatCa, user);
+  const laSuperAdmin = require('../middleware/auth').laSuperAdmin(user.vaiTro);
   const trongPhamVi = orderService.phamViDon(user);
   const [huyGanDay, loiTrackingGke] = (await Promise.all([layDonHuyGanDay(), layLoiTrackingGanDay()]))
     .map(ds => ds.filter(d => trongPhamVi(d.sttKey)));
@@ -102,16 +103,35 @@ async function layTrungTamHanhDong(user) {
     loiSheetSeller: require('./nhatKyDbService').layLoiDongBoDangCho().filter(d => trongPhamVi(d.STT_Key)),
     // Y6 / L2 (11/10/2026): bỏ mục đã đánh dấu "Đã xử lý" với đúng giá trị hiện tại (C2).
     ...layCanhBaoVanHanh(rows),
+    // ĐƠN CẦN CHECK (14/10/2026) — CHỈ superadmin; admin không nhận trường này.
+    ...(laSuperAdmin ? { donCanCheck: await ganThongTinDonCanCheck(require('./nhatKyDbService').layDonCanCheck(false), tatCa) } : {}),
   };
+}
+
+// Thông tin đơn ĐANG CÓ (không lưu bản chụp) cho từng mã trong ghi chú cần check — đơn không còn thì tonTai = false.
+async function ganThongTinDonCanCheck(dsGhiChu, tatCa) {
+  const theoKey = new Map(tatCa.map(r => [r.STT_Key, r]));
+  const canGan = [...new Set(dsGhiChu.flatMap(g => g.stt_keys))].map(k => theoKey.get(k)).filter(Boolean);
+  const tenKhach = new Map((await orderService.ganTenKhachHang(canGan)).map(r => [r.STT_Key, r.TenKhachHang || '']));
+  return dsGhiChu.map(g => ({ ...g, don: g.stt_keys.map(k => {
+    const r = theoKey.get(k);
+    return r ? { sttKey: k, tonTai: true, tieuDe: orderService.tieuDeSanPham(r), tenKhachHang: tenKhach.get(k) || '', trangThai: r.TRANG_THAI_XUONG || '', xuong: r.XUONG || '' }
+      : { sttKey: k, tonTai: false };
+  }) }));
 }
 
 function layCanhBaoVanHanh(rows) {
   const vanHanh = require('./vanHanhService');
   const { daGiaoThanhCongGke } = require('./trackingAutoService');
   const cauHinh = vanHanh.layCauHinh();
+  // mucCanhBao (14/10/2026, theo yêu cầu người dùng): mức cảnh báo trễ hạn của đơn (DO/CAM/VANG/null — cùng mức ở Danh sách đơn,
+  // services/alertService.js) để admin thấy ngay đơn nhận lâu nào đang trễ nặng; giữ nguyên thứ tự (người dùng chốt).
+  const { tinhMucCanhBao, layCauHinhCanhBao } = require('./alertService');
+  const cauHinhCanhBao = layCauHinhCanhBao();
+  const theoKey = new Map(rows.map(r => [r.STT_Key, r]));
   return {
     nhanQuaLau: vanHanh.locDaXuLy('NHAN_LAU', vanHanh.donDangNhan(rows, cauHinh.y6).filter(vanHanh.canNhac), vanHanh.khoaY6, vanHanh.giaTriY6)
-      .map(d => ({ ...d, khoa: vanHanh.khoaY6(d), giaTri: vanHanh.giaTriY6(d) })),
+      .map(d => ({ ...d, khoa: vanHanh.khoaY6(d), giaTri: vanHanh.giaTriY6(d), mucCanhBao: tinhMucCanhBao(theoKey.get(d.sttKey), cauHinhCanhBao) })),
     vanChuyenBatThuong: vanHanh.locDaXuLy('VAN_CHUYEN',
       vanHanh.vanChuyenBatThuong(rows, cauHinh.l2, r => daGiaoThanhCongGke(r.MA_NODE_TRACKING, r.MA_TRANG_THAI_NODE_TRACKING)), vanHanh.khoaL2, vanHanh.giaTriL2)
       .map(d => ({ ...d, khoa: vanHanh.khoaL2(d), giaTri: vanHanh.giaTriL2(d) })),
@@ -119,4 +139,4 @@ function layCanhBaoVanHanh(rows) {
   };
 }
 
-module.exports = { layTrungTamHanhDong };
+module.exports = { layTrungTamHanhDong, ganThongTinDonCanCheck };

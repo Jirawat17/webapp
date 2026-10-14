@@ -42,6 +42,7 @@
   /* Ngữ nghĩa trạng thái — tách biệt rõ khỏi màu nhấn để không gây nhầm lẫn */
   --color-success-bg: #dcfce7; --color-success-text: #166534;
   --color-warning-bg: #fef3c7; --color-warning-text: #92400e;
+  --color-cam-bg: #ffedd5; --color-cam-text: #9a3412; /* mức cảnh báo Cam (14/10/2026: badge + tô dòng ở Trung tâm hành động dùng chung) */
   --color-danger-bg:  #fee2e2; --color-danger-text:  #991b1b;
   --color-info-bg:    #e0e7ff; --color-info-text:    #3730a3;
   --color-neutral-bg: #e4e4e7; --color-neutral-text: #3f3f46;
@@ -577,7 +578,7 @@ select.chon-trang-thai-tieu-cuc { border-color: var(--color-warning-text); color
 .trang-thai-success { background: var(--color-success-bg); color: var(--color-success-text); }
 .trang-thai-danger  { background: var(--color-danger-bg);  color: var(--color-danger-text); }
 .badge-canh-bao.vang { background: var(--color-warning-bg); color: var(--color-warning-text); }
-.badge-canh-bao.cam  { background: #ffedd5; color: #9a3412; }
+.badge-canh-bao.cam  { background: var(--color-cam-bg); color: var(--color-cam-text); }
 .badge-canh-bao.do   { background: var(--color-danger-bg); color: var(--color-danger-text); animation: nhipCanhBao 1.8s ease-in-out infinite; }
 @keyframes nhipCanhBao {
   0%, 100% { box-shadow: 0 0 0 0 rgba(153,27,27,0.35); }
@@ -1102,6 +1103,7 @@ select.chon-trang-thai-tieu-cuc { border-color: var(--color-warning-text); color
 
   --color-success-bg: #072e1e; --color-success-text: #4ade80;
   --color-warning-bg: #3a2705; --color-warning-text: #fbbf24;
+  --color-cam-bg: #431407; --color-cam-text: #fb923c;
   --color-danger-bg:  #3a0d0d; --color-danger-text:  #f87171;
   --color-info-bg:    #1c1a3d; --color-info-text:    #a5b4fc;
   --color-neutral-bg: #2a2a2e; --color-neutral-text: #d4d4d8;
@@ -1110,8 +1112,7 @@ select.chon-trang-thai-tieu-cuc { border-color: var(--color-warning-text); color
   --shadow-md: 0 10px 24px -10px rgba(0,0,0,0.65);
   --shadow-lg: 0 24px 48px -20px rgba(0,0,0,0.75);
 }
-/* 2 chỗ màu viết cứng (không dùng token) — cần override riêng cho nền tối */
-[data-theme="dark"] .badge-canh-bao.cam { background: #431407; color: #fb923c; }
+/* Màu viết cứng (không dùng token) — cần override riêng cho nền tối. (.badge-canh-bao.cam dùng --color-cam-* từ 14/10/2026.) */
 [data-theme="dark"] .skeleton-card { background: linear-gradient(90deg, #5e5c66 25%, #706e79 37%, #5e5c66 63%); background-size: 400% 100%; }
 /* Vòng nhấp nháy cảnh báo Đỏ dùng rgba(153,27,27,..) — đúng tông cho nền sáng nhưng chìm trên nền
    tối (badge nền tối #3a0d0d rất gần màu vòng sáng). Nền tối cần vòng sáng hơn để còn thấy rõ. */

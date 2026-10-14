@@ -448,6 +448,10 @@ async function capNhatThat(sttKey, updates, user, tuyChon) {
       throw new Error(`Đơn đang "${row[cot] || '(trống)'}", không còn "${giaTri}" — có người vừa đổi trạng thái, tải lại trang để xem.`);
     }
   }
+  // tuyChon.kiemTraDon(row) -> câu báo lỗi | null (14/10/2026, ảnh đã sản xuất 1/2 — routes/photos.js): điều kiện riêng của nơi gọi,
+  // kiểm tra trên bản MỚI NHẤT trong lượt khoá theo đơn như yeuCauDangLa.
+  const loiKiemTraDon = tuyChon.kiemTraDon && tuyChon.kiemTraDon(row);
+  if (loiKiemTraDon) throw new Error(loiKiemTraDon);
 
   // tuyChon.boQuaRangBuoc (bổ sung 25/09/2026) — CHỈ route POST /orders/chuyen-trang-thai-superadmin
   // truyền (superadmin, đã kiểm tra quyền ở route): bỏ qua cổng ảnh bắt buộc, điều kiện nguồn/tracking
