@@ -80,7 +80,7 @@
 </div>
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=123"></script>
+<script src="/js/api.js?v=124"></script>
 <script>
 let toanBoDong = [];
 
@@ -156,11 +156,16 @@ function moTaChiTietUA(r) {
   if (c.msCamera != null) p.push(`camera ${giayUA(c.msCamera)}s`);
   if (c.msNen != null) p.push(`nén ${giayUA(c.msNen)}s${c.msGiaiMa != null ? ` (giải mã ${giayUA(c.msGiaiMa)}, vẽ ${giayUA(c.msVe)}, xuất ${giayUA(c.msXuat)})` : ''}`
     + ` ${c.kbGoc}→${c.kbSauNen}KB${c.rongGoc ? ` ${c.rongGoc}x${c.caoGoc}→${c.rong}x${c.cao}` : ''}${c.loaiFile ? ' ' + c.loaiFile : ''}${c.khongNen ? ` [không nén: ${c.khongNen}]` : ''}`);
+  if (c.dauFile) p.push(`đầu file ${c.dauFile.startsWith('ffd8ff') ? 'JPEG' : c.dauFile.slice(8, 16) === '66747970' ? 'HEIF/AVIF' : 'lạ'} (${c.dauFile})`);
+  if (c.huongExif != null) p.push(`EXIF ${c.huongExif}${c.tuXoayExif ? ', app tự xoay' : ''}${c.doXoay ? ` (dò: ${c.doXoay})` : ''}`);
   if (c.msGui != null) p.push(`gửi ${giayUA(c.msGui)}s${c.kbMoiGiay ? ` (${c.kbMoiGiay}KB/s)` : ''}`);
+  if (c.soLanGui > 1) p.push(`gửi ${c.soLanGui} lần${c.msTongGui != null ? ` (tổng ${giayUA(c.msTongGui)}s)` : ''}`);
   if (c.msGuiVaCho != null) p.push(`gửi+chờ máy chủ ${giayUA(c.msGuiVaCho)}s`);
   if (c.msMayChu != null) p.push(`máy chủ ${giayUA(c.msMayChu)}s`);
   if (c.mang && c.mang.loai) p.push(`mạng ${c.mang.loai}${c.mang.mbps != null ? ' ~' + c.mang.mbps + 'Mbps' : ''}`);
   if (c.soLanThu > 1) p.push(`thử ${c.soLanThu} lần`);
+  if (c.loiDung) p.push(`lỗi tắt camera cũ: ${c.loiDung}`);
+  if (c.trangThaiMayQuet != null) p.push(`máy quét: ${({ 1: 'chưa chạy', 2: 'đang quét', 3: 'tạm dừng' })[c.trangThaiMayQuet] || c.trangThaiMayQuet}`);
   if (c.soDon != null) p.push(`${c.thanhCong}/${c.soDon} đơn OK`);
   if (c.giaiDoan) p.push(`đang ${c.giaiDoan === 'gui' ? 'gửi' : 'nén'} thì thoát`);
   // Máy chủ đã rút gọn dòng quá dài (routes/nhatKyQuet.js#chiTietGon) — báo rõ để không hiểu nhầm là "không đo được"

@@ -83,7 +83,7 @@
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=123"></script>
+<script src="/js/api.js?v=124"></script>
 <script>
 let user;
 // Mặc định mở vào "Quét kịch bản" (batch) khi vào trang — theo yêu cầu người dùng 05/09/2026, vì đây
@@ -503,6 +503,11 @@ function phatAmThanhKetQua(nhom) {
 // trong lúc đang chạy thì chỉ nhớ chế độ MUỐN cuối cùng, xong lượt hiện tại mới chuyển thẳng tới đó (bỏ qua các chế độ trung gian).
 // Giới hạn: lượt đang chờ hộp xin quyền camera (getUserMedia) không huỷ được — đổi chế độ sẽ có hiệu lực ngay khi người dùng trả lời.
 let cameraMuonChay = null, luotDieuChinhCamera = null;
+// Lỗi khi tắt camera cũ (dungCamera) — gắn vào log MO_CAMERA ngay sau (chiTiet.loiDung) để biết vì sao mở camera mới báo "Cannot clear
+// while scan is ongoing" (Logs_UploadAnh 14/10: đổi chế độ ngay khi camera vừa mở xong).
+let loiDungCamera = null;
+const trangThaiScanner = () => { try { return scanner.getState(); } catch (e) { return null; } }; // html5-qrcode: 1 chưa chạy, 2 đang quét, 3 tạm dừng
+const moTaLoi = e => `${(e && e.name) || ''} ${String((e && e.message) || e)}`.trim(); // html5-qrcode hay throw CHUỖI (không có name)
 function dieuChinhCamera(muonChay) {
   cameraMuonChay = muonChay;
   if (!luotDieuChinhCamera) {
@@ -523,6 +528,7 @@ function dieuChinhCamera(muonChay) {
 }
 async function dieuChinhCameraThat(muonChay) {
   if (muonChay === cameraDangChayCho) return;
+  loiDungCamera = null; // chỉ gắn lỗi tắt camera của ĐÚNG lượt này vào log MO_CAMERA ngay sau
   if (cameraDangChayCho !== null) await dungCamera();
   cameraDangChayCho = muonChay;
   if (muonChay === 'lookup') await batDauCamera(xuLyQuetTraCuu);
@@ -565,7 +571,7 @@ async function batDauCamera(onScan, qrboxSize, tuyChon = {}) {
       console.log(`[Camera] Mở camera thành công sau ${Date.now() - gioBatDau}ms (facingMode=${facingMode})`);
       tSanSangQuet = performance.now();
       cameraDaMo = true;
-      ghiLogQuet({ suKien: 'MO_CAMERA', ketQua: 'OK', tongMs: Math.round(tSanSangQuet - tMoCamera), chiTiet: { soLanThu: lan + 1 } });
+      ghiLogQuet({ suKien: 'MO_CAMERA', ketQua: 'OK', tongMs: Math.round(tSanSangQuet - tMoCamera), chiTiet: { soLanThu: lan + 1, ...(loiDungCamera ? { loiDung: loiDungCamera } : {}) } });
       return;
     } catch (err) {
       console.error(`[Camera] Lỗi mở camera (lần ${lan + 1}/${soLanThuLai + 1}, sau ${Date.now() - gioBatDau}ms) — tên lỗi: "${err && err.name}":`, err);
@@ -574,8 +580,9 @@ async function batDauCamera(onScan, qrboxSize, tuyChon = {}) {
         await new Promise(r => setTimeout(r, 700));
         continue;
       }
-      ghiLogQuet({ suKien: 'MO_CAMERA', ketQua: 'LOI', loi: `${(err && err.name) || ''} ${String((err && err.message) || err)}`.trim(),
-        tongMs: Math.round(performance.now() - tMoCamera), chiTiet: { soLanThu: lan + 1 } });
+      ghiLogQuet({ suKien: 'MO_CAMERA', ketQua: 'LOI', loi: moTaLoi(err),
+        tongMs: Math.round(performance.now() - tMoCamera),
+        chiTiet: { soLanThu: lan + 1, trangThaiMayQuet: trangThaiScanner(), ...(loiDungCamera ? { loiDung: loiDungCamera } : {}) } });
       const goiY = laLoiCameraDangBanRoi(err)
         ? 'Camera đang được app/tab khác dùng — đóng hết ứng dụng/tab khác đang mở camera (Zoom, Teams, Windows Camera, tab trình duyệt khác...) rồi thử lại.'
         : 'Hãy cho phép quyền camera cho trang web này trong trình duyệt.';
@@ -587,9 +594,39 @@ async function batDauCamera(onScan, qrboxSize, tuyChon = {}) {
   }
 }
 
+// html5-qrcode 2.3.8: stop() lỗi giữa chừng (vd camera.close() ném lỗi) thì máy quét KẸT ở "đang quét" -> mọi start() sau đều báo "Cannot
+// clear while scan is ongoing"; stop() còn có thể TREO mãi (close() không bao giờ xong khi luồng video không còn track nào) làm kẹt cả
+// hàng đợi bật/tắt camera. Nên: chờ stop() tối đa 2 giây; sau đó máy quét chưa về "chưa chạy" (1) thì BỎ hẳn bản đó — tự tắt luồng video,
+// dừng vòng quét của nó (shouldScan — thuộc tính nội bộ 2.3.8, để bản cũ không gọi hàm quét của chế độ cũ nữa) — lần mở sau tạo bản mới.
 async function dungCamera() {
   if (scanner) {
-    try { await scanner.stop(); } catch (e) {}
+    const cu = scanner;
+    let hen;
+    // GỐC lỗi Logs 14/10 (thử với thư viện thật): start() xong TRƯỚC khi video phát ("playing") — canvas quét chỉ được tạo lúc "playing";
+    // stop() trong khoảng đó gọi removeChild(canvas null) -> lỗi, máy quét kẹt. Nên chờ "playing" (tối đa 2 giây) rồi mới stop(). Bộ nghe
+    // của html5-qrcode gắn trước nên chạy trước bộ nghe này -> canvas đã có khi stop().
+    const video = document.querySelector('#qr-reader video');
+    if (video && !document.querySelector('#qr-reader canvas')) {
+      await new Promise(xong => { video.addEventListener('playing', xong, { once: true }); hen = setTimeout(xong, 2000); });
+      clearTimeout(hen);
+    }
+    try {
+      await Promise.race([cu.stop(), new Promise((_, loi) => { hen = setTimeout(() => loi(new Error('stop() quá 2 giây')), 2000); })]);
+    } catch (e) {
+      loiDungCamera = `${moTaLoi(e).slice(0, 150)} (trạng thái ${trangThaiScanner()})`;
+    } finally {
+      clearTimeout(hen);
+    }
+    if (trangThaiScanner() !== 1) {
+      // Nâng html5-qrcode mà thuộc tính nội bộ này đổi tên -> ghi rõ vào log thay vì âm thầm không có tác dụng.
+      const conShouldScan = 'shouldScan' in cu;
+      cu.shouldScan = false;
+      document.querySelectorAll('#qr-reader video').forEach(v => { try { v.srcObject && v.srcObject.getTracks().forEach(t => t.stop()); } catch (e) {} });
+      document.getElementById('qr-reader').innerHTML = ''; // bỏ khung video chết của bản cũ ngay (chế độ sau có thể không mở camera)
+      scanner = null;
+      loiDungCamera = `${loiDungCamera || 'stop() xong nhưng máy quét chưa về "chưa chạy"'} — đã bỏ máy quét cũ, tạo bản mới`
+        + (conShouldScan ? '' : ' [html5-qrcode không còn shouldScan — xem lại dungCamera]');
+    }
   }
   cameraDaMo = false;
   cameraDangChayCho = null;

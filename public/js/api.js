@@ -934,6 +934,15 @@ async function giaiMaAnhDeNen(file, ts) {
     };
   } catch (loiImg) {
     URL.revokeObjectURL(url);
+    // 16 byte đầu file (hex) để biết file THẬT là gì khi cả 2 cách đều không đọc được: "ffd8ff..." = JPEG; "66747970" ("ftyp") từ byte
+    // thứ 4 = HEIF/HEIC/AVIF (4 byte sau là nhãn: heic, heix, mif1, msf1, avif...) — nghi Samsung A05 lưu HEIC dưới tên .jpg (Logs 14/10).
+    // Đọc quá 1 giây thì bỏ (null) — không để bước ghi log chặn việc gửi ảnh gốc.
+    let hen;
+    ts.dauFile = await Promise.race([
+      file.slice(0, 16).arrayBuffer().then(b => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join(''), () => null),
+      new Promise(r => { hen = setTimeout(() => r(null), 1000); }),
+    ]);
+    clearTimeout(hen);
     throw new Error(`${ts.loiBitmap} | <img>: ${String(loiImg && loiImg.message || loiImg).slice(0, 120)}`);
   }
 }
