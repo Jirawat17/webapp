@@ -19,7 +19,8 @@ try {
   PHIEN_BAN_MOI_NHAT = (fs.readFileSync(path.join(__dirname, '..', 'public', 'scan.html'), 'utf8').match(/\/js\/api\.js\?v=(\d+)/) || [])[1] || '';
 } catch (e) { /* không đọc được -> không nhắc */ }
 
-const SU_KIEN = ['MO_CAMERA', 'QUET_QR', 'CHUP_ANH', 'XAC_NHAN_HANG_LOAT', 'QUET_LAI', 'THOAT_GIUA_CHUNG'];
+// XONG_DON (15/10/2026): mỗi lần Xong lượt ảnh đã sản xuất (bấm nút / tự Xong khi quét đơn khác) + khôi phục đơn chờ Xong bị bỏ.
+const SU_KIEN = ['MO_CAMERA', 'QUET_QR', 'CHUP_ANH', 'XAC_NHAN_HANG_LOAT', 'QUET_LAI', 'THOAT_GIUA_CHUNG', 'XONG_DON'];
 const NGUONG_CHAM_CHUP_MS = 8000; // CHUP_ANH: từ lúc có ảnh tới lúc tải xong > 8 giây = chậm (người dùng chọn 12/10/2026)
 const chu = (v, n) => String(v == null ? '' : v).slice(0, n);
 // Giới hạn ghi (12/10/2026, rà soát): tối đa 600 sự kiện/người/phút — vòng lặp lỗi phía trình duyệt hay gửi bậy không làm phình

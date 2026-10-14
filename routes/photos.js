@@ -11,6 +11,10 @@ const { ghiLog } = require('../services/logService');
 const { requireLogin, requireExactRole, laAdmin } = require('../middleware/auth');
 const { layCaiDatNenAnh, datCaiDatNenAnh } = require('../services/caiDatDbService');
 const { thoiGianVNISOString } = require('../services/dateUtils');
+const trangThaiDbService = require('../services/trangThaiDbService');
+// Trạng thái MỚI NHẤT (SQLite) — kèm vào lỗi 400 khi orderService.update từ chối giữa chừng (trạng thái vừa đổi ngay giữa bước kiểm tra và
+// lúc ghi), để trang gọi nhận ra đơn đã sang trạng thái khác giống nhánh kiểm tra trước (14/10/2026).
+const trangThaiMoiNhat = sttKey => trangThaiDbService.layTheoKey(sttKey).TRANG_THAI_XUONG || undefined;
 
 router.use(requireLogin);
 
@@ -89,7 +93,8 @@ function thieuTrackingThat(row) {
 // chạy máy TRƯỚC (đơn làm lại sau lỗi) không tính, chụp lại từ ảnh 1 như mới (người dùng chốt: quét lại đơn đang chụp dở thì GIỮ
 // ảnh 1, cho chụp tiếp). Ảnh cũ chưa có dấu thời gian (trước 14/10/2026) cũng không tính.
 const SO_ANH_SAN_XUAT_TOI_DA = 2;
-const TRANG_THAI_DUOC_THAY_ANH_SX = 'Đã sản xuất'; // admin thay ảnh đã sản xuất (POST /upload thay=1) — người dùng chốt: chỉ trạng thái này
+const TRANG_THAI_DUOC_THAY_ANH_SX = 'Đã sản xuất';
+const THAY_ANH_2_TRONG_MS = 10 * 60 * 1000; // ảnh 2 gửi ngay sau ảnh 1 (trang Chi tiết đơn) — 10 phút đủ cho mạng chậm // admin thay ảnh đã sản xuất (POST /upload thay=1) — người dùng chốt: chỉ trạng thái này
 function soAnhSanXuatLuotNay(row) {
   if (row.TRANG_THAI_XUONG !== 'Đang chạy máy' || !row.Anh_Da_San_Xuat_URL || !row.THOI_GIAN_ANH_SAN_XUAT) return 0;
   let vaoLuc = '';
@@ -207,9 +212,12 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
   const viTri = req.body.viTri === '2' ? 2 : 1;
   const xong = req.body.xong !== '0' && !thayAnh; // thay ảnh: không bao giờ đổi trạng thái
   if (moc !== 'da_san_xuat' && (viTri !== 1 || req.body.xong === '0')) return res.status(400).json({ error: 'Mốc ảnh này chỉ có 1 ảnh' });
-  // Ảnh 2 phải thuộc đúng lượt có ảnh 1. Thay ảnh: ảnh 1 MỚI đã lưu sau lúc đơn sang "Đã sản xuất" (THOI_GIAN_ANH_SAN_XUAT > THOI_GIAN_SAN_XUAT).
+  // Ảnh 2 phải thuộc đúng lượt có ảnh 1. Thay ảnh: ảnh 1 MỚI đã lưu sau lúc đơn sang "Đã sản xuất" (THOI_GIAN_ANH_SAN_XUAT > THOI_GIAN_SAN_XUAT)
+  // và VỪA lưu (trong THAY_ANH_2_TRONG_MS) — thay cả lượt, không cho thay riêng ảnh 2 về sau.
+  const vuaThayAnh1 = r => (r.THOI_GIAN_ANH_SAN_XUAT || '') > (r.THOI_GIAN_SAN_XUAT || '')
+    && Date.now() - Date.parse(r.THOI_GIAN_ANH_SAN_XUAT) <= THAY_ANH_2_TRONG_MS;
   const loiAnh2 = r => (viTri !== 2 ? null
-    : thayAnh ? ((r.THOI_GIAN_ANH_SAN_XUAT || '') > (r.THOI_GIAN_SAN_XUAT || '') ? null : `Đơn "${sttKey}": thay ảnh 2 phải đi cùng ảnh 1 mới — chọn lại cả 2 ảnh.`)
+    : thayAnh ? (vuaThayAnh1(r) ? null : `Đơn "${sttKey}": thay ảnh 2 phải đi cùng ảnh 1 mới — chọn lại cả 2 ảnh.`)
     : soAnhSanXuatLuotNay(r) < 1 ? `Đơn "${sttKey}" chưa có ảnh đã sản xuất thứ 1 của lượt chụp này — chụp ảnh 1 trước.` : null);
   if (moc === 'da_san_xuat' && loiAnh2(row)) return res.status(400).json({ error: loiAnh2(row), nghiepVu: true });
 
@@ -248,8 +256,8 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
       ...(moc === 'da_san_xuat' ? { yeuCauDangLa: { TRANG_THAI_XUONG: thayAnh ? TRANG_THAI_DUOC_THAY_ANH_SX : chuyenTuDong.yeuCau }, kiemTraDon: loiAnh2 } : {}),
     });
   } catch (err) {
-    // orderService.update từ chối = dữ liệu đơn không cho đổi (vd trạng thái vừa đổi ở nơi khác) -> nghiệp vụ, xem Logs_UploadAnh
-    return res.status(400).json({ error: err.message, nghiepVu: true });
+    // orderService.update từ chối = dữ liệu đơn không cho đổi (vd trạng thái vừa đổi ở nơi khác) -> nghiệp vụ, xem Logs_UploadAnh.
+    return res.status(400).json({ error: err.message, nghiepVu: true, ...(chuyenTuDong ? { trangThaiHienTai: trangThaiMoiNhat(sttKey) } : {}) });
   }
 
   ghiLog({
@@ -289,7 +297,7 @@ router.post('/hoan-tat-san-xuat', async (req, res) => {
     updated = await orderService.update(sttKey, { TRANG_THAI_XUONG: chuyenSang, NguoiCapNhatCuoi: user.ten, ThoiGianCapNhatCuoi: new Date().toISOString() },
       user, { quaAnh: true, donDaDoc: { headers, row }, yeuCauDangLa: { TRANG_THAI_XUONG: yeuCau }, kiemTraDon: loiChuaCoAnh });
   } catch (err) {
-    return res.status(400).json({ error: err.message, nghiepVu: true });
+    return res.status(400).json({ error: err.message, nghiepVu: true, trangThaiHienTai: trangThaiMoiNhat(sttKey) });
   }
   // Cùng HanhDong UPLOAD_ANH (moc da_san_xuat, tu/sang) như khi ảnh tự chuyển trạng thái — báo cáo / lịch sử / chỉ tiêu đọc y như cũ.
   ghiLog({

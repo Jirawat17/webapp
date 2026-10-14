@@ -585,10 +585,15 @@ function base64ThanhBlob(base64, kieuMime) {
 
 // Lịch sử (bổ sung 27/09/2026): danh sách "Nhãn: trước → sau" từ ThayDoi do server dựng (services/moTaLichSu.js).
 // tu === null = log cũ không lưu giá trị trước -> chỉ hiện giá trị sau, không suy đoán.
+// Giá trị là ảnh của app (/api/photos/file/..., vd thay ảnh đã sản xuất 14/10/2026) -> link "Mở ảnh cũ/mới" thay cho đường dẫn dài
+// (chỉ đúng tiền tố đường dẫn nội bộ này mới thành link — không biến chữ bất kỳ thành href).
+function giaTriLichSu(v, nhanAnh) {
+  return /^\/api\/photos\/file\/[^\s"'<>]+$/.test(v) ? `<a href="${escapeHtml(v)}" target="_blank" rel="noopener">${nhanAnh}</a>` : escapeHtml(v);
+}
 function htmlThayDoiLichSu(thayDoi) {
   if (!thayDoi || !thayDoi.length) return '';
   return `<ul class="lich-su-thay-doi">${thayDoi.map(t =>
-    `<li>${escapeHtml(t.nhan)}: ${t.tu !== null ? `${escapeHtml(t.tu)} → ` : ''}<strong>${escapeHtml(t.sang)}</strong></li>`).join('')}</ul>`;
+    `<li>${escapeHtml(t.nhan)}: ${t.tu !== null ? `${giaTriLichSu(t.tu, 'Mở ảnh cũ')} → ` : ''}<strong>${giaTriLichSu(t.sang, 'Mở ảnh mới')}</strong></li>`).join('')}</ul>`;
 }
 
 // Đơn đã huỷ KHÔNG được mua tracking (bổ sung 27/09/2026, theo yêu cầu người dùng) — hộp đỏ lớn phủ
@@ -961,6 +966,18 @@ async function giaiMaAnhDeNen(file, ts) {
     throw new Error(`${ts.loiBitmap} | <img>: ${String(loiImg && loiImg.message || loiImg).slice(0, 120)}`);
   }
 }
+
+// Ảnh HEIC/HEIF (14/10/2026, Logs_UploadAnh: Samsung A05 bật "Ảnh hiệu suất cao" -> ảnh HEIC mang tên .jpg): trình duyệt Android/máy tính
+// không đọc được -> không nén được (gửi nguyên vài MB) và người xem trên Chrome / QC có thể không mở được ảnh. Nhận ra qua 16 byte đầu
+// (ts.dauFile, chỉ ghi khi KHÔNG giải mã được): "ftyp" từ byte thứ 4. Chỉ CẢNH BÁO để người dùng tắt cài đặt — ảnh vẫn được gửi như cũ.
+const laAnhHeif = dauFile => typeof dauFile === 'string' && dauFile.slice(8, 16) === '66747970';
+const CANH_BAO_ANH_HEIF = 'Máy này đang chụp ảnh dạng HEIC (HEIF): app KHÔNG nén được (gửi rất chậm) và nhiều máy tính KHÔNG XEM ĐƯỢC ảnh này.\n'
+  + 'Cách sửa (làm 1 lần): mở ứng dụng Camera → Cài đặt (bánh răng) → Tùy chọn ảnh nâng cao → TẮT "Ảnh hiệu suất cao" (Samsung).\n'
+  + 'Ảnh vừa chụp vẫn được gửi lên bình thường.';
+// Trang Chi tiết đơn: admin hay tải file từ máy tính (vd ảnh HEIC chép từ iPhone) — không phải lúc nào cũng là camera Samsung.
+const CANH_BAO_FILE_HEIF = 'File ảnh này là dạng HEIC (HEIF): app KHÔNG nén được và nhiều máy tính / Chrome KHÔNG XEM ĐƯỢC ảnh này.\n'
+  + 'Nên chuyển ảnh sang JPG trước khi tải (hoặc tắt chế độ HEIC/"Ảnh hiệu suất cao" trên máy đã chụp).\n'
+  + 'Ảnh này vẫn được tải lên như bình thường.';
 
 async function nenAnhTruocKhiTaiLen(file, tuyChon = {}) {
   const canhDaiToiDa = tuyChon.canhDaiToiDa || CANH_DAI_NHAT_TOI_DA_KHI_NEN_ANH;

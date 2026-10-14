@@ -87,7 +87,7 @@
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=125"></script>
+<script src="/js/api.js?v=126"></script>
 <script>
 let user;
 // Mặc định mở vào "Quét kịch bản" (batch) khi vào trang — theo yêu cầu người dùng 05/09/2026, vì đây
@@ -153,6 +153,46 @@ const dsUploadDangCho = new Set(); // khoá: sttKey (ảnh 1 / ảnh duy nhất)
 // soAnh, huaAnh1: Promise<bool> ảnh 1 đã lưu, dong: dòng "Danh sách đã chụp" }. Xong lượt khi: chụp xong ảnh 2 / bấm "Xong đơn này" /
 // quét được đơn KHÁC (kiểm tra OK). Thoát trang thì đơn vẫn "Đang chạy máy"; quét lại đơn đó -> máy chủ báo đã có ảnh -> chụp tiếp.
 let donChoXong = null;
+// LƯU donChoXong trên máy (15/10/2026, Logs 14/10: Tu tra cứu -> mở Chi tiết đơn -> quay lại, trang Quét QR tải lại, "đơn chờ Xong" chỉ
+// nằm trong bộ nhớ trang nên MẤT, quét đơn kế không còn gì để tự Xong -> 7 đơn kẹt "Đang chạy máy" 2–3 giờ). Mọi lần đổi donChoXong đi qua
+// datDonChoXong(); mở lại trang thì khoiPhucDonChoXong() hỏi lại máy chủ rồi dựng lại khung chờ. Chỉ lưu dữ liệu thuần (không lưu Promise).
+// Khoá RIÊNG từng tài khoản (máy dùng chung — vd 1 iPhone cho Nhân và Phượng): người sau mở trang không đụng tới đơn chờ của người trước.
+const khoaDonChoXong = () => 'scan-don-cho-xong:' + user.ten;
+const GIU_DON_CHO_XONG_MS = 24 * 3600 * 1000; // quá 1 ngày thì bỏ (đơn đó quét lại vẫn thấy "đã có ảnh" từ máy chủ)
+function datDonChoXong(d) {
+  donChoXong = d;
+  try {
+    if (d) localStorage.setItem(khoaDonChoXong(), JSON.stringify({ sttKey: d.sttKey, tieuDe: d.tieuDe || '', tenKhachHang: d.tenKhachHang || '', luc: Date.now() }));
+    else localStorage.removeItem(khoaDonChoXong());
+  } catch (e) { /* trình duyệt chặn lưu — vẫn chạy như cũ, chỉ không khôi phục được */ }
+}
+// -> true nếu đã khôi phục (trang chuyển thẳng sang "Chụp ảnh đã sản xuất"). Máy chủ là nguồn đúng: chỉ khôi phục khi đơn VẪN "Đang chạy
+// máy" và có ảnh của lượt này (ảnh 1 có thể chưa tải xong lúc trang bị đóng). Lỗi mạng: giữ nguyên bản lưu, lần mở trang sau thử lại.
+async function khoiPhucDonChoXong() {
+  let luu = null;
+  try { luu = JSON.parse(localStorage.getItem(khoaDonChoXong()) || 'null'); } catch (e) { return false; }
+  if (!luu || !luu.sttKey) return false;
+  if (!(Date.now() - luu.luc < GIU_DON_CHO_XONG_MS)) { datDonChoXong(null); return false; }
+  const boQua = lyDo => {
+    datDonChoXong(null);
+    ghiLogQuet({ suKien: 'XONG_DON', cheDo: 'photo_san_xuat', sttKey: luu.sttKey, ketQua: 'BO_NGANG', loi: lyDo, chiTiet: { cach: 'khoi-phuc' } });
+    return false;
+  };
+  let kq;
+  try {
+    kq = await apiFetch('/photos/kiem-tra', { method: 'POST', body: JSON.stringify({ sttKey: luu.sttKey, moc: CAU_HINH_ANH.photo_san_xuat.moc }) });
+  } catch (err) {
+    if (!err.status || err.status >= 500) return false; // mạng / máy chủ lỗi — để lần sau
+    return boQua(err.message); // đơn đã sang trạng thái khác (vd người khác đã Xong) / không còn — không còn gì để Xong
+  }
+  if (!(kq.soAnhLuotNay >= 1)) return boQua('Ảnh 1 chưa lưu được (trang bị đóng khi đang tải) — quét lại mã đơn để chụp lại');
+  const dong = { trangThai: 'cho-xong', sttKey: luu.sttKey, ghiChu: `Đã có ${kq.soAnhLuotNay} ảnh — chưa Xong (khôi phục sau khi trang tải lại)` };
+  dsDaChupTheoMoc.photo_san_xuat.unshift(dong);
+  datDonChoXong({ sttKey: luu.sttKey, tieuDe: kq.tieuDe || luu.tieuDe, tenKhachHang: kq.tenKhachHang || luu.tenKhachHang, soAnh: kq.soAnhLuotNay,
+    huaAnh1: Promise.resolve(true), dong, khoiPhuc: true });
+  hienThiToast('OK', `${luu.sttKey}: đơn đang chờ — chụp ảnh 2, bấm Xong hoặc quét đơn tiếp theo`);
+  return true;
+}
 
 // ============================================================
 // Logs_UploadAnh (12/10/2026, theo yêu cầu người dùng): ghi MỌI thao tác ở trang này (mở camera, quét QR, chụp + tải ảnh, xác nhận
@@ -236,7 +276,6 @@ function nhacBanMoi(moiNhat) {
   el.textContent = '⟳ Có bản mới của app — bấm để tải lại trang';
   el.onclick = () => {
     if (dsUploadDangCho.size && !confirm(`Còn ${dsUploadDangCho.size} ảnh đang tải lên — tải lại trang bây giờ sẽ làm hỏng các ảnh đó. Vẫn tải lại?`)) return;
-    if (donChoXong && !confirm(`Đơn ${donChoXong.sttKey} chưa bấm Xong (vẫn "Đang chạy máy") — tải lại trang thì phải quét lại đơn đó để Xong. Vẫn tải lại?`)) return;
     daDongYRoiTrang = true; // đã hỏi ở trên — không hỏi lần 2 ở beforeunload
     location.reload();
   };
@@ -249,8 +288,31 @@ function nhacBanMoi(moiNhat) {
 // Hỏi lại trước khi rời trang khi còn ảnh đang tải / đang chờ gửi lại (14/10/2026 — Logs_UploadAnh 13/10: 10V25 bị đóng trang giữa lúc
 // gửi, ảnh mất). Trình duyệt tự hiện hộp hỏi mặc định; Safari iOS có thể bỏ qua — khi đó vẫn ghi THOAT như dưới.
 let daDongYRoiTrang = false;
+// Thanh cảnh báo ảnh HEIC (14/10/2026) — cố định ĐÁY màn hình (ngay trên thanh tab, không đè thanh "Có bản mới" ở đầu trang) tới khi bấm
+// Đóng (alert sẽ chặn nhịp quét/chụp liên tục); 1 lần mỗi lần mở trang.
+let daBaoAnhHeif = false;
+function baoAnhHeif() {
+  if (daBaoAnhHeif) return;
+  daBaoAnhHeif = true;
+  const el = document.createElement('div');
+  el.setAttribute('role', 'alert');
+  el.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:2001;padding:12px 14px;background:#b91c1c;color:#fff;font-weight:600;white-space:pre-line;box-shadow:0 -2px 8px rgba(0,0,0,.3)';
+  el.textContent = CANH_BAO_ANH_HEIF;
+  const dong = document.createElement('button');
+  dong.type = 'button';
+  dong.textContent = 'Đã hiểu — đóng';
+  dong.style.cssText = 'display:block;margin-top:8px;padding:6px 14px;border:0;border-radius:6px;background:#fff;color:#b91c1c;font-weight:700';
+  dong.onclick = () => el.remove();
+  el.appendChild(dong);
+  // Ngay trên thanh tab dưới cùng (điện thoại) — đo chiều cao THẬT (nhãn tab xuống 2 dòng thì cao hơn); máy tính thanh tab ở trên -> đáy.
+  const tab = document.querySelector('.tab-links');
+  const r = tab && getComputedStyle(tab).position === 'fixed' ? tab.getBoundingClientRect() : null;
+  if (r && r.top > innerHeight / 2) el.style.bottom = Math.round(innerHeight - r.top) + 'px';
+  document.body.appendChild(el);
+  if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+}
 window.addEventListener('beforeunload', e => {
-  if ((!dsUploadDangCho.size && !donChoXong) || daDongYRoiTrang) return; // donChoXong: đơn chụp dở chưa Xong
+  if (!dsUploadDangCho.size || daDongYRoiTrang) return; // đơn chờ Xong đã lưu trên máy (datDonChoXong) — không cần hỏi vì nó
   e.preventDefault();
   e.returnValue = '';
 });
@@ -313,6 +375,7 @@ function doiMode(moiMode) {
   guiLogQuet(false, true); // lô rỗng: chỉ để hỏi phiên bản mới nhất
   await taiKichBan();
   await taiCauHinhNenAnh();
+  if (await khoiPhucDonChoXong()) mode = 'photo_san_xuat'; // đang chụp dở đơn nào thì mở lại đúng chế độ đó
   capNhatManHinh();
 })();
 
@@ -1082,12 +1145,12 @@ async function xuLyQuetDeXacDinhDon(sttKeyThoDoc) {
       hienThiToast('OK', `${sttKeyMoi}: đơn này đang chờ — chụp ảnh 2 hoặc bấm Xong`);
       phatAmThanhKetQua('OK');
     } else {
-      if (cauHinh.haiAnh && donChoXong) hoanTatDonChoXong(); // quét được đơn KHÁC = đơn trước xong lượt (chạy ngầm, không chờ)
+      if (cauHinh.haiAnh && donChoXong) hoanTatDonChoXong('quet-don-sau'); // quét được đơn KHÁC = đơn trước xong lượt (chạy ngầm, không chờ)
       if (cauHinh.haiAnh && ketQua.soAnhLuotNay >= 1) {
         // Đơn đã có ảnh của lượt này từ trước (thoát trang / quên bấm Xong) — người dùng chốt: GIỮ ảnh đã có, chụp tiếp hoặc Xong.
         const dong = { trangThai: 'cho-xong', sttKey: sttKeyMoi, ghiChu: `Đã có ${ketQua.soAnhLuotNay} ảnh từ lần chụp trước — chưa Xong` };
         themDongDaChup(dong);
-        donChoXong = { sttKey: sttKeyMoi, tieuDe: ketQua.tieuDe, tenKhachHang: ketQua.tenKhachHang, soAnh: ketQua.soAnhLuotNay, huaAnh1: Promise.resolve(true), dong };
+        datDonChoXong({ sttKey: sttKeyMoi, tieuDe: ketQua.tieuDe, tenKhachHang: ketQua.tenKhachHang, soAnh: ketQua.soAnhLuotNay, huaAnh1: Promise.resolve(true), dong });
         hienThiToast('OK', `${ketQua.tieuDe || sttKeyMoi}: đã có ${ketQua.soAnhLuotNay} ảnh — ${ketQua.soAnhLuotNay < 2 ? 'chụp ảnh 2 hoặc ' : ''}bấm Xong`);
       } else {
         // log: bản ghi CHUP_ANH của lượt này — đi tiếp qua bấm chụp -> có ảnh -> nén -> gửi (taiAnhLenNgam).
@@ -1175,6 +1238,7 @@ async function taiAnhLenNgam(sttKey, cauHinh, file, dong, log, tuyChon = {}) {
   const thongSoNen = {}; // object RIÊNG của lượt này (ảnh nén ngầm chồng nhau — không đọc biến toàn cục của api.js)
   const fileDaNen = await nenAnhTruocKhiTaiLen(file, { ...cauHinhNenAnh, thongSo: thongSoNen });
   const tNen1 = performance.now();
+  if (laAnhHeif(thongSoNen.dauFile)) baoAnhHeif(); // máy đang chụp HEIC — nhắc tắt cài đặt (1 lần mỗi lần mở trang)
   log.giaiDoan = 'gui';
   // Dòng "[đo: nén ..., gửi+chờ ...]" tạm hiện trên màn hình (23/09/2026) ĐÃ BỎ 12/10/2026 — số đo giờ ghi vào Logs_UploadAnh.
   const ghiLogChup = (ketQua, them) => {
@@ -1226,7 +1290,9 @@ async function taiAnhLenNgam(sttKey, cauHinh, file, dong, log, tuyChon = {}) {
       } catch (err) {
         // Lần trước thực ra ĐÃ lưu (mất phản hồi giữa đường) -> lần gửi lại bị từ chối vì đơn đã sang đúng trạng thái đích
         // (routes/photos.js trả trangThaiHienTai — không dò chữ trong câu báo lỗi).
-        if (soLanGui > 1 && err.nghiepVu && err.duLieu && err.duLieu.trangThaiHienTai === cauHinh.chuyenSang) { data = { daLuuLanTruoc: true }; break; }
+        // CHỈ khi lần gửi này có chuyển trạng thái (xong): ảnh 1 của "đã sản xuất" (xong=false) không đổi trạng thái nên đơn đã sang đích
+        // KHÔNG chứng minh ảnh này đã lưu (có thể máy khác vừa chụp xong) -> báo lỗi như thường.
+        if (xong && soLanGui > 1 && err.nghiepVu && err.duLieu && err.duLieu.trangThaiHienTai === cauHinh.chuyenSang) { data = { daLuuLanTruoc: true }; break; }
         if ((err.status && err.status < 500) || soLanGui > CHO_GUI_LAI_ANH_MS.length) throw err;
         dong.ghiChu = `Mạng chập chờn — tự gửi lại lần ${soLanGui + 1}/${CHO_GUI_LAI_ANH_MS.length + 1}... (đừng đóng trang)`;
         renderDsDaChup();
@@ -1257,7 +1323,7 @@ async function taiAnhLenNgam(sttKey, cauHinh, file, dong, log, tuyChon = {}) {
     hienThiToastAnh('canh-bao', `${sttKey}: ${dong.ghiChu}`);
     phatAmThanhKetQua('SAI_TRANG_THAI');
     // Ảnh 1 không lưu được -> đơn không còn "chờ Xong" (không có ảnh nào để Xong); quét lại mã đơn để chụp lại từ đầu.
-    if (donChoXong && donChoXong.dong === dong) { donChoXong = null; renderDonChoXong(); }
+    if (donChoXong && donChoXong.dong === dong) { datDonChoXong(null); renderDonChoXong(); }
     return false;
   } finally {
     dsUploadDangCho.delete(khoa);
@@ -1287,7 +1353,7 @@ async function xuLyChupAnh(file) {
   // Ảnh đã sản xuất: ảnh 1 lưu nhưng CHƯA chuyển trạng thái — đơn vào khung "chờ Xong" (chụp ảnh 2 / Xong / quét đơn tiếp theo).
   const hua = taiAnhLenNgam(sttKey, cauHinh, file, dong, log, cauHinh.haiAnh ? { xong: false } : {});
   if (cauHinh.haiAnh) {
-    donChoXong = { sttKey, tieuDe: donDaXacDinhChoAnh.tieuDe, tenKhachHang: donDaXacDinhChoAnh.tenKhachHang, soAnh: 1, huaAnh1: hua, dong };
+    datDonChoXong({ sttKey, tieuDe: donDaXacDinhChoAnh.tieuDe, tenKhachHang: donDaXacDinhChoAnh.tenKhachHang, soAnh: 1, huaAnh1: hua, dong });
   }
   donDaXacDinhChoAnh = null;
   await capNhatManHinh();
@@ -1306,7 +1372,7 @@ function renderDonChoXong() {
     <div style="margin:6px 0">Đã chụp ${d.soAnh} ảnh — chưa chuyển "Đã sản xuất".</div>
     <div class="hang-nut" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
       ${d.soAnh < 2 ? `<button type="button" class="btn-hanh-dong" onclick="bamChupAnh2()">${icon('camera', { size: 18 })} Chụp ảnh 2</button>` : ''}
-      <button type="button" class="btn-hanh-dong phu" onclick="hoanTatDonChoXong()">${icon('check', { size: 18 })} Xong đơn này</button>
+      <button type="button" class="btn-hanh-dong phu" onclick="hoanTatDonChoXong('nut')">${icon('check', { size: 18 })} Xong đơn này</button>
     </div>
     <div style="margin-top:6px;font-size:.9em;opacity:.8">Quét mã đơn tiếp theo cũng tự Xong đơn này.</div>`;
 }
@@ -1321,7 +1387,7 @@ document.getElementById('input-chup-anh-2').addEventListener('change', e => {
   const file = e.target.files[0];
   const d = donChoXong;
   if (!file || !d) return;
-  donChoXong = null;
+  datDonChoXong(null);
   renderDonChoXong();
   d.dong.sauAnh1 = true;
   d.dong.trangThai = 'dang-tai';
@@ -1336,26 +1402,32 @@ document.getElementById('input-chup-anh-2').addEventListener('change', e => {
 });
 
 // "Xong đơn này" / quét sang đơn khác — chuyển "Đã sản xuất" với số ảnh đang có. Chạy ngầm; tự gửi lại khi lỗi mạng như ảnh.
-async function hoanTatDonChoXong() {
+// cach: 'nut' (bấm Xong) | 'quet-don-sau' (tự Xong khi quét đơn khác). MỖI lần đều ghi Logs_UploadAnh (XONG_DON, 15/10/2026) — trước đây
+// không ghi nên không biết đơn kẹt "Đang chạy máy" là do Xong lỗi hay do không hề gửi.
+async function hoanTatDonChoXong(cach = 'nut') {
   const d = donChoXong;
   if (!d) return;
-  donChoXong = null;
+  datDonChoXong(null);
   renderDonChoXong();
   d.dong.sauAnh1 = true;
   const khoa = d.sttKey + '#xong';
   dsUploadDangCho.add(khoa);
+  const t0 = performance.now();
+  let lan = 0;
+  const ghiLogXong = (ketQua, them = {}) => ghiLogQuet({ suKien: 'XONG_DON', cheDo: 'photo_san_xuat', sttKey: d.sttKey, ketQua, loi: them.loi || '',
+    tongMs: Math.round(performance.now() - t0), chiTiet: { cach, soAnh: d.soAnh, soLanGui: lan, ...(d.khoiPhuc ? { khoiPhuc: true } : {}), ...(them.chiTiet || {}) } });
   try {
-    if (!(await d.huaAnh1)) return; // ảnh 1 không lưu được — dòng đã báo lỗi, không có gì để Xong
+    if (!(await d.huaAnh1)) { ghiLogXong('BO_NGANG', { loi: 'Ảnh 1 không lưu được — không Xong' }); return; } // dòng đã báo lỗi ảnh 1
     d.dong.trangThai = 'dang-tai';
     d.dong.ghiChu = 'Đang chuyển sang "Đã sản xuất"...';
     renderDemNhomAnh(); renderDsDaChup();
-    for (let lan = 1; ; lan++) {
+    for (lan = 1; ; lan++) {
       try {
         await apiFetch('/photos/hoan-tat-san-xuat', { method: 'POST', body: JSON.stringify({ sttKey: d.sttKey }) });
         break;
       } catch (err) {
         // Lần trước thực ra đã chuyển (mất phản hồi) -> lần gửi lại bị từ chối vì đơn đã "Đã sản xuất".
-        if (lan > 1 && err.duLieu && err.duLieu.trangThaiHienTai === CAU_HINH_ANH.photo_san_xuat.chuyenSang) break;
+        if (lan > 1 && err.duLieu && err.duLieu.trangThaiHienTai === CAU_HINH_ANH.photo_san_xuat.chuyenSang) { d.daXongLanTruoc = true; break; }
         if ((err.status && err.status < 500) || lan > CHO_GUI_LAI_ANH_MS.length) throw err;
         d.dong.ghiChu = `Mạng chập chờn — tự gửi lại lần ${lan + 1}/${CHO_GUI_LAI_ANH_MS.length + 1}... (đừng đóng trang)`;
         renderDsDaChup();
@@ -1366,7 +1438,17 @@ async function hoanTatDonChoXong() {
     d.dong.ghiChu = `${d.tenKhachHang || ''} — Đang chạy máy → Đã sản xuất (${d.soAnh} ảnh)`;
     hienThiToastAnh('ok', `${d.sttKey} — đã chuyển sang "Đã sản xuất" (${d.soAnh} ảnh)`);
     phatAmThanhKetQua('OK');
+    ghiLogXong('OK', d.daXongLanTruoc ? { chiTiet: { daXongLanTruoc: true } } : {});
   } catch (err) {
+    if (err.duLieu && err.duLieu.trangThaiHienTai === CAU_HINH_ANH.photo_san_xuat.chuyenSang) {
+      ghiLogXong('OK', { chiTiet: { nguoiKhacDaXong: true } });
+      // Đơn ĐÃ ở "Đã sản xuất" — người khác vừa bấm Xong / chụp xong đơn này trước: không phải lỗi, không kêu báo lỗi (14/10/2026).
+      d.dong.trangThai = 'ok';
+      d.dong.ghiChu = `${d.tenKhachHang || ''} — đơn đã ở "Đã sản xuất" (người khác vừa bấm Xong / chụp xong đơn này)`;
+      hienThiToastAnh('ok', `${d.sttKey} — đơn đã ở "Đã sản xuất" (người khác vừa xong)`);
+      return;
+    }
+    ghiLogXong(ketQuaLoi(err, 'SAI_TRANG_THAI'), { loi: err.message });
     d.dong.trangThai = 'canh-bao';
     d.dong.ghiChu = err.nghiepVu ? err.message : `CHƯA chuyển "Đã sản xuất" (${err.message}) — quét lại mã đơn rồi bấm Xong.`;
     hienThiToastAnh('canh-bao', `${d.sttKey}: ${d.dong.ghiChu}`);

@@ -35,7 +35,7 @@
 </div>
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=125"></script>
+<script src="/js/api.js?v=126"></script>
 <script>
 const sttKey = new URLSearchParams(location.search).get('stt');
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
@@ -508,7 +508,7 @@ const LOAI_ANH_TAI_LEN = [
   { moc: 've_file', ten: 'Ảnh file thêu (sau khi vẽ file)', ghiChu: 'chỉ lưu ảnh, không đổi trạng thái đơn; tải lại sẽ thay ảnh cũ.' },
   { moc: 've_file_2', ten: 'Ảnh File Thêu 2 (không bắt buộc)', ghiChu: 'chỉ lưu ảnh, không đổi trạng thái đơn; tải lại sẽ thay ảnh cũ.' },
   { moc: 've_file_3', ten: 'Ảnh File Thêu 3 (không bắt buộc)', ghiChu: 'chỉ lưu ảnh, không đổi trạng thái đơn; tải lại sẽ thay ảnh cũ.' },
-  { moc: 'da_san_xuat', ten: 'Ảnh đã sản xuất (ngay khi chạy máy xong)', chiAdmin: true, ghiChu: 'chọn 1 hoặc 2 ảnh cùng lúc (tối đa 2 ảnh/đơn). Chỉ dùng được khi đơn đang ở "Đang chạy máy" — tải xong cả lượt sẽ TỰ ĐỘNG chuyển đơn sang "Đã sản xuất". san_xuat/nguoi_lay_phoi nên dùng màn "Chụp ảnh đã sản xuất" ở trang Quét QR thay vì đây (nhanh hơn, không cần mở từng đơn).' },
+  { moc: 'da_san_xuat', ten: 'Ảnh đã sản xuất (ngay khi chạy máy xong)', chiAdmin: true, ghiChu: 'chọn 1 hoặc 2 ảnh cùng lúc (tối đa 2 ảnh/đơn). Đơn đang ở "Đang chạy máy": tải xong cả lượt sẽ TỰ ĐỘNG chuyển đơn sang "Đã sản xuất". Đơn đang ở "Đã sản xuất": THAY toàn bộ ảnh đã sản xuất cũ (không đổi trạng thái; link ảnh cũ vẫn xem được trong lịch sử đơn). san_xuat/nguoi_lay_phoi nên dùng màn "Chụp ảnh đã sản xuất" ở trang Quét QR thay vì đây (nhanh hơn, không cần mở từng đơn).' },
   { moc: 'da_dan_tem', ten: 'Ảnh ĐÃ DÁN TEM (sau khi dán tem lên kiện hàng)', chiAdmin: true, ghiChu: 'chỉ dùng được khi đơn đang ở "Đã sản xuất" VÀ đã có thông tin Tracking (mua trước ở khối "Vận chuyển (GKE)" ở trên hoặc menu Tracking) — tải ảnh xong sẽ TỰ ĐỘNG chuyển đơn sang "ĐÃ DÁN TEM". Bản thân việc tải ảnh này không tạo mã tracking. san_xuat/nguoi_lay_phoi nên dùng màn "Chụp ảnh ĐÃ DÁN TEM" ở trang Quét QR thay vì đây (nhanh hơn, không cần mở từng đơn).' },
 ];
 
@@ -1010,31 +1010,44 @@ async function taiAnh(nut) {
   const toiDa = moc === 'da_san_xuat' ? 2 : 1;
   if (input.files.length > toiDa) return alert(`Chỉ chọn tối đa ${toiDa} ảnh cho loại này (đang chọn ${input.files.length}).`);
   if (nut.disabled) return; // chặn bấm 2 lần khi đang tải (ảnh Đã sản xuất / ĐÃ DÁN TEM tự chuyển trạng thái)
+  // Thay ảnh đã sản xuất (14/10/2026, theo yêu cầu người dùng — chỉ ở đây, chỉ admin, đơn đang "Đã sản xuất"): thay CẢ lượt ảnh cũ.
+  const thay = moc === 'da_san_xuat' && donHienTai && donHienTai.TRANG_THAI_XUONG === 'Đã sản xuất';
+  if (thay && !confirm(`Đơn đã ở "Đã sản xuất". THAY toàn bộ ảnh đã sản xuất hiện có bằng ${input.files.length} ảnh mới?`
+    + (input.files.length === 1 && donHienTai.Anh_Da_San_Xuat_URL_2 ? '\n(Đơn đang có 2 ảnh — ảnh thứ 2 cũ sẽ bị bỏ.)' : '')
+    + '\nTrạng thái đơn không đổi; link ảnh cũ vẫn xem được trong lịch sử đơn.')) return;
   nut.disabled = true;
-  try { await guiAnh(moc, [...input.files]); } finally { nut.disabled = false; }
+  try { await guiAnh(moc, [...input.files], thay); } finally { nut.disabled = false; }
 }
-async function guiAnh(moc, dsFile) {
+let daBaoHeif = false; // cảnh báo ảnh HEIC 1 lần mỗi lần mở trang
+async function guiAnh(moc, dsFile, thay = false) {
   // Ảnh đã sản xuất 2 ảnh: gửi ảnh 1 (chưa chuyển trạng thái) rồi ảnh 2 (chuyển "Đã sản xuất") — xem routes/photos.js#soAnhSanXuatLuotNay.
   let daLuu = 0;
   try {
     for (let i = 0; i < dsFile.length; i++) {
       // Nén ảnh trước khi upload (bổ sung 21/09/2026, theo yêu cầu người dùng — xem api.js#nenAnhTruocKhiTaiLen)
       // — cùng lý do đã áp dụng ở scan.html: ảnh camera gốc thường vài MB, nén trước giúp upload nhanh hơn.
-      const fileDaNen = await nenAnhTruocKhiTaiLen(dsFile[i]);
+      const thongSo = {};
+      const fileDaNen = await nenAnhTruocKhiTaiLen(dsFile[i], { thongSo });
+      if (laAnhHeif(thongSo.dauFile) && !daBaoHeif) { daBaoHeif = true; alert(CANH_BAO_FILE_HEIF); } // file HEIC — nhắc chuyển JPG / tắt HEIC
       const form = new FormData();
       form.append('photo', fileDaNen);
       form.append('sttKey', sttKey);
       form.append('moc', moc);
       form.append('viTri', String(i + 1));
       form.append('xong', i === dsFile.length - 1 ? '1' : '0');
+      if (thay) form.append('thay', '1');
       const res = await fetch('/api/photos/upload', { method: 'POST', body: form, credentials: 'include' });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (!res.ok) throw Object.assign(new Error(data.error), { trangThaiHienTai: data.trangThaiHienTai });
       daLuu++;
     }
-    alert(dsFile.length > 1 ? `Đã tải ${dsFile.length} ảnh lên!` : 'Đã tải ảnh lên!');
+    alert(thay ? `Đã thay ${dsFile.length} ảnh đã sản xuất!` : dsFile.length > 1 ? `Đã tải ${dsFile.length} ảnh lên!` : 'Đã tải ảnh lên!');
   } catch (e) {
-    alert(daLuu ? `Đã lưu ảnh 1 nhưng ảnh 2 lỗi: ${e.message}\nĐơn CHƯA chuyển trạng thái — chọn lại cả 2 ảnh rồi tải lại.` : e.message);
+    // Trang mở lúc đơn còn "Đang chạy máy" nhưng đơn vừa được chụp xong ở nơi khác -> giờ là "thay ảnh": tải lại trang, bấm lại.
+    if (!daLuu && !thay && moc === 'da_san_xuat' && e.trangThaiHienTai === 'Đã sản xuất') {
+      alert('Đơn vừa được chuyển sang "Đã sản xuất" (có người vừa chụp xong ảnh). Trang sẽ tải lại thông tin đơn — chọn lại ảnh rồi bấm "Tải ảnh lên" nếu muốn THAY ảnh đã sản xuất.');
+    } else alert(!daLuu ? e.message : thay ? `Đã thay ảnh 1 nhưng ảnh 2 lỗi: ${e.message}\nĐơn hiện chỉ còn 1 ảnh mới — chọn lại cả 2 ảnh rồi thay lại.`
+      : `Đã lưu ảnh 1 nhưng ảnh 2 lỗi: ${e.message}\nĐơn CHƯA chuyển trạng thái — chọn lại cả 2 ảnh rồi tải lại.`);
   }
   await taiChiTiet();
 }

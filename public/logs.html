@@ -38,7 +38,7 @@
       <div class="truong"><label for="ua-su-kien">Sự kiện</label>
         <select id="ua-su-kien"><option value="">Tất cả</option><option value="CHUP_ANH">Chụp + tải ảnh</option><option value="QUET_QR">Quét QR</option>
           <option value="MO_CAMERA">Mở camera</option><option value="XAC_NHAN_HANG_LOAT">Xác nhận hàng loạt</option><option value="QUET_LAI">Quét lại (bỏ ngang)</option>
-          <option value="THOAT_GIUA_CHUNG">Thoát khi ảnh chưa tải xong</option></select></div>
+          <option value="THOAT_GIUA_CHUNG">Thoát khi ảnh chưa tải xong</option><option value="XONG_DON">Xong đơn (ảnh đã sản xuất)</option></select></div>
       <div class="truong"><label for="ua-nhom-kq">Kết quả</label>
         <select id="ua-nhom-kq"><option value="">Tất cả</option><option value="KY_THUAT">Lỗi kỹ thuật (mạng/máy chủ/camera, thoát khi chưa tải xong)</option>
           <option value="NGHIEP_VU">Sai đơn (sai trạng thái / không tìm thấy / trùng)</option><option value="BO_NGANG">Quét lại (bỏ ngang)</option></select></div>
@@ -80,7 +80,7 @@
 </div>
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=125"></script>
+<script src="/js/api.js?v=126"></script>
 <script>
 let toanBoDong = [];
 
@@ -118,7 +118,7 @@ function chonTabLogs(tab) {
 }
 
 // ---------- Logs_UploadAnh ----------
-const NHAN_SU_KIEN_UA = { MO_CAMERA: 'Mở camera', QUET_QR: 'Quét QR', CHUP_ANH: 'Chụp + tải ảnh', XAC_NHAN_HANG_LOAT: 'Xác nhận hàng loạt', QUET_LAI: 'Quét lại', THOAT_GIUA_CHUNG: 'Thoát giữa chừng' };
+const NHAN_SU_KIEN_UA = { MO_CAMERA: 'Mở camera', QUET_QR: 'Quét QR', CHUP_ANH: 'Chụp + tải ảnh', XAC_NHAN_HANG_LOAT: 'Xác nhận hàng loạt', QUET_LAI: 'Quét lại', THOAT_GIUA_CHUNG: 'Thoát giữa chừng', XONG_DON: 'Xong đơn' };
 const NHAN_CHE_DO_UA = { batch: 'Quét kịch bản', lookup: 'Tra cứu', photo_san_xuat: 'Ảnh đã sản xuất', photo_da_dan_tem: 'Ảnh ĐÃ DÁN TEM' };
 let dsUploadAnh = [];
 const giayUA = ms => (ms == null || ms === '' ? '—' : (ms / 1000).toFixed(1).replace('.', ','));
@@ -156,7 +156,7 @@ function moTaChiTietUA(r) {
   if (c.msCamera != null) p.push(`camera ${giayUA(c.msCamera)}s`);
   if (c.msNen != null) p.push(`nén ${giayUA(c.msNen)}s${c.msGiaiMa != null ? ` (giải mã ${giayUA(c.msGiaiMa)}, vẽ ${giayUA(c.msVe)}, xuất ${giayUA(c.msXuat)})` : ''}`
     + ` ${c.kbGoc}→${c.kbSauNen}KB${c.rongGoc ? ` ${c.rongGoc}x${c.caoGoc}→${c.rong}x${c.cao}` : ''}${c.loaiFile ? ' ' + c.loaiFile : ''}${c.khongNen ? ` [không nén: ${c.khongNen}]` : ''}`);
-  if (c.dauFile) p.push(`đầu file ${c.dauFile.startsWith('ffd8ff') ? 'JPEG' : c.dauFile.slice(8, 16) === '66747970' ? 'HEIF/AVIF' : 'lạ'} (${c.dauFile})`);
+  if (c.dauFile) p.push(`đầu file ${c.dauFile.startsWith('ffd8ff') ? 'JPEG' : laAnhHeif(c.dauFile) ? 'HEIF/AVIF' : 'lạ'} (${c.dauFile})`);
   if (c.huongExif != null) p.push(`EXIF ${c.huongExif}${c.tuXoayExif ? ', app tự xoay' : ''}${c.doXoay ? ` (dò: ${c.doXoay})` : ''}`);
   if (c.msGui != null) p.push(`gửi ${giayUA(c.msGui)}s${c.kbMoiGiay ? ` (${c.kbMoiGiay}KB/s)` : ''}`);
   if (c.soLanGui > 1) p.push(`gửi ${c.soLanGui} lần${c.msTongGui != null ? ` (tổng ${giayUA(c.msTongGui)}s)` : ''}`);
@@ -165,6 +165,11 @@ function moTaChiTietUA(r) {
   if (c.mang && c.mang.loai) p.push(`mạng ${c.mang.loai}${c.mang.mbps != null ? ' ~' + c.mang.mbps + 'Mbps' : ''}`);
   if (c.soLanThu > 1) p.push(`thử ${c.soLanThu} lần`);
   if (c.loiDung) p.push(`lỗi tắt camera cũ: ${c.loiDung}`);
+  if (c.cach) p.push(({ nut: 'bấm Xong', 'quet-don-sau': 'tự Xong khi quét đơn khác', 'khoi-phuc': 'khôi phục sau khi trang tải lại' })[c.cach] || c.cach);
+  if (c.cach && c.soAnh != null) p.push(`${c.soAnh} ảnh`);
+  if (c.khoiPhuc) p.push('(đơn khôi phục sau khi trang tải lại)');
+  if (c.nguoiKhacDaXong) p.push('người khác đã Xong trước');
+  if (c.daXongLanTruoc) p.push('đã Xong từ lần gửi trước');
   if (c.trangThaiMayQuet != null) p.push(`máy quét: ${({ 1: 'chưa chạy', 2: 'đang quét', 3: 'tạm dừng' })[c.trangThaiMayQuet] || c.trangThaiMayQuet}`);
   if (c.soDon != null) p.push(`${c.thanhCong}/${c.soDon} đơn OK`);
   if (c.giaiDoan) p.push(`đang ${c.giaiDoan === 'gui' ? 'gửi' : 'nén'} thì thoát`);
