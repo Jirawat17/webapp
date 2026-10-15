@@ -44,4 +44,33 @@ router.post('/gui-thu', async (req, res) => {
   res.json({ ok: true });
 });
 
+// ---------- Báo cáo logs hằng ngày qua Telegram (15/10/2026) — services/baoCaoLogService.js ----------
+// Không bao giờ trả Bot Token về trình duyệt — chỉ bản che (giống token QC ở routes/qc.js).
+const baoCaoLog = require('../services/baoCaoLogService');
+const cheToken = k => (k ? (k.length <= 8 ? '••••' : `${k.slice(0, 4)}…${k.slice(-4)}`) : '');
+router.get('/bao-cao-log', (req, res) => {
+  const ch = baoCaoLog.layCauHinh();
+  res.json({ gio: ch.gio, chat: ch.chat, nguonToken: ch.token ? 'app' : process.env.TELEGRAM_BOT_TOKEN ? 'env' : '', tokenChe: cheToken(ch.token), ngayCuoi: ch.ngayCuoi });
+});
+// body: { gio: 'HH:MM' | '' (tắt), chat, botToken? (trống = giữ token cũ), xoaToken? }
+router.post('/bao-cao-log', (req, res) => {
+  const b = req.body || {};
+  const gio = String(b.gio || '').trim();
+  if (gio && !/^([01]\d|2[0-3]):[0-5]\d$/.test(gio)) return res.status(400).json({ error: 'Giờ gửi không hợp lệ (dạng HH:MM, vd 23:30).' });
+  const chat = String(b.chat || '').trim();
+  if (chat && !/^-?\d+$|^@\w+$/.test(chat)) return res.status(400).json({ error: 'Chat ID Telegram không hợp lệ (dạng số, vd -1001234567890, hoặc @tenkenh).' });
+  if (gio && !chat) return res.status(400).json({ error: 'Đã đặt giờ gửi thì phải nhập Chat ID nhận báo cáo.' });
+  const botToken = String(b.botToken || '').trim();
+  if (botToken && !/^\d{5,15}:[A-Za-z0-9_-]{30,60}$/.test(botToken)) return res.status(400).json({ error: 'Bot Token không hợp lệ (dạng 123456789:AAE..., lấy từ @BotFather).' });
+  baoCaoLog.luuCauHinh({ gio, chat, token: b.xoaToken ? '' : botToken || undefined });
+  res.json({ ok: true });
+});
+// Gửi NGAY báo cáo 24 giờ gần nhất theo cấu hình ĐÃ LƯU (không tính là lần gửi hằng ngày).
+router.post('/bao-cao-log/gui-ngay', async (req, res) => {
+  let kq;
+  try { kq = await baoCaoLog.guiBaoCao(); } catch (err) { kq = { ok: false, loi: 'Lỗi khi tạo báo cáo: ' + err.message }; }
+  if (!kq.ok) return res.status(400).json({ error: kq.loi });
+  res.json({ ok: true });
+});
+
 module.exports = router;

@@ -307,6 +307,9 @@ router.post('/cap-nhat-trang-thai-thu-cong', async (req, res) => {
   const loi = [];
   const gomDelivered = []; // ô Delivered cần ghi sang Sheet Seller — ghi 1 lần sau vòng lặp (28/09/2026)
 
+  // Đọc Sheets 1 lần cho cả lượt (15/10/2026) — trước đây mỗi đơn tự đọc lại toàn bộ Sheet trong capNhatTrangThaiTrackingChoDon.
+  // Đọc khi gặp đơn ĐẦU TIÊN cần tra (đơn bị loại ngay ở 2 bước kiểm tra dưới không tốn lượt đọc nào).
+  let duLieuDon = null;
   for (const sttKey of sttKeys) {
     try {
       const { row } = await orderService.getByKey(sttKey);
@@ -318,7 +321,8 @@ router.post('/cap-nhat-trang-thai-thu-cong', async (req, res) => {
         loi.push({ sttKey, lyDo: 'Đơn chưa có mã tracking thật — chưa có gì để tra cứu.' });
         continue;
       }
-      const ketQua = await capNhatTrangThaiTrackingChoDon(sttKey, { gomDelivered });
+      duLieuDon = duLieuDon || await orderService.getAll({ fresh: true });
+      const ketQua = await capNhatTrangThaiTrackingChoDon(sttKey, { gomDelivered, duLieuDon });
       if (!ketQua.ok) { loi.push({ sttKey, lyDo: ketQua.lyDo }); continue; }
       thanhCong.push({
         sttKey,

@@ -45,7 +45,8 @@ function kiemTraDon(row, rows) {
   if (nhom && nhom.donMua.STT_Key !== row.STT_Key) lyDo.push(`Thuộc nhóm DonNhieuAo ${nhom.goc} — chỉ xuất đơn ${nhom.donMua.STT_Key} (cả nhóm dùng chung 1 tracking).`);
   if (lyDo.length) return kq;
 
-  const rowGke = trackingAutoService.apDungThongTinGke(row, []); // dữ liệu sửa tay ở hộp đỏ (nếu có), giống API
+  // Dữ liệu sửa tay ở hộp đỏ (nếu có) + ZIP Mỹ 4 số thêm số 0 đầu — giống hệt mua qua API (15/10/2026); việc tự thêm số 0 báo ở cảnh báo.
+  const rowGke = trackingAutoService.themSo0ZipMy(trackingAutoService.apDungThongTinGke(row, []), canhBao);
   if (!gkeService.duocMuaTrackingTheoQuocGia(rowGke)) lyDo.push(`Chỉ xuất đơn giao tới US hoặc UK — quốc gia "${rowGke.DIA_CHI_NUOC || '(trống)'}".`);
   let cauHinh = null;
   try { cauHinh = gkeService.layCauHinhGkeChoDon(row); } catch (e) { lyDo.push(e.message.replace(/^\[[^\]]*\]\s*/, '')); }

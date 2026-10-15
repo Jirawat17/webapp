@@ -90,6 +90,23 @@
   <button type="button" class="btn-hanh-dong" id="btn-luu-van-hanh" style="margin-top:var(--space-3)">Lưu</button>
   <p id="thong-bao-van-hanh" style="display:none"></p>
 
+  <!-- Báo cáo logs hằng ngày qua Telegram (15/10/2026, theo yêu cầu người dùng) — routes/vanHanh.js + services/baoCaoLogService.js. -->
+  <h3 style="margin-top:var(--space-6)">Báo cáo logs hằng ngày (Telegram)</h3>
+  <p>Mỗi ngày đúng giờ đã chọn, gửi 1 tin tóm tắt + file log server (.txt) + file Logs_UploadAnh (.csv) của 24 giờ gần nhất.
+    Log có thông tin khách hàng (tên, địa chỉ) — chỉ dùng chat riêng tư.</p>
+  <div class="bao-cao-form">
+    <div class="truong"><label for="bcl-gio">Giờ gửi (để trống = tắt)</label><input type="time" id="bcl-gio" style="width:9em"></div>
+    <div class="truong" style="flex:1;min-width:220px"><label for="bcl-chat">Chat ID nhận báo cáo logs</label><input id="bcl-chat" placeholder="vd -1001234567890"></div>
+    <div class="truong" style="flex:1;min-width:220px"><label for="bcl-token">Bot Token <small id="bcl-token-trang-thai" style="color:var(--color-text-muted)"></small></label>
+      <input type="password" id="bcl-token" autocomplete="new-password" placeholder="123456789:AAE..."></div>
+  </div>
+  <div class="bao-cao-form" style="margin-top:var(--space-3)">
+    <button type="button" class="btn-hanh-dong" id="btn-luu-bcl">Lưu</button>
+    <button type="button" class="btn-hanh-dong phu" id="btn-gui-ngay-bcl">Gửi ngay báo cáo 24 giờ</button>
+    <button type="button" class="btn-hanh-dong phu" id="btn-xoa-token-bcl" style="display:none">Xoá token đã lưu</button>
+  </div>
+  <p id="thong-bao-bcl" style="display:none"></p>
+
   <!-- Tỷ lệ nén ảnh (bổ sung 23/09/2026, theo yêu cầu người dùng) — CHỈ áp dụng cho 2 chế độ chụp ảnh
        ở scan.html (Chụp ảnh đã sản xuất / Chụp ảnh ĐÃ DÁN TEM), không ảnh hưởng upload ảnh ở order.html
        (xem public/js/api.js#nenAnhTruocKhiTaiLen). -->
@@ -259,6 +276,10 @@
   await taiCauHinhVanHanh();
   document.getElementById('btn-luu-van-hanh').onclick = luuCauHinhVanHanh;
   document.getElementById('btn-vh-gui-thu').onclick = guiThuVanHanh;
+  await taiBaoCaoLog();
+  document.getElementById('btn-luu-bcl').onclick = () => luuBaoCaoLog(false);
+  document.getElementById('btn-xoa-token-bcl').onclick = () => luuBaoCaoLog(true);
+  document.getElementById('btn-gui-ngay-bcl').onclick = guiNgayBaoCaoLog;
   await taiCauHinhNenAnh();
   await taiMauXuong(); await taiTaiKhoanGke(); await taiTeamXuong(); await taiNhomHang();
   document.getElementById('btn-them-loai-hang').onclick = themLoaiHangMoi;
@@ -735,6 +756,43 @@ async function luuCauHinhVanHanh() {
 async function guiThuVanHanh() {
   try { await apiFetch('/van-hanh/gui-thu', { method: 'POST' }); thongBaoVanHanh('Đã gửi tin thử — kiểm tra chat Telegram (nhớ bấm Lưu trước nếu vừa đổi Chat ID).'); }
   catch (e) { thongBaoVanHanh('Lỗi: ' + e.message, true); }
+}
+
+// Báo cáo logs hằng ngày (15/10/2026) — routes/vanHanh.js /bao-cao-log. Token không bao giờ trả về trình duyệt, chỉ bản che.
+async function taiBaoCaoLog() {
+  const c = await apiFetch('/van-hanh/bao-cao-log');
+  document.getElementById('bcl-gio').value = c.gio;
+  document.getElementById('bcl-chat').value = c.chat;
+  const o = document.getElementById('bcl-token');
+  o.value = '';
+  o.placeholder = c.nguonToken === 'app' ? 'Để trống = giữ token cũ' : '123456789:AAE...';
+  document.getElementById('btn-xoa-token-bcl').style.display = c.nguonToken === 'app' ? '' : 'none';
+  document.getElementById('bcl-token-trang-thai').textContent = c.nguonToken === 'app' ? `(đang lưu: ${c.tokenChe})`
+    : c.nguonToken === 'env' ? '(đang dùng TELEGRAM_BOT_TOKEN trong .env)' : '(chưa có — chưa gửi được)';
+}
+function thongBaoBaoCaoLog(chu, loi) {
+  const tb = document.getElementById('thong-bao-bcl');
+  tb.style.display = 'block'; tb.style.color = loi ? 'var(--color-primary)' : '#16a34a'; tb.textContent = chu;
+}
+async function luuBaoCaoLog(xoaToken) {
+  if (xoaToken && !confirm('Xoá Bot Token đã lưu? (Sẽ dùng TELEGRAM_BOT_TOKEN trong .env nếu có.)')) return;
+  try {
+    await apiFetch('/van-hanh/bao-cao-log', { method: 'POST', body: JSON.stringify({
+      gio: document.getElementById('bcl-gio').value, chat: document.getElementById('bcl-chat').value.trim(),
+      botToken: document.getElementById('bcl-token').value.trim(), xoaToken,
+    }) });
+    await taiBaoCaoLog();
+    const gio = document.getElementById('bcl-gio').value;
+    thongBaoBaoCaoLog(xoaToken ? 'Đã xoá token.' : gio ? `Đã lưu — gửi mỗi ngày lúc ${gio}.` : 'Đã lưu — đang TẮT gửi hằng ngày (chưa có giờ gửi).');
+  } catch (e) { thongBaoBaoCaoLog('Lỗi: ' + e.message, true); }
+}
+async function guiNgayBaoCaoLog() {
+  const nut = document.getElementById('btn-gui-ngay-bcl');
+  nut.disabled = true;
+  thongBaoBaoCaoLog('Đang gửi...');
+  try { await apiFetch('/van-hanh/bao-cao-log/gui-ngay', { method: 'POST' }); thongBaoBaoCaoLog('Đã gửi — kiểm tra chat Telegram (gửi theo cấu hình ĐÃ LƯU).'); }
+  catch (e) { thongBaoBaoCaoLog('Lỗi: ' + e.message, true); }
+  nut.disabled = false;
 }
 
 async function taiNguongCanhBao() {

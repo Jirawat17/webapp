@@ -47,6 +47,27 @@ function guiTinNhan(chatId, text, botToken = BOT_TOKEN) {
   });
 }
 
+// Gửi 1 file đính kèm (sendDocument) — báo cáo logs hằng ngày (services/baoCaoLogService.js, 15/10/2026). Luôn resolve -> { ok, loi }.
+// Telegram nhận file tới 50MB; log server tự cắt ở 5MB (services/logCapture.js) nên dư sức. Lỗi KHÔNG in token (nằm trong URL).
+async function guiFile(chatId, tenFile, noiDung, botToken = BOT_TOKEN) {
+  if (!botToken || !chatId) return { ok: false, loi: !botToken ? 'Chưa có Bot Token Telegram.' : 'Chưa có Chat ID.' };
+  const form = new FormData();
+  form.append('chat_id', String(chatId));
+  form.append('document', new Blob([noiDung]), tenFile);
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${botToken}/sendDocument`, { method: 'POST', body: form, signal: AbortSignal.timeout(120000) });
+    if (res.ok) return { ok: true };
+    const raw = await res.text();
+    let moTa = raw.slice(0, 200);
+    try { moTa = JSON.parse(raw).description || moTa; } catch (e) { /* giữ raw */ }
+    console.error('[Telegram] Lỗi gửi file:', res.status, moTa);
+    return { ok: false, loi: `Telegram báo lỗi (HTTP ${res.status}): ${moTa}` };
+  } catch (err) {
+    console.error('[Telegram] Lỗi kết nối khi gửi file:', err.message);
+    return { ok: false, loi: `Lỗi kết nối Telegram: ${err.message}` };
+  }
+}
+
 // don ở đây là 1 dòng Sheet gốc (từ orderService.getAll()), có thể kèm thêm TenKhachHang đã gán sẵn
 // (xem services/canhBaoJob.js) — dùng đúng tên cột thật, KHÔNG dùng Ten_San_Pham/Ten_KH/Trang_Thai/
 // Ngay_Dat (không tồn tại trong Sheet — lỗi cũ khiến tin Telegram gửi ra bị rỗng các dòng này).
@@ -62,4 +83,4 @@ async function guiCanhBao(muc, don) {
   await guiTinNhan(CHAT_ID_THEO_MUC[muc], text);
 }
 
-module.exports = { guiCanhBao, guiTinNhan };
+module.exports = { guiCanhBao, guiTinNhan, guiFile };

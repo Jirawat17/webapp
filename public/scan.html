@@ -324,6 +324,7 @@ window.addEventListener('pagehide', e => {
       chiTiet: { giaiDoan: l.giaiDoan || 'nen', tamCat: e.persisted } });
   }
   if (!e.persisted) luotDangTai.clear();
+  ghiLogLapBiChan();
   clearTimeout(henGuiLog);
   while (hangDoiLog.length) guiLogQuet(true);
 });
@@ -1124,6 +1125,29 @@ async function tiepTucQuet() {
 // tin cậy hơn hẳn — giờ quét sống TRƯỚC để xác định đơn, ảnh chụp sau không cần đọc được mã QR nữa.
 // ============================================================
 
+// Cùng mã + cùng chế độ vừa bị máy chủ từ chối (4xx) trong 6 giây -> KHÔNG gọi lại máy chủ, chỉ báo lại lỗi cũ (15/10/2026, người dùng
+// chốt). Camera đọc lại mã lỗi liên tục: log 15/10 có 10LH253 9 lần/32 giây, mã vạch USPS 15 lần. 6 giây tính từ lần hỏi máy chủ gần nhất
+// (lần bị chặn không gia hạn) — quá 6 giây hỏi lại thật, phòng đơn vừa đổi trạng thái. Lỗi mạng/5xx không nhớ: thử lại có ích.
+const CHAN_LOI_LAP_MS = 6000;
+let loiQuetGanNhat = null; // { ma, cheDo, loi, ketQuaLog, luc, soLanLap, lapTu, lapDen }
+// Lần bị chặn vẫn ĐẾM — ghi 1 dòng tổng vào Logs_UploadAnh (chiTiet.soLanLapBiChan) khi lượt chặn kết thúc (lần hỏi máy chủ kế tiếp /
+// rời trang / ẩn trang), để vẫn thấy người quét lặp mã lỗi bao lâu mà không thêm 1 dòng cho mỗi khung hình camera. Dòng tổng được ghi
+// MUỘN hơn lúc quét -> kèm lapTu/lapDen (giờ thật lần chặn đầu/cuối, ms) để Logs_UploadAnh đặt đúng chỗ trên dòng thời gian. -> true nếu có ghi.
+function ghiLogLapBiChan() {
+  const l = loiQuetGanNhat;
+  if (!l || !l.soLanLap) return false;
+  ghiLogQuet({ suKien: 'QUET_QR', cheDo: l.cheDo, sttKey: l.ma, ketQua: l.ketQuaLog, loi: l.loi,
+    chiTiet: { nguon: 'CAMERA', soLanLapBiChan: l.soLanLap, lapTu: l.lapTu, lapDen: l.lapDen } });
+  l.soLanLap = 0;
+  return true;
+}
+// Ẩn trang (khoá máy, chuyển app) — trình duyệt di động có thể tắt hẳn trang mà KHÔNG phát pagehide: gửi luôn dòng tổng (nếu có) bằng sendBeacon.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'hidden' || !ghiLogLapBiChan()) return;
+  clearTimeout(henGuiLog);
+  while (hangDoiLog.length) guiLogQuet(true);
+});
+
 // Quét được mã trong trạng thái [Đang quét] — kiểm tra đơn đủ điều kiện chụp TRƯỚC khi cho chụp ảnh
 // thật (tránh lãng phí 1 lần chụp cho đơn sai trạng thái/không tồn tại).
 async function xuLyQuetDeXacDinhDon(sttKeyThoDoc) {
@@ -1131,6 +1155,17 @@ async function xuLyQuetDeXacDinhDon(sttKeyThoDoc) {
   if (!cauHinh) return; // phòng thêm: mã đọc từ camera của chế độ chụp ảnh tới muộn khi đã đổi sang chế độ khác — bỏ qua
   if (dangXuLyQuet) return;
   dangXuLyQuet = true;
+  const loiCu = loiQuetGanNhat;
+  if (loiCu && loiCu.ma === sttKeyThoDoc && loiCu.cheDo === mode && performance.now() - loiCu.luc < CHAN_LOI_LAP_MS) {
+    if (!loiCu.soLanLap) loiCu.lapTu = Date.now();
+    loiCu.soLanLap++;
+    loiCu.lapDen = Date.now();
+    hienThiToast('SAI_TRANG_THAI', loiCu.loi);
+    phatAmThanhKetQua('SAI_TRANG_THAI');
+    setTimeout(() => { dangXuLyQuet = false; tSanSangQuet = performance.now(); }, 700);
+    return;
+  }
+  ghiLogLapBiChan();
   const msTimMa = msTimMaHienTai(), tKiemTra = performance.now();
 
   try {
@@ -1163,7 +1198,9 @@ async function xuLyQuetDeXacDinhDon(sttKeyThoDoc) {
       await capNhatManHinh();
     }
   } catch (err) {
-    ghiLogQuet({ suKien: 'QUET_QR', sttKey: sttKeyThoDoc, ketQua: ketQuaLoi(err, 'SAI_TRANG_THAI'), loi: err.message, chiTiet: { nguon: 'CAMERA', msTimMa, msKiemTra: Math.round(performance.now() - tKiemTra) } });
+    const ketQuaLog = ketQuaLoi(err, 'SAI_TRANG_THAI');
+    ghiLogQuet({ suKien: 'QUET_QR', sttKey: sttKeyThoDoc, ketQua: ketQuaLog, loi: err.message, chiTiet: { nguon: 'CAMERA', msTimMa, msKiemTra: Math.round(performance.now() - tKiemTra) } });
+    if (err.status >= 400 && err.status < 500) loiQuetGanNhat = { ma: sttKeyThoDoc, cheDo: mode, loi: err.message, ketQuaLog, luc: performance.now(), soLanLap: 0 };
     hienThiToast('SAI_TRANG_THAI', err.message);
     phatAmThanhKetQua('SAI_TRANG_THAI');
   }

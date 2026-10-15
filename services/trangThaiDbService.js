@@ -203,6 +203,11 @@ function layTheoKey(sttKey) {
   return apDungMacDinhThat(row ? { ...RONG_MAC_DINH, ...row } : { ...RONG_MAC_DINH });
 }
 
+// STT_Key các đơn đang dùng chung tracking của keyTra (DonNhieuAo) — trackingAutoService.js#capNhatTrangThaiTrackingChoDon (15/10/2026).
+db.exec(`CREATE INDEX IF NOT EXISTS idx_tracking_chung_cua ON trang_thai_don (TRACKING_CHUNG_CUA)`); // tra mỗi đơn của lượt quét tracking
+const cauKeyDungChungTracking = db.prepare(`SELECT stt_key FROM trang_thai_don WHERE TRACKING_CHUNG_CUA = ?`);
+const dsKeyDungChungTracking = keyTra => cauKeyDungChungTracking.all(chuanHoaKey(keyTra)).map(r => r.stt_key);
+
 // Toàn bộ dòng trong DB, kèm stt_key riêng để làm khoá Map — dùng cho orderService.js#getAll() gộp vào
 // TOÀN BỘ Don_Hang_ALL đọc từ Sheets. Đọc cả bảng mỗi lần gọi (không lọc theo danh sách key) — SQLite
 // đọc vài trăm nghìn dòng ngắn vẫn ở mức mili-giây, không đáng lo ở quy mô đơn hàng của 1 xưởng.
@@ -363,4 +368,4 @@ function layDonDoiTrangThaiTu(tu) {
     .all(tu).map(({ stt_key, ...r }) => ({ STT_Key: stt_key, ...apDungMacDinhThat(r) }));
 }
 
-module.exports = { CAC_COT, RONG_MAC_DINH, layTheoKey, layTatCa, ghiDe, ghiDeNhieu, daKhoiTaoCanhBaoTinhTrang, ghiCanhBaoTinhTrang, demTheoXuong, dsKeyTheoXuong, doiTenXuongHangLoat, layDonDoiTrangThaiTu, layLichSuDoiTrangThaiTu };
+module.exports = { CAC_COT, RONG_MAC_DINH, layTheoKey, layTatCa, dsKeyDungChungTracking, ghiDe, ghiDeNhieu, daKhoiTaoCanhBaoTinhTrang, ghiCanhBaoTinhTrang, demTheoXuong, dsKeyTheoXuong, doiTenXuongHangLoat, layDonDoiTrangThaiTu, layLichSuDoiTrangThaiTu };

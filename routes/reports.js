@@ -1303,6 +1303,7 @@ function veBangPdf(doc, bang, canTrangMoi) {
 }
 
 router.get('/pdf', async (req, res) => {
+  const batDau = Date.now();
   const list = await layDonDaLoc(req.query, req.session.user);
 
   res.setHeader('Content-Type', 'application/pdf');
@@ -1316,12 +1317,21 @@ router.get('/pdf', async (req, res) => {
     doc.registerFont('NotoSans', FONT_REGULAR);
     doc.registerFont('NotoSans-Bold', FONT_BOLD);
     doc.pipe(res);
+    // Đo (15/10/2026 — có lần IN ĐƠN 91–127 giây dù dựng từng đơn chỉ ~2 giây): dung lượng file + lúc dựng xong + lúc gửi xong / người
+    // dùng bỏ đi, để biết chậm ở dựng PDF hay ở đường truyền tới máy người dùng. "Dựng xong" lấy NGAY khi vẽ xong đơn cuối — KHÔNG lấy
+    // sự kiện 'end' của doc: doc đang pipe vào res nên 'end' chờ cả lúc máy người dùng nhận hết dữ liệu (đường truyền chậm lẫn vào).
+    let soByte = 0, dungXongMs = null, soDaVe = 0;
+    doc.on('data', c => { soByte += c.length; });
+    res.on('close', () => console.log(`[IN ĐƠN] PDF vẽ ${soDaVe}/${list.length} đơn: ${Math.round(soByte / 1024)}KB, dựng xong ${dungXongMs ?? '(chưa — dừng)'}ms, `
+      + `${res.writableFinished ? 'gửi xong' : 'NGƯỜI DÙNG BỎ ĐI'} lúc ${Date.now() - batDau}ms`));
 
     if (list.length === 0) {
       doc.font('NotoSans').fontSize(9).text('Không có đơn nào khớp bộ lọc.', 10, 10);
     } else {
-      await veTrangDonCanInPdf(doc, list, dongNguoiXuatChuoi(req.session.user.ten));
+      // Người dùng bỏ đi (kết nối đóng) -> dừng ngay, không tải ảnh/vẽ tiếp các đơn còn lại cho không ai nhận (15/10/2026).
+      await veTrangDonCanInPdf(doc, list, dongNguoiXuatChuoi(req.session.user.ten), () => { soDaVe++; }, () => res.destroyed);
     }
+    dungXongMs = Date.now() - batDau;
     doc.end();
     return;
   }
@@ -1370,7 +1380,7 @@ router.post('/don-can-in/bat-dau', async (req, res) => {
   const job = {
     tongSo: list.length, daXong: 0, trangThai: 'dang_chay', daHuy: false,
     buffer: null, contentType: null, tenFile: null, loi: null,
-    capNhatLucNao: Date.now(),
+    capNhatLucNao: Date.now(), batDau: Date.now(),
   };
   _congViecInDon.set(jobId, job);
 
@@ -1414,6 +1424,7 @@ router.post('/don-can-in/bat-dau', async (req, res) => {
 
         if (!job.daHuy) {
           job.buffer = Buffer.concat(chunks);
+          console.log(`[IN ĐƠN] File PDF ${list.length} đơn (chạy nền): ${Math.round(job.buffer.length / 1024)}KB, dựng ${Date.now() - job.batDau}ms`);
           job.contentType = 'application/pdf';
           job.tenFile = `DonCanIn_${ngayChoTenFile(req.body)}.pdf`;
         }

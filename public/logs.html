@@ -164,6 +164,10 @@ function moTaChiTietUA(r) {
   if (c.msMayChu != null) p.push(`máy chủ ${giayUA(c.msMayChu)}s`);
   if (c.mang && c.mang.loai) p.push(`mạng ${c.mang.loai}${c.mang.mbps != null ? ' ~' + c.mang.mbps + 'Mbps' : ''}`);
   if (c.soLanThu > 1) p.push(`thử ${c.soLanThu} lần`);
+  if (c.soLanLapBiChan) {
+    const gio = ms => new Date(ms).toLocaleTimeString('vi-VN', { hour12: false });
+    p.push(`quét lặp lại ${c.soLanLapBiChan} lần${c.lapTu ? ` (${gio(c.lapTu)}–${gio(c.lapDen)})` : ''}, không hỏi lại máy chủ`);
+  }
   if (c.loiDung) p.push(`lỗi tắt camera cũ: ${c.loiDung}`);
   if (c.cach) p.push(({ nut: 'bấm Xong', 'quet-don-sau': 'tự Xong khi quét đơn khác', 'khoi-phuc': 'khôi phục sau khi trang tải lại' })[c.cach] || c.cach);
   if (c.cach && c.soAnh != null) p.push(`${c.soAnh} ảnh`);

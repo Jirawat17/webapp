@@ -32,12 +32,23 @@ function laDiaChiNoiBo(diaChiIp) {
   return true; // không parse được thành IP hợp lệ -> chặn an toàn thay vì cho qua
 }
 
-async function urlDuocPhepFetch(url) {
+// -> { diaChis } nếu được tải, { loi } (câu log) nếu không. Tách lý do (15/10/2026): trước đây DNS tạm lỗi trên VPS (EAI_AGAIN) cũng
+// bị log là "trỏ vào địa chỉ nội bộ" — sai hướng điều tra. EAI_AGAIN = lỗi TẠM của DNS -> thử lại 1 lần sau 1 giây.
+async function kiemTraUrl(url) {
   let hostname;
-  try { hostname = new URL(url).hostname; } catch (e) { return false; }
+  try { hostname = new URL(url).hostname; } catch (e) { return { loi: 'Chặn tải — URL không hợp lệ' }; }
   let diaChis;
-  try { diaChis = await dns.lookup(hostname, { all: true }); } catch (e) { return false; } // không phân giải được -> chặn
-  return diaChis.length > 0 && diaChis.every(d => !laDiaChiNoiBo(d.address));
+  for (let lan = 1; !diaChis; lan++) {
+    try {
+      diaChis = await dns.lookup(hostname, { all: true });
+    } catch (e) {
+      if (e.code === 'EAI_AGAIN' && lan === 1) { await new Promise(r => setTimeout(r, 1000)); continue; }
+      return { loi: `Không tải được — không phân giải được tên miền (${e.code || e.message})` }; // không phân giải được -> chặn
+    }
+  }
+  if (!diaChis.length) return { loi: 'Không tải được — tên miền không có địa chỉ IP nào' };
+  if (diaChis.some(d => laDiaChiNoiBo(d.address))) return { loi: 'Chặn tải — URL trỏ vào địa chỉ nội bộ/riêng tư' };
+  return { diaChis };
 }
 
 // Tải ảnh trực tiếp qua HTTP(S) thường — dùng khi URL KHÔNG phải MinIO proxy VÀ KHÔNG nhận diện
@@ -63,10 +74,12 @@ const THOI_GIAN_TAI_TOI_DA_MS = 60000;
 async function taiUrlTho(url, soLanChuyenHuongConLai = 5, hanChotTong = Date.now() + THOI_GIAN_TAI_TOI_DA_MS) {
   // Kiểm tra lại ở MỖI lần gọi — kể cả khi đệ quy theo redirect bên dưới — vì URL ban đầu hợp lệ
   // (công khai) vẫn có thể redirect sang 1 địa chỉ nội bộ.
-  if (!(await urlDuocPhepFetch(url))) {
-    console.error('[Ảnh ngoài] Chặn tải — URL trỏ vào địa chỉ nội bộ/riêng tư:', url);
+  const kiemTra = await kiemTraUrl(url);
+  if (kiemTra.loi) {
+    console.error(`[Ảnh ngoài] ${kiemTra.loi}:`, url);
     return null;
   }
+  const { diaChis } = kiemTra;
   return new Promise((resolveGoc) => {
     let hanChot = null;
     const resolve = v => { clearTimeout(hanChot); resolveGoc(v); };
@@ -74,6 +87,9 @@ async function taiUrlTho(url, soLanChuyenHuongConLai = 5, hanChotTong = Date.now
     const yeuCau = mod.get(url, {
       maxHeaderSize: 65536 * 4, // 256KB — dư sức so với ~25KB thực tế gặp phải, vẫn có giới hạn để tránh phản hồi bất thường
       timeout: 15000,
+      // Kết nối ĐÚNG địa chỉ vừa kiểm tra (15/10/2026) — không tra DNS lần 2 (lần tra thứ 2 từng lỗi EAI_AGAIN riêng) và địa chỉ
+      // không thể đổi giữa lúc kiểm tra và lúc kết nối (DNS rebinding). opts.all: Node 20 (autoSelectFamily) xin cả danh sách.
+      lookup: (_host, opts, cb) => (opts && opts.all ? cb(null, diaChis) : cb(null, diaChis[0].address, diaChis[0].family)),
       headers: { 'User-Agent': 'Mozilla/5.0' }, // 1 số site chặn request không có User-Agint hợp lệ
     }, (res) => {
       // Kết nối bị huỷ/đứt giữa lúc đang nhận body (server nguồn ngắt, timeout 15s bên dưới, quaLon bên dưới): res phát
@@ -111,7 +127,7 @@ async function taiUrlTho(url, soLanChuyenHuongConLai = 5, hanChotTong = Date.now
     }, Math.max(0, hanChotTong - Date.now()));
     yeuCau.on('timeout', () => yeuCau.destroy());
     yeuCau.on('error', (err) => {
-      console.error('[Ảnh ngoài] Không tải được:', url, '-', err.message);
+      console.error('[Ảnh ngoài] Không tải được:', url, '-', err.message || err.code || err.name); // AggregateError (nhiều IP cùng lỗi) có message rỗng
       resolve(null);
     });
   });

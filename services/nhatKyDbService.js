@@ -527,8 +527,9 @@ const ghiNhieuLogsUploadAnh = db.transaction(ds => {
 const SQL_NHOM_KQ = `CASE WHEN ket_qua = 'LOI' OR su_kien = 'THOAT_GIUA_CHUNG' THEN 'KY_THUAT'
   WHEN ket_qua IN ('SAI_TRANG_THAI', 'KHONG_TIM_THAY', 'TRUNG', 'CO_DON_LOI') THEN 'NGHIEP_VU' WHEN ket_qua = 'BO_NGANG' THEN 'BO_NGANG' ELSE '' END`;
 // Lọc: tu/den = 'YYYY-MM-DD' (ngày VN, đến hết ngày "den"); nguoi khớp chính xác; nhomKq = KY_THUAT/NGHIEP_VU/BO_NGANG; chiCham = lượt chụp chậm.
-function dieuKienLogsUploadAnh({ tu, den, nguoi, suKien, nhomKq, chiCham } = {}) {
+function dieuKienLogsUploadAnh({ tu, den, tuLuc, nguoi, suKien, nhomKq, chiCham } = {}) {
   const dk = [], ts = [];
+  if (tuLuc) { dk.push('luc >= ?'); ts.push(String(tuLuc)); } // mốc giờ VN đầy đủ (thoiGianVNISOString) — báo cáo logs 24 giờ (baoCaoLogService.js)
   if (/^\d{4}-\d{2}-\d{2}$/.test(tu || '')) { dk.push('luc >= ?'); ts.push(tu); }
   if (/^\d{4}-\d{2}-\d{2}$/.test(den || '')) { dk.push('luc < ?'); ts.push(den + 'T99'); }
   if (nguoi) { dk.push('nguoi = ?'); ts.push(nguoi); }

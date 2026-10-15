@@ -84,6 +84,15 @@ function apDungThongTinGke(row, nhatKy) {
   // "Địa chỉ" sửa tay = địa chỉ ĐẦY ĐỦ (người dùng chốt 02/10/2026) — không ghép thêm DIA_CHI_TEN_DUONG_2 của Sheet nữa.
   return { ...row, ...sua, ...(sua.DIA_CHI_TEN_DUONG ? { DIA_CHI_TEN_DUONG_2: '' } : {}) };
 }
+// ZIP Mỹ 4 chữ số (15/10/2026, người dùng chốt "tự thêm số 0"): Sheet/Excel làm rơi số 0 đầu (vd NH "3217" -> "03217",
+// GKE đòi 5–10 ký tự, trước đây thử lại 10 lần vô ích). Chỉ đổi dữ liệu GỬI GKE, không sửa Sheet; ghi nhật ký mua tracking.
+function themSo0ZipMy(row, nhatKy) {
+  const zip = String(row.MA_ZIPCODE || '').trim();
+  if (!/^\d{4}(-\d{4})?$/.test(zip)) return row;
+  try { if (gkeService.maQuocGia(row.DIA_CHI_NUOC) !== 'US') return row; } catch { return row; }
+  nhatKy.push(`[ZIP Mỹ thiếu số 0 đầu] "${zip}" -> "0${zip}".`);
+  return { ...row, MA_ZIPCODE: '0' + zip };
+}
 const XOA_THEO_DOI_THU = { TU_MUA_SO_LAN_THU: '', TU_MUA_CHE_DO: '', TU_MUA_LOI_GAN_NHAT: '', TU_MUA_THOI_GIAN_THU: '' };
 
 // Không throw — lỗi ghi chỉ in console (không che lỗi mua gốc).
@@ -389,7 +398,7 @@ async function _muaTrackingChoDonThat(sttKey, user) {
     // CHỈ mua cho đơn giao tới US/UK (bổ sung 27/09/2026, theo yêu cầu người dùng) — xét DIA_CHI_NUOC của
     // đơn mua (đơn ".1" nếu là DonNhieuAo). Chặn ở ĐÂY nên áp dụng cho mọi lối mua.
     // Dữ liệu sửa tay ở hộp đỏ mua thủ công (nếu có) — đè TRƯỚC khi xét quốc gia + gửi GKE; `row` gốc giữ nguyên cho mọi việc khác.
-    const rowGke = apDungThongTinGke(row, nhatKy);
+    const rowGke = themSo0ZipMy(apDungThongTinGke(row, nhatKy), nhatKy);
     if (!gkeService.duocMuaTrackingTheoQuocGia(rowGke)) {
       throw new Error(`Chỉ mua tracking GKE cho đơn giao tới US hoặc UK — đơn ${sttKey} có quốc gia "${rowGke.DIA_CHI_NUOC || '(trống)'}".`);
     }
@@ -719,17 +728,23 @@ function daGiaoThanhCongGke(maNode, maTrangThaiNode) {
 // mới") dùng ĐƯỢC cho cả job tự động (chỉ cần `.ok`, bỏ qua `.lyDo`) lẫn route thủ công (cần cả 2).
 // gomDelivered (bổ sung 28/09/2026): mảng để GOM các ô Delivered cần ghi sang Sheet Seller (nơi gọi tự ghi
 // 1 lần cho cả lượt — job/nút cập nhật nhiều đơn). Không truyền -> ghi ngay cho đơn này (Hệ thống).
-async function capNhatTrangThaiTrackingChoDon(sttKey, { gomDelivered } = {}) {
-  const { headers, rows } = await orderService.getAll({ fresh: true });
-  const row = rows.find(r => r.STT_Key === sttKey);
+// duLieuDon (15/10/2026): {headers, rows} đã đọc Sheets 1 lần cho CẢ lượt — trước đây mỗi đơn tự đọc lại toàn bộ Sheet (683 đơn =
+// 683 lượt đọc, lượt quét 15 phút, sát hạn mức Google). Cột tracking/trạng thái nằm ở SQLite -> đè lại bản MỚI NHẤT cho từng đơn.
+async function capNhatTrangThaiTrackingChoDon(sttKey, { gomDelivered, duLieuDon } = {}) {
+  const { headers, rows } = duLieuDon || await orderService.getAll({ fresh: true });
+  const moiNhat = r => r && { ...r, ...trangThaiDbService.layTheoKey(r.STT_Key) };
+  const row = moiNhat(rows.find(r => r.STT_Key === sttKey));
   if (!row) return { ok: false, lyDo: 'Không tìm thấy đơn: ' + sttKey };
 
   // DonNhieuAo (bổ sung 26/09/2026): GKE chỉ biết vận đơn dưới STT_Key của đơn ".1" — đơn dùng chung tra
   // theo đơn đó, rồi ghi kết quả cho CẢ đơn ".1" lẫn mọi đơn đang dùng chung tracking của nó.
   const keyTra = row.TRACKING_CHUNG_CUA || sttKey;
-  const cacDonGhi = rows.filter(r => r.STT_Key === keyTra || r.TRACKING_CHUNG_CUA === keyTra);
+  // Thành viên nhóm xét theo TRACKING_CHUNG_CUA MỚI NHẤT (SQLite) — rows của cả lượt có thể đã cũ vài phút (nhóm vừa đổi giữa lượt).
+  // So theo khoá đã cắt khoảng trắng — SQLite lưu stt_key đã trim (trangThaiDbService.chuanHoaKey), STT_Key trên Sheet có thể dư dấu cách.
+  const dsDungChung = new Set(trangThaiDbService.dsKeyDungChungTracking(keyTra));
+  const cacDonGhi = rows.filter(r => r.STT_Key === keyTra || dsDungChung.has(String(r.STT_Key).trim())).map(moiNhat);
 
-  const donTra = rows.find(r => r.STT_Key === keyTra);
+  const donTra = moiNhat(rows.find(r => r.STT_Key === keyTra));
   if (!donTra) return { ok: false, lyDo: `Không tìm thấy đơn ${keyTra} (đơn mua tracking của nhóm)` };
   const cauHinhGke = gkeService.layCauHinhGkeChoDon(donTra); // tài khoản ĐÃ tạo vận đơn
   const laSeller = donTra.NGUON_TRACKING === orderService.NGUON_TRACKING_SELLER;
@@ -773,7 +788,8 @@ async function capNhatTrangThaiTrackingChoDon(sttKey, { gomDelivered } = {}) {
 // thành công ở lượt quét trước (daGiaoThanhCongGke — xem comment trên) để đỡ tốn lượt gọi GKE vô ích.
 // Lỗi ở 1 đơn chỉ log console, KHÔNG dừng cả lượt — đơn đó tự thử lại ở lượt sau.
 async function chayQuetCapNhatTrangThaiTracking() {
-  const { rows } = await orderService.getAll();
+  const duLieuDon = await orderService.getAll({ fresh: true }); // đọc Sheets ĐÚNG 1 lần cho cả lượt
+  const { rows } = duLieuDon;
   // Bỏ đơn dùng chung tracking (DonNhieuAo) — cập nhật theo đơn ".1" của nó (xem capNhatTrangThaiTrackingChoDon).
   const donCoTracking = rows.filter(r => r.TRACKING_ID && !r.TRACKING_CHUNG_CUA);
   const donCanQuet = donCoTracking.filter(r => !daGiaoThanhCongGke(r.MA_NODE_TRACKING, r.MA_TRANG_THAI_NODE_TRACKING)
@@ -784,7 +800,7 @@ async function chayQuetCapNhatTrangThaiTracking() {
   const gomDelivered = [];
   for (const don of donCanQuet) {
     try {
-      const ketQua = await capNhatTrangThaiTrackingChoDon(don.STT_Key, { gomDelivered });
+      const ketQua = await capNhatTrangThaiTrackingChoDon(don.STT_Key, { gomDelivered, duLieuDon });
       if (ketQua.ok) soDaCapNhat++;
     } catch (err) {
       console.error(`[TrackingTuDong] Lỗi tra cứu trạng thái tracking cho ${don.STT_Key}:`, err.message);
@@ -937,6 +953,6 @@ module.exports = {
   layDonChuyenThuCong, choTuDongThuLai, suaThongTinGke, SO_LAN_THU_TU_DONG_TOI_DA, apDungThongTinGke, docThongTinGke,
   layCauHinh, luuCauHinh, chayQuetTuDongMuaTracking, layDanhSachDonAutoTracking, layLogTracking,
   muaTrackingChoDon, inLabelChoDon, muaTrackingVaInLabelChoDon,
-  capNhatTrangThaiTrackingChoDon, chayQuetCapNhatTrangThaiTracking, chayQuetTrangThaiNeuDenLuot, daGiaoThanhCongGke,
+  capNhatTrangThaiTrackingChoDon, chayQuetCapNhatTrangThaiTracking, themSo0ZipMy, chayQuetTrangThaiNeuDenLuot, daGiaoThanhCongGke,
   layCauHinhQuetTrangThai, luuCauHinhQuetTrangThai, SO_PHUT_QUET_TRANG_THAI_TOI_THIEU,
 };
