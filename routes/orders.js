@@ -1215,23 +1215,35 @@ router.post('/:sttKey/so-mui-chi', async (req, res) => {
   }
   const soMui = nhap ? String(Number(nhap)) : ''; // bỏ số 0 ở đầu
   const sttKey = req.params.sttKey;
-  await xepHangSoMui(sttKey, () => luuSoMuiChi(req, res, user, sttKey, soMui));
+  const tVao = Date.now();
+  await xepHangSoMui(sttKey, () => luuSoMuiChi(req, res, user, sttKey, soMui, tVao));
 });
-async function luuSoMuiChi(req, res, user, sttKey, soMui) {
+// Log tách thời gian (16/10/2026, giống dòng "[Photos] Upload ..."): log 15/10 có lượt lưu số mũi chỉ 3–7 giây — đo xem chậm ở
+// đọc đơn (Google Sheet Don_Hang_ALL), ghi Sheet Seller hay ghi cập nhật/lịch sử trước khi quyết định cách tối ưu.
+async function luuSoMuiChi(req, res, user, sttKey, soMui, tVao = Date.now()) {
+  const t0 = Date.now();
   const { headers, row } = await orderService.getByKey(sttKey, { fresh: true });
   if (!row || !orderService.coQuyenTheoXuong(user, row)) return res.status(404).json({ error: 'Không tìm thấy đơn hàng: ' + sttKey });
+  const tDoc = Date.now();
 
   const [kq] = await sheetSellerService.ghiHangLoat([{ sttKey, loai: 'SO_MUI', giaTri: { GhiChuTinhGia: soMui } }], user, { ghiLichSu: false });
-  if (!kq.ok) return res.status(502).json({ error: `Không thể lưu số mũi chỉ. Vui lòng thử lại. (Lý do: ${kq.lyDo})` });
+  const tSeller = Date.now();
+  const doThoiGian = phanCuoi => `[Orders] Số mũi chỉ ${sttKey}: chờ lượt ${t0 - tVao}ms, đọc đơn ${tDoc - t0}ms, ghi Sheet Seller ${tSeller - tDoc}ms, ${phanCuoi}, TỔNG ${Date.now() - tVao}ms`;
+  if (!kq.ok) {
+    console.log(doThoiGian('LỖI ghi Sheet Seller'));
+    return res.status(502).json({ error: `Không thể lưu số mũi chỉ. Vui lòng thử lại. (Lý do: ${kq.lyDo})` });
+  }
 
   await orderService.update(sttKey, {
     SO_MUI_CHI_NOI_BO: soMui, SO_MUI_CHI_LUC: new Date().toISOString(),
     NguoiCapNhatCuoi: user.ten, ThoiGianCapNhatCuoi: new Date().toISOString(),
   }, user, { donDaDoc: { headers, row } });
+  const tGhi = Date.now();
   await ghiLog({
     nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'SUA_SO_MUI_CHI', sttKey,
     chiTiet: { tu: kq.thayDoi.length ? kq.thayDoi[0].tu : (row.GhiChuTinhGia || ''), sang: soMui, sheet: sheetSellerService.chiTietLichSu(kq) },
   });
+  console.log(doThoiGian(`ghi cập nhật ${tGhi - tSeller}ms, ghi lịch sử ${Date.now() - tGhi}ms`));
   res.json({ ok: true, soMui, sheet: { tab: kq.tab, dong: kq.dong } });
 }
 
@@ -1402,7 +1414,7 @@ async function tinhLaiNhomHangLoat(sttKeySet, nguong) {
   // khớp đúng. Ghi bên dưới đi thẳng qua trangThaiDbService theo STT_Key — không còn cần biết số dòng
   // vật lý nữa (bỏ hẳn layLaiSoDongMoiNhat/_row, xem
   // docs/superpowers/specs/2026-09-18-chuyen-cot-app-ghi-sang-sqlite-design.md).
-  const { rows: tatCaDon } = await orderService.getAll({ fresh: true });
+  const { rows: tatCaDon } = await orderService.getAll();
   const coHash = tatCaDon.filter(d => sttKeySet.has(d.STT_Key) && d.HASH_ANH_MAU);
   const theoNhom = gomNhomCompleteLinkage(coHash, nguong);
 
@@ -1517,7 +1529,7 @@ router.post('/quet-hang-loat/bat-dau', async (req, res) => {
   // ở đầu route này (tới tận khi hết hạn dọn job 15 phút) dù thực ra không có job nào đang chạy thật.
   let rows;
   try {
-    ({ rows } = await orderService.getAll({ fresh: true }));
+    ({ rows } = await orderService.getAll());
   } catch (err) {
     _congViecHangLoat.delete(jobId);
     throw err;

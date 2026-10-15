@@ -54,7 +54,7 @@ router.delete('/goi-y/:maNhom', async (req, res) => {
   const user = req.session.user;
   const { maNhom } = req.params;
   const sttKeys = Array.isArray(req.body?.sttKeys) ? req.body.sttKeys : [];
-  const { rows } = await orderService.getAll({ fresh: true });
+  const { rows } = await orderService.getAll();
   const xoa = orderService.locTheoXuong(rows, user)
     .filter(r => r.NHOM_HANG_LOAT === maNhom && sttKeys.includes(r.STT_Key))
     .map(r => r.STT_Key);

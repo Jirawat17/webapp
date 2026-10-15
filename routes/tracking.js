@@ -217,11 +217,11 @@ router.post('/cho-tu-dong-lai', coMenuTracking, async (req, res) => {
   const { sttKeys } = req.body;
   const user = req.session.user;
   if (!Array.isArray(sttKeys) || sttKeys.length === 0) return res.status(400).json({ error: 'Danh sách đơn trống' });
-  const { rows } = await orderService.getAll({ fresh: true });
+  const { banDoTheoKey } = await orderService.getManyByKeys(sttKeys, { fresh: true });
   const thanhCong = [];
   const loi = [];
   for (const sttKey of sttKeys) {
-    const row = rows.find(r => r.STT_Key === sttKey);
+    const row = banDoTheoKey.get(sttKey);
     if (!row || !orderService.coQuyenTheoXuong(user, row)) { loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng' }); continue; }
     if (choTuDongThuLai(row, user)) thanhCong.push(sttKey);
     else loi.push({ sttKey, lyDo: 'Đơn không ở chế độ mua thủ công.' });
@@ -234,7 +234,7 @@ router.post('/cho-tu-dong-lai', coMenuTracking, async (req, res) => {
 router.post('/thong-tin-gke', coMenuTracking, async (req, res) => {
   const { sttKey, truong } = req.body;
   const giaTri = req.body.giaTri === null ? null : String(req.body.giaTri ?? '');
-  const { rows } = await orderService.getAll({ fresh: true });
+  const { rows } = await orderService.getAll({ docThat: true });
   const row = rows.find(r => r.STT_Key === sttKey);
   if (!row || !orderService.coQuyenTheoXuong(req.session.user, row)) return res.status(404).json({ error: 'Không tìm thấy đơn hàng' });
   const loi = suaThongTinGke(row, req.session.user, truong, giaTri);
@@ -248,6 +248,7 @@ router.post('/thong-tin-gke', coMenuTracking, async (req, res) => {
 // sung 09/09/2026 lần 2, theo yêu cầu người dùng (chọn mua nhiều đơn cùng lúc ở menu Đơn hàng thì in
 // gộp 1 lần thay vì mở lần lượt N hộp thoại in).
 async function xuLyInLabelHangLoat(req, res, hamXuLy) {
+  const tVao = Date.now();
   const { sttKeys } = req.body;
   const user = req.session.user;
   if (!Array.isArray(sttKeys) || sttKeys.length === 0) {
@@ -277,7 +278,10 @@ async function xuLyInLabelHangLoat(req, res, hamXuLy) {
     }
   }
 
+  const tGop = Date.now();
   const labelBase64 = cacLabelBase64.length > 0 ? await gopCacTemPdf(cacLabelBase64) : null;
+  // Log tách thời gian (16/10/2026) — từng đơn xem dòng "[Tracking] In label <mã>: đọc đơn / GKE / ..." (trackingAutoService.inLabelChoDon).
+  console.log(`[Tracking] ${req.path} ${sttKeys.length} đơn (${thanhCong.length} OK): xử lý ${tGop - tVao}ms, ghép PDF ${Date.now() - tGop}ms, TỔNG ${Date.now() - tVao}ms`);
   res.json({ ok: true, thanhCong, loi, loiDaySheetKh, labelBase64 });
 }
 
@@ -307,12 +311,11 @@ router.post('/cap-nhat-trang-thai-thu-cong', async (req, res) => {
   const loi = [];
   const gomDelivered = []; // ô Delivered cần ghi sang Sheet Seller — ghi 1 lần sau vòng lặp (28/09/2026)
 
-  // Đọc Sheets 1 lần cho cả lượt (15/10/2026) — trước đây mỗi đơn tự đọc lại toàn bộ Sheet trong capNhatTrangThaiTrackingChoDon.
-  // Đọc khi gặp đơn ĐẦU TIÊN cần tra (đơn bị loại ngay ở 2 bước kiểm tra dưới không tốn lượt đọc nào).
-  let duLieuDon = null;
+  // Đọc 1 lần cho cả lô (bản Sheet ≤ 30 giây; có mã chưa thấy thì tự đọc thật 1 lần) rồi truyền xuống capNhatTrangThaiTrackingChoDon (16/10/2026).
+  const duLieuDon = await orderService.getManyByKeys(sttKeys, { fresh: true });
   for (const sttKey of sttKeys) {
     try {
-      const { row } = await orderService.getByKey(sttKey);
+      const row = duLieuDon.banDoTheoKey.get(sttKey);
       if (!row || !orderService.coQuyenTheoXuong(user, row)) {
         loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng' });
         continue;
@@ -321,7 +324,6 @@ router.post('/cap-nhat-trang-thai-thu-cong', async (req, res) => {
         loi.push({ sttKey, lyDo: 'Đơn chưa có mã tracking thật — chưa có gì để tra cứu.' });
         continue;
       }
-      duLieuDon = duLieuDon || await orderService.getAll({ fresh: true });
       const ketQua = await capNhatTrangThaiTrackingChoDon(sttKey, { gomDelivered, duLieuDon });
       if (!ketQua.ok) { loi.push({ sttKey, lyDo: ketQua.lyDo }); continue; }
       thanhCong.push({

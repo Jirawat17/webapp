@@ -14,7 +14,7 @@ async function chayKiemTraCanhBao() {
     // của Sheets) để tính đúng mức cảnh báo. Ghi CanhBaoDaGui bên dưới đi qua trangThaiDbService theo
     // STT_Key — không còn cần số dòng vật lý (xem
     // docs/superpowers/specs/2026-09-18-chuyen-cot-app-ghi-sang-sqlite-design.md).
-    const { rows } = await orderService.getAll({ fresh: true });
+    const { rows } = await orderService.getAll({ docThat: true });
     const banDoTenKH = await layBanDoTenKhachHang(); // 1 lần cho cả lượt quét, tránh gọi lặp lại mỗi đơn
     let soCanhBaoDaGui = 0;
 

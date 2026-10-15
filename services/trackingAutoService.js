@@ -360,7 +360,7 @@ async function _muaTrackingChoDonThat(sttKey, user) {
   let daToiBuocGke = false; // chỉ lỗi từ bước gọi GKE trở đi mới tính là 1 lần thử (ghiNhanLanThuTuDong)
 
   try {
-    const { headers, rows } = await orderService.getAll({ fresh: true });
+    const { headers, rows } = await orderService.getAll({ docThat: true });
     row = rows.find(r => r.STT_Key === sttKey);
     if (!row) throw new Error('Không tìm thấy đơn: ' + sttKey);
     chanMuaDonDaHuy(row);
@@ -543,9 +543,11 @@ async function ghiDaInLabel(sttKey, user) {
 // "Đã sản xuất"/"ĐÃ DÁN TEM" và đã có tracking thật để có gì mà in lại (xem kiemTraDieuKienInLabel).
 async function inLabelChoDon(sttKey, user) {
   const nhatKy = [];
-  const { rows } = await orderService.getAll({ fresh: true });
-  const row = rows.find(r => r.STT_Key === sttKey);
+  const t0 = Date.now(); // log tách thời gian (16/10/2026) — log 15/10 có lượt in tem 3–5,7 giây
+  const { rows, banDoTheoKey } = await orderService.getManyByKeys([sttKey], { fresh: true });
+  const row = banDoTheoKey.get(sttKey);
   if (!row) throw new Error('Không tìm thấy đơn: ' + sttKey);
+  const tDoc = Date.now();
 
   try {
     kiemTraDieuKienInLabel(row);
@@ -569,8 +571,11 @@ async function inLabelChoDon(sttKey, user) {
       if (laSeller) throw new Error(`GKE không có vận đơn cho đơn ${donLayTem.STT_Key} (tracking do Seller cung cấp): ${err.message}`);
       throw err;
     }
+    const tGke = Date.now();
     const ketQuaTem = await ghiChuNhomLenTem(temGke, nhom);
+    const tGhiChu = Date.now();
     await ghiDaInLabel(sttKey, user);
+    console.log(`[Tracking] In label ${sttKey}: đọc đơn ${tDoc - t0}ms, GKE ${tGke - tDoc}ms, ghi chú tem ${tGhiChu - tGke}ms, ghi đã in ${Date.now() - tGhiChu}ms, TỔNG ${Date.now() - t0}ms`);
 
     ghiLogTrackingVaoDb({
       sttKey, nguon: 'In label', nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: 'Thành công',
@@ -605,8 +610,8 @@ function chanMuaDonDaHuy(row) {
 // trạng thái): đã xác nhận với người dùng, 2 nút MỚI này dành riêng cho lúc chuẩn bị gửi hàng, không
 // phải để lấy mã tracking sớm như nút gốc.
 async function muaTrackingVaInLabelChoDon(sttKey, user) {
-  const { rows } = await orderService.getAll({ fresh: true });
-  const row = rows.find(r => r.STT_Key === sttKey);
+  const { rows, banDoTheoKey } = await orderService.getManyByKeys([sttKey], { fresh: true });
+  const row = banDoTheoKey.get(sttKey);
   if (!row) throw new Error('Không tìm thấy đơn: ' + sttKey);
 
   let nhom;
@@ -731,7 +736,7 @@ function daGiaoThanhCongGke(maNode, maTrangThaiNode) {
 // duLieuDon (15/10/2026): {headers, rows} đã đọc Sheets 1 lần cho CẢ lượt — trước đây mỗi đơn tự đọc lại toàn bộ Sheet (683 đơn =
 // 683 lượt đọc, lượt quét 15 phút, sát hạn mức Google). Cột tracking/trạng thái nằm ở SQLite -> đè lại bản MỚI NHẤT cho từng đơn.
 async function capNhatTrangThaiTrackingChoDon(sttKey, { gomDelivered, duLieuDon } = {}) {
-  const { headers, rows } = duLieuDon || await orderService.getAll({ fresh: true });
+  const { headers, rows } = duLieuDon || await orderService.getAll({ docThat: true });
   const moiNhat = r => r && { ...r, ...trangThaiDbService.layTheoKey(r.STT_Key) };
   const row = moiNhat(rows.find(r => r.STT_Key === sttKey));
   if (!row) return { ok: false, lyDo: 'Không tìm thấy đơn: ' + sttKey };
@@ -788,7 +793,7 @@ async function capNhatTrangThaiTrackingChoDon(sttKey, { gomDelivered, duLieuDon 
 // thành công ở lượt quét trước (daGiaoThanhCongGke — xem comment trên) để đỡ tốn lượt gọi GKE vô ích.
 // Lỗi ở 1 đơn chỉ log console, KHÔNG dừng cả lượt — đơn đó tự thử lại ở lượt sau.
 async function chayQuetCapNhatTrangThaiTracking() {
-  const duLieuDon = await orderService.getAll({ fresh: true }); // đọc Sheets ĐÚNG 1 lần cho cả lượt
+  const duLieuDon = await orderService.getAll({ docThat: true }); // đọc Sheets ĐÚNG 1 lần cho cả lượt
   const { rows } = duLieuDon;
   // Bỏ đơn dùng chung tracking (DonNhieuAo) — cập nhật theo đơn ".1" của nó (xem capNhatTrangThaiTrackingChoDon).
   const donCoTracking = rows.filter(r => r.TRACKING_ID && !r.TRACKING_CHUNG_CUA);

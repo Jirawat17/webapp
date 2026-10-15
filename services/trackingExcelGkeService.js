@@ -108,7 +108,7 @@ async function kiemTra(sttKeys, user) {
   const ma = tachMaDon(Array.isArray(sttKeys) ? sttKeys.join('\n') : sttKeys);
   if (!ma.length) throw Object.assign(new Error('Chưa có mã đơn nào.'), { status: 400 });
   if (ma.length > SO_DON_TOI_DA) throw Object.assign(new Error(`Tối đa ${SO_DON_TOI_DA} đơn mỗi lần.`), { status: 400 });
-  const { rows } = await orderService.getAll({ fresh: true });
+  const { rows } = await orderService.getAll({ docThat: true });
   const duocThay = new Map(orderService.locTheoXuong(rows, user).map(r => [r.STT_Key, r]));
   const kq = { tong: ma.length, hopLe: [], biLoai: [], khongTimThay: [] };
   for (const m of ma) {

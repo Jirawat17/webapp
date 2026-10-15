@@ -9,6 +9,11 @@ const { thoiGianVNISOString } = require('./dateUtils');
 //   LichSuNhapPhoi — cột: ThoiGian | LOAI | KICH_THUOC | MAU_SAC | SoLuongNhap | NguoiNhap | GhiChu
 //                    — mỗi dòng là 1 lần nhập kho (lô hàng), CỘNG DỒN vào Ton_Kho_Phoi, không sửa/xoá.
 const TAB_TON_KHO = 'Ton_Kho_Phoi';
+// TẠM DỪNG trừ/hoàn kho phôi tự động (15/10/2026, người dùng: "hiện chưa dùng Kho phôi") — tab Ton_Kho_Phoi chưa có nên mọi lần trừ/hoàn
+// đều lỗi "Unable to parse range" (~60 dòng ERROR/ngày) và tốn lượt gọi Google Sheets vô ích. Tắt thì 3 hàm trừ/hoàn bên dưới bỏ qua NGAY
+// (không đọc/ghi Sheet, không log). Bật lại: đặt KHO_PHOI_BAT=1 trong .env rồi khởi động lại (cần tạo tab Ton_Kho_Phoi trước).
+// Trang Quản lý tài sản (xem tồn kho / nhập kho) KHÔNG đổi.
+const KHO_PHOI_BAT = process.env.KHO_PHOI_BAT === '1';
 const TAB_LICH_SU_NHAP = 'LichSuNhapPhoi';
 
 // Chuẩn hoá để SO SÁNH (không đụng tới dữ liệu gốc lưu trong Sheet) — cắt khoảng trắng 2 đầu, gộp
@@ -100,6 +105,7 @@ async function nhapKho({ loai, kichThuoc, mauSac, soLuong, nguoiNhap, vaiTro, gh
 // 20/09/2026, phát hiện qua rà soát bảo mật: trước đây chỉ trừ 1 chiều, khiến chu trình "Đã lấy phôi ->
 // Chưa lấy phôi -> Đã lấy phôi" trừ kho 2 lần cho đúng 1 lượt lấy phôi thật).
 function truKhoTheoDon(donHang, user) {
+  if (!KHO_PHOI_BAT) return Promise.resolve();
   const khoa = `${chuan(donHang.LOAI)}|${chuan(donHang.KICH_THUOC)}|${chuan(donHang.MAU_SAC)}`;
   return xepHangTheoToHopPhoi(khoa, () => truKhoTheoDonThat(donHang, user));
 }
@@ -138,6 +144,7 @@ async function truKhoTheoDonThat(donHang, user) {
 // phôi -> Chưa lấy phôi -> Đã lấy phôi" (sửa nhầm, bấm nhầm nút quick-toggle 2 lần...) trừ kho 2 LẦN
 // cho đúng 1 lượt lấy phôi thật ngoài đời — xem orderService.js#update() nơi gọi hàm này.
 function hoanKhoTheoDon(donHang, user) {
+  if (!KHO_PHOI_BAT) return Promise.resolve();
   const khoa = `${chuan(donHang.LOAI)}|${chuan(donHang.KICH_THUOC)}|${chuan(donHang.MAU_SAC)}`;
   return xepHangTheoToHopPhoi(khoa, () => hoanKhoTheoDonThat(donHang, user));
 }
@@ -180,7 +187,7 @@ async function hoanKhoTheoDonThat(donHang, user) {
 // tự lọc chỉ những đơn THẬT SỰ chuyển trạng thái (đúng logic tinhTinhTrangTuDong hiện có, không lặp lại
 // ở đây) và đã bỏ qua SO_LUONG không hợp lệ — hàm này chỉ lo phần gộp + ghi Sheets.
 async function apDungThayDoiKhoHangLoat(danhSachThayDoi) {
-  if (danhSachThayDoi.length === 0) return;
+  if (!KHO_PHOI_BAT || danhSachThayDoi.length === 0) return;
 
   const gopTheoToHop = new Map(); // "loai|kichThuoc|mauSac" (đã chuẩn hoá) -> { loai, kichThuoc, mauSac, tongSoLuong }
   for (const { loai, kichThuoc, mauSac, soLuong } of danhSachThayDoi) {

@@ -1,4 +1,4 @@
-const { readTab, readTabCached } = require('./sheetsService');
+const { readTabCached, docThatVaGhiCache } = require('./sheetsService');
 const trangThaiDbService = require('./trangThaiDbService');
 const { layBanDoTenKhachHang } = require('./khachHangService');
 const taiSanService = require('./taiSanService');
@@ -21,12 +21,35 @@ const NHOM_LOC_TONG_QUAT = {
 
 const TAB = 'Don_Hang_ALL';
 const KEY_COL = 'STT_Key';
+const TUOI_DU_MOI_MS = 30000; // bản Sheet "đủ mới" — xem chú thích trên getAll()
+const CHU_KY_LAM_MOI_NEN_MS = 25000; // < TUOI_DU_MOI_MS để lượt đọc của người dùng gần như luôn có sẵn bản ≤ 30 giây
 
-// Mặc định đọc qua cache (nhanh, dữ liệu có thể cũ tối đa 10s) — dùng cho hiển thị/kiểm tra. Chỉ
-// giúp các màn hình XEM (danh sách, dashboard, báo cáo) đỡ tốn quota khi nhiều người cùng xem —
-// KHÔNG ảnh hưởng các thao tác GHI (update() luôn tự đọc fresh riêng, xem bên dưới).
-// Truyền { fresh: true } để BẮT BUỘC đọc thật từ Google Sheets — LUÔN dùng trước khi ghi (update())
-// để không bao giờ ghi nhầm dòng nếu vừa có ai thêm/xoá dòng khác ở nơi khác.
+// Đọc THẬT Don_Hang_ALL rồi ghi vào cache chung (sheetsService gộp các lượt gọi trùng lúc thành 1 request).
+const docSheetThat = () => docThatVaGhiCache(TAB);
+
+// Làm mới nền mỗi 25 giây (server.js gọi 1 lần lúc khởi động) — ~2,4 lượt đọc/phút, rất thấp so với hạn mức Google Sheets. Lỗi chỉ
+// log lúc BẮT ĐẦU lỗi và lúc HỒI PHỤC (không log mỗi 25 giây); trong lúc lỗi, lượt đọc của người dùng tự đọc thật khi bản cũ quá 30 giây.
+function batDauLamMoiNen() {
+  let dangLoi = false;
+  setInterval(() => {
+    docSheetThat().then(() => {
+      if (dangLoi) { dangLoi = false; console.log('[Orders] Làm mới nền Don_Hang_ALL đã hoạt động lại.'); }
+    }).catch(err => {
+      if (!dangLoi) { dangLoi = true; console.error('[Orders] Làm mới nền Don_Hang_ALL lỗi:', err.message); }
+    });
+  }, CHU_KY_LAM_MOI_NEN_MS);
+  console.log(`[Orders] Đã bật làm mới nền Don_Hang_ALL (mỗi ${CHU_KY_LAM_MOI_NEN_MS / 1000} giây).`);
+}
+
+// ĐỌC SHEET "ĐỦ MỚI" (16/10/2026, người dùng chốt — log 15/10: kiểm tra đơn 3–4s, số mũi chỉ 3–7s, in tem 3–5,7s; mỗi thao tác đọc lại
+// TOÀN BỘ Don_Hang_ALL mất 1,1–2,7s): Don_Hang_ALL được làm mới NỀN mỗi 25 giây (batDauLamMoiNen), mọi lượt đọc dùng bản ≤ 30 giây
+// (TUOI_DU_MOI_MS) — kể cả trước khi GHI: app không còn ghi vào Sheet này (từ 18/09/2026 mọi cột app ghi nằm ở SQLite theo STT_Key, và
+// update() luôn đè lại cột SQLite MỚI NHẤT), nên lý do cũ "đọc thật trước khi ghi để không ghi nhầm dòng" không còn. Đánh đổi: ai sửa
+// trực tiếp trên Sheet (tên, địa chỉ, huỷ...) thì app thấy chậm tối đa ~30 giây.
+//   getAll() / getAll({ ttlMs })        — bản ≤ 30 giây (hoặc ≤ ttlMs).
+//   getByKey / getManyByKeys + { fresh: true } — như trên, THÊM: không thấy mã đơn (đơn vừa thêm vào Sheet) -> đọc thật 1 lần rồi mới
+//                                          kết luận. Nơi cần TÌM ĐƠN THEO MÃ dùng 2 hàm này (getAll() + rows.find không có bước này).
+//   { docThat: true }                    — LUÔN đọc thật (vd tạo vận đơn GKE cần đúng địa chỉ, xuất Excel GKE, các job nền).
 //
 // GỘP thêm các cột APP TỰ GHI từ SQLite (bổ sung 18/09/2026, xem
 // docs/superpowers/specs/2026-09-18-chuyen-cot-app-ghi-sang-sqlite-design.md — THAY cho việc các cột
@@ -34,8 +57,8 @@ const KEY_COL = 'STT_Key';
 // không còn thể "lạc chủ" dù Don_Hang_ALL (công thức QUERY/VSTACK sống, xem layTatCa ở trangThaiDbService)
 // xáo trộn dòng bất cứ lúc nào. Đơn chưa từng có dòng trong SQLite (đơn mới) nhận toàn bộ giá trị rỗng —
 // đúng hành vi cũ khi các cột này còn là ô trống trong Sheet.
-async function getAll({ fresh = false, ttlMs = 10000 } = {}) {
-  const { headers, rows } = fresh ? await readTab(TAB) : await readTabCached(TAB, ttlMs);
+async function getAll({ docThat = false, ttlMs = TUOI_DU_MOI_MS } = {}) {
+  const { headers, rows } = docThat ? await docSheetThat() : await readTabCached(TAB, ttlMs);
   const banDoTrangThai = trangThaiDbService.layTatCa();
   const rowsGop = rows
     // Lọc bỏ dòng KHÔNG có STT_Key (bổ sung 21/09/2026, theo yêu cầu người dùng) — Don_Hang_ALL là công
@@ -211,10 +234,10 @@ function tuGanXuongTheoTeam(rows) {
   console.log(`[Orders] Tự gán Xưởng theo Team cho ${canGan.size} đơn`);
 }
 
-async function getByKey(sttKey, opts) {
-  const { headers, rows } = await getAll(opts);
-  const row = rows.find(r => r[KEY_COL] === sttKey);
-  return { headers, row };
+// opts.fresh: không thấy mã trong bản ≤ 30 giây -> đọc thật 1 lần (đơn vừa thêm vào Sheet) trước khi trả "không có" — xem getManyByKeys.
+async function getByKey(sttKey, opts = {}) {
+  const { headers, banDoTheoKey } = await getManyByKeys([sttKey], opts);
+  return { headers, row: banDoTheoKey.get(sttKey) };
 }
 
 // Đọc TOÀN BỘ sheet ĐÚNG 1 LẦN rồi tra theo danh sách sttKeys — dùng cho các thao tác HÀNG LOẠT
@@ -228,10 +251,18 @@ async function getByKey(sttKey, opts) {
 // CẢ LÔ (thường vài giây, tuỳ số đơn) thay vì luôn tuyệt đối mới nhất ngay trước khi ghi từng đơn —
 // chấp nhận được với quy mô đội hiện tại (rủi ro: nếu đúng lúc đang xử lý lô mà có người KHÁC sửa
 // đúng 1 đơn nằm trong lô đó ở nơi khác, đơn đó dùng dữ liệu "cũ" vài giây thay vì mới nhất).
-async function getManyByKeys(sttKeys, opts) {
-  const { headers, rows } = await getAll(opts);
-  const banDoTheoKey = new Map(rows.map(r => [r[KEY_COL], r]));
-  return { headers, banDoTheoKey };
+// Trả THÊM rows (toàn bộ đơn) cho nơi vừa cần tra theo mã vừa cần cả danh sách (vd nhóm DonNhieuAo khi in tem).
+async function getManyByKeys(sttKeys, opts = {}) {
+  let { headers, rows } = await getAll(opts);
+  let banDoTheoKey = new Map(rows.map(r => [r[KEY_COL], r]));
+  // Mã chưa thấy -> đọc thật 1 lần. TRỪ mã chắc chắn không bao giờ có trong danh sách: rỗng, hoặc đơn đã "Xoá dữ liệu đơn hàng" (DA_XOA —
+  // getAll lọc bỏ) — tránh mỗi lượt gọi với mã đó (vd "Đẩy lại tất cả" còn lỗi của đơn đã xoá) đều đọc lại cả Sheet.
+  const coTheMoi = k => k && !banDoTheoKey.has(k) && trangThaiDbService.layTheoKey(k).DA_XOA !== 'TRUE';
+  if (opts.fresh && !opts.docThat && sttKeys.some(coTheMoi)) {
+    ({ headers, rows } = await getAll({ docThat: true }));
+    banDoTheoKey = new Map(rows.map(r => [r[KEY_COL], r]));
+  }
+  return { headers, rows, banDoTheoKey };
 }
 
 const idxSanSang = chiSoTinhTrang('ĐÃ SẴN SÀNG CHẠY MÁY');
@@ -429,7 +460,7 @@ async function capNhatThat(sttKey, updates, user, tuyChon) {
   // vừa getByKey({fresh:true}) để kiểm tra trạng thái trước khi quyết định có gọi update() hay
   // không) — bỏ qua việc đọc lại y hệt lần nữa (đỡ tốn quota Sheets, đặc biệt cho luồng quét QR hàng
   // loạt, trước đây mỗi mã quét tốn TỚI 2 lượt đọc toàn bộ tab Don_Hang_ALL thay vì 1).
-  const { row: rowDaDoc } = tuyChon.donDaDoc || await getByKey(sttKey, { fresh: true }); // luôn đọc thật trước khi ghi
+  const { row: rowDaDoc } = tuyChon.donDaDoc || await getByKey(sttKey, { fresh: true }); // bản Sheet ≤ 30s (cột app ghi lấy SQLite ngay dưới)
   if (!rowDaDoc) throw new Error('Không tìm thấy đơn hàng: ' + sttKey);
 
   // Đè lại đúng các cột trạng thái app-ghi (trangThaiDbService — KHÔNG phải cột từ Sheets) bằng bản
@@ -883,6 +914,6 @@ function anCotTheoDoiMuaTracking(row, user) {
 module.exports = {
   VAI_TRO_MENU_TRACKING, anCotTheoDoiMuaTracking, NGUON_TRACKING_SELLER,
   suaDonKetSanSang,
-  TAB, KEY_COL, getAll, getByKey, getManyByKeys, update, filterForRole, ganTenKhachHang, tieuDeSanPham, danhSachViTriTheu,
+  TAB, KEY_COL, getAll, getByKey, batDauLamMoiNen, getManyByKeys, update, filterForRole, ganTenKhachHang, tieuDeSanPham, danhSachViTriTheu,
   layDanhSachXuong, locTheoXuong, coQuyenTheoXuong, phamViDon, laUuTien, laDonHold, loaiTinhTrangDacBiet, canhBaoTinhTrangConHan, canhBaoNhomKhiQuet, timDonTheoMaGoTay, docSoMuiChi, lyDoDaMuaTracking, NHOM_LOC_TONG_QUAT,
 };

@@ -89,7 +89,7 @@ function nguonCuaDon(sttKey, config) {
 async function docTab(client, spreadsheetId, tab, range = '') {
   const res = await sheetsService.goiApiCoThuLai(() => client.spreadsheets.values.get({
     spreadsheetId, range: tenTabTrongRange(tab) + range,
-  }));
+  }, sheetsService.TUY_CHON_DOC)); // hạn chờ đọc 20s, không tự thử lại trong gaxios (xem sheetsService.js)
   const values = res.data.values || [];
   return { headers: (values[0] || []).map(h => String(h).trim()), values };
 }

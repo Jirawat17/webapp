@@ -79,7 +79,8 @@ require('./services/canhBaoJob').batDauLichCanhBao();
 // docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md) — TẮT theo mặc định cho tới khi
 // admin tự bật ở trang "Tracking" (services/trackingAutoService.js tự đọc cấu hình mỗi lượt quét).
 require('./services/trackingJob').batDauLichTracking();
-require('./services/baoCaoLogService').batDauLichBaoCaoLog(); // báo cáo logs 24 giờ qua Telegram mỗi ngày (giờ đặt ở Settings, 15/10/2026)
+require('./services/baoCaoLogService').batDauLichBaoCaoLog();
+require('./services/orderService').batDauLamMoiNen(); // Don_Hang_ALL làm mới nền mỗi 25 giây — thao tác đọc bản ≤ 30 giây (16/10/2026) // báo cáo logs 24 giờ qua Telegram mỗi ngày (giờ đặt ở Settings, 15/10/2026)
 
 // Tự động quét QC (02/10/2026) — mỗi 2 phút; từng QC TẮT theo mặc định, bật ở menu QC (services/qc/qcAutoService.js).
 require('./services/qc/qcAutoService').batDauLichAutoQc();

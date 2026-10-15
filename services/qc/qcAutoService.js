@@ -92,7 +92,7 @@ async function chayLuotAutoQc(bayGio = Date.now()) {
     const dangBat = layCauHinhAuto().filter(c => c.bat);
     if (!dangBat.length) return nhatKy;
     const mocApDung = thoiDiem(caiDatDbService.layMocApDungAutoQc());
-    const { rows } = await orderService.getAll({ fresh: true });
+    const { rows } = await orderService.getAll({ docThat: true });
     for (const cfg of dangBat) {
       const qt = QUY_TAC[cfg.loai];
       // Ngưỡng hỏng -> chayQc sẽ từ chối; bỏ cả loại QC ở lượt này, không tốn lần thử của đơn nào.

@@ -1500,7 +1500,7 @@ router.post('/thue-team-khac/bat-dau', async (req, res) => {
   if (!laAdmin(user.vaiTro) && user.vaiTro !== 've_file') return res.status(403).json({ error: 'Vai trò này không dùng được THUÊ TEAM KHÁC' });
   const sttKeys = [...new Set((Array.isArray(req.body.sttKeys) ? req.body.sttKeys : []).map(k => String(k).trim()).filter(Boolean))];
   if (sttKeys.length === 0) return res.status(400).json({ error: 'Hãy chọn ít nhất 1 đơn hàng.' });
-  const { rows } = await orderService.getAll({ fresh: true });
+  const { rows } = await orderService.getManyByKeys(sttKeys, { fresh: true });
   const theoKey = new Map(orderService.locTheoXuong(rows, user).map(r => [r.STT_Key, r]));
   const khongThay = sttKeys.filter(k => !theoKey.has(k));
   if (khongThay.length) return res.status(404).json({ error: `Không tìm thấy đơn: ${khongThay.join(', ')} — bỏ chọn đơn này rồi xuất lại.` });

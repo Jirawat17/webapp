@@ -361,8 +361,8 @@ function hoanThienKetQua3(ai, { maCanCo, row, rows, cungNhom, laKienGom = false,
 
 // -> { ketQua, anh: [url], model, daGoiAi }
 async function chayQc3(sttKey, nguong, thongKe, mau) {
-  const { rows } = await orderService.getAll({ fresh: true });
-  const row = rows.find(r => r.STT_Key === sttKey);
+  const { rows, banDoTheoKey } = await orderService.getManyByKeys([sttKey], { fresh: true }); // bản Sheet ≤ 30 giây (16/10/2026)
+  const row = banDoTheoKey.get(sttKey);
   if (!row) throw loiNghiepVu(`Không tìm thấy đơn ${sttKey}.`, 404);
   const nhom = donNhieuAoService.layNhomCuaDon(sttKey, rows);
   const donTem = nhom ? (nhom.donIn || nhom.donMua) : null; // đơn dán tem của kiện gom
@@ -505,8 +505,8 @@ function hoanThienKetQuaDoiChieu(ai, tenHopLe, { hangMuc, batBuoc }, nguong) {
 //   loai, anhCanKiem(row) -> [{ ten, nguon, url }] (ảnh BẮT BUỘC, đọc được ít nhất 1), thieuAnh: lý do khi không có ảnh cần kiểm,
 //   anhPhu(row) -> [{ ten, nguon, url }] (gửi thêm nếu đọc được), hangMuc, batBuoc, prompt(duLieu, dsAnh) }
 async function chayDoiChieu(sttKey, qc, nguong, thongKe, mau) {
-  const { rows } = await orderService.getAll({ fresh: true });
-  const row = rows.find(r => r.STT_Key === sttKey);
+  const { rows, banDoTheoKey } = await orderService.getManyByKeys([sttKey], { fresh: true }); // bản Sheet ≤ 30 giây (16/10/2026)
+  const row = banDoTheoKey.get(sttKey);
   if (!row) throw loiNghiepVu(`Không tìm thấy đơn ${sttKey}.`, 404);
   const urlFileTheu = COT_FILE_THEU.map(c => row[c]).filter(Boolean);
   const khongGoiAi = (lyDo, anh = []) => ({ daGoiAi: false, anh, fileTheu: urlFileTheu, ketQua: ketQuaThieuDuLieu(lyDo, nguong) });

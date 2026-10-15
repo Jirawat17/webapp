@@ -12,7 +12,7 @@ const SHEET_ID = process.env.SHEET_ID;
 // xong, và các nơi cần đọc số dòng thật (_row) trước khi ghi PHẢI gọi readTab() thẳng (bỏ qua
 // cache) để không bao giờ ghi nhầm dòng nếu có ai khác vừa thêm/xoá dòng ở nơi khác.
 // ============================================================
-const _cacheBang = new Map(); // tabName -> { data: {headers, rows}, hetHan }
+const _cacheBang = new Map(); // tabName -> { data: {headers, rows}, luc } — luc = lúc BẮT ĐẦU lượt đọc (tuổi dữ liệu xét theo ttl của TỪNG nơi gọi)
 const _cacheHeader = new Map(); // tabName -> { headers, hetHan } — KHÔNG xoá khi appendRow, vì thêm 1
                                  // dòng dữ liệu không làm đổi header; chỉ xoá khi updateCells sửa hẳn dòng 1
 
@@ -50,9 +50,17 @@ function colToLetter(idx) {
   return letter;
 }
 
+// Hạn chờ Google Sheets (16/10/2026): googleapis (gaxios) mặc định KHÔNG có timeout — 1 kết nối treo giữ promise mãi mãi, mà các lượt
+// đọc trùng lúc dùng CHUNG 1 promise (gopYeuCauTrung) nên kéo treo theo mọi nơi đang chờ (job, mua tracking, làm mới nền...).
+//  - ĐỌC (TUY_CHON_DOC, truyền ở MỌI lượt values.get): 20 giây (log 15/10: đọc cả Don_Hang_ALL 1–3 giây), TẮT tự thử lại của gaxios
+//    (mặc định thử lại GET ~4 lần -> treo hẳn mới báo lỗi sau ~80 giây, đo thử: hạn 0,5s -> lỗi sau ~2,1s; tắt -> 0,5s). Lỗi 429/5xx vẫn
+//    được goiApiCoThuLai thử lại như cũ — chỉ còn 1 tầng thử lại.
+//  - GHI (mặc định của client): 60 giây — dài hơn để hiếm khi "Google đã ghi xong mà app báo lỗi"; vẫn có điểm dừng thay vì treo mãi.
+const THOI_GIAN_CHO_GHI_SHEETS_MS = 60000;
+const TUY_CHON_DOC = { timeout: 20000, retry: false };
 async function getSheetsClient() {
   const auth = await getAuthClient();
-  return google.sheets({ version: 'v4', auth });
+  return google.sheets({ version: 'v4', auth, timeout: THOI_GIAN_CHO_GHI_SHEETS_MS });
 }
 
 // ============================================================
@@ -146,7 +154,7 @@ async function readTab(tabName) {
   const res = await goiApiCoThuLai(() => sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
     range: tabName,
-  }));
+  }, TUY_CHON_DOC));
 
   const values = res.data.values || [];
   if (values.length === 0) return { headers: [], rows: [] };
@@ -164,19 +172,26 @@ async function readTab(tabName) {
 // Bản có cache của readTab — dùng cho các trường hợp chỉ đọc để hiển thị/kiểm tra nhanh
 // (danh sách đơn, tra cứu, kiểm tra kịch bản...). Dữ liệu có thể cũ hơn thực tế tối đa `ttlMs`,
 // nhưng KHÔNG ảnh hưởng độ chính xác cuối cùng vì bước ghi thật luôn đọc lại tươi (xem orderService.update).
+// Tuổi dữ liệu xét theo ttlMs của NƠI GỌI (16/10/2026) — trước đây hạn được chốt lúc GHI cache theo ttl của lượt đọc đó: 1 màn hình
+// xem (ttl 10s) ghi cache thì nơi chấp nhận 30s (upload ảnh) cũng phải đọc lại sau 10s.
 async function readTabCached(tabName, ttlMs = 5000) {
   const cached = _cacheBang.get(tabName);
-  const now = Date.now();
-  if (cached && cached.hetHan > now) return cached.data;
+  if (cached && Date.now() - cached.luc < ttlMs) return cached.data;
+  return docThatVaGhiCache(tabName);
+}
 
+// Đọc THẬT 1 tab rồi ghi vào cache — dùng chung cho readTabCached (hết hạn) và nơi cần đọc thật (orderService docThat / làm mới nền
+// Don_Hang_ALL, 16/10/2026). CÙNG map gộp lượt trùng với readTabCached: lượt hết hạn cache và lượt đọc thật trùng lúc chỉ tốn 1 request.
+function docThatVaGhiCache(tabName) {
   return gopYeuCauTrung(_dangDocBang, tabName, async () => {
     const theHeLucBatDau = _theHeCache.get(tabName) || 0;
+    const batDau = Date.now();
     const data = await readTab(tabName);
     // Chỉ ghi cache nếu KHÔNG có lượt xoaCacheBang() nào chạy xen giữa lúc đang đọc — nếu có, dữ liệu
     // vừa đọc được đã CŨ hơn 1 lượt ghi khác, ghi vào cache lúc này sẽ phục hồi nhầm dữ liệu cũ.
-    if ((_theHeCache.get(tabName) || 0) === theHeLucBatDau) {
-      _cacheBang.set(tabName, { data, hetHan: Date.now() + ttlMs });
-    }
+    // Không đè bản mới hơn (luc = lúc BẮT ĐẦU đọc).
+    const cu = _cacheBang.get(tabName);
+    if ((_theHeCache.get(tabName) || 0) === theHeLucBatDau && (!cu || cu.luc <= batDau)) _cacheBang.set(tabName, { data, luc: batDau });
     return data;
   });
 }
@@ -191,7 +206,7 @@ async function getHeadersCached(tabName, ttlMs = 10 * 60 * 1000) {
 
   return gopYeuCauTrung(_dangDocHeader, tabName, async () => {
     const sheets = await getSheetsClient();
-    const res = await goiApiCoThuLai(() => sheets.spreadsheets.values.get({ spreadsheetId: SHEET_ID, range: `${tabName}!1:1` }));
+    const res = await goiApiCoThuLai(() => sheets.spreadsheets.values.get({ spreadsheetId: SHEET_ID, range: `${tabName}!1:1` }, TUY_CHON_DOC));
     const headers = (res.data.values && res.data.values[0] || []).map(h => String(h).trim());
 
     _cacheHeader.set(tabName, { headers, hetHan: Date.now() + ttlMs });
@@ -286,9 +301,9 @@ async function updateCellsManyRows(tabName, headers, danhSachCapNhat) {
 
 module.exports = {
   readTab, readTabCached, getHeadersCached, appendRow, appendRows, updateCells, updateCellsManyRows,
-  colToLetter, xoaCacheBang,
+  colToLetter, xoaCacheBang, docThatVaGhiCache,
   // getSheetsClient/goiApiCoThuLai (bổ sung 21/09/2026, theo yêu cầu người dùng) — cho phép
   // services/sheetSellerService.js tái dùng ĐÚNG xác thực Google + cơ chế retry đã có ở đây, khi ghi
   // vào spreadsheet KHÁC (Sheet của Seller, không phải SHEET_ID cố định của file này).
-  getSheetsClient, goiApiCoThuLai,
+  getSheetsClient, goiApiCoThuLai, TUY_CHON_DOC,
 };

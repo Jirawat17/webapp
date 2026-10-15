@@ -42,8 +42,7 @@ router.post('/day-lai', requireExactRole('superadmin'), async (req, res) => {
     ? nhatKyDbService.layLoiDongBoDangCho().map(d => ({ sttKey: d.STT_Key, loai: d.Loai }))
     : (Array.isArray(req.body.items) ? req.body.items : []);
   if (ds.length === 0) return res.status(400).json({ error: 'Không có đơn nào để đẩy lại' });
-  const { rows } = await orderService.getAll({ fresh: true });
-  const theoKey = new Map(rows.map(r => [r.STT_Key, r]));
+  const { banDoTheoKey: theoKey } = await orderService.getManyByKeys(ds.map(d => d.sttKey), { fresh: true });
   const canGhi = [];
   const khongGhi = [];
   for (const { sttKey, loai } of ds) {
