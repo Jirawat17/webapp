@@ -7,24 +7,62 @@ const path = require('path');
 // TRƯỚC dòng console.* đầu tiên trong server.js, require() SỚM NHẤT có thể là cách chắc chắn duy nhất).
 // data/ đã là volume mount sẵn trên Docker VPS (xem docker-compose.yml) — log sống sót qua redeploy,
 // không cần thêm volume mới.
-const DUONG_DAN_LOG = process.env.SERVER_LOG_PATH || path.join(__dirname, '..', 'data', 'server.log');
-fs.mkdirSync(path.dirname(DUONG_DAN_LOG), { recursive: true });
+// LOG THEO NGÀY (16/10/2026, người dùng chốt giữ 30 ngày): mỗi ngày (giờ VN) 1 file data/logs/server-YYYY-MM-DD.log, thay cho 1 file
+// server.log tự cắt nửa khi vượt 5MB (ngày nhiều việc bị mất log buổi sáng -> báo cáo 24 giờ thiếu). File quá 30 ngày tự xoá. File
+// server.log cũ (trước khi đổi) vẫn được đọc như phần cũ nhất, quá 30 ngày không ghi thêm thì tự xoá.
+// SERVER_LOG_PATH (môi trường thử): thư mục log = <thư mục của đường dẫn đó>/logs.
+const DUONG_DAN_LOG_CU = process.env.SERVER_LOG_PATH || path.join(__dirname, '..', 'data', 'server.log');
+const THU_MUC_LOG = path.join(path.dirname(DUONG_DAN_LOG_CU), 'logs');
+fs.mkdirSync(THU_MUC_LOG, { recursive: true });
+const SO_NGAY_GIU_LOG = 30;
+// ponytail: chặn ghi thêm khi 1 file ngày vượt 200MB (log lặp vô hạn do lỗi) — giữ an toàn đĩa; ghi 1 dòng báo rồi thôi tới hết ngày.
+const NGUONG_FILE_NGAY_BYTES = 200 * 1024 * 1024;
+const ngayVN = ms => new Date(ms + 7 * 3600000).toISOString().slice(0, 10); // VN không đổi giờ mùa hè -> +7 cố định
+const fileNgay = ngay => path.join(THU_MUC_LOG, `server-${ngay}.log`);
+const MAU_TEN_FILE = /^server-(\d{4}-\d{2}-\d{2})\.log$/;
 
-// ponytail: giới hạn 5MB rồi cắt giữ nửa sau — đọc/ghi lại TOÀN BỘ file mỗi lần vượt ngưỡng (O(n)), đủ
-// dùng ở quy mô vài chục dòng log/phút hiện tại; nếu sau này log dày hơn hẳn, cần xoay vòng nhiều file
-// thật (kiểu logrotate) thay vì cắt 1 file duy nhất.
-const NGUONG_XOAY_VONG_BYTES = 5 * 1024 * 1024;
+function donLogCu() {
+  const moc = ngayVN(Date.now() - SO_NGAY_GIU_LOG * 86400000);
+  try {
+    for (const f of fs.readdirSync(THU_MUC_LOG)) {
+      const m = f.match(MAU_TEN_FILE);
+      if (m && m[1] < moc) fs.unlinkSync(path.join(THU_MUC_LOG, f));
+    }
+    if (fs.existsSync(DUONG_DAN_LOG_CU) && fs.statSync(DUONG_DAN_LOG_CU).mtimeMs < Date.now() - SO_NGAY_GIU_LOG * 86400000) fs.unlinkSync(DUONG_DAN_LOG_CU);
+  } catch (e) { /* dọn lỗi lần này thì lần đổi ngày sau dọn tiếp */ }
+}
 
+let _ngayDangGhi = '', _soLanGhi = 0, _daVuotNguong = false;
 function ghi(dong) {
   try {
-    let kichThuoc = 0;
-    try { kichThuoc = fs.statSync(DUONG_DAN_LOG).size; } catch (e) { /* chưa có file — bình thường lúc mới cài */ }
-    if (kichThuoc > NGUONG_XOAY_VONG_BYTES) {
-      const noiDung = fs.readFileSync(DUONG_DAN_LOG, 'utf8');
-      fs.writeFileSync(DUONG_DAN_LOG, noiDung.slice(Math.floor(noiDung.length / 2)));
+    const ngay = ngayVN(Date.now());
+    if (ngay !== _ngayDangGhi) { _ngayDangGhi = ngay; _daVuotNguong = false; donLogCu(); }
+    if (_daVuotNguong) return;
+    const f = fileNgay(ngay);
+    if (++_soLanGhi % 500 === 0) { // kiểm tra dung lượng thưa thôi (stat mỗi dòng là thừa)
+      let kichThuoc = 0;
+      try { kichThuoc = fs.statSync(f).size; } catch (e) { /* chưa có file */ }
+      if (kichThuoc > NGUONG_FILE_NGAY_BYTES) {
+        _daVuotNguong = true;
+        fs.appendFileSync(f, `[${new Date().toISOString()}] [ERROR] [Log] File log hôm nay vượt ${NGUONG_FILE_NGAY_BYTES / 1048576}MB — NGỪNG ghi thêm tới hết ngày (kiểm tra log lặp).\n`);
+        return;
+      }
     }
-    fs.appendFileSync(DUONG_DAN_LOG, dong + '\n');
+    fs.appendFileSync(f, dong + '\n');
   } catch (e) { /* lỗi ghi log KHÔNG được làm hỏng luồng chính — im lặng bỏ qua, console gốc vẫn đã in ra */ }
+}
+
+// Danh sách file log, CŨ trước (file server.log cũ nhất, rồi theo ngày). tuNgay: bỏ các file ngày trước ngày đó.
+function dsFileLog(tuNgay = '') {
+  let ds = [];
+  try { ds = fs.readdirSync(THU_MUC_LOG).map(f => f.match(MAU_TEN_FILE)).filter(m => m && m[1] >= tuNgay).map(m => m[1]).sort().map(fileNgay); } catch (e) { /* chưa có thư mục */ }
+  return (fs.existsSync(DUONG_DAN_LOG_CU) ? [DUONG_DAN_LOG_CU] : []).concat(ds);
+}
+const docFile = f => { try { return fs.readFileSync(f, 'utf8').split('\n').filter(Boolean); } catch (e) { return []; } };
+
+// Mọi dòng log từ NGÀY của tuMs trở đi (cũ trước) — báo cáo logs 24 giờ (services/baoCaoLogService.js) tự lọc đúng mốc giờ.
+function docDongTu(tuMs) {
+  return dsFileLog(ngayVN(tuMs)).flatMap(docFile);
 }
 
 function dinhDangDong(method, args) {
@@ -63,6 +101,27 @@ process.on('uncaughtExceptionMonitor', (err, origin) => {
 // - Lỗi 500: server.js chuyển stack vào res.locals.loiStack để in CÙNG 1 lần với dòng [API] (không in 2 nơi).
 const NGUONG_CHAM_MS = 3000;
 const DUONG_DAN_ANH = ['/api/photos/file/', '/api/photos/anh-ngoai'];
+// Thao tác được đo MỌI lượt (16/10/2026) — "METHOD mẫu-đường-dẫn-route" -> tên hiện trong báo cáo hằng ngày (giữa / 90%, so với hôm
+// trước). Chỉ vài thao tác người dùng chờ trực tiếp — không đo các lượt tự làm mới/ảnh (rất nhiều, làm phình bảng).
+const THAO_TAC_DO = {
+  'POST /api/photos/kiem-tra': 'Kiểm tra đơn trước khi chụp',
+  'POST /api/photos/upload': 'Tải ảnh lên (máy chủ xử lý)',
+  'POST /api/qr/kich-ban/:scenarioId/kiem-tra': 'Quét QR (kịch bản)',
+  'POST /api/tracking/in-label': 'In tem',
+  'POST /api/tracking/mua-va-in-label': 'Mua tracking + in tem',
+  'POST /api/orders/:sttKey/so-mui-chi': 'Lưu số mũi chỉ',
+  'GET /api/orders': 'Mở danh sách đơn hàng',
+  'GET /api/orders/:sttKey': 'Mở chi tiết đơn',
+  'GET /api/reports/pdf': 'In phiếu đơn',
+};
+function ghiThoiGianNeuCanDo(req, ms, ma) {
+  if (!req.route) return;
+  const thaoTac = THAO_TAC_DO[`${req.method} ${req.baseUrl || ''}${req.route.path === '/' ? '' : req.route.path}`];
+  if (!thaoTac) return;
+  try {
+    require('./nhatKyDbService').ghiThoiGianApi(require('./dateUtils').thoiGianVNISOString(), thaoTac, ms, ma);
+  } catch (e) { /* đo lỗi không được làm hỏng lượt gọi */ }
+}
 const motDong = s => String(s).replace(/\s+/g, ' ').trim().slice(0, 300);
 function ghiLuotApi(req, res, next) {
   const batDau = Date.now();
@@ -75,6 +134,9 @@ function ghiLuotApi(req, res, next) {
   };
   res.on('close', () => {
     const ms = Date.now() - batDau, xong = res.writableFinished, ma = res.statusCode;
+    if (xong) ghiThoiGianNeuCanDo(req, ms, ma);
+    // Lượt đo mạng (/api/ping) chậm là chuyện của MẠNG, đã lưu chi tiết ở bảng do_mang — không ghi "CHẬM" vào log (mạng yếu sẽ ra hàng loạt dòng).
+    if (ma < 400 && req.originalUrl.startsWith('/api/ping')) return;
     const cham = ms > NGUONG_CHAM_MS;
     if (xong ? (ma < 400 && !cham) : !cham) return;
     const duongDan = req.originalUrl.split('?')[0];
@@ -92,16 +154,14 @@ function ghiLuotApi(req, res, next) {
   next();
 }
 
-// Đọc N dòng cuối — dùng bởi routes/logs.js. Đọc lại TOÀN BỘ file rồi cắt (đơn giản, đủ nhanh ở quy mô
-// tối đa ~5MB/NGUONG_XOAY_VONG_BYTES ở trên) thay vì đọc ngược từ cuối file theo byte.
+// Đọc N dòng cuối — dùng bởi routes/logs.js. Đọc file MỚI NHẤT trước, thiếu thì lùi dần sang ngày trước.
 function docDongCuoi(soDong = 500) {
-  try {
-    const noiDung = fs.readFileSync(DUONG_DAN_LOG, 'utf8');
-    const dong = noiDung.split('\n').filter(Boolean);
-    return dong.slice(-soDong).join('\n');
-  } catch (e) {
-    return '';
+  let dong = [];
+  for (const f of dsFileLog().reverse()) {
+    dong = docFile(f).concat(dong);
+    if (dong.length >= soDong) break;
   }
+  return dong.slice(-soDong).join('\n');
 }
 
-module.exports = { docDongCuoi, DUONG_DAN_LOG, ghiLuotApi };
+module.exports = { docDongCuoi, docDongTu, THU_MUC_LOG, ghiLuotApi };

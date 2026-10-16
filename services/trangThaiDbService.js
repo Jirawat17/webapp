@@ -102,6 +102,9 @@ const CAC_COT = [
   // orderService.js#dongBoTrackingSeller tự ghi/cập nhật/xoá; '' = app mua hoặc nhập tay. BO_QUA_CANH_BAO_THU_CONG: "người|lúc"
   // superadmin bấm "Bỏ qua" ở khung cảnh báo đơn chuyển mua thủ công — đơn không hiện lại ở khung đó (trống = hiện bình thường).
   'NGUON_TRACKING', 'BO_QUA_CANH_BAO_THU_CONG',
+  // LOI_TRA_TRACKING (16/10/2026): "lúc|lý do" lần tra trạng thái tracking GKE GẦN NHẤT bị lỗi (trackingAutoService.capNhatTrangThaiTracking
+  // ChoDon ghi, tra được thì xoá) — danh sách lỗi dữ liệu gửi Seller hằng ngày (baoCaoVanHanhService) đọc.
+  'LOI_TRA_TRACKING',
   // CanhBaoDaGui: không nằm trong danh sách 31 cột người dùng liệt kê (có thể chỉ là sót khi liệt kê) —
   // nhưng rà code xác nhận đây CŨNG là cột app tự ghi (services/canhBaoJob.js, cờ chống spam Telegram),
   // không thuộc RAW/A:AM lẫn AN:BR người dùng mô tả. Xếp vào đây theo đúng tiêu chí "app tự ghi" đã

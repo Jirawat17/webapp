@@ -92,7 +92,9 @@
 
   <!-- Báo cáo logs hằng ngày qua Telegram (15/10/2026, theo yêu cầu người dùng) — routes/vanHanh.js + services/baoCaoLogService.js. -->
   <h3 style="margin-top:var(--space-6)">Báo cáo logs hằng ngày (Telegram)</h3>
-  <p>Mỗi ngày đúng giờ đã chọn, gửi 1 tin tóm tắt + file log server (.txt) + file Logs_UploadAnh (.csv) của 24 giờ gần nhất.
+  <p>Mỗi ngày đúng giờ đã chọn, gửi 1 tin tóm tắt (phiên bản app, lỗi, tốc độ các thao tác chính) + file log server (.txt) + file
+    Logs_UploadAnh (.csv) của 24 giờ gần nhất + danh sách lỗi dữ liệu cần Seller sửa (theo Team, file Excel — ngày không có lỗi thì không gửi).
+    7 giờ sáng thứ 7: báo cáo vận hành tuần (thời gian từng khâu, đơn kẹt, QC — toàn xưởng và từng Xưởng) vào cùng chat.
     Log có thông tin khách hàng (tên, địa chỉ) — chỉ dùng chat riêng tư.</p>
   <div class="bao-cao-form">
     <div class="truong"><label for="bcl-gio">Giờ gửi (để trống = tắt)</label><input type="time" id="bcl-gio" style="width:9em"></div>
@@ -103,6 +105,8 @@
   <div class="bao-cao-form" style="margin-top:var(--space-3)">
     <button type="button" class="btn-hanh-dong" id="btn-luu-bcl">Lưu</button>
     <button type="button" class="btn-hanh-dong phu" id="btn-gui-ngay-bcl">Gửi ngay báo cáo 24 giờ</button>
+    <button type="button" class="btn-hanh-dong phu" id="btn-gui-tuan-bcl">Gửi ngay báo cáo tuần</button>
+    <button type="button" class="btn-hanh-dong phu" id="btn-gui-loi-bcl">Gửi ngay lỗi dữ liệu</button>
     <button type="button" class="btn-hanh-dong phu" id="btn-xoa-token-bcl" style="display:none">Xoá token đã lưu</button>
   </div>
   <p id="thong-bao-bcl" style="display:none"></p>
@@ -258,7 +262,7 @@
 </div>
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=126"></script>
+<script src="/js/api.js?v=127"></script>
 <script>
 (async () => {
   const user = await requireLoginOrRedirect();
@@ -279,7 +283,9 @@
   await taiBaoCaoLog();
   document.getElementById('btn-luu-bcl').onclick = () => luuBaoCaoLog(false);
   document.getElementById('btn-xoa-token-bcl').onclick = () => luuBaoCaoLog(true);
-  document.getElementById('btn-gui-ngay-bcl').onclick = guiNgayBaoCaoLog;
+  document.getElementById('btn-gui-ngay-bcl').onclick = () => guiNgayBaoCaoLog('btn-gui-ngay-bcl', 'gui-ngay');
+  document.getElementById('btn-gui-tuan-bcl').onclick = () => guiNgayBaoCaoLog('btn-gui-tuan-bcl', 'gui-tuan');
+  document.getElementById('btn-gui-loi-bcl').onclick = () => guiNgayBaoCaoLog('btn-gui-loi-bcl', 'gui-loi-du-lieu');
   await taiCauHinhNenAnh();
   await taiMauXuong(); await taiTaiKhoanGke(); await taiTeamXuong(); await taiNhomHang();
   document.getElementById('btn-them-loai-hang').onclick = themLoaiHangMoi;
@@ -786,12 +792,15 @@ async function luuBaoCaoLog(xoaToken) {
     thongBaoBaoCaoLog(xoaToken ? 'Đã xoá token.' : gio ? `Đã lưu — gửi mỗi ngày lúc ${gio}.` : 'Đã lưu — đang TẮT gửi hằng ngày (chưa có giờ gửi).');
   } catch (e) { thongBaoBaoCaoLog('Lỗi: ' + e.message, true); }
 }
-async function guiNgayBaoCaoLog() {
-  const nut = document.getElementById('btn-gui-ngay-bcl');
+// duongDan: 'gui-ngay' (báo cáo 24 giờ) | 'gui-tuan' (báo cáo vận hành tuần) | 'gui-loi-du-lieu' — gửi theo cấu hình ĐÃ LƯU.
+async function guiNgayBaoCaoLog(idNut, duongDan) {
+  const nut = document.getElementById(idNut);
   nut.disabled = true;
   thongBaoBaoCaoLog('Đang gửi...');
-  try { await apiFetch('/van-hanh/bao-cao-log/gui-ngay', { method: 'POST' }); thongBaoBaoCaoLog('Đã gửi — kiểm tra chat Telegram (gửi theo cấu hình ĐÃ LƯU).'); }
-  catch (e) { thongBaoBaoCaoLog('Lỗi: ' + e.message, true); }
+  try {
+    const kq = await apiFetch('/van-hanh/bao-cao-log/' + duongDan, { method: 'POST' });
+    thongBaoBaoCaoLog(duongDan === 'gui-loi-du-lieu' && !kq.soLoi ? 'Không có lỗi dữ liệu nào — không gửi gì.' : 'Đã gửi — kiểm tra chat Telegram (gửi theo cấu hình ĐÃ LƯU).');
+  } catch (e) { thongBaoBaoCaoLog('Lỗi: ' + e.message, true); }
   nut.disabled = false;
 }
 

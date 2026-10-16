@@ -555,7 +555,37 @@ function duyetTongHopLogsUploadAnh(loc = {}) {
       FROM logs_upload_anh ${where} LIMIT -1 OFFSET 0)`).iterate(...ts); // chỉ các cột cần (không kéo loi/thong_tin qua truy vấn con)
 }
 
+// ---------- Số đo cho báo cáo hằng ngày / hằng tuần (16/10/2026) — services/baoCaoVanHanhService.js ----------
+// Thời gian máy chủ xử lý MỌI lượt của vài thao tác chính (logCapture.js#ghiLuotApi chọn thao tác) — để có số giữa / 90% từng thao tác,
+// so với hôm trước. Log server chỉ ghi lượt CHẬM/lỗi nên không tính được số này. Giữ 35 ngày (baoCaoLogService dọn mỗi ngày).
+db.exec(`CREATE TABLE IF NOT EXISTS thoi_gian_api (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, luc TEXT NOT NULL, thao_tac TEXT NOT NULL, ms INTEGER NOT NULL, ma INTEGER NOT NULL
+)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_thoi_gian_api_luc ON thoi_gian_api(luc)`);
+const cauGhiThoiGianApi = db.prepare(`INSERT INTO thoi_gian_api (luc, thao_tac, ms, ma) VALUES (?, ?, ?, ?)`);
+const ghiThoiGianApi = (luc, thaoTac, ms, ma) => cauGhiThoiGianApi.run(luc, thaoTac, ms, ma);
+// tuLuc/denLuc: chuỗi giờ VN đầy đủ (thoiGianVNISOString) — so chuỗi cùng định dạng.
+const layThoiGianApi = (tuLuc, denLuc) => db.prepare(`SELECT thao_tac, ms, ma FROM thoi_gian_api WHERE luc >= ? AND luc < ?`).all(tuLuc, denLuc);
+const xoaThoiGianApiTruoc = luc => db.prepare(`DELETE FROM thoi_gian_api WHERE luc < ?`).run(luc).changes;
+const layDoLogsUploadAnh = (tuLuc, denLuc) => db.prepare(`SELECT su_kien, ket_qua, tong_ms FROM logs_upload_anh WHERE luc >= ? AND luc < ?`).all(tuLuc, denLuc);
+// Đo mạng từ trình duyệt (16/10/2026) — routes/doMang.js: mỗi dòng = 1 lần đo (ms trống = không kết nối được, loi = lý do). Giữ 35 ngày.
+db.exec(`CREATE TABLE IF NOT EXISTS do_mang (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, luc TEXT NOT NULL, nguoi TEXT NOT NULL DEFAULT '', vai_tro TEXT NOT NULL DEFAULT '', xuong TEXT NOT NULL DEFAULT '',
+  trang TEXT NOT NULL DEFAULT '', ms INTEGER, loi TEXT NOT NULL DEFAULT '', loai_mang TEXT NOT NULL DEFAULT '', mbps REAL, rtt INTEGER,
+  he_dieu_hanh TEXT NOT NULL DEFAULT '', trinh_duyet TEXT NOT NULL DEFAULT '', may TEXT NOT NULL DEFAULT ''
+)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_do_mang_luc ON do_mang(luc)`);
+const ghiNhieuDoMang = db.transaction(ds => {
+  const st = db.prepare(`INSERT INTO do_mang (luc, nguoi, vai_tro, xuong, trang, ms, loi, loai_mang, mbps, rtt, he_dieu_hanh, trinh_duyet, may)
+    VALUES (@luc, @nguoi, @vaiTro, @xuong, @trang, @ms, @loi, @loaiMang, @mbps, @rtt, @heDieuHanh, @trinhDuyet, @may)`);
+  for (const d of ds) st.run(d);
+});
+const layDoMang = (tuLuc, denLuc) => db.prepare(`SELECT * FROM do_mang WHERE luc >= ? AND luc < ? ORDER BY luc`).all(tuLuc, denLuc);
+const xoaDoMangTruoc = luc => db.prepare(`DELETE FROM do_mang WHERE luc < ?`).run(luc).changes;
+const layQcLogTrongKhoang = (tuLuc, denLuc) => db.prepare(`SELECT STT_Key, LoaiQc, KetQua FROM qc_log WHERE ThoiGian >= ? AND ThoiGian < ? AND CheDo != 'TEST'`).all(tuLuc, denLuc);
+
 module.exports = {
+  ghiThoiGianApi, layThoiGianApi, xoaThoiGianApiTruoc, layDoLogsUploadAnh, layQcLogTrongKhoang, ghiNhieuDoMang, layDoMang, xoaDoMangTruoc,
   ghiNhieuLogsUploadAnh, dsLogsUploadAnh, duyetTongHopLogsUploadAnh, danhDauDaXuLy, layDaXuLy, themDonCanCheck, suaDonCanCheck, danhDauDaCheck, layDonCanCheck, themBaoLoi, ganAnhBaoLoi, demBaoLoiTu, layBaoLoi, dsBaoLoi, capNhatBaoLoi,
   layNote, layDanhSachNote, layTatCaTheNote, taoNote, suaNote, datAnhNote, xoaNote,
   ghiQcLog, layQcLog, layQcLogTheoId, danhGiaQcLog, thongKeDanhGiaQc, thongKeTokenQc, layDongDaDanhGiaCoAi, maxQcLogId, layCclSauId, tongKetQcNgay,

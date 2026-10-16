@@ -3,6 +3,8 @@ require('dotenv').config();
 // error để ghi thêm ra file, xem services/logCapture.js. Trước dòng này, mọi console.* KHÔNG được ghi
 // (chỉ 2 dòng dotenv/express-async-errors phía trên có thể lỡ mất, không đáng kể).
 require('./services/logCapture');
+// Phiên bản đang chạy (16/10/2026) — dòng này đánh dấu mỗi lần deploy/khởi động lại trong log; báo cáo Telegram đọc lại để biết số liệu thuộc bản nào.
+console.log(`[PhienBan] Khởi động: ${require('./services/phienBanService').moTa}`);
 require('express-async-errors'); // tự bắt lỗi từ các route async, không cần try/catch thủ công ở mỗi route
 
 const express = require('express');
@@ -55,6 +57,7 @@ app.use('/api/thu-vien', require('./routes/thuVien')); // Tìm ảnh — thư vi
 app.use('/api/van-hanh', require('./routes/vanHanh')); // Cấu hình cảnh báo vận hành Y6/L2 + Telegram vận hành (11/10/2026) — CHỈ superadmin
 app.use('/api/bao-loi', require('./routes/baoLoi')); // Y20 Báo lỗi app (11/10/2026)
 app.use('/api/nhat-ky-quet', require('./routes/nhatKyQuet')); // Logs_UploadAnh — thao tác menu Quét QR (12/10/2026)
+app.use('/api/ping', require('./routes/doMang')); // đo tốc độ mạng từ trình duyệt — chấm báo mạng trên menu mọi trang (16/10/2026)
 
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -79,8 +82,8 @@ require('./services/canhBaoJob').batDauLichCanhBao();
 // docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md) — TẮT theo mặc định cho tới khi
 // admin tự bật ở trang "Tracking" (services/trackingAutoService.js tự đọc cấu hình mỗi lượt quét).
 require('./services/trackingJob').batDauLichTracking();
-require('./services/baoCaoLogService').batDauLichBaoCaoLog();
-require('./services/orderService').batDauLamMoiNen(); // Don_Hang_ALL làm mới nền mỗi 25 giây — thao tác đọc bản ≤ 30 giây (16/10/2026) // báo cáo logs 24 giờ qua Telegram mỗi ngày (giờ đặt ở Settings, 15/10/2026)
+require('./services/baoCaoLogService').batDauLichBaoCaoLog(); // báo cáo logs 24 giờ (giờ đặt ở Settings) + báo cáo vận hành tuần (7h sáng thứ 7) qua Telegram
+require('./services/orderService').batDauLamMoiNen(); // Don_Hang_ALL làm mới nền mỗi 25 giây — thao tác đọc bản ≤ 30 giây (16/10/2026)
 
 // Tự động quét QC (02/10/2026) — mỗi 2 phút; từng QC TẮT theo mặc định, bật ở menu QC (services/qc/qcAutoService.js).
 require('./services/qc/qcAutoService').batDauLichAutoQc();

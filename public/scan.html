@@ -78,6 +78,7 @@
     <button type="button" id="btn-quet-lai-chup-anh" class="btn-hanh-dong phu">Quét lại</button>
     <div id="toast-chup-anh" class="toast-vua-quet"></div>
     <div id="dem-nhom-anh" class="dem-nhom"></div>
+    <div id="toc-do-anh-gan-nhat" style="display:none;margin-top:10px;font-size:13px;color:var(--color-text-muted)"></div>
     <h3 style="margin-top:20px">Danh sách đã chụp</h3>
     <div id="ds-da-chup" class="ds-dang-quet"></div>
   </div>
@@ -87,7 +88,7 @@
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=126"></script>
+<script src="/js/api.js?v=127"></script>
 <script>
 let user;
 // Mặc định mở vào "Quét kịch bản" (batch) khi vào trang — theo yêu cầu người dùng 05/09/2026, vì đây
@@ -208,37 +209,7 @@ let cameraDaMo = false; // camera đang chạy thật (mở thành công) — kh
 const msTimMaHienTai = () => (cameraDaMo ? Math.round(performance.now() - tSanSangQuet) : null);
 const luotDangTai = new Map(); // sttKey -> bản ghi CHUP_ANH đang tải — đóng trang giữa chừng thì ghi THOAT_GIUA_CHUNG
 
-// Hệ điều hành / trình duyệt / đời máy. User-Agent của Chrome Android đã bị "đóng băng" (Android 10; K) -> hỏi thêm Client Hints
-// (chỉ Chrome/Edge/Samsung có). iPhone không cho biết đời máy; Safari iOS mới có thể không báo đúng số iOS.
-async function layThietBiLog() {
-  const ua = navigator.userAgent;
-  const khop = (re, i = 1) => (ua.match(re) || [])[i] || '';
-  let os = 'Khác', osVer = '', br = 'Khác', brVer = '', may = '';
-  if (/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) {
-    os = /iPhone|iPod/.test(ua) ? 'iOS' : 'iPadOS';
-    osVer = khop(/OS (\d+[_.]\d+)/).replace('_', '.') || khop(/Version\/(\d+(\.\d+)?)/);
-  } else if (/Android/.test(ua)) { os = 'Android'; osVer = khop(/Android (\d+(\.\d+)?)/); may = khop(/Android [^;)]+; ([^;)]+?)(?: Build[^;)]*)?\)/); }
-  else if (/Windows/.test(ua)) os = 'Windows';
-  else if (/Mac OS X/.test(ua)) os = 'macOS';
-  else if (/Linux|CrOS/.test(ua)) os = 'Linux';
-  const TRINH_DUYET = [[/EdgA?\/(\d+(\.\d+)?)/, 'Edge'], [/SamsungBrowser\/(\d+(\.\d+)?)/, 'Samsung Internet'], [/(?:OPR|OPT)\/(\d+(\.\d+)?)/, 'Opera'],
-    [/Zalo[^\/]*\/(\d+(\.\d+)?)/i, 'Zalo'], [/FBAV\/(\d+(\.\d+)?)/, 'Facebook'], [/CriOS\/(\d+(\.\d+)?)/, 'Chrome'], [/FxiOS\/(\d+(\.\d+)?)/, 'Firefox'],
-    [/Firefox\/(\d+(\.\d+)?)/, 'Firefox'], [/Chrome\/(\d+(\.\d+)?)/, 'Chrome'], [/Version\/(\d+(\.\d+)?).*Safari/, 'Safari']];
-  for (const [re, ten] of TRINH_DUYET) { const m = ua.match(re); if (m) { br = ten; brVer = m[1]; break; } }
-  try {
-    const h = await navigator.userAgentData?.getHighEntropyValues?.(['platformVersion', 'model', 'fullVersionList']);
-    if (h) {
-      if (os === 'Android' && h.platformVersion) osVer = h.platformVersion.split('.').slice(0, 2).join('.');
-      if (h.model) may = h.model;
-      const b = (h.fullVersionList || []).find(x => !/Not|Chromium/i.test(x.brand));
-      if (b && br === 'Chrome') brVer = b.version.split('.').slice(0, 2).join('.');
-    }
-  } catch (e) { /* trình duyệt không cho -> dùng User-Agent */ }
-  if (may === 'K') may = '';
-  return { os, osVer, br, brVer, may, ram: navigator.deviceMemory || null, cpu: navigator.hardwareConcurrency || null,
-    manHinh: `${screen.width}x${screen.height}@${window.devicePixelRatio || 1}`,
-    standalone: !!(window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true };
-}
+// layThietBiLog() (hệ điều hành / trình duyệt / đời máy) nằm ở /js/api.js từ 16/10/2026 — dùng chung với log đo mạng mọi trang.
 // Lấy thông tin thiết bị NGAY khi tải trang; mọi lô log CHỜ promise này (tối đa 2 giây) — máy cũ trả Client Hints chậm, không chờ
 // thì vài sự kiện đầu (mở camera, mã đầu tiên) rơi vào nhóm "? · ?" đúng lúc cần đo máy chậm.
 const thietBiLogSan = layThietBiLog().then(tb => (thietBiLog = tb)).catch(() => (thietBiLog = {}));
@@ -280,6 +251,7 @@ function nhacBanMoi(moiNhat) {
     location.reload();
   };
   document.body.appendChild(el);
+  capNhatHienThiMang(); // dải cảnh báo mạng (nếu đang hiện) xếp lại xuống dưới thanh này
 }
 // Đóng tab / chuyển trang khi ảnh còn đang tải -> ghi lại (người dùng thoát giữa chừng), gửi bằng sendBeacon (vẫn đi khi trang đóng).
 // Trang chỉ TẠM CẤT (bfcache, e.persisted) vẫn ghi THOAT — trình duyệt có thể xoá hẳn trang cất mà không quay lại (hay gặp trên iOS),
@@ -1339,6 +1311,10 @@ async function taiAnhLenNgam(sttKey, cauHinh, file, dong, log, tuyChon = {}) {
 
     const don = data.don || {};
     ghiLogChup('OK', { thoiGian: data.thoiGian });
+    if (data.thoiGian) { // tốc độ tải ảnh thật lên chấm báo mạng + dòng "Ảnh vừa tải" (16/10/2026)
+      const msGuiMang = Math.max(0, Math.round(performance.now() - tLanGuiCuoi0) - data.thoiGian.tong), kb = Math.round(fileDaNen.size / 1024);
+      baoTocDoTaiAnh({ msGui: msGuiMang, kb, kbps: msGuiMang > 0 ? Math.round(kb / (msGuiMang / 1000)) : null });
+    }
     if (!xong) {
       // Ảnh 1 đã lưu, đơn vẫn "Đang chạy máy" — người dùng đã bấm ảnh 2 / Xong trong lúc ảnh 1 đang tải thì để bước đó tự ghi dòng.
       if (!dong.sauAnh1) { dong.trangThai = 'cho-xong'; dong.ghiChu = 'Đã lưu ảnh 1 — chụp ảnh 2, bấm Xong hoặc quét đơn tiếp theo'; }

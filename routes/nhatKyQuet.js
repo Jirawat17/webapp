@@ -3,8 +3,6 @@
 // (vd Android/Chrome nhanh, iOS/máy cũ chậm) và biết chặng nào chậm. Trình duyệt (scan.html) gom sự kiện rồi gửi theo lô.
 // Ghi: mọi người đã đăng nhập. Xem/tổng hợp: CHỈ superadmin (trang Logs). Không lưu nội dung ảnh, chỉ số đo.
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
 const router = express.Router();
 const { requireLogin, requireExactRole } = require('../middleware/auth');
 const nhatKy = require('../services/nhatKyDbService');
@@ -13,11 +11,8 @@ const { thoiGianVNISOString } = require('../services/dateUtils');
 router.use(requireLogin);
 
 // Phiên bản app MỚI NHẤT = số ?v= của api.js trong scan.html đang phục vụ (đọc 1 lần lúc khởi động — mỗi lần triển khai container
-// khởi động lại). Trang Quét QR so với số của chính nó để nhắc "Có bản mới" (tab mở suốt ca nhiều ngày không tải lại).
-let PHIEN_BAN_MOI_NHAT = '';
-try {
-  PHIEN_BAN_MOI_NHAT = (fs.readFileSync(path.join(__dirname, '..', 'public', 'scan.html'), 'utf8').match(/\/js\/api\.js\?v=(\d+)/) || [])[1] || '';
-} catch (e) { /* không đọc được -> không nhắc */ }
+// khởi động lại; services/phienBanService.js). Trang Quét QR so với số của chính nó để nhắc "Có bản mới" (tab mở suốt ca nhiều ngày).
+const PHIEN_BAN_MOI_NHAT = require('../services/phienBanService').phienBanApp;
 
 // XONG_DON (15/10/2026): mỗi lần Xong lượt ảnh đã sản xuất (bấm nút / tự Xong khi quét đơn khác) + khôi phục đơn chờ Xong bị bỏ.
 const SU_KIEN = ['MO_CAMERA', 'QUET_QR', 'CHUP_ANH', 'XAC_NHAN_HANG_LOAT', 'QUET_LAI', 'THOAT_GIUA_CHUNG', 'XONG_DON'];

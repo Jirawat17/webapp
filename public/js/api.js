@@ -84,11 +84,17 @@ addEventListener('error', e => _ghiVaoDs(_loiJsGanDay, { loi: String(e.message |
 addEventListener('unhandledrejection', e => _ghiVaoDs(_loiJsGanDay, { loi: 'Promise: ' + String((e.reason && (e.reason.stack || e.reason.message)) || e.reason).slice(0, 500) }, 20));
 
 async function apiFetch(url, options = {}) {
-  const res = await fetch(API + url, {
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-  });
+  let res;
+  try {
+    res = await fetch(API + url, {
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      ...options,
+    });
+  } catch (e) {
+    if (!(e && e.name === 'AbortError')) _baoLoiMangTuApi(); // lỗi mạng (không có mã HTTP) -> chấm báo mạng đo lại ngay
+    throw e;
+  }
   // 200 mà nội dung KHÔNG phải JSON (14/10/2026): wifi có trang đăng nhập chặn giữa / trang kiểm tra của Cloudflare trả HTML mã 200 —
   // trước đây thành {} và nơi gọi tưởng thành công (vd tải ảnh báo ✅ dù ảnh chưa tới máy chủ). Coi như lỗi mạng (không có status).
   let data;
@@ -103,6 +109,268 @@ async function apiFetch(url, options = {}) {
       { status: res.status, nghiepVu: !!data.nghiepVu, duLieu: data });
   }
   return data;
+}
+
+// ============================================================
+// TỐC ĐỘ MẠNG TỚI MÁY CHỦ (16/10/2026, theo yêu cầu người dùng — mọi trang đã đăng nhập):
+//  - Chấm trên thanh menu: trình duyệt gọi POST /api/ping (máy chủ trả ngay, không đọc Sheet/DB) mỗi 30 giây khi tab đang hiện, đo
+//    thời gian khứ hồi. 🟢 < 300ms · 🟡 300ms–1s · 🔴 > 1s / mất kết nối. Bấm chấm -> khung chi tiết (độ trễ, loại mạng, tải ảnh lần trước).
+//  - Dải cảnh báo đầu trang: mất kết nối (đỏ) / mạng yếu 3 lần đo liền > 1s (vàng, gợi ý dùng Wi-Fi xưởng). Hết lỗi thì tự ẩn.
+//  - Lưu log chi tiết: mỗi lần đo được gửi kèm lượt ping KẾ TIẾP (không tốn thêm request); rời trang thì gửi nốt bằng sendBeacon.
+//    Máy chủ lưu bảng do_mang (routes/doMang.js) -> báo cáo Telegram hằng ngày (dòng tóm tắt + file CSV chi tiết).
+//  - Lượt gọi API thật lỗi MẠNG (không có mã HTTP) -> đo lại ngay để chấm đổi màu sớm (không chờ 30 giây).
+// Loại mạng / Mbps chỉ Chrome Android báo; iPhone/iPad chỉ có độ trễ đo thật.
+// ============================================================
+const MANG = { CHU_KY_MS: 30000, HAN_MS: 10000, NGUONG_XANH: 300, NGUONG_VANG: 1000, SO_LAN_YEU_CANH_BAO: 3 };
+const _mang = { daBat: false, dangDo: false, lanDoCuoi: 0, ganDay: [], hangDoi: [], soLanYeuLienTiep: 0, lanKetNoiDuocCuoi: 0, anhGanNhat: null, daAnDai: '' };
+const thongTinMangTrinhDuyet = () => { const c = navigator.connection; return c ? { loai: c.effectiveType || '', mbps: c.downlink ?? null, rtt: c.rtt ?? null } : {}; };
+const chuMs = ms => (ms == null ? '—' : ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1).replace('.', ',')}s`);
+let _thietBiMangSan = null; // Promise thông tin thiết bị (layThietBiLog) — lấy 1 lần
+
+function trangThaiMang() {
+  const cuoi = _mang.ganDay[_mang.ganDay.length - 1];
+  if (!cuoi) return { mau: 'xam', chu: '…', moTa: 'Đang đo…' };
+  if (cuoi.ms == null) return { mau: 'do', chu: 'mất', moTa: `Mất kết nối tới máy chủ (${cuoi.loi || 'lỗi mạng'})` };
+  if (cuoi.ms < MANG.NGUONG_XANH) return { mau: 'xanh', chu: chuMs(cuoi.ms), moTa: 'Mạng tốt' };
+  if (cuoi.ms <= MANG.NGUONG_VANG) return { mau: 'vang', chu: chuMs(cuoi.ms), moTa: 'Mạng hơi chậm' };
+  return { mau: 'do', chu: chuMs(cuoi.ms), moTa: 'Mạng rất chậm' };
+}
+const MAU_CHAM = { xanh: '#16a34a', vang: '#d97706', do: '#dc2626', xam: '#9ca3af' };
+
+function capNhatHienThiMang() {
+  const tt = trangThaiMang();
+  document.querySelectorAll('.cham-mang').forEach(el => {
+    el.querySelector('.cham-mang-cham').style.background = MAU_CHAM[tt.mau];
+    const chu = el.querySelector('.cham-mang-chu');
+    if (chu) chu.textContent = tt.chu;
+    el.title = `Kết nối tới máy chủ: ${tt.moTa}${tt.chu !== 'mất' && tt.chu !== '…' ? ' — ' + tt.chu : ''}. Bấm để xem chi tiết.`;
+  });
+  // Dải cảnh báo: mất kết nối / mạng yếu kéo dài. Người dùng bấm × -> ẩn tới khi trạng thái đổi sang loại khác.
+  const cuoi = _mang.ganDay[_mang.ganDay.length - 1];
+  const loai = !cuoi ? '' : cuoi.ms == null ? 'mat' : _mang.soLanYeuLienTiep >= MANG.SO_LAN_YEU_CANH_BAO ? 'yeu' : '';
+  if (loai !== _mang.daAnDai.split('|')[0]) _mang.daAnDai = '';
+  let dai = document.getElementById('dai-canh-bao-mang');
+  // Dải nằm cố định trên đầu -> đẩy nội dung trang xuống đúng bằng chiều cao dải (không che thanh menu), ẩn dải thì trả lại.
+  const datDem = () => { document.body.style.paddingTop = dai && dai.isConnected ? `${dai.offsetTop + dai.offsetHeight}px` : ''; };
+  if (!loai || _mang.daAnDai) { if (dai) { dai.remove(); datDem(); } }
+  else {
+    if (!dai) {
+      dai = document.createElement('div');
+      dai.id = 'dai-canh-bao-mang';
+      dai.setAttribute('role', 'status');
+      dai.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:1999;padding:8px 40px 8px 12px;font-weight:600;font-size:14px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.15)';
+      document.body.appendChild(dai);
+    }
+    const mat = loai === 'mat';
+    const banMoi = document.getElementById('thanh-ban-moi'); // thanh "Có bản mới" (scan.html) cũng cố định trên đầu -> xếp dải mạng ngay dưới
+    dai.style.top = banMoi ? `${banMoi.offsetHeight}px` : '0';
+    dai.style.background = mat ? 'var(--color-danger-bg, #fee2e2)' : 'var(--color-warning-bg, #fef3c7)';
+    dai.style.color = mat ? 'var(--color-danger-text, #991b1b)' : 'var(--color-warning-text, #92400e)';
+    dai.innerHTML = (mat ? '📵 Mất kết nối tới máy chủ — kiểm tra Wi-Fi / 4G. Thao tác lúc này sẽ lỗi cho tới khi có mạng lại.'
+      : `🐢 Mạng đang yếu (độ trễ ~${escapeHtml(chuMs(cuoi.ms))}) — nên kết nối Wi-Fi xưởng để thao tác nhanh hơn.`)
+      + '<button type="button" aria-label="Ẩn" style="position:absolute;right:8px;top:4px;border:0;background:none;font-size:20px;cursor:pointer;color:inherit">×</button>';
+    dai.querySelector('button').onclick = () => { _mang.daAnDai = loai + '|an'; dai.remove(); datDem(); };
+    datDem();
+  }
+  if (document.getElementById('khung-chi-tiet-mang')) veKhungChiTietMang();
+}
+
+function veKhungChiTietMang() {
+  const khung = document.getElementById('khung-chi-tiet-mang');
+  if (!khung) return;
+  const tt = trangThaiMang();
+  const coSo = _mang.ganDay.filter(d => d.ms != null).map(d => d.ms);
+  const tb = coSo.length ? Math.round(coSo.reduce((a, b) => a + b, 0) / coSo.length) : null;
+  const tdt = thongTinMangTrinhDuyet();
+  const a = _mang.anhGanNhat;
+  const dong = [
+    `<b style="color:${MAU_CHAM[tt.mau]}">● ${escapeHtml(tt.moTa)}</b>`,
+    `Lần đo gần nhất: <b>${escapeHtml(chuMs((_mang.ganDay[_mang.ganDay.length - 1] || {}).ms))}</b>`,
+    `Trung bình ${coSo.length} lần gần đây: ${escapeHtml(chuMs(tb))}`,
+    tdt.loai ? `Loại mạng (trình duyệt báo): ${escapeHtml(tdt.loai)}${tdt.mbps != null ? ` · ~${escapeHtml(String(tdt.mbps))} Mbps` : ''}` : 'Loại mạng: máy này không cho biết',
+    a ? `Ảnh tải gần nhất (${escapeHtml(new Date(a.luc).toTimeString().slice(0, 5))}): gửi ${escapeHtml(chuMs(a.msGui))} · ${a.kb}KB${a.kbps ? ` · ${a.kbps} KB/s` : ''}` : '',
+    _mang.lanKetNoiDuocCuoi ? `Kết nối được lần cuối: ${escapeHtml(new Date(_mang.lanKetNoiDuocCuoi).toTimeString().slice(0, 8))}` : '',
+    `<span style="color:var(--color-text-muted)">🟢 &lt; ${MANG.NGUONG_XANH}ms · 🟡 đến ${chuMs(MANG.NGUONG_VANG)} · 🔴 chậm hơn / mất mạng. Đo mỗi ${MANG.CHU_KY_MS / 1000} giây.</span>`,
+  ].filter(Boolean);
+  khung.innerHTML = dong.join('<br>') + '<div style="margin-top:8px;text-align:right"><button type="button" class="btn-hanh-dong phu" id="nut-do-mang-lai">Đo lại ngay</button></div>';
+  khung.querySelector('#nut-do-mang-lai').onclick = e => { e.stopPropagation(); doMangMotLan(true); };
+}
+function moChiTietMang(ev) {
+  ev.stopPropagation();
+  let khung = document.getElementById('khung-chi-tiet-mang');
+  if (khung) { khung.remove(); return; }
+  khung = document.createElement('div');
+  khung.id = 'khung-chi-tiet-mang';
+  khung.style.cssText = 'position:fixed;top:56px;right:8px;z-index:2100;max-width:min(360px,calc(100vw - 16px));padding:12px;border-radius:10px;'
+    + 'background:var(--color-surface,#fff);color:var(--color-text,#111);border:1px solid var(--color-border,#ddd);box-shadow:0 6px 20px rgba(0,0,0,.18);font-size:14px;line-height:1.6';
+  khung.onclick = e => e.stopPropagation();
+  document.body.appendChild(khung);
+  veKhungChiTietMang();
+  setTimeout(() => document.addEventListener('click', () => khung.remove(), { once: true }), 0);
+}
+
+// Trang Quét QR báo mỗi lần tải ảnh xong (msGui: phần gửi qua mạng, kb: dung lượng sau nén) — hiện trong khung chi tiết + dòng
+// "Ảnh vừa tải" trên trang quét (phần tử #toc-do-anh-gan-nhat nếu trang có).
+function baoTocDoTaiAnh({ msGui, kb, kbps }) {
+  _mang.anhGanNhat = { luc: Date.now(), msGui, kb, kbps };
+  const el = document.getElementById('toc-do-anh-gan-nhat');
+  if (el) {
+    el.style.display = '';
+    el.textContent = `Ảnh vừa tải (${new Date().toTimeString().slice(0, 5)}): gửi ${chuMs(msGui)} · ${kb}KB${kbps ? ` · ${kbps} KB/s` : ''}`
+      + (msGui > 10000 ? ' — chậm, nên kết nối Wi-Fi xưởng' : '');
+  }
+  veKhungChiTietMang();
+}
+
+// Gửi 1 lô số đo lên /api/ping, hạn 10 giây (AbortController + setTimeout — AbortSignal.timeout không có trên iOS < 16; treo mà không có
+// hạn thì lượt gửi kẹt mãi). Dùng chung cho lượt đo và lượt gửi riêng hàng chờ. -> Response (ném lỗi mạng / quá hạn như fetch).
+async function guiDoMang(ds) {
+  const huy = new AbortController();
+  const hen = setTimeout(() => huy.abort(), MANG.HAN_MS);
+  try {
+    return await fetch(API + '/ping', {
+      method: 'POST', credentials: 'include', cache: 'no-store', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ thietBi: _mang.thietBi || {}, ds: ds.map(d => ({ ...d, cachMs: Date.now() - d.t, t: undefined })) }),
+      signal: huy.signal,
+    });
+  } finally {
+    clearTimeout(hen);
+  }
+}
+// Mỗi lần đo ghi kèm TÊN người đang dùng trang (máy chủ chỉ lưu nếu khớp người của phiên gửi lên — máy dùng chung: số đo lúc Tú hết phiên
+// không bị ghi sang tên Chang vừa đăng nhập ở tab khác).
+function themSoDoMang(d) {
+  _mang.hangDoi.push({ t: Date.now(), trang: location.pathname, nguoi: (window.__nguoiDung || {}).ten || '', ...d });
+  if (_mang.hangDoi.length > 200) _mang.hangDoi.splice(0, _mang.hangDoi.length - 200);
+}
+
+// 1 lần đo. Gửi KÈM các lần đo trước còn chờ (log chi tiết); gửi lỗi thì giữ lại cho lần sau (tối đa 200 lần đo).
+async function doMangMotLan(batBuoc = false) {
+  if (_mang.dangDo || (document.hidden && !batBuoc)) return;
+  _mang.dangDo = true;
+  _mang.lanDoCuoi = Date.now();
+  if (!_thietBiMangSan) _thietBiMangSan = layThietBiLog().catch(() => ({}));
+  _mang.thietBi = await Promise.race([_thietBiMangSan, new Promise(r => setTimeout(() => r({}), 1500))]);
+  // Lượt đo chỉ mang tối đa 5 lần đo trước (vài trăm byte) — sau khi mất mạng lâu, hàng chờ lớn được gửi RIÊNG sau lượt đo (guiHangDoiMang),
+  // để thời gian đo không bị cộng thêm thời gian đẩy cả lô lên (số đo cao giả ngay lúc vừa có mạng lại).
+  const goi = !_mang.dangGuiHangDoi && _mang.hangDoi.length <= 5 ? _mang.hangDoi.splice(0) : [];
+  const tdt = thongTinMangTrinhDuyet();
+  const t0 = performance.now();
+  let ms = null, loi = '';
+  try {
+    const res = await guiDoMang(goi);
+    ms = Math.round(performance.now() - t0);
+    if (!res.ok && res.status >= 500) { loi = `máy chủ lỗi ${res.status}`; ms = null; }
+    if (ms != null) _mang.lanKetNoiDuocCuoi = Date.now();
+    // 401 (hết phiên): máy chủ KHÔNG lưu khi chưa đăng nhập -> giữ lại số đo, gửi khi đăng nhập lại (tối đa 200 lần đo); rời trang lúc
+    // này thì cất vào localStorage thay vì sendBeacon (xem pagehide).
+    _mang.hetPhien = res.status === 401;
+    if (ms == null || _mang.hetPhien) _mang.hangDoi.unshift(...goi);
+    else if (_mang.hangDoi.length) guiHangDoiMang();
+  } catch (e) {
+    loi = navigator.onLine === false ? 'không có mạng' : (e && (e.name === 'AbortError' || e.name === 'TimeoutError')) ? `quá ${MANG.HAN_MS / 1000} giây` : 'lỗi mạng';
+    _mang.hangDoi.unshift(...goi);
+  }
+  themSoDoMang({ ms, loi, loai: tdt.loai || '', mbps: tdt.mbps ?? null, rtt: tdt.rtt ?? null });
+  _mang.ganDay.push({ ms, loi });
+  if (_mang.ganDay.length > 10) _mang.ganDay.shift();
+  _mang.soLanYeuLienTiep = ms != null && ms > MANG.NGUONG_VANG ? _mang.soLanYeuLienTiep + 1 : 0;
+  _mang.dangDo = false;
+  capNhatHienThiMang();
+}
+
+// Gửi riêng hàng chờ số đo lớn (sau khi mất mạng lâu) — KHÔNG tính thời gian. Mỗi lúc chỉ 1 lượt (lượt đo không lấy hàng chờ khi đang
+// gửi); lỗi / hết phiên / quá hạn thì trả lại hàng chờ — số đo không bị "treo" ngoài hàng chờ.
+async function guiHangDoiMang() {
+  if (_mang.dangGuiHangDoi) return;
+  const goi = _mang.hangDoi.splice(0, 100);
+  if (!goi.length) return;
+  _mang.dangGuiHangDoi = true;
+  try {
+    const res = await guiDoMang(goi);
+    if (!res.ok) _mang.hangDoi.unshift(...goi);
+  } catch (e) {
+    _mang.hangDoi.unshift(...goi);
+  } finally {
+    _mang.dangGuiHangDoi = false;
+  }
+}
+
+// Hết phiên rồi rời trang (vd sáng ra bấm thao tác -> bị chuyển sang trang đăng nhập): sendBeacon không biết máy chủ trả 401 -> số đo mất.
+// Cất vào localStorage, đăng nhập lại (trang có menu kế tiếp) thì lấy ra gửi tiếp — CHỈ số đo của đúng người đó.
+const KHOA_DO_MANG_CHO = 'doMangChoGui';
+function catSoDoMangChoDangNhap() {
+  try {
+    const cu = JSON.parse(localStorage.getItem(KHOA_DO_MANG_CHO) || '[]');
+    localStorage.setItem(KHOA_DO_MANG_CHO, JSON.stringify(cu.concat(_mang.hangDoi.splice(0)).slice(-200)));
+  } catch (e) { /* bị chặn / đầy -> bỏ */ }
+}
+function layLaiSoDoMangDaCat() {
+  try {
+    const ds = JSON.parse(localStorage.getItem(KHOA_DO_MANG_CHO) || '[]');
+    localStorage.removeItem(KHOA_DO_MANG_CHO);
+    const ten = (window.__nguoiDung || {}).ten || '';
+    _mang.hangDoi.unshift(...ds.filter(d => d && d.nguoi === ten).slice(-200));
+  } catch (e) { /* hỏng -> bỏ */ }
+}
+
+function batDauDoMang() {
+  if (_mang.daBat) { capNhatHienThiMang(); return; } // renderNav gọi lại -> chỉ vẽ lại chấm
+  _mang.daBat = true;
+  layLaiSoDoMangDaCat();
+  doMangMotLan();
+  setInterval(() => doMangMotLan(), MANG.CHU_KY_MS);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && Date.now() - _mang.lanDoCuoi > 10000) doMangMotLan(); });
+  addEventListener('online', () => doMangMotLan(true));
+  addEventListener('offline', () => {
+    _mang.ganDay.push({ ms: null, loi: 'không có mạng' });
+    themSoDoMang({ ms: null, loi: 'không có mạng', ...thongTinMangTrinhDuyet() });
+    capNhatHienThiMang();
+  });
+  // Rời trang: gửi nốt các lần đo chưa gửi (không đo thêm). Đang hết phiên / máy không có sendBeacon -> cất localStorage.
+  addEventListener('pagehide', () => {
+    if (!_mang.hangDoi.length) return;
+    if (_mang.hetPhien || !navigator.sendBeacon) { catSoDoMangChoDangNhap(); return; }
+    const ds = _mang.hangDoi.splice(0).map(d => ({ ...d, cachMs: Date.now() - d.t, t: undefined }));
+    try { navigator.sendBeacon(API + '/ping', new Blob([JSON.stringify({ ds, thietBi: _mang.thietBi || {} })], { type: 'application/json' })); } catch (e) { /* bỏ */ }
+  });
+}
+// Lượt gọi API thật lỗi mạng -> đo lại ngay (tối đa 1 lần / 5 giây).
+function _baoLoiMangTuApi() {
+  if (_mang.daBat && Date.now() - _mang.lanDoCuoi > 5000) doMangMotLan(true);
+}
+
+// Hệ điều hành / trình duyệt / đời máy (chuyển từ scan.html 16/10/2026 — dùng chung cho Logs_UploadAnh và log đo mạng mọi trang).
+// User-Agent của Chrome Android đã bị "đóng băng" (Android 10; K) -> hỏi thêm Client Hints (chỉ Chrome/Edge/Samsung có). iPhone không
+// cho biết đời máy; Safari iOS mới có thể không báo đúng số iOS.
+async function layThietBiLog() {
+  const ua = navigator.userAgent;
+  const khop = (re, i = 1) => (ua.match(re) || [])[i] || '';
+  let os = 'Khác', osVer = '', br = 'Khác', brVer = '', may = '';
+  if (/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) {
+    os = /iPhone|iPod/.test(ua) ? 'iOS' : 'iPadOS';
+    osVer = khop(/OS (\d+[_.]\d+)/).replace('_', '.') || khop(/Version\/(\d+(\.\d+)?)/);
+  } else if (/Android/.test(ua)) { os = 'Android'; osVer = khop(/Android (\d+(\.\d+)?)/); may = khop(/Android [^;)]+; ([^;)]+?)(?: Build[^;)]*)?\)/); }
+  else if (/Windows/.test(ua)) os = 'Windows';
+  else if (/Mac OS X/.test(ua)) os = 'macOS';
+  else if (/Linux|CrOS/.test(ua)) os = 'Linux';
+  const TRINH_DUYET = [[/EdgA?\/(\d+(\.\d+)?)/, 'Edge'], [/SamsungBrowser\/(\d+(\.\d+)?)/, 'Samsung Internet'], [/(?:OPR|OPT)\/(\d+(\.\d+)?)/, 'Opera'],
+    [/Zalo[^\/]*\/(\d+(\.\d+)?)/i, 'Zalo'], [/FBAV\/(\d+(\.\d+)?)/, 'Facebook'], [/CriOS\/(\d+(\.\d+)?)/, 'Chrome'], [/FxiOS\/(\d+(\.\d+)?)/, 'Firefox'],
+    [/Firefox\/(\d+(\.\d+)?)/, 'Firefox'], [/Chrome\/(\d+(\.\d+)?)/, 'Chrome'], [/Version\/(\d+(\.\d+)?).*Safari/, 'Safari']];
+  for (const [re, ten] of TRINH_DUYET) { const m = ua.match(re); if (m) { br = ten; brVer = m[1]; break; } }
+  try {
+    const h = await navigator.userAgentData?.getHighEntropyValues?.(['platformVersion', 'model', 'fullVersionList']);
+    if (h) {
+      if (os === 'Android' && h.platformVersion) osVer = h.platformVersion.split('.').slice(0, 2).join('.');
+      if (h.model) may = h.model;
+      const b = (h.fullVersionList || []).find(x => !/Not|Chromium/i.test(x.brand));
+      if (b && br === 'Chrome') brVer = b.version.split('.').slice(0, 2).join('.');
+    }
+  } catch (e) { /* trình duyệt không cho -> dùng User-Agent */ }
+  if (may === 'K') may = '';
+  return { os, osVer, br, brVer, may, ram: navigator.deviceMemory || null, cpu: navigator.hardwareConcurrency || null,
+    manHinh: `${screen.width}x${screen.height}@${window.devicePixelRatio || 1}`,
+    standalone: !!(window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true };
 }
 
 // Y20 "Báo lỗi app" (11/10/2026, theo yêu cầu người dùng): khung báo lỗi mở từ nút trên thanh menu (mọi vai trò). Mô tả bắt buộc; ảnh
@@ -400,7 +668,11 @@ function renderNav(user, active) {
   // .tab-links, style.css tự bật/tắt riêng theo breakpoint) — gộp chung 1 class sẽ khiến CSS ẩn/hiện
   // NHẦM cả 2 bản cùng lúc thay vì đúng 1 bản theo màn hình.
   // Y20: máy tính có chữ "Báo lỗi"; header điện thoại (.app-header) CHỈ icon — hàng tên + vai trò + Thoát đã gần kín bề ngang.
+  // Chấm báo mạng (16/10/2026): điện thoại chỉ chấm (header chật), máy tính chấm + số ms. Bấm -> khung chi tiết.
+  const chamMang = coChu => `<span class="cham-mang" role="button" tabindex="0" onclick="moChiTietMang(event)" style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;flex-shrink:0;font-size:12px;padding:4px">`
+    + `<span class="cham-mang-cham" style="width:10px;height:10px;border-radius:50%;background:#9ca3af;display:inline-block"></span>${coChu ? '<span class="cham-mang-chu">…</span>' : ''}</span>`;
   const noiDungNguoiDung = coChuBaoLoi => `
+    ${chamMang(coChuBaoLoi)}
     <span class="nav-user">${escapeHtml(user.ten)} · ${escapeHtml(NHAN_VAI_TRO[user.vaiTro] || user.vaiTro)}</span>
     <button class="icon-btn ${coChuBaoLoi ? 'icon-btn-nhan' : ''}" onclick="moBaoLoi()" title="Báo lỗi app" aria-label="Báo lỗi app">${icon('alert')}${coChuBaoLoi ? '<span>Báo lỗi</span>' : ''}</button>
     <button class="icon-btn icon-btn-nhan" onclick="dangXuat()">${icon('logout')}<span>Thoát</span></button>`;
@@ -426,6 +698,7 @@ function renderNav(user, active) {
   nav.querySelector('.app-header .brand').style.flexShrink = '0';
   phaiHeader.querySelectorAll('button').forEach(b => { b.style.flexShrink = '0'; });
   canChoTenHeader();
+  batDauDoMang();
   // Đo lại khi font Noto Sans (font-display: swap) tải xong và khi đổi cỡ/xoay màn hình — đăng ký 1 lần dù renderNav gọi nhiều lần.
   if (!window._daNgheCanChoTen) {
     window._daNgheCanChoTen = true;

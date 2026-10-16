@@ -753,18 +753,24 @@ async function capNhatTrangThaiTrackingChoDon(sttKey, { gomDelivered, duLieuDon 
   if (!donTra) return { ok: false, lyDo: `Không tìm thấy đơn ${keyTra} (đơn mua tracking của nhóm)` };
   const cauHinhGke = gkeService.layCauHinhGkeChoDon(donTra); // tài khoản ĐÃ tạo vận đơn
   const laSeller = donTra.NGUON_TRACKING === orderService.NGUON_TRACKING_SELLER;
+  // Lỗi tra gần nhất lưu SQLite (LOI_TRA_TRACKING, 16/10/2026) cho danh sách lỗi dữ liệu gửi Seller; tra được thì xoá.
+  const ghiLoiTra = lyDo => trangThaiDbService.ghiDe(keyTra, { LOI_TRA_TRACKING: `${thoiGianVNISOString()}|${lyDo}` });
   let lichSu;
   try {
     lichSu = await gkeService.layLichSuTrackingGke(keyTra, cauHinhGke, []);
   } catch (err) {
-    if (laSeller) throw new Error(`GKE không có vận đơn cho đơn ${keyTra} (tracking do Seller cung cấp): ${err.message}`);
-    throw err;
+    const loi = laSeller ? new Error(`GKE không có vận đơn cho đơn ${keyTra} (tracking do Seller cung cấp): ${err.message}`) : err;
+    ghiLoiTra(loi.message);
+    throw loi;
   }
   if (lichSu.length === 0) {
-    return { ok: false, lyDo: laSeller
+    const lyDo = laSeller
       ? `GKE không có vận đơn / sự kiện cho đơn ${keyTra} (tracking do Seller cung cấp).`
-      : 'GKE chưa có sự kiện tracking nào cho đơn này (có thể vừa tạo nhãn, chưa được đơn vị vận chuyển quét nhận).' };
+      : 'GKE chưa có sự kiện tracking nào cho đơn này (có thể vừa tạo nhãn, chưa được đơn vị vận chuyển quét nhận).';
+    if (laSeller) ghiLoiTra(lyDo);
+    return { ok: false, lyDo };
   }
+  if (donTra.LOI_TRA_TRACKING) trangThaiDbService.ghiDe(keyTra, { LOI_TRA_TRACKING: '' });
 
   const suKienMoiNhat = lichSu[lichSu.length - 1];
   const capNhat = {

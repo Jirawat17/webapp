@@ -72,5 +72,16 @@ router.post('/bao-cao-log/gui-ngay', async (req, res) => {
   if (!kq.ok) return res.status(400).json({ error: kq.loi });
   res.json({ ok: true });
 });
+// Gửi NGAY báo cáo vận hành tuần (7 ngày tới lúc bấm) / danh sách lỗi dữ liệu — cùng chat báo cáo logs (16/10/2026).
+router.post('/bao-cao-log/gui-tuan', async (req, res) => {
+  const kq = await baoCaoLog.guiBaoCaoTuan();
+  if (!kq.ok) return res.status(400).json({ error: kq.loi });
+  res.json({ ok: true });
+});
+router.post('/bao-cao-log/gui-loi-du-lieu', async (req, res) => {
+  const kq = await baoCaoLog.guiLoiDuLieuNgay();
+  if (!kq.ok) return res.status(400).json({ error: kq.loi });
+  res.json({ ok: true, soLoi: kq.soLoi });
+});
 
 module.exports = router;
