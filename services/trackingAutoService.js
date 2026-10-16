@@ -16,6 +16,7 @@ const { ghiLog } = require('./logService');
 const { dinhDangNgayGioNgan, thoiGianVNISOString } = require('./dateUtils');
 const trangThaiDbService = require('./trangThaiDbService');
 const donNhieuAoService = require('./donNhieuAoService');
+const storageService = require('./storageService');
 
 const SO_PHUT_MAC_DINH = 10;
 
@@ -426,6 +427,7 @@ async function _muaTrackingChoDonThat(sttKey, user) {
     }
 
     const ketQuaTem = await gkeService.layTemIn(row, cauHinhGke, { laLanDauSauKhiTao: chuaTungTaoDon || dangChoTuLanTruoc }, nhatKy);
+    luuTemNen(row.STT_Key, ketQuaTem && ketQuaTem.tracking_num, ketQuaTem); // lần IN LABEL sau dùng luôn tem này, không gọi lại GKE
     await orderService.update(sttKey, {
       TRACKING_ID: ketQuaTem.tracking_num,
       HANG_VAN_CHUYEN: ketQuaTem.delivery_carrier,
@@ -474,6 +476,27 @@ async function _muaTrackingChoDonThat(sttKey, user) {
       chiTiet: nhatKy.concat(`LỖI: ${err.message}`).join('\n'),
     });
     throw err;
+  }
+}
+
+// Tem GKE lưu sẵn trên MinIO (16/10/2026, theo yêu cầu người dùng — log 15/10: IN LABEL trung bình 3,8 giây, GKE từng báo "tem chưa sẵn
+// sàng" 48 lần): lúc MUA tracking đã lấy được tem (layTemIn chờ tem sẵn sàng) -> lưu luôn; IN LABEL đọc bản lưu, không có (đơn mua trước
+// khi có tính năng, MinIO lỗi...) thì lấy từ GKE như cũ rồi lưu cho lần sau. Khoá theo đơn + mã tracking: mua lại tracking mới -> khoá mới.
+// Nằm TRONG thư mục ảnh của đơn (orders/<mã>/) — tem có tên/địa chỉ/SĐT khách: "Xoá dữ liệu đơn" (xoaDuLieuDonService) xoá luôn.
+// ponytail: không tự xoá tem cũ (~50–100KB/tem) — thêm dọn theo tuổi nếu bucket phình.
+const khoaTemDaLuu = (sttKey, trackingNum) => `orders/${sttKey}/tem-gke_${String(trackingNum).replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
+function luuTemNen(sttKey, trackingNum, ketQuaTem) {
+  if (!ketQuaTem || !ketQuaTem.label_base64 || !trackingNum) return;
+  storageService.uploadImageBuffer(Buffer.from(ketQuaTem.label_base64, 'base64'), khoaTemDaLuu(sttKey, trackingNum), 'application/pdf')
+    .catch(err => console.error(`[Tracking] Lưu sẵn tem ${sttKey} lỗi:`, err.message));
+}
+async function docTemDaLuu(sttKey, trackingNum) {
+  try {
+    const buf = await storageService.getObjectBuffer(khoaTemDaLuu(sttKey, trackingNum), { timeoutMs: 3000 });
+    return buf.length ? buf.toString('base64') : null;
+  } catch (err) {
+    if (err.name !== 'NoSuchKey') console.warn(`[Tracking] Đọc tem lưu sẵn ${sttKey} lỗi (lấy từ GKE):`, err.message);
+    return null;
   }
 }
 
@@ -563,19 +586,26 @@ async function inLabelChoDon(sttKey, user) {
     if (laSeller && !gkeService.duocMuaTrackingTheoQuocGia(donLayTem)) {
       throw new Error('Tracking do Seller cung cấp — chỉ in label GKE cho đơn gửi US/UK (GB).');
     }
-    const cauHinhGke = gkeService.layCauHinhGkeChoDon(donLayTem);
+    const temDaLuu = await docTemDaLuu(donLayTem.STT_Key, donLayTem.TRACKING_ID);
     let temGke;
-    try {
-      temGke = await gkeService.layTemIn(donLayTem, cauHinhGke, { laLanDauSauKhiTao: false }, nhatKy);
-    } catch (err) {
-      if (laSeller) throw new Error(`GKE không có vận đơn cho đơn ${donLayTem.STT_Key} (tracking do Seller cung cấp): ${err.message}`);
-      throw err;
+    if (temDaLuu) {
+      temGke = { label_base64: temDaLuu, tracking_num: donLayTem.TRACKING_ID };
+      nhatKy.push(`Dùng tem đã lưu sẵn (tracking ${donLayTem.TRACKING_ID}) — không gọi GKE.`);
+    } else {
+      const cauHinhGke = gkeService.layCauHinhGkeChoDon(donLayTem);
+      try {
+        temGke = await gkeService.layTemIn(donLayTem, cauHinhGke, { laLanDauSauKhiTao: false }, nhatKy);
+      } catch (err) {
+        if (laSeller) throw new Error(`GKE không có vận đơn cho đơn ${donLayTem.STT_Key} (tracking do Seller cung cấp): ${err.message}`);
+        throw err;
+      }
+      luuTemNen(donLayTem.STT_Key, donLayTem.TRACKING_ID, temGke); // khoá theo tracking ĐANG LƯU của đơn (tracking Seller có thể khác số GKE trả)
     }
     const tGke = Date.now();
     const ketQuaTem = await ghiChuNhomLenTem(temGke, nhom);
     const tGhiChu = Date.now();
     await ghiDaInLabel(sttKey, user);
-    console.log(`[Tracking] In label ${sttKey}: đọc đơn ${tDoc - t0}ms, GKE ${tGke - tDoc}ms, ghi chú tem ${tGhiChu - tGke}ms, ghi đã in ${Date.now() - tGhiChu}ms, TỔNG ${Date.now() - t0}ms`);
+    console.log(`[Tracking] In label ${sttKey}: đọc đơn ${tDoc - t0}ms, lấy tem (${temDaLuu ? 'đã lưu' : 'GKE'}) ${tGke - tDoc}ms, ghi chú tem ${tGhiChu - tGke}ms, ghi đã in ${Date.now() - tGhiChu}ms, TỔNG ${Date.now() - t0}ms`);
 
     ghiLogTrackingVaoDb({
       sttKey, nguon: 'In label', nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: 'Thành công',

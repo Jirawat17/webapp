@@ -85,12 +85,17 @@ const taoCsvDoMang = ds => taoCsv(COT_CSV_MANG, ds);
 
 // ======================= (7) Lỗi dữ liệu cần Seller sửa =======================
 // Phân loại lỗi mua tracking GKE — CHỈ lỗi do dữ liệu đơn (lỗi kỹ thuật: mạng, token... không thuộc việc của Seller -> bỏ).
+// Thứ tự = ưu tiên (mẫu đầu tiên khớp). 16/10/2026: "[chuẩn bị dữ liệu] ... thiếu cột MA_ZIPCODE" (ô ZIP TRỐNG) và "city, zip code, and state
+// verification failed" (ZIP hợp lệ nhưng không khớp thành phố/bang) từng bị xếp nhầm vào "ZIP sai định dạng" vì chứa chữ "zip".
 const LOI_MUA_THEO_MAU = [
-  [/postal code not in service|无服务|未匹配到路由/i, 'Mua tracking GKE: ZIP / quốc gia ngoài vùng phục vụ', 'GKE không phục vụ ZIP này — Seller kiểm tra lại ZIP + địa chỉ; nếu đúng thì cần gửi bằng hãng khác.'],
-  [/postcode|邮编|zip/i, 'Mua tracking GKE: ZIP sai định dạng', 'ZIP Mỹ phải đủ 5 số (vd 03217), postcode UK đúng dạng (vd TR15 2SX) — Seller sửa ô ZIP.'],
-  [/p\.?\s*o\.?\s*box/i, 'Mua tracking GKE: địa chỉ PO Box', 'GKE không nhận PO Box — Seller xin khách địa chỉ nhận hàng khác.'],
   [/\[chuẩn bị dữ liệu\]|thiếu cột/i, 'Mua tracking GKE: thiếu thông tin người nhận', 'Seller bổ sung đủ tên / thành phố / ZIP / quốc gia.'],
+  [/p\.?\s*o\.?\s*box/i, 'Mua tracking GKE: địa chỉ PO Box', 'GKE không nhận PO Box — Seller xin khách địa chỉ nhận hàng khác.'],
+  [/postal code not in service|无服务|未匹配到路由/i, 'Mua tracking GKE: ZIP / quốc gia ngoài vùng phục vụ', 'GKE không phục vụ ZIP này — Seller kiểm tra lại ZIP + địa chỉ; nếu đúng thì cần gửi bằng hãng khác.'],
+  [/city, zip code,? and state|城市、邮编、州/i, 'Mua tracking GKE: ZIP / thành phố / bang không khớp', 'Seller kiểm tra lại ZIP, thành phố và bang có khớp nhau không rồi sửa ô sai.'],
+  [/postcode|邮编|zip/i, 'Mua tracking GKE: ZIP sai định dạng', 'ZIP Mỹ phải đủ 5 số (vd 03217), postcode UK đúng dạng (vd TR15 2SX) — Seller sửa ô ZIP.'],
 ];
+// gkeService báo "thiếu cột X" cả khi cột CÓ mà ô TRỐNG (!donHang[X]) — trong báo cáo ghi đúng là ô trống.
+const chiTietLoiMua = s => String(s).replace(/thiếu cột ([A-Z0-9_, ]+?) —/, 'để trống ô $1 —').slice(0, 300);
 const TRUONG_DIA_CHI = { TEN: 'Tên', DIA_CHI_TEN_DUONG: 'Địa chỉ 1', DIA_CHI_TEN_DUONG_2: 'Địa chỉ 2', DIA_CHI_TEN_TP: 'Thành phố', DIA_CHI_BANG: 'Bang', MA_ZIPCODE: 'ZIP' };
 const hienKyTu = s => String(s).replace(/\r/g, '').replace(/\n/g, '⏎').replace(/\t/g, '⇥').replace(/^ +| +$/g, m => '·'.repeat(m.length)); // cho thấy ký tự ẩn
 const laUS = r => /^(us|usa|united states( of america)?)$/i.test(String(r.DIA_CHI_NUOC || '').trim());
@@ -107,7 +112,7 @@ async function danhSachLoiDuLieu() {
   for (const r of chuaXong) {
     if (r.TRACKING_ID || !r.TU_MUA_LOI_GAN_NHAT) continue;
     const mau = LOI_MUA_THEO_MAU.find(([re]) => re.test(r.TU_MUA_LOI_GAN_NHAT));
-    if (mau) them(r, 'Mua tracking', mau[1], r.TU_MUA_LOI_GAN_NHAT.slice(0, 300), `ZIP "${r.MA_ZIPCODE || ''}" · ${r.DIA_CHI_NUOC || ''}`, mau[2]);
+    if (mau) them(r, 'Mua tracking', mau[1], chiTietLoiMua(r.TU_MUA_LOI_GAN_NHAT), `ZIP "${r.MA_ZIPCODE || ''}" · ${r.DIA_CHI_NUOC || ''}`, mau[2]);
   }
   // b. Ghi Sheet Seller lỗi (đang chờ, chưa bị "Bỏ qua")
   for (const d of nhatKy.layLoiDongBoDangCho()) {
@@ -115,8 +120,10 @@ async function danhSachLoiDuLieu() {
     const cachSua = thieuCot ? `Thêm cột "${thieuCot[1].trim()}" vào DÒNG 1 của tab "${d.Tab}", rồi báo xưởng bấm "Đẩy lại" ở Trung tâm hành động.`
       : /quyền|permission|403/i.test(d.LyDo || '') ? 'Chia sẻ quyền CHỈNH SỬA Sheet cho email dịch vụ của app (xem Settings > Sheet Seller).'
       : 'Kiểm tra tab / tiêu đề cột trong Sheet Seller.';
+    // gop: lỗi CÙNG nguyên nhân (cùng loại + tab + lý do không nhắc mã đơn — vd tab thiếu cột, Sheet chưa có tab tháng) -> file Excel gộp 1 dòng.
+    const lyDo = String(d.LyDo || '');
     ds.push({ team: teamCua(d.STT_Key), sttKey: d.STT_Key, nhom: 'Sheet Seller', loai: `Ghi Sheet Seller lỗi (${NHAN_LOAI_SELLER[d.Loai] || d.Loai})`,
-      chiTiet: String(d.LyDo || '').slice(0, 300), giaTri: d.Tab ? `Tab ${d.Tab}` : '', cachSua });
+      chiTiet: lyDo.slice(0, 300), giaTri: d.Tab ? `Tab ${d.Tab}` : '', cachSua, gop: lyDo.includes(d.STT_Key) ? '' : `${d.Loai}|${d.Tab || ''}|${lyDo}` });
   }
   // c. Tên / địa chỉ có ký tự lạ, ZIP Mỹ 4 số, PO Box — đơn CHƯA có tracking (dữ liệu còn dùng để mua tracking)
   for (const r of chuaXong) {
@@ -158,6 +165,23 @@ async function danhSachLoiDuLieu() {
 }
 
 const tenSheet = team => String(team).replace(/[[\]*?/\\:]/g, '').slice(0, 31) || 'Khac';
+// Gộp các dòng cùng `gop` (≥ 2 đơn) thành 1 dòng: "Mã đơn" = "N đơn", "Giá trị hiện tại" = tab + danh sách mã đơn (16/10/2026, theo yêu cầu
+// người dùng — file 16/10: Team V 80 dòng thực chất chỉ là 2 cột thiếu ở tab T9.2026).
+function gopDongCungNguyenNhan(ds) {
+  const theoKhoa = new Map();
+  for (const d of ds) if (d.gop) (theoKhoa.get(d.gop) || theoKhoa.set(d.gop, []).get(d.gop)).push(d);
+  const daGop = new Set();
+  const kq = [];
+  for (const d of ds) {
+    const nhom = d.gop ? theoKhoa.get(d.gop) : null;
+    if (!nhom || nhom.length < 2) { kq.push(d); continue; }
+    if (daGop.has(d.gop)) continue;
+    daGop.add(d.gop);
+    const ma = [...new Set(nhom.map(x => x.sttKey))].sort((a, b) => String(a).localeCompare(String(b), undefined, { numeric: true }));
+    kq.push({ ...d, sttKey: `${ma.length} đơn`, giaTri: `${d.giaTri ? d.giaTri + ' — ' : ''}đơn: ${ma.join(', ')}` });
+  }
+  return kq;
+}
 async function taoFileLoiDuLieu(ds) {
   const wb = new ExcelJS.Workbook();
   const theoTeam = new Map();
@@ -170,7 +194,7 @@ async function taoFileLoiDuLieu(ds) {
     ];
     sh.getRow(1).font = { bold: true };
     sh.views = [{ state: 'frozen', ySplit: 1 }];
-    dsTeam.sort((a, b) => a.loai.localeCompare(b.loai) || String(a.sttKey).localeCompare(String(b.sttKey))).forEach(d => sh.addRow(d));
+    gopDongCungNguyenNhan(dsTeam).sort((a, b) => a.loai.localeCompare(b.loai) || String(a.sttKey).localeCompare(String(b.sttKey))).forEach(d => sh.addRow(d));
     sh.eachRow(row => { row.alignment = { vertical: 'top', wrapText: true }; });
   }
   return Buffer.from(await wb.xlsx.writeBuffer());

@@ -1,4 +1,4 @@
-// Lịch quét tự động mua tracking — mẫu giống hệt services/canhBaoJob.js. Chạy mỗi 2 phút (KHÔNG
+// Lịch quét tự động mua tracking — mẫu giống lịch cảnh báo 3 tầng cũ (services/canhBaoJob.js, đã bỏ 16/10/2026). Chạy mỗi 2 phút (KHÔNG
 // phải 30 phút như cảnh báo) vì số phút chờ (x) do người dùng tự nhập ở trang "Tracking" có thể khá
 // ngắn — quét dày hơn để độ trễ thực tế sát với x đã chọn hơn (lệch tối đa ~2 phút thay vì tối đa 30
 // phút nếu dùng chung lịch với cảnh báo).

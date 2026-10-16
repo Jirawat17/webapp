@@ -4,16 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đăng nhập — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=111">
+<link rel="stylesheet" href="/css/style.css?v=112">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <script src="/js/theme.js?v=104"></script>
 </head>
 <body class="trang-dang-nhap">
 <div class="login-wrap">
-  <img class="welcome-banner" src="/images/Welcome.jpg" alt="" aria-hidden="true">
   <div class="logo-mark" aria-hidden="true" id="logo-mark"></div>
-  <h1>Xưởng Thêu <span style="font-size:0.4em;font-weight:400;color:var(--color-text-muted);vertical-align:middle">Phiên bản 68</span></h1>
+  <h1>Xưởng Thêu <span id="phien-ban-app" style="font-size:0.4em;font-weight:400;color:var(--color-text-muted);vertical-align:middle"></span></h1>
   <p>Chào mừng đến với Giao diện quản lý xưởng thêu</p>
   <div id="danh-sach-ten" class="ten-list">Đang tải danh sách nhân viên...</div>
   <div id="khoi-nhap-mat-khau" style="display:none;margin-top:16px">
@@ -84,8 +83,12 @@
   </details>
 </div>
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=127"></script>
+<script src="/js/api.js?v=128"></script>
 <script>
+// Phiên bản app (16/10/2026, theo yêu cầu người dùng — trước đây ghi cứng "Phiên bản 68"): số v= của /js/api.js trang này đang nạp,
+// cùng định nghĩa phiên bản ở services/phienBanService.js (log / báo cáo Telegram) — tăng v= khi deploy là số ở đây tự đổi.
+(m => { if (m) document.getElementById('phien-ban-app').textContent = 'Phiên bản ' + m[1]; })(
+  ((document.querySelector('script[src*="/js/api.js"]') || {}).src || '').match(/[?&]v=(\d+)/));
 document.getElementById('logo-mark').innerHTML = '<img src="/images/logo.png" alt="" width="88" height="88" style="display:block;margin:0 auto;border-radius:22%;box-shadow:0 8px 24px rgba(200,24,24,.28)">';
 document.querySelectorAll('[data-icon]').forEach(el => {
   el.innerHTML = icon(el.dataset.icon, { size: Number(el.dataset.iconSize) || 16 });
@@ -139,7 +142,7 @@ async function dangNhap(ten, matKhau) {
     // sau khi đăng nhập (sửa 12/09/2026, xem
     // docs/superpowers/specs/2026-09-12-chan-nguoi-lay-phoi-xem-don-hang-design.md).
     window.location.href = trangChuTheoVaiTro(user.vaiTro);
-  } catch (e) { alert(e.message); }
+  } catch (e) { await hopThongBao(e.message); }
 }
 
 taiDanhSach();

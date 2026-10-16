@@ -165,7 +165,6 @@ body.trang-dang-nhap {
   background-attachment: fixed;
 }
 .login-wrap { max-width: 440px; margin: var(--space-8) auto; padding: var(--space-5); text-align: center; }
-.login-wrap .welcome-banner { max-width: 100%; height: auto; margin-bottom: var(--space-2); }
 .login-wrap .logo-mark { color: var(--color-primary); margin-bottom: var(--space-2); animation: troiNhe 3.5s ease-in-out infinite; }
 @keyframes troiNhe { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 .ten-list { display: flex; flex-wrap: wrap; gap: var(--space-3); justify-content: center; margin-top: var(--space-5); }
@@ -844,6 +843,8 @@ select.chon-trang-thai-tieu-cuc { border-color: var(--color-warning-text); color
   pointer-events: none;
 }
 .toast-vua-quet.hien { opacity: 1; transform: translateY(0); }
+.toast-vua-quet.hien.co-nut { pointer-events: auto; } /* toast có nút (scan.html — chuyển sang chế độ Đã dán tem) */
+.toast-vua-quet .nut-trong-toast { margin-top: 8px; }
 .toast-vua-quet.ok       { background: var(--color-success-bg); color: var(--color-success-text); }
 .toast-vua-quet.canh-bao { background: var(--color-warning-bg); color: var(--color-warning-text); }
 .toast-vua-quet.loi      { background: var(--color-danger-bg); color: var(--color-danger-text); }
@@ -1283,6 +1284,25 @@ body, .app-header, .order-card, .btn-hanh-dong, .badge, .mau-swatch, .tab-links 
 .hop-don-da-huy__noi-dung { padding: 16px 20px 20px; }
 .hop-don-da-huy__ma { color: #dc2626; font-weight: 800; font-size: 1.2rem; word-break: break-word; margin: 8px 0 16px; }
 .hop-don-da-huy__ds { text-align: left; margin: 8px 0 16px; padding-left: 20px; color: #dc2626; font-weight: 600; word-break: break-word; }
+
+/* Hộp thoại chung (16/10/2026) — public/js/api.js#hopThongBao / hopXacNhan / hopNhap, thay alert/confirm/prompt của trình duyệt.
+   z-index trên mọi thanh cố định (thanh "Có bản mới" 2000, dải mạng...). */
+.hop-thoai {
+  position: fixed; inset: 0; z-index: 3000; background: rgba(0, 0, 0, 0.5);
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+.hop-thoai__khung {
+  background: var(--color-surface); color: var(--color-text); border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  width: 100%; max-width: 460px; max-height: 85vh; overflow: auto; padding: 20px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+.hop-thoai__tieu-de { font-weight: 800; font-size: 1.1rem; margin-bottom: 8px; }
+.hop-thoai__noi-dung { white-space: pre-wrap; word-break: break-word; line-height: 1.5; font-size: 1rem; }
+.hop-thoai__o-nhap {
+  width: 100%; margin-top: 12px; padding: 10px 12px; font: inherit; font-size: 1rem; min-height: var(--tap-min);
+  border: 1.5px solid var(--color-border); border-radius: var(--radius-sm, 8px); background: var(--color-bg, #fff); color: var(--color-text);
+}
+.hop-thoai__nut { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+.hop-thoai__nut .btn-hanh-dong { min-width: 96px; }
 
 /* Lịch sử đơn / menu Lịch sử (27/09/2026) — danh sách "trước → sau" + dòng mờ cho lượt quét chỉ xem/bị từ chối. */
 .lich-su-thay-doi { margin: 4px 0 0; padding-left: 18px; font-size: 0.85rem; color: var(--color-text-muted); }

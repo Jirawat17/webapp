@@ -118,7 +118,7 @@ Sheet không có cột deadline riêng, nên cảnh báo tính theo **số ngày
 - 🟠 **Cam**: ≥5 ngày mà chưa tới `B4_Đang sản xuất`
 - 🔴 **Đỏ**: ≥7 ngày mà chưa `SHIPPED`
 
-Sửa ngưỡng/điều kiện tại `services/alertService.js` nếu cần khác đi. Cấu hình `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHATID_*` trong `.env` (xem `.env.example`).
+Sửa ngưỡng/điều kiện ở menu Settings (lưu SQLite, xem `services/alertService.js`). Mức cảnh báo chỉ hiện trên giao diện — gửi Telegram cảnh báo đã bỏ (16/10/2026).
 
 ## 7. Chatbot
 

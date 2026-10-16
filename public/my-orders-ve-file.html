@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn của tôi (Vẽ file) — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=111">
+<link rel="stylesheet" href="/css/style.css?v=112">
 <script src="/js/theme.js?v=104"></script>
 </head>
 <body>
@@ -225,7 +225,7 @@
 </div>
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=127"></script>
+<script src="/js/api.js?v=128"></script>
 <script>
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
 // settings.html (superadmin), 3/5/7 không còn luôn đúng nên không hard-code vào nhãn hiển thị nữa.
@@ -559,7 +559,7 @@ function capNhatThanhHanhDongCanVe() {
 // docs/superpowers/specs/2026-09-08-trang-thai-dang-ve-file-design.md).
 async function apDungNhanVeFile() {
   const soLuong = donCanVeChonSet.size;
-  if (!confirm(`Nhận vẽ file cho ${soLuong} đơn đã chọn?`)) return;
+  if (!await hopXacNhan(`Nhận vẽ file cho ${soLuong} đơn đã chọn?`)) return;
 
   const nut = document.getElementById('nut-nhan-ve-file');
   const nhanGoc = nut.innerHTML;
@@ -586,7 +586,7 @@ async function apDungNhanVeFile() {
     thongBao += `\n\nKhông nhận được ${ketQua.loi.length} đơn:\n` +
       ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
   }
-  alert(thongBao);
+  await hopThongBao(thongBao);
 
   document.querySelectorAll('#thanh-hanh-dong-can-ve button, #thanh-hanh-dong-can-ve select').forEach(el => el.disabled = false);
   nut.innerHTML = nhanGoc;
@@ -600,10 +600,10 @@ async function apDungNhanVeFile() {
 // Admin CHỈ ĐỊNH 1 người vẽ file cho các đơn đã chọn — gọi POST /orders/chi-dinh-nguoi-ve-file.
 async function apDungChiDinhNguoiVeFile() {
   const nguoiVeFile = document.getElementById('nguoi-ve-file-dich').value;
-  if (!nguoiVeFile) { alert('Hãy chọn người vẽ file muốn chỉ định'); return; }
+  if (!nguoiVeFile) { await hopThongBao('Hãy chọn người vẽ file muốn chỉ định'); return; }
 
   const soLuong = donCanVeChonSet.size;
-  if (!confirm(`Chỉ định "${nguoiVeFile}" vẽ file cho ${soLuong} đơn đã chọn?`)) return;
+  if (!await hopXacNhan(`Chỉ định "${nguoiVeFile}" vẽ file cho ${soLuong} đơn đã chọn?`)) return;
 
   document.querySelectorAll('#thanh-hanh-dong-can-ve button, #thanh-hanh-dong-can-ve select').forEach(el => el.disabled = true);
   const nutApDung = document.getElementById('nut-ap-dung-chi-dinh-ve-file');
@@ -629,7 +629,7 @@ async function apDungChiDinhNguoiVeFile() {
     thongBao += `\n\nKhông chỉ định được ${ketQua.loi.length} đơn:\n` +
       ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
   }
-  alert(thongBao);
+  await hopThongBao(thongBao);
 
   document.querySelectorAll('#thanh-hanh-dong-can-ve button, #thanh-hanh-dong-can-ve select').forEach(el => el.disabled = false);
   nutApDung.textContent = 'Áp dụng';
@@ -799,7 +799,7 @@ function capNhatThanhHanhDongToiVe() {
 // — không đụng NGUOI_VE_FILE (giữ làm dấu vết ai đã vẽ).
 async function apDungDanhDauDaVe() {
   const soLuong = donToiVeChonSet.size;
-  if (!confirm(`Đánh dấu ${soLuong} đơn đã chọn là "Đã vẽ file"?`)) return;
+  if (!await hopXacNhan(`Đánh dấu ${soLuong} đơn đã chọn là "Đã vẽ file"?`)) return;
 
   const nut = document.getElementById('nut-danh-dau-da-ve');
   const nhanGoc = nut.innerHTML;
@@ -826,7 +826,7 @@ async function apDungDanhDauDaVe() {
     thongBao += `\n\nKhông đánh dấu được ${ketQua.loi.length} đơn:\n` +
       ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
   }
-  alert(thongBao);
+  await hopThongBao(thongBao);
 
   document.querySelectorAll('#thanh-hanh-dong-toi-ve button').forEach(b => b.disabled = false);
   nut.innerHTML = nhanGoc;

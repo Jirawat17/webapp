@@ -825,13 +825,13 @@ function htmlNutBoQuaCanhBao(sttKey) {
     onclick='boQuaCanhBaoThuCong(this, ${escapeHtml(JSON.stringify(sttKey))}, true)'>Bỏ qua</button>`;
 }
 async function boQuaCanhBaoThuCong(nut, sttKey, boQua) {
-  if (boQua && !confirm(`Bỏ qua cảnh báo mua tracking thủ công của đơn ${sttKey}? Đơn sẽ không hiện ở khung cảnh báo nữa (hiện lại được ở Chi tiết đơn).`)) return;
+  if (boQua && !await hopXacNhan(`Bỏ qua cảnh báo mua tracking thủ công của đơn ${sttKey}? Đơn sẽ không hiện ở khung cảnh báo nữa (hiện lại được ở Chi tiết đơn).`)) return;
   nut.disabled = true;
   try {
     await apiFetch('/tracking/bo-qua-canh-bao', { method: 'POST', body: JSON.stringify({ sttKey, boQua }) });
     if (typeof taiCanhBaoThuCong === 'function' && boQua) await taiCanhBaoThuCong();
     else location.reload();
-  } catch (e) { alert('Lỗi: ' + e.message); nut.disabled = false; }
+  } catch (e) { await hopThongBao('Lỗi: ' + e.message); nut.disabled = false; }
 }
 
 // Khối skeleton dùng khi đang tải dữ liệu — thay cho chữ "Đang tải..." khô khan
@@ -905,6 +905,83 @@ function hienHopDo({ tieuDe = [], moTa = '', ma = [], danhSach = [] }) {
   });
 }
 
+// Hộp thoại chung của app (16/10/2026, theo yêu cầu người dùng) — thay alert() / confirm() / prompt() của trình duyệt: hộp của trình
+// duyệt mỗi máy một kiểu (iOS xám, Android khác, máy tính khác), không theo màu / chế độ tối của app, trình duyệt có thể cho người dùng
+// tích "không hiện hộp thoại nữa". Cách dùng (trong hàm async):
+//   await hopThongBao('Đã lưu.')                      — chờ bấm OK
+//   if (!await hopXacNhan('Xoá đơn?')) return;        — true = Đồng ý, false = Huỷ / Esc
+//   const ten = await hopNhap('Tên nhóm:', 'mặc định') — chuỗi đã nhập, null = Huỷ / Esc (giống prompt)
+// Nội dung là CHỮ THƯỜNG (gán textContent, giữ xuống dòng \n) — không nhận HTML. Gọi nhiều hộp cùng lúc -> hiện LẦN LƯỢT.
+// Khác hộp trình duyệt: KHÔNG dừng JavaScript của trang — nơi gọi phải `await` nếu việc phía sau phải chờ người dùng bấm.
+let _hangDoiHopThoai = Promise.resolve();
+let _soHopThoai = 0; // id cho aria-labelledby / aria-describedby
+function _moHopThoai({ noiDung, loai, tieuDe = '', nutDongY = 'OK', nutHuy = 'Huỷ', giaTri = '' }) {
+  const luot = _hangDoiHopThoai.then(() => new Promise(xong => {
+    const nen = document.createElement('div');
+    nen.className = 'hop-thoai';
+    nen.setAttribute('role', loai === 'thong-bao' ? 'alertdialog' : 'dialog');
+    nen.setAttribute('aria-modal', 'true');
+    nen.innerHTML = `<div class="hop-thoai__khung">
+        ${tieuDe ? '<div class="hop-thoai__tieu-de"></div>' : ''}
+        <div class="hop-thoai__noi-dung"></div>
+        ${loai === 'nhap' ? '<input type="text" class="hop-thoai__o-nhap" autocomplete="off">' : ''}
+        <div class="hop-thoai__nut">
+          ${loai !== 'thong-bao' ? '<button type="button" class="btn-hanh-dong phu" data-kq="huy"></button>' : ''}
+          <button type="button" class="btn-hanh-dong" data-kq="dong-y"></button>
+        </div>
+      </div>`;
+    const id = 'hop-thoai-' + (++_soHopThoai);
+    if (tieuDe) {
+      const td = nen.querySelector('.hop-thoai__tieu-de');
+      td.textContent = tieuDe; td.id = id + '-td';
+      nen.setAttribute('aria-labelledby', td.id);
+    }
+    const nd = nen.querySelector('.hop-thoai__noi-dung');
+    nd.textContent = String(noiDung ?? ''); nd.id = id + '-nd';
+    nen.setAttribute('aria-describedby', nd.id);
+    const o = nen.querySelector('.hop-thoai__o-nhap');
+    if (o) o.value = giaTri == null ? '' : String(giaTri);
+    const nutOk = nen.querySelector('[data-kq="dong-y"]');
+    nutOk.textContent = nutDongY;
+    const nutKhong = nen.querySelector('[data-kq="huy"]');
+    if (nutKhong) nutKhong.textContent = nutHuy;
+    const truocDo = document.activeElement;
+    const ketQua = dongY => (loai === 'thong-bao' ? undefined : loai === 'xac-nhan' ? dongY : (dongY ? o.value : null));
+    const dong = dongY => {
+      document.removeEventListener('keydown', phim, true);
+      nen.remove();
+      try { if (truocDo && truocDo.focus) truocDo.focus(); } catch (e) { /* bỏ */ }
+      xong(ketQua(dongY));
+    };
+    // Esc = Huỷ (thông báo: = OK); Enter trong ô nhập = OK. Tab / Shift+Tab chỉ đi vòng trong hộp (như hộp của trình duyệt — không
+    // tới được nút của trang phía sau). Phím nhắm vào phần tử NGOÀI hộp: chặn hẳn (cả hành động mặc định — Enter/Space không bấm
+    // được nút trang) rồi đưa focus về hộp.
+    const phim = e => {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); dong(loai === 'thong-bao'); }
+      else if (e.key === 'Enter' && e.target === o) { e.preventDefault(); e.stopPropagation(); dong(true); }
+      else if (e.key === 'Tab') {
+        e.preventDefault(); e.stopPropagation();
+        const ds = [...nen.querySelectorAll('input, button')];
+        const i = ds.indexOf(document.activeElement);
+        ds[(i + (e.shiftKey ? -1 : 1) + ds.length) % ds.length].focus();
+      } else if (!nen.contains(e.target)) { e.preventDefault(); e.stopPropagation(); (o || nutOk).focus(); }
+    };
+    document.addEventListener('keydown', phim, true);
+    nutOk.onclick = () => dong(true);
+    if (nutKhong) nutKhong.onclick = () => dong(false);
+    document.body.appendChild(nen);
+    if (o) { o.focus(); o.select(); } else nutOk.focus();
+  }));
+  _hangDoiHopThoai = luot.catch(() => {});
+  return luot;
+}
+// Đang có hộp thoại mở — hộp của trình duyệt dừng cả trang (kể cả camera quét mã), hộp này thì không: trang Quét QR dùng để bỏ qua mã
+// camera đọc được khi người dùng còn đang đọc / trả lời hộp (scan.html#batDauCamera).
+const dangMoHopThoai = () => !!document.querySelector('.hop-thoai');
+const hopThongBao = (noiDung, tuyChon = {}) => _moHopThoai({ ...tuyChon, noiDung, loai: 'thong-bao' });
+const hopXacNhan = (noiDung, tuyChon = {}) => _moHopThoai({ nutDongY: 'Đồng ý', ...tuyChon, noiDung, loai: 'xac-nhan' });
+const hopNhap = (noiDung, giaTri = '', tuyChon = {}) => _moHopThoai({ ...tuyChon, noiDung, giaTri, loai: 'nhap' });
+
 // Danh sách "Chưa ghi được sang Sheet Seller" (28/09/2026) — dùng CHUNG ở Trung tâm hành động và Settings.
 // ds: từ /api/dong-bo-sheet-seller/loi-dang-cho (hoặc Trung tâm hành động .loiSheetSeller). choDayLai: chỉ
 // superadmin (server cũng chặn). Sau khi đẩy lại, gọi taiLai() do trang truyền vào để vẽ lại.
@@ -933,13 +1010,13 @@ let _taiLaiSauDayLai = null; // trang đăng ký hàm vẽ lại (datTaiLaiSauDa
 // "Bỏ qua" 1 lỗi ghi Sheet Seller (14/10/2026, theo yêu cầu người dùng — chỉ superadmin): ẩn khỏi danh sách lỗi đang chờ và khỏi
 // "Đẩy lại tất cả"; đơn đó ghi lỗi lần mới thì hiện lại (routes/dongBoSheetSeller.js POST /bo-qua).
 async function boQuaLoiSheetSeller(sttKey, loai, btn) {
-  if (!confirm(`Bỏ qua lỗi ghi Sheet Seller của đơn ${sttKey} (${NHAN_LOAI_SHEET_SELLER[loai] || loai})? Lỗi này sẽ không hiện ở đây nữa — nếu đơn lại ghi lỗi lần mới thì hiện lại.`)) return;
+  if (!await hopXacNhan(`Bỏ qua lỗi ghi Sheet Seller của đơn ${sttKey} (${NHAN_LOAI_SHEET_SELLER[loai] || loai})? Lỗi này sẽ không hiện ở đây nữa — nếu đơn lại ghi lỗi lần mới thì hiện lại.`)) return;
   btn.disabled = true;
   try {
     await apiFetch('/dong-bo-sheet-seller/bo-qua', { method: 'POST', body: JSON.stringify({ sttKey, loai }) });
     if (_taiLaiSauDayLai) await _taiLaiSauDayLai();
   } catch (e) {
-    alert('Lỗi: ' + e.message);
+    await hopThongBao('Lỗi: ' + e.message);
     btn.disabled = false;
   }
 }
@@ -959,10 +1036,10 @@ async function dayLaiSheetSeller(items, btn) {
         danhSach: loi.map(k => `${k.sttKey} (${NHAN_LOAI_SHEET_SELLER[k.loai] || k.loai}): ${k.lyDo}`),
       });
     } else {
-      alert(`Đã ghi lại sang Sheet Seller thành công ${ok} mục.`);
+      await hopThongBao(`Đã ghi lại sang Sheet Seller thành công ${ok} mục.`);
     }
   } catch (e) {
-    alert('Lỗi: ' + e.message);
+    await hopThongBao('Lỗi: ' + e.message);
   }
   btn.disabled = false;
   btn.textContent = nhan;

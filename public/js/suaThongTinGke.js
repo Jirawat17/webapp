@@ -39,21 +39,21 @@ async function guiThongTinGke(btn, sttKey, truong, giaTri) {
     await apiFetch('/tracking/thong-tin-gke', { method: 'POST', body: JSON.stringify({ sttKey, truong, giaTri }) });
     await taiCanhBaoThuCong();
   } catch (e) {
-    alert('Không lưu được: ' + e.message);
+    await hopThongBao('Không lưu được: ' + e.message);
     btn.disabled = false;
   }
 }
 
-function luuThongTinGke(btn, id) {
+async function luuThongTinGke(btn, id) {
   const o = document.getElementById(id + '-truong');
   const giaTri = document.getElementById(id + '-gia-tri').value.trim();
-  if (!giaTri) { alert('Nhập giá trị mới trước khi lưu.'); return; }
+  if (!giaTri) { await hopThongBao('Nhập giá trị mới trước khi lưu.'); return; }
   const nhan = o.selectedOptions[0].textContent;
-  if (!confirm(`Đơn ${btn.dataset.stt}: dùng ${nhan} = "${giaTri}" khi gửi GKE?\n(Gốc: ${o.selectedOptions[0].dataset.goc || '(trống)'} — Google Sheet giữ nguyên.)`)) return;
+  if (!await hopXacNhan(`Đơn ${btn.dataset.stt}: dùng ${nhan} = "${giaTri}" khi gửi GKE?\n(Gốc: ${o.selectedOptions[0].dataset.goc || '(trống)'} — Google Sheet giữ nguyên.)`)) return;
   guiThongTinGke(btn, btn.dataset.stt, o.value, giaTri);
 }
 
-function xoaThongTinGke(btn) {
-  if (!confirm(`Đơn ${btn.dataset.stt}: xoá giá trị sửa tay của ${btn.dataset.nhan}, quay về dữ liệu gốc khi gửi GKE?`)) return;
+async function xoaThongTinGke(btn) {
+  if (!await hopXacNhan(`Đơn ${btn.dataset.stt}: xoá giá trị sửa tay của ${btn.dataset.nhan}, quay về dữ liệu gốc khi gửi GKE?`)) return;
   guiThongTinGke(btn, btn.dataset.stt, btn.dataset.truong, null);
 }

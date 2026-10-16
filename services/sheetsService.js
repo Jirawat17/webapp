@@ -1,3 +1,4 @@
+const { AsyncLocalStorage } = require('async_hooks');
 const { google } = require('googleapis');
 const { getAuthClient } = require('../config/googleClients');
 
@@ -177,7 +178,58 @@ async function readTab(tabName) {
 async function readTabCached(tabName, ttlMs = 5000) {
   const cached = _cacheBang.get(tabName);
   if (cached && Date.now() - cached.luc < ttlMs) return cached.data;
-  return docThatVaGhiCache(tabName);
+  const docThat = docThatVaGhiCache(tabName);
+  // Được dùng tạm + đang có bản < 5 phút: chờ lượt đọc thật TỐI ĐA 5 giây (đọc cả Don_Hang_ALL bình thường 1–3 giây) — Google lỗi 503
+  // được goiApiCoThuLai thử lại tới ~1 phút 50 giây, treo thì tới 20 giây: không bắt người đang xem chờ hết mới dùng bản cũ. Lượt đọc
+  // vẫn chạy tiếp và tự ghi cache khi xong.
+  if (_choPhepDungTam.getStore() && cached && Date.now() - cached.luc < DUNG_TAM_KHI_LOI_MS) {
+    docThat.catch(() => {}); // không thành "unhandled rejection" khi đã trả bản cũ trước
+    let hen;
+    const CHAM = Symbol('cham');
+    try {
+      const kq = await Promise.race([docThat, new Promise(r => { hen = setTimeout(r, CHO_DOC_TOI_DA_MS, CHAM); })]);
+      return kq !== CHAM ? kq : dungTamBanCu(tabName, new Error(`Google Sheets chưa trả lời sau ${CHO_DOC_TOI_DA_MS / 1000} giây`));
+    } catch (err) {
+      return dungTamBanCu(tabName, err);
+    } finally {
+      clearTimeout(hen);
+    }
+  }
+  try {
+    return await docThat;
+  } catch (err) {
+    return dungTamBanCu(tabName, err);
+  }
+}
+
+// Google lỗi thoáng qua (16/10/2026, theo yêu cầu người dùng — log 16/10 09:59: Google trả 502, người đang mở đơn nhận lỗi 500 dù app vừa
+// có bản đọc vài chục giây trước): đọc lỗi mà còn bản sao < 5 phút thì DÙNG TẠM bản đó + ghi cảnh báo log (tối đa 1 dòng/30 giây/tab).
+// Chỉ áp dụng lượt đọc qua cache (xem/tra cứu); lượt đọc THẬT (docThat / getByKey fresh / readTab) vẫn báo lỗi như cũ.
+// CHỈ trong lượt request GET /api (server.js bọc bằng choPhepDungTamKhiLoi): lượt ghi (POST...) có thể dựa vào dữ liệu đọc để quyết định
+// ghi, job nền tự chạy lại sau — không nhận bản cũ mà không biết.
+const DUNG_TAM_KHI_LOI_MS = 5 * 60 * 1000;
+const CHO_DOC_TOI_DA_MS = 5000;
+const _choPhepDungTam = new AsyncLocalStorage();
+const choPhepDungTamKhiLoi = fn => _choPhepDungTam.run(true, fn);
+const _lucCanhBaoDungTam = new Map(); // tabName -> lúc ghi log gần nhất
+function dungTamBanCu(tabName, err) {
+  const cu = _cacheBang.get(tabName);
+  const tuoiMs = cu ? Date.now() - cu.luc : Infinity;
+  if (tuoiMs >= DUNG_TAM_KHI_LOI_MS || !_choPhepDungTam.getStore()) throw err;
+  if (Date.now() - (_lucCanhBaoDungTam.get(tabName) || 0) >= 30000) {
+    _lucCanhBaoDungTam.set(tabName, Date.now());
+    console.warn(`[SheetsAPI] Đọc tab "${tabName}" lỗi (${tomTatLoi(err)}) — dùng tạm bản đọc ${Math.round(tuoiMs / 1000)} giây trước.`);
+  }
+  return cu.data;
+}
+
+// Lỗi Google đôi khi là NGUYÊN trang HTML (vd 502) — rút gọn cho dòng log: "HTTP 502 · Error 502 (Server Error)!!1".
+function tomTatLoi(err) {
+  const ma = maLoiHttp(err);
+  const msg = String((err && err.message) || err || '');
+  const tieuDe = /<title>([^<]*)<\/title>/i.exec(msg);
+  const gon = tieuDe ? tieuDe[1] : msg.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 150);
+  return ma ? `HTTP ${ma} · ${gon}` : gon;
 }
 
 // Đọc THẬT 1 tab rồi ghi vào cache — dùng chung cho readTabCached (hết hạn) và nơi cần đọc thật (orderService docThat / làm mới nền
@@ -301,7 +353,7 @@ async function updateCellsManyRows(tabName, headers, danhSachCapNhat) {
 
 module.exports = {
   readTab, readTabCached, getHeadersCached, appendRow, appendRows, updateCells, updateCellsManyRows,
-  colToLetter, xoaCacheBang, docThatVaGhiCache,
+  colToLetter, xoaCacheBang, docThatVaGhiCache, tomTatLoi, choPhepDungTamKhiLoi,
   // getSheetsClient/goiApiCoThuLai (bổ sung 21/09/2026, theo yêu cầu người dùng) — cho phép
   // services/sheetSellerService.js tái dùng ĐÚNG xác thực Google + cơ chế retry đã có ở đây, khi ghi
   // vào spreadsheet KHÁC (Sheet của Seller, không phải SHEET_ID cố định của file này).

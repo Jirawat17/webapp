@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Thiết lập — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=111">
+<link rel="stylesheet" href="/css/style.css?v=112">
 <script src="/js/theme.js?v=104"></script>
 <style>
 /* Cấu hình GKE — mượn nguyên bố cục lưới đã có ở tracking.html trước khi chuyển sang đây (bổ sung
@@ -62,7 +62,7 @@
   <!-- Thời gian cảnh báo tự động (bổ sung 23/09/2026, theo yêu cầu người dùng) — thay 3 ngưỡng ngày
        hard-code 3/5/7 trong services/alertService.js#tinhMucCanhBao. -->
   <h3 style="margin-top:var(--space-6)">Thời gian cảnh báo tự động</h3>
-  <p>Đơn đã vào <b>trạng thái đầu vào</b> quá số ngày mà vẫn chưa tới <b>trạng thái đầu ra</b> thì phát cảnh báo (badge trên đơn hàng, ô KPI ở BĐK, Telegram). Tắt 1 mức = tắt hẳn mức đó ở mọi nơi. Đơn trúng nhiều mức hiện mức cao nhất (Đỏ &gt; Cam &gt; Vàng).</p>
+  <p>Đơn đã vào <b>trạng thái đầu vào</b> quá số ngày mà vẫn chưa tới <b>trạng thái đầu ra</b> thì phát cảnh báo (badge trên đơn hàng, ô KPI ở BĐK). Tắt 1 mức = tắt hẳn mức đó ở mọi nơi. Đơn trúng nhiều mức hiện mức cao nhất (Đỏ &gt; Cam &gt; Vàng).</p>
   <div id="ds-cau-hinh-canh-bao" style="display:grid; gap:var(--space-3)"></div>
   <button type="button" class="btn-hanh-dong" id="btn-luu-canh-bao" style="margin-top:var(--space-3)">Lưu</button>
   <p id="thong-bao-canh-bao" style="display:none"></p>
@@ -262,7 +262,7 @@
 </div>
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=127"></script>
+<script src="/js/api.js?v=128"></script>
 <script>
 (async () => {
   const user = await requireLoginOrRedirect();

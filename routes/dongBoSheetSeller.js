@@ -33,7 +33,17 @@ function giaTriHienTai(r, loai) {
   if (loai === 'GHI_CHU') return { GHI_CHU_XUONG: r.GHI_CHU_XUONG_NOI_BO || '' };
   if (loai === 'TRACKING') return r.TRACKING_ID ? { TRACKING_ID2: r.TRACKING_ID, HANG_VAN_CHUYEN2: r.HANG_VAN_CHUYEN || '' } : null;
   if (loai === 'DELIVERED') return r.TRANG_THAI_TRACKING ? { Delivered: r.TRANG_THAI_TRACKING } : null;
+  // Số mũi chỉ (16/10/2026): lưu ở Chi tiết đơn giờ báo "đã lưu" ngay rồi ghi Sheet chạy nền -> đẩy lại bản trong app (trống = đã xoá).
+  if (loai === 'SO_MUI') return r.SO_MUI_CHI_LUC ? { GhiChuTinhGia: r.SO_MUI_CHI_NOI_BO || '' } : null;
   return null;
+}
+
+// Số mũi chỉ: chỉ đẩy lại khi bản trong app ĐÚNG là giá trị của lần ghi lỗi gần nhất. Lỗi từ trước 16/10/2026 (lưu lỗi thì app không lưu
+// gì): bản app là số CŨ hơn -> đẩy lên sẽ đè số Seller có thể đã sửa thẳng trên Sheet. -> câu báo | null.
+function loiSoMuiKhacBanApp(sttKey, banApp) {
+  const ganNhat = nhatKyDbService.layDongBoGanNhat(sttKey, 'SO_MUI');
+  if (!ganNhat || ganNhat.KetQua !== 'LOI' || String(ganNhat.GiaTriSau ?? '') === String(banApp ?? '')) return null;
+  return `Số mũi chỉ trong app ("${banApp}") khác giá trị lần ghi lỗi ("${ganNhat.GiaTriSau}") — không đẩy để tránh đè số trên Sheet; nhập và Lưu lại ở Chi tiết đơn.`;
 }
 
 // body: { items: [{ sttKey, loai }] } hoặc { tatCa: true } (mọi lỗi đang chờ).
@@ -48,8 +58,10 @@ router.post('/day-lai', requireExactRole('superadmin'), async (req, res) => {
   for (const { sttKey, loai } of ds) {
     const r = theoKey.get(sttKey);
     const giaTri = r && giaTriHienTai(r, loai);
+    const loiSoMuiCu = loai === 'SO_MUI' && giaTri && loiSoMuiKhacBanApp(sttKey, giaTri.GhiChuTinhGia);
     if (!r) khongGhi.push({ sttKey, loai, ok: false, lyDo: 'Không còn đơn này trong Don_Hang_ALL.' });
-    else if (!giaTri) khongGhi.push({ sttKey, loai, ok: false, lyDo: loai === 'SO_MUI' ? 'Số mũi chỉ không đẩy lại tự động — nhập và Lưu lại ở trang Chi tiết đơn.'
+    else if (loiSoMuiCu) khongGhi.push({ sttKey, loai, ok: false, lyDo: loiSoMuiCu });
+    else if (!giaTri) khongGhi.push({ sttKey, loai, ok: false, lyDo: loai === 'SO_MUI' ? 'Trong app chưa có số mũi chỉ đã lưu — nhập và Lưu ở trang Chi tiết đơn.'
       : loai in sheetSellerService.COT_THEO_LOAI ? 'Trong app chưa có giá trị để ghi (chưa có tracking/trạng thái vận chuyển).' : `Loại không hợp lệ: ${loai}` });
     else canGhi.push({ sttKey, loai, giaTri });
   }

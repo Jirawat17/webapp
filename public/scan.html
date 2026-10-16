@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Quét QR — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=111">
+<link rel="stylesheet" href="/css/style.css?v=112">
 <script src="/js/theme.js?v=104"></script>
 <style>
 /* Tự ẩn header khi cuộn xuống, hiện lại khi cuộn lên — chỉ áp dụng riêng cho trang Quét QR
@@ -88,7 +88,7 @@
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=127"></script>
+<script src="/js/api.js?v=128"></script>
 <script>
 let user;
 // Mặc định mở vào "Quét kịch bản" (batch) khi vào trang — theo yêu cầu người dùng 05/09/2026, vì đây
@@ -245,8 +245,8 @@ function nhacBanMoi(moiNhat) {
   el.type = 'button';
   el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:2000;padding:10px;border:0;background:#f59e0b;color:#111;font-weight:700;font-size:15px;cursor:pointer';
   el.textContent = '⟳ Có bản mới của app — bấm để tải lại trang';
-  el.onclick = () => {
-    if (dsUploadDangCho.size && !confirm(`Còn ${dsUploadDangCho.size} ảnh đang tải lên — tải lại trang bây giờ sẽ làm hỏng các ảnh đó. Vẫn tải lại?`)) return;
+  el.onclick = async () => {
+    if (dsUploadDangCho.size && !await hopXacNhan(`Còn ${dsUploadDangCho.size} ảnh đang tải lên — tải lại trang bây giờ sẽ làm hỏng các ảnh đó. Vẫn tải lại?`)) return;
     daDongYRoiTrang = true; // đã hỏi ở trên — không hỏi lần 2 ở beforeunload
     location.reload();
   };
@@ -586,7 +586,7 @@ async function dieuChinhCameraThat(muonChay) {
   else if (muonChay === 'batch') await batDauCamera(ma => xuLyQuetKichBan(ma)); // html5-qrcode gọi (mã, kếtQuả) — chỉ chuyển mã, tham số 2 dành cho ô nhập
   // "Chụp ảnh đã sản xuất" — bước quét QR SỐNG để xác định đơn, trước khi cho chụp ảnh
   // thật (xem docs/superpowers/specs/2026-09-07-tach-quet-chup-anh-design.md).
-  else if (muonChay === 'photo_scan') await batDauCamera(xuLyQuetDeXacDinhDon);
+  else if (muonChay === 'photo_scan') await batDauCamera(ma => xuLyQuetDeXacDinhDon(ma)); // html5-qrcode truyền thêm decodedResult — không để rơi vào `nguon`
 }
 
 // "NotReadableError: Could not start video source" KHÔNG PHẢI lỗi quyền — trình duyệt/OS chưa kịp
@@ -615,7 +615,10 @@ async function batDauCamera(onScan, qrboxSize, tuyChon = {}) {
   for (let lan = 0; lan <= soLanThuLai; lan++) {
     const gioBatDau = Date.now();
     try {
-      await scanner.start({ facingMode }, { fps: 10, qrbox: qrboxSize || 260, ...(aspectRatio ? { aspectRatio } : {}) }, onScan);
+      // Mã đọc được lúc đang có hộp thoại mở (api.js#dangMoHopThoai) -> bỏ qua: hộp của app không dừng camera như alert() của
+      // trình duyệt trước đây, không để đơn bị xử lý phía sau hộp người dùng đang đọc. Đóng hộp xong camera đọc lại bình thường.
+      await scanner.start({ facingMode }, { fps: 10, qrbox: qrboxSize || 260, ...(aspectRatio ? { aspectRatio } : {}) },
+        (...thamSo) => { if (!dangMoHopThoai()) onScan(...thamSo); });
       capNhatHoTroFlash();
       console.log(`[Camera] Mở camera thành công sau ${Date.now() - gioBatDau}ms (facingMode=${facingMode})`);
       tSanSangQuet = performance.now();
@@ -702,7 +705,7 @@ document.getElementById('btn-flash').onclick = async () => {
     await scanner.applyVideoConstraints({ advanced: [{ torch: denFlashBat }] });
   } catch (e) {
     denFlashBat = false;
-    alert('Thiết bị hoặc trình duyệt này không hỗ trợ bật đèn flash qua web (thường gặp trên iPhone/Safari).');
+    await hopThongBao('Thiết bị hoặc trình duyệt này không hỗ trợ bật đèn flash qua web (thường gặp trên iPhone/Safari).');
   }
   capNhatNutFlash();
 };
@@ -796,7 +799,7 @@ async function xuLyQuetKichBan(sttKey, kichBanCuaMa = null) {
     });
   } catch (e) {
     logQuet('LOI', { loi: e.message });
-    alert('Lỗi khi kiểm tra mã: ' + e.message);
+    await hopThongBao('Lỗi khi kiểm tra mã: ' + e.message);
     dangXuLyQuet = false;
     tSanSangQuet = performance.now();
     return;
@@ -843,7 +846,8 @@ async function xuLyQuetKichBan(sttKey, kichBanCuaMa = null) {
   else setTimeout(() => { dangXuLyQuet = false; tSanSangQuet = performance.now(); }, 700);
 }
 
-function hienThiToast(loai, noiDung) {
+// nut (tuỳ chọn, 16/10/2026): { nhan, bam } — nút bấm ngay trong toast; toast có nút hiện lâu hơn (10 giây) và bấm được.
+function hienThiToast(loai, noiDung, nut) {
   clearTimeout(toastTimer);
   const el = document.getElementById('toast-vua-quet');
   const MAP = {
@@ -853,9 +857,41 @@ function hienThiToast(loai, noiDung) {
     trung: { cls: 'canh-bao', icon: '🔁' },
   };
   const m = MAP[loai] || MAP.trung;
-  el.className = 'toast-vua-quet hien ' + m.cls;
-  el.innerHTML = `<span style="font-size:1.4rem">${m.icon}</span> ${escapeHtml(noiDung)}`;
-  toastTimer = setTimeout(() => { el.classList.remove('hien'); }, 3500);
+  // Camera vẫn đọc lại đúng mã lỗi ~0,7 giây/lần: toast có nút đang hiện CÙNG nội dung -> chỉ gia hạn, KHÔNG vẽ lại (vẽ lại thay nút giữa
+  // lúc đang chạm -> lần bấm bị mất).
+  if (nut && el.classList.contains('co-nut') && el.dataset.noiDung === noiDung) {
+    toastTimer = setTimeout(() => { el.classList.remove('hien', 'co-nut'); }, 10000);
+    return;
+  }
+  el.dataset.noiDung = noiDung;
+  el.className = 'toast-vua-quet hien ' + m.cls + (nut ? ' co-nut' : '');
+  el.innerHTML = `<span style="font-size:1.4rem">${m.icon}</span> <span>${escapeHtml(noiDung)}${nut ? '<br><button type="button" class="btn-hanh-dong nut-trong-toast"></button>' : ''}</span>`;
+  if (nut) {
+    const b = el.querySelector('.nut-trong-toast');
+    b.textContent = nut.nhan;
+    b.onclick = () => { clearTimeout(toastTimer); el.classList.remove('hien', 'co-nut'); nut.bam(); };
+  }
+  toastTimer = setTimeout(() => { el.classList.remove('hien', 'co-nut'); }, nut ? 10000 : 3500);
+}
+
+// Quét đơn "Đã sản xuất" khi đang ở chế độ chụp ảnh SẢN XUẤT (16/10/2026, theo yêu cầu người dùng — log 15/10: cùng đơn bị quét lại
+// 6–9 lần vì đang nhầm chế độ): thông báo lỗi kèm nút chuyển sang chế độ Đã dán tem + tự kiểm tra lại đúng đơn vừa quét (vào thẳng
+// màn chụp). Chỉ khi đơn đang ĐÚNG trạng thái chế độ Đã dán tem yêu cầu.
+function nutChuyenSangDanTem(ma, trangThaiHienTai) {
+  if (mode !== 'photo_san_xuat' || trangThaiHienTai !== 'Đã sản xuất') return undefined;
+  return {
+    nhan: 'Chuyển sang chế độ Đã dán tem',
+    bam: async () => {
+      while (dangXuLyQuet) await new Promise(r => setTimeout(r, 200)); // lượt quét trước còn khoá 0,7 giây
+      // Giữ khoá TỪ TRƯỚC khi đổi chế độ: camera vẫn chạy, không để 1 mã khác đọc được giữa chừng chen vào rồi bị lượt của nút ghi đè
+      // (ảnh chụp sau đó gắn nhầm đơn). xuLyQuetDeXacDinhDon tự nhả khoá khi xong.
+      dangXuLyQuet = true;
+      // Đơn ở chế độ chụp sản xuất đang chờ "Xong" (đã có ảnh 1) -> coi như xong lượt, giống "quét sang đơn tiếp theo" (chạy ngầm).
+      if (donChoXong) hoanTatDonChoXong('doi-che-do');
+      doiMode('photo_da_dan_tem');
+      xuLyQuetDeXacDinhDon(ma, 'NUT_DOI_CHE_DO');
+    },
+  };
 }
 
 function lopNhom(nhom) { return nhom === 'OK' ? 'ok' : nhom === 'SAI_TRANG_THAI' ? 'canh-bao' : 'loi'; }
@@ -1061,9 +1097,9 @@ async function xacNhanCapNhatHangLoat() {
   });
 
   if (res.daHuy) {
-    alert(`Đã HỦY giữa chừng — đã cập nhật ${res.thanhCong.length}/${nhomOK.length} đơn. Các đơn còn lại vẫn ở nhóm "OK", bấm "Xác nhận cập nhật" lại để tiếp tục.`);
+    await hopThongBao(`Đã HỦY giữa chừng — đã cập nhật ${res.thanhCong.length}/${nhomOK.length} đơn. Các đơn còn lại vẫn ở nhóm "OK", bấm "Xác nhận cập nhật" lại để tiếp tục.`);
   } else if (res.loi.length > 0) {
-    alert(`Đã cập nhật ${res.thanhCong.length} đơn. Có ${res.loi.length} đơn KHÔNG cập nhật được — xem lại nhóm "Sai trạng thái" bên dưới.`);
+    await hopThongBao(`Đã cập nhật ${res.thanhCong.length} đơn. Có ${res.loi.length} đơn KHÔNG cập nhật được — xem lại nhóm "Sai trạng thái" bên dưới.`);
   }
 
   renderDemNhom();
@@ -1101,7 +1137,7 @@ async function tiepTucQuet() {
 // chốt). Camera đọc lại mã lỗi liên tục: log 15/10 có 10LH253 9 lần/32 giây, mã vạch USPS 15 lần. 6 giây tính từ lần hỏi máy chủ gần nhất
 // (lần bị chặn không gia hạn) — quá 6 giây hỏi lại thật, phòng đơn vừa đổi trạng thái. Lỗi mạng/5xx không nhớ: thử lại có ích.
 const CHAN_LOI_LAP_MS = 6000;
-let loiQuetGanNhat = null; // { ma, cheDo, loi, ketQuaLog, luc, soLanLap, lapTu, lapDen }
+let loiQuetGanNhat = null; // { ma, cheDo, loi, ketQuaLog, luc, soLanLap, lapTu, lapDen, trangThaiHienTai }
 // Lần bị chặn vẫn ĐẾM — ghi 1 dòng tổng vào Logs_UploadAnh (chiTiet.soLanLapBiChan) khi lượt chặn kết thúc (lần hỏi máy chủ kế tiếp /
 // rời trang / ẩn trang), để vẫn thấy người quét lặp mã lỗi bao lâu mà không thêm 1 dòng cho mỗi khung hình camera. Dòng tổng được ghi
 // MUỘN hơn lúc quét -> kèm lapTu/lapDen (giờ thật lần chặn đầu/cuối, ms) để Logs_UploadAnh đặt đúng chỗ trên dòng thời gian. -> true nếu có ghi.
@@ -1122,30 +1158,30 @@ document.addEventListener('visibilitychange', () => {
 
 // Quét được mã trong trạng thái [Đang quét] — kiểm tra đơn đủ điều kiện chụp TRƯỚC khi cho chụp ảnh
 // thật (tránh lãng phí 1 lần chụp cho đơn sai trạng thái/không tồn tại).
-async function xuLyQuetDeXacDinhDon(sttKeyThoDoc) {
+async function xuLyQuetDeXacDinhDon(sttKeyThoDoc, nguon = 'CAMERA') {
   const cauHinh = CAU_HINH_ANH[mode];
-  if (!cauHinh) return; // phòng thêm: mã đọc từ camera của chế độ chụp ảnh tới muộn khi đã đổi sang chế độ khác — bỏ qua
-  if (dangXuLyQuet) return;
+  if (!cauHinh) { if (nguon !== 'CAMERA') dangXuLyQuet = false; return; } // phòng thêm: mã đọc từ camera tới muộn khi đã đổi chế độ — bỏ qua
+  if (dangXuLyQuet && nguon === 'CAMERA') return; // nút đổi chế độ tự giữ khoá trước khi gọi (nutChuyenSangDanTem)
   dangXuLyQuet = true;
   const loiCu = loiQuetGanNhat;
   if (loiCu && loiCu.ma === sttKeyThoDoc && loiCu.cheDo === mode && performance.now() - loiCu.luc < CHAN_LOI_LAP_MS) {
     if (!loiCu.soLanLap) loiCu.lapTu = Date.now();
     loiCu.soLanLap++;
     loiCu.lapDen = Date.now();
-    hienThiToast('SAI_TRANG_THAI', loiCu.loi);
+    hienThiToast('SAI_TRANG_THAI', loiCu.loi, nutChuyenSangDanTem(loiCu.ma, loiCu.trangThaiHienTai));
     phatAmThanhKetQua('SAI_TRANG_THAI');
     setTimeout(() => { dangXuLyQuet = false; tSanSangQuet = performance.now(); }, 700);
     return;
   }
   ghiLogLapBiChan();
-  const msTimMa = msTimMaHienTai(), tKiemTra = performance.now();
+  const msTimMa = nguon === 'CAMERA' ? msTimMaHienTai() : null, tKiemTra = performance.now(); // bấm nút: không có "thời gian tìm mã"
 
   try {
     const ketQua = await apiFetch('/photos/kiem-tra', {
       method: 'POST', body: JSON.stringify({ sttKey: sttKeyThoDoc, moc: cauHinh.moc }),
     });
     const msKiemTra = Math.round(performance.now() - tKiemTra);
-    ghiLogQuet({ suKien: 'QUET_QR', sttKey: ketQua.sttKey || sttKeyThoDoc, ketQua: 'OK', chiTiet: { nguon: 'CAMERA', msTimMa, msKiemTra } });
+    ghiLogQuet({ suKien: 'QUET_QR', sttKey: ketQua.sttKey || sttKeyThoDoc, ketQua: 'OK', chiTiet: { nguon, msTimMa, msKiemTra } });
     const sttKeyMoi = ketQua.sttKey || sttKeyThoDoc;
     if (cauHinh.haiAnh && donChoXong && donChoXong.sttKey === sttKeyMoi) {
       // Quét lại đúng đơn đang chờ Xong — giữ nguyên khung chờ, không mở lượt chụp mới (ảnh 1 có thể còn đang tải lên).
@@ -1171,9 +1207,10 @@ async function xuLyQuetDeXacDinhDon(sttKeyThoDoc) {
     }
   } catch (err) {
     const ketQuaLog = ketQuaLoi(err, 'SAI_TRANG_THAI');
-    ghiLogQuet({ suKien: 'QUET_QR', sttKey: sttKeyThoDoc, ketQua: ketQuaLog, loi: err.message, chiTiet: { nguon: 'CAMERA', msTimMa, msKiemTra: Math.round(performance.now() - tKiemTra) } });
-    if (err.status >= 400 && err.status < 500) loiQuetGanNhat = { ma: sttKeyThoDoc, cheDo: mode, loi: err.message, ketQuaLog, luc: performance.now(), soLanLap: 0 };
-    hienThiToast('SAI_TRANG_THAI', err.message);
+    ghiLogQuet({ suKien: 'QUET_QR', sttKey: sttKeyThoDoc, ketQua: ketQuaLog, loi: err.message, chiTiet: { nguon, msTimMa, msKiemTra: Math.round(performance.now() - tKiemTra) } });
+    const trangThaiHienTai = err.duLieu && err.duLieu.trangThaiHienTai;
+    if (err.status >= 400 && err.status < 500) loiQuetGanNhat = { ma: sttKeyThoDoc, cheDo: mode, loi: err.message, ketQuaLog, luc: performance.now(), soLanLap: 0, trangThaiHienTai };
+    hienThiToast('SAI_TRANG_THAI', err.message, nutChuyenSangDanTem(sttKeyThoDoc, trangThaiHienTai));
     phatAmThanhKetQua('SAI_TRANG_THAI');
   }
 
@@ -1346,13 +1383,13 @@ async function taiAnhLenNgam(sttKey, cauHinh, file, dong, log, tuyChon = {}) {
 }
 
 async function xuLyChupAnh(file) {
-  if (!donDaXacDinhChoAnh) { alert('Chưa xác định được đơn — quét lại mã QR trước khi chụp.'); return; }
+  if (!donDaXacDinhChoAnh) { await hopThongBao('Chưa xác định được đơn — quét lại mã QR trước khi chụp.'); return; }
   const cauHinh = CAU_HINH_ANH[mode];
   const sttKey = donDaXacDinhChoAnh.sttKey;
   const log = { ...(donDaXacDinhChoAnh.log || { cheDo: mode, tXacDinh: performance.now() }), tCoAnh: performance.now(), giaiDoan: 'nen' };
 
   if (dsUploadDangCho.has(sttKey)) {
-    alert(`Đơn ${sttKey} vừa chụp xong, ảnh trước đang tải lên — đợi 1 chút rồi quét lại nếu cần chụp thêm.`);
+    await hopThongBao(`Đơn ${sttKey} vừa chụp xong, ảnh trước đang tải lên — đợi 1 chút rồi quét lại nếu cần chụp thêm.`);
     return;
   }
 

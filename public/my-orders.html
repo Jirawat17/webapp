@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn của tôi — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=111">
+<link rel="stylesheet" href="/css/style.css?v=112">
 <script src="/js/theme.js?v=104"></script>
 </head>
 <body>
@@ -197,7 +197,7 @@
 </div>
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=127"></script>
+<script src="/js/api.js?v=128"></script>
 <script>
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
 // settings.html (superadmin), 3/5/7 không còn luôn đúng nên không hard-code vào nhãn hiển thị nữa.
@@ -504,7 +504,7 @@ function capNhatThanhHanhDongSanSang() {
 
 async function apDungNhanChayMay() {
   const soLuong = donSanSangChonSet.size;
-  if (!confirm(`Chuyển ${soLuong} đơn đã chọn sang "Đang chạy máy"?`)) return;
+  if (!await hopXacNhan(`Chuyển ${soLuong} đơn đã chọn sang "Đang chạy máy"?`)) return;
 
   const nut = document.getElementById('nut-nhan-chay-may');
   const nhanGoc = nut.innerHTML;
@@ -531,7 +531,7 @@ async function apDungNhanChayMay() {
     thongBao += `\n\nKhông chuyển được ${ketQua.loi.length} đơn:\n` +
       ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
   }
-  alert(thongBao);
+  await hopThongBao(thongBao);
 
   document.querySelectorAll('#thanh-hanh-dong-san-sang button, #thanh-hanh-dong-san-sang select').forEach(el => el.disabled = false);
   nut.innerHTML = nhanGoc;
@@ -546,10 +546,10 @@ async function apDungNhanChayMay() {
 // khối chỉ định ở orders.html (xem docs/superpowers/specs/2026-09-08-admin-chi-dinh-tai-san-sang-design.md).
 async function apDungChiDinhNguoiChayMaySanSang() {
   const nguoiSanXuat = document.getElementById('nguoi-chay-may-dich-san-sang').value;
-  if (!nguoiSanXuat) { alert('Hãy chọn người sản xuất muốn chỉ định'); return; }
+  if (!nguoiSanXuat) { await hopThongBao('Hãy chọn người sản xuất muốn chỉ định'); return; }
 
   const soLuong = donSanSangChonSet.size;
-  if (!confirm(`Chỉ định "${nguoiSanXuat}" chạy máy cho ${soLuong} đơn đã chọn (chuyển sang "Đang chạy máy")?`)) return;
+  if (!await hopXacNhan(`Chỉ định "${nguoiSanXuat}" chạy máy cho ${soLuong} đơn đã chọn (chuyển sang "Đang chạy máy")?`)) return;
 
   document.querySelectorAll('#thanh-hanh-dong-san-sang button, #thanh-hanh-dong-san-sang select').forEach(el => el.disabled = true);
   const nutApDung = document.getElementById('nut-ap-dung-chi-dinh-san-sang');
@@ -575,7 +575,7 @@ async function apDungChiDinhNguoiChayMaySanSang() {
     thongBao += `\n\nKhông chỉ định được ${ketQua.loi.length} đơn:\n` +
       ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
   }
-  alert(thongBao);
+  await hopThongBao(thongBao);
 
   document.querySelectorAll('#thanh-hanh-dong-san-sang button, #thanh-hanh-dong-san-sang select').forEach(el => el.disabled = false);
   nutApDung.textContent = 'Áp dụng';

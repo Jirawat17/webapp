@@ -129,6 +129,7 @@ const doiTenXuongHangLoat = db.transaction((tenCu, tenMoi) => {
 });
 
 module.exports = {
+  db, // services/phienStore.js (bảng phien — phiên đăng nhập) dùng chung kết nối CSDL tài khoản
   CAC_COT, layTatCa, layTheoTen, themMoi, capNhat, doiTen, demTheoXuong, doiTenXuongHangLoat,
   tachXuong, cacXuongCuaNguoiDung, phamViNhanVien,
 };

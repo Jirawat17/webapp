@@ -1,4 +1,4 @@
-const { readTabCached, docThatVaGhiCache } = require('./sheetsService');
+const { readTabCached, docThatVaGhiCache, tomTatLoi } = require('./sheetsService');
 const trangThaiDbService = require('./trangThaiDbService');
 const { layBanDoTenKhachHang } = require('./khachHangService');
 const taiSanService = require('./taiSanService');
@@ -35,7 +35,7 @@ function batDauLamMoiNen() {
     docSheetThat().then(() => {
       if (dangLoi) { dangLoi = false; console.log('[Orders] Làm mới nền Don_Hang_ALL đã hoạt động lại.'); }
     }).catch(err => {
-      if (!dangLoi) { dangLoi = true; console.error('[Orders] Làm mới nền Don_Hang_ALL lỗi:', err.message); }
+      if (!dangLoi) { dangLoi = true; console.error('[Orders] Làm mới nền Don_Hang_ALL lỗi:', tomTatLoi(err)); }
     });
   }, CHU_KY_LAM_MOI_NEN_MS);
   console.log(`[Orders] Đã bật làm mới nền Don_Hang_ALL (mỗi ${CHU_KY_LAM_MOI_NEN_MS / 1000} giây).`);
@@ -844,11 +844,13 @@ function canhBaoTinhTrangConHan(row, bayGio = Date.now()) {
 // ("thêu 2 mặt 50000", "12.5") -> KHONG_DOC, không đoán. -> { trangThai: 'CHUA'|'CO'|'KHONG_DOC', so: number|null, nguyenVan }
 const SO_MUI_CHO_SHEET_MS = 30 * 60 * 1000;
 const MAU_SO_MUI = /^(\d{1,3}(?:[.,]\d{3})+|\d+)\s*(?:mũi)?$/i;
-function docSoMuiChi(row, bayGio = Date.now()) {
+// loiSheet (16/10/2026): lần ghi số mũi sang Sheet Seller gần nhất đang LỖI (ghi Sheet chạy nền, chờ "Đẩy lại") -> hiện bản app tới khi
+// ghi được, không tự quay về số cũ trên Sheet sau 30 phút.
+function docSoMuiChi(row, bayGio = Date.now(), loiSheet = false) {
   const sheet = String(row.GhiChuTinhGia || '').trim();
   const luc = Date.parse(row.SO_MUI_CHI_LUC || '');
   const app = String(row.SO_MUI_CHI_NOI_BO || '').trim();
-  const nguyenVan = (luc && bayGio - luc < SO_MUI_CHO_SHEET_MS && sheet !== app) ? app : sheet;
+  const nguyenVan = (luc && (loiSheet || bayGio - luc < SO_MUI_CHO_SHEET_MS) && sheet !== app) ? app : sheet;
   if (!nguyenVan) return { trangThai: 'CHUA', so: null, nguyenVan };
   const m = MAU_SO_MUI.exec(nguyenVan.normalize('NFC'));
   if (!m) return { trangThai: 'KHONG_DOC', so: null, nguyenVan };

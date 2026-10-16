@@ -171,6 +171,16 @@ function layLoiDongBoDangCho() {
   return moiNhat.filter(d => (boQua.get(`${d.STT_Key}|${d.Loai}`) || {}).gia_tri !== String(d.id))
     .map(d => ({ ...d, SoLanLoi: demLoi.get(d.STT_Key, d.Loai, d.STT_Key, d.Loai).c }));
 }
+// Mã đơn có lần ghi SỐ MŨI CHỈ gần nhất đang LỖI (cùng nghĩa layLoiDongBoDangCho: lỗi đã "Bỏ qua" không tính) — routes/orders.js#lamGiauDon
+// gọi ở MỌI lượt danh sách/chi tiết đơn nên chỉ 1 truy vấn, không đếm số lần lỗi (16/10/2026).
+const cauSoMuiLoiMoiNhat = db.prepare(`
+  SELECT d.id, d.STT_Key FROM dong_bo_sheet_seller d
+  JOIN (SELECT STT_Key, MAX(id) AS id FROM dong_bo_sheet_seller WHERE Loai = 'SO_MUI' GROUP BY STT_Key) m ON m.id = d.id
+  WHERE d.KetQua = 'LOI'`);
+function dsKeySoMuiLoiDangCho() {
+  const boQua = layDaXuLy('SHEET_SELLER');
+  return new Set(cauSoMuiLoiMoiNhat.all().filter(d => (boQua.get(`${d.STT_Key}|SO_MUI`) || {}).gia_tri !== String(d.id)).map(d => d.STT_Key));
+}
 // Lần ghi GẦN NHẤT của 1 đơn theo 1 loại (vd ghi chú xưởng) — null nếu chưa từng ghi.
 const cauDongBoGanNhat = db.prepare(`SELECT ThoiGian, KetQua, LyDo, GiaTriSau FROM dong_bo_sheet_seller WHERE STT_Key = ? AND Loai = ? ORDER BY id DESC LIMIT 1`);
 function layDongBoGanNhat(sttKey, loai) {
@@ -590,7 +600,7 @@ module.exports = {
   layNote, layDanhSachNote, layTatCaTheNote, taoNote, suaNote, datAnhNote, xoaNote,
   ghiQcLog, layQcLog, layQcLogTheoId, danhGiaQcLog, thongKeDanhGiaQc, thongKeTokenQc, layDongDaDanhGiaCoAi, maxQcLogId, layCclSauId, tongKetQcNgay,
   taoKinhNghiem, suaKinhNghiem, doiTrangThaiKinhNghiem, layKinhNghiemTheoId, layDanhSachKinhNghiem, layKinhNghiemApDung, tangSoLanDungKinhNghiem, giuQuyenAutoQc, ketThucAutoQc, layTatCaAutoQc, donDepAutoQcDangChay,
-  ghiNhieuDongBoSheetSeller, layNhatKyDongBoSheetSeller, layLoiDongBoDangCho, layDongBoGanNhat, xoaDongBoSheetSellerTheoDon,
+  ghiNhieuDongBoSheetSeller, layNhatKyDongBoSheetSeller, layLoiDongBoDangCho, dsKeySoMuiLoiDangCho, layDongBoGanNhat, xoaDongBoSheetSellerTheoDon,
   ghiLichSuHoatDong, ghiNhieuLichSuHoatDong, layTatCaLichSuHoatDong, xoaLichSuHoatDongTheoDon,
   ghiNhatKyQuetHangLoat, xoaNhatKyQuetHangLoatTheoDon,
   ghiLogsTracking, layTatCaLogsTracking, xoaLogsTrackingTheoDon,

@@ -106,9 +106,10 @@ const CAC_COT = [
   // ChoDon ghi, tra được thì xoá) — danh sách lỗi dữ liệu gửi Seller hằng ngày (baoCaoVanHanhService) đọc.
   'LOI_TRA_TRACKING',
   // CanhBaoDaGui: không nằm trong danh sách 31 cột người dùng liệt kê (có thể chỉ là sót khi liệt kê) —
-  // nhưng rà code xác nhận đây CŨNG là cột app tự ghi (services/canhBaoJob.js, cờ chống spam Telegram),
+  // nhưng rà code xác nhận đây CŨNG là cột app tự ghi (cờ chống spam Telegram cảnh báo 3 tầng),
   // không thuộc RAW/A:AM lẫn AN:BR người dùng mô tả. Xếp vào đây theo đúng tiêu chí "app tự ghi" đã
   // thống nhất — nếu không đúng ý người dùng, dễ dàng bỏ khỏi danh sách này sau.
+  // 16/10/2026: bỏ gửi Telegram cảnh báo (services/canhBaoJob.js đã xoá) — cột KHÔNG còn ai ghi, giữ lại chỉ để không mất dữ liệu cũ.
   'CanhBaoDaGui',
   // DA_XOA (bổ sung 20/09/2026, cho nút "Xoá dữ liệu đơn hàng" CHỈ superadmin — xem
   // services/xoaDuLieuDonService.js): KHÔNG bao giờ tồn tại trong Sheets (cột thuần app-nội-bộ, khác mọi

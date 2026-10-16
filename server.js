@@ -14,12 +14,21 @@ const path = require('path');
 const app = express();
 
 app.use(express.json());
+// Phiên lưu SQLite (16/10/2026) — khởi động lại máy chủ không còn đăng xuất mọi người (xem services/phienStore.js).
+const { PhienSqliteStore, donPhienHetHan } = require('./services/phienStore');
+donPhienHetHan();
+setInterval(donPhienHetHan, 6 * 3600 * 1000).unref();
 app.use(session({
   secret: process.env.SESSION_SECRET || 'doi-chuoi-bi-mat-nay-truoc-khi-chay-that',
+  store: new PhienSqliteStore(),
   resave: false,
   saveUninitialized: false,
   cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 }, // 30 ngày — chọn tên 1 lần là máy nhớ luôn
 }));
+// Chỉ /api (16/10/2026): file tĩnh (js/css/ảnh) không cần đọc lại tài khoản — quyền chỉ kiểm tra ở API.
+app.use('/api', require('./middleware/auth').kiemTraLaiTaiKhoan);
+// Lượt GET (xem/tra cứu) được dùng tạm bản Sheet cũ < 5 phút khi Google lỗi; lượt ghi (POST/PUT...) và job nền KHÔNG (sheetsService).
+app.use('/api', (req, res, next) => (req.method === 'GET' ? require('./services/sheetsService').choPhepDungTamKhiLoi(next) : next()));
 
 // Ghi nhận "còn đang hoạt động" cho mọi request đã đăng nhập — phục vụ Bảng điều khiển admin, xem
 // services/presenceService.js. Đặt sau session, trước mọi route, để áp dụng cho toàn bộ API.
@@ -75,8 +84,8 @@ app.listen(PORT, () => console.log(`Xưởng Thêu app đang chạy tại http:/
 // Sửa 1 lần các đơn kẹt ở "Đã in mã" dù đủ phôi + file (bổ sung 25/09/2026, xem orderService.js).
 try { require('./services/orderService').suaDonKetSanSang(); } catch (err) { console.error('[Orders] Lỗi sửa đơn kẹt:', err.message); }
 
-// Bật lịch kiểm tra cảnh báo 3 tầng + nhắc ship — chạy nền, độc lập với request nào đang tới
-require('./services/canhBaoJob').batDauLichCanhBao();
+// Lịch gửi Telegram cảnh báo 3 tầng (services/canhBaoJob.js) ĐÃ BỎ 16/10/2026, theo yêu cầu người dùng — không dùng (chưa từng cấu
+// hình chat), lại ghi cờ "đã gửi" dù không gửi được. Mức cảnh báo trên giao diện vẫn tính trực tiếp (alertService.tinhMucCanhBao).
 
 // Bật lịch quét tự động mua tracking GKE (bổ sung 09/09/2026, xem
 // docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md) — TẮT theo mặc định cho tới khi

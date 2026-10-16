@@ -1,15 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { requireLogin, requireRole, requireExactRole } = require('../middleware/auth');
-const { chayKiemTraCanhBao } = require('../services/canhBaoJob');
+const { requireLogin, requireExactRole } = require('../middleware/auth');
+// (16/10/2026) bỏ POST /chay-thu cùng lịch gửi Telegram cảnh báo (services/canhBaoJob.js) — xem server.js.
 const { layCauHinhCanhBao } = require('../services/alertService');
 const { THU_TU_TINH_TRANG, chiSoTinhTrang } = require('../data/pipelineTinhTrang');
 const { datCaiDatCanhBao } = require('../services/caiDatDbService');
-
-router.post('/chay-thu', requireRole('quan_ly'), async (req, res) => {
-  await chayKiemTraCanhBao();
-  res.json({ ok: true, message: 'Đã chạy kiểm tra cảnh báo — xem log server hoặc Telegram để xác nhận.' });
-});
 
 // Ngưỡng số ngày cho 3 mức cảnh báo (bổ sung 23/09/2026, theo yêu cầu người dùng — xem
 // services/alertService.js#tinhMucCanhBao). GET yêu cầu đăng nhập thường (chỉ settings.html gọi, trang

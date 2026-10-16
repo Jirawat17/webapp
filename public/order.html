@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Chi tiết đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=111">
+<link rel="stylesheet" href="/css/style.css?v=112">
 <script src="/js/theme.js?v=104"></script>
 <style>
 /* Ô "Nhập mã đơn" (04/10/2026, theo yêu cầu người dùng): gấp 3 cỡ cũ (160x21px, chữ 13,3px) cả rộng, cao, cỡ chữ; chữ gõ vào
@@ -35,7 +35,7 @@
 </div>
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=127"></script>
+<script src="/js/api.js?v=128"></script>
 <script>
 const sttKey = new URLSearchParams(location.search).get('stt');
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
@@ -148,7 +148,7 @@ function dongSoMuiChi(don) {
           value="${escapeHtml(soMuiChiHienThi(don))}" style="width:160px;padding:6px 10px;border-radius:8px;border:1px solid var(--color-border);font:inherit;font-weight:700">
         <button type="submit" class="btn-hanh-dong phu">${icon('check')} Lưu</button>
       </form>
-      <small id="so-mui-chi-tb" role="status" style="color:var(--color-text-muted)"></small>
+      <small id="so-mui-chi-tb" role="status" style="color:${don.SoMuiChiLoiSheet ? 'var(--color-danger-text)' : 'var(--color-text-muted)'}">${don.SoMuiChiLoiSheet ? CHUA_GHI_SHEET_SO_MUI : ''}</small>
     </td></tr>`;
 }
 
@@ -407,17 +407,17 @@ async function taiLenEmb(input) {
   if (!files.length) return;
   if (files.length > 1 || laThuMuc) return taiLenNhieuEmb(files);
   const f = files[0];
-  if (!/\.emb$/i.test(f.name)) { alert('Chỉ nhận file .emb'); return; }
-  if (f.size > 30 * 1048576) { alert('File quá lớn (tối đa 30MB).'); return; }
+  if (!/\.emb$/i.test(f.name)) { await hopThongBao('Chỉ nhận file .emb'); return; }
+  if (f.size > 30 * 1048576) { await hopThongBao('File quá lớn (tối đa 30MB).'); return; }
   // Đọc lại bộ file chính NGAY trước khi hỏi (người khác có thể vừa đổi bộ sau khi trang mở); lỗi thì dùng bản đang hiện.
   try { const d = await apiFetch('/thu-vien/emb/' + encodeURIComponent(sttKey)); embChinhHienTai = d.dsChinh || []; } catch (e) { /* dùng bản đang hiện */ }
   const ss = s => String(s || '').normalize('NFC').trim().toLowerCase(); // cùng cách so tên với server (xuLyService#tenSoSanh)
   const n = embChinhHienTai.length, dsCungTen = embChinhHienTai.filter(c => ss(c.ten) === ss(f.name)), cungTen = dsCungTen[0];
   if (n >= 2 && dsCungTen.length >= 2) { // cùng quy tắc với server (xuLyService#luuEmb) — không biết thay file nào
-    alert(`Bộ file chính của đơn ${sttKey} đang có ${dsCungTen.length} file cùng tên "${f.name}" — không biết thay file nào. Tải lại CẢ BỘ (chọn nhiều file cùng lúc) để thay.`);
+    await hopThongBao(`Bộ file chính của đơn ${sttKey} đang có ${dsCungTen.length} file cùng tên "${f.name}" — không biết thay file nào. Tải lại CẢ BỘ (chọn nhiều file cùng lúc) để thay.`);
     return;
   }
-  if (!confirm(n >= 2
+  if (!await hopXacNhan(n >= 2
     ? `Đơn ${sttKey} đang có ${n} file EMB chính. "${f.name}" sẽ ${cungTen ? `THAY file cùng tên "${cungTen.ten}" (file đó thành bản cũ)` : 'được THÊM vào bộ'}; các file chính khác giữ nguyên.`
     : `Tải "${f.name}" lên làm file EMB của đơn ${sttKey}? Bản EMB cũ (nếu có) vẫn được giữ lại.`)) return;
   const gui = xacNhan => {
@@ -430,23 +430,23 @@ async function taiLenEmb(input) {
     let kq = await gui(false);
     // mã chưa có trong Sheet lẫn thư viện (hoặc không đọc được Sheet) -> server hỏi lại trước khi lưu
     if (kq.ketQua === 'CAN_XAC_NHAN') {
-      if (!confirm(`${kq.lyDo} Vẫn lưu file EMB vào đơn ${sttKey}?`)) return;
+      if (!await hopXacNhan(`${kq.lyDo} Vẫn lưu file EMB vào đơn ${sttKey}?`)) return;
       kq = await gui(true);
     }
-    alert(kq.ketQua === 'DA_LUU' ? (kq.lyDo || 'Đã lưu file EMB.') : (kq.lyDo || 'Không lưu.'));
-  } catch (e) { alert('Tải lên EMB lỗi: ' + e.message); }
+    await hopThongBao(kq.ketQua === 'DA_LUU' ? (kq.lyDo || 'Đã lưu file EMB.') : (kq.lyDo || 'Không lưu.'));
+  } catch (e) { await hopThongBao('Tải lên EMB lỗi: ' + e.message); }
   taiKhoiEmb();
 }
 
 async function taiLenNhieuEmb(files) {
   const ma = (donHienTai && donHienTai.STT_Key) || sttKey;
   const dsEmb = files.filter(f => /\.emb$/i.test(f.name));
-  if (!dsEmb.length) { alert('Không có file .emb nào trong các file đã chọn.'); return; }
-  if (dsEmb.length > 500) { alert('Tối đa 500 file .emb mỗi lần.'); return; }
+  if (!dsEmb.length) { await hopThongBao('Không có file .emb nào trong các file đã chọn.'); return; }
+  if (dsEmb.length > 500) { await hopThongBao('Tối đa 500 file .emb mỗi lần.'); return; }
   let khop;
   try { // chỉ gửi TÊN file (không gửi thư mục) — đúng quy tắc "tên file chứa mã đơn"
     khop = await apiFetch('/thu-vien/xem-truoc', { method: 'POST', body: JSON.stringify({ files: dsEmb.map(f => ({ ten: f.name, duongDan: f.name, kichThuoc: f.size })) }) });
-  } catch (e) { alert('Không kiểm tra được tên file: ' + e.message); return; }
+  } catch (e) { await hopThongBao('Không kiểm tra được tên file: ' + e.message); return; }
   const nhan = [], boQua = [], nhieuMa = [];
   const GHI_CHU_BO_QUA = { QUA_LON: ' (quá 30MB)', KHONG_QUYEN: ' (mã đơn ngoài phạm vi Xưởng của bạn)', KHOP: ' (mang mã đơn khác)', TRUNG: ' (mang mã đơn khác)' };
   dsEmb.forEach((f, i) => {
@@ -458,8 +458,8 @@ async function taiLenNhieuEmb(files) {
   const soKhongPhaiEmb = files.length - dsEmb.length;
   const dongBoQua = (boQua.length ? `\n\nBỏ qua ${boQua.length} file không mang mã ${ma}: ${boQua.slice(0, 15).join(', ')}${boQua.length > 15 ? ', …' : ''}` : '')
     + (nhieuMa.length ? `\n\nBỏ qua ${nhieuMa.length} file có tên khớp NHIỀU mã đơn (đổi tên file cho rõ mã rồi chọn lại): ${nhieuMa.slice(0, 15).join(', ')}${nhieuMa.length > 15 ? ', …' : ''}` : '');
-  if (!nhan.length) { alert(`Không có file .emb nào có tên chứa mã đơn ${ma}.${dongBoQua}`); return; }
-  if (!confirm(`Tải lên ${nhan.length} file EMB vào đơn ${ma}: ${nhan.map(f => f.name).join(', ')}.\n`
+  if (!nhan.length) { await hopThongBao(`Không có file .emb nào có tên chứa mã đơn ${ma}.${dongBoQua}`); return; }
+  if (!await hopXacNhan(`Tải lên ${nhan.length} file EMB vào đơn ${ma}: ${nhan.map(f => f.name).join(', ')}.\n`
     + `${nhan.length > 1 ? 'Các file này cùng là file chính của đơn; ' : ''}EMB đang có (nếu có) chuyển thành bản cũ, không bị xoá.${dongBoQua}`
     + `${soKhongPhaiEmb ? `\n(${soKhongPhaiEmb} file không phải .emb cũng bỏ qua.)` : ''}`)) return;
   const loTai = nhan.length > 1 ? 'emb' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8) : '';
@@ -476,7 +476,7 @@ async function taiLenNhieuEmb(files) {
     try {
       let kq = await gui();
       if (kq.ketQua === 'CAN_XAC_NHAN') {
-        if (!confirm(`${kq.lyDo} Vẫn lưu file EMB vào đơn ${ma}?`)) break;
+        if (!await hopXacNhan(`${kq.lyDo} Vẫn lưu file EMB vào đơn ${ma}?`)) break;
         xacNhan = true;
         kq = await gui();
       }
@@ -484,7 +484,7 @@ async function taiLenNhieuEmb(files) {
     } catch (e) { coLoi = true; ketQua.push(`${f.name}: LỖI — ${e.message}`); }
   }
   // Lượt nhiều file lỗi giữa chừng: bộ file chính của đơn đang THIẾU (bộ cũ đã thành bản cũ) — báo rõ cách sửa.
-  alert(`Kết quả tải lên EMB đơn ${ma}:\n${ketQua.join('\n')}`
+  await hopThongBao(`Kết quả tải lên EMB đơn ${ma}:\n${ketQua.join('\n')}`
     + (coLoi && loTai ? `\n\n⚠ BỘ FILE CHÍNH CHƯA ĐỦ — chọn lại TOÀN BỘ ${nhan.length} file và tải lên lần nữa (file đã lưu được dùng lại, không lưu trùng).` : ''));
   taiKhoiEmb();
 }
@@ -735,13 +735,13 @@ async function luuTrangThaiThuCong() {
   try {
     await apiFetch('/orders/' + encodeURIComponent(sttKey), { method: 'PUT', body: JSON.stringify(updates) });
     await taiChiTiet();
-  } catch (e) { alert(e.message); }
+  } catch (e) { await hopThongBao(e.message); }
 }
 
 async function apDungChiDinhNguoiChayMayChiTiet(btn) {
   const nguoiSanXuat = document.getElementById('chi-dinh-nguoi-chay-may').value;
-  if (!nguoiSanXuat) { alert('Hãy chọn người sản xuất muốn chỉ định'); return; }
-  if (!confirm(`Chỉ định "${nguoiSanXuat}" chạy máy cho đơn này (chuyển sang "Đang chạy máy")?`)) return;
+  if (!nguoiSanXuat) { await hopThongBao('Hãy chọn người sản xuất muốn chỉ định'); return; }
+  if (!await hopXacNhan(`Chỉ định "${nguoiSanXuat}" chạy máy cho đơn này (chuyển sang "Đang chạy máy")?`)) return;
 
   const nhanGoc = btn.innerHTML;
   btn.disabled = true;
@@ -752,14 +752,14 @@ async function apDungChiDinhNguoiChayMayChiTiet(btn) {
       method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], nguoiSanXuat }),
     });
     if (ketQua.loi && ketQua.loi.length > 0) {
-      alert('Không chỉ định được: ' + ketQua.loi[0].lyDo);
+      await hopThongBao('Không chỉ định được: ' + ketQua.loi[0].lyDo);
       btn.disabled = false;
       btn.innerHTML = nhanGoc;
     } else {
       await taiChiTiet(); // vẽ lại toàn bộ khu vực thao tác — không cần tự khôi phục nút cũ
     }
   } catch (e) {
-    alert(e.message);
+    await hopThongBao(e.message);
     btn.disabled = false;
     btn.innerHTML = nhanGoc;
   }
@@ -767,8 +767,8 @@ async function apDungChiDinhNguoiChayMayChiTiet(btn) {
 
 async function apDungChiDinhNguoiVeFileChiTiet(btn) {
   const nguoiVeFile = document.getElementById('chi-dinh-nguoi-ve-file').value;
-  if (!nguoiVeFile) { alert('Hãy chọn người vẽ file muốn chỉ định'); return; }
-  if (!confirm(`Chỉ định "${nguoiVeFile}" vẽ file cho đơn này (chuyển sang "Đang vẽ file")?`)) return;
+  if (!nguoiVeFile) { await hopThongBao('Hãy chọn người vẽ file muốn chỉ định'); return; }
+  if (!await hopXacNhan(`Chỉ định "${nguoiVeFile}" vẽ file cho đơn này (chuyển sang "Đang vẽ file")?`)) return;
 
   const nhanGoc = btn.innerHTML;
   btn.disabled = true;
@@ -779,14 +779,14 @@ async function apDungChiDinhNguoiVeFileChiTiet(btn) {
       method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], nguoiVeFile }),
     });
     if (ketQua.loi && ketQua.loi.length > 0) {
-      alert('Không chỉ định được: ' + ketQua.loi[0].lyDo);
+      await hopThongBao('Không chỉ định được: ' + ketQua.loi[0].lyDo);
       btn.disabled = false;
       btn.innerHTML = nhanGoc;
     } else {
       await taiChiTiet();
     }
   } catch (e) {
-    alert(e.message);
+    await hopThongBao(e.message);
     btn.disabled = false;
     btn.innerHTML = nhanGoc;
   }
@@ -800,7 +800,7 @@ const laDonDaHuy = () => donHienTai && donHienTai.TRANG_THAI_XUONG === TRANG_THA
 
 async function muaTrackingThuCongChiTiet(btn) {
   if (laDonDaHuy()) return hienThongBaoDonDaHuy([sttKey]);
-  if (!confirm(`Mua tracking GKE thủ công cho đơn ${sttKey} ngay bây giờ? Đây là thao tác tạo vận đơn THẬT, có thể phát sinh chi phí.`)) return;
+  if (!await hopXacNhan(`Mua tracking GKE thủ công cho đơn ${sttKey} ngay bây giờ? Đây là thao tác tạo vận đơn THẬT, có thể phát sinh chi phí.`)) return;
 
   const nhanGoc = btn.innerHTML;
   btn.disabled = true;
@@ -810,7 +810,7 @@ async function muaTrackingThuCongChiTiet(btn) {
     const ketQua = await apiFetch('/tracking/mua-thu-cong', { method: 'POST', body: JSON.stringify({ sttKeys: [sttKey] }) });
     if (ketQua.loi && ketQua.loi.length > 0) {
       const loiKhac = await tachVaBaoDonDaHuy(ketQua.loi);
-      if (loiKhac.length) alert('Không mua được tracking: ' + loiKhac[0].lyDo);
+      if (loiKhac.length) await hopThongBao('Không mua được tracking: ' + loiKhac[0].lyDo);
       btn.disabled = false;
       btn.innerHTML = nhanGoc;
     } else {
@@ -820,7 +820,7 @@ async function muaTrackingThuCongChiTiet(btn) {
       await taiChiTiet();
     }
   } catch (e) {
-    alert(e.message);
+    await hopThongBao(e.message);
     btn.disabled = false;
     btn.innerHTML = nhanGoc;
   }
@@ -831,13 +831,13 @@ async function muaTrackingThuCongChiTiet(btn) {
 // thành công thì MỞ LUÔN hộp thoại in (moHopThoaiInPdf(), định nghĩa trong js/api.js) trước khi tải
 // lại trang — không đợi taiChiTiet() xong mới in, vì lúc đó labelBase64 đã mất khỏi bộ nhớ.
 async function apDungInLabelChiTiet(btn) {
-  if (!confirm(`In label cho đơn ${sttKey}?`)) return;
+  if (!await hopXacNhan(`In label cho đơn ${sttKey}?`)) return;
   await xuLyInLabelChiTiet(btn, '/tracking/in-label');
 }
 
 async function apDungMuaVaInLabelChiTiet(btn) {
   if (laDonDaHuy()) return hienThongBaoDonDaHuy([sttKey]);
-  if (!confirm(`Mua tracking (nếu chưa có) và in label cho đơn ${sttKey}? Có thể phát sinh phí thật với đơn chưa có tracking.`)) return;
+  if (!await hopXacNhan(`Mua tracking (nếu chưa có) và in label cho đơn ${sttKey}? Có thể phát sinh phí thật với đơn chưa có tracking.`)) return;
   await xuLyInLabelChiTiet(btn, '/tracking/mua-va-in-label');
 }
 
@@ -850,7 +850,7 @@ async function xuLyInLabelChiTiet(btn, duongDan) {
     const ketQua = await apiFetch(duongDan, { method: 'POST', body: JSON.stringify({ sttKeys: [sttKey] }) });
     if (ketQua.loi && ketQua.loi.length > 0) {
       const loiKhac = await tachVaBaoDonDaHuy(ketQua.loi);
-      if (loiKhac.length) alert('Lỗi: ' + loiKhac[0].lyDo);
+      if (loiKhac.length) await hopThongBao('Lỗi: ' + loiKhac[0].lyDo);
       btn.disabled = false;
       btn.innerHTML = nhanGoc;
       return;
@@ -862,7 +862,7 @@ async function xuLyInLabelChiTiet(btn, duongDan) {
     await baoLoiSheetSeller(ketQua.loiDaySheetKh);
     await taiChiTiet();
   } catch (e) {
-    alert('Lỗi: ' + e.message);
+    await hopThongBao('Lỗi: ' + e.message);
     btn.disabled = false;
     btn.innerHTML = nhanGoc;
   }
@@ -874,7 +874,7 @@ async function chuyenGiaiDoan(scenarioId, btn) {
     await apiFetch(`/qr/kich-ban/${scenarioId}/quet`, { method: 'POST', body: JSON.stringify({ sttKey }) });
     await taiChiTiet();
   } catch (e) {
-    alert(e.message);
+    await hopThongBao(e.message);
     btn.disabled = false;
   }
 }
@@ -887,15 +887,15 @@ async function bamNutTrangThai(nut, btn) {
   if (nut === 'BAO_LOI_SAN_XUAT') {
     // san_xuat: nhập mật khẩu xác nhận (29/09/2026) — so ở SERVER (routes/orders.js), không lộ giá trị đúng ở đây.
     if (user.vaiTro === 'san_xuat') {
-      matKhau = prompt(`Báo lỗi sản xuất đơn ${sttKey}?\n"Đang chạy máy" → "LỖI SẢN XUẤT CẦN LÀM LẠI"\n\nNhập mật khẩu xác nhận:`);
+      matKhau = await hopNhap(`Báo lỗi sản xuất đơn ${sttKey}?\n"Đang chạy máy" → "LỖI SẢN XUẤT CẦN LÀM LẠI"\n\nNhập mật khẩu xác nhận:`);
       if (matKhau === null) return;
-    } else if (!confirm(`Báo lỗi sản xuất đơn ${sttKey}?\n\n"Đang chạy máy" → "LỖI SẢN XUẤT CẦN LÀM LẠI"`)) return;
+    } else if (!await hopXacNhan(`Báo lỗi sản xuất đơn ${sttKey}?\n\n"Đang chạy máy" → "LỖI SẢN XUẤT CẦN LÀM LẠI"`)) return;
   }
   btn.disabled = true;
   try {
     await apiFetch('/orders/' + encodeURIComponent(sttKey) + '/nut-trang-thai', { method: 'POST', body: JSON.stringify({ nut, matKhau }) });
   } catch (e) {
-    alert(e.message);
+    await hopThongBao(e.message);
   }
   await taiChiTiet();
 }
@@ -904,6 +904,29 @@ async function bamNutTrangThai(nut, btn) {
 // xong (< 30 phút) mà Sheet chưa kịp đổi -> hiện bản trong app (SO_MUI_CHI_NOI_BO); sau đó luôn theo Sheet (ai sửa thẳng trên Sheet
 // vẫn thấy đúng).
 const SO_MUI_CHO_SHEET_MS = 30 * 60 * 1000;
+// Lưu số mũi giờ báo "đã lưu" ngay, ghi Sheet Seller chạy nền (16/10/2026) — ghi lỗi thì báo ở đây (lúc mở đơn + ngay sau khi lưu).
+const CHUA_GHI_SHEET_SO_MUI = 'Đã lưu trong app nhưng CHƯA ghi được vào Sheet Seller — đã báo superadmin (Trung tâm hành động → Đẩy lại).';
+// Hỏi lại kết quả ghi Sheet chạy nền: mỗi 3 giây, tối đa 1 phút (Google quá tải có thể tự thử lại gần 2 phút), tới khi có lần ghi MỚI HƠN
+// mốc lưu (luc, giờ VN do máy chủ trả) VÀ đúng số vừa lưu (lần ghi của lượt lưu TRƯỚC còn xếp hàng có thể xong sau mốc này). Lưu lượt mới
+// -> vòng của lượt cũ tự dừng (_luotChoSoMui), không ghi đè dòng báo của lượt mới.
+let _luotChoSoMui = 0;
+async function choKetQuaGhiSheetSoMui(luc, soMui, tb, chuDaLuu) {
+  const luot = _luotChoSoMui;
+  const conLaLuotNay = () => luot === _luotChoSoMui && tb.isConnected; // đã lưu lượt khác / tải lại / rời trang -> dừng
+  for (let lan = 0; lan < 20; lan++) {
+    await new Promise(r => setTimeout(r, 3000));
+    if (!conLaLuotNay()) return;
+    let d = null;
+    try { d = await apiFetch('/orders/' + encodeURIComponent(sttKey) + '/so-mui-chi/dong-bo'); } catch (e) { continue; }
+    if (!conLaLuotNay()) return;
+    if (!d || String(d.ThoiGian || '') < luc || String(d.GiaTriSau ?? '') !== soMui) continue;
+    if (d.KetQua === 'OK') { tb.textContent = chuDaLuu + ' · đã ghi vào Sheet Seller.'; return; }
+    tb.style.color = 'var(--color-danger-text)';
+    tb.textContent = `${chuDaLuu}. ${CHUA_GHI_SHEET_SO_MUI}${d.LyDo ? ' Lý do: ' + d.LyDo : ''}`;
+    return;
+  }
+  if (conLaLuotNay()) tb.textContent = chuDaLuu + ' · chưa có kết quả ghi Sheet Seller (Google đang chậm) — tải lại trang sau ít phút: nếu ghi lỗi sẽ hiện chữ đỏ ở đây.';
+}
 function soMuiChiHienThi(don) {
   return don.SoMuiChiNguyenVan || ''; // server tính (services/orderService.js#docSoMuiChi) — 1 quy tắc cho cả danh sách/bộ lọc
 }
@@ -919,13 +942,16 @@ async function luuSoMuiChi(e) {
   }
   const nut = e.target.querySelector('button');
   nut.disabled = true;
+  _luotChoSoMui++; // dừng vòng hỏi kết quả ghi Sheet của lượt lưu trước
   try {
     const kq = await apiFetch('/orders/' + encodeURIComponent(sttKey) + '/so-mui-chi', { method: 'POST', body: JSON.stringify({ soMui: nhap }) });
     donHienTai.SO_MUI_CHI_NOI_BO = kq.soMui;
     donHienTai.SO_MUI_CHI_LUC = new Date().toISOString();
     o.value = kq.soMui;
     tb.style.color = 'var(--color-success-text)';
-    tb.textContent = kq.soMui ? `Đã lưu số mũi chỉ: ${Number(kq.soMui).toLocaleString('en-US')}` : 'Đã xoá số mũi chỉ.';
+    const chuDaLuu = kq.soMui ? `Đã lưu số mũi chỉ: ${Number(kq.soMui).toLocaleString('en-US')}` : 'Đã xoá số mũi chỉ';
+    tb.textContent = chuDaLuu + ' · đang ghi vào Sheet Seller...';
+    if (kq.luc) choKetQuaGhiSheetSoMui(kq.luc, String(kq.soMui ?? ''), tb, chuDaLuu);
   } catch (err) {
     tb.style.color = 'var(--color-danger-text)';
     tb.textContent = /Không thể lưu số mũi chỉ/.test(err.message || '') ? err.message : `Không thể lưu số mũi chỉ. Vui lòng thử lại. (${err.message})`;
@@ -939,7 +965,7 @@ async function luuGhiChu() {
   try {
     const kq = await apiFetch('/orders/' + encodeURIComponent(sttKey) + '/ghi-chu-xuong', { method: 'POST', body: JSON.stringify({ ghiChu }) });
     if (kq.sheet.ok) {
-      alert(`Đã lưu ghi chú vào Sheet Seller (tab "${kq.sheet.tab}", dòng ${kq.sheet.dong}). Ghi chú sẽ hiện lại ở đây sau khi Sheet cập nhật (vài giây tới vài phút).`);
+      await hopThongBao(`Đã lưu ghi chú vào Sheet Seller (tab "${kq.sheet.tab}", dòng ${kq.sheet.dong}). Ghi chú sẽ hiện lại ở đây sau khi Sheet cập nhật (vài giây tới vài phút).`);
     } else {
       await hienHopDo({
         tieuDe: ['CHƯA GHI ĐƯỢC GHI CHÚ', 'VÀO SHEET SELLER'],
@@ -948,7 +974,7 @@ async function luuGhiChu() {
       });
     }
     await taiChiTiet();
-  } catch (e) { alert(e.message); }
+  } catch (e) { await hopThongBao(e.message); }
 }
 
 // Giống hệt inNhanh('don_can_in', ...) ở orders.html nhưng chỉ in đúng 1 đơn — dùng 'stt' (khớp
@@ -980,7 +1006,7 @@ async function inDonHang(btn) {
     // lỗi "Lỗi WebKitBlobResource 1" vì blob đã bị huỷ trước khi kịp đọc. Trễ 1 giây cho an toàn.
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   } catch (e) {
-    alert('Lỗi: ' + e.message);
+    await hopThongBao('Lỗi: ' + e.message);
     return; // in lỗi -> KHÔNG đổi trạng thái
   } finally {
     btn.disabled = false;
@@ -993,9 +1019,9 @@ async function inDonHang(btn) {
       const kq = await apiFetch('/orders/chuyen-trang-thai-hang-loat', {
         method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], cot: 'TRANG_THAI_XUONG', trangThaiMoi: 'Đã in mã', chiKhiDangLa: 'Chưa in mã' }),
       });
-      if (kq.loi.length) alert(`Đã in xong nhưng CHƯA chuyển được "Đã in mã": ${kq.loi[0].lyDo}`);
+      if (kq.loi.length) await hopThongBao(`Đã in xong nhưng CHƯA chuyển được "Đã in mã": ${kq.loi[0].lyDo}`);
     } catch (e) {
-      alert(`Đã in xong nhưng CHƯA chuyển được "Đã in mã": ${e.message}`);
+      await hopThongBao(`Đã in xong nhưng CHƯA chuyển được "Đã in mã": ${e.message}`);
     }
     await taiChiTiet();
   }
@@ -1004,15 +1030,15 @@ async function inDonHang(btn) {
 async function taiAnh(nut) {
   const moc = document.getElementById('loai-anh').value;
   const input = document.getElementById('anh-tai-len');
-  if (!moc) return alert('Chưa chọn loại ảnh');
-  if (!input.files[0]) return alert('Chưa chọn ảnh');
+  if (!moc) return await hopThongBao('Chưa chọn loại ảnh');
+  if (!input.files[0]) return await hopThongBao('Chưa chọn ảnh');
   // Ảnh đã sản xuất: 1 hoặc 2 ảnh cùng lúc (14/10/2026, theo yêu cầu người dùng); loại khác 1 ảnh.
   const toiDa = moc === 'da_san_xuat' ? 2 : 1;
-  if (input.files.length > toiDa) return alert(`Chỉ chọn tối đa ${toiDa} ảnh cho loại này (đang chọn ${input.files.length}).`);
+  if (input.files.length > toiDa) return await hopThongBao(`Chỉ chọn tối đa ${toiDa} ảnh cho loại này (đang chọn ${input.files.length}).`);
   if (nut.disabled) return; // chặn bấm 2 lần khi đang tải (ảnh Đã sản xuất / ĐÃ DÁN TEM tự chuyển trạng thái)
   // Thay ảnh đã sản xuất (14/10/2026, theo yêu cầu người dùng — chỉ ở đây, chỉ admin, đơn đang "Đã sản xuất"): thay CẢ lượt ảnh cũ.
   const thay = moc === 'da_san_xuat' && donHienTai && donHienTai.TRANG_THAI_XUONG === 'Đã sản xuất';
-  if (thay && !confirm(`Đơn đã ở "Đã sản xuất". THAY toàn bộ ảnh đã sản xuất hiện có bằng ${input.files.length} ảnh mới?`
+  if (thay && !await hopXacNhan(`Đơn đã ở "Đã sản xuất". THAY toàn bộ ảnh đã sản xuất hiện có bằng ${input.files.length} ảnh mới?`
     + (input.files.length === 1 && donHienTai.Anh_Da_San_Xuat_URL_2 ? '\n(Đơn đang có 2 ảnh — ảnh thứ 2 cũ sẽ bị bỏ.)' : '')
     + '\nTrạng thái đơn không đổi; link ảnh cũ vẫn xem được trong lịch sử đơn.')) return;
   nut.disabled = true;
@@ -1028,7 +1054,7 @@ async function guiAnh(moc, dsFile, thay = false) {
       // — cùng lý do đã áp dụng ở scan.html: ảnh camera gốc thường vài MB, nén trước giúp upload nhanh hơn.
       const thongSo = {};
       const fileDaNen = await nenAnhTruocKhiTaiLen(dsFile[i], { thongSo });
-      if (laAnhHeif(thongSo.dauFile) && !daBaoHeif) { daBaoHeif = true; alert(CANH_BAO_FILE_HEIF); } // file HEIC — nhắc chuyển JPG / tắt HEIC
+      if (laAnhHeif(thongSo.dauFile) && !daBaoHeif) { daBaoHeif = true; await hopThongBao(CANH_BAO_FILE_HEIF); } // file HEIC — nhắc chuyển JPG / tắt HEIC
       const form = new FormData();
       form.append('photo', fileDaNen);
       form.append('sttKey', sttKey);
@@ -1041,12 +1067,12 @@ async function guiAnh(moc, dsFile, thay = false) {
       if (!res.ok) throw Object.assign(new Error(data.error), { trangThaiHienTai: data.trangThaiHienTai });
       daLuu++;
     }
-    alert(thay ? `Đã thay ${dsFile.length} ảnh đã sản xuất!` : dsFile.length > 1 ? `Đã tải ${dsFile.length} ảnh lên!` : 'Đã tải ảnh lên!');
+    await hopThongBao(thay ? `Đã thay ${dsFile.length} ảnh đã sản xuất!` : dsFile.length > 1 ? `Đã tải ${dsFile.length} ảnh lên!` : 'Đã tải ảnh lên!');
   } catch (e) {
     // Trang mở lúc đơn còn "Đang chạy máy" nhưng đơn vừa được chụp xong ở nơi khác -> giờ là "thay ảnh": tải lại trang, bấm lại.
     if (!daLuu && !thay && moc === 'da_san_xuat' && e.trangThaiHienTai === 'Đã sản xuất') {
-      alert('Đơn vừa được chuyển sang "Đã sản xuất" (có người vừa chụp xong ảnh). Trang sẽ tải lại thông tin đơn — chọn lại ảnh rồi bấm "Tải ảnh lên" nếu muốn THAY ảnh đã sản xuất.');
-    } else alert(!daLuu ? e.message : thay ? `Đã thay ảnh 1 nhưng ảnh 2 lỗi: ${e.message}\nĐơn hiện chỉ còn 1 ảnh mới — chọn lại cả 2 ảnh rồi thay lại.`
+      await hopThongBao('Đơn vừa được chuyển sang "Đã sản xuất" (có người vừa chụp xong ảnh). Trang sẽ tải lại thông tin đơn — chọn lại ảnh rồi bấm "Tải ảnh lên" nếu muốn THAY ảnh đã sản xuất.');
+    } else await hopThongBao(!daLuu ? e.message : thay ? `Đã thay ảnh 1 nhưng ảnh 2 lỗi: ${e.message}\nĐơn hiện chỉ còn 1 ảnh mới — chọn lại cả 2 ảnh rồi thay lại.`
       : `Đã lưu ảnh 1 nhưng ảnh 2 lỗi: ${e.message}\nĐơn CHƯA chuyển trạng thái — chọn lại cả 2 ảnh rồi tải lại.`);
   }
   await taiChiTiet();

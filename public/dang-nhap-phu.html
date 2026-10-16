@@ -4,14 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đăng nhập — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=111">
+<link rel="stylesheet" href="/css/style.css?v=112">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <script src="/js/theme.js?v=104"></script>
 </head>
 <body class="trang-dang-nhap">
 <div class="login-wrap">
-  <img class="welcome-banner" src="/images/Welcome.jpg" alt="" aria-hidden="true">
   <div class="logo-mark" aria-hidden="true" id="logo-mark"></div>
   <h1>Xưởng Thêu</h1>
   <form id="form-dang-nhap" style="margin-top:16px;display:flex;flex-direction:column;align-items:center;gap:12px">
@@ -27,7 +26,7 @@
   </form>
 </div>
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=127"></script>
+<script src="/js/api.js?v=128"></script>
 <script>
 document.getElementById('logo-mark').innerHTML = '<img src="/images/logo.png" alt="" width="88" height="88" style="display:block;margin:0 auto;border-radius:22%;box-shadow:0 8px 24px rgba(200,24,24,.28)">';
 
@@ -38,7 +37,7 @@ document.getElementById('form-dang-nhap').onsubmit = async (e) => {
   try {
     const user = await apiFetch('/auth/dang-nhap', { method: 'POST', body: JSON.stringify({ ten, matKhau }) });
     window.location.href = trangChuTheoVaiTro(user.vaiTro);
-  } catch (err) { alert(err.message); }
+  } catch (err) { await hopThongBao(err.message); }
 };
 </script>
 </body>

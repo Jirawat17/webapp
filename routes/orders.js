@@ -11,7 +11,7 @@ const taiSanService = require('../services/taiSanService');
 const alertService = require('../services/alertService');
 const vanHanhService = require('../services/vanHanhService');
 const scenarioService = require('../services/scenarioService');
-const { parseNgay } = require('../services/dateUtils');
+const { parseNgay, thoiGianVNISOString } = require('../services/dateUtils');
 const { DANH_SACH_TRANG_THAI_BAO_CAO, TRANG_THAI_PHOI_VALUES, TRANG_THAI_VE_FILE_VALUES, khopGiaTriLoc, chiSoTinhTrang } = require('../data/pipelineTinhTrang');
 const { ghiLog, layLichSuTheoDon } = require('../services/logService');
 const { taiDsAnh } = require('../services/anhNguonService');
@@ -56,6 +56,8 @@ const { NHOM_LOC_TONG_QUAT } = orderService; // LỌC TỔNG QUÁT — 3 nhóm t
 async function lamGiauDon(rows, banDoNhom, user) {
   const daGanKH = await orderService.ganTenKhachHang(rows);
   const nguongNhan = vanHanhService.layCauHinh().y6; // Y6 (11/10/2026) — đọc 1 lần cho cả danh sách
+  // Đơn có lần ghi số mũi sang Sheet Seller đang LỖI (16/10/2026) — 1 lượt đọc cho cả danh sách, chỉ vai trò thấy số mũi.
+  const soMuiLoiSheet = VAI_TRO_SUA_SO_MUI.includes(user && user.vaiTro) ? require('../services/nhatKyDbService').dsKeySoMuiLoiDangCho() : null;
   return daGanKH.map(r => ({
     ...orderService.anCotTheoDoiMuaTracking(r, user),
     TieuDeSanPham: orderService.tieuDeSanPham(r),
@@ -73,7 +75,8 @@ async function lamGiauDon(rows, banDoNhom, user) {
     ...(conHan => ({ DonHold: conHan === 'HOLD', TinhTrangDacBiet: conHan }))(orderService.canhBaoTinhTrangConHan(r)),
     TinhTrangNhan: orderService.loaiTinhTrangDacBiet(r),
     // Số mũi chỉ (07/10/2026) — CHỈ admin/superadmin/ve_file (cùng nhóm được sửa, xem VAI_TRO_SUA_SO_MUI).
-    ...(VAI_TRO_SUA_SO_MUI.includes(user && user.vaiTro) ? (s => ({ SoMuiChi: s.so, SoMuiChiTrangThai: s.trangThai, SoMuiChiNguyenVan: s.nguyenVan }))(orderService.docSoMuiChi(r)) : {}),
+    ...(soMuiLoiSheet ? (loi => (s => ({ SoMuiChi: s.so, SoMuiChiTrangThai: s.trangThai, SoMuiChiNguyenVan: s.nguyenVan, SoMuiChiLoiSheet: loi }))(
+      orderService.docSoMuiChi(r, Date.now(), loi)))(soMuiLoiSheet.has(r.STT_Key)) : {}),
     NhomNhieuAo: banDoNhom ? donNhieuAoService.tomTatChoDon(r.STT_Key, banDoNhom.get(r.STT_Key)) : null,
     LyDoDaMuaTracking: orderService.lyDoDaMuaTracking(r, banDoNhom ? banDoNhom.get(r.STT_Key) : null),
   }));
@@ -1193,12 +1196,15 @@ router.post('/:sttKey/ghi-chu-xuong', async (req, res) => {
 
 // Số mũi chỉ (07/10/2026, theo yêu cầu người dùng): CHỈ admin/superadmin/ve_file (chặn ở đây, không chỉ ẩn ô trên trang). Ghi vào ô
 // GhiChuTinhGia của Sheet Seller (người dùng xác nhận cột chỉ dùng cho số mũi). Số nguyên 1..1.000.000, hoặc trống để xoá.
-// Ghi Sheet TRƯỚC: lỗi -> trả lỗi, KHÔNG lưu gì trong app, KHÔNG báo đã lưu. Thành công -> lưu bản trong app (hiện ngay
-// trong lúc IMPORTRANGE chưa đưa giá trị mới về Don_Hang_ALL) + lịch sử.
+// 16/10/2026 (theo yêu cầu người dùng — log 16/10: lưu 3–4 giây, 85–90% là ghi Sheet Seller): lưu bản trong app (hiện ngay trong lúc
+// IMPORTRANGE chưa đưa giá trị mới về Don_Hang_ALL) rồi báo "đã lưu" NGAY; ghi Sheet Seller CHẠY NỀN sau đó. Ghi lỗi -> nhật ký đồng bộ
+// ghi dòng LỖI -> đơn hiện ở Trung tâm hành động, superadmin bấm "Đẩy lại" (đẩy bản trong app, xem routes/dongBoSheetSeller.js).
+// Trước đây: ghi Sheet TRƯỚC, lỗi thì không lưu gì và báo lỗi.
 const VAI_TRO_SUA_SO_MUI = ['admin', 'superadmin', 've_file'];
 const SO_MUI_TOI_DA = 1000000;
-// Hàng đợi theo đơn: 2 người lưu cùng lúc cho CÙNG đơn -> lượt sau chờ lượt trước xong HẲN (ghi Sheet + lưu bản app), nên Sheet và
-// bản app luôn cùng giá trị của người lưu sau. Không dùng khoá của orderService.update (lượt này gọi update bên trong -> tự chờ mình).
+// Hàng đợi theo đơn CHỈ cho phần ghi Sheet Seller chạy nền (16/10/2026): lưu bản app (đã có khoá theo đơn của orderService.update) rồi
+// trả lời ngay; các lượt ghi Sheet của CÙNG đơn xếp hàng theo đúng thứ tự lưu -> Sheet nhận giá trị của người lưu sau cùng. Trước đây
+// hàng đợi bọc cả lượt lưu -> lưu 2 lần liền cho 1 đơn thì lần sau phải chờ lần trước ghi Sheet xong (2–4 giây).
 const _hangDoiSoMui = new Map();
 function xepHangSoMui(sttKey, congViec) {
   const luot = (_hangDoiSoMui.get(sttKey) || Promise.resolve()).catch(() => {}).then(congViec);
@@ -1214,38 +1220,49 @@ router.post('/:sttKey/so-mui-chi', async (req, res) => {
     return res.status(400).json({ error: `Số mũi chỉ phải là số nguyên từ 1 đến ${SO_MUI_TOI_DA.toLocaleString('vi-VN')} (không chữ, không số âm, không số lẻ).` });
   }
   const soMui = nhap ? String(Number(nhap)) : ''; // bỏ số 0 ở đầu
-  const sttKey = req.params.sttKey;
-  const tVao = Date.now();
-  await xepHangSoMui(sttKey, () => luuSoMuiChi(req, res, user, sttKey, soMui, tVao));
+  await luuSoMuiChi(req, res, user, req.params.sttKey, soMui);
 });
 // Log tách thời gian (16/10/2026, giống dòng "[Photos] Upload ..."): log 15/10 có lượt lưu số mũi chỉ 3–7 giây — đo xem chậm ở
 // đọc đơn (Google Sheet Don_Hang_ALL), ghi Sheet Seller hay ghi cập nhật/lịch sử trước khi quyết định cách tối ưu.
-async function luuSoMuiChi(req, res, user, sttKey, soMui, tVao = Date.now()) {
+async function luuSoMuiChi(req, res, user, sttKey, soMui) {
   const t0 = Date.now();
   const { headers, row } = await orderService.getByKey(sttKey, { fresh: true });
   if (!row || !orderService.coQuyenTheoXuong(user, row)) return res.status(404).json({ error: 'Không tìm thấy đơn hàng: ' + sttKey });
   const tDoc = Date.now();
-
-  const [kq] = await sheetSellerService.ghiHangLoat([{ sttKey, loai: 'SO_MUI', giaTri: { GhiChuTinhGia: soMui } }], user, { ghiLichSu: false });
-  const tSeller = Date.now();
-  const doThoiGian = phanCuoi => `[Orders] Số mũi chỉ ${sttKey}: chờ lượt ${t0 - tVao}ms, đọc đơn ${tDoc - t0}ms, ghi Sheet Seller ${tSeller - tDoc}ms, ${phanCuoi}, TỔNG ${Date.now() - tVao}ms`;
-  if (!kq.ok) {
-    console.log(doThoiGian('LỖI ghi Sheet Seller'));
-    return res.status(502).json({ error: `Không thể lưu số mũi chỉ. Vui lòng thử lại. (Lý do: ${kq.lyDo})` });
-  }
 
   await orderService.update(sttKey, {
     SO_MUI_CHI_NOI_BO: soMui, SO_MUI_CHI_LUC: new Date().toISOString(),
     NguoiCapNhatCuoi: user.ten, ThoiGianCapNhatCuoi: new Date().toISOString(),
   }, user, { donDaDoc: { headers, row } });
   const tGhi = Date.now();
-  await ghiLog({
-    nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'SUA_SO_MUI_CHI', sttKey,
-    chiTiet: { tu: kq.thayDoi.length ? kq.thayDoi[0].tu : (row.GhiChuTinhGia || ''), sang: soMui, sheet: sheetSellerService.chiTietLichSu(kq) },
+  // luc: mốc lưu (giờ VN, cùng khuôn ThoiGian nhật ký đồng bộ) — order.html hỏi /so-mui-chi/dong-bo tới khi có lần ghi Sheet MỚI HƠN mốc này.
+  res.json({ ok: true, soMui, luc: thoiGianVNISOString() });
+
+  // --- chạy nền (đã trả lời)
+  xepHangSoMui(sttKey, async () => {
+    const tCho = Date.now();
+    try {
+      const [kq] = await sheetSellerService.ghiHangLoat([{ sttKey, loai: 'SO_MUI', giaTri: { GhiChuTinhGia: soMui } }], user, { ghiLichSu: false });
+      const tSeller = Date.now();
+      await ghiLog({
+        nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'SUA_SO_MUI_CHI', sttKey,
+        chiTiet: { tu: kq.thayDoi.length ? kq.thayDoi[0].tu : (row.GhiChuTinhGia || ''), sang: soMui, sheet: sheetSellerService.chiTietLichSu(kq) },
+      });
+      console.log(`[Orders] Số mũi chỉ ${sttKey}: đọc đơn ${tDoc - t0}ms, ghi cập nhật ${tGhi - tDoc}ms (đã trả lời), chờ lượt ghi Sheet ${tCho - tGhi}ms, `
+        + `ghi Sheet Seller (nền) ${tSeller - tCho}ms${kq.ok ? '' : ' — LỖI: ' + kq.lyDo}, ghi lịch sử ${Date.now() - tSeller}ms, TỔNG ${Date.now() - t0}ms`);
+    } catch (err) {
+      console.error(`[Orders] Số mũi chỉ ${sttKey}: lỗi ghi Sheet Seller chạy nền:`, err.message);
+    }
   });
-  console.log(doThoiGian(`ghi cập nhật ${tGhi - tSeller}ms, ghi lịch sử ${Date.now() - tGhi}ms`));
-  res.json({ ok: true, soMui, sheet: { tab: kq.tab, dong: kq.dong } });
 }
+
+// Lần ghi số mũi chỉ GẦN NHẤT sang Sheet Seller (16/10/2026) — order.html hỏi lại sau khi lưu (ghi Sheet chạy nền) để báo người vừa lưu nếu
+// ghi lỗi. -> { ThoiGian, KetQua, LyDo, GiaTriSau } | null
+router.get('/:sttKey/so-mui-chi/dong-bo', async (req, res) => {
+  if (!VAI_TRO_SUA_SO_MUI.includes(req.session.user.vaiTro)) return res.status(403).json({ error: 'Vai trò này không được sửa số mũi chỉ' });
+  if (!orderService.phamViDon(req.session.user)(req.params.sttKey)) return res.status(404).json({ error: 'Không tìm thấy đơn hàng' });
+  res.json(require('../services/nhatKyDbService').layDongBoGanNhat(req.params.sttKey, 'SO_MUI'));
+});
 
 // 2 nút lớn ở Chi tiết đơn (28/09/2026, theo yêu cầu người dùng) — mỗi nút chuyển TRANG_THAI_XUONG đúng 1 bước cố định:
 //   BAT_DAU_CHAY_MAY: chỉ san_xuat — người bấm thành người chạy máy (orderService.update tự ghi NGUOI_CHAY_MAY).

@@ -9,6 +9,24 @@ function laAdmin(vaiTro) {
   return VAI_TRO_ADMIN.includes(vaiTro);
 }
 
+// Đọc lại tài khoản MỖI lượt (16/10/2026, theo yêu cầu người dùng — đi cùng phiên lưu SQLite, services/phienStore.js: phiên sống qua
+// restart nên không còn "vô tình" đá người bị xoá/khoá ra như MemoryStore cũ). Không còn tài khoản (xoá / đổi tên) hoặc KichHoat khác
+// TRUE -> bỏ đăng nhập của phiên (route cần đăng nhập trả 401 như hết phiên). Đổi vai trò / Xưởng -> áp dụng ngay. 1 lượt SELECT theo khoá
+// chính trên SQLite (micro giây).
+function kiemTraLaiTaiKhoan(req, res, next) {
+  const u = req.session && req.session.user;
+  if (!u) return next();
+  const tk = require('../services/taiKhoanService').layTheoTen(u.ten);
+  if (!tk || String(tk.KichHoat).toUpperCase() !== 'TRUE') {
+    console.log(`[Auth] Đăng xuất phiên của "${u.ten}" — tài khoản ${tk ? 'đã bị khoá' : 'không còn (xoá / đổi tên)'}.`);
+    delete req.session.user;
+    return next();
+  }
+  if (tk.VaiTro !== u.vaiTro) u.vaiTro = tk.VaiTro;
+  if ((tk.Xuong || '') !== u.xuong) u.xuong = tk.Xuong || '';
+  next();
+}
+
 function requireLogin(req, res, next) {
   if (!req.session.user) return res.status(401).json({ error: 'Chưa đăng nhập' });
   next();
@@ -48,4 +66,4 @@ function laSuperAdmin(vaiTro) {
   return vaiTro === 'superadmin';
 }
 
-module.exports = { requireLogin, requireRole, requireExactRole, laAdmin, laSuperAdmin, VAI_TRO_ADMIN };
+module.exports = { kiemTraLaiTaiKhoan, requireLogin, requireRole, requireExactRole, laAdmin, laSuperAdmin, VAI_TRO_ADMIN };
