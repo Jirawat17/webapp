@@ -19,7 +19,8 @@ router.get('/danh-sach', requireRole(), async (req, res) => {
 // đổi tiếp thì cảnh báo hiện lại. Kiểm phạm vi Xưởng theo mã đơn (khoá bắt đầu bằng mã đơn).
 router.post('/da-xu-ly', requireRole(), (req, res) => {
   const { loai, khoa, giaTri, ghiChu } = req.body || {};
-  if (!['NHAN_LAU', 'VAN_CHUYEN'].includes(loai) || !khoa) return res.status(400).json({ error: 'Thiếu loại/khoá cảnh báo' });
+  // DON_NHIEU_AO (17/10/2026): "DonNhieuAo cần xử lý" — services/actionCenterService.js#layDonNhieuAoCanXuLy.
+  if (!['NHAN_LAU', 'VAN_CHUYEN', 'DON_NHIEU_AO'].includes(loai) || !khoa) return res.status(400).json({ error: 'Thiếu loại/khoá cảnh báo' });
   const sttKey = String(khoa).split('|')[0];
   if (!require('../services/orderService').phamViDon(req.session.user)(sttKey)) return res.status(404).json({ error: 'Không tìm thấy đơn' });
   require('../services/nhatKyDbService').danhDauDaXuLy({

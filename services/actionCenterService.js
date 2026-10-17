@@ -90,11 +90,10 @@ async function layTrungTamHanhDong(user) {
   const rows = orderService.locTheoXuong(tatCa, user);
   const laSuperAdmin = require('../middleware/auth').laSuperAdmin(user.vaiTro);
   const trongPhamVi = orderService.phamViDon(user);
-  const [huyGanDay, loiTrackingGke] = (await Promise.all([layDonHuyGanDay(), layLoiTrackingGanDay()]))
-    .map(ds => ds.filter(d => trongPhamVi(d.sttKey)));
+  const [huyTatCa, loiTrackingTatCa] = await Promise.all([layDonHuyGanDay(), layLoiTrackingGanDay()]);
+  const [huyGanDay, loiTrackingGke] = [huyTatCa, loiTrackingTatCa].map(ds => ds.filter(d => trongPhamVi(d.sttKey)));
   return {
-    loiDonNhieuAo: donNhieuAoService.danhSachLoiDuLieu(tatCa).filter(n => n.sttKeys.every(trongPhamVi)),
-    nhomHuyConTracking: layNhomHuyConTracking(tatCa, huyGanDay).filter(n => trongPhamVi(n.sttKey)),
+    ...layDonNhieuAoCanXuLy(tatCa, huyTatCa, trongPhamVi),
     huyGanDay,
     loiSanXuat: layDonLoiSanXuat(rows),
     uuTienChuaXuLy: layDonUuTienChuaXuLy(rows),
@@ -105,6 +104,45 @@ async function layTrungTamHanhDong(user) {
     ...layCanhBaoVanHanh(rows),
     // ĐƠN CẦN CHECK (14/10/2026) — CHỈ superadmin; admin không nhận trường này.
     ...(laSuperAdmin ? { donCanCheck: await ganThongTinDonCanCheck(require('./nhatKyDbService').layDonCanCheck(false), tatCa) } : {}),
+  };
+}
+
+// "DonNhieuAo cần xử lý" (17/10/2026, theo yêu cầu người dùng): mỗi dòng (lỗi dữ liệu nhóm / nhóm đã huỷ còn vận đơn GKE) có khoá + giá trị
+// cho nút "Đã xử lý" (loại DON_NHIEU_AO, routes/actionCenter.js). Ẩn tới khi lỗi của nhóm ĐỔI (thêm/bớt đơn, đổi OrderID, lỗi khác; nhóm huỷ:
+// đổi mã vận đơn) — người dùng chốt. Khoá bắt đầu bằng 1 mã đơn của nhóm (route kiểm tra phạm vi Xưởng theo mã đó).
+// Kèm từng đơn: ngày lên đơn (d/m) + mức cảnh báo trễ hạn (DO/CAM/VANG như Danh sách đơn); mucCanhBao của dòng = mức cao nhất trong nhóm.
+const THU_TU_MUC = { VANG: 1, CAM: 2, DO: 3 };
+// huyTatCa: đơn huỷ 48 giờ CHƯA lọc phạm vi — dọn bản ghi "Đã xử lý" phải xét mọi nhóm, không chỉ nhóm người đang xem thấy.
+function layDonNhieuAoCanXuLy(tatCa, huyTatCa, trongPhamVi) {
+  const { locDaXuLy } = require('./vanHanhService');
+  const { tinhMucCanhBao, layCauHinhCanhBao } = require('./alertService');
+  const { parseNgay } = require('./dateUtils');
+  const cauHinhCanhBao = layCauHinhCanhBao();
+  const theoKey = new Map(tatCa.map(r => [r.STT_Key, r]));
+  const thongTinDon = sttKey => {
+    const r = theoKey.get(sttKey);
+    const ngay = r && parseNgay(r.NGAY_LEN_DON);
+    return { sttKey, ngayLenDon: ngay ? `${ngay.getDate()}/${ngay.getMonth() + 1}` : '', mucCanhBao: r ? tinhMucCanhBao(r, cauHinhCanhBao) : null };
+  };
+  const ganDon = (d, sttKeys) => {
+    const don = sttKeys.map(thongTinDon);
+    const mucCanhBao = don.map(x => x.mucCanhBao).filter(Boolean).sort((a, b) => THU_TU_MUC[b] - THU_TU_MUC[a])[0] || null;
+    return { ...d, don, mucCanhBao };
+  };
+  // Khoá có cả OrderID: 1 nhóm có thể ra 2 dòng cùng gốc + cùng mã đầu (lỗi riêng của nhóm, và "cùng gốc nhưng khác OrderID") — chung khoá
+  // thì bấm "Đã xử lý" dòng này ghi đè bản ghi của dòng kia (INSERT OR REPLACE theo loai + khoa), không bao giờ ẩn được cả hai.
+  const loi = donNhieuAoService.danhSachLoiDuLieu(tatCa)
+    .map(n => ({ ...n, laHuy: false, khoa: `${n.sttKeys[0]}|LOI|${n.goc}|${n.orderId}`, giaTri: `${[...n.sttKeys].sort().join(',')}|${n.orderId}|${n.loi.join(' ')}` }));
+  const huy = layNhomHuyConTracking(tatCa, huyTatCa)
+    .map(n => ({ ...n, laHuy: true, khoa: `${n.sttKey}|HUY|${n.goc}`, giaTri: String(n.trackingId) }));
+  const tatCaDong = [...loi, ...huy];
+  // Dọn bản ghi "Đã xử lý" của nhóm không còn lỗi / đã đổi khoá (bảng không phình mãi) — xét TOÀN BỘ nhóm, trước khi lọc phạm vi.
+  require('./nhatKyDbService').donDaXuLyKhongConDung('DON_NHIEU_AO', new Set(tatCaDong.map(d => d.khoa)));
+  const conHien = locDaXuLy('DON_NHIEU_AO', tatCaDong, d => d.khoa, d => d.giaTri) // 1 lượt đọc "Đã xử lý" cho cả 2 loại dòng
+    .filter(d => (d.laHuy ? trongPhamVi(d.sttKey) : d.sttKeys.every(trongPhamVi)));
+  return {
+    loiDonNhieuAo: conHien.filter(d => !d.laHuy).map(n => ganDon(n, n.sttKeys)),
+    nhomHuyConTracking: conHien.filter(d => d.laHuy).map(n => ganDon(n, [n.sttKey])),
   };
 }
 

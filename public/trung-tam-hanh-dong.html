@@ -117,11 +117,23 @@ function veKhoiLoiTracking(ds) {
 
 // DonNhieuAo (bổ sung 26/09/2026) — lỗi dữ liệu nhóm (xem services/donNhieuAoService.js) + nhóm đã huỷ
 // nhưng đơn ".1" còn vận đơn GKE cần huỷ tay.
+// 17/10/2026 (theo yêu cầu người dùng): mỗi mã đơn là link sang Chi tiết đơn, kèm ngày lên đơn + nhãn mức cảnh báo của đơn đó; nền dòng theo
+// mức cao nhất trong nhóm (như "Đơn nhận quá lâu"); nút "Đã xử lý" ẩn dòng tới khi lỗi của nhóm đổi (server quyết định, loại DON_NHIEU_AO).
+function maDonNhieuAo(d) {
+  return `<a class="stt" href="/order.html?stt=${encodeURIComponent(d.sttKey)}">${escapeHtml(d.sttKey)}</a>`
+    + (d.ngayLenDon ? ` <span style="color:var(--color-text-muted)">(lên đơn ${escapeHtml(d.ngayLenDon)})</span>` : '')
+    + (d.mucCanhBao ? ` <span class="badge-canh-bao ${d.mucCanhBao.toLowerCase()}">${NHAN_MUC_CANH_BAO[d.mucCanhBao]}</span>` : '');
+}
+function dongDonNhieuAo(d, moTaHtml) {
+  return `<div class="ttha-dong ${d.mucCanhBao ? 'muc-' + d.mucCanhBao.toLowerCase() : ''}">
+    <div style="flex:1;min-width:0"><div>${d.don.map(maDonNhieuAo).join(' · ')}</div><div class="phu" style="display:block;margin-top:4px">${moTaHtml}</div></div>
+    <span style="display:flex;gap:6px;flex-wrap:wrap">${nutDaXuLy('DON_NHIEU_AO', d)}</span></div>`;
+}
 function veKhoiDonNhieuAo(loi, huy) {
   if (loi.length === 0 && huy.length === 0) return khoiRong('Không có lỗi DonNhieuAo nào.');
   return `<div class="ttha-danh-sach">${
-    huy.map(d => dongDon(d.sttKey, `Nhóm ${escapeHtml(d.goc)} ĐÃ HUỶ — huỷ vận đơn ${escapeHtml(d.trackingId)} bên GKE bằng tay`)).join('') +
-    loi.map(n => dongDon(n.sttKeys[0], `Nhóm ${escapeHtml(n.goc)} · OrderID ${escapeHtml(n.orderId)} · ${escapeHtml(n.sttKeys.join(', '))}<br>${n.loi.map(escapeHtml).join('<br>')}`)).join('')
+    huy.map(d => dongDonNhieuAo(d, `Nhóm ${escapeHtml(d.goc)} ĐÃ HUỶ — huỷ vận đơn ${escapeHtml(d.trackingId)} bên GKE bằng tay`)).join('') +
+    loi.map(n => dongDonNhieuAo(n, `Nhóm ${escapeHtml(n.goc)} · OrderID ${escapeHtml(n.orderId)}<br>${n.loi.map(escapeHtml).join('<br>')}`)).join('')
   }</div>`;
 }
 

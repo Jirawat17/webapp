@@ -51,7 +51,10 @@ function thongKeTocDo(ms) {
   });
 }
 // Dọn số đo cũ (gọi mỗi ngày từ lịch báo cáo) — giữ 35 ngày, đủ so sánh tuần/tháng.
-const donSoDoCu = (ms = Date.now()) => { nhatKy.xoaThoiGianApiTruoc(vn(ms - 35 * MOT_NGAY_MS)); nhatKy.xoaDoMangTruoc(vn(ms - 35 * MOT_NGAY_MS)); };
+const donSoDoCu = (ms = Date.now()) => {
+  const moc = vn(ms - 35 * MOT_NGAY_MS);
+  nhatKy.xoaThoiGianApiTruoc(moc); nhatKy.xoaDoMangTruoc(moc); nhatKy.xoaDoMangMayChuTruoc(moc);
+};
 
 // ======================= Mạng tới máy chủ (đo từ trình duyệt mỗi 30 giây — routes/doMang.js) =======================
 const msChu = ms => (ms == null ? '—' : ms < 1000 ? `${ms}ms` : giay(ms));
@@ -75,9 +78,60 @@ function thongKeMang(ms) {
   const xep = [...nhom].map(([k, v]) => [k, tomTatMang(v)]).filter(([, t]) => t.n >= 10)
     .sort((a, b) => ((b[1].giua ?? Infinity) - (a[1].giua ?? Infinity)) || (b[1].soLoi / b[1].n - a[1].soLoi / a[1].n));
   for (const [k, t] of xep.slice(0, 6)) dong.push(`• ${esc(k)}: ${dongMang(t)}`);
+  dong.push(...dongTachDoan(ds));
   return { dong, ds };
 }
-const COT_CSV_MANG = ['luc', 'nguoi', 'vai_tro', 'xuong', 'trang', 'ms', 'loi', 'loai_mang', 'mbps', 'rtt', 'he_dieu_hanh', 'trinh_duyet', 'may'];
+
+// ---- Tách đoạn (17/10/2026): trình duyệt (cột ms_cf...) + máy chủ tự đo mỗi phút (bảng do_mang_may_chu) ----
+const giuaP90 = v => (v.length ? `${msChu(phanVi(v, 0.5))} / ${msChu(phanVi(v, 0.9))}` : '—');
+const cot = (ds, k) => ds.map(d => d[k]).filter(v => v != null);
+const tramCF = ds => {
+  const dem = new Map();
+  for (const d of ds) if (d.colo) dem.set(d.colo, (dem.get(d.colo) || 0) + 1);
+  const tong = [...dem.values()].reduce((a, b) => a + b, 0);
+  return [...dem].sort((a, b) => b[1] - a[1]).map(([c, n]) => `${c} ${tyLe(n, tong)}`).join(', ');
+};
+// Giờ chậm nhất (giữa lớn nhất, ≥ 10 lần đo) + tách đoạn của giờ đó — thấy ngay buổi tối chậm vì đoạn nào.
+function gioChamNhat(ds, kTong) {
+  const theoGio = new Map();
+  for (const d of ds) { const g = String(d.luc).slice(11, 13); (theoGio.get(g) || theoGio.set(g, []).get(g)).push(d); }
+  let tot = null;
+  for (const [g, v] of theoGio) {
+    const t = cot(v, kTong);
+    if (t.length >= 10 && (!tot || phanVi(t, 0.5) > tot.giua)) tot = { g, v, giua: phanVi(t, 0.5) };
+  }
+  return tot;
+}
+function dongTachDoan(ds) {
+  const dong = [];
+  const coDoan = ds.filter(d => d.ms_cf != null || d.ms_xep_hang != null);
+  if (coDoan.length) {
+    const moTa = v => `Máy→Cloudflare ${giuaP90(cot(v, 'ms_cf'))} · Cloudflare→máy chủ ${giuaP90(cot(v, 'ms_cf_may_chu'))} · máy chủ xử lý ${giuaP90(cot(v, 'ms_app'))}`
+      + ` · chờ trong trình duyệt ${giuaP90(cot(v, 'ms_xep_hang'))}`;
+    dong.push(`<b>Tách đoạn</b> (trình duyệt, giữa / 90%): ${moTa(coDoan)}${tramCF(coDoan) ? ` · trạm Cloudflare: ${esc(tramCF(coDoan))}` : ''}`);
+    const g = gioChamNhat(coDoan, 'ms');
+    if (g) dong.push(`• Giờ chậm nhất ${g.g}h (giữa ${msChu(g.giua)}): ${moTa(g.v)}`);
+  }
+  return dong;
+}
+// -> { dong: [HTML], ds } — số đo máy chủ tự làm mỗi phút trong 24 giờ.
+function thongKeMangMayChu(ms) {
+  const ds = nhatKy.layDoMangMayChu(vn(ms - MOT_NGAY_MS), vn(ms));
+  if (!ds.length) return { dong: [], ds };
+  const soLoi = ds.filter(d => d.loi).length;
+  const moTa = v => `Máy chủ→Cloudflare ${giuaP90(cot(v, 'ms_cf'))} · Cloudflare→máy chủ ${giuaP90(cot(v, 'ms_cf_may_chu'))}`;
+  const dong = [`<b>Máy chủ tự đo mỗi phút</b> (${ds.length} lần, lỗi ${tyLe(soLoi, ds.length)}): ${moTa(ds)}${tramCF(ds) ? ` · trạm Cloudflare: ${esc(tramCF(ds))}` : ''}`];
+  const g = gioChamNhat(ds, 'ms_cf_may_chu');
+  if (g) dong.push(`• Giờ chậm nhất ${g.g}h: ${moTa(g.v)}`);
+  const loiNhieu = new Map();
+  for (const d of ds) if (d.loi) loiNhieu.set(d.loi, (loiNhieu.get(d.loi) || 0) + 1);
+  for (const [l, n] of [...loiNhieu].sort((a, b) => b[1] - a[1]).slice(0, 3)) dong.push(`• ${n}× ${esc(l)}`);
+  return { dong, ds };
+}
+const COT_CSV_MANG_MAY_CHU = ['luc', 'colo', 'ms_dns', 'ms_tcp', 'ms_tls', 'ms_cf', 'ms_cf_may_chu', 'ms_app', 'loi'];
+const taoCsvDoMangMayChu = ds => taoCsv(COT_CSV_MANG_MAY_CHU, ds);
+const COT_CSV_MANG = ['luc', 'nguoi', 'vai_tro', 'xuong', 'trang', 'ms', 'loi', 'loai_mang', 'mbps', 'rtt', 'he_dieu_hanh', 'trinh_duyet', 'may',
+  'ms_cf', 'ms_cf_may_chu', 'ms_app', 'ms_xep_hang', 'ms_ket_noi', 'colo'];
 // CSV có BOM (Excel đọc đúng tiếng Việt); ô bắt đầu bằng = + - @ thêm ' (chống công thức Excel) — cùng quy tắc file Logs_UploadAnh.
 const oCsv = v => `"${String(v ?? '').replace(/^[=+\-@\t\r]/, "'$&").replace(/"/g, '""')}"`;
 const taoCsv = (cot, ds) => '﻿' + [cot.join(','), ...ds.map(r => cot.map(k => oCsv(r[k])).join(','))].join('\r\n');
@@ -336,4 +390,4 @@ async function guiTinDai(guiTinNhan, chat, text, token) {
   return { ok: true };
 }
 
-module.exports = { thongKeTocDo, donSoDoCu, thongKeMang, taoCsvDoMang, taoCsv, danhSachLoiDuLieu, taoFileLoiDuLieu, guiLoiDuLieu, tinhBaoCaoTuan, vanBanBaoCaoTuan, taoBaoCaoTuan, guiTinDai };
+module.exports = { thongKeTocDo, donSoDoCu, thongKeMang, taoCsvDoMang, thongKeMangMayChu, taoCsvDoMangMayChu, taoCsv, danhSachLoiDuLieu, taoFileLoiDuLieu, guiLoiDuLieu, tinhBaoCaoTuan, vanBanBaoCaoTuan, taoBaoCaoTuan, guiTinDai };

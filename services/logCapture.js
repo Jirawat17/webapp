@@ -136,7 +136,8 @@ function ghiLuotApi(req, res, next) {
     const ms = Date.now() - batDau, xong = res.writableFinished, ma = res.statusCode;
     if (xong) ghiThoiGianNeuCanDo(req, ms, ma);
     // Lượt đo mạng (/api/ping) chậm là chuyện của MẠNG, đã lưu chi tiết ở bảng do_mang — không ghi "CHẬM" vào log (mạng yếu sẽ ra hàng loạt dòng).
-    if (ma < 400 && req.originalUrl.startsWith('/api/ping')) return;
+    // Lượt 401 của chính máy chủ tự đo mỗi phút (services/doMangMayChuService.js, User-Agent riêng) cũng không ghi.
+    if (req.originalUrl.startsWith('/api/ping') && (ma < 400 || req.get('user-agent') === 'xuong-theu-do-mang')) return;
     const cham = ms > NGUONG_CHAM_MS;
     if (xong ? (ma < 400 && !cham) : !cham) return;
     const duongDan = req.originalUrl.split('?')[0];

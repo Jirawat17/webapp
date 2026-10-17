@@ -113,6 +113,8 @@ async function guiBaoCao(bayGio = new Date()) {
   if (tocDo.length) dong.push('<b>Tốc độ</b> (số lượt · giữa · 90% lượt nhanh hơn; <i>hôm trước</i>):', ...tocDo);
   const mang = baoCaoVanHanh.thongKeMang(ms);
   dong.push(...mang.dong);
+  const mangMayChu = baoCaoVanHanh.thongKeMangMayChu(ms); // máy chủ tự đo qua Cloudflare mỗi phút (17/10/2026)
+  dong.push(...mangMayChu.dong);
 
   const kqTin = await baoCaoVanHanh.guiTinDai(telegramService.guiTinNhan, ch.chat, dong.join('\n'), token);
   if (!kqTin.ok) return kqTin;
@@ -128,6 +130,10 @@ async function guiBaoCao(bayGio = new Date()) {
   if (mang.ds.length) { // log chi tiết từng lần đo mạng (16/10/2026)
     const kq = await telegramService.guiFile(ch.chat, `DoMang_${tenTheoGio(ms)}.csv`, baoCaoVanHanh.taoCsvDoMang(mang.ds), token);
     if (!kq.ok) dsLoi.push('đo mạng: ' + kq.loi);
+  }
+  if (mangMayChu.ds.length) {
+    const kq = await telegramService.guiFile(ch.chat, `DoMangMayChu_${tenTheoGio(ms)}.csv`, baoCaoVanHanh.taoCsvDoMangMayChu(mangMayChu.ds), token);
+    if (!kq.ok) dsLoi.push('máy chủ đo mạng: ' + kq.loi);
   }
   try {
     const kq = await baoCaoVanHanh.guiLoiDuLieu({ chat: ch.chat, token, guiTinNhan: telegramService.guiTinNhan, guiFile: telegramService.guiFile }, ms);

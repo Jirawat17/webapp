@@ -190,10 +190,24 @@ function veKhungChiTietMang() {
     tdt.loai ? `Loại mạng (trình duyệt báo): ${escapeHtml(tdt.loai)}${tdt.mbps != null ? ` · ~${escapeHtml(String(tdt.mbps))} Mbps` : ''}` : 'Loại mạng: máy này không cho biết',
     a ? `Ảnh tải gần nhất (${escapeHtml(new Date(a.luc).toTimeString().slice(0, 5))}): gửi ${escapeHtml(chuMs(a.msGui))} · ${a.kb}KB${a.kbps ? ` · ${a.kbps} KB/s` : ''}` : '',
     _mang.lanKetNoiDuocCuoi ? `Kết nối được lần cuối: ${escapeHtml(new Date(_mang.lanKetNoiDuocCuoi).toTimeString().slice(0, 8))}` : '',
+    dongTachDoanMang(),
     `<span style="color:var(--color-text-muted)">🟢 &lt; ${MANG.NGUONG_XANH}ms · 🟡 đến ${chuMs(MANG.NGUONG_VANG)} · 🔴 chậm hơn / mất mạng. Đo mỗi ${MANG.CHU_KY_MS / 1000} giây.</span>`,
   ].filter(Boolean);
   khung.innerHTML = dong.join('<br>') + '<div style="margin-top:8px;text-align:right"><button type="button" class="btn-hanh-dong phu" id="nut-do-mang-lai">Đo lại ngay</button></div>';
   khung.querySelector('#nut-do-mang-lai').onclick = e => { e.stopPropagation(); doMangMotLan(true); };
+}
+// Dòng "tách đoạn" của lần đo gần nhất (17/10/2026) — CHỈ superadmin (người dùng chốt). Mỗi đoạn kèm ý nghĩa ngắn để đọc được ngay.
+function dongTachDoanMang() {
+  const d = _mang.doanCuoi;
+  if (!d || (window.__nguoiDung || {}).vaiTro !== 'superadmin') return '';
+  const p = [
+    d.msCF != null ? `Máy → Cloudflare${d.colo ? ` (${escapeHtml(d.colo)})` : ''}: <b>${escapeHtml(chuMs(d.msCF))}</b>` : 'Máy → Cloudflare: không đo được',
+    d.msCFMayChu != null ? `Cloudflare → máy chủ: <b>${escapeHtml(chuMs(d.msCFMayChu))}</b>` : '',
+    d.msApp != null ? `máy chủ xử lý: ${escapeHtml(chuMs(d.msApp))}` : '',
+    d.msXepHang != null ? `chờ trong trình duyệt: ${escapeHtml(chuMs(d.msXepHang))}` : '',
+    d.msKetNoi ? `mở kết nối: ${escapeHtml(chuMs(d.msKetNoi))}` : '',
+  ].filter(Boolean);
+  return `<span style="font-size:13px">Tách đoạn: ${p.join(' · ')}</span>`;
 }
 function moChiTietMang(ev) {
   ev.stopPropagation();
@@ -244,6 +258,42 @@ function themSoDoMang(d) {
   if (_mang.hangDoi.length > 200) _mang.hangDoi.splice(0, _mang.hangDoi.length - 200);
 }
 
+// Tách lần đo theo ĐOẠN (17/10/2026, theo yêu cầu người dùng — speedtest trong nước nhanh nhưng chấm mạng báo chậm: cần biết chậm ở
+// đoạn nào). Dùng Resource Timing của chính lượt gửi (cùng origin nên có đủ mốc):
+//   xepHang  — chờ TRONG trình duyệt trước khi gửi (đang tải trang / ảnh nặng, nhiều tab…), đã trừ DNS + bắt tay kết nối
+//   ketNoi   — DNS + TCP + TLS khi phải mở kết nối mới (0 khi dùng lại kết nối)
+//   cf       — gửi xong -> byte đầu của /cdn-cgi/trace: CHÍNH Cloudflare trả lời, không vào máy chủ = 1 vòng Máy -> Cloudflare
+//   cfMayChu — byte đầu /api/ping (vào tận máy chủ) - cf - app = Cloudflare <-> máy chủ (2 lượt đo cách nhau vài ms -> ước lượng)
+//   app      — máy chủ tự báo thời gian xử lý (header Server-Timing: app;dur=…)
+//   colo     — trạm Cloudflare máy này đang đi qua (HAN/SGN trong nước; SIN/HKG… là ra nước ngoài rồi mới vòng về)
+// Không có Cloudflare phía trước (chạy thử trên máy) -> /cdn-cgi/trace 404 -> thôi đo phần Cloudflare.
+// tuLuc: performance.now() lúc bắt đầu gửi — chỉ nhận mục của CHÍNH lượt này (mục có thể chưa kịp vào bộ đệm -> không lấy nhầm lượt trước).
+const _mocDoMang = (url, tuLuc) => {
+  const ds = performance.getEntriesByType ? performance.getEntriesByType('resource').filter(e => e.name.endsWith(url) && e.startTime >= tuLuc - 1) : [];
+  const e = ds[ds.length - 1];
+  if (!e || !e.requestStart || !e.responseStart) return null;
+  const ketNoi = Math.max(0, (e.connectEnd - e.connectStart) || 0) + Math.max(0, (e.domainLookupEnd - e.domainLookupStart) || 0);
+  return { ttfb: Math.round(e.responseStart - e.requestStart), ketNoi: Math.round(ketNoi), xepHang: Math.max(0, Math.round(e.requestStart - e.startTime - ketNoi)) };
+};
+let _khongCoCloudflare = false;
+async function doDoanCloudflare() {
+  if (_khongCoCloudflare) return null;
+  const huy = new AbortController();
+  const hen = setTimeout(() => huy.abort(), MANG.HAN_MS);
+  const t0 = performance.now();
+  try {
+    const res = await fetch('/cdn-cgi/trace', { cache: 'no-store', credentials: 'omit', signal: huy.signal });
+    const chu = await res.text();
+    if (!res.ok || !/colo=/.test(chu)) { _khongCoCloudflare = true; return null; }
+    const moc = _mocDoMang('/cdn-cgi/trace', t0);
+    return { cf: moc ? moc.ttfb : Math.round(performance.now() - t0), colo: ((chu.match(/colo=([A-Z]+)/) || [])[1] || '') };
+  } catch (e) {
+    return null;
+  } finally {
+    clearTimeout(hen);
+  }
+}
+
 // 1 lần đo. Gửi KÈM các lần đo trước còn chờ (log chi tiết); gửi lỗi thì giữ lại cho lần sau (tối đa 200 lần đo).
 async function doMangMotLan(batBuoc = false) {
   if (_mang.dangDo || (document.hidden && !batBuoc)) return;
@@ -256,10 +306,14 @@ async function doMangMotLan(batBuoc = false) {
   const goi = !_mang.dangGuiHangDoi && _mang.hangDoi.length <= 5 ? _mang.hangDoi.splice(0) : [];
   const tdt = thongTinMangTrinhDuyet();
   const t0 = performance.now();
-  let ms = null, loi = '';
+  let ms = null, loi = '', moc = null, app = null;
   try {
     const res = await guiDoMang(goi);
     ms = Math.round(performance.now() - t0);
+    // Mốc thời gian (Resource Timing) chỉ có sau khi nhận HẾT phản hồi -> đọc hết rồi mới lấy (ms đã chốt lúc có header ở trên).
+    await res.text().catch(() => {});
+    moc = _mocDoMang(API + '/ping', t0) || (await new Promise(r => setTimeout(r, 0)), _mocDoMang(API + '/ping', t0));
+    app = Number(((res.headers.get('Server-Timing') || '').match(/app;dur=([\d.]+)/) || [])[1]);
     if (!res.ok && res.status >= 500) { loi = `máy chủ lỗi ${res.status}`; ms = null; }
     if (ms != null) _mang.lanKetNoiDuocCuoi = Date.now();
     // 401 (hết phiên): máy chủ KHÔNG lưu khi chưa đăng nhập -> giữ lại số đo, gửi khi đăng nhập lại (tối đa 200 lần đo); rời trang lúc
@@ -271,7 +325,16 @@ async function doMangMotLan(batBuoc = false) {
     loi = navigator.onLine === false ? 'không có mạng' : (e && (e.name === 'AbortError' || e.name === 'TimeoutError')) ? `quá ${MANG.HAN_MS / 1000} giây` : 'lỗi mạng';
     _mang.hangDoi.unshift(...goi);
   }
-  themSoDoMang({ ms, loi, loai: tdt.loai || '', mbps: tdt.mbps ?? null, rtt: tdt.rtt ?? null });
+  // Đoạn Cloudflare đo SAU lượt ping (kể cả khi ping lỗi: Cloudflare vẫn trả lời được mà máy chủ thì không -> lỗi ở đoạn sau Cloudflare).
+  const cf = navigator.onLine === false ? null : await doDoanCloudflare();
+  const appMs = Number.isFinite(app) ? Math.round(app) : null;
+  const doan = {
+    msCF: cf ? cf.cf : null, colo: cf ? cf.colo : '', msApp: appMs,
+    msXepHang: moc ? moc.xepHang : null, msKetNoi: moc ? moc.ketNoi : null,
+    msCFMayChu: ms != null && moc && cf ? Math.max(0, moc.ttfb - cf.cf - (appMs || 0)) : null,
+  };
+  _mang.doanCuoi = { ...doan, ms, luc: Date.now() };
+  themSoDoMang({ ms, loi, loai: tdt.loai || '', mbps: tdt.mbps ?? null, rtt: tdt.rtt ?? null, ...doan });
   _mang.ganDay.push({ ms, loi });
   if (_mang.ganDay.length > 10) _mang.ganDay.shift();
   _mang.soLanYeuLienTiep = ms != null && ms > MANG.NGUONG_VANG ? _mang.soLanYeuLienTiep + 1 : 0;
@@ -317,6 +380,12 @@ function layLaiSoDoMangDaCat() {
 function batDauDoMang() {
   if (_mang.daBat) { capNhatHienThiMang(); return; } // renderNav gọi lại -> chỉ vẽ lại chấm
   _mang.daBat = true;
+  // Bộ đệm Resource Timing mặc định 250 mục: trang nhiều ảnh dễ đầy -> lượt đo không còn mốc thời gian để tách đoạn. Đầy thì xoá (chỉ
+  // phần đo mạng đọc bộ đệm này).
+  try {
+    if (performance.setResourceTimingBufferSize) performance.setResourceTimingBufferSize(1000);
+    performance.addEventListener('resourcetimingbufferfull', () => performance.clearResourceTimings());
+  } catch (e) { /* trình duyệt cũ */ }
   layLaiSoDoMangDaCat();
   doMangMotLan();
   setInterval(() => doMangMotLan(), MANG.CHU_KY_MS);

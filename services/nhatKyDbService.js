@@ -436,6 +436,14 @@ function danhDauDaXuLy({ loai, khoa, giaTri, nguoi, luc, ghiChu = '' }) {
   db.prepare(`INSERT OR REPLACE INTO canh_bao_da_xu_ly (loai, khoa, gia_tri, nguoi, luc, ghi_chu) VALUES (?, ?, ?, ?, ?, ?)`)
     .run(loai, khoa, String(giaTri ?? ''), nguoi || '', luc, ghiChu || '');
 }
+// Xoá các lần "Đã xử lý" của 1 loại mà khoá KHÔNG còn trong danh sách hiện tại (17/10/2026 — DonNhieuAo: nhóm hết lỗi / đổi khoá thì bản
+// ghi cũ không bao giờ dùng lại). dsKhoaConDung: Set khoá đang có (tính trên TOÀN BỘ đơn, không theo phạm vi Xưởng của người xem). -> số đã xoá
+function donDaXuLyKhongConDung(loai, dsKhoaConDung) {
+  const cauXoa = db.prepare(`DELETE FROM canh_bao_da_xu_ly WHERE loai = ? AND khoa = ?`);
+  let n = 0;
+  for (const khoa of layDaXuLy(loai).keys()) if (!dsKhoaConDung.has(khoa)) n += cauXoa.run(loai, khoa).changes;
+  return n;
+}
 function layDaXuLy(loai) {
   return new Map(db.prepare(`SELECT * FROM canh_bao_da_xu_ly WHERE loai = ?`).all(loai).map(r => [r.khoa, r]));
 }
@@ -585,18 +593,36 @@ db.exec(`CREATE TABLE IF NOT EXISTS do_mang (
   he_dieu_hanh TEXT NOT NULL DEFAULT '', trinh_duyet TEXT NOT NULL DEFAULT '', may TEXT NOT NULL DEFAULT ''
 )`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_do_mang_luc ON do_mang(luc)`);
+// Tách đoạn (17/10/2026, public/js/api.js#doMangMotLan): ms_cf = 1 vòng Máy -> Cloudflare; ms_cf_may_chu = Cloudflare <-> máy chủ (ước lượng);
+// ms_app = máy chủ xử lý; ms_xep_hang = chờ trong trình duyệt; ms_ket_noi = mở kết nối mới; colo = trạm Cloudflare (HAN/SGN/SIN...).
+const COT_DO_MANG_DOAN = { ms_cf: 'INTEGER', ms_cf_may_chu: 'INTEGER', ms_app: 'INTEGER', ms_xep_hang: 'INTEGER', ms_ket_noi: 'INTEGER', colo: "TEXT NOT NULL DEFAULT ''" };
+const cotDoMangDaCo = db.prepare(`PRAGMA table_info(do_mang)`).all().map(c => c.name);
+for (const [cot, kieu] of Object.entries(COT_DO_MANG_DOAN)) if (!cotDoMangDaCo.includes(cot)) db.exec(`ALTER TABLE do_mang ADD COLUMN ${cot} ${kieu}`);
 const ghiNhieuDoMang = db.transaction(ds => {
-  const st = db.prepare(`INSERT INTO do_mang (luc, nguoi, vai_tro, xuong, trang, ms, loi, loai_mang, mbps, rtt, he_dieu_hanh, trinh_duyet, may)
-    VALUES (@luc, @nguoi, @vaiTro, @xuong, @trang, @ms, @loi, @loaiMang, @mbps, @rtt, @heDieuHanh, @trinhDuyet, @may)`);
-  for (const d of ds) st.run(d);
+  const st = db.prepare(`INSERT INTO do_mang (luc, nguoi, vai_tro, xuong, trang, ms, loi, loai_mang, mbps, rtt, he_dieu_hanh, trinh_duyet, may,
+      ms_cf, ms_cf_may_chu, ms_app, ms_xep_hang, ms_ket_noi, colo)
+    VALUES (@luc, @nguoi, @vaiTro, @xuong, @trang, @ms, @loi, @loaiMang, @mbps, @rtt, @heDieuHanh, @trinhDuyet, @may,
+      @msCF, @msCFMayChu, @msApp, @msXepHang, @msKetNoi, @colo)`);
+  for (const d of ds) st.run({ msCF: null, msCFMayChu: null, msApp: null, msXepHang: null, msKetNoi: null, colo: '', ...d });
 });
+// Máy chủ tự đo mỗi phút (17/10/2026, services/doMangMayChuService.js) — VPS -> Cloudflare -> (vòng lại) máy chủ, độc lập người dùng.
+db.exec(`CREATE TABLE IF NOT EXISTS do_mang_may_chu (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, luc TEXT NOT NULL, colo TEXT NOT NULL DEFAULT '',
+  ms_dns INTEGER, ms_tcp INTEGER, ms_tls INTEGER, ms_cf INTEGER, ms_cf_may_chu INTEGER, ms_app INTEGER, loi TEXT NOT NULL DEFAULT ''
+)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_do_mang_may_chu_luc ON do_mang_may_chu(luc)`);
+const cauGhiDoMangMayChu = db.prepare(`INSERT INTO do_mang_may_chu (luc, colo, ms_dns, ms_tcp, ms_tls, ms_cf, ms_cf_may_chu, ms_app, loi)
+  VALUES (@luc, @colo, @msDns, @msTcp, @msTls, @msCF, @msCFMayChu, @msApp, @loi)`);
+const ghiDoMangMayChu = d => cauGhiDoMangMayChu.run({ colo: '', msDns: null, msTcp: null, msTls: null, msCF: null, msCFMayChu: null, msApp: null, loi: '', ...d });
+const layDoMangMayChu = (tuLuc, denLuc) => db.prepare(`SELECT * FROM do_mang_may_chu WHERE luc >= ? AND luc < ? ORDER BY luc`).all(tuLuc, denLuc);
+const xoaDoMangMayChuTruoc = luc => db.prepare(`DELETE FROM do_mang_may_chu WHERE luc < ?`).run(luc).changes;
 const layDoMang = (tuLuc, denLuc) => db.prepare(`SELECT * FROM do_mang WHERE luc >= ? AND luc < ? ORDER BY luc`).all(tuLuc, denLuc);
 const xoaDoMangTruoc = luc => db.prepare(`DELETE FROM do_mang WHERE luc < ?`).run(luc).changes;
 const layQcLogTrongKhoang = (tuLuc, denLuc) => db.prepare(`SELECT STT_Key, LoaiQc, KetQua FROM qc_log WHERE ThoiGian >= ? AND ThoiGian < ? AND CheDo != 'TEST'`).all(tuLuc, denLuc);
 
 module.exports = {
-  ghiThoiGianApi, layThoiGianApi, xoaThoiGianApiTruoc, layDoLogsUploadAnh, layQcLogTrongKhoang, ghiNhieuDoMang, layDoMang, xoaDoMangTruoc,
-  ghiNhieuLogsUploadAnh, dsLogsUploadAnh, duyetTongHopLogsUploadAnh, danhDauDaXuLy, layDaXuLy, themDonCanCheck, suaDonCanCheck, danhDauDaCheck, layDonCanCheck, themBaoLoi, ganAnhBaoLoi, demBaoLoiTu, layBaoLoi, dsBaoLoi, capNhatBaoLoi,
+  ghiThoiGianApi, layThoiGianApi, xoaThoiGianApiTruoc, layDoLogsUploadAnh, layQcLogTrongKhoang, ghiNhieuDoMang, layDoMang, xoaDoMangTruoc, ghiDoMangMayChu, layDoMangMayChu, xoaDoMangMayChuTruoc,
+  ghiNhieuLogsUploadAnh, dsLogsUploadAnh, duyetTongHopLogsUploadAnh, danhDauDaXuLy, layDaXuLy, donDaXuLyKhongConDung, themDonCanCheck, suaDonCanCheck, danhDauDaCheck, layDonCanCheck, themBaoLoi, ganAnhBaoLoi, demBaoLoiTu, layBaoLoi, dsBaoLoi, capNhatBaoLoi,
   layNote, layDanhSachNote, layTatCaTheNote, taoNote, suaNote, datAnhNote, xoaNote,
   ghiQcLog, layQcLog, layQcLogTheoId, danhGiaQcLog, thongKeDanhGiaQc, thongKeTokenQc, layDongDaDanhGiaCoAi, maxQcLogId, layCclSauId, tongKetQcNgay,
   taoKinhNghiem, suaKinhNghiem, doiTrangThaiKinhNghiem, layKinhNghiemTheoId, layDanhSachKinhNghiem, layKinhNghiemApDung, tangSoLanDungKinhNghiem, giuQuyenAutoQc, ketThucAutoQc, layTatCaAutoQc, donDepAutoQcDangChay,
