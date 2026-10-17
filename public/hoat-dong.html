@@ -46,6 +46,16 @@
     </div>
   </div>
 
+  <!-- Biểu đồ "Tất cả mọi người" (17/10/2026, theo yêu cầu người dùng — chỉ admin/superadmin): mỗi người 1 đường, dùng chung bộ chọn
+       thời gian ở trên; trục thời gian tự động (1 ngày theo giờ, tới 62 ngày theo ngày, dài hơn theo tuần). -->
+  <div id="khoi-bieu-do" style="display:none">
+    <p id="mo-ta-bieu-do" style="color:var(--color-text-muted);margin:0 0 12px"></p>
+    <div class="chart-card" style="margin-bottom:var(--space-4)"><h3 style="margin-top:0">Vẽ file — số file đã vẽ</h3><canvas id="bd-ve-file"></canvas></div>
+    <div class="chart-card" style="margin-bottom:var(--space-4)"><h3 style="margin-top:0">Sản xuất — lượt đổi trạng thái</h3><canvas id="bd-doi-trang-thai"></canvas></div>
+    <div class="chart-card" style="margin-bottom:var(--space-4)"><h3 style="margin-top:0">Sản xuất — số đơn chạy máy xong</h3><canvas id="bd-chay-may-xong"></canvas></div>
+  </div>
+
+  <div id="khoi-ca-nhan">
   <div id="khoi-chi-tieu-vai-tro" style="display:none">
     <h3 style="margin-top:0">Chỉ tiêu công việc</h3>
     <div id="the-chi-tieu-vai-tro" class="thong-ke-nhanh"></div>
@@ -81,6 +91,7 @@
     <h3>Ảnh đã upload</h3>
     <div id="ds-upload-anh" class="timeline"></div>
   </div>
+  </div><!-- /khoi-ca-nhan -->
 </div>
 
 <script src="/js/icons.js?v=106"></script>
@@ -111,7 +122,7 @@ const NHAN_MOC_ANH = { mau: 'Ảnh mẫu (PNG)', mockup: 'Ảnh Mockup', ve_file
         const dsChoChon = dsNhanVien.filter(u => String(u.KichHoat).toUpperCase() === 'TRUE' && u.Ten !== user.ten);
         document.getElementById('khoi-chon-nguoi').style.display = 'flex';
         const chon = document.getElementById('chon-nguoi-xem');
-        chon.innerHTML = '<option value="">Chính tôi (Admin)</option>' +
+        chon.innerHTML = '<option value="">Chính tôi (Admin)</option><option value="__TAT_CA__">Tất cả mọi người (biểu đồ)</option>' +
           dsChoChon.map(u => `<option value="${escapeHtml(u.Ten)}">${escapeHtml(u.Ten)} (${escapeHtml(NHAN_VAI_TRO[u.VaiTro] || u.VaiTro)})</option>`).join('');
         chon.onchange = () => { nguoiDangXem = chon.value; taiHoatDong(); };
       } catch (e) { /* không tải được danh sách nhân viên — ẩn ô chọn, admin vẫn xem được hoạt động chính mình */ }
@@ -168,11 +179,8 @@ function tsDep(isoStr) {
   return `${fmt(vn.getDate())}-${fmt(vn.getMonth()+1)} ${fmt(vn.getHours())}:${fmt(vn.getMinutes())}:${fmt(vn.getSeconds())}`;
 }
 
-async function taiHoatDong() {
-  document.getElementById('thong-ke-nhanh').textContent = 'Đang tải...';
-
-  const qs = new URLSearchParams();
-  if (nguoiDangXem) qs.set('nguoiDung', nguoiDangXem);
+// Khoảng thời gian đang chọn -> tuNgay/denNgay (dùng chung cho hoạt động 1 người và biểu đồ mọi người).
+function datKhoangThoiGian(qs) {
   if (kyHienTai === 'tuy_chon') {
     const tu = document.getElementById('hd-tu-ngay').value;
     const den = document.getElementById('hd-den-ngay').value;
@@ -185,6 +193,20 @@ async function taiHoatDong() {
       qs.set('denNgay', dinhDangYMD(khoang.den));
     }
   }
+  return qs;
+}
+
+const XEM_TAT_CA = '__TAT_CA__';
+async function taiHoatDong() {
+  const laTatCa = nguoiDangXem === XEM_TAT_CA;
+  document.getElementById('khoi-ca-nhan').style.display = laTatCa ? 'none' : '';
+  document.getElementById('khoi-bieu-do').style.display = laTatCa ? '' : 'none';
+  if (laTatCa) return taiBieuDo();
+  document.getElementById('thong-ke-nhanh').textContent = 'Đang tải...';
+
+  const qs = new URLSearchParams();
+  if (nguoiDangXem) qs.set('nguoiDung', nguoiDangXem);
+  datKhoangThoiGian(qs);
 
   let data;
   try {
@@ -216,6 +238,62 @@ async function taiHoatDong() {
   renderDsQuetBiTuChoi(data.quetBiTuChoi);
   renderDsDoiTrangThai(data.doiTrangThai);
   renderDsUploadAnh(data.uploadAnh);
+}
+
+// ---------- Biểu đồ "Tất cả mọi người" (17/10/2026) ----------
+// Chart.js tải KHI CẦN (chỉ admin chọn "Tất cả mọi người") — trang của nhân viên không phải tải thêm thư viện. Ghim phiên bản.
+let _taiChartJs = null;
+function taiChartJs() {
+  if (window.Chart) return Promise.resolve();
+  if (!_taiChartJs) _taiChartJs = new Promise((xong, loi) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js';
+    s.onload = xong; s.onerror = () => { _taiChartJs = null; loi(new Error('Không tải được thư viện biểu đồ')); };
+    document.head.appendChild(s);
+  });
+  return _taiChartJs;
+}
+const MAU_DUONG = ['#e11d48', '#2563eb', '#16a34a', '#d97706', '#7c3aed', '#0891b2', '#db2777', '#65a30d', '#ea580c', '#4f46e5', '#0d9488', '#a16207'];
+const NHAN_DON_VI = { gio: 'theo giờ', ngay: 'theo ngày', tuan: 'theo tuần (bắt đầu thứ Hai)' };
+const _bieuDo = {};
+function veDuong(idCanvas, nhan, dsDuong) {
+  if (_bieuDo[idCanvas]) _bieuDo[idCanvas].destroy();
+  const canvas = document.getElementById(idCanvas);
+  const mauChu = getComputedStyle(document.documentElement).getPropertyValue('--color-text-muted').trim() || '#666';
+  _bieuDo[idCanvas] = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: nhan,
+      datasets: dsDuong.map((d, i) => ({
+        label: `${d.ten} (${d.so.reduce((a, b) => a + b, 0)})`, data: d.so,
+        borderColor: MAU_DUONG[i % MAU_DUONG.length], backgroundColor: MAU_DUONG[i % MAU_DUONG.length],
+        tension: 0.25, cubicInterpolationMode: 'monotone', pointRadius: 2, borderWidth: 2, // monotone: đường cong không vọt xuống dưới 0
+      })),
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { position: 'bottom', labels: { color: mauChu, boxWidth: 12 } } }, // bấm tên ở chú thích để ẩn/hiện đường
+      scales: { x: { ticks: { color: mauChu } }, y: { beginAtZero: true, ticks: { color: mauChu, precision: 0 } } },
+    },
+  });
+  canvas.parentElement.style.height = '320px';
+}
+async function taiBieuDo() {
+  document.getElementById('tieu-de-hoat-dong').textContent = 'Hoạt động của tất cả mọi người';
+  const moTa = document.getElementById('mo-ta-bieu-do');
+  moTa.textContent = 'Đang tải...';
+  document.getElementById('mo-ta-hoat-dong').textContent = 'Mỗi người 1 đường — bấm tên ở chú thích dưới biểu đồ để ẩn/hiện. Số trong ngoặc là tổng cả khoảng thời gian.';
+  try {
+    const [data] = await Promise.all([apiFetch('/hoat-dong/bieu-do?' + datKhoangThoiGian(new URLSearchParams()).toString()), taiChartJs()]);
+    if (nguoiDangXem !== XEM_TAT_CA) return; // đã đổi lựa chọn trong lúc tải
+    moTa.textContent = `Từ ${data.tuNgay.split('-').reverse().join('/')} đến ${data.denNgay.split('-').reverse().join('/')} · ${NHAN_DON_VI[data.donVi]}`
+      + (data.veFile.length + data.doiTrangThai.length ? '' : ' · không có người vẽ file / sản xuất nào thuộc Xưởng bạn phụ trách');
+    veDuong('bd-ve-file', data.nhan, data.veFile);
+    veDuong('bd-doi-trang-thai', data.nhan, data.doiTrangThai);
+    veDuong('bd-chay-may-xong', data.nhan, data.chayMayXong);
+  } catch (e) {
+    moTa.textContent = 'Không tải được biểu đồ: ' + e.message;
+  }
 }
 
 // Chỉ tiêu công việc theo vai trò (bổ sung 08/09/2026, xem

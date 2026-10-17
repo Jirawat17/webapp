@@ -174,7 +174,26 @@ async function layHoatDongCuaToi({ nguoiDung, tuNgay, denNgay, nguoiXem, locDon 
   const rows = nhatKyDbService.layTatCaLichSuHoatDong();
   const cuaToi = rows.filter(r => r.NguoiDung === nguoiDung && trongKhoangThoiGian(r.ThoiGian, tuNgay, denNgay)
     && (!locDon || locDon(r.STT_Key)));
+  const { quet, doiTrangThai, uploadAnh, quetBiTuChoi, truKhoPhoi } = phanLoaiHoatDong(cuaToi);
 
+  // Toàn bộ thao tác (bổ sung 27/09/2026, theo yêu cầu người dùng) — MỌI hành động của người này trong khoảng
+  // thời gian, mới nhất trước, kèm mô tả đầy đủ "trước -> sau" (menu "Lịch sử", phần "Toàn bộ thao tác").
+  const toanBo = ganMoTa(cuaToi, nguoiXem).sort((a, b) => new Date(b.ThoiGian) - new Date(a.ThoiGian));
+
+  return {
+    toanBo,
+    tongSoQuet: quet.length,
+    tongSoDoiTrangThai: doiTrangThai.length,
+    tongSoUpload: uploadAnh.length,
+    tongSoQuetBiTuChoi: quetBiTuChoi.length,
+    tongSoLuongPhoiDaLay: truKhoPhoi.reduce((tong, x) => tong + x.soLuong, 0),
+    quet, doiTrangThai, uploadAnh, truKhoPhoi, quetBiTuChoi,
+  };
+}
+
+// Phân loại các dòng LichSuHoatDong của 1 người thành quét / đổi trạng thái / upload ảnh... (tách 17/10/2026 khỏi
+// layHoatDongCuaToi để biểu đồ "Tất cả mọi người" — bieuDoHoatDongNhom — đếm ĐÚNG cùng quy tắc). Mỗi mảng mới nhất trước.
+function phanLoaiHoatDong(cuaToi) {
   const quet = [];
   const doiTrangThai = [];
   const uploadAnh = [];
@@ -243,19 +262,75 @@ async function layHoatDongCuaToi({ nguoiDung, tuNgay, denNgay, nguoiXem, locDon 
   uploadAnh.sort(moiNhatTruoc);
   truKhoPhoi.sort(moiNhatTruoc);
   quetBiTuChoi.sort(moiNhatTruoc);
+  return { quet, doiTrangThai, uploadAnh, quetBiTuChoi, truKhoPhoi };
+}
 
-  // Toàn bộ thao tác (bổ sung 27/09/2026, theo yêu cầu người dùng) — MỌI hành động của người này trong khoảng
-  // thời gian, mới nhất trước, kèm mô tả đầy đủ "trước -> sau" (menu "Lịch sử", phần "Toàn bộ thao tác").
-  const toanBo = ganMoTa(cuaToi, nguoiXem).sort((a, b) => new Date(b.ThoiGian) - new Date(a.ThoiGian));
-
+// Biểu đồ "Tất cả mọi người" ở menu Lịch sử (17/10/2026, theo yêu cầu người dùng — admin/superadmin). Mỗi người 1 đường:
+//   veFile      — người VẼ FILE: số file đã vẽ (đơn chuyển "Đã vẽ file", mỗi đơn đếm 1 lần ở lần đầu) — cùng quy tắc chỉ tiêu "File đã vẽ"
+//   doiTrangThai — người SẢN XUẤT: mọi lượt đổi trạng thái (cùng danh sách "Đổi trạng thái đơn" của trang)
+//   chayMayXong — người SẢN XUẤT: số đơn chạy máy xong (ảnh "đã sản xuất", mỗi đơn 1 lần) — cùng chỉ tiêu "Đơn đã chạy máy"
+// Trục thời gian TỰ ĐỘNG (người dùng chốt): 1 ngày -> theo giờ; tới 62 ngày -> theo ngày; dài hơn -> theo tuần (bắt đầu thứ Hai).
+// Giờ / ngày tính theo giờ Việt Nam. dsNguoi: [{ ten, vaiTro }]; locDon như layHoatDongCuaToi.
+const MOT_NGAY_MS = 86400000;
+const ngayVN = d => new Date(d.getTime() + 7 * 3600000).toISOString().slice(0, 10); // 'YYYY-MM-DD' theo giờ VN
+const soNgay = s => Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10)) / MOT_NGAY_MS;
+const tuNgaySo = n => new Date(n * MOT_NGAY_MS).toISOString().slice(0, 10);
+function bieuDoHoatDongNhom({ dsNguoi, tuNgay, denNgay, locDon = null, bayGio = new Date() }) {
+  const theoTen = new Map(dsNguoi.map(n => [n.ten, []]));
+  for (const r of nhatKyDbService.layTatCaLichSuHoatDong()) {
+    const ds = theoTen.get(r.NguoiDung);
+    if (ds && trongKhoangThoiGian(r.ThoiGian, tuNgay, denNgay) && (!locDon || locDon(r.STT_Key))) ds.push(r);
+  }
+  // Sự kiện (thời điểm) theo người + chỉ số
+  const lanDauTheoDon = (list, dk) => { // mỗi đơn 1 lần — lấy lần SỚM nhất trong khoảng
+    const m = new Map();
+    for (const x of list) if (dk(x) && (!m.has(x.sttKey) || x.thoiGian < m.get(x.sttKey))) m.set(x.sttKey, x.thoiGian);
+    return [...m.values()];
+  };
+  const suKien = dsNguoi.map(n => {
+    const hd = phanLoaiHoatDong(theoTen.get(n.ten));
+    return {
+      ten: n.ten, vaiTro: n.vaiTro,
+      veFile: lanDauTheoDon(hd.doiTrangThai, x => x.cot === 'TRANG_THAI_VE_FILE' && x.sang === 'Đã vẽ file'),
+      doiTrangThai: hd.doiTrangThai.map(x => x.thoiGian),
+      chayMayXong: lanDauTheoDon(hd.uploadAnh, x => x.moc === 'da_san_xuat'),
+    };
+  });
+  // Khoảng ngày: theo bộ lọc; "Toàn bộ" (không có tuNgay) -> từ sự kiện sớm nhất
+  // reduce thay vì Math.min(...) — "Toàn bộ" có thể rất nhiều mốc, spread quá lớn sẽ lỗi RangeError
+  const somNhat = suKien.flatMap(s => [...s.veFile, ...s.doiTrangThai, ...s.chayMayXong])
+    .reduce((min, t) => { const ms = new Date(t).getTime(); return ms < min ? ms : min; }, Infinity);
+  const homNay = ngayVN(bayGio);
+  const tu = /^\d{4}-\d{2}-\d{2}$/.test(tuNgay || '') ? tuNgay : (somNhat < Infinity ? ngayVN(new Date(somNhat)) : homNay);
+  let den = /^\d{4}-\d{2}-\d{2}$/.test(denNgay || '') ? denNgay : homNay;
+  if (den > homNay && tu <= homNay) den = homNay; // "Tuần này"/"Tháng này": không vẽ các ngày chưa tới (toàn số 0, dễ hiểu nhầm)
+  const nTu = soNgay(tu), nDen = Math.max(soNgay(den), nTu);
+  const soNgayKhoang = nDen - nTu + 1;
+  const donVi = soNgayKhoang === 1 ? 'gio' : soNgayKhoang <= 62 ? 'ngay' : 'tuan';
+  const nThuHaiDau = nTu - ((new Date(nTu * MOT_NGAY_MS).getUTCDay() + 6) % 7); // thứ Hai của tuần chứa ngày đầu
+  const nhan = [];
+  if (donVi === 'gio') for (let h = 0; h < 24; h++) nhan.push(`${h}h`);
+  else if (donVi === 'ngay') for (let n = nTu; n <= nDen; n++) { const s = tuNgaySo(n); nhan.push(`${+s.slice(8, 10)}/${+s.slice(5, 7)}`); }
+  else for (let n = nThuHaiDau; n <= nDen; n += 7) { const s = tuNgaySo(n); nhan.push(`Tuần ${+s.slice(8, 10)}/${+s.slice(5, 7)}`); }
+  const viTri = t => {
+    const d = new Date(t);
+    if (isNaN(d)) return -1;
+    const vn = new Date(d.getTime() + 7 * 3600000);
+    if (donVi === 'gio') return vn.getUTCHours();
+    const n = soNgay(vn.toISOString().slice(0, 10));
+    return donVi === 'ngay' ? n - nTu : Math.floor((n - nThuHaiDau) / 7);
+  };
+  const dem = ds => {
+    const so = new Array(nhan.length).fill(0);
+    for (const t of ds) { const i = viTri(t); if (i >= 0 && i < so.length) so[i]++; }
+    return so;
+  };
+  const duong = (vaiTro, k) => suKien.filter(s => s.vaiTro === vaiTro).map(s => ({ ten: s.ten, so: dem(s[k]) }));
   return {
-    toanBo,
-    tongSoQuet: quet.length,
-    tongSoDoiTrangThai: doiTrangThai.length,
-    tongSoUpload: uploadAnh.length,
-    tongSoQuetBiTuChoi: quetBiTuChoi.length,
-    tongSoLuongPhoiDaLay: truKhoPhoi.reduce((tong, x) => tong + x.soLuong, 0),
-    quet, doiTrangThai, uploadAnh, truKhoPhoi, quetBiTuChoi,
+    donVi, tuNgay: tu, denNgay: den, nhan,
+    veFile: duong('ve_file', 'veFile'),
+    doiTrangThai: duong('san_xuat', 'doiTrangThai'),
+    chayMayXong: duong('san_xuat', 'chayMayXong'),
   };
 }
 
@@ -298,5 +373,5 @@ function tinhChiTieuCongViec(hoatDong, slTheoStt) {
 
 module.exports = {
   ghiLog, ghiLogNhieu, layLichSuTheoDon, ghiNhatKyQuetHangLoat, layHoatDongGanDay, layLichSuChuyenSangTrangThai,
-  layHoatDongCuaToi, tinhChiTieuCongViec, trongKhoangThoiGian,
+  layHoatDongCuaToi, tinhChiTieuCongViec, trongKhoangThoiGian, bieuDoHoatDongNhom,
 };

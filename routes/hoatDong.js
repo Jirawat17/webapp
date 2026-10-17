@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { layHoatDongCuaToi, tinhChiTieuCongViec } = require('../services/logService');
+const { layHoatDongCuaToi, tinhChiTieuCongViec, bieuDoHoatDongNhom } = require('../services/logService');
 const orderService = require('../services/orderService');
 const taiKhoanService = require('../services/taiKhoanService');
 const { requireLogin, laAdmin } = require('../middleware/auth');
@@ -43,6 +43,20 @@ router.get('/cua-toi', async (req, res) => {
   ketQua.chiTieu = tinhChiTieuCongViec(ketQua, slTheoStt);
 
   res.json(ketQua);
+});
+
+// Biểu đồ "Tất cả mọi người" (17/10/2026, theo yêu cầu người dùng) — CHỈ admin/superadmin. Người vẽ file + người sản xuất đang hoạt động
+// thuộc Xưởng người xem phụ trách (superadmin: tất cả), chỉ tính việc trên đơn thuộc Xưởng đó — cùng phạm vi ô "Xem hoạt động của".
+router.get('/bieu-do', (req, res) => {
+  const nguoiGoi = req.session.user;
+  if (!laAdmin(nguoiGoi.vaiTro)) return res.status(403).json({ error: 'Chỉ admin xem được biểu đồ của mọi người' });
+  const trongPhamVi = taiKhoanService.phamViNhanVien(nguoiGoi);
+  const dsNguoi = taiKhoanService.layTatCa()
+    .filter(r => String(r.KichHoat).toUpperCase() === 'TRUE' && ['ve_file', 'san_xuat'].includes(r.VaiTro) && trongPhamVi(r.Xuong))
+    .map(r => ({ ten: r.Ten, vaiTro: r.VaiTro }))
+    .sort((a, b) => a.ten.localeCompare(b.ten));
+  const { tuNgay, denNgay } = req.query;
+  res.json(bieuDoHoatDongNhom({ dsNguoi, tuNgay, denNgay, locDon: orderService.phamViDon(nguoiGoi) }));
 });
 
 module.exports = router;
