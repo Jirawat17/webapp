@@ -156,6 +156,7 @@ function renderBangThongTin(don, viTri) {
   if (user.vaiTro === 'san_xuat') {
     return `
       ${dongGhiChu(don)}
+      <tr><td><strong>Vị trí thêu</strong></td><td>${don.ViTriTheu?.length ? `<strong>${viTri}</strong>` : viTri}</td></tr>
       <tr><td>Số lượng</td><td>${escapeHtml(don.SO_LUONG || '')} ${don.SO_LUONG_AO_TREN_DON ? `(áo trên đơn: ${escapeHtml(don.SO_LUONG_AO_TREN_DON)})` : ''}</td></tr>
       <tr><td>Ngày lên đơn</td><td>${don.NGAY_LEN_DON ? dinhDangNgay(don.NGAY_LEN_DON) : ''}</td></tr>`;
   }

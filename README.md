@@ -49,7 +49,7 @@ Các tab `Nhan_Vien`, `QuetMa`, `Chatbot`, `B0_Chuan_Bi_Phoi_Ao`, `DATANEW_VIP3`
 | `DUONG_DAN_URL` | Ảnh mẫu / thiết kế gốc |
 | `MOCKUP` | Ảnh mockup thêu |
 | `LOAI`, `KICH_THUOC`, `MAU_SAC` | Loại áo / kích thước / màu — app tự ghép thành tiêu đề hiển thị |
-| `VI_TRI_1`, `VI_TRI_2`, `VI_TRI_3` | Vị trí thêu |
+| `VI_TRI_1` | Vị trí thêu (app chỉ đọc cột này — `VI_TRI_2`/`VI_TRI_3` không còn dùng) |
 | `SO_LUONG`, `SO_LUONG_AO_TREN_DON` | Số lượng |
 | `GHI_CHU` | Ghi chú xưởng — mọi vai trò đều sửa được |
 | `TEN`, `SDT` | Tên & SĐT người nhận |

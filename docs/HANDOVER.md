@@ -318,7 +318,7 @@ Menu theo vai trò (`public/js/api.js#renderNav`): nguoi_lay_phoi (Quét QR…),
 **Chi tiết đơn (`public/order.html`) — trạng thái hiện tại (đã làm):**
 - Vai trò khác san_xuat: thứ tự **Ghi chú (đậm cả nhãn+giá trị) → Ghi chú xưởng (đậm) → [Ghi chú xưởng bản trong app nếu cảnh báo] → [Nhóm DonNhieuAo] → Vị trí thêu → Số lượng → Ngày lên đơn → Người nhận → Địa chỉ giao hàng (gồm DIA_CHI_TEN_DUONG_2) → Mã IOSS → Hãng vận chuyển → Mã tracking → Đã mua Tracking → [Trạng thái vận chuyển] → Mã đơn (sàn TMĐT) → Xưởng → Cập nhật lần cuối**.
 - **Đã ẩn:** Mã đơn (STT_Key), Khách hàng, Loại/Kích thước/Màu (tiêu đề trang vẫn có thể hiện STT_Key khi không có tên sản phẩm).
-- san_xuat: Ghi chú, Ghi chú xưởng (đậm), Số lượng, Ngày lên đơn.
+- san_xuat: Ghi chú, Ghi chú xưởng (đậm), Vị trí thêu (đậm, thêm 18/10/2026), Số lượng, Ngày lên đơn.
 - ve_file được dùng khối "Sửa trạng thái thủ công" như admin.
 
 **Danh sách đơn (`orders.html`):** SL font 1.8rem; khối Nâng cao chứa Lọc tổng quát, Mã Tracking, Đã mua Tracking, DonNhieuAo (+ các lọc ít dùng); nút "IN DANH SÁCH PHÔI", "IN DANH SÁCH PHÔI + IN ĐƠN", "IN ĐƠN"; hộp đỏ đơn mua thủ công (có ô sửa dữ liệu gửi GKE).
