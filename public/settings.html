@@ -214,6 +214,20 @@
     <p id="thong-bao-gke" style="display:none"></p>
   </details>
 
+  <!-- Tài khoản KL theo Xưởng (22/10/2026, theo yêu cầu người dùng — cùng khuôn Tài khoản GKE). API routes/tracking.js /tai-khoan-kl, CHỈ
+       superadmin. Token KHÔNG bao giờ hiện lại (máy chủ chỉ trả 4 ký tự cuối) — để trống khi lưu = giữ token cũ. -->
+  <details style="margin-top:var(--space-6)">
+    <summary class="btn-hanh-dong phu">Tài khoản KL</summary>
+    <p style="color:var(--color-text-muted)">Mỗi Xưởng dùng 1 tài khoản KL để mua tracking / in label KL (KL chỉ nhận đơn giao tới Mỹ). Xưởng chưa gán tài khoản sẽ KHÔNG mua được tracking KL. Đơn đã mua luôn lấy label / tra trạng thái bằng đúng tài khoản đã mua.</p>
+    <h3>Gán tài khoản cho Xưởng</h3>
+    <div class="st-danh-sach-xuong" id="kl-gan-xuong"></div>
+    <h3 style="margin-top:var(--space-5)">Danh sách tài khoản</h3>
+    <div id="kl-danh-sach-tk" style="display:flex;flex-direction:column;gap:var(--space-4)"></div>
+    <button type="button" class="btn-hanh-dong phu" id="btn-them-tk-kl" style="margin-top:var(--space-3)">+ Thêm tài khoản KL</button>
+    <p class="st-ghi-chu-truong">Token: API key tạo ở trang KL (Accounts → Account API keys). SKU: mã hàng đã khai báo sẵn ở mục Item Declarations trên trang KL (mô tả, kích thước, giá trị) — mỗi đơn chỉ gửi SKU + số lượng áo. Cân nặng = TRONG_LUONG × Số lượng (đổi sang gram); đơn thiếu TRONG_LUONG dùng "Cân nặng mỗi áo (gram)".</p>
+    <p id="thong-bao-kl" style="display:none"></p>
+  </details>
+
   <!-- Đồng bộ Sheet Seller (bổ sung 28/09/2026, theo yêu cầu người dùng) — app ghi ghi chú xưởng / tracking /
        Delivered vào Sheet của Seller (services/sheetSellerService.js, tra Sheet qua tab CONFIG theo Team). KHÔNG
        tự thử lại khi lỗi — superadmin theo dõi ở đây (và Trung tâm hành động) rồi bấm Đẩy lại. API:
@@ -262,7 +276,7 @@
 </div>
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=128"></script>
+<script src="/js/api.js?v=129"></script>
 <script>
 (async () => {
   const user = await requireLoginOrRedirect();
@@ -287,11 +301,12 @@
   document.getElementById('btn-gui-tuan-bcl').onclick = () => guiNgayBaoCaoLog('btn-gui-tuan-bcl', 'gui-tuan');
   document.getElementById('btn-gui-loi-bcl').onclick = () => guiNgayBaoCaoLog('btn-gui-loi-bcl', 'gui-loi-du-lieu');
   await taiCauHinhNenAnh();
-  await taiMauXuong(); await taiTaiKhoanGke(); await taiTeamXuong(); await taiNhomHang();
+  await taiMauXuong(); await taiTaiKhoanGke(); await taiTaiKhoanKl(); await taiTeamXuong(); await taiNhomHang();
   document.getElementById('btn-them-loai-hang').onclick = themLoaiHangMoi;
   document.getElementById('btn-luu-canh-bao').onclick = luuNguongCanhBao;
   document.getElementById('btn-luu-nen-anh').onclick = luuCauHinhNenAnh;
   document.getElementById('btn-them-tk-gke').onclick = themTheTaiKhoanGke;
+  document.getElementById('btn-them-tk-kl').onclick = themTheTaiKhoanKl;
   document.getElementById('btn-khoi-phuc-du-lieu-don').onclick = khoiPhucDuLieuDon;
   document.getElementById('btn-them-xuong').onclick = themXuongMoi;
   document.getElementById('btn-them-team').onclick = themTeamMoi;
@@ -485,7 +500,7 @@ async function themXuongMoi() {
   try {
     await apiFetch('/orders/xuong', { method: 'POST', body: JSON.stringify({ ten }) });
     o.value = '';
-    await taiMauXuong(); await taiTaiKhoanGke(); await taiTeamXuong();
+    await taiMauXuong(); await taiTaiKhoanGke(); await taiTaiKhoanKl(); await taiTeamXuong();
   } catch (e) { alert(e.message); }
 }
 
@@ -497,7 +512,7 @@ async function doiTenXuongUi(tenCu) {
   if (!tenMoi || tenMoi === tenCu) return;
   try {
     await apiFetch('/orders/xuong/' + encodeURIComponent(tenCu), { method: 'PUT', body: JSON.stringify({ tenMoi }) });
-    await taiMauXuong(); await taiTaiKhoanGke(); await taiTeamXuong();
+    await taiMauXuong(); await taiTaiKhoanGke(); await taiTaiKhoanKl(); await taiTeamXuong();
   } catch (e) { alert(e.message); }
 }
 
@@ -505,7 +520,7 @@ async function xoaXuongUi(ten) {
   if (!confirm(`Xoá Xưởng "${ten}"? Chỉ xoá được nếu không còn đơn/nhân viên nào đang gán Xưởng này.`)) return;
   try {
     await apiFetch('/orders/xuong/' + encodeURIComponent(ten), { method: 'DELETE' });
-    await taiMauXuong(); await taiTaiKhoanGke(); await taiTeamXuong();
+    await taiMauXuong(); await taiTaiKhoanGke(); await taiTaiKhoanKl(); await taiTeamXuong();
   } catch (e) { alert(e.message); }
 }
 
@@ -724,6 +739,79 @@ async function ganTaiKhoanGke(xuong, taiKhoanId) {
     thongBaoGke(taiKhoanId ? `Đã gán tài khoản cho Xưởng ${xuong}.` : `Đã bỏ gán tài khoản của Xưởng ${xuong}.`);
     await taiTaiKhoanGke();
   } catch (e) { thongBaoGke('Lỗi khi gán: ' + e.message, true); await taiTaiKhoanGke(); }
+}
+
+// ---- Tài khoản KL theo Xưởng (22/10/2026) — cùng khuôn tài khoản GKE ở trên; token không hiện lại, để trống = giữ token cũ ----
+const TRUONG_TK_KL = [
+  ['ten', 'Tên tài khoản', 'text'], ['token', 'Token (API key)', 'password'],
+  ['skuNumber', 'SKU đã khai báo trên KL', 'text', 'EMB-GARMENT'], ['canNangMoiAoGram', 'Cân nặng mỗi áo (gram)', 'number', '300'],
+];
+function theTaiKhoanKl(tk, id, dungCho) {
+  return `
+    <div class="bao-cao-form st-cau-hinh-gke st-the-tk-gke" data-tk-kl="${escapeHtml(id)}">
+      <strong>${id === 'moi' ? 'Tài khoản mới' : escapeHtml(tk.ten || '(chưa đặt tên)')}</strong>
+      <span class="st-ghi-chu-truong">${id === 'moi' ? '' : (dungCho.length ? 'Đang dùng cho Xưởng: ' + dungCho.map(escapeHtml).join(', ') : 'Chưa gán cho Xưởng nào')}</span>
+      <div class="st-luoi-gke">
+        ${TRUONG_TK_KL.map(([khoa, nhan, loai, goiY]) => `
+          <div class="truong"><label for="kl-${id}-${khoa}">${nhan}</label>
+            <input type="${loai}" id="kl-${id}-${khoa}" value="${khoa === 'token' ? '' : escapeHtml(tk[khoa] ?? '')}"
+              placeholder="${khoa === 'token' ? (tk.coToken ? `Đã có (…${escapeHtml(tk.duoiToken)}) — để trống = giữ nguyên` : 'Dán API key KL') : (goiY || '')}"
+              ${loai === 'number' ? 'min="1" step="1"' : ''} autocomplete="${loai === 'password' ? 'new-password' : 'off'}">
+          </div>`).join('')}
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button type="button" class="btn-hanh-dong" data-tk="${escapeHtml(id)}" onclick="luuTaiKhoanKl(this.dataset.tk)">Lưu tài khoản</button>
+        ${id === 'moi'
+          ? `<button type="button" class="btn-hanh-dong phu" onclick="taiTaiKhoanKl()">Huỷ</button>`
+          : `<button type="button" class="btn-hanh-dong phu nguy-hiem" data-tk="${escapeHtml(id)}" onclick="xoaTaiKhoanKl(this.dataset.tk)">Xoá tài khoản</button>`}
+      </div>
+    </div>`;
+}
+async function taiTaiKhoanKl() {
+  let kq;
+  try { kq = await apiFetch('/tracking/tai-khoan-kl'); } catch (e) { thongBaoGke('Không tải được tài khoản KL: ' + e.message, true, 'thong-bao-kl'); return; }
+  const tenTk = Object.fromEntries(kq.taiKhoan.map(t => [t.id, t.ten]));
+  document.getElementById('kl-gan-xuong').innerHTML = kq.danhSachXuong.map(x => `
+    <div class="st-dong-xuong">
+      <span class="ten-xuong">${escapeHtml(x)}</span>
+      <select data-xuong="${escapeHtml(x)}" onchange="ganTaiKhoanKl(this.dataset.xuong, this.value)">
+        <option value="">— Chưa gán (không mua được tracking KL) —</option>
+        ${kq.taiKhoan.map(t => `<option value="${t.id}" ${kq.ganXuong[x] === t.id ? 'selected' : ''}>${escapeHtml(t.ten || '#' + t.id)}</option>`).join('')}
+      </select>
+      ${kq.ganXuong[x] && !tenTk[kq.ganXuong[x]] ? '<span style="color:var(--color-danger-text)">Tài khoản đã gán không còn tồn tại</span>' : ''}
+    </div>`).join('');
+  document.getElementById('kl-danh-sach-tk').innerHTML = kq.taiKhoan.length
+    ? kq.taiKhoan.map(t => theTaiKhoanKl(t, t.id, kq.danhSachXuong.filter(x => kq.ganXuong[x] === t.id))).join('')
+    : '<p style="color:var(--color-text-muted)">Chưa có tài khoản KL nào — bấm "Thêm tài khoản KL".</p>';
+}
+function themTheTaiKhoanKl() {
+  if (document.querySelector('[data-tk-kl="moi"]')) return;
+  document.getElementById('kl-danh-sach-tk').insertAdjacentHTML('beforeend', theTaiKhoanKl({}, 'moi', []));
+  document.getElementById('kl-moi-ten').focus();
+}
+async function luuTaiKhoanKl(id) {
+  const giaTri = {};
+  TRUONG_TK_KL.forEach(([khoa]) => { giaTri[khoa] = document.getElementById(`kl-${id}-${khoa}`).value.trim(); });
+  try {
+    await apiFetch('/tracking/tai-khoan-kl' + (id === 'moi' ? '' : '/' + encodeURIComponent(id)), { method: id === 'moi' ? 'POST' : 'PUT', body: JSON.stringify(giaTri) });
+    thongBaoGke(`Đã lưu tài khoản KL "${giaTri.ten}".`, false, 'thong-bao-kl');
+    await taiTaiKhoanKl();
+  } catch (e) { thongBaoGke('Lỗi khi lưu: ' + e.message, true, 'thong-bao-kl'); }
+}
+async function xoaTaiKhoanKl(id) {
+  if (!await hopXacNhan('Xoá tài khoản KL này? Đơn ĐÃ mua tracking bằng tài khoản này sẽ không lấy lại label / tra trạng thái được nữa.')) return;
+  try {
+    await apiFetch('/tracking/tai-khoan-kl/' + encodeURIComponent(id), { method: 'DELETE' });
+    thongBaoGke('Đã xoá tài khoản KL.', false, 'thong-bao-kl');
+    await taiTaiKhoanKl();
+  } catch (e) { thongBaoGke(e.message, true, 'thong-bao-kl'); }
+}
+async function ganTaiKhoanKl(xuong, taiKhoanId) {
+  try {
+    await apiFetch('/tracking/gan-tai-khoan-kl', { method: 'POST', body: JSON.stringify({ xuong, taiKhoanId }) });
+    thongBaoGke(taiKhoanId ? `Đã gán tài khoản KL cho Xưởng ${xuong}.` : `Đã bỏ gán tài khoản KL của Xưởng ${xuong}.`, false, 'thong-bao-kl');
+    await taiTaiKhoanKl();
+  } catch (e) { thongBaoGke('Lỗi khi gán: ' + e.message, true, 'thong-bao-kl'); await taiTaiKhoanKl(); }
 }
 
 // 07/10/2026: mỗi mức = bật/tắt + đầu vào ('' = từ ngày lên đơn) + đầu ra + số ngày. Server kiểm tra lại (routes/canhBao.js).

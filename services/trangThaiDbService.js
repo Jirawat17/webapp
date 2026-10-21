@@ -105,6 +105,14 @@ const CAC_COT = [
   // LOI_TRA_TRACKING (16/10/2026): "lúc|lý do" lần tra trạng thái tracking GKE GẦN NHẤT bị lỗi (trackingAutoService.capNhatTrangThaiTracking
   // ChoDon ghi, tra được thì xoá) — danh sách lỗi dữ liệu gửi Seller hằng ngày (baoCaoVanHanhService) đọc.
   'LOI_TRA_TRACKING',
+  // Hãng mua tracking KL (22/10/2026, theo yêu cầu người dùng — services/klService.js, trackingKlService.js). TRACKING_ID/HANG_VAN_CHUYEN
+  // DÙNG CHUNG với GKE (1 đơn chỉ 1 tracking); DON_VI_VAN_CHUYEN cho biết tracking đó mua qua hãng nào: '' = GKE / Seller (như cũ),
+  // 'KL' = mua qua KL. KL_ORDER_SID = mã đơn bên KL (lấy label / tra đơn); KL_PHI_USD / KL_PHI_VND = phí KL trả về lúc tạo đơn;
+  // TAI_KHOAN_KL = id tài khoản KL đã tạo đơn (lấy label về sau dùng đúng tài khoản dù đơn đổi Xưởng).
+  'DON_VI_VAN_CHUYEN', 'KL_ORDER_SID', 'KL_PHI_USD', 'KL_PHI_VND', 'TAI_KHOAN_KL',
+  // KL_DANG_TAO: lúc (ISO) đã GỬI lệnh tạo đơn KL mà chưa có kết quả ('' = không). Cột RIÊNG — KHÔNG dùng TAM_THOI (nhiều nơi hiểu TAM_THOI
+  // là "vận đơn GKE đang chờ tem": danh sách đơn, DonNhieuAo, xuất Excel GKE, lịch sử).
+  'KL_DANG_TAO',
   // CanhBaoDaGui: không nằm trong danh sách 31 cột người dùng liệt kê (có thể chỉ là sót khi liệt kê) —
   // nhưng rà code xác nhận đây CŨNG là cột app tự ghi (cờ chống spam Telegram cảnh báo 3 tầng),
   // không thuộc RAW/A:AM lẫn AN:BR người dùng mô tả. Xếp vào đây theo đúng tiêu chí "app tự ghi" đã

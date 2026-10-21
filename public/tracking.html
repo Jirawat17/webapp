@@ -185,7 +185,7 @@
      quy trình mua và bảng "Danh sách đơn tự động mua tracking" giữ nguyên. -->
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=128"></script>
+<script src="/js/api.js?v=129"></script>
 <script src="/js/suaThongTinGke.js?v=2"></script>
 <script>
 // Nhãn + class hiển thị cho từng trạng thái trả về từ services/trackingAutoService.js
@@ -193,6 +193,7 @@
 const NHAN_TRANG_THAI = {
   DA_MUA: { nhan: 'Đã mua', lop: 'da-mua' },
   DANG_CHO_TEM: { nhan: 'Đang chờ tem GKE', lop: 'dang-cho-tem' },
+  DANG_TAO_DON_KL: { nhan: 'Đang mua KL (chưa rõ kết quả)', lop: 'dang-cho-tem' }, // 22/10/2026 — đơn đang mua tracking KL
   DEN_HAN_CHO_XU_LY: { nhan: 'Đến hạn, chờ xử lý', lop: 'den-han' },
   DANG_CHO: { nhan: 'Đang chờ đủ giờ', lop: 'dang-cho' },
   // DonNhieuAo (bổ sung 26/09/2026): đơn con chưa có tracking — chờ đơn ".1" mua rồi tự gán.

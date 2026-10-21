@@ -11,7 +11,9 @@ const {
 } = require('../services/gkeService');
 const orderService = require('../services/orderService');
 const sheetSellerService = require('../services/sheetSellerService');
-const { requireLogin, requireExactRole } = require('../middleware/auth');
+const { requireLogin, requireExactRole, laAdmin } = require('../middleware/auth');
+const klService = require('../services/klService');
+const { muaTrackingKlChoDon, muaTrackingKlVaInLabelChoDon } = require('../services/trackingKlService');
 
 router.use(requireLogin);
 
@@ -94,6 +96,48 @@ router.delete('/tai-khoan-gke/:id', requireExactRole('superadmin'), (req, res) =
 router.post('/gan-tai-khoan-gke', requireExactRole('superadmin'), (req, res) => {
   try { ganTaiKhoanGkeChoXuong(String(req.body.xuong || ''), req.body.taiKhoanId || ''); res.json({ ok: true }); }
   catch (err) { res.status(400).json({ error: err.message }); }
+});
+
+// ---- Tài khoản KL theo Xưởng (22/10/2026) — CHỈ superadmin, cùng khuôn tài khoản GKE. Token KHÔNG trả về giao diện (klService). ----
+router.get('/tai-khoan-kl', requireExactRole('superadmin'), (req, res) => res.json(klService.layDanhSachTaiKhoanKl()));
+router.post('/tai-khoan-kl', requireExactRole('superadmin'), (req, res) => {
+  try { res.json({ ok: true, id: klService.luuTaiKhoanKl(null, req.body || {}) }); } catch (err) { res.status(400).json({ error: err.message }); }
+});
+router.put('/tai-khoan-kl/:id', requireExactRole('superadmin'), (req, res) => {
+  try { res.json({ ok: true, id: klService.luuTaiKhoanKl(req.params.id, req.body || {}) }); } catch (err) { res.status(400).json({ error: err.message }); }
+});
+router.delete('/tai-khoan-kl/:id', requireExactRole('superadmin'), (req, res) => {
+  try { klService.xoaTaiKhoanKl(req.params.id); res.json({ ok: true }); } catch (err) { res.status(400).json({ error: err.message }); }
+});
+router.post('/gan-tai-khoan-kl', requireExactRole('superadmin'), (req, res) => {
+  try { klService.ganTaiKhoanKlChoXuong(String(req.body.xuong || ''), req.body.taiKhoanId || ''); res.json({ ok: true }); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+});
+
+// "Mua Tracking KL ngay" (22/10/2026) — CHỈ admin/superadmin (chặn ở máy chủ, không chỉ ẩn nút). Cùng khuôn /mua-thu-cong: chặn khác
+// Xưởng, lỗi 1 đơn không dừng cả lượt. Trả thêm thông tin tracking để giao diện hiện ngay.
+router.post('/kl/mua', async (req, res) => {
+  const user = req.session.user;
+  if (!laAdmin(user.vaiTro)) return res.status(403).json({ error: 'Chỉ admin mới được mua tracking KL thủ công' });
+  const { sttKeys } = req.body;
+  if (!Array.isArray(sttKeys) || sttKeys.length === 0) return res.status(400).json({ error: 'Danh sách đơn trống' });
+  const thanhCong = [], loi = [], loiDaySheetKh = [];
+  for (const sttKey of sttKeys) {
+    try {
+      const { row } = await orderService.getByKey(sttKey);
+      if (!row || !orderService.coQuyenTheoXuong(user, row)) { loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng' }); continue; }
+      const kq = await muaTrackingKlChoDon(sttKey, user);
+      if (!kq) { loi.push({ sttKey, lyDo: 'Đơn này đã có mã tracking — không mua KL.' }); continue; }
+      loiDaySheetKh.push(...(kq.loiSheetCon || []));
+      if (kq.dungChung) { loi.push({ sttKey, lyDo: `Không mua — đơn DonNhieuAo dùng chung tracking ${kq.tracking_num} của ${kq.donMua} (đã gán).` }); continue; }
+      thanhCong.push({ sttKey, tracking: kq.tracking_num, hang: kq.delivery_carrier, phiUsd: kq.kl.usd, phiVnd: kq.kl.vnd });
+      if (kq.dayCheKhachHang && !kq.dayCheKhachHang.ok) loiDaySheetKh.push({ sttKey, lyDo: kq.dayCheKhachHang.lyDo });
+    } catch (err) {
+      if (!err.maLoi) console.error(`[TrackingKL] Lỗi mua tracking KL cho ${sttKey}:`, err.message);
+      loi.push({ sttKey, lyDo: err.message, maLoi: err.maLoi });
+    }
+  }
+  res.json({ ok: true, thanhCong, loi, loiDaySheetKh });
 });
 
 router.get('/logs', (req, res) => {
@@ -274,7 +318,8 @@ async function xuLyInLabelHangLoat(req, res, hamXuLy) {
       if (ketQua && ketQua.loiSheetCon) loiDaySheetKh.push(...ketQua.loiSheetCon);
       if (ketQua && ketQua.label_base64) cacLabelBase64.push(ketQua.label_base64);
     } catch (err) {
-      loi.push({ sttKey, lyDo: err.message, maLoi: err.maLoi });
+      loi.push({ sttKey, lyDo: err.message, maLoi: err.maLoi, ...(err.daMua ? { daMua: true } : {}) });
+      if (err.loiDaySheetKh) loiDaySheetKh.push(...err.loiDaySheetKh); // KL: đã mua nhưng label lỗi — lỗi ghi Sheet Seller vẫn báo
     }
   }
 
@@ -292,6 +337,9 @@ router.post('/in-label', (req, res) => xuLyInLabelHangLoat(req, res, inLabelChoD
 // "MUA TRACKING và IN LABEL" — 1 nút làm cả 2 việc, tự bỏ qua bước mua nếu đơn đã có tracking rồi (xem
 // services/trackingAutoService.js#muaTrackingVaInLabelChoDon).
 router.post('/mua-va-in-label', (req, res) => xuLyInLabelHangLoat(req, res, muaTrackingVaInLabelChoDon));
+
+// "Mua Tracking KL và In Label KL" (22/10/2026) — cùng phạm vi vai trò với "MUA TRACKING và IN LABEL" (GKE), ghép PDF như in hàng loạt.
+router.post('/kl/mua-va-in-label', (req, res) => xuLyInLabelHangLoat(req, res, muaTrackingKlVaInLabelChoDon));
 
 // Tra cứu/cập nhật trạng thái tracking THẬT thủ công (bổ sung 14/09/2026, theo yêu cầu người dùng — xem
 // docs/superpowers/specs/2026-09-14-cap-nhat-trang-thai-tracking-design.md) — tương đương thủ công của

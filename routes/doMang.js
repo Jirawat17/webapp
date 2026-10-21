@@ -7,6 +7,7 @@ const router = express.Router();
 const nhatKy = require('../services/nhatKyDbService');
 const { thoiGianVNISOString } = require('../services/dateUtils');
 const doMangMayChu = require('../services/doMangMayChuService');
+const { traNhaMang } = require('../services/nhaMangService');
 
 const chu = (v, toiDa) => String(v ?? '').slice(0, toiDa);
 const so = v => (Number.isFinite(Number(v)) && v !== null && v !== '' ? Number(v) : null);
@@ -28,6 +29,9 @@ router.post('/', (req, res) => {
   if (ds.length) {
     const tb = req.body.thietBi && typeof req.body.thietBi === 'object' ? req.body.thietBi : {};
     const bayGio = Date.now();
+    // Nhà mạng (21/10/2026): tra từ IP của lượt GỬI (thường trùng IP lúc đo — vài chục giây trước), KHÔNG lưu IP. Sau Cloudflare: IP thật ở
+    // header cf-connecting-ip (đi thẳng không qua Cloudflare thì header này có thể bị giả — chỉ dùng cho thống kê, không cho quyền gì).
+    const nhaMang = chu(traNhaMang(req.headers['cf-connecting-ip'] || req.socket.remoteAddress), 60);
     try {
       nhatKy.ghiNhieuDoMang(ds.map(d => ({
         luc: thoiGianVNISOString(new Date(bayGio - Math.min(Math.max(so(d.cachMs) || 0, 0), 24 * 3600 * 1000))),
@@ -37,9 +41,29 @@ router.post('/', (req, res) => {
         heDieuHanh: chu(`${tb.os || ''} ${tb.osVer || ''}`.trim(), 40), trinhDuyet: chu(`${tb.br || ''} ${tb.brVer || ''}`.trim(), 40), may: chu(tb.may, 60),
         msCF: soDoan(d.msCF), msCFMayChu: soDoan(d.msCFMayChu), msApp: soDoan(d.msApp), msXepHang: soDoan(d.msXepHang), msKetNoi: soDoan(d.msKetNoi),
         colo: chu(String(d.colo || '').replace(/[^A-Z]/g, ''), 5),
+        nhaMang, kieuKetNoi: chu(String(d.kieu || '').replace(/[^a-z-]/g, ''), 12),
       })));
     } catch (err) {
       console.error('[DoMang] Lỗi lưu số đo mạng:', err.message);
+    }
+  }
+  // Tốc độ chiều lên đo từ điện thoại tới speed.cloudflare.com (22/10/2026, api.js#doTocDoLenNeuDenLuot) -> bảng do_toc_do.
+  const tocDo = (Array.isArray(req.body && req.body.tocDo) ? req.body.tocDo.slice(0, 50) : [])
+    .filter(d => d && typeof d === 'object' && (!d.nguoi || d.nguoi === u.ten));
+  if (tocDo.length) {
+    const tb = req.body.thietBi && typeof req.body.thietBi === 'object' ? req.body.thietBi : {};
+    const bayGio = Date.now();
+    const nhaMang = chu(traNhaMang(req.headers['cf-connecting-ip'] || req.socket.remoteAddress), 60);
+    try {
+      nhatKy.ghiNhieuTocDo(tocDo.map(d => ({
+        luc: thoiGianVNISOString(new Date(bayGio - Math.min(Math.max(so(d.cachMs) || 0, 0), 24 * 3600 * 1000))),
+        nguon: 'dien_thoai', huong: d.huong === 'xuong' ? 'xuong' : 'len',
+        kb: soDoan(d.kb), ms: soDoan(d.ms), kbs: soDoan(d.kbs), msRtt: soDoan(d.msRtt),
+        colo: chu(String(d.colo || '').replace(/[^A-Z]/g, ''), 5), nhaMang, kieuKetNoi: chu(String(d.kieu || '').replace(/[^a-z-]/g, ''), 12),
+        nguoi: chu(u.ten, 60), xuong: chu(u.xuong, 60), may: chu(tb.may || `${tb.os || ''} ${tb.br || ''}`.trim(), 60), loi: chu(d.loi, 60),
+      })));
+    } catch (err) {
+      console.error('[DoMang] Lỗi lưu số đo tốc độ:', err.message);
     }
   }
   datThoiGianXuLy(req, res);

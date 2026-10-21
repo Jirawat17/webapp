@@ -35,7 +35,7 @@
 </div>
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=128"></script>
+<script src="/js/api.js?v=129"></script>
 <script>
 const sttKey = new URLSearchParams(location.search).get('stt');
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
@@ -639,12 +639,18 @@ function renderKhuVucThaoTac(don) {
     tomTatVanChuyen.push('In label khi đơn "Đã sản xuất" / "ĐÃ DÁN TEM"');
     chuThichVanChuyen.push('In label: chỉ dùng được khi đơn đang "Đã sản xuất" hoặc "ĐÃ DÁN TEM". Khổ giấy mặc định 100x150mm theo máy in đang đặt mặc định trên máy tính này.');
   }
+  // Đơn mua tracking qua KL / đang tạo đơn KL (22/10/2026): khối GKE chỉ ghi chú — mọi thao tác ở khối "Vận chuyển (KL)" bên dưới.
+  if (don.DON_VI_VAN_CHUYEN === 'KL' || don.KL_DANG_TAO) {
+    vanChuyen = vanChuyen ? '<p style="margin:0;font-size:0.85rem">Đơn mua tracking qua <strong>KL</strong> — thao tác ở khối "Vận chuyển (KL)" bên dưới.</p>' : '';
+    chuThichVanChuyen = [];
+  }
   if (vanChuyen) html += `
       <div class="upload-box">
         <label>${icon('package', { size: 18 })} Vận chuyển (GKE)</label>
         ${vanChuyen}
         ${chuThichVanChuyen.length ? chuThich(tomTatVanChuyen.join(' · '), chuThichVanChuyen.join(' ')) : ''}
       </div>`;
+  if (user.vaiTro !== 'nguoi_lay_phoi' && user.vaiTro !== 'san_xuat') html += htmlKhoiKl(don);
 
   // Ảnh file thêu 1/2/3 (ve_file + admin; thuần lưu ảnh, KHÔNG đụng trạng thái) và ảnh Đã sản xuất / ĐÃ DÁN TEM (chỉ admin;
   // tự chuyển trạng thái) — mỗi lần tải 1 ảnh vào đúng cột của loại đã chọn, không bắt buộc đủ, không theo thứ tự.
@@ -842,6 +848,77 @@ async function apDungMuaVaInLabelChiTiet(btn) {
   await xuLyInLabelChiTiet(btn, '/tracking/mua-va-in-label');
 }
 
+// ---- Khối "Vận chuyển (KL)" (22/10/2026, theo yêu cầu người dùng — services/trackingKlService.js) ----
+// Quyền giống GKE: "Mua Tracking KL ngay" chỉ admin/superadmin (máy chủ cũng chặn); "Mua Tracking KL và In Label KL" admin/superadmin/ve_file.
+// 1 đơn chỉ 1 tracking: đơn đã có tracking hãng khác (GKE / Seller) không mua KL.
+function htmlKhoiKl(don) {
+  const laKl = don.DON_VI_VAN_CHUYEN === 'KL';
+  const nhom = don.NhomNhieuAo;
+  let nd = '';
+  if (don.TRACKING_ID && laKl) {
+    const phi = [don.KL_PHI_USD ? `$${don.KL_PHI_USD}` : '', don.KL_PHI_VND ? `${Number(don.KL_PHI_VND).toLocaleString('vi-VN')}₫` : ''].filter(Boolean).join(' · ');
+    nd = `<p style="margin:0 0 8px">Tracking KL: <strong>${escapeHtml(don.TRACKING_ID)}</strong>${nutSaoChep(don.TRACKING_ID, 'Sao chép mã tracking')}`
+      + `${don.HANG_VAN_CHUYEN ? ` (${escapeHtml(don.HANG_VAN_CHUYEN)})` : ''}${phi ? ` · Phí: ${escapeHtml(phi)}` : ''}${don.TRACKING_CHUNG_CUA ? ` <span style="color:var(--color-text-faint)">(dùng chung của ${escapeHtml(don.TRACKING_CHUNG_CUA)})</span>` : ''}</p>`;
+    nd += nhom && !nhom.laDonIn
+      ? `<p style="margin:0;font-size:0.85rem">Cả nhóm DonNhieuAo ${escapeHtml(nhom.goc)} dùng 1 tem — in label KL ở đơn <strong>${escapeHtml(nhom.donIn || '(chưa xác định)')}</strong>.</p>`
+      : `<div class="hang-nut"><button class="btn-hanh-dong" onclick="apDungMuaVaInLabelKl(this)">${icon('printer')} In Label KL</button></div>`;
+  } else if (don.TRACKING_ID) {
+    nd = `<p style="margin:0;font-size:0.85rem">Đơn đã có tracking <strong>${escapeHtml(don.TRACKING_ID)}</strong> (${don.NGUON_TRACKING === 'SELLER' ? 'Seller cung cấp' : 'GKE'}) — không mua KL.</p>`;
+  } else if (don.TAM_THOI === 'DANG_CHO_GKE_TAO_TEM') {
+    nd = '<p style="margin:0;font-size:0.85rem">Đơn đã tạo vận đơn GKE (đang chờ tem GKE) — không mua KL.</p>';
+  } else if (laDonConNhieuAo(don)) {
+    nd = `<p style="margin:0;font-size:0.85rem">Đơn thuộc nhóm DonNhieuAo ${escapeHtml(nhom.goc)} — mua tracking ở đơn <strong>${escapeHtml(nhom.donMua || '(chưa xác định)')}</strong>, đơn này dùng chung.</p>`;
+  } else {
+    if (don.KL_DANG_TAO) {
+      nd += '<p style="margin:0 0 8px;font-size:0.85rem;color:var(--color-warning-text)">Lần mua KL trước chưa nhận được kết quả từ KL. Bấm mua lại: app tra KL theo mã đơn trước — KHÔNG tạo đơn trùng.</p>';
+    }
+    nd += `<div class="hang-nut">
+        ${laAdmin(user.vaiTro) ? `<button class="btn-hanh-dong phu" onclick="muaTrackingKlNgay(this)">${icon('package')} Mua Tracking KL ngay</button>` : ''}
+        ${nhom && !nhom.laDonIn ? '' : `<button class="btn-hanh-dong" onclick="apDungMuaVaInLabelKl(this)">${icon('printer')} Mua Tracking KL và In Label KL</button>`}
+      </div>`;
+  }
+  return `
+      <div class="upload-box">
+        <label>${icon('package', { size: 18 })} Vận chuyển (KL)</label>
+        ${nd}
+        ${chuThich('KL chỉ nhận đơn giao tới Mỹ (US)', 'Mua Tracking KL: tạo đơn vận chuyển THẬT bên KL (có thể phát sinh phí), lấy mã tracking. Mua và In Label: chỉ khi đơn "Đã sản xuất" / "ĐÃ DÁN TEM", mua (nếu chưa có) rồi in label KL. Tài khoản KL theo Xưởng chỉnh ở Settings.')}
+      </div>`;
+}
+
+async function muaTrackingKlNgay(btn) {
+  if (laDonDaHuy()) return hienThongBaoDonDaHuy([sttKey]);
+  if (!await hopXacNhan(`Mua tracking KL cho đơn ${sttKey} ngay bây giờ? Đây là thao tác tạo đơn vận chuyển THẬT bên KL, có thể phát sinh phí.`)) return;
+  const nhanGoc = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Đang mua...';
+  try {
+    const kq = await apiFetch('/tracking/kl/mua', { method: 'POST', body: JSON.stringify({ sttKeys: [sttKey] }) });
+    if (kq.loi && kq.loi.length) {
+      const loiKhac = await tachVaBaoDonDaHuy(kq.loi);
+      if (loiKhac.length) await hopThongBao('Không mua được tracking KL: ' + loiKhac[0].lyDo);
+      btn.disabled = false;
+      btn.innerHTML = nhanGoc;
+      return;
+    }
+    const t = kq.thanhCong[0] || {};
+    const phi = [t.phiUsd != null ? `$${t.phiUsd}` : '', t.phiVnd != null ? `${Number(t.phiVnd).toLocaleString('vi-VN')}₫` : ''].filter(Boolean).join(' · ');
+    await hopThongBao(`Đã mua tracking KL: ${t.tracking}${t.hang ? ` (${t.hang})` : ''}${phi ? ` · phí ${phi}` : ''}`);
+    await baoLoiSheetSeller(kq.loiDaySheetKh);
+    await taiChiTiet();
+  } catch (e) {
+    await hopThongBao(e.message);
+    btn.disabled = false;
+    btn.innerHTML = nhanGoc;
+  }
+}
+
+async function apDungMuaVaInLabelKl(btn) {
+  if (laDonDaHuy()) return hienThongBaoDonDaHuy([sttKey]);
+  const daCo = donHienTai && donHienTai.TRACKING_ID && donHienTai.DON_VI_VAN_CHUYEN === 'KL';
+  if (!await hopXacNhan(daCo ? `In label KL cho đơn ${sttKey}?` : `Mua tracking KL và in label cho đơn ${sttKey}? Tạo đơn vận chuyển THẬT bên KL, có thể phát sinh phí.`)) return;
+  await xuLyInLabelChiTiet(btn, '/tracking/kl/mua-va-in-label');
+}
+
 async function xuLyInLabelChiTiet(btn, duongDan) {
   const nhanGoc = btn.innerHTML;
   btn.disabled = true;
@@ -852,6 +929,12 @@ async function xuLyInLabelChiTiet(btn, duongDan) {
     if (ketQua.loi && ketQua.loi.length > 0) {
       const loiKhac = await tachVaBaoDonDaHuy(ketQua.loi);
       if (loiKhac.length) await hopThongBao('Lỗi: ' + loiKhac[0].lyDo);
+      // KL (22/10/2026): đã mua tracking nhưng lấy label lỗi -> báo lỗi Sheet Seller (nếu có) + tải lại đơn để hiện tracking vừa mua.
+      if (ketQua.loi.some(l => l.daMua)) {
+        await baoLoiSheetSeller(ketQua.loiDaySheetKh);
+        await taiChiTiet();
+        return;
+      }
       btn.disabled = false;
       btn.innerHTML = nhanGoc;
       return;

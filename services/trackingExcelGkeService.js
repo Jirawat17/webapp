@@ -40,6 +40,7 @@ function kiemTraDon(row, rows) {
   if (row.TRACKING_ID) lyDo.push(`Đã có mã tracking ${row.TRACKING_ID} — không mua lại.`);
   // TAM_THOI = "đang chờ tem": vận đơn ĐÃ tạo bên GKE (lỗi ở bước lấy tem) — upload Excel sẽ trùng customer_order_num / tạo vận đơn thứ 2.
   if (row.TAM_THOI) lyDo.push('Vận đơn ĐÃ được tạo trên GKE (đang chờ tem) — dùng IN LABEL để lấy tem, KHÔNG tạo lại bằng Excel.');
+  if (row.KL_DANG_TAO) lyDo.push('Đơn đang mua tracking KL (chưa rõ kết quả) — xử lý ở khối Vận chuyển (KL), KHÔNG mua GKE.'); // 22/10/2026
   const nhom = donNhieuAoService.layNhomCuaDon(row.STT_Key, rows);
   if (nhom && nhom.loiChan.length) lyDo.push(`Nhóm DonNhieuAo ${nhom.goc} lỗi dữ liệu: ${nhom.loiChan.join(' ')}`);
   if (nhom && nhom.donMua.STT_Key !== row.STT_Key) lyDo.push(`Thuộc nhóm DonNhieuAo ${nhom.goc} — chỉ xuất đơn ${nhom.donMua.STT_Key} (cả nhóm dùng chung 1 tracking).`);

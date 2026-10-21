@@ -53,7 +53,7 @@ function thongKeTocDo(ms) {
 // Dọn số đo cũ (gọi mỗi ngày từ lịch báo cáo) — giữ 35 ngày, đủ so sánh tuần/tháng.
 const donSoDoCu = (ms = Date.now()) => {
   const moc = vn(ms - 35 * MOT_NGAY_MS);
-  nhatKy.xoaThoiGianApiTruoc(moc); nhatKy.xoaDoMangTruoc(moc); nhatKy.xoaDoMangMayChuTruoc(moc);
+  nhatKy.xoaThoiGianApiTruoc(moc); nhatKy.xoaDoMangTruoc(moc); nhatKy.xoaDoMangMayChuTruoc(moc); nhatKy.xoaTocDoTruoc(moc);
 };
 
 // ======================= Mạng tới máy chủ (đo từ trình duyệt mỗi 30 giây — routes/doMang.js) =======================
@@ -64,12 +64,21 @@ function tomTatMang(ds) {
 }
 const dongMang = t => `${t.n} lần · giữa ${msChu(t.giua)} · 90% ≤ ${msChu(t.p90)} · mất kết nối ${tyLe(t.soLoi, t.n)}`;
 // -> { dong: [HTML], ds: các lần đo 24 giờ (cho file CSV chi tiết) }. Theo người + máy: 6 nhóm chậm nhất (≥ 10 lần đo).
+// Lượt đo "mở sẵn kết nối trước khi gửi ảnh" (21/10/2026, api.js#nenAnhTruocKhiTaiLen — trang có đuôi #truoc-gui-anh): đo đúng lúc vừa quay
+// lại từ app camera (thường phải mở kết nối mới) -> TÁCH khỏi số đo định kỳ 30 giây, báo riêng 1 dòng. File CSV vẫn giữ đủ mọi dòng.
+const NHAN_TRUOC_GUI_ANH = '#truoc-gui-anh';
+const laTruocGuiAnh = d => String(d.trang || '').endsWith(NHAN_TRUOC_GUI_ANH);
 function thongKeMang(ms) {
-  const ds = nhatKy.layDoMang(vn(ms - MOT_NGAY_MS), vn(ms));
-  if (!ds.length) return { dong: [], ds };
-  const truoc = nhatKy.layDoMang(vn(ms - 2 * MOT_NGAY_MS), vn(ms - MOT_NGAY_MS));
+  const tatCa = nhatKy.layDoMang(vn(ms - MOT_NGAY_MS), vn(ms));
+  if (!tatCa.length) return { dong: [], ds: tatCa };
+  const ds = tatCa.filter(d => !laTruocGuiAnh(d));
+  const truocGuiAnh = tatCa.filter(laTruocGuiAnh);
+  const truoc = nhatKy.layDoMang(vn(ms - 2 * MOT_NGAY_MS), vn(ms - MOT_NGAY_MS)).filter(d => !laTruocGuiAnh(d));
   const tTruoc = tomTatMang(truoc);
   const dong = [`<b>Mạng tới máy chủ</b> (trình duyệt đo mỗi 30 giây): ${dongMang(tomTatMang(ds))}${truoc.length ? ` <i>(hôm trước giữa ${msChu(tTruoc.giua)} / 90% ${msChu(tTruoc.p90)})</i>` : ''}`];
+  if (truocGuiAnh.length) {
+    dong.push(`• Đo ngay trước khi gửi ảnh (vừa quay lại từ camera): ${dongMang(tomTatMang(truocGuiAnh))} · mở kết nối mới ${giuaP90(cot(truocGuiAnh, 'ms_ket_noi'))}`);
+  }
   const nhom = new Map();
   for (const d of ds) {
     const k = [d.nguoi, [d.he_dieu_hanh, d.may || d.trinh_duyet].filter(Boolean).join(' · ')].filter(Boolean).join(' — ');
@@ -79,7 +88,31 @@ function thongKeMang(ms) {
     .sort((a, b) => ((b[1].giua ?? Infinity) - (a[1].giua ?? Infinity)) || (b[1].soLoi / b[1].n - a[1].soLoi / a[1].n));
   for (const [k, t] of xep.slice(0, 6)) dong.push(`• ${esc(k)}: ${dongMang(t)}`);
   dong.push(...dongTachDoan(ds));
-  return { dong, ds };
+  dong.push(...dongTheoNhom(ds, 'nha_mang', 'Theo nhà mạng'), ...dongTheoNhom(ds, 'kieu_ket_noi', 'Theo kiểu kết nối (Chrome Android)'));
+  return { dong, ds: tatCa };
+}
+
+// Nhóm trạm Cloudflare (21/10/2026): gần (VN / Singapore / Hồng Kông) · châu Á khác (Nhật, Hàn, Đài, Thái, Malaysia...) · xa (châu Âu / Mỹ...).
+// Tách riêng châu Á khác để thấy rõ nhà mạng nào bị đẩy sang châu Âu / Mỹ (log 19–20/10: MRS, CDG, MXP, MAD, SJC...).
+const TRAM_GAN = new Set(['HAN', 'SGN', 'SIN', 'HKG']);
+const TRAM_CHAU_A = new Set(['NRT', 'KIX', 'FUK', 'OKA', 'ICN', 'TPE', 'KHH', 'BKK', 'KUL', 'CGK', 'MNL', 'MFM', 'PNH', 'RGN', 'DAC', 'BOM', 'DEL', 'MAA']);
+function tyLeNhomTram(v) {
+  const coTram = v.filter(d => d.colo);
+  if (!coTram.length) return '';
+  const gan = coTram.filter(d => TRAM_GAN.has(d.colo)).length;
+  const chauA = coTram.filter(d => TRAM_CHAU_A.has(d.colo)).length;
+  return ` · trạm gần ${tyLe(gan, coTram.length)} / châu Á khác ${tyLe(chauA, coTram.length)} / xa (Âu, Mỹ...) ${tyLe(coTram.length - gan - chauA, coTram.length)}`;
+}
+// Theo nhà mạng / kiểu kết nối (21/10/2026): mỗi nhóm (≥ 10 lần đo, tối đa 6 nhóm đông nhất) — tổng giữa / 90%, Máy→Cloudflare giữa,
+// tỉ lệ theo nhóm trạm Cloudflare. Chưa có dữ liệu cột này (bản cũ / chưa tải được dữ liệu nhà mạng) -> không in.
+function dongTheoNhom(ds, k, tieuDe) {
+  const nhom = new Map();
+  for (const d of ds) if (d[k]) (nhom.get(d[k]) || nhom.set(d[k], []).get(d[k])).push(d);
+  const xep = [...nhom].filter(([, v]) => v.length >= 10).sort((a, b) => b[1].length - a[1].length).slice(0, 6);
+  if (!xep.length) return [];
+  return [`<b>${tieuDe}</b>:`, ...xep.map(([ten, v]) => {
+    return `• ${esc(ten)}: ${dongMang(tomTatMang(v))} · Máy→Cloudflare ${giuaP90(cot(v, 'ms_cf'))}${tyLeNhomTram(v)}`;
+  })];
 }
 
 // ---- Tách đoạn (17/10/2026): trình duyệt (cột ms_cf...) + máy chủ tự đo mỗi phút (bảng do_mang_may_chu) ----
@@ -121,17 +154,64 @@ function thongKeMangMayChu(ms) {
   const soLoi = ds.filter(d => d.loi).length;
   const moTa = v => `Máy chủ→Cloudflare ${giuaP90(cot(v, 'ms_cf'))} · Cloudflare→máy chủ ${giuaP90(cot(v, 'ms_cf_may_chu'))}`;
   const dong = [`<b>Máy chủ tự đo mỗi phút</b> (${ds.length} lần, lỗi ${tyLe(soLoi, ds.length)}): ${moTa(ds)}${tramCF(ds) ? ` · trạm Cloudflare: ${esc(tramCF(ds))}` : ''}`];
+  // Đích tham chiếu KHÔNG qua Cloudflare + tài nguyên máy chủ (21/10/2026) — cả ngày và đúng giờ chậm nhất.
+  const thamChieu = v => (cot(v, 'ms_tcp_trong_nuoc').length || cot(v, 'ms_tcp_quoc_te').length
+    ? ` · kết nối không qua Cloudflare: trong nước ${giuaP90(cot(v, 'ms_tcp_trong_nuoc'))}, quốc tế ${giuaP90(cot(v, 'ms_tcp_quoc_te'))}` : '');
+  const so = (v, dv) => (v.length ? `${phanVi(v, 0.5)}${dv} / ${phanVi(v, 0.9)}${dv}` : '—'); // giữa / 90% cho số không phải ms
+  const heThong = v => (cot(v, 'cpu_ban').length
+    ? ` · CPU bận ${so(cot(v, 'cpu_ban'), '%')}, steal tối đa ${cot(v, 'cpu_steal').reduce((a, b) => Math.max(a, b), 0)}%`
+      + ` · card mạng máy chủ (gồm cả LAN/MinIO) vào ${so(cot(v, 'mang_vao_kbs'), ' KB/s')}, ra ${so(cot(v, 'mang_ra_kbs'), ' KB/s')}` : '');
+  if (thamChieu(ds) || heThong(ds)) dong.push(`• Cả ngày (giữa / 90%)${thamChieu(ds)}${heThong(ds)}`);
   const g = gioChamNhat(ds, 'ms_cf_may_chu');
-  if (g) dong.push(`• Giờ chậm nhất ${g.g}h: ${moTa(g.v)}`);
+  if (g) dong.push(`• Giờ chậm nhất ${g.g}h: ${moTa(g.v)}${thamChieu(g.v)}${heThong(g.v)}`);
   const loiNhieu = new Map();
   for (const d of ds) if (d.loi) loiNhieu.set(d.loi, (loiNhieu.get(d.loi) || 0) + 1);
   for (const [l, n] of [...loiNhieu].sort((a, b) => b[1] - a[1]).slice(0, 3)) dong.push(`• ${n}× ${esc(l)}`);
   return { dong, ds };
 }
-const COT_CSV_MANG_MAY_CHU = ['luc', 'colo', 'ms_dns', 'ms_tcp', 'ms_tls', 'ms_cf', 'ms_cf_may_chu', 'ms_app', 'loi'];
+// ---- Tốc độ đường truyền (22/10/2026): máy chủ ở nhà vs điện thoại ở xưởng, CÙNG đích speed.cloudflare.com (bảng do_toc_do) ----
+// So theo GIỜ: giờ nào điện thoại chậm mà máy chủ nhanh -> đường mạng xưởng; ngược lại -> đường mạng nhà; cả 2 chậm -> đường quốc tế chung.
+const kbsChu = v => (v == null ? '—' : `${v} KB/s`);
+const giuaThap = v => (v.length ? `${kbsChu(phanVi(v, 0.5))} (10% chậm nhất ≤ ${kbsChu(phanVi(v, 0.1))})` : '—');
+function thongKeDuongTruyen(ms) {
+  const ds = nhatKy.layTocDo(vn(ms - MOT_NGAY_MS), vn(ms));
+  if (!ds.length) return { dong: [], ds };
+  const loc = (nguon, huong) => ds.filter(d => d.nguon === nguon && d.huong === huong);
+  const mcXuong = loc('may_chu', 'xuong'), mcLen = loc('may_chu', 'len'), dtLen = loc('dien_thoai', 'len'), nhanAnh = loc('nhan_anh', 'len');
+  const soLoi = v => v.filter(d => d.loi).length;
+  const dong = ['<b>Tốc độ đường truyền</b> (tới speed.cloudflare.com, không qua app; giữa · 10% chậm nhất):'];
+  if (mcXuong.length || mcLen.length) {
+    dong.push(`• Máy chủ (mạng nhà): tải xuống ${giuaThap(cot(mcXuong, 'kbs'))} · tải lên ${giuaThap(cot(mcLen, 'kbs'))} · lỗi ${soLoi(mcXuong) + soLoi(mcLen)}/${mcXuong.length + mcLen.length}`);
+  }
+  if (dtLen.length) {
+    dong.push(`• Điện thoại (mạng xưởng) tải lên: ${giuaThap(cot(dtLen, 'kbs'))} · 1 vòng tới Cloudflare ${giuaP90(cot(dtLen, 'ms_rtt'))} · lỗi ${soLoi(dtLen)}/${dtLen.length}`);
+    const theoXuong = new Map();
+    for (const d of dtLen) { const k = d.xuong || '(chưa gán Xưởng)'; (theoXuong.get(k) || theoXuong.set(k, []).get(k)).push(d); }
+    for (const [x, v] of [...theoXuong].sort((a, b) => b[1].length - a[1].length).slice(0, 4)) {
+      const nm = [...new Set(v.map(d => d.nha_mang).filter(Boolean))].slice(0, 2).join(', ');
+      dong.push(`  ◦ Xưởng ${esc(x)}${nm ? ` (${esc(nm)})` : ''}: ${v.length} lần · ${giuaThap(cot(v, 'kbs'))}`);
+    }
+  }
+  if (nhanAnh.length) {
+    dong.push(`• Máy chủ nhận ảnh thật (từ lúc yêu cầu tới máy chủ đến khi nhận đủ ảnh): ${nhanAnh.length} ảnh · ${giuaThap(cot(nhanAnh, 'kbs'))} · thời gian ${giuaP90(cot(nhanAnh, 'ms'))}`);
+  }
+  // Theo giờ: giữa KB/s máy chủ lên / máy chủ xuống / điện thoại lên / nhận ảnh thật — chỉ giờ có số đo.
+  const theoGio = new Map();
+  for (const d of ds) { const g = String(d.luc).slice(11, 13); (theoGio.get(g) || theoGio.set(g, []).get(g)).push(d); }
+  const o = (v, nguon, huong) => { const x = cot(v.filter(d => d.nguon === nguon && d.huong === huong), 'kbs'); return x.length ? phanVi(x, 0.5) : '–'; };
+  const dongGio = [...theoGio].sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([g, v]) => `${g}h ${o(v, 'may_chu', 'len')}/${o(v, 'may_chu', 'xuong')}/${o(v, 'dien_thoai', 'len')}/${o(v, 'nhan_anh', 'len')}`);
+  if (dongGio.length) dong.push(`• Theo giờ (KB/s: máy chủ lên / máy chủ xuống / điện thoại lên / nhận ảnh thật): ${dongGio.join(' · ')}`);
+  return { dong, ds };
+}
+const COT_CSV_TOC_DO = ['luc', 'nguon', 'huong', 'kb', 'ms', 'kbs', 'ms_rtt', 'colo', 'nha_mang', 'kieu_ket_noi', 'nguoi', 'xuong', 'may', 'loi'];
+const taoCsvTocDo = ds => taoCsv(COT_CSV_TOC_DO, ds);
+
+const COT_CSV_MANG_MAY_CHU = ['luc', 'colo', 'ms_dns', 'ms_tcp', 'ms_tls', 'ms_cf', 'ms_cf_may_chu', 'ms_app', 'loi',
+  'ms_tcp_trong_nuoc', 'ms_tcp_quoc_te', 'tai_cpu', 'cpu_ban', 'cpu_steal', 'mang_vao_kbs', 'mang_ra_kbs'];
 const taoCsvDoMangMayChu = ds => taoCsv(COT_CSV_MANG_MAY_CHU, ds);
 const COT_CSV_MANG = ['luc', 'nguoi', 'vai_tro', 'xuong', 'trang', 'ms', 'loi', 'loai_mang', 'mbps', 'rtt', 'he_dieu_hanh', 'trinh_duyet', 'may',
-  'ms_cf', 'ms_cf_may_chu', 'ms_app', 'ms_xep_hang', 'ms_ket_noi', 'colo'];
+  'ms_cf', 'ms_cf_may_chu', 'ms_app', 'ms_xep_hang', 'ms_ket_noi', 'colo', 'nha_mang', 'kieu_ket_noi'];
 // CSV có BOM (Excel đọc đúng tiếng Việt); ô bắt đầu bằng = + - @ thêm ' (chống công thức Excel) — cùng quy tắc file Logs_UploadAnh.
 const oCsv = v => `"${String(v ?? '').replace(/^[=+\-@\t\r]/, "'$&").replace(/"/g, '""')}"`;
 const taoCsv = (cot, ds) => '﻿' + [cot.join(','), ...ds.map(r => cot.map(k => oCsv(r[k])).join(','))].join('\r\n');
@@ -390,4 +470,4 @@ async function guiTinDai(guiTinNhan, chat, text, token) {
   return { ok: true };
 }
 
-module.exports = { thongKeTocDo, donSoDoCu, thongKeMang, taoCsvDoMang, thongKeMangMayChu, taoCsvDoMangMayChu, taoCsv, danhSachLoiDuLieu, taoFileLoiDuLieu, guiLoiDuLieu, tinhBaoCaoTuan, vanBanBaoCaoTuan, taoBaoCaoTuan, guiTinDai };
+module.exports = { thongKeTocDo, donSoDoCu, thongKeMang, taoCsvDoMang, thongKeMangMayChu, taoCsvDoMangMayChu, thongKeDuongTruyen, taoCsvTocDo, taoCsv, danhSachLoiDuLieu, taoFileLoiDuLieu, guiLoiDuLieu, tinhBaoCaoTuan, vanBanBaoCaoTuan, taoBaoCaoTuan, guiTinDai };

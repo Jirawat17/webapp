@@ -12,6 +12,8 @@ const { requireLogin, requireExactRole, laAdmin } = require('../middleware/auth'
 const { layCaiDatNenAnh, datCaiDatNenAnh } = require('../services/caiDatDbService');
 const { thoiGianVNISOString } = require('../services/dateUtils');
 const trangThaiDbService = require('../services/trangThaiDbService');
+const nhatKyDb = require('../services/nhatKyDbService');
+const { traNhaMang } = require('../services/nhaMangService');
 // Trạng thái MỚI NHẤT (SQLite) — kèm vào lỗi 400 khi orderService.update từ chối giữa chừng (trạng thái vừa đổi ngay giữa bước kiểm tra và
 // lúc ghi), để trang gọi nhận ra đơn đã sang trạng thái khác giống nhánh kiểm tra trước (14/10/2026).
 const trangThaiMoiNhat = sttKey => trangThaiDbService.layTheoKey(sttKey).TRANG_THAI_XUONG || undefined;
@@ -145,6 +147,8 @@ router.post('/kiem-tra', async (req, res) => {
 // Vì mã đơn đã lấy từ bước quét QR ngay trước đó trong cùng luồng thao tác (sttKey gửi kèm trong
 // form), KHÔNG cần AI đọc ảnh để nhận diện mã — nhanh hơn, không tốn quota Gemini, chính xác 100%.
 router.post('/upload', upload.single('photo'), async (req, res) => {
+  // Thời gian NHẬN HẾT ảnh (22/10/2026): từ lúc request vào app (server.js#_tVaoUpload, chưa đọc dữ liệu) tới khi multer đọc xong ảnh.
+  const msNhan = req._tVaoUpload ? Math.round(performance.now() - req._tVaoUpload) : null;
   const tBatDau = Date.now(); // bổ sung 23/09/2026, theo yêu cầu người dùng — đo thời gian từng bước để
   // biết chính xác khâu nào chậm nếu người dùng vẫn báo "upload lâu" sau các lần sửa trước, thay vì
   // phải đoán tiếp không có bằng chứng thật từ máy chủ đang chạy.
@@ -271,9 +275,23 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
   console.log(
     `[Photos] Upload ${sttKey}/${moc}: đọc đơn ${tSauDocDon - tBatDau}ms, MinIO ${tSauMinio - tSauDocDon}ms, ` +
     `ghi cập nhật ${Date.now() - tSauMinio}ms, TỔNG ${Date.now() - tBatDau}ms, ảnh ${(req.file.size / 1024).toFixed(0)}KB`
+    + (msNhan != null ? `, nhận ảnh ${msNhan}ms${msNhan > 0 ? ` (${Math.round(req.file.size / 1024 / (msNhan / 1000))} KB/s)` : ''}` : '')
   );
   // thoiGian (12/10/2026, Logs_UploadAnh): mốc máy chủ trả về để trang Quét QR tách "gửi qua mạng" = tổng phía máy − máy chủ.
-  res.json({ ok: true, url, don: updated, thoiGian: { docDon: tSauDocDon - tBatDau, minio: tSauMinio - tSauDocDon, ghi: Date.now() - tSauMinio, tong: Date.now() - tBatDau } });
+  // Lưu thời gian nhận ảnh vào do_toc_do (nguon 'nhan_anh') NGAY ở máy chủ — không phụ thuộc log điện thoại gửi sau (lượt chậm hay mất log
+  // đó nhất); báo cáo so theo giờ với tốc độ máy chủ / điện thoại đo tới Cloudflare. Lỗi ghi không ảnh hưởng việc upload.
+  if (msNhan != null) {
+    try {
+      const kb = Math.round(req.file.size / 1024);
+      nhatKyDb.ghiNhieuTocDo([{
+        luc: thoiGianVNISOString(), nguon: 'nhan_anh', huong: 'len', kb, ms: msNhan, kbs: msNhan > 0 ? Math.round(kb / (msNhan / 1000)) : null,
+        nhaMang: traNhaMang(req.headers['cf-connecting-ip'] || req.socket.remoteAddress).slice(0, 60),
+        nguoi: String(user.ten || '').slice(0, 60), xuong: String(user.xuong || '').slice(0, 60), loi: '',
+      }]);
+    } catch (err) { console.error('[Photos] Lỗi lưu thời gian nhận ảnh:', err.message); }
+  }
+  // nhan (22/10/2026): thời gian máy chủ nhận hết ảnh — KHÔNG cộng vào tong (tong vẫn chỉ là phần xử lý, trang Quét QR trừ ra như cũ).
+  res.json({ ok: true, url, don: updated, thoiGian: { docDon: tSauDocDon - tBatDau, minio: tSauMinio - tSauDocDon, ghi: Date.now() - tSauMinio, tong: Date.now() - tBatDau, nhan: msNhan } });
 });
 
 // "Xong đơn này" (14/10/2026) — chụp xong lượt ảnh đã sản xuất mà không gửi kèm ảnh cuối: nút Xong ở scan.html, hoặc tự gọi khi quét
@@ -320,7 +338,7 @@ router.get('/file/*', async (req, res) => {
   }
   // Tem GKE lưu sẵn (tem-gke_<tracking>.pdf, 16/10/2026 — trackingAutoService#khoaTemDaLuu) nằm chung thư mục đơn để "Xoá dữ liệu đơn"
   // xoá luôn, nhưng KHÔNG mở qua đây: tem có tên/địa chỉ/SĐT khách — chỉ lấy qua IN LABEL (có kiểm tra quyền).
-  if (/\/tem-gke_[^/]*$/.test(objectKey)) return res.status(404).json({ error: 'Không tìm thấy ảnh' });
+  if (/\/tem-(gke|kl)_[^/]*$/.test(objectKey)) return res.status(404).json({ error: 'Không tìm thấy ảnh' }); // + tem KL (22/10/2026)
   // Ảnh của đơn ngoài Xưởng người xem -> coi như không có (29/09/2026, admin chỉ thấy Xưởng mình phụ trách).
   // Key dạng orders/{sttKey}/{uuid}-{tên} (storageService.js#taoObjectKeyDonHang).
   if (!orderService.phamViDon(req.session.user)(objectKey.split('/')[1])) {

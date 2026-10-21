@@ -88,7 +88,7 @@
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=128"></script>
+<script src="/js/api.js?v=129"></script>
 <script>
 let user;
 // Mặc định mở vào "Quét kịch bản" (batch) khi vào trang — theo yêu cầu người dùng 05/09/2026, vì đây
@@ -216,10 +216,8 @@ const thietBiLogSan = layThietBiLog().then(tb => (thietBiLog = tb)).catch(() => 
 // Lỗi do máy chủ đánh dấu nghiepVu (đơn không hợp lệ: sai trạng thái, không tìm thấy, chưa có tracking...) -> nhóm "Sai đơn".
 // Mọi lỗi khác (mất mạng, hết phiên 401, file không phải ảnh, máy chủ 5xx...) -> lỗi kỹ thuật ('LOI').
 const ketQuaLoi = (err, nhanNghiepVu) => (err && err.nghiepVu ? nhanNghiepVu : 'LOI');
-function mangHienTai() {
-  const c = navigator.connection;
-  return c ? { loai: c.effectiveType || '', mbps: c.downlink ?? null } : null;
-}
+// Dùng chung api.js#thongTinMangTrinhDuyet (loai / mbps / rtt / kieu) — trình duyệt không báo gì thì null như trước.
+const mangHienTai = () => (navigator.connection ? thongTinMangTrinhDuyet() : null);
 function ghiLogQuet(suKien) {
   hangDoiLog.push({ ...suKien, cheDo: suKien.cheDo || mode, _t: Date.now() });
   clearTimeout(henGuiLog);

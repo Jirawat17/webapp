@@ -123,9 +123,13 @@ async function apiFetch(url, options = {}) {
 // ============================================================
 const MANG = { CHU_KY_MS: 30000, HAN_MS: 10000, NGUONG_XANH: 300, NGUONG_VANG: 1000, SO_LAN_YEU_CANH_BAO: 3 };
 const _mang = { daBat: false, dangDo: false, lanDoCuoi: 0, ganDay: [], hangDoi: [], soLanYeuLienTiep: 0, lanKetNoiDuocCuoi: 0, anhGanNhat: null, daAnDai: '' };
-const thongTinMangTrinhDuyet = () => { const c = navigator.connection; return c ? { loai: c.effectiveType || '', mbps: c.downlink ?? null, rtt: c.rtt ?? null } : {}; };
+// kieu (21/10/2026): wifi / cellular / ethernet... — KIỂU kết nối thật (chỉ Chrome Android báo); loai ("4g") chỉ là MỨC tốc độ ước lượng.
+const thongTinMangTrinhDuyet = () => { const c = navigator.connection; return c ? { loai: c.effectiveType || '', mbps: c.downlink ?? null, rtt: c.rtt ?? null, kieu: c.type || '' } : {}; };
 const chuMs = ms => (ms == null ? '—' : ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1).replace('.', ',')}s`);
 let _thietBiMangSan = null; // Promise thông tin thiết bị (layThietBiLog) — lấy 1 lần
+// Hiển thị (chấm, khung chi tiết, dải cảnh báo) CHỈ superadmin (21/10/2026, theo yêu cầu người dùng — người dùng thường thấy rối mắt).
+// Mọi vai trò VẪN đo + gửi log do_mang như cũ (báo cáo/CSV phân tích khâu chậm không đổi).
+const hienThiMang = () => (window.__nguoiDung || {}).vaiTro === 'superadmin';
 
 function trangThaiMang() {
   const cuoi = _mang.ganDay[_mang.ganDay.length - 1];
@@ -152,7 +156,7 @@ function capNhatHienThiMang() {
   let dai = document.getElementById('dai-canh-bao-mang');
   // Dải nằm cố định trên đầu -> đẩy nội dung trang xuống đúng bằng chiều cao dải (không che thanh menu), ẩn dải thì trả lại.
   const datDem = () => { document.body.style.paddingTop = dai && dai.isConnected ? `${dai.offsetTop + dai.offsetHeight}px` : ''; };
-  if (!loai || _mang.daAnDai) { if (dai) { dai.remove(); datDem(); } }
+  if (!loai || _mang.daAnDai || !hienThiMang()) { if (dai) { dai.remove(); datDem(); } }
   else {
     if (!dai) {
       dai = document.createElement('div');
@@ -238,13 +242,14 @@ function baoTocDoTaiAnh({ msGui, kb, kbps }) {
 
 // Gửi 1 lô số đo lên /api/ping, hạn 10 giây (AbortController + setTimeout — AbortSignal.timeout không có trên iOS < 16; treo mà không có
 // hạn thì lượt gửi kẹt mãi). Dùng chung cho lượt đo và lượt gửi riêng hàng chờ. -> Response (ném lỗi mạng / quá hạn như fetch).
-async function guiDoMang(ds) {
+async function guiDoMang(ds, tocDo = []) {
   const huy = new AbortController();
   const hen = setTimeout(() => huy.abort(), MANG.HAN_MS);
+  const cach = d => ({ ...d, cachMs: Date.now() - d.t, t: undefined });
   try {
     return await fetch(API + '/ping', {
       method: 'POST', credentials: 'include', cache: 'no-store', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ thietBi: _mang.thietBi || {}, ds: ds.map(d => ({ ...d, cachMs: Date.now() - d.t, t: undefined })) }),
+      body: JSON.stringify({ thietBi: _mang.thietBi || {}, ds: ds.map(cach), ...(tocDo.length ? { tocDo: tocDo.map(cach) } : {}) }),
       signal: huy.signal,
     });
   } finally {
@@ -295,7 +300,66 @@ async function doDoanCloudflare() {
 }
 
 // 1 lần đo. Gửi KÈM các lần đo trước còn chờ (log chi tiết); gửi lỗi thì giữ lại cho lần sau (tối đa 200 lần đo).
-async function doMangMotLan(batBuoc = false) {
+// ---- Tốc độ CHIỀU LÊN của đường mạng xưởng (22/10/2026, theo yêu cầu người dùng) ----
+// Máy chủ đặt ở nhà (Hà Nội), khác đường mạng với xưởng HN/BN -> ảnh đi qua 2 đường. Điện thoại ở trang Quét tải lên 256KB dữ liệu NGẪU NHIÊN
+// tới speed.cloudflare.com (máy chủ thử tốc độ của Cloudflare, cho phép gọi từ trình duyệt — KHÔNG qua máy chủ app); máy chủ ở nhà đo tới CÙNG
+// đích này (doMangMayChuService.js#doTocDoMayChu) -> so cùng giờ biết đường nào nghẽn. Mỗi 10 phút, chỉ khi trang đang hiện và không gửi ảnh
+// trong 90 giây qua (không tranh đường với ảnh thật). Kết quả gửi kèm lượt đo mạng kế tiếp (bảng do_toc_do, nguon 'dien_thoai').
+// Chờ 30 giây sau lần gửi ảnh gần nhất (không phải 90: giờ cao điểm thợ chụp liên tục -> gần như không đo được đúng giờ cần so).
+const TOC_DO = { CHU_KY_MS: 10 * 60 * 1000, KB: 256, HAN_MS: 30000, CHO_SAU_GUI_ANH_MS: 30 * 1000, URL: 'https://speed.cloudflare.com' };
+Object.assign(_mang, { hangDoiTocDo: [], lanDoTocDo: 0, lanGuiAnhCuoi: 0, dangDoTocDo: false });
+async function doTocDoLenNeuDenLuot() {
+  if (location.pathname !== '/scan.html' || document.hidden || _mang.dangDoTocDo || navigator.onLine === false) return;
+  if (Date.now() - _mang.lanDoTocDo < TOC_DO.CHU_KY_MS || Date.now() - _mang.lanGuiAnhCuoi < TOC_DO.CHO_SAU_GUI_ANH_MS) return;
+  _mang.dangDoTocDo = true;
+  _mang.lanDoTocDo = Date.now();
+  const kq = { huong: 'len', kb: TOC_DO.KB, kieu: thongTinMangTrinhDuyet().kieu || '' };
+  const huy = new AbortController();
+  const hen = setTimeout(() => huy.abort(), TOC_DO.HAN_MS);
+  const goi = (path, tuyChon = {}) => fetch(TOC_DO.URL + path, { cache: 'no-store', credentials: 'omit', signal: huy.signal, ...tuyChon })
+    .then(async r => { await r.arrayBuffer(); return r; });
+  try {
+    // 2 lượt 0 byte trước: lượt 1 mở sẵn kết nối (thời gian tải lên không lẫn bắt tay), lượt 2 đo 1 vòng tới Cloudflare (ms_rtt).
+    await goi('/__down?bytes=0');
+    const tRtt = performance.now();
+    await goi('/__down?bytes=0');
+    kq.msRtt = Math.round(performance.now() - tRtt);
+    const du = new Uint8Array(TOC_DO.KB * 1024);
+    for (let i = 0; i < du.length; i += 65536) crypto.getRandomValues(du.subarray(i, i + 65536)); // getRandomValues tối đa 64KB / lần
+    const t0 = performance.now();
+    const r = await goi('/__up', { method: 'POST', body: du });
+    const ms = performance.now() - t0;
+    kq.colo = (r.headers.get('cf-meta-colo') || '').replace(/[^A-Z]/g, '').slice(0, 5);
+    // Trừ 1 vòng (msRtt): phần chờ Cloudflare trả lời không phải thời gian truyền — 256KB mà không trừ thì đi trạm xa (RTT ~300ms) số KB/s
+    // tụt một nửa dù đường mạng không chậm. Máy chủ cũng trừ y như vậy (doMangMayChuService.js#truyen).
+    const msTruyen = ms - kq.msRtt > 0 ? ms - kq.msRtt : ms;
+    if (!r.ok) kq.loi = `HTTP ${r.status}`;
+    else { kq.ms = Math.round(ms); kq.kbs = msTruyen > 0 ? Math.round(TOC_DO.KB / (msTruyen / 1000)) : null; }
+  } catch (e) {
+    kq.loi = e && e.name === 'AbortError' ? `quá ${TOC_DO.HAN_MS / 1000} giây` : 'lỗi mạng';
+  } finally {
+    clearTimeout(hen);
+    _mang.dangDoTocDo = false;
+  }
+  _mang.hangDoiTocDo.push({ t: Date.now(), nguoi: (window.__nguoiDung || {}).ten || '', ...kq });
+  if (_mang.hangDoiTocDo.length > 50) _mang.hangDoiTocDo.splice(0, _mang.hangDoiTocDo.length - 50);
+  guiTocDoNgay();
+}
+// Gửi kết quả NGAY (không chờ lượt ping sau ~30 giây — thợ rời trang / khoá máy trước đó là mất, mà hay mất đúng lúc mạng xấu). Lỗi -> giữ
+// lại, gửi kèm lượt ping sau; rời trang -> sendBeacon / cất localStorage (pagehide).
+async function guiTocDoNgay() {
+  const goi = _mang.hangDoiTocDo.splice(0);
+  if (!goi.length) return;
+  try {
+    const res = await guiDoMang([], goi);
+    if (!res.ok) _mang.hangDoiTocDo.unshift(...goi);
+  } catch (e) {
+    _mang.hangDoiTocDo.unshift(...goi);
+  }
+}
+
+// nhan (21/10/2026): gắn vào trang của số đo (vd 'truoc-gui-anh') để báo cáo tách lượt đo đặc biệt khỏi số đo định kỳ 30 giây.
+async function doMangMotLan(batBuoc = false, nhan = '') {
   if (_mang.dangDo || (document.hidden && !batBuoc)) return;
   _mang.dangDo = true;
   _mang.lanDoCuoi = Date.now();
@@ -304,11 +368,12 @@ async function doMangMotLan(batBuoc = false) {
   // Lượt đo chỉ mang tối đa 5 lần đo trước (vài trăm byte) — sau khi mất mạng lâu, hàng chờ lớn được gửi RIÊNG sau lượt đo (guiHangDoiMang),
   // để thời gian đo không bị cộng thêm thời gian đẩy cả lô lên (số đo cao giả ngay lúc vừa có mạng lại).
   const goi = !_mang.dangGuiHangDoi && _mang.hangDoi.length <= 5 ? _mang.hangDoi.splice(0) : [];
+  const goiTocDo = _mang.hangDoiTocDo.splice(0); // kết quả đo tốc độ chiều lên (doTocDoLenNeuDenLuot) — vài chục byte, gửi kèm
   const tdt = thongTinMangTrinhDuyet();
   const t0 = performance.now();
   let ms = null, loi = '', moc = null, app = null;
   try {
-    const res = await guiDoMang(goi);
+    const res = await guiDoMang(goi, goiTocDo);
     ms = Math.round(performance.now() - t0);
     // Mốc thời gian (Resource Timing) chỉ có sau khi nhận HẾT phản hồi -> đọc hết rồi mới lấy (ms đã chốt lúc có header ở trên).
     await res.text().catch(() => {});
@@ -319,11 +384,12 @@ async function doMangMotLan(batBuoc = false) {
     // 401 (hết phiên): máy chủ KHÔNG lưu khi chưa đăng nhập -> giữ lại số đo, gửi khi đăng nhập lại (tối đa 200 lần đo); rời trang lúc
     // này thì cất vào localStorage thay vì sendBeacon (xem pagehide).
     _mang.hetPhien = res.status === 401;
-    if (ms == null || _mang.hetPhien) _mang.hangDoi.unshift(...goi);
+    if (ms == null || _mang.hetPhien) { _mang.hangDoi.unshift(...goi); _mang.hangDoiTocDo.unshift(...goiTocDo); }
     else if (_mang.hangDoi.length) guiHangDoiMang();
   } catch (e) {
     loi = navigator.onLine === false ? 'không có mạng' : (e && (e.name === 'AbortError' || e.name === 'TimeoutError')) ? `quá ${MANG.HAN_MS / 1000} giây` : 'lỗi mạng';
     _mang.hangDoi.unshift(...goi);
+    _mang.hangDoiTocDo.unshift(...goiTocDo);
   }
   // Đoạn Cloudflare đo SAU lượt ping (kể cả khi ping lỗi: Cloudflare vẫn trả lời được mà máy chủ thì không -> lỗi ở đoạn sau Cloudflare).
   const cf = navigator.onLine === false ? null : await doDoanCloudflare();
@@ -334,7 +400,8 @@ async function doMangMotLan(batBuoc = false) {
     msCFMayChu: ms != null && moc && cf ? Math.max(0, moc.ttfb - cf.cf - (appMs || 0)) : null,
   };
   _mang.doanCuoi = { ...doan, ms, luc: Date.now() };
-  themSoDoMang({ ms, loi, loai: tdt.loai || '', mbps: tdt.mbps ?? null, rtt: tdt.rtt ?? null, ...doan });
+  themSoDoMang({ ms, loi, loai: tdt.loai || '', mbps: tdt.mbps ?? null, rtt: tdt.rtt ?? null, kieu: tdt.kieu || '', ...doan,
+    ...(nhan ? { trang: `${location.pathname}#${nhan}` } : {}) });
   _mang.ganDay.push({ ms, loi });
   if (_mang.ganDay.length > 10) _mang.ganDay.shift();
   _mang.soLanYeuLienTiep = ms != null && ms > MANG.NGUONG_VANG ? _mang.soLanYeuLienTiep + 1 : 0;
@@ -362,19 +429,24 @@ async function guiHangDoiMang() {
 // Hết phiên rồi rời trang (vd sáng ra bấm thao tác -> bị chuyển sang trang đăng nhập): sendBeacon không biết máy chủ trả 401 -> số đo mất.
 // Cất vào localStorage, đăng nhập lại (trang có menu kế tiếp) thì lấy ra gửi tiếp — CHỈ số đo của đúng người đó.
 const KHOA_DO_MANG_CHO = 'doMangChoGui';
+const KHOA_TOC_DO_CHO = 'doTocDoChoGui'; // kết quả đo tốc độ chờ gửi (22/10/2026) — cất riêng, cùng cách
 function catSoDoMangChoDangNhap() {
-  try {
-    const cu = JSON.parse(localStorage.getItem(KHOA_DO_MANG_CHO) || '[]');
-    localStorage.setItem(KHOA_DO_MANG_CHO, JSON.stringify(cu.concat(_mang.hangDoi.splice(0)).slice(-200)));
-  } catch (e) { /* bị chặn / đầy -> bỏ */ }
+  for (const [khoa, hang, toiDa] of [[KHOA_DO_MANG_CHO, _mang.hangDoi, 200], [KHOA_TOC_DO_CHO, _mang.hangDoiTocDo, 50]]) {
+    try {
+      const cu = JSON.parse(localStorage.getItem(khoa) || '[]');
+      localStorage.setItem(khoa, JSON.stringify(cu.concat(hang.splice(0)).slice(-toiDa)));
+    } catch (e) { /* bị chặn / đầy -> bỏ */ }
+  }
 }
 function layLaiSoDoMangDaCat() {
-  try {
-    const ds = JSON.parse(localStorage.getItem(KHOA_DO_MANG_CHO) || '[]');
-    localStorage.removeItem(KHOA_DO_MANG_CHO);
-    const ten = (window.__nguoiDung || {}).ten || '';
-    _mang.hangDoi.unshift(...ds.filter(d => d && d.nguoi === ten).slice(-200));
-  } catch (e) { /* hỏng -> bỏ */ }
+  const ten = (window.__nguoiDung || {}).ten || '';
+  for (const [khoa, hang, toiDa] of [[KHOA_DO_MANG_CHO, _mang.hangDoi, 200], [KHOA_TOC_DO_CHO, _mang.hangDoiTocDo, 50]]) {
+    try {
+      const ds = JSON.parse(localStorage.getItem(khoa) || '[]');
+      localStorage.removeItem(khoa);
+      hang.unshift(...ds.filter(d => d && d.nguoi === ten).slice(-toiDa));
+    } catch (e) { /* hỏng -> bỏ */ }
+  }
 }
 
 function batDauDoMang() {
@@ -388,7 +460,7 @@ function batDauDoMang() {
   } catch (e) { /* trình duyệt cũ */ }
   layLaiSoDoMangDaCat();
   doMangMotLan();
-  setInterval(() => doMangMotLan(), MANG.CHU_KY_MS);
+  setInterval(async () => { await doMangMotLan(); doTocDoLenNeuDenLuot(); }, MANG.CHU_KY_MS);
   document.addEventListener('visibilitychange', () => { if (!document.hidden && Date.now() - _mang.lanDoCuoi > 10000) doMangMotLan(); });
   addEventListener('online', () => doMangMotLan(true));
   addEventListener('offline', () => {
@@ -398,10 +470,12 @@ function batDauDoMang() {
   });
   // Rời trang: gửi nốt các lần đo chưa gửi (không đo thêm). Đang hết phiên / máy không có sendBeacon -> cất localStorage.
   addEventListener('pagehide', () => {
-    if (!_mang.hangDoi.length) return;
+    if (!_mang.hangDoi.length && !_mang.hangDoiTocDo.length) return;
     if (_mang.hetPhien || !navigator.sendBeacon) { catSoDoMangChoDangNhap(); return; }
-    const ds = _mang.hangDoi.splice(0).map(d => ({ ...d, cachMs: Date.now() - d.t, t: undefined }));
-    try { navigator.sendBeacon(API + '/ping', new Blob([JSON.stringify({ ds, thietBi: _mang.thietBi || {} })], { type: 'application/json' })); } catch (e) { /* bỏ */ }
+    const cach = d => ({ ...d, cachMs: Date.now() - d.t, t: undefined });
+    const ds = _mang.hangDoi.splice(0).map(cach);
+    const tocDo = _mang.hangDoiTocDo.splice(0).map(cach);
+    try { navigator.sendBeacon(API + '/ping', new Blob([JSON.stringify({ ds, tocDo, thietBi: _mang.thietBi || {} })], { type: 'application/json' })); } catch (e) { /* bỏ */ }
   });
 }
 // Lượt gọi API thật lỗi mạng -> đo lại ngay (tối đa 1 lần / 5 giây).
@@ -741,7 +815,7 @@ function renderNav(user, active) {
   const chamMang = coChu => `<span class="cham-mang" role="button" tabindex="0" onclick="moChiTietMang(event)" style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;flex-shrink:0;font-size:12px;padding:4px">`
     + `<span class="cham-mang-cham" style="width:10px;height:10px;border-radius:50%;background:#9ca3af;display:inline-block"></span>${coChu ? '<span class="cham-mang-chu">…</span>' : ''}</span>`;
   const noiDungNguoiDung = coChuBaoLoi => `
-    ${chamMang(coChuBaoLoi)}
+    ${hienThiMang() ? chamMang(coChuBaoLoi) : ''}
     <span class="nav-user">${escapeHtml(user.ten)} · ${escapeHtml(NHAN_VAI_TRO[user.vaiTro] || user.vaiTro)}</span>
     <button class="icon-btn ${coChuBaoLoi ? 'icon-btn-nhan' : ''}" onclick="moBaoLoi()" title="Báo lỗi app" aria-label="Báo lỗi app">${icon('alert')}${coChuBaoLoi ? '<span>Báo lỗi</span>' : ''}</button>
     <button class="icon-btn icon-btn-nhan" onclick="dangXuat()">${icon('logout')}<span>Thoát</span></button>`;
@@ -1399,6 +1473,13 @@ const CANH_BAO_FILE_HEIF = 'File ảnh này là dạng HEIC (HEIF): app KHÔNG n
   + 'Ảnh này vẫn được tải lên như bình thường.';
 
 async function nenAnhTruocKhiTaiLen(file, tuyChon = {}) {
+  // Mở sẵn kết nối tới máy chủ (21/10/2026, theo yêu cầu người dùng — log 20/10: gửi ảnh chậm): lúc vừa chụp xong trang thường vừa bị ẩn
+  // (mở app camera) nên kết nối cũ có thể đã đóng; gửi 1 lượt đo mạng NGAY bây giờ để phần bắt tay kết nối (0,3–1 giây giờ cao điểm) chạy
+  // SONG SONG với bước nén (~0,6 giây) thay vì cộng vào lúc gửi ảnh. Không chờ, lỗi bỏ qua; đang đo dở thì kết nối đã sẵn — bỏ qua.
+  // Vừa đo trong 5 giây (vd tải nhiều ảnh liền nhau) -> kết nối còn mở, không gửi thêm.
+  // Gắn nhãn 'truoc-gui-anh' — báo cáo tách riêng (đo lúc vừa quay lại từ camera, không đại diện cho số đo định kỳ).
+  if (_mang.daBat && Date.now() - _mang.lanDoCuoi > 5000) doMangMotLan(true, 'truoc-gui-anh').catch(() => {});
+  _mang.lanGuiAnhCuoi = Date.now(); // đo tốc độ chiều lên (doTocDoLenNeuDenLuot) tránh lúc đang gửi ảnh
   const canhDaiToiDa = tuyChon.canhDaiToiDa || CANH_DAI_NHAT_TOI_DA_KHI_NEN_ANH;
   const chatLuongJpeg = tuyChon.chatLuongJpeg || CHAT_LUONG_JPEG_KHI_NEN_ANH;
   const ts = tuyChon.thongSo || {};

@@ -13,7 +13,7 @@ const NHAN_COT = {
   GHI_CHU: 'Ghi chú', GHI_CHU_XUONG: 'Ghi chú xưởng', GHI_CHU_XUONG_NOI_BO: 'Ghi chú xưởng (bản trong app)', GHI_CHU_VE_FILE: 'Ghi chú vẽ file', GHI_CHU_CHAY_MAY: 'Ghi chú chạy máy',
   NGUOI_CHAY_MAY: 'Người chạy máy', NGUOI_VE_FILE: 'Người vẽ file', NGUOI_VAN_HANH: 'Người vận hành',
   TRACKING_ID: 'Mã tracking', HANG_VAN_CHUYEN: 'Hãng vận chuyển', TRANG_THAI_TRACKING: 'Trạng thái vận chuyển',
-  TRONG_LUONG: 'Trọng lượng', AUTO_TRACKING: 'Tự mua tracking', IN_LABEL: 'Đã in label', TAM_THOI: 'Chờ tem GKE',
+  TRONG_LUONG: 'Trọng lượng', AUTO_TRACKING: 'Tự mua tracking', IN_LABEL: 'Đã in label', TAM_THOI: 'Chờ tem GKE', KL_DANG_TAO: 'Đang mua tracking KL', DON_VI_VAN_CHUYEN: 'Hãng mua tracking',
   XUONG: 'Xưởng', DON_UU_TIEN: 'Ưu tiên', QUOC_GIA: 'Quốc gia', KHACH_HANG: 'Khách hàng',
   Ten_Kich_Ban: 'Tên kịch bản', Cot: 'Cột', Trang_Thai_Yeu_Cau: 'Trạng thái yêu cầu', Trang_Thai_Sau: 'Trạng thái sau',
   Nguoi_Thuc_Hien: 'Người thực hiện',

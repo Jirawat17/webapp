@@ -596,14 +596,18 @@ db.exec(`CREATE INDEX IF NOT EXISTS idx_do_mang_luc ON do_mang(luc)`);
 // Tách đoạn (17/10/2026, public/js/api.js#doMangMotLan): ms_cf = 1 vòng Máy -> Cloudflare; ms_cf_may_chu = Cloudflare <-> máy chủ (ước lượng);
 // ms_app = máy chủ xử lý; ms_xep_hang = chờ trong trình duyệt; ms_ket_noi = mở kết nối mới; colo = trạm Cloudflare (HAN/SGN/SIN...).
 const COT_DO_MANG_DOAN = { ms_cf: 'INTEGER', ms_cf_may_chu: 'INTEGER', ms_app: 'INTEGER', ms_xep_hang: 'INTEGER', ms_ket_noi: 'INTEGER', colo: "TEXT NOT NULL DEFAULT ''" };
+// 21/10/2026: nha_mang = nhà mạng tra từ IP trên máy chủ (services/nhaMangService.js — KHÔNG lưu IP); kieu_ket_noi = trình duyệt báo
+// wifi / cellular (di động) / ethernet... (chỉ Chrome Android) — khác loai_mang ("4g" chỉ là MỨC tốc độ ước lượng, Wi-Fi nhanh cũng báo "4g").
+COT_DO_MANG_DOAN.nha_mang = "TEXT NOT NULL DEFAULT ''";
+COT_DO_MANG_DOAN.kieu_ket_noi = "TEXT NOT NULL DEFAULT ''";
 const cotDoMangDaCo = db.prepare(`PRAGMA table_info(do_mang)`).all().map(c => c.name);
 for (const [cot, kieu] of Object.entries(COT_DO_MANG_DOAN)) if (!cotDoMangDaCo.includes(cot)) db.exec(`ALTER TABLE do_mang ADD COLUMN ${cot} ${kieu}`);
 const ghiNhieuDoMang = db.transaction(ds => {
   const st = db.prepare(`INSERT INTO do_mang (luc, nguoi, vai_tro, xuong, trang, ms, loi, loai_mang, mbps, rtt, he_dieu_hanh, trinh_duyet, may,
-      ms_cf, ms_cf_may_chu, ms_app, ms_xep_hang, ms_ket_noi, colo)
+      ms_cf, ms_cf_may_chu, ms_app, ms_xep_hang, ms_ket_noi, colo, nha_mang, kieu_ket_noi)
     VALUES (@luc, @nguoi, @vaiTro, @xuong, @trang, @ms, @loi, @loaiMang, @mbps, @rtt, @heDieuHanh, @trinhDuyet, @may,
-      @msCF, @msCFMayChu, @msApp, @msXepHang, @msKetNoi, @colo)`);
-  for (const d of ds) st.run({ msCF: null, msCFMayChu: null, msApp: null, msXepHang: null, msKetNoi: null, colo: '', ...d });
+      @msCF, @msCFMayChu, @msApp, @msXepHang, @msKetNoi, @colo, @nhaMang, @kieuKetNoi)`);
+  for (const d of ds) st.run({ msCF: null, msCFMayChu: null, msApp: null, msXepHang: null, msKetNoi: null, colo: '', nhaMang: '', kieuKetNoi: '', ...d });
 });
 // Máy chủ tự đo mỗi phút (17/10/2026, services/doMangMayChuService.js) — VPS -> Cloudflare -> (vòng lại) máy chủ, độc lập người dùng.
 db.exec(`CREATE TABLE IF NOT EXISTS do_mang_may_chu (
@@ -611,17 +615,45 @@ db.exec(`CREATE TABLE IF NOT EXISTS do_mang_may_chu (
   ms_dns INTEGER, ms_tcp INTEGER, ms_tls INTEGER, ms_cf INTEGER, ms_cf_may_chu INTEGER, ms_app INTEGER, loi TEXT NOT NULL DEFAULT ''
 )`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_do_mang_may_chu_luc ON do_mang_may_chu(luc)`);
-const cauGhiDoMangMayChu = db.prepare(`INSERT INTO do_mang_may_chu (luc, colo, ms_dns, ms_tcp, ms_tls, ms_cf, ms_cf_may_chu, ms_app, loi)
-  VALUES (@luc, @colo, @msDns, @msTcp, @msTls, @msCF, @msCFMayChu, @msApp, @loi)`);
-const ghiDoMangMayChu = d => cauGhiDoMangMayChu.run({ colo: '', msDns: null, msTcp: null, msTls: null, msCF: null, msCFMayChu: null, msApp: null, loi: '', ...d });
+// 21/10/2026 (doMangMayChuService.js): kết nối TCP tới đích trong nước / quốc tế không qua Cloudflare + CPU / lưu lượng mạng của máy chủ.
+const COT_MAY_CHU_THEM = { ms_tcp_trong_nuoc: 'INTEGER', ms_tcp_quoc_te: 'INTEGER', tai_cpu: 'REAL', cpu_ban: 'INTEGER', cpu_steal: 'REAL',
+  mang_vao_kbs: 'INTEGER', mang_ra_kbs: 'INTEGER' };
+const cotMayChuDaCo = db.prepare(`PRAGMA table_info(do_mang_may_chu)`).all().map(c => c.name);
+for (const [cot, kieu] of Object.entries(COT_MAY_CHU_THEM)) if (!cotMayChuDaCo.includes(cot)) db.exec(`ALTER TABLE do_mang_may_chu ADD COLUMN ${cot} ${kieu}`);
+const cauGhiDoMangMayChu = db.prepare(`INSERT INTO do_mang_may_chu (luc, colo, ms_dns, ms_tcp, ms_tls, ms_cf, ms_cf_may_chu, ms_app, loi,
+    ms_tcp_trong_nuoc, ms_tcp_quoc_te, tai_cpu, cpu_ban, cpu_steal, mang_vao_kbs, mang_ra_kbs)
+  VALUES (@luc, @colo, @msDns, @msTcp, @msTls, @msCF, @msCFMayChu, @msApp, @loi,
+    @msTcpTrongNuoc, @msTcpQuocTe, @taiCpu, @cpuBan, @cpuSteal, @mangVaoKbs, @mangRaKbs)`);
+const ghiDoMangMayChu = d => cauGhiDoMangMayChu.run({ colo: '', msDns: null, msTcp: null, msTls: null, msCF: null, msCFMayChu: null, msApp: null, loi: '',
+  msTcpTrongNuoc: null, msTcpQuocTe: null, taiCpu: null, cpuBan: null, cpuSteal: null, mangVaoKbs: null, mangRaKbs: null, ...d });
 const layDoMangMayChu = (tuLuc, denLuc) => db.prepare(`SELECT * FROM do_mang_may_chu WHERE luc >= ? AND luc < ? ORDER BY luc`).all(tuLuc, denLuc);
 const xoaDoMangMayChuTruoc = luc => db.prepare(`DELETE FROM do_mang_may_chu WHERE luc < ?`).run(luc).changes;
 const layDoMang = (tuLuc, denLuc) => db.prepare(`SELECT * FROM do_mang WHERE luc >= ? AND luc < ? ORDER BY luc`).all(tuLuc, denLuc);
 const xoaDoMangTruoc = luc => db.prepare(`DELETE FROM do_mang WHERE luc < ?`).run(luc).changes;
+// Đo TỐC ĐỘ đường truyền (22/10/2026, theo yêu cầu người dùng — máy chủ ở nhà Hà Nội, điện thoại ở xưởng HN/BN, 2 đường mạng khác nhau: cần
+// biết đường nào nghẽn). Cả 2 nguồn đo tới CÙNG 1 đích (speed.cloudflare.com, không qua máy chủ app) để so được cùng giờ:
+//   nguon 'may_chu'    — Zima tự tải xuống + tải lên 1MB mỗi 15 phút (doMangMayChuService.js) = sức chứa đường mạng nhà
+//   nguon 'dien_thoai' — điện thoại ở trang Quét tải lên 256KB mỗi 10 phút (api.js) = sức chứa chiều lên của đường mạng xưởng
+// huong: 'len' / 'xuong'; kb = dung lượng; ms = thời gian truyền; kbs = kb / giây; ms_rtt = 1 vòng tới Cloudflare ngay trước đó (điện thoại).
+db.exec(`CREATE TABLE IF NOT EXISTS do_toc_do (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, luc TEXT NOT NULL, nguon TEXT NOT NULL DEFAULT '', huong TEXT NOT NULL DEFAULT '',
+  kb INTEGER, ms INTEGER, kbs INTEGER, ms_rtt INTEGER, colo TEXT NOT NULL DEFAULT '', nha_mang TEXT NOT NULL DEFAULT '',
+  kieu_ket_noi TEXT NOT NULL DEFAULT '', nguoi TEXT NOT NULL DEFAULT '', xuong TEXT NOT NULL DEFAULT '', may TEXT NOT NULL DEFAULT '',
+  loi TEXT NOT NULL DEFAULT ''
+)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_do_toc_do_luc ON do_toc_do(luc)`);
+const cauGhiTocDo = db.prepare(`INSERT INTO do_toc_do (luc, nguon, huong, kb, ms, kbs, ms_rtt, colo, nha_mang, kieu_ket_noi, nguoi, xuong, may, loi)
+  VALUES (@luc, @nguon, @huong, @kb, @ms, @kbs, @msRtt, @colo, @nhaMang, @kieuKetNoi, @nguoi, @xuong, @may, @loi)`);
+const ghiNhieuTocDo = db.transaction(ds => {
+  for (const d of ds) cauGhiTocDo.run({ kb: null, ms: null, kbs: null, msRtt: null, colo: '', nhaMang: '', kieuKetNoi: '', nguoi: '', xuong: '', may: '', loi: '', ...d });
+});
+const layTocDo = (tuLuc, denLuc) => db.prepare(`SELECT * FROM do_toc_do WHERE luc >= ? AND luc < ? ORDER BY luc`).all(tuLuc, denLuc);
+const xoaTocDoTruoc = luc => db.prepare(`DELETE FROM do_toc_do WHERE luc < ?`).run(luc).changes;
 const layQcLogTrongKhoang = (tuLuc, denLuc) => db.prepare(`SELECT STT_Key, LoaiQc, KetQua FROM qc_log WHERE ThoiGian >= ? AND ThoiGian < ? AND CheDo != 'TEST'`).all(tuLuc, denLuc);
 
 module.exports = {
   ghiThoiGianApi, layThoiGianApi, xoaThoiGianApiTruoc, layDoLogsUploadAnh, layQcLogTrongKhoang, ghiNhieuDoMang, layDoMang, xoaDoMangTruoc, ghiDoMangMayChu, layDoMangMayChu, xoaDoMangMayChuTruoc,
+  ghiNhieuTocDo, layTocDo, xoaTocDoTruoc,
   ghiNhieuLogsUploadAnh, dsLogsUploadAnh, duyetTongHopLogsUploadAnh, danhDauDaXuLy, layDaXuLy, donDaXuLyKhongConDung, themDonCanCheck, suaDonCanCheck, danhDauDaCheck, layDonCanCheck, themBaoLoi, ganAnhBaoLoi, demBaoLoiTu, layBaoLoi, dsBaoLoi, capNhatBaoLoi,
   layNote, layDanhSachNote, layTatCaTheNote, taoNote, suaNote, datAnhNote, xoaNote,
   ghiQcLog, layQcLog, layQcLogTheoId, danhGiaQcLog, thongKeDanhGiaQc, thongKeTokenQc, layDongDaDanhGiaCoAi, maxQcLogId, layCclSauId, tongKetQcNgay,

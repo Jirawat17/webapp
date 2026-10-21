@@ -16,6 +16,10 @@ const app = express();
 // Mốc request VÀO app cho lượt đo mạng (17/10/2026) — đặt TRƯỚC đọc body + phiên để thời gian "máy chủ xử lý" (Server-Timing,
 // routes/doMang.js) gồm cả phần app tự làm trước route.
 app.use('/api/ping', (req, res, next) => { req._tVaoPing = performance.now(); next(); });
+// Mốc request upload ảnh VÀO app (22/10/2026) — lúc nhận xong phần đầu (header), TRƯỚC khi đọc dữ liệu ảnh: routes/photos.js tính thời gian
+// nhận hết ảnh (= đoạn Cloudflare -> máy chủ ở nhà, nếu Cloudflare đã nhận đủ ảnh rồi mới chuyển tiếp; nếu chuyển tiếp dần thì gồm cả đoạn
+// điện thoại -> Cloudflare).
+app.use('/api/photos/upload', (req, res, next) => { req._tVaoUpload = performance.now(); next(); });
 app.use(express.json());
 // Phiên lưu SQLite (16/10/2026) — khởi động lại máy chủ không còn đăng xuất mọi người (xem services/phienStore.js).
 const { PhienSqliteStore, donPhienHetHan } = require('./services/phienStore');
@@ -97,6 +101,7 @@ require('./services/trackingJob').batDauLichTracking();
 require('./services/baoCaoLogService').batDauLichBaoCaoLog(); // báo cáo logs 24 giờ (giờ đặt ở Settings) + báo cáo vận hành tuần (7h sáng thứ 7) qua Telegram
 require('./services/orderService').batDauLamMoiNen(); // Don_Hang_ALL làm mới nền mỗi 25 giây — thao tác đọc bản ≤ 30 giây (16/10/2026)
 require('./services/doMangMayChuService').batDauDoMangMayChu(); // máy chủ tự đo mạng qua Cloudflare mỗi phút (17/10/2026)
+require('./services/nhaMangService').batDauCapNhatNhaMang(); // dữ liệu IP -> nhà mạng cho log đo mạng, tải lại mỗi tuần (21/10/2026)
 
 // Tự động quét QC (02/10/2026) — mỗi 2 phút; từng QC TẮT theo mặc định, bật ở menu QC (services/qc/qcAutoService.js).
 require('./services/qc/qcAutoService').batDauLichAutoQc();

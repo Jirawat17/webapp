@@ -260,6 +260,32 @@ function ghiTaiKhoanGke(id, giaTri) {
 function xoaTaiKhoanGke(id) {
   db.prepare(`DELETE FROM tai_khoan_gke WHERE id = ?`).run(Number(id));
 }
+// ---------- Tài khoản KL theo Xưởng (22/10/2026, theo yêu cầu người dùng — cùng khuôn tài khoản GKE) ----------
+// Token = API key tạo ở trang KL (vantage.klportal.com). SkuNumber = SKU đã khai báo sẵn ở mục Item Declarations trên trang KL (mô tả,
+// kích thước, giá trị) — mỗi đơn chỉ gửi SKU + số lượng. CanNangMoiAoGram: dùng khi đơn thiếu TRONG_LUONG.
+const CAC_COT_TAI_KHOAN_KL = ['Ten', 'Token', 'SkuNumber', 'CanNangMoiAoGram'];
+db.exec(`CREATE TABLE IF NOT EXISTS tai_khoan_kl (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ${CAC_COT_TAI_KHOAN_KL.map(c => `${c} TEXT NOT NULL DEFAULT ''`).join(', ')}
+)`);
+if (!db.prepare(`PRAGMA table_info(danh_sach_xuong)`).all().some(c => c.name === 'TaiKhoanKl')) {
+  db.exec(`ALTER TABLE danh_sach_xuong ADD COLUMN TaiKhoanKl TEXT NOT NULL DEFAULT ''`);
+}
+const layDanhSachTaiKhoanKl = () => db.prepare(`SELECT id, ${CAC_COT_TAI_KHOAN_KL.join(', ')} FROM tai_khoan_kl ORDER BY id`).all();
+const layTaiKhoanKl = id => db.prepare(`SELECT id, ${CAC_COT_TAI_KHOAN_KL.join(', ')} FROM tai_khoan_kl WHERE id = ?`).get(Number(id)) || null;
+function ghiTaiKhoanKl(id, giaTri) {
+  const cot = CAC_COT_TAI_KHOAN_KL.filter(c => giaTri[c] !== undefined);
+  const vals = cot.map(c => String(giaTri[c] ?? ''));
+  if (id) {
+    if (cot.length) db.prepare(`UPDATE tai_khoan_kl SET ${cot.map(c => `${c} = ?`).join(', ')} WHERE id = ?`).run(...vals, Number(id));
+    return Number(id);
+  }
+  return Number(db.prepare(`INSERT INTO tai_khoan_kl (${cot.join(', ')}) VALUES (${cot.map(() => '?').join(', ')})`).run(...vals).lastInsertRowid);
+}
+const xoaTaiKhoanKl = id => db.prepare(`DELETE FROM tai_khoan_kl WHERE id = ?`).run(Number(id));
+const layGanTaiKhoanKl = () => Object.fromEntries(db.prepare(`SELECT Ten, TaiKhoanKl FROM danh_sach_xuong WHERE TaiKhoanKl != ''`).all().map(r => [r.Ten, r.TaiKhoanKl]));
+const ganTaiKhoanKlChoXuong = (xuong, id) => db.prepare(`UPDATE danh_sach_xuong SET TaiKhoanKl = ? WHERE Ten = ?`).run(id ? String(id) : '', xuong);
+
 // { Xuong: 'id tài khoản' } — chỉ các Xưởng đã gán.
 function layGanTaiKhoanGke() {
   return Object.fromEntries(db.prepare(`SELECT Ten, TaiKhoanGke FROM danh_sach_xuong WHERE TaiKhoanGke != ''`).all().map(r => [r.Ten, r.TaiKhoanGke]));
@@ -430,6 +456,7 @@ module.exports = {
   layPhienBanPromptQc, layPromptDangDungQc, datPromptDangDungQc, luuPhienBanPromptQc, layLichSuPromptQc,
   CAC_COT_TAI_KHOAN_GKE, layDanhSachTaiKhoanGke, layTaiKhoanGke, ghiTaiKhoanGke, xoaTaiKhoanGke,
   layGanTaiKhoanGke, ganTaiKhoanGkeChoXuong,
+  layDanhSachTaiKhoanKl, layTaiKhoanKl, ghiTaiKhoanKl, xoaTaiKhoanKl, layGanTaiKhoanKl, ganTaiKhoanKlChoXuong,
   layCaiDatHangLoat, datCaiDatHangLoat,
   layCauHinhTracking, datCauHinhTracking, CAC_COT_CAU_HINH_TRACKING,
   layCaiDatCanhBao, datCaiDatCanhBao,

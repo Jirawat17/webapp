@@ -323,6 +323,7 @@ Menu theo vai trò (`public/js/api.js#renderNav`): nguoi_lay_phoi (Quét QR…),
 
 **Danh sách đơn (`orders.html`):** SL font 1.8rem; khối Nâng cao chứa Lọc tổng quát, Mã Tracking, Đã mua Tracking, DonNhieuAo (+ các lọc ít dùng); nút "IN DANH SÁCH PHÔI", "IN DANH SÁCH PHÔI + IN ĐƠN", "IN ĐƠN"; hộp đỏ đơn mua thủ công (có ô sửa dữ liệu gửi GKE).
 **Tracking (`tracking.html`):** cấu hình tự mua (bật, số phút, số giờ sau in mã), hộp đỏ mua thủ công (Mua ngay, Cho tự động thử lại, Sửa dữ liệu gửi GKE), bảng đơn, logs.
+**Vận chuyển KL (22/10/2026):** khối "Vận chuyển (KL)" ở Chi tiết đơn — "Mua Tracking KL ngay" (admin/superadmin, chặn cả ở máy chủ) và "Mua Tracking KL và In Label KL" (admin/superadmin/ve_file, đơn "Đã sản xuất"/"ĐÃ DÁN TEM"). Chỉ đơn giao tới US; KL chỉ mua tay. Dùng chung TRACKING_ID/HANG_VAN_CHUYEN với GKE + cột DON_VI_VAN_CHUYEN='KL', KL_ORDER_SID, KL_PHI_USD/VND, TAI_KHOAN_KL (SQLite). Trước khi tạo luôn tra KL theo mã đơn (không tạo trùng); dấu TAM_THOI=DANG_TAO_DON_KL khi chưa rõ kết quả. Tài khoản KL theo Xưởng ở Settings (token không hiện lại). Code: services/klService.js, services/trackingKlService.js; nút IN LABEL GKE / tra trạng thái tự chuyển sang KL cho đơn KL. Label KL: đang nhận PDF — chưa có file mẫu thật.
 **Đơn hàng loạt:** "Nhóm hệ thống đề xuất" có nút "Xoá nhóm đề xuất" (bên trái "Xác nhận…") — chỉ xoá `NHOM_HANG_LOAT` của các đơn đang hiện, trong phạm vi Xưởng; quét lại có thể gom lại.
 **Đăng nhập:** logo Σ/X (`public/images/logo.png`), favicon `public/favicon.ico`, `apple-touch-icon.png`.
 
