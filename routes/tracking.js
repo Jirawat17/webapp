@@ -13,7 +13,7 @@ const orderService = require('../services/orderService');
 const sheetSellerService = require('../services/sheetSellerService');
 const { requireLogin, requireExactRole, laAdmin } = require('../middleware/auth');
 const klService = require('../services/klService');
-const { muaTrackingKlChoDon, muaTrackingKlVaInLabelChoDon } = require('../services/trackingKlService');
+const { muaTrackingKlChoDon, muaTrackingKlVaInLabelChoDon, boDauDangMuaKl } = require('../services/trackingKlService');
 
 router.use(requireLogin);
 
@@ -138,6 +138,18 @@ router.post('/kl/mua', async (req, res) => {
     }
   }
   res.json({ ok: true, thanhCong, loi, loiDaySheetKh });
+});
+
+// "Bỏ dấu đang mua KL" (22/10/2026) — CHỈ superadmin; chặn khác Xưởng như các nút khác.
+router.post('/kl/bo-dau', requireExactRole('superadmin'), async (req, res) => {
+  const sttKey = String((req.body && req.body.sttKey) || '');
+  const { row } = await orderService.getByKey(sttKey);
+  if (!row || !orderService.coQuyenTheoXuong(req.session.user, row)) return res.status(404).json({ error: 'Không tìm thấy đơn hàng' });
+  try {
+    res.json(await boDauDangMuaKl(sttKey, req.session.user, { boQuaKiemTra: req.body.boQuaKiemTra === true }));
+  } catch (err) {
+    res.status(400).json({ error: err.message, maLoi: err.maLoi || '' });
+  }
 });
 
 router.get('/logs', (req, res) => {

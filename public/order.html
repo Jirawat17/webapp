@@ -266,7 +266,7 @@ async function taiChiTiet() {
     </div>
     </div>
 
-    <div class="${user.vaiTro === 'san_xuat' ? '' : 'chi-tiet-layout'}">
+    <div class="${user.vaiTro === 'superadmin' ? 'chi-tiet-layout' : ''}">
       <div>
         ${dsAnh.length ? `<div class="nhom-anh-mau">${dsAnh.map(src => `<img class="anh-mau" src="${escapeHtml(src)}" alt="Ảnh mẫu/mockup" loading="lazy" onerror="this.remove()">`).join('')}</div>` : ''}
         ${(user.vaiTro !== 'nguoi_lay_phoi' && (don.DUONG_DAN_URL || don.MOCKUP)) || don.Anh_File_Theu_URL || don.Anh_File_Theu_URL_2 || don.Anh_File_Theu_URL_3 || don.Anh_Da_San_Xuat_URL || don.Anh_Da_San_Xuat_URL_2 || don.Anh_Dong_Goi_URL ? `
@@ -288,7 +288,7 @@ async function taiChiTiet() {
         <div id="khu-vuc-thao-tac"></div>
       </div>
 
-      ${user.vaiTro === 'san_xuat' ? '' : `
+      ${user.vaiTro !== 'superadmin' ? '' : `
       <div>
         <h3>Lịch sử thay đổi</h3>
         <div class="timeline">
@@ -870,7 +870,9 @@ function htmlKhoiKl(don) {
     nd = `<p style="margin:0;font-size:0.85rem">Đơn thuộc nhóm DonNhieuAo ${escapeHtml(nhom.goc)} — mua tracking ở đơn <strong>${escapeHtml(nhom.donMua || '(chưa xác định)')}</strong>, đơn này dùng chung.</p>`;
   } else {
     if (don.KL_DANG_TAO) {
-      nd += '<p style="margin:0 0 8px;font-size:0.85rem;color:var(--color-warning-text)">Lần mua KL trước chưa nhận được kết quả từ KL. Bấm mua lại: app tra KL theo mã đơn trước — KHÔNG tạo đơn trùng.</p>';
+      nd += '<p style="margin:0 0 8px;font-size:0.85rem;color:var(--color-warning-text)">Lần mua KL trước chưa nhận được kết quả từ KL. Bấm mua lại: app tra KL theo mã đơn trước — KHÔNG tạo đơn trùng.'
+        + (user.vaiTro === 'superadmin' ? ` Muốn mua GKE thay: <button type="button" class="btn-hanh-dong phu" style="padding:4px 10px;font-size:0.82rem" onclick="boDauDangMuaKl(this)">Bỏ dấu đang mua KL</button>` : '')
+        + '</p>';
     }
     nd += `<div class="hang-nut">
         ${laAdmin(user.vaiTro) ? `<button class="btn-hanh-dong phu" onclick="muaTrackingKlNgay(this)">${icon('package')} Mua Tracking KL ngay</button>` : ''}
@@ -909,6 +911,28 @@ async function muaTrackingKlNgay(btn) {
     await hopThongBao(e.message);
     btn.disabled = false;
     btn.innerHTML = nhanGoc;
+  }
+}
+
+// Superadmin: bỏ dấu "đang mua KL" (máy chủ tra KL trước; không tra được thì hỏi xác nhận đã tự kiểm tra trên trang KL).
+async function boDauDangMuaKl(btn) {
+  if (!await hopXacNhan(`Bỏ dấu "đang mua KL" của đơn ${sttKey}? App tra KL theo mã đơn trước — chỉ bỏ khi KL không có đơn này.`)) return;
+  btn.disabled = true;
+  const gui = boQuaKiemTra => apiFetch('/tracking/kl/bo-dau', { method: 'POST', body: JSON.stringify({ sttKey, boQuaKiemTra }) });
+  try {
+    try {
+      await gui(false);
+    } catch (e) {
+      if (!(e.duLieu && e.duLieu.maLoi === 'KHONG_TRA_DUOC_KL')) throw e;
+      if (!await hopXacNhan(`${e.message}
+Bạn ĐÃ tự kiểm tra trên trang KL và chắc chắn KHÔNG có đơn ${sttKey}? Bỏ dấu mà KL thật ra đã tạo đơn thì có thể bị mua 2 lần (KL + GKE).`)) { btn.disabled = false; return; }
+      await gui(true);
+    }
+    await hopThongBao('Đã bỏ dấu đang mua KL — có thể mua GKE hoặc mua KL lại.');
+    await taiChiTiet();
+  } catch (e) {
+    await hopThongBao(e.message);
+    btn.disabled = false;
   }
 }
 

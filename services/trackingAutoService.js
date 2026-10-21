@@ -952,6 +952,7 @@ async function layDanhSachDonAutoTracking(user) {
         trackingId: daCoTrackingThat ? r.TRACKING_ID : '',
         nguonSeller: daCoTrackingThat && r.NGUON_TRACKING === orderService.NGUON_TRACKING_SELLER,
         hangVanChuyen: daCoTrackingThat ? (r.HANG_VAN_CHUYEN || '') : '',
+        donVi: daCoTrackingThat ? (r.DON_VI_VAN_CHUYEN || '') : '', // 'KL' = mua qua KL (22/10/2026); '' = GKE / Seller
         hanTuMua: !daCoTrackingThat && han !== null ? new Date(han).toISOString() : '',
         soLanThu: daCoTrackingThat ? 0 : Number(r.TU_MUA_SO_LAN_THU) || 0,
         loiGanNhat: daCoTrackingThat ? '' : r.TU_MUA_LOI_GAN_NHAT || '',

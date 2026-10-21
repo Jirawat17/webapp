@@ -51,8 +51,11 @@ const HANH_DONG_GIOI_HAN_THU = ['TU_DONG_MUA_CHUYEN_THU_CONG', 'CHO_TU_DONG_MUA_
 const VAI_TRO_THAY_GIOI_HAN_THU = ['admin', 'superadmin', 've_file'];
 
 async function layLichSuTheoDon(sttKey, nguoiXem) {
-  const rows = nhatKyDbService.layTatCaLichSuHoatDong();
   const vaiTro = nguoiXem && typeof nguoiXem === 'object' ? nguoiXem.vaiTro : nguoiXem;
+  // Lịch sử thay đổi của đơn CHỈ superadmin xem (22/10/2026, theo yêu cầu người dùng) — chặn ở đây nên mọi nơi gọi đều theo:
+  // Chi tiết đơn (routes/orders.js), tra cứu QR (routes/qr.js), chatbot (routes/chatbot.js). Vai trò khác nhận mảng rỗng.
+  if (vaiTro !== 'superadmin') return [];
+  const rows = nhatKyDbService.layTatCaLichSuHoatDong();
   const duocThayGioiHan = VAI_TRO_THAY_GIOI_HAN_THU.includes(vaiTro);
   const coDon = r => (r.STT_Key === sttKey
     || (!r.STT_Key && r.ChiTiet.includes(JSON.stringify(sttKey)) && (docChiTiet(r.ChiTiet).sttKeys || []).includes(sttKey)))

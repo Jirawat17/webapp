@@ -492,7 +492,7 @@ async function taiDanhSach() {
               <td><a href="/order.html?stt=${encodeURIComponent(d.sttKey)}">${escapeHtml(d.sttKey)}</a></td>
               <td><span class="tk-trang-thai ${tt.lop}">${escapeHtml(tt.nhan)}</span>${d.soLanThu ? `<div style="font-size:0.78rem;color:var(--color-danger-text);margin-top:4px">Tự động thử ${d.soLanThu}/10 lần — ${escapeHtml(d.loiGanNhat)}</div>` : ''}</td>
               <td>${escapeHtml(d.trackingId || '—')}${d.trackingId ? nutSaoChep(d.trackingId, 'Sao chép mã tracking') : ''}${d.nguonSeller ? ' <small style="color:var(--color-text-muted)">(Seller cung cấp)</small>' : ''}</td>
-              <td>${escapeHtml(d.hangVanChuyen || '—')}</td>
+              <td>${d.donVi === 'KL' ? '<strong>KL</strong> · ' : ''}${escapeHtml(d.hangVanChuyen || '—')}</td>
               <td>${d.thoiGianSanXuat ? dinhDangNgayGioNganAnToan(d.thoiGianSanXuat) : '—'}</td>
               <td>${d.hanTuMua ? dinhDangNgayGioNganAnToan(d.hanTuMua) : '—'}</td>
               <td style="display:flex;gap:6px;flex-wrap:wrap">

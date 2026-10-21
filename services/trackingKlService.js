@@ -67,6 +67,16 @@ async function _muaTrackingKl(sttKey, user) {
     }
     if (don) {
       nhatKy.push(`KL đã có đơn thành công cho mã ${sttKey} (sid ${don.sid}) — dùng lại, KHÔNG tạo đơn mới.`);
+      // Danh sách có thể thiếu hãng giao / phí -> lấy chi tiết đơn; lỗi thì dùng dữ liệu đang có (đã có barcode + sid là đủ để lưu tracking).
+      if (!don.shipping_partner || don.usd == null) {
+        try {
+          const ct = await klService.layDonKl(don.sid, cauHinh, nhatKy);
+          don = { ...don, ...Object.fromEntries(['shipping_partner', 'usd', 'vnd'].filter(k => ct[k] != null && ct[k] !== '').map(k => [k, ct[k]])) };
+        } catch (err) {
+          nhatKy.push(`Không lấy được chi tiết đơn KL ${don.sid} (${err.message}) — hãng giao / phí có thể để trống.`);
+        }
+        if (!don.shipping_partner) nhatKy.push(`CẢNH BÁO: KL không cho biết hãng giao của đơn ${don.sid} — cột hãng vận chuyển để trống.`);
+      }
     } else {
       // Bước 2: dấu "đang tạo" + tài khoản, rồi mới gửi lệnh tạo.
       await orderService.update(sttKey, { KL_DANG_TAO: thoiGianVNISOString(), TAI_KHOAN_KL: cauHinh.id, DON_VI_VAN_CHUYEN: DON_VI_KL }, user);
@@ -76,7 +86,8 @@ async function _muaTrackingKl(sttKey, user) {
         if (err.khongRoKetQua) {
           throw new Error(`${err.message}. CHƯA BIẾT KL đã tạo đơn hay chưa — bấm lại: app tra KL theo mã đơn trước, KHÔNG tạo trùng.`);
         }
-        await orderService.update(sttKey, { KL_DANG_TAO: '', DON_VI_VAN_CHUYEN: '' }, user); // KL từ chối rõ ràng -> bỏ dấu, sửa dữ liệu rồi mua lại
+        // KL từ chối rõ ràng -> bỏ dấu + tài khoản (lần sau lấy lại tài khoản ĐANG gán cho Xưởng), sửa dữ liệu rồi mua lại.
+        await orderService.update(sttKey, { KL_DANG_TAO: '', DON_VI_VAN_CHUYEN: '', TAI_KHOAN_KL: '' }, user);
         throw err;
       }
     }
@@ -109,6 +120,39 @@ async function _muaTrackingKl(sttKey, user) {
     t.ghiLogTrackingVaoDb({ sttKey, nguon: 'KL - Thủ công', nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: 'Lỗi', chiTiet: nhatKy.concat(`LỖI: ${err.message}`).join('\n') });
     throw err;
   }
+}
+
+// "Bỏ dấu đang mua KL" (22/10/2026, CHỈ superadmin — routes/tracking.js): đơn kẹt KL_DANG_TAO (KL mất phản hồi, KL lỗi lâu / hết tiền) để mua
+// GKE hoặc mua KL lại từ đầu. Tra KL theo mã đơn TRƯỚC: KL có đơn -> không bỏ (bấm Mua để nhận tracking, hoặc xoá đơn trên trang KL).
+// Không tra được KL -> lỗi maLoi 'KHONG_TRA_DUOC_KL'; superadmin xác nhận đã tự kiểm tra trên trang KL thì gửi lại với boQuaKiemTra.
+function boDauDangMuaKl(sttKey, user, { boQuaKiemTra = false } = {}) {
+  return tas().xepHangMuaTracking(sttKey, async () => {
+    const t = tas();
+    const { row } = await orderService.getByKey(sttKey, { fresh: true });
+    if (!row) throw new Error('Không tìm thấy đơn: ' + sttKey);
+    if (!row.KL_DANG_TAO) throw new Error('Đơn không ở trạng thái "đang mua KL".');
+    const nhatKy = [];
+    if (!boQuaKiemTra) {
+      let don;
+      try {
+        don = await klService.timDonTheoMa(sttKey, klService.layCauHinhKlChoDon(row), nhatKy);
+      } catch (err) {
+        throw Object.assign(new Error(`Không tra được KL để kiểm tra (${err.message}).`), { maLoi: 'KHONG_TRA_DUOC_KL' });
+      }
+      if (don) {
+        throw new Error(klService.laDonThanhCong(don)
+          ? `KL ĐÃ có đơn mã ${sttKey} (barcode ${don.barcode}) — không bỏ dấu; bấm "Mua Tracking KL" để nhận tracking này (không tạo đơn mới).`
+          : `KL có đơn mã ${sttKey} ở trạng thái "${[don.status, don.status_text].filter(v => v != null && v !== '').join(' – ')}" — xoá đơn đó trên trang KL trước rồi bỏ dấu.`);
+      }
+    }
+    await orderService.update(sttKey, { KL_DANG_TAO: '', DON_VI_VAN_CHUYEN: '', TAI_KHOAN_KL: '' }, user);
+    const chiTiet = boQuaKiemTra ? 'Bỏ dấu KHÔNG tra KL (superadmin xác nhận đã tự kiểm tra trên trang KL).' : 'Đã tra KL: không có đơn mã này — bỏ dấu.';
+    ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'BO_DAU_DANG_MUA_KL', sttKey, chiTiet: { boQuaKiemTra } })
+      .catch(err => console.error('[TrackingKL] Lỗi ghi log nền:', err.message));
+    t.ghiLogTrackingVaoDb({ sttKey, nguon: 'KL - Bỏ dấu', nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: 'Thành công', chiTiet: nhatKy.concat(chiTiet).join('\n') });
+    t.ghiLogTracking(`[KL - ${user.ten}] ${sttKey}: bỏ dấu đang mua KL${boQuaKiemTra ? ' (không tra KL)' : ''}`, sttKey);
+    return { ok: true };
+  });
 }
 
 // In label KL cho đơn ĐÃ mua tracking KL (cũng là đích của nút "IN LABEL" GKE / in hàng loạt khi đơn là đơn KL — trackingAutoService.inLabelChoDon).
@@ -191,4 +235,4 @@ async function traTrangThaiKl(donTra) {
 }
 const daGiaoXongKl = r => laDonKl(r) && r.MA_TRANG_THAI_NODE_TRACKING === 'DONE';
 
-module.exports = { muaTrackingKlChoDon, inLabelKlChoDon, muaTrackingKlVaInLabelChoDon, traTrangThaiKl, laDonKl, daGiaoXongKl };
+module.exports = { muaTrackingKlChoDon, inLabelKlChoDon, muaTrackingKlVaInLabelChoDon, boDauDangMuaKl, traTrangThaiKl, laDonKl, daGiaoXongKl };

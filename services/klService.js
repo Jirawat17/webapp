@@ -140,6 +140,14 @@ const TRANG_THAI_KL_LOI = new Set(['-1', '5', '6']);
 const laTrangThaiKlLoi = d => TRANG_THAI_KL_LOI.has(String(d.status).trim()) || /fail|warn/i.test(`${d.status || ''} ${d.status_text || ''}`);
 const laDonThanhCong = d => !!(d && d.barcode && d.sid && !laTrangThaiKlLoi(d));
 
+// Chi tiết 1 đơn KL (GET /api/v1/orders/<sid>) — dùng khi DÙNG LẠI đơn tìm được qua tra theo mã: danh sách có thể thiếu shipping_partner /
+// usd / vnd (ví dụ tài liệu: "shipping_partner": null). Lỗi -> ném (nơi gọi tự quyết dùng dữ liệu đang có).
+async function layDonKl(sid, cauHinh, nhatKy) {
+  const { res, data, text } = await goi('chi tiết đơn', 'GET', `/api/v1/orders/${encodeURIComponent(sid)}`, cauHinh, { nhatKy });
+  if (!res.ok || !data || typeof data !== 'object') throw new Error(`[chi tiết đơn] KL từ chối: ${lyDoLoi(data, text, res)}`);
+  return data.data && typeof data.data === 'object' && !Array.isArray(data.data) ? data.data : data;
+}
+
 // Tạo đơn (MUA tracking — có thể phát sinh phí). KHÔNG thử lại. -> { barcode, sid, shipping_partner, usd, vnd }.
 async function taoDonKl(body, cauHinh, nhatKy) {
   ghi(nhatKy, `[KL] [tạo đơn] Body: ${JSON.stringify(body)}`);
@@ -244,5 +252,5 @@ function taoBodyDonKl(row, dsDon, cauHinh, maQuocGia) {
 module.exports = {
   dangTaoDonKl, DON_VI_KL, BASE_URL,
   layCauHinhKlChoDon, layDanhSachTaiKhoanKl, luuTaiKhoanKl, xoaTaiKhoanKl, ganTaiKhoanKlChoXuong,
-  timDonTheoMa, laDonThanhCong, taoDonKl, layLabelKl, layTrackingKl, suKienMoiNhat, tenHangVanChuyen, maBangMy, taoBodyDonKl,
+  timDonTheoMa, laDonThanhCong, layDonKl, taoDonKl, layLabelKl, layTrackingKl, suKienMoiNhat, tenHangVanChuyen, maBangMy, taoBodyDonKl,
 };
