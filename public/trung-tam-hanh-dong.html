@@ -71,7 +71,7 @@
 </div>
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=129"></script>
+<script src="/js/api.js?v=130"></script>
 <script>
 function dinhDangThoiGian(iso) {
   const d = new Date(iso);
@@ -96,9 +96,12 @@ function veKhoiLoiSanXuat(ds) {
   ).join('')}</div>`;
 }
 
+// Ngày lên đơn (22/10/2026, theo yêu cầu người dùng) — "lên đơn 15/10", cùng cách mục DonNhieuAo.
+const nhanNgayLenDon = d => (d.ngayLenDon ? `lên đơn ${escapeHtml(d.ngayLenDon)}` : '');
+// 22/10/2026: tên đơn là link riêng sang Chi tiết đơn (như các mục có nút) + ngày lên đơn.
 function veKhoiUuTien(ds) {
   if (ds.length === 0) return khoiRong('Không có đơn ưu tiên nào đang chờ xử lý.');
-  return `<div class="ttha-danh-sach">${ds.map(d => dongDon(d.sttKey, escapeHtml(d.trangThai || ''))).join('')}</div>`;
+  return `<div class="ttha-danh-sach">${ds.map(d => dongCoNut(d.sttKey, [escapeHtml(d.trangThai || ''), nhanNgayLenDon(d)].filter(Boolean).join(' · '), '')).join('')}</div>`;
 }
 
 function veKhoiHuy(ds) {
@@ -151,7 +154,7 @@ const NHAN_MUC_CANH_BAO = { DO: 'Đỏ', CAM: 'Cam', VANG: 'Vàng' };
 function veKhoiNhanQuaLau(ds) {
   if (ds.length === 0) return khoiRong('Không có đơn nào nhận quá lâu.');
   return `<div class="ttha-danh-sach">${ds.map(d => dongCoNut(d.sttKey,
-    `${d.mucCanhBao ? `<span class="badge-canh-bao ${d.mucCanhBao.toLowerCase()}">Cảnh báo ${NHAN_MUC_CANH_BAO[d.mucCanhBao]}</span>` : ''}${NHAN_NHAN[d.loai]} · ${escapeHtml(d.nguoi || '?')} · ${d.soGio === null ? 'không rõ lúc nhận' : `đã nhận ${Math.floor(d.soGio)} giờ`}`,
+    `${d.mucCanhBao ? `<span class="badge-canh-bao ${d.mucCanhBao.toLowerCase()}">Cảnh báo ${NHAN_MUC_CANH_BAO[d.mucCanhBao]}</span>` : ''}${NHAN_NHAN[d.loai]} · ${escapeHtml(d.nguoi || '?')} · ${d.soGio === null ? 'không rõ lúc nhận' : `đã nhận ${Math.floor(d.soGio)} giờ`}${d.ngayLenDon ? ' · ' + nhanNgayLenDon(d) : ''}`,
     `<button type="button" class="btn-hanh-dong" onclick='thuHoiDon(${escapeHtml(JSON.stringify(d.sttKey))}, ${JSON.stringify(d.loai)}, this)'>Thu hồi</button>${nutDaXuLy('NHAN_LAU', d)}`,
     d.mucCanhBao ? 'muc-' + d.mucCanhBao.toLowerCase() : '')).join('')}</div>`;
 }
@@ -159,7 +162,7 @@ const NHAN_QUY_TAC = { R1: 'Chưa được quét nhận', R2: 'Đứng yên', R3
 function veKhoiVanChuyen(ds) {
   if (ds.length === 0) return khoiRong('Không có kiện nào bất thường.');
   return `<div class="ttha-danh-sach">${ds.map(d => dongCoNut(d.sttKey,
-    `${escapeHtml(d.trackingId)} · ${d.quyTac.map(q => NHAN_QUY_TAC[q.ma] + (q.soNgay !== null ? ` ${q.soNgay} ngày` : '')).join(', ')}${d.trangThai ? ' · ' + escapeHtml(d.trangThai) : ''}`,
+    `${escapeHtml(d.trackingId)} · ${d.quyTac.map(q => NHAN_QUY_TAC[q.ma] + (q.soNgay !== null ? ` ${q.soNgay} ngày` : '')).join(', ')}${d.trangThai ? ' · ' + escapeHtml(d.trangThai) : ''}${d.ngayLenDon ? ' · ' + nhanNgayLenDon(d) : ''}`,
     nutDaXuLy('VAN_CHUYEN', d))).join('')}</div>`;
 }
 async function danhDauDaXuLy(loai, khoa, giaTri, nut) {

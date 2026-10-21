@@ -40,12 +40,18 @@ function layDonLoiSanXuat(rows) {
 
 // "Chưa xử lý" = ưu tiên NHƯNG chưa xong việc (chưa ship/chưa ở trạng thái kết thúc) — cùng 2 mốc
 // alertService đang dùng để biết đơn nào không cần cảnh báo nữa (xem mục 3, spec doc).
+// Ngày lên đơn dạng ngắn "15/10" ('' nếu không đọc được) — dùng chung các mục của Trung tâm hành động (22/10/2026, theo yêu cầu người dùng).
+function ngayLenDonNgan(r) {
+  const ngay = r && require('./dateUtils').parseNgay(r.NGAY_LEN_DON);
+  return ngay ? `${ngay.getDate()}/${ngay.getMonth() + 1}` : '';
+}
+
 function layDonUuTienChuaXuLy(rows) {
   return rows
     .filter(don => orderService.laUuTien(don)
       && !TRANG_THAI_KET_THUC.includes(don.TRANG_THAI_XUONG)
       && !TRANG_THAI_DA_SHIP.includes(don.TRANG_THAI_XUONG))
-    .map(don => ({ sttKey: don.STT_Key, trangThai: don.TRANG_THAI_XUONG }));
+    .map(don => ({ sttKey: don.STT_Key, trangThai: don.TRANG_THAI_XUONG, ngayLenDon: ngayLenDonNgan(don) }));
 }
 
 // Đọc bảng SQLite logs_tracking (bổ sung 19/09/2026, xem services/nhatKyDbService.js) — bọc try/catch
@@ -116,13 +122,11 @@ const THU_TU_MUC = { VANG: 1, CAM: 2, DO: 3 };
 function layDonNhieuAoCanXuLy(tatCa, huyTatCa, trongPhamVi) {
   const { locDaXuLy } = require('./vanHanhService');
   const { tinhMucCanhBao, layCauHinhCanhBao } = require('./alertService');
-  const { parseNgay } = require('./dateUtils');
   const cauHinhCanhBao = layCauHinhCanhBao();
   const theoKey = new Map(tatCa.map(r => [r.STT_Key, r]));
   const thongTinDon = sttKey => {
     const r = theoKey.get(sttKey);
-    const ngay = r && parseNgay(r.NGAY_LEN_DON);
-    return { sttKey, ngayLenDon: ngay ? `${ngay.getDate()}/${ngay.getMonth() + 1}` : '', mucCanhBao: r ? tinhMucCanhBao(r, cauHinhCanhBao) : null };
+    return { sttKey, ngayLenDon: ngayLenDonNgan(r), mucCanhBao: r ? tinhMucCanhBao(r, cauHinhCanhBao) : null };
   };
   const ganDon = (d, sttKeys) => {
     const don = sttKeys.map(thongTinDon);
@@ -169,10 +173,10 @@ function layCanhBaoVanHanh(rows) {
   const theoKey = new Map(rows.map(r => [r.STT_Key, r]));
   return {
     nhanQuaLau: vanHanh.locDaXuLy('NHAN_LAU', vanHanh.donDangNhan(rows, cauHinh.y6).filter(vanHanh.canNhac), vanHanh.khoaY6, vanHanh.giaTriY6)
-      .map(d => ({ ...d, khoa: vanHanh.khoaY6(d), giaTri: vanHanh.giaTriY6(d), mucCanhBao: tinhMucCanhBao(theoKey.get(d.sttKey), cauHinhCanhBao) })),
+      .map(d => ({ ...d, khoa: vanHanh.khoaY6(d), giaTri: vanHanh.giaTriY6(d), mucCanhBao: tinhMucCanhBao(theoKey.get(d.sttKey), cauHinhCanhBao), ngayLenDon: ngayLenDonNgan(theoKey.get(d.sttKey)) })),
     vanChuyenBatThuong: vanHanh.locDaXuLy('VAN_CHUYEN',
       vanHanh.vanChuyenBatThuong(rows, cauHinh.l2, r => daGiaoThanhCongGke(r.MA_NODE_TRACKING, r.MA_TRANG_THAI_NODE_TRACKING)), vanHanh.khoaL2, vanHanh.giaTriL2)
-      .map(d => ({ ...d, khoa: vanHanh.khoaL2(d), giaTri: vanHanh.giaTriL2(d) })),
+      .map(d => ({ ...d, khoa: vanHanh.khoaL2(d), giaTri: vanHanh.giaTriL2(d), ngayLenDon: ngayLenDonNgan(theoKey.get(d.sttKey)) })),
     nguongNhan: cauHinh.y6,
   };
 }

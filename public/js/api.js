@@ -1132,7 +1132,8 @@ const NHAN_LOAI_SHEET_SELLER = { GHI_CHU: 'Ghi chú xưởng', TRACKING: 'Tracki
 const tgNgan = iso => { const d = new Date(iso); return isNaN(d) ? String(iso || '') : d.toLocaleString('vi-VN'); };
 function htmlLoiSheetSeller(ds, choDayLai) {
   if (!ds || !ds.length) return '<p style="color:var(--color-text-muted)">Không có lần ghi nào sang Sheet Seller đang lỗi.</p>';
-  return `${choDayLai ? `<button type="button" class="btn-hanh-dong" onclick="dayLaiSheetSeller(null, this)">Đẩy lại tất cả (${ds.length})</button>` : ''}
+  return `${choDayLai ? `<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn-hanh-dong" onclick="dayLaiSheetSeller(null, this)">Đẩy lại tất cả (${ds.length})</button>
+      <button type="button" class="btn-hanh-dong phu" onclick="boQuaTatCaLoiSheetSeller(${ds.length}, this)">Bỏ qua tất cả (${ds.length})</button></div>` : ''}
     <div class="bang-cuon-ngang"><table class="info-table">
       <tr><th>Đơn</th><th>Loại</th><th>Nơi ghi</th><th>Giá trị định ghi</th><th>Lý do</th><th>Lần lỗi gần nhất</th>${choDayLai ? '<th></th>' : ''}</tr>
       ${ds.map(d => `<tr>
@@ -1157,6 +1158,19 @@ async function boQuaLoiSheetSeller(sttKey, loai, btn) {
   btn.disabled = true;
   try {
     await apiFetch('/dong-bo-sheet-seller/bo-qua', { method: 'POST', body: JSON.stringify({ sttKey, loai }) });
+    if (_taiLaiSauDayLai) await _taiLaiSauDayLai();
+  } catch (e) {
+    await hopThongBao('Lỗi: ' + e.message);
+    btn.disabled = false;
+  }
+}
+// "Bỏ qua tất cả" (22/10/2026, theo yêu cầu người dùng — chỉ superadmin): bỏ qua MỌI lỗi đang chờ; đơn nào ghi lỗi lần mới thì hiện lại.
+async function boQuaTatCaLoiSheetSeller(soLuong, btn) {
+  if (!await hopXacNhan(`Bỏ qua TẤT CẢ ${soLuong} lỗi ghi Sheet Seller đang chờ? Các lỗi này sẽ không hiện ở đây và không được "Đẩy lại tất cả" nữa — đơn nào ghi lỗi lần mới thì hiện lại.`)) return;
+  btn.disabled = true;
+  try {
+    const kq = await apiFetch('/dong-bo-sheet-seller/bo-qua', { method: 'POST', body: JSON.stringify({ tatCa: true }) });
+    await hopThongBao(`Đã bỏ qua ${kq.soDaBoQua} lỗi.`);
     if (_taiLaiSauDayLai) await _taiLaiSauDayLai();
   } catch (e) {
     await hopThongBao('Lỗi: ' + e.message);
