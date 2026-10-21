@@ -105,6 +105,7 @@ function lyDoDaMuaTracking(r, nhom) {
   else if (String(r.TRACKING_ID2 || '').trim()) lyDo = 'Theo mã tracking Seller điền trong Sheet (TRACKING_ID2) — hệ thống không mua.';
   else if (r.TAM_THOI) lyDo = 'Đã tạo vận đơn GKE nhưng đang chờ tem — chưa có mã tracking.';
   else if (r.KL_DANG_TAO) lyDo = 'Đang mua tracking KL (chưa rõ kết quả) — chưa có mã tracking.';
+  else if (r.HPW_DANG_TAO || r.HPW_REFERENCE_ID) lyDo = `Đang mua tracking HPW${r.HPW_REFERENCE_ID ? ` (lô ${r.HPW_REFERENCE_ID}, chưa mua label)` : ' (chưa rõ kết quả)'} — chưa có mã tracking.`;
   else lyDo = 'Chưa có mã tracking.';
   if (nhom && !nhom.donMua) {
     lyDo += ` Nhóm cùng OrderID ${nhom.orderId} chưa xác định được đơn ".1" (${nhom.loiChan.join(' ')}) nên mỗi đơn tính riêng theo mã của chính nó.`;
@@ -144,7 +145,7 @@ function dongBoTrackingSeller(rows) {
   });
   const apDung = (dich, nguon, cacCon) => {
     if (dich.TRACKING_ID && dich.NGUON_TRACKING !== NGUON_TRACKING_SELLER) return; // app đã mua / nhập tay
-    if (dich.TAM_THOI || dich.KL_DANG_TAO || TRANG_THAI_KET_THUC.includes(dich.TRANG_THAI_XUONG)) return; // + đang mua KL (22/10/2026)
+    if (dich.TAM_THOI || dich.KL_DANG_TAO || dich.HPW_DANG_TAO || dich.HPW_REFERENCE_ID || TRANG_THAI_KET_THUC.includes(dich.TRANG_THAI_XUONG)) return; // + đang mua KL / HPW (22/10/2026)
     const ma = nguon ? maSeller(nguon) : '';
     if (!ma && dich.NGUON_TRACKING !== NGUON_TRACKING_SELLER) return; // chưa có gì để chép / xoá
     const hang = ma ? String(nguon.HANG_VAN_CHUYEN2 || '').trim() : '';

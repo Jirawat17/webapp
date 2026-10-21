@@ -14,7 +14,8 @@ const donNhieuAoService = require('./donNhieuAoService');
 const sheetSellerService = require('./sheetSellerService');
 const { ghiLog } = require('./logService');
 // trackingAutoService cũng require file này (lấy label / tra trạng thái đơn KL) -> nạp khi dùng, tránh vòng require.
-const tas = () => require('./trackingAutoService')._dungChoKl;
+const tas = () => require('./trackingAutoService')._dungChoHangKhac;
+const hangChung = require('./hangVanChuyenKhacService');
 
 const { DON_VI_KL } = klService;
 const { thoiGianVNISOString } = require('./dateUtils');
@@ -43,6 +44,7 @@ async function _muaTrackingKl(sttKey, user) {
     if (row.TAM_THOI === gkeService.MA_DANG_CHO_TEM) {
       throw new Error('Đơn đã tạo vận đơn GKE (đang chờ tem GKE) — không mua KL. Lấy tem ở khối Vận chuyển (GKE).');
     }
+    if (require('./hpwService').dangMuaHpw(row)) throw new Error('Đơn đang mua tracking HPW (đã tạo lô / chưa rõ kết quả) — không mua KL. Xem khối Vận chuyển (HPW).');
 
     // DonNhieuAo: chỉ mua ở đơn ".1" cho cả nhóm; đơn con nhận bản sao tracking (cùng quy tắc GKE).
     const nhom = donNhieuAoService.layNhomCuaDon(sttKey, rows);
@@ -155,68 +157,17 @@ function boDauDangMuaKl(sttKey, user, { boQuaKiemTra = false } = {}) {
   });
 }
 
-// In label KL cho đơn ĐÃ mua tracking KL (cũng là đích của nút "IN LABEL" GKE / in hàng loạt khi đơn là đơn KL — trackingAutoService.inLabelChoDon).
-async function inLabelKlChoDon(sttKey, user) {
-  const t = tas();
-  const nhatKy = [];
-  const { rows, banDoTheoKey } = await orderService.getManyByKeys([sttKey], { fresh: true });
-  const row = banDoTheoKey.get(sttKey);
-  if (!row) throw new Error('Không tìm thấy đơn: ' + sttKey);
-  try {
-    t.kiemTraDieuKienInLabel(row);
-    const nhom = t.kiemTraNhomKhiInLabel(row, rows);
-    const donLayTem = nhom ? nhom.donMua : row;
-    if (!donLayTem.TRACKING_ID || !laDonKl(donLayTem)) throw new Error('Đơn chưa có tracking KL — dùng nút "Mua Tracking KL và In Label KL".');
-    if (!donLayTem.KL_ORDER_SID) throw new Error(`Đơn ${donLayTem.STT_Key} thiếu mã đơn KL (sid) — không lấy được label.`);
-    let base64 = await t.docTemDaLuu(donLayTem.STT_Key, donLayTem.TRACKING_ID, 'kl');
-    if (base64) nhatKy.push(`Dùng tem KL đã lưu sẵn (tracking ${donLayTem.TRACKING_ID}) — không gọi KL.`);
-    else {
-      base64 = await klService.layLabelKl(donLayTem.KL_ORDER_SID, klService.layCauHinhKlChoDon(donLayTem), nhatKy);
-      t.luuTemNen(donLayTem.STT_Key, donLayTem.TRACKING_ID, { label_base64: base64 }, 'kl');
-    }
-    const ketQuaTem = await t.ghiChuNhomLenTem({ label_base64: base64, tracking_num: donLayTem.TRACKING_ID, delivery_carrier: donLayTem.HANG_VAN_CHUYEN }, nhom);
-    await t.ghiDaInLabel(sttKey, user);
-    t.ghiLogTrackingVaoDb({ sttKey, nguon: 'KL - In label', nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: 'Thành công', trackingId: donLayTem.TRACKING_ID, hangVanChuyen: donLayTem.HANG_VAN_CHUYEN, chiTiet: nhatKy.join('\n') });
-    return ketQuaTem;
-  } catch (err) {
-    t.ghiLogTrackingVaoDb({ sttKey, nguon: 'KL - In label', nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: 'Lỗi', chiTiet: nhatKy.concat(`LỖI: ${err.message}`).join('\n') });
-    throw err;
-  }
-}
-
-// "Mua Tracking KL và In Label KL": cần "Đã sản xuất"/"ĐÃ DÁN TEM" (như nút GKE). Đã có tracking KL -> chỉ in; tracking hãng khác -> báo lỗi.
-// Mua được mà lấy label lỗi -> báo rõ, tracking GIỮ NGUYÊN; bấm lại chỉ lấy label (đơn đã có tracking KL), không mua lần 2.
-async function muaTrackingKlVaInLabelChoDon(sttKey, user) {
-  const t = tas();
-  const { rows, banDoTheoKey } = await orderService.getManyByKeys([sttKey], { fresh: true });
-  const row = banDoTheoKey.get(sttKey);
-  if (!row) throw new Error('Không tìm thấy đơn: ' + sttKey);
-  let nhom;
-  try {
-    t.chanMuaDonDaHuy(row);
-    t.kiemTraDieuKienInLabel(row);
-    nhom = t.kiemTraNhomKhiInLabel(row, rows);
-  } catch (err) {
-    t.ghiLogTrackingVaoDb({ sttKey, nguon: 'KL - Mua + In label', nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: 'Lỗi', chiTiet: `LỖI: ${err.message}` });
-    throw err;
-  }
-  const donMua = nhom ? nhom.donMua : row;
-  if (donMua.TRACKING_ID) {
-    if (laDonKl(donMua)) return inLabelKlChoDon(sttKey, user);
-    throw new Error(`Đơn đã có tracking ${donMua.TRACKING_ID} (không phải KL) — in label ở khối Vận chuyển (GKE).`);
-  }
-  const kq = await muaTrackingKlChoDon(sttKey, user);
-  if (!kq) throw new Error('Đơn vừa được mua tracking bởi người khác — thử lại thao tác này.');
-  try {
-    const tem = await inLabelKlChoDon(sttKey, user);
-    return { ...tem, dayCheKhachHang: kq.dayCheKhachHang, loiSheetCon: kq.loiSheetCon };
-  } catch (err) {
-    // daMua: giao diện tải lại đơn (hiện tracking vừa mua); loiDaySheetKh: lỗi ghi Sheet Seller của lượt mua này vẫn phải báo (hộp đỏ).
-    const loiDaySheetKh = [...(kq.loiSheetCon || []), ...(kq.dayCheKhachHang && !kq.dayCheKhachHang.ok ? [{ sttKey, lyDo: kq.dayCheKhachHang.lyDo }] : [])];
-    throw Object.assign(new Error(`Đã mua tracking KL ${kq.tracking_num} (${kq.delivery_carrier}) nhưng CHƯA lấy được label: ${err.message} — bấm lại nút để chỉ lấy label (không mua lại).`),
-      { daMua: true, loiDaySheetKh });
-  }
-}
+// In label / "Mua Tracking KL và In Label KL" — phần dùng chung với HPW (hangVanChuyenKhacService.js). In label KL cũng là đích của nút
+// "IN LABEL" GKE / in hàng loạt khi đơn là đơn KL (trackingAutoService.inLabelChoDon).
+const HANG_KL = {
+  ten: 'KL', maTem: 'kl', laDon: r => laDonKl(r),
+  thieuDuLieu: don => (don.KL_ORDER_SID ? null : `Đơn ${don.STT_Key} thiếu mã đơn KL (sid) — không lấy được label.`),
+  layLabel: (don, nhatKy) => klService.layLabelKl(don.KL_ORDER_SID, klService.layCauHinhKlChoDon(don), nhatKy),
+  mua: (sttKey, user) => muaTrackingKlChoDon(sttKey, user),
+  inLabel: (sttKey, user) => inLabelKlChoDon(sttKey, user),
+};
+const inLabelKlChoDon = (sttKey, user) => hangChung.inLabelHangKhac(HANG_KL, sttKey, user);
+const muaTrackingKlVaInLabelChoDon = (sttKey, user) => hangChung.muaVaInLabelHangKhac(HANG_KL, sttKey, user);
 
 // Trạng thái vận chuyển đơn KL — gọi từ trackingAutoService.capNhatTrangThaiTrackingChoDon (cùng job / nút tra thủ công với GKE).
 // -> { capNhat } | { lyDo } (chưa có sự kiện). trackingComplete -> MA_TRANG_THAI_NODE_TRACKING 'DONE' (job thôi quét đơn đó).

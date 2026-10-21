@@ -639,9 +639,10 @@ function renderKhuVucThaoTac(don) {
     tomTatVanChuyen.push('In label khi đơn "Đã sản xuất" / "ĐÃ DÁN TEM"');
     chuThichVanChuyen.push('In label: chỉ dùng được khi đơn đang "Đã sản xuất" hoặc "ĐÃ DÁN TEM". Khổ giấy mặc định 100x150mm theo máy in đang đặt mặc định trên máy tính này.');
   }
-  // Đơn mua tracking qua KL / đang tạo đơn KL (22/10/2026): khối GKE chỉ ghi chú — mọi thao tác ở khối "Vận chuyển (KL)" bên dưới.
-  if (don.DON_VI_VAN_CHUYEN === 'KL' || don.KL_DANG_TAO) {
-    vanChuyen = vanChuyen ? '<p style="margin:0;font-size:0.85rem">Đơn mua tracking qua <strong>KL</strong> — thao tác ở khối "Vận chuyển (KL)" bên dưới.</p>' : '';
+  // Đơn mua tracking qua hãng khác (KL / HPW) hoặc đang mua dở (22/10/2026): khối GKE chỉ ghi chú — thao tác ở khối của hãng đó bên dưới.
+  const hangKhac = don.DON_VI_VAN_CHUYEN || (don.KL_DANG_TAO ? 'KL' : dangMuaHpwUi(don) ? 'HPW' : '');
+  if (hangKhac) {
+    vanChuyen = vanChuyen ? `<p style="margin:0;font-size:0.85rem">Đơn mua tracking qua <strong>${escapeHtml(hangKhac)}</strong> — thao tác ở khối "Vận chuyển (${escapeHtml(hangKhac)})" bên dưới.</p>` : '';
     chuThichVanChuyen = [];
   }
   if (vanChuyen) html += `
@@ -650,7 +651,7 @@ function renderKhuVucThaoTac(don) {
         ${vanChuyen}
         ${chuThichVanChuyen.length ? chuThich(tomTatVanChuyen.join(' · '), chuThichVanChuyen.join(' ')) : ''}
       </div>`;
-  if (user.vaiTro !== 'nguoi_lay_phoi' && user.vaiTro !== 'san_xuat') html += htmlKhoiKl(don);
+  if (user.vaiTro !== 'nguoi_lay_phoi' && user.vaiTro !== 'san_xuat') html += htmlKhoiKl(don) + htmlKhoiHpw(don);
 
   // Ảnh file thêu 1/2/3 (ve_file + admin; thuần lưu ảnh, KHÔNG đụng trạng thái) và ảnh Đã sản xuất / ĐÃ DÁN TEM (chỉ admin;
   // tự chuyển trạng thái) — mỗi lần tải 1 ảnh vào đúng cột của loại đã chọn, không bắt buộc đủ, không theo thứ tự.
@@ -863,9 +864,11 @@ function htmlKhoiKl(don) {
       ? `<p style="margin:0;font-size:0.85rem">Cả nhóm DonNhieuAo ${escapeHtml(nhom.goc)} dùng 1 tem — in label KL ở đơn <strong>${escapeHtml(nhom.donIn || '(chưa xác định)')}</strong>.</p>`
       : `<div class="hang-nut"><button class="btn-hanh-dong" onclick="apDungMuaVaInLabelKl(this)">${icon('printer')} In Label KL</button></div>`;
   } else if (don.TRACKING_ID) {
-    nd = `<p style="margin:0;font-size:0.85rem">Đơn đã có tracking <strong>${escapeHtml(don.TRACKING_ID)}</strong> (${don.NGUON_TRACKING === 'SELLER' ? 'Seller cung cấp' : 'GKE'}) — không mua KL.</p>`;
+    nd = `<p style="margin:0;font-size:0.85rem">Đơn đã có tracking <strong>${escapeHtml(don.TRACKING_ID)}</strong> (${escapeHtml(nguonTracking(don))}) — không mua KL.</p>`;
   } else if (don.TAM_THOI === 'DANG_CHO_GKE_TAO_TEM') {
     nd = '<p style="margin:0;font-size:0.85rem">Đơn đã tạo vận đơn GKE (đang chờ tem GKE) — không mua KL.</p>';
+  } else if (dangMuaHpwUi(don)) {
+    nd = '<p style="margin:0;font-size:0.85rem">Đơn đang mua tracking HPW — không mua KL. Xem khối "Vận chuyển (HPW)".</p>';
   } else if (laDonConNhieuAo(don)) {
     nd = `<p style="margin:0;font-size:0.85rem">Đơn thuộc nhóm DonNhieuAo ${escapeHtml(nhom.goc)} — mua tracking ở đơn <strong>${escapeHtml(nhom.donMua || '(chưa xác định)')}</strong>, đơn này dùng chung.</p>`;
   } else {
@@ -887,24 +890,108 @@ function htmlKhoiKl(don) {
       </div>`;
 }
 
-async function muaTrackingKlNgay(btn) {
+// Dùng chung khối KL / HPW (22/10/2026).
+const dangMuaHpwUi = don => !!(don.HPW_DANG_TAO || (don.HPW_REFERENCE_ID && !don.TRACKING_ID));
+const nguonTracking = don => don.DON_VI_VAN_CHUYEN || (don.NGUON_TRACKING === 'SELLER' ? 'Seller cung cấp' : 'GKE');
+
+// ---- Khối "Vận chuyển (HPW)" (22/10/2026, theo yêu cầu người dùng — services/trackingHpwService.js) ----
+// Cùng quyền / cách hiển thị như khối KL. Chỉ đơn US / UK. Thêm thao tác superadmin: huỷ lô chưa mua label, gắn mã lô tay, bỏ dấu.
+function htmlKhoiHpw(don) {
+  const laHpw = don.DON_VI_VAN_CHUYEN === 'HPW';
+  const nhom = don.NhomNhieuAo;
+  const laSa = user.vaiTro === 'superadmin';
+  const nutNho = (nhan, onclick) => `<button type="button" class="btn-hanh-dong phu" style="padding:4px 10px;font-size:0.82rem" onclick="${onclick}">${nhan}</button>`;
+  let nd = '';
+  if (don.TRACKING_ID && laHpw) {
+    nd = `<p style="margin:0 0 8px">Tracking HPW: <strong>${escapeHtml(don.TRACKING_ID)}</strong>${nutSaoChep(don.TRACKING_ID, 'Sao chép mã tracking')}`
+      + `${don.HANG_VAN_CHUYEN ? ` (${escapeHtml(don.HANG_VAN_CHUYEN)})` : ''}${don.HPW_PHI_USD ? ` · Phí: $${escapeHtml(don.HPW_PHI_USD)}` : ''}`
+      + `${don.HPW_REFERENCE_ID ? ` · Lô ${escapeHtml(don.HPW_REFERENCE_ID)}` : ''}${don.TRACKING_CHUNG_CUA ? ` <span style="color:var(--color-text-faint)">(dùng chung của ${escapeHtml(don.TRACKING_CHUNG_CUA)})</span>` : ''}</p>`;
+    nd += nhom && !nhom.laDonIn
+      ? `<p style="margin:0;font-size:0.85rem">Cả nhóm DonNhieuAo ${escapeHtml(nhom.goc)} dùng 1 tem — in label HPW ở đơn <strong>${escapeHtml(nhom.donIn || '(chưa xác định)')}</strong>.</p>`
+      : `<div class="hang-nut"><button class="btn-hanh-dong" onclick="apDungMuaVaInLabelHpw(this)">${icon('printer')} In Label HPW</button></div>`;
+  } else if (don.TRACKING_ID) {
+    nd = `<p style="margin:0;font-size:0.85rem">Đơn đã có tracking <strong>${escapeHtml(don.TRACKING_ID)}</strong> (${escapeHtml(nguonTracking(don))}) — không mua HPW.</p>`;
+  } else if (don.TAM_THOI === 'DANG_CHO_GKE_TAO_TEM') {
+    nd = '<p style="margin:0;font-size:0.85rem">Đơn đã tạo vận đơn GKE (đang chờ tem GKE) — không mua HPW.</p>';
+  } else if (don.KL_DANG_TAO) {
+    nd = '<p style="margin:0;font-size:0.85rem">Đơn đang mua tracking KL — không mua HPW. Xem khối "Vận chuyển (KL)".</p>';
+  } else if (laDonConNhieuAo(don)) {
+    nd = `<p style="margin:0;font-size:0.85rem">Đơn thuộc nhóm DonNhieuAo ${escapeHtml(nhom.goc)} — mua tracking ở đơn <strong>${escapeHtml(nhom.donMua || '(chưa xác định)')}</strong>, đơn này dùng chung.</p>`;
+  } else {
+    let goiY = [];
+    try { goiY = don.HPW_GOI_Y_DIA_CHI ? JSON.parse(don.HPW_GOI_Y_DIA_CHI) : []; } catch { goiY = []; }
+    if (don.HPW_REFERENCE_ID) {
+      nd += `<p style="margin:0 0 8px;font-size:0.85rem;color:var(--color-warning-text)">Đã tạo lô <strong>${escapeHtml(don.HPW_REFERENCE_ID)}</strong>${don.HPW_PHI_USD ? ` (dự tính $${escapeHtml(don.HPW_PHI_USD)})` : ''} nhưng CHƯA mua label.`
+        + (goiY.length ? ` HPW gợi ý sửa địa chỉ: <strong>${goiY.map(escapeHtml).join(' | ')}</strong>.` : '')
+        + ' Bấm mua = mua label cho lô này (địa chỉ như lúc tạo).'
+        + (laSa ? ` Muốn đổi địa chỉ: ${nutNho('Huỷ lô hàng HPW', 'huyLoHangHpw(this)')} rồi sửa dữ liệu đơn và mua lại.` : '') + '</p>';
+    } else if (don.HPW_DANG_TAO) {
+      nd += '<p style="margin:0 0 8px;font-size:0.85rem;color:var(--color-warning-text)">Lần tạo lô HPW trước chưa nhận được kết quả. Bấm mua lại: HPW không cho trùng mã đơn nên KHÔNG tạo được lô thứ 2.'
+        + (laSa ? `<br>Nếu HPW báo trùng mã: tìm mã lô (HPW...) trên trang HPW rồi gắn vào đơn
+            <input type="text" id="hpw-ma-lo" placeholder="HPW..." style="width:150px;padding:4px 8px;border-radius:8px;border:1px solid var(--color-border);font:inherit">
+            ${nutNho('Gắn mã lô hàng HPW', 'ganMaLoHangHpw(this)')} — hoặc ${nutNho('Bỏ dấu đang mua HPW', 'boDauDangMuaHpw(this)')} nếu chắc chắn HPW chưa có lô.` : '') + '</p>';
+    }
+    nd += `<div class="hang-nut">
+        ${laAdmin(user.vaiTro) ? `<button class="btn-hanh-dong phu" onclick="muaTrackingHpwNgay(this)">${icon('package')} Mua Tracking HPW ngay</button>` : ''}
+        ${nhom && !nhom.laDonIn ? '' : `<button class="btn-hanh-dong" onclick="apDungMuaVaInLabelHpw(this)">${icon('printer')} Mua Tracking HPW và In Label HPW</button>`}
+      </div>`;
+  }
+  return `
+      <div class="upload-box">
+        <label>${icon('package', { size: 18 })} Vận chuyển (HPW)</label>
+        ${nd}
+        ${chuThich('HPW chỉ mua cho đơn giao tới Mỹ (US) hoặc Anh (UK)', 'Mua Tracking HPW: tạo lô hàng rồi mua label THẬT bên HPW (có thể phát sinh phí), lấy mã tracking. HPW gợi ý sửa địa chỉ thì app dừng trước bước mua label. Mua và In Label: chỉ khi đơn "Đã sản xuất" / "ĐÃ DÁN TEM". Tài khoản HPW theo Xưởng chỉnh ở Settings.')}
+      </div>`;
+}
+
+const muaTrackingHpwNgay = btn => muaTrackingHangNgay(btn, 'hpw', 'HPW');
+async function apDungMuaVaInLabelHpw(btn) {
   if (laDonDaHuy()) return hienThongBaoDonDaHuy([sttKey]);
-  if (!await hopXacNhan(`Mua tracking KL cho đơn ${sttKey} ngay bây giờ? Đây là thao tác tạo đơn vận chuyển THẬT bên KL, có thể phát sinh phí.`)) return;
+  const daCo = donHienTai && donHienTai.TRACKING_ID && donHienTai.DON_VI_VAN_CHUYEN === 'HPW';
+  if (!await hopXacNhan(daCo ? `In label HPW cho đơn ${sttKey}?` : `Mua tracking HPW và in label cho đơn ${sttKey}? Tạo lô hàng + mua label THẬT bên HPW, có thể phát sinh phí.`)) return;
+  await xuLyInLabelChiTiet(btn, '/tracking/hpw/mua-va-in-label');
+}
+// Thao tác superadmin HPW: gửi rồi tải lại đơn.
+async function thaoTacHpw(btn, duongDan, cauHoi, them = {}) {
+  if (!await hopXacNhan(cauHoi)) return;
+  btn.disabled = true;
+  try {
+    await apiFetch(duongDan, { method: 'POST', body: JSON.stringify({ sttKey, ...them }) });
+    await taiChiTiet();
+  } catch (e) {
+    await hopThongBao(e.message);
+    btn.disabled = false;
+  }
+}
+const huyLoHangHpw = btn => thaoTacHpw(btn, '/tracking/hpw/huy-lo-hang', `Huỷ lô hàng HPW ${donHienTai.HPW_REFERENCE_ID} (chưa mua label) của đơn ${sttKey}? Lần mua sau sẽ tạo lô MỚI với mã đơn có đuôi (vd ${sttKey}-2).`);
+const boDauDangMuaHpw = btn => thaoTacHpw(btn, '/tracking/hpw/bo-dau', `Bỏ dấu "đang mua HPW" của đơn ${sttKey}? Chỉ làm khi đã kiểm tra trên trang HPW là KHÔNG có lô hàng cho đơn này (app không tra được theo mã đơn).`);
+function ganMaLoHangHpw(btn) {
+  const ma = (document.getElementById('hpw-ma-lo') || {}).value || '';
+  if (!ma.trim()) return hopThongBao('Nhập mã lô hàng HPW (vd HPW0224123456).');
+  return thaoTacHpw(btn, '/tracking/hpw/gan-ma-lo-hang', `Gắn lô HPW ${ma.trim()} vào đơn ${sttKey}? App kiểm tra lô trên HPW trước khi gắn.`, { maLoHang: ma.trim() });
+}
+
+const muaTrackingKlNgay = btn => muaTrackingHangNgay(btn, 'kl', 'KL');
+// "Mua Tracking <hãng> ngay" — dùng chung KL / HPW (22/10/2026).
+async function muaTrackingHangNgay(btn, ma, ten) {
+  if (laDonDaHuy()) return hienThongBaoDonDaHuy([sttKey]);
+  if (!await hopXacNhan(`Mua tracking ${ten} cho đơn ${sttKey} ngay bây giờ? Đây là thao tác tạo đơn vận chuyển THẬT bên ${ten}, có thể phát sinh phí.`)) return;
   const nhanGoc = btn.innerHTML;
   btn.disabled = true;
   btn.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Đang mua...';
   try {
-    const kq = await apiFetch('/tracking/kl/mua', { method: 'POST', body: JSON.stringify({ sttKeys: [sttKey] }) });
+    const kq = await apiFetch(`/tracking/${ma}/mua`, { method: 'POST', body: JSON.stringify({ sttKeys: [sttKey] }) });
     if (kq.loi && kq.loi.length) {
       const loiKhac = await tachVaBaoDonDaHuy(kq.loi);
-      if (loiKhac.length) await hopThongBao('Không mua được tracking KL: ' + loiKhac[0].lyDo);
+      if (loiKhac.length) await hopThongBao(`Không mua được tracking ${ten}: ` + loiKhac[0].lyDo);
+      if (kq.loi.some(l => l.goiYDiaChi)) { await taiChiTiet(); return; } // HPW: đã tạo lô, dừng vì gợi ý địa chỉ -> hiện lô + gợi ý
       btn.disabled = false;
       btn.innerHTML = nhanGoc;
       return;
     }
     const t = kq.thanhCong[0] || {};
     const phi = [t.phiUsd != null ? `$${t.phiUsd}` : '', t.phiVnd != null ? `${Number(t.phiVnd).toLocaleString('vi-VN')}₫` : ''].filter(Boolean).join(' · ');
-    await hopThongBao(`Đã mua tracking KL: ${t.tracking}${t.hang ? ` (${t.hang})` : ''}${phi ? ` · phí ${phi}` : ''}`);
+    await hopThongBao(`Đã mua tracking ${ten}: ${t.tracking}${t.hang ? ` (${t.hang})` : ''}${phi ? ` · phí ${phi}` : ''}`);
     await baoLoiSheetSeller(kq.loiDaySheetKh);
     await taiChiTiet();
   } catch (e) {
@@ -954,7 +1041,7 @@ async function xuLyInLabelChiTiet(btn, duongDan) {
       const loiKhac = await tachVaBaoDonDaHuy(ketQua.loi);
       if (loiKhac.length) await hopThongBao('Lỗi: ' + loiKhac[0].lyDo);
       // KL (22/10/2026): đã mua tracking nhưng lấy label lỗi -> báo lỗi Sheet Seller (nếu có) + tải lại đơn để hiện tracking vừa mua.
-      if (ketQua.loi.some(l => l.daMua)) {
+      if (ketQua.loi.some(l => l.daMua || l.goiYDiaChi)) { // + HPW: đã tạo lô, dừng vì gợi ý địa chỉ
         await baoLoiSheetSeller(ketQua.loiDaySheetKh);
         await taiChiTiet();
         return;

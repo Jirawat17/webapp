@@ -228,6 +228,21 @@
     <p id="thong-bao-kl" style="display:none"></p>
   </details>
 
+  <!-- Tài khoản HPW theo Xưởng (22/10/2026, cùng khuôn Tài khoản KL). API routes/tracking.js /tai-khoan-hpw, CHỈ superadmin. Password KHÔNG
+       hiện lại — để trống khi lưu = giữ password cũ. -->
+  <details style="margin-top:var(--space-6)">
+    <summary class="btn-hanh-dong phu">Tài khoản HPW</summary>
+    <p style="color:var(--color-text-muted)">Mỗi Xưởng dùng 1 tài khoản HPW (VNEpacket) để mua tracking / in label HPW — chỉ đơn giao tới Mỹ (US) hoặc Anh (UK). Xưởng chưa gán tài khoản sẽ KHÔNG mua được tracking HPW.</p>
+    <h3>Gán tài khoản cho Xưởng</h3>
+    <div class="st-danh-sach-xuong" id="hpw-gan-xuong"></div>
+    <h3 style="margin-top:var(--space-5)">Danh sách tài khoản</h3>
+    <div id="hpw-danh-sach-tk" style="display:flex;flex-direction:column;gap:var(--space-4)"></div>
+    <button type="button" class="btn-hanh-dong phu" id="btn-them-tk-hpw" style="margin-top:var(--space-3)">+ Thêm tài khoản HPW</button>
+    <p class="st-ghi-chu-truong">Dịch vụ HPW (LabelService): US Standard, US Premium, Outside US, US Oversize, US Defer, US Pre Track. Kích thước kiện tính cm, cân nặng gram, giá khai báo $ / áo. Cân nặng cả kiện = TRONG_LUONG × Số lượng (đổi sang gram); đơn thiếu TRONG_LUONG dùng "Cân nặng mỗi áo".</p>
+    <datalist id="ds-dich-vu-hpw"></datalist>
+    <p id="thong-bao-hpw" style="display:none"></p>
+  </details>
+
   <!-- Đồng bộ Sheet Seller (bổ sung 28/09/2026, theo yêu cầu người dùng) — app ghi ghi chú xưởng / tracking /
        Delivered vào Sheet của Seller (services/sheetSellerService.js, tra Sheet qua tab CONFIG theo Team). KHÔNG
        tự thử lại khi lỗi — superadmin theo dõi ở đây (và Trung tâm hành động) rồi bấm Đẩy lại. API:
@@ -301,12 +316,13 @@
   document.getElementById('btn-gui-tuan-bcl').onclick = () => guiNgayBaoCaoLog('btn-gui-tuan-bcl', 'gui-tuan');
   document.getElementById('btn-gui-loi-bcl').onclick = () => guiNgayBaoCaoLog('btn-gui-loi-bcl', 'gui-loi-du-lieu');
   await taiCauHinhNenAnh();
-  await taiMauXuong(); await taiTaiKhoanGke(); await taiTaiKhoanKl(); await taiTeamXuong(); await taiNhomHang();
+  await taiMauXuong(); await taiTaiKhoanGke(); await taiTaiKhoanKl(); await taiTaiKhoanHpw(); await taiTeamXuong(); await taiNhomHang();
   document.getElementById('btn-them-loai-hang').onclick = themLoaiHangMoi;
   document.getElementById('btn-luu-canh-bao').onclick = luuNguongCanhBao;
   document.getElementById('btn-luu-nen-anh').onclick = luuCauHinhNenAnh;
   document.getElementById('btn-them-tk-gke').onclick = themTheTaiKhoanGke;
   document.getElementById('btn-them-tk-kl').onclick = themTheTaiKhoanKl;
+  document.getElementById('btn-them-tk-hpw').onclick = themTheTaiKhoanHpw;
   document.getElementById('btn-khoi-phuc-du-lieu-don').onclick = khoiPhucDuLieuDon;
   document.getElementById('btn-them-xuong').onclick = themXuongMoi;
   document.getElementById('btn-them-team').onclick = themTeamMoi;
@@ -500,7 +516,7 @@ async function themXuongMoi() {
   try {
     await apiFetch('/orders/xuong', { method: 'POST', body: JSON.stringify({ ten }) });
     o.value = '';
-    await taiMauXuong(); await taiTaiKhoanGke(); await taiTaiKhoanKl(); await taiTeamXuong();
+    await taiMauXuong(); await taiTaiKhoanGke(); await taiTaiKhoanKl(); await taiTaiKhoanHpw(); await taiTeamXuong();
   } catch (e) { alert(e.message); }
 }
 
@@ -512,7 +528,7 @@ async function doiTenXuongUi(tenCu) {
   if (!tenMoi || tenMoi === tenCu) return;
   try {
     await apiFetch('/orders/xuong/' + encodeURIComponent(tenCu), { method: 'PUT', body: JSON.stringify({ tenMoi }) });
-    await taiMauXuong(); await taiTaiKhoanGke(); await taiTaiKhoanKl(); await taiTeamXuong();
+    await taiMauXuong(); await taiTaiKhoanGke(); await taiTaiKhoanKl(); await taiTaiKhoanHpw(); await taiTeamXuong();
   } catch (e) { alert(e.message); }
 }
 
@@ -520,7 +536,7 @@ async function xoaXuongUi(ten) {
   if (!confirm(`Xoá Xưởng "${ten}"? Chỉ xoá được nếu không còn đơn/nhân viên nào đang gán Xưởng này.`)) return;
   try {
     await apiFetch('/orders/xuong/' + encodeURIComponent(ten), { method: 'DELETE' });
-    await taiMauXuong(); await taiTaiKhoanGke(); await taiTaiKhoanKl(); await taiTeamXuong();
+    await taiMauXuong(); await taiTaiKhoanGke(); await taiTaiKhoanKl(); await taiTaiKhoanHpw(); await taiTeamXuong();
   } catch (e) { alert(e.message); }
 }
 
@@ -812,6 +828,89 @@ async function ganTaiKhoanKl(xuong, taiKhoanId) {
     thongBaoGke(taiKhoanId ? `Đã gán tài khoản KL cho Xưởng ${xuong}.` : `Đã bỏ gán tài khoản KL của Xưởng ${xuong}.`, false, 'thong-bao-kl');
     await taiTaiKhoanKl();
   } catch (e) { thongBaoGke('Lỗi khi gán: ' + e.message, true, 'thong-bao-kl'); await taiTaiKhoanKl(); }
+}
+
+// ---- Tài khoản HPW theo Xưởng (22/10/2026) — cùng khuôn KL; password không hiện lại, để trống = giữ password cũ ----
+const DICH_VU_HPW = ['US Standard', 'US Premium', 'Outside US', 'US Oversize', 'US Defer', 'US Pre Track']; // gợi ý theo tài liệu HPW
+const TRUONG_TK_HPW = [
+  ['ten', 'Tên tài khoản', 'text'], ['username', 'Username', 'text'], ['password', 'Password', 'password'],
+  ['labelServiceUs', 'Dịch vụ cho đơn US', 'chon', 'US Standard'], ['labelServiceUk', 'Dịch vụ cho đơn UK', 'chon', 'Outside US'],
+  ['daiCm', 'Dài kiện (cm)', 'number'], ['rongCm', 'Rộng kiện (cm)', 'number'], ['caoCm', 'Cao kiện (cm)', 'number'],
+  ['hsCode', 'HSCODE', 'text'], ['tenHang', 'Tên hàng', 'text', 'Embroidered garment'], ['skuHang', 'SKU', 'text', 'EMB-GARMENT'],
+  ['giaHangUsd', 'Giá khai báo ($ / áo)', 'number'], ['canNangMoiAoGram', 'Cân nặng mỗi áo (gram)', 'number', '300'],
+];
+function theTaiKhoanHpw(tk, id, dungCho) {
+  const o = (khoa, loai, goiY) => {
+    const idO = `hpw-${id}-${khoa}`;
+    if (loai === 'chon') { // ô tự nhập + gợi ý: HPW có thể xác nhận tên dịch vụ ngoài danh sách tài liệu (vd cho đơn UK)
+      return `<input type="text" id="${idO}" list="ds-dich-vu-hpw" value="${escapeHtml(tk[khoa] || goiY)}" autocomplete="off">`;
+    }
+    const gt = khoa === 'password' ? '' : (tk[khoa] ?? '');
+    const ph = khoa === 'password' ? (tk.coPassword ? 'Đã có — để trống = giữ nguyên' : 'Password đăng nhập HPW') : (goiY || '');
+    return `<input type="${loai}" id="${idO}" value="${escapeHtml(gt)}" placeholder="${escapeHtml(ph)}" ${loai === 'number' ? 'min="0" step="0.01"' : ''} autocomplete="${loai === 'password' ? 'new-password' : 'off'}">`;
+  };
+  return `
+    <div class="bao-cao-form st-cau-hinh-gke st-the-tk-gke" data-tk-hpw="${escapeHtml(id)}">
+      <strong>${id === 'moi' ? 'Tài khoản mới' : escapeHtml(tk.ten || '(chưa đặt tên)')}</strong>
+      <span class="st-ghi-chu-truong">${id === 'moi' ? '' : (dungCho.length ? 'Đang dùng cho Xưởng: ' + dungCho.map(escapeHtml).join(', ') : 'Chưa gán cho Xưởng nào')}</span>
+      <div class="st-luoi-gke">
+        ${TRUONG_TK_HPW.map(([khoa, nhan, loai, goiY]) => `<div class="truong"><label for="hpw-${id}-${khoa}">${nhan}</label>${o(khoa, loai, goiY)}</div>`).join('')}
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button type="button" class="btn-hanh-dong" data-tk="${escapeHtml(id)}" onclick="luuTaiKhoanHpw(this.dataset.tk)">Lưu tài khoản</button>
+        ${id === 'moi'
+          ? `<button type="button" class="btn-hanh-dong phu" onclick="taiTaiKhoanHpw()">Huỷ</button>`
+          : `<button type="button" class="btn-hanh-dong phu nguy-hiem" data-tk="${escapeHtml(id)}" onclick="xoaTaiKhoanHpw(this.dataset.tk)">Xoá tài khoản</button>`}
+      </div>
+    </div>`;
+}
+async function taiTaiKhoanHpw() {
+  document.getElementById('ds-dich-vu-hpw').innerHTML = DICH_VU_HPW.map(d => `<option value="${escapeHtml(d)}">`).join('');
+  let kq;
+  try { kq = await apiFetch('/tracking/tai-khoan-hpw'); } catch (e) { thongBaoGke('Không tải được tài khoản HPW: ' + e.message, true, 'thong-bao-hpw'); return; }
+  const tenTk = Object.fromEntries(kq.taiKhoan.map(t => [t.id, t.ten]));
+  document.getElementById('hpw-gan-xuong').innerHTML = kq.danhSachXuong.map(x => `
+    <div class="st-dong-xuong">
+      <span class="ten-xuong">${escapeHtml(x)}</span>
+      <select data-xuong="${escapeHtml(x)}" onchange="ganTaiKhoanHpw(this.dataset.xuong, this.value)">
+        <option value="">— Chưa gán (không mua được tracking HPW) —</option>
+        ${kq.taiKhoan.map(t => `<option value="${t.id}" ${kq.ganXuong[x] === t.id ? 'selected' : ''}>${escapeHtml(t.ten || '#' + t.id)}</option>`).join('')}
+      </select>
+      ${kq.ganXuong[x] && !tenTk[kq.ganXuong[x]] ? '<span style="color:var(--color-danger-text)">Tài khoản đã gán không còn tồn tại</span>' : ''}
+    </div>`).join('');
+  document.getElementById('hpw-danh-sach-tk').innerHTML = kq.taiKhoan.length
+    ? kq.taiKhoan.map(t => theTaiKhoanHpw(t, t.id, kq.danhSachXuong.filter(x => kq.ganXuong[x] === t.id))).join('')
+    : '<p style="color:var(--color-text-muted)">Chưa có tài khoản HPW nào — bấm "Thêm tài khoản HPW".</p>';
+}
+function themTheTaiKhoanHpw() {
+  if (document.querySelector('[data-tk-hpw="moi"]')) return;
+  document.getElementById('hpw-danh-sach-tk').insertAdjacentHTML('beforeend', theTaiKhoanHpw({}, 'moi', []));
+  document.getElementById('hpw-moi-ten').focus();
+}
+async function luuTaiKhoanHpw(id) {
+  const giaTri = {};
+  TRUONG_TK_HPW.forEach(([khoa]) => { giaTri[khoa] = document.getElementById(`hpw-${id}-${khoa}`).value.trim(); });
+  try {
+    const kq = await apiFetch('/tracking/tai-khoan-hpw' + (id === 'moi' ? '' : '/' + encodeURIComponent(id)), { method: id === 'moi' ? 'POST' : 'PUT', body: JSON.stringify(giaTri) });
+    await taiTaiKhoanHpw();
+    // Dịch vụ ngoài danh sách tài liệu -> vẫn lưu, hiện cảnh báo (màu lỗi) để kiểm tra chính tả.
+    thongBaoGke(`Đã lưu tài khoản HPW "${giaTri.ten}".${kq.canhBao ? ' ' + kq.canhBao : ''}`, !!kq.canhBao, 'thong-bao-hpw');
+  } catch (e) { thongBaoGke('Lỗi khi lưu: ' + e.message, true, 'thong-bao-hpw'); }
+}
+async function xoaTaiKhoanHpw(id) {
+  if (!await hopXacNhan('Xoá tài khoản HPW này? Đơn ĐÃ mua tracking bằng tài khoản này sẽ không lấy lại label / tra trạng thái được nữa.')) return;
+  try {
+    await apiFetch('/tracking/tai-khoan-hpw/' + encodeURIComponent(id), { method: 'DELETE' });
+    thongBaoGke('Đã xoá tài khoản HPW.', false, 'thong-bao-hpw');
+    await taiTaiKhoanHpw();
+  } catch (e) { thongBaoGke(e.message, true, 'thong-bao-hpw'); }
+}
+async function ganTaiKhoanHpw(xuong, taiKhoanId) {
+  try {
+    await apiFetch('/tracking/gan-tai-khoan-hpw', { method: 'POST', body: JSON.stringify({ xuong, taiKhoanId }) });
+    thongBaoGke(taiKhoanId ? `Đã gán tài khoản HPW cho Xưởng ${xuong}.` : `Đã bỏ gán tài khoản HPW của Xưởng ${xuong}.`, false, 'thong-bao-hpw');
+    await taiTaiKhoanHpw();
+  } catch (e) { thongBaoGke('Lỗi khi gán: ' + e.message, true, 'thong-bao-hpw'); await taiTaiKhoanHpw(); }
 }
 
 // 07/10/2026: mỗi mức = bật/tắt + đầu vào ('' = từ ngày lên đơn) + đầu ra + số ngày. Server kiểm tra lại (routes/canhBao.js).

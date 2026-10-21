@@ -338,7 +338,7 @@ router.get('/file/*', async (req, res) => {
   }
   // Tem GKE lưu sẵn (tem-gke_<tracking>.pdf, 16/10/2026 — trackingAutoService#khoaTemDaLuu) nằm chung thư mục đơn để "Xoá dữ liệu đơn"
   // xoá luôn, nhưng KHÔNG mở qua đây: tem có tên/địa chỉ/SĐT khách — chỉ lấy qua IN LABEL (có kiểm tra quyền).
-  if (/\/tem-(gke|kl)_[^/]*$/.test(objectKey)) return res.status(404).json({ error: 'Không tìm thấy ảnh' }); // + tem KL (22/10/2026)
+  if (/\/tem-(gke|kl|hpw)_[^/]*$/.test(objectKey)) return res.status(404).json({ error: 'Không tìm thấy ảnh' }); // + tem KL (22/10/2026)
   // Ảnh của đơn ngoài Xưởng người xem -> coi như không có (29/09/2026, admin chỉ thấy Xưởng mình phụ trách).
   // Key dạng orders/{sttKey}/{uuid}-{tên} (storageService.js#taoObjectKeyDonHang).
   if (!orderService.phamViDon(req.session.user)(objectKey.split('/')[1])) {

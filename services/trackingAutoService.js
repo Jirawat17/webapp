@@ -18,7 +18,9 @@ const trangThaiDbService = require('./trangThaiDbService');
 const donNhieuAoService = require('./donNhieuAoService');
 const storageService = require('./storageService');
 const klService = require('./klService');
-// trackingKlService require ngược file này (lấy hàm dùng chung qua _dungChoKl) -> nạp khi gọi, tránh vòng require.
+const hpwService = require('./hpwService');
+const trackingHpwService = () => require('./trackingHpwService'); // require ngược file này -> nạp khi gọi
+// trackingKlService require ngược file này (lấy hàm dùng chung qua _dungChoHangKhac) -> nạp khi gọi, tránh vòng require.
 const trackingKlService = () => require('./trackingKlService');
 
 const SO_PHUT_MAC_DINH = 10;
@@ -285,7 +287,7 @@ async function saoTrackingXuongNhom(nhom, tracking, user) {
       MA_TRANG_THAI_NODE_TRACKING: tracking.maTrangThaiNode || '',
       TAI_KHOAN_GKE: tracking.taiKhoanGke || '',
       // Hãng KL (22/10/2026): đơn con dùng chung tracking KL của đơn ".1" -> cùng DON_VI_VAN_CHUYEN (tra trạng thái / in label đi đường KL).
-      DON_VI_VAN_CHUYEN: tracking.donVi || '', TAI_KHOAN_KL: tracking.taiKhoanKl || '',
+      DON_VI_VAN_CHUYEN: tracking.donVi || '', TAI_KHOAN_KL: tracking.taiKhoanKl || '', TAI_KHOAN_HPW: tracking.taiKhoanHpw || '',
     }, user);
     daSao.push(con.STT_Key);
     ghiLog({
@@ -335,7 +337,7 @@ function baoLoiSheetSeller(ketQua, user, viec) {
 const trackingCuaDon = r => ({
   trackingId: r.TRACKING_ID, hangVanChuyen: r.HANG_VAN_CHUYEN, trangThaiTracking: r.TRANG_THAI_TRACKING,
   thoiGianCapNhat: r.THOI_GIAN_CAP_NHAT_TRACKING, maNode: r.MA_NODE_TRACKING, maTrangThaiNode: r.MA_TRANG_THAI_NODE_TRACKING,
-  taiKhoanGke: r.TAI_KHOAN_GKE, donVi: r.DON_VI_VAN_CHUYEN, taiKhoanKl: r.TAI_KHOAN_KL,
+  taiKhoanGke: r.TAI_KHOAN_GKE, donVi: r.DON_VI_VAN_CHUYEN, taiKhoanKl: r.TAI_KHOAN_KL, taiKhoanHpw: r.TAI_KHOAN_HPW,
 });
 
 // Đồng bộ mọi nhóm mà đơn ".1" ĐÃ có tracking nhưng còn đơn con chưa có (vd đơn con thêm vào Sheet sau
@@ -381,6 +383,9 @@ async function _muaTrackingChoDonThat(sttKey, user) {
     // Đơn đang tạo đơn KL (22/10/2026 — trackingKlService.js): lần gửi KL trước chưa rõ kết quả -> KHÔNG mua thêm GKE (1 đơn chỉ 1 hãng).
     if (klService.dangTaoDonKl(row)) {
       throw Object.assign(new Error('Đơn đang mua tracking KL (lần gửi trước chưa rõ kết quả) — không mua GKE. Xem khối Vận chuyển (KL).'), { loiChung: true });
+    }
+    if (hpwService.dangMuaHpw(row)) { // HPW (22/10/2026): đang gửi / đã tạo lô chưa mua label
+      throw Object.assign(new Error('Đơn đang mua tracking HPW (đã tạo lô / chưa rõ kết quả) — không mua GKE. Xem khối Vận chuyển (HPW).'), { loiChung: true });
     }
     // Từ 12/09/2026 lần 14, theo yêu cầu người dùng: trạng thái "đang chờ tem" KHÔNG còn ghi tạm vào
     // TRACKING_ID nữa (cột này giờ LUÔN chỉ là rỗng hoặc mã thật) — chuyển hẳn sang cột TAM_THOI, người
@@ -493,7 +498,7 @@ async function _muaTrackingChoDonThat(sttKey, user) {
 // khi có tính năng, MinIO lỗi...) thì lấy từ GKE như cũ rồi lưu cho lần sau. Khoá theo đơn + mã tracking: mua lại tracking mới -> khoá mới.
 // Nằm TRONG thư mục ảnh của đơn (orders/<mã>/) — tem có tên/địa chỉ/SĐT khách: "Xoá dữ liệu đơn" (xoaDuLieuDonService) xoá luôn.
 // ponytail: không tự xoá tem cũ (~50–100KB/tem) — thêm dọn theo tuổi nếu bucket phình.
-// hang: 'gke' (mặc định) | 'kl' (22/10/2026, tem KL — trackingKlService.js dùng chung qua _dungChoKl) -> tem-gke_* / tem-kl_*.
+// hang: 'gke' (mặc định) | 'kl' (22/10/2026, tem KL — trackingKlService / trackingHpwService dùng chung qua _dungChoHangKhac) -> tem-gke_* / tem-kl_* / tem-hpw_*.
 const khoaTemDaLuu = (sttKey, trackingNum, hang = 'gke') => `orders/${sttKey}/tem-${hang}_${String(trackingNum).replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
 function luuTemNen(sttKey, trackingNum, ketQuaTem, hang = 'gke') {
   if (!ketQuaTem || !ketQuaTem.label_base64 || !trackingNum) return;
@@ -584,6 +589,7 @@ async function inLabelChoDon(sttKey, user) {
   // Đơn mua tracking qua KL (22/10/2026): nút IN LABEL / in hàng loạt -> lấy label KL (trackingKlService tự kiểm tra điều kiện + ghi log).
   const nhomKl = donNhieuAoService.layNhomCuaDon(sttKey, rows);
   if (trackingKlService().laDonKl(nhomKl ? nhomKl.donMua : row)) return trackingKlService().inLabelKlChoDon(sttKey, user);
+  if (trackingHpwService().laDonHpw(nhomKl ? nhomKl.donMua : row)) return trackingHpwService().inLabelHpwChoDon(sttKey, user); // HPW
 
   try {
     kiemTraDieuKienInLabel(row);
@@ -704,6 +710,7 @@ async function chayQuetTuDongMuaTracking() {
   const donDuDieuKien = rows.filter(r => {
     if (r.TRACKING_ID) return false; // đã có tracking thật (kể cả mã Seller đã chép — orderService#dongBoTrackingSeller)
     if (klService.dangTaoDonKl(r)) return false; // đang mua tracking KL (22/10/2026) — KL chỉ mua tay, không chen GKE
+    if (hpwService.dangMuaHpw(r)) return false; // đang mua tracking HPW (22/10/2026)
     if (String(r.TRACKING_ID2 || '').trim() && !r.TAM_THOI) return false; // Seller đã điền mã (đơn chưa chép được, vd đã kết thúc) — không mua thêm
     if (r.TU_MUA_CHE_DO === CHE_DO_THU_CONG) return false; // đã thử đủ 10 lần — chỉ còn mua tay
     if (laDonConNhieuAo(r)) return false; // đơn ".2" trở lên — dùng tracking của đơn ".1"
@@ -802,6 +809,12 @@ async function capNhatTrangThaiTrackingChoDon(sttKey, { gomDelivered, duLieuDon 
     await ghiKetQuaTrangThai(cacDonGhi, { ...kl.capNhat, THOI_GIAN_CAP_NHAT_TRACKING: dinhDangNgayGioNgan(new Date()) }, { headers, gomDelivered });
     return { ok: true, suKien: kl.suKien };
   }
+  if (trackingHpwService().laDonHpw(donTra)) { // HPW (22/10/2026) — cùng cách nhánh KL
+    const hpw = await trackingHpwService().traTrangThaiHpw(donTra);
+    if (!hpw.capNhat) return { ok: false, lyDo: hpw.lyDo };
+    await ghiKetQuaTrangThai(cacDonGhi, { ...hpw.capNhat, THOI_GIAN_CAP_NHAT_TRACKING: dinhDangNgayGioNgan(new Date()) }, { headers, gomDelivered });
+    return { ok: true, suKien: hpw.suKien };
+  }
   const cauHinhGke = gkeService.layCauHinhGkeChoDon(donTra); // tài khoản ĐÃ tạo vận đơn
   const laSeller = donTra.NGUON_TRACKING === orderService.NGUON_TRACKING_SELLER;
   // Lỗi tra gần nhất lưu SQLite (LOI_TRA_TRACKING, 16/10/2026) cho danh sách lỗi dữ liệu gửi Seller; tra được thì xoá.
@@ -862,6 +875,7 @@ async function chayQuetCapNhatTrangThaiTracking() {
   const donCoTracking = rows.filter(r => r.TRACKING_ID && !r.TRACKING_CHUNG_CUA);
   const donCanQuet = donCoTracking.filter(r => !daGiaoThanhCongGke(r.MA_NODE_TRACKING, r.MA_TRANG_THAI_NODE_TRACKING)
     && !trackingKlService().daGiaoXongKl(r) // đơn KL đã giao xong (trackingComplete) — 22/10/2026
+    && !trackingHpwService().daGiaoXongHpw(r) // đơn HPW đã giao xong (DELIVERED) — 22/10/2026
     // Tracking Seller của đơn đã kết thúc: GKE có thể không bao giờ báo "đã giao" -> không quét mãi (người dùng chốt 11/10/2026).
     && !(r.NGUON_TRACKING === orderService.NGUON_TRACKING_SELLER && TRANG_THAI_KHONG_CAN_MUA.includes(r.TRANG_THAI_XUONG)));
 
@@ -936,6 +950,7 @@ async function layDanhSachDonAutoTracking(user) {
       let trangThai;
       if (daCoTrackingThat) trangThai = 'DA_MUA';
       else if (klService.dangTaoDonKl(r)) trangThai = 'DANG_TAO_DON_KL';
+      else if (hpwService.dangMuaHpw(r)) trangThai = 'DANG_MUA_HPW';
       else if (laDonConNhieuAo(r) && !(nhom && !nhom.loiChan.length)) trangThai = 'DON_CON_CHUA_GHEP_NHOM';
       else if (r.TU_MUA_CHE_DO === CHE_DO_THU_CONG) trangThai = 'CHUYEN_THU_CONG';
       else if (nhom && nhom.loiChan.length) trangThai = 'LOI_NHOM';
@@ -1026,8 +1041,8 @@ module.exports = {
   muaTrackingChoDon, inLabelChoDon, muaTrackingVaInLabelChoDon,
   capNhatTrangThaiTrackingChoDon, chayQuetCapNhatTrangThaiTracking, themSo0ZipMy, chayQuetTrangThaiNeuDenLuot, daGiaoThanhCongGke,
   layCauHinhQuetTrangThai, luuCauHinhQuetTrangThai, SO_PHUT_QUET_TRANG_THAI_TOI_THIEU,
-  // Hàm nội bộ dùng lại cho luồng KL (services/trackingKlService.js, 22/10/2026) — không dùng nơi khác.
-  _dungChoKl: {
+  // Hàm nội bộ dùng lại cho các hãng ngoài GKE (KL, HPW — trackingKlService / trackingHpwService / hangVanChuyenKhacService, 22/10/2026).
+  _dungChoHangKhac: {
     xepHangMuaTracking, chanMuaDonDaHuy, kiemTraDieuKienInLabel, kiemTraNhomKhiInLabel, ghiChuNhomLenTem, ghiDaInLabel,
     ghiLogTracking, ghiLogTrackingVaoDb, saoTrackingXuongNhom, baoLoiSheetSeller, trackingCuaDon, luuTemNen, docTemDaLuu,
   },

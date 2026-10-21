@@ -113,6 +113,12 @@ const CAC_COT = [
   // KL_DANG_TAO: lúc (ISO) đã GỬI lệnh tạo đơn KL mà chưa có kết quả ('' = không). Cột RIÊNG — KHÔNG dùng TAM_THOI (nhiều nơi hiểu TAM_THOI
   // là "vận đơn GKE đang chờ tem": danh sách đơn, DonNhieuAo, xuất Excel GKE, lịch sử).
   'KL_DANG_TAO',
+  // Hãng HPW / VNEpacket (22/10/2026 — services/hpwService.js, trackingHpwService.js). DON_VI_VAN_CHUYEN = 'HPW'. Mua 2 bước: tạo lô hàng
+  // (HPW_REFERENCE_ID = mã lô bên HPW, vd HPW0224123456) -> mua label (TRACKING_ID). HPW_MA_GUI = mã đơn đã gửi HPW (ShippingReferenceId:
+  // STT_Key, sau khi huỷ lô thì STT_Key-2, -3... vì HPW không cho trùng); HPW_PHI_USD = phí (total); HPW_LABEL_PATH = link label PDF;
+  // TAI_KHOAN_HPW = id tài khoản HPW; HPW_DANG_TAO = lúc gửi lệnh tạo / mua label chưa rõ kết quả; HPW_GOI_Y_DIA_CHI = gợi ý sửa địa chỉ
+  // HPW trả lúc tạo lô (đã dừng trước bước mua label).
+  'HPW_REFERENCE_ID', 'HPW_MA_GUI', 'HPW_PHI_USD', 'HPW_LABEL_PATH', 'TAI_KHOAN_HPW', 'HPW_DANG_TAO', 'HPW_GOI_Y_DIA_CHI',
   // CanhBaoDaGui: không nằm trong danh sách 31 cột người dùng liệt kê (có thể chỉ là sót khi liệt kê) —
   // nhưng rà code xác nhận đây CŨNG là cột app tự ghi (cờ chống spam Telegram cảnh báo 3 tầng),
   // không thuộc RAW/A:AM lẫn AN:BR người dùng mô tả. Xếp vào đây theo đúng tiêu chí "app tự ghi" đã

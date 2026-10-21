@@ -286,6 +286,33 @@ const xoaTaiKhoanKl = id => db.prepare(`DELETE FROM tai_khoan_kl WHERE id = ?`).
 const layGanTaiKhoanKl = () => Object.fromEntries(db.prepare(`SELECT Ten, TaiKhoanKl FROM danh_sach_xuong WHERE TaiKhoanKl != ''`).all().map(r => [r.Ten, r.TaiKhoanKl]));
 const ganTaiKhoanKlChoXuong = (xuong, id) => db.prepare(`UPDATE danh_sach_xuong SET TaiKhoanKl = ? WHERE Ten = ?`).run(id ? String(id) : '', xuong);
 
+// ---------- Tài khoản HPW theo Xưởng (22/10/2026, cùng khuôn KL / GKE) ----------
+// Username/Password đăng nhập API HPW (POST /me). LabelServiceUs / LabelServiceUk: dịch vụ HPW cho đơn US / UK. Kích thước kiện (cm), HSCODE,
+// tên hàng, SKU, giá khai báo ($ / áo), cân nặng mỗi áo (gram, khi đơn thiếu TRONG_LUONG) gửi kèm mỗi lô hàng.
+const CAC_COT_TAI_KHOAN_HPW = ['Ten', 'Username', 'Password', 'LabelServiceUs', 'LabelServiceUk', 'DaiCm', 'RongCm', 'CaoCm', 'HsCode', 'TenHang',
+  'SkuHang', 'GiaHangUsd', 'CanNangMoiAoGram'];
+db.exec(`CREATE TABLE IF NOT EXISTS tai_khoan_hpw (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ${CAC_COT_TAI_KHOAN_HPW.map(c => `${c} TEXT NOT NULL DEFAULT ''`).join(', ')}
+)`);
+if (!db.prepare(`PRAGMA table_info(danh_sach_xuong)`).all().some(c => c.name === 'TaiKhoanHpw')) {
+  db.exec(`ALTER TABLE danh_sach_xuong ADD COLUMN TaiKhoanHpw TEXT NOT NULL DEFAULT ''`);
+}
+const layDanhSachTaiKhoanHpw = () => db.prepare(`SELECT id, ${CAC_COT_TAI_KHOAN_HPW.join(', ')} FROM tai_khoan_hpw ORDER BY id`).all();
+const layTaiKhoanHpw = id => db.prepare(`SELECT id, ${CAC_COT_TAI_KHOAN_HPW.join(', ')} FROM tai_khoan_hpw WHERE id = ?`).get(Number(id)) || null;
+function ghiTaiKhoanHpw(id, giaTri) {
+  const cot = CAC_COT_TAI_KHOAN_HPW.filter(c => giaTri[c] !== undefined);
+  const vals = cot.map(c => String(giaTri[c] ?? ''));
+  if (id) {
+    if (cot.length) db.prepare(`UPDATE tai_khoan_hpw SET ${cot.map(c => `${c} = ?`).join(', ')} WHERE id = ?`).run(...vals, Number(id));
+    return Number(id);
+  }
+  return Number(db.prepare(`INSERT INTO tai_khoan_hpw (${cot.join(', ')}) VALUES (${cot.map(() => '?').join(', ')})`).run(...vals).lastInsertRowid);
+}
+const xoaTaiKhoanHpw = id => db.prepare(`DELETE FROM tai_khoan_hpw WHERE id = ?`).run(Number(id));
+const layGanTaiKhoanHpw = () => Object.fromEntries(db.prepare(`SELECT Ten, TaiKhoanHpw FROM danh_sach_xuong WHERE TaiKhoanHpw != ''`).all().map(r => [r.Ten, r.TaiKhoanHpw]));
+const ganTaiKhoanHpwChoXuong = (xuong, id) => db.prepare(`UPDATE danh_sach_xuong SET TaiKhoanHpw = ? WHERE Ten = ?`).run(id ? String(id) : '', xuong);
+
 // { Xuong: 'id tài khoản' } — chỉ các Xưởng đã gán.
 function layGanTaiKhoanGke() {
   return Object.fromEntries(db.prepare(`SELECT Ten, TaiKhoanGke FROM danh_sach_xuong WHERE TaiKhoanGke != ''`).all().map(r => [r.Ten, r.TaiKhoanGke]));
@@ -457,6 +484,7 @@ module.exports = {
   CAC_COT_TAI_KHOAN_GKE, layDanhSachTaiKhoanGke, layTaiKhoanGke, ghiTaiKhoanGke, xoaTaiKhoanGke,
   layGanTaiKhoanGke, ganTaiKhoanGkeChoXuong,
   layDanhSachTaiKhoanKl, layTaiKhoanKl, ghiTaiKhoanKl, xoaTaiKhoanKl, layGanTaiKhoanKl, ganTaiKhoanKlChoXuong,
+  layDanhSachTaiKhoanHpw, layTaiKhoanHpw, ghiTaiKhoanHpw, xoaTaiKhoanHpw, layGanTaiKhoanHpw, ganTaiKhoanHpwChoXuong,
   layCaiDatHangLoat, datCaiDatHangLoat,
   layCauHinhTracking, datCauHinhTracking, CAC_COT_CAU_HINH_TRACKING,
   layCaiDatCanhBao, datCaiDatCanhBao,

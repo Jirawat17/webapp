@@ -14,6 +14,8 @@ const sheetSellerService = require('../services/sheetSellerService');
 const { requireLogin, requireExactRole, laAdmin } = require('../middleware/auth');
 const klService = require('../services/klService');
 const { muaTrackingKlChoDon, muaTrackingKlVaInLabelChoDon, boDauDangMuaKl } = require('../services/trackingKlService');
+const hpwService = require('../services/hpwService');
+const trackingHpw = require('../services/trackingHpwService');
 
 router.use(requireLogin);
 
@@ -139,6 +141,58 @@ router.post('/kl/mua', async (req, res) => {
   }
   res.json({ ok: true, thanhCong, loi, loiDaySheetKh });
 });
+
+// ---- HPW (22/10/2026) — cùng khuôn KL. Tài khoản: CHỈ superadmin, password không trả về giao diện. ----
+router.get('/tai-khoan-hpw', requireExactRole('superadmin'), (req, res) => res.json(hpwService.layDanhSachTaiKhoanHpw()));
+router.post('/tai-khoan-hpw', requireExactRole('superadmin'), (req, res) => {
+  try { res.json({ ok: true, id: hpwService.luuTaiKhoanHpw(null, req.body || {}), canhBao: hpwService.canhBaoDichVuHpw(req.body || {}) }); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+});
+router.put('/tai-khoan-hpw/:id', requireExactRole('superadmin'), (req, res) => {
+  try { res.json({ ok: true, id: hpwService.luuTaiKhoanHpw(req.params.id, req.body || {}), canhBao: hpwService.canhBaoDichVuHpw(req.body || {}) }); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+});
+router.delete('/tai-khoan-hpw/:id', requireExactRole('superadmin'), (req, res) => {
+  try { hpwService.xoaTaiKhoanHpw(req.params.id); res.json({ ok: true }); } catch (err) { res.status(400).json({ error: err.message }); }
+});
+router.post('/gan-tai-khoan-hpw', requireExactRole('superadmin'), (req, res) => {
+  try { hpwService.ganTaiKhoanHpwChoXuong(String(req.body.xuong || ''), req.body.taiKhoanId || ''); res.json({ ok: true }); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+});
+// "Mua Tracking HPW ngay" — CHỈ admin/superadmin (chặn ở máy chủ).
+router.post('/hpw/mua', async (req, res) => {
+  const user = req.session.user;
+  if (!laAdmin(user.vaiTro)) return res.status(403).json({ error: 'Chỉ admin mới được mua tracking HPW thủ công' });
+  const { sttKeys } = req.body;
+  if (!Array.isArray(sttKeys) || sttKeys.length === 0) return res.status(400).json({ error: 'Danh sách đơn trống' });
+  const thanhCong = [], loi = [], loiDaySheetKh = [];
+  for (const sttKey of sttKeys) {
+    try {
+      const { row } = await orderService.getByKey(sttKey);
+      if (!row || !orderService.coQuyenTheoXuong(user, row)) { loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng' }); continue; }
+      const kq = await trackingHpw.muaTrackingHpwChoDon(sttKey, user);
+      if (!kq) { loi.push({ sttKey, lyDo: 'Đơn này đã có mã tracking — không mua HPW.' }); continue; }
+      loiDaySheetKh.push(...(kq.loiSheetCon || []));
+      if (kq.dungChung) { loi.push({ sttKey, lyDo: `Không mua — đơn DonNhieuAo dùng chung tracking ${kq.tracking_num} của ${kq.donMua} (đã gán).` }); continue; }
+      thanhCong.push({ sttKey, tracking: kq.tracking_num, hang: kq.delivery_carrier, phiUsd: kq.hpw.usd });
+      if (kq.dayCheKhachHang && !kq.dayCheKhachHang.ok) loiDaySheetKh.push({ sttKey, lyDo: kq.dayCheKhachHang.lyDo });
+    } catch (err) {
+      if (!err.maLoi) console.error(`[TrackingHPW] Lỗi mua tracking HPW cho ${sttKey}:`, err.message);
+      loi.push({ sttKey, lyDo: err.message, maLoi: err.maLoi, ...(err.goiYDiaChi ? { goiYDiaChi: err.goiYDiaChi } : {}) });
+    }
+  }
+  res.json({ ok: true, thanhCong, loi, loiDaySheetKh });
+});
+// Thao tác superadmin cho 1 đơn HPW: huỷ lô (chưa mua label), gắn mã lô tay, bỏ dấu đang mua. Chặn khác Xưởng.
+const thaoTacHpw = ham => [requireExactRole('superadmin'), async (req, res) => {
+  const sttKey = String((req.body && req.body.sttKey) || '');
+  const { row } = await orderService.getByKey(sttKey);
+  if (!row || !orderService.coQuyenTheoXuong(req.session.user, row)) return res.status(404).json({ error: 'Không tìm thấy đơn hàng' });
+  try { res.json(await ham(sttKey, req)); } catch (err) { res.status(400).json({ error: err.message }); }
+}];
+router.post('/hpw/huy-lo-hang', ...thaoTacHpw((sttKey, req) => trackingHpw.huyLoHangHpw(sttKey, req.session.user)));
+router.post('/hpw/gan-ma-lo-hang', ...thaoTacHpw((sttKey, req) => trackingHpw.ganMaLoHangHpw(sttKey, req.body.maLoHang, req.session.user)));
+router.post('/hpw/bo-dau', ...thaoTacHpw((sttKey, req) => trackingHpw.boDauDangMuaHpw(sttKey, req.session.user)));
 
 // "Bỏ dấu đang mua KL" (22/10/2026) — CHỈ superadmin; chặn khác Xưởng như các nút khác.
 router.post('/kl/bo-dau', requireExactRole('superadmin'), async (req, res) => {
@@ -330,7 +384,7 @@ async function xuLyInLabelHangLoat(req, res, hamXuLy) {
       if (ketQua && ketQua.loiSheetCon) loiDaySheetKh.push(...ketQua.loiSheetCon);
       if (ketQua && ketQua.label_base64) cacLabelBase64.push(ketQua.label_base64);
     } catch (err) {
-      loi.push({ sttKey, lyDo: err.message, maLoi: err.maLoi, ...(err.daMua ? { daMua: true } : {}) });
+      loi.push({ sttKey, lyDo: err.message, maLoi: err.maLoi, ...(err.daMua ? { daMua: true } : {}), ...(err.goiYDiaChi ? { goiYDiaChi: err.goiYDiaChi } : {}) });
       if (err.loiDaySheetKh) loiDaySheetKh.push(...err.loiDaySheetKh); // KL: đã mua nhưng label lỗi — lỗi ghi Sheet Seller vẫn báo
     }
   }
@@ -352,6 +406,7 @@ router.post('/mua-va-in-label', (req, res) => xuLyInLabelHangLoat(req, res, muaT
 
 // "Mua Tracking KL và In Label KL" (22/10/2026) — cùng phạm vi vai trò với "MUA TRACKING và IN LABEL" (GKE), ghép PDF như in hàng loạt.
 router.post('/kl/mua-va-in-label', (req, res) => xuLyInLabelHangLoat(req, res, muaTrackingKlVaInLabelChoDon));
+router.post('/hpw/mua-va-in-label', (req, res) => xuLyInLabelHangLoat(req, res, trackingHpw.muaTrackingHpwVaInLabelChoDon)); // HPW (22/10/2026)
 
 // Tra cứu/cập nhật trạng thái tracking THẬT thủ công (bổ sung 14/09/2026, theo yêu cầu người dùng — xem
 // docs/superpowers/specs/2026-09-14-cap-nhat-trang-thai-tracking-design.md) — tương đương thủ công của

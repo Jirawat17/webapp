@@ -194,6 +194,7 @@ const NHAN_TRANG_THAI = {
   DA_MUA: { nhan: 'Đã mua', lop: 'da-mua' },
   DANG_CHO_TEM: { nhan: 'Đang chờ tem GKE', lop: 'dang-cho-tem' },
   DANG_TAO_DON_KL: { nhan: 'Đang mua KL (chưa rõ kết quả)', lop: 'dang-cho-tem' }, // 22/10/2026 — đơn đang mua tracking KL
+  DANG_MUA_HPW: { nhan: 'Đang mua HPW (đã tạo lô / chưa rõ kết quả)', lop: 'dang-cho-tem' }, // 22/10/2026
   DEN_HAN_CHO_XU_LY: { nhan: 'Đến hạn, chờ xử lý', lop: 'den-han' },
   DANG_CHO: { nhan: 'Đang chờ đủ giờ', lop: 'dang-cho' },
   // DonNhieuAo (bổ sung 26/09/2026): đơn con chưa có tracking — chờ đơn ".1" mua rồi tự gán.
@@ -492,7 +493,7 @@ async function taiDanhSach() {
               <td><a href="/order.html?stt=${encodeURIComponent(d.sttKey)}">${escapeHtml(d.sttKey)}</a></td>
               <td><span class="tk-trang-thai ${tt.lop}">${escapeHtml(tt.nhan)}</span>${d.soLanThu ? `<div style="font-size:0.78rem;color:var(--color-danger-text);margin-top:4px">Tự động thử ${d.soLanThu}/10 lần — ${escapeHtml(d.loiGanNhat)}</div>` : ''}</td>
               <td>${escapeHtml(d.trackingId || '—')}${d.trackingId ? nutSaoChep(d.trackingId, 'Sao chép mã tracking') : ''}${d.nguonSeller ? ' <small style="color:var(--color-text-muted)">(Seller cung cấp)</small>' : ''}</td>
-              <td>${d.donVi === 'KL' ? '<strong>KL</strong> · ' : ''}${escapeHtml(d.hangVanChuyen || '—')}</td>
+              <td>${d.donVi ? `<strong>${escapeHtml(d.donVi)}</strong> · ` : ''}${escapeHtml(d.hangVanChuyen || '—')}</td>
               <td>${d.thoiGianSanXuat ? dinhDangNgayGioNganAnToan(d.thoiGianSanXuat) : '—'}</td>
               <td>${d.hanTuMua ? dinhDangNgayGioNganAnToan(d.hanTuMua) : '—'}</td>
               <td style="display:flex;gap:6px;flex-wrap:wrap">
