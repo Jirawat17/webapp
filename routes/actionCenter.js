@@ -20,7 +20,8 @@ router.get('/danh-sach', requireRole(), async (req, res) => {
 router.post('/da-xu-ly', requireRole(), (req, res) => {
   const { loai, khoa, giaTri, ghiChu } = req.body || {};
   // DON_NHIEU_AO (17/10/2026): "DonNhieuAo cần xử lý" — services/actionCenterService.js#layDonNhieuAoCanXuLy.
-  if (!['NHAN_LAU', 'VAN_CHUYEN', 'DON_NHIEU_AO'].includes(loai) || !khoa) return res.status(400).json({ error: 'Thiếu loại/khoá cảnh báo' });
+  // UU_TIEN (22/10/2026): "Đơn ưu tiên chưa xử lý" — khoá = mã đơn, giá trị = trạng thái lúc bấm (actionCenterService#layDonUuTienCanHien).
+  if (!['NHAN_LAU', 'VAN_CHUYEN', 'DON_NHIEU_AO', 'UU_TIEN'].includes(loai) || !khoa) return res.status(400).json({ error: 'Thiếu loại/khoá cảnh báo' });
   const sttKey = String(khoa).split('|')[0];
   if (!require('../services/orderService').phamViDon(req.session.user)(sttKey)) return res.status(404).json({ error: 'Không tìm thấy đơn' });
   require('../services/nhatKyDbService').danhDauDaXuLy({

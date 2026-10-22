@@ -101,7 +101,9 @@ const nhanNgayLenDon = d => (d.ngayLenDon ? `lên đơn ${escapeHtml(d.ngayLenDo
 // 22/10/2026: tên đơn là link riêng sang Chi tiết đơn (như các mục có nút) + ngày lên đơn.
 function veKhoiUuTien(ds) {
   if (ds.length === 0) return khoiRong('Không có đơn ưu tiên nào đang chờ xử lý.');
-  return `<div class="ttha-danh-sach">${ds.map(d => dongCoNut(d.sttKey, [escapeHtml(d.trangThai || ''), nhanNgayLenDon(d)].filter(Boolean).join(' · '), '')).join('')}</div>`;
+  // "Đã xử lý" (22/10/2026): ẩn tới khi trạng thái đơn đổi (server lọc, loại UU_TIEN).
+  return `<p class="ttha-mo-ta">Bấm "Đã xử lý" để ẩn đơn — đơn chuyển sang trạng thái khác mà vẫn ưu tiên, chưa xong thì hiện lại.</p>
+    <div class="ttha-danh-sach">${ds.map(d => dongCoNut(d.sttKey, [escapeHtml(d.trangThai || ''), nhanNgayLenDon(d)].filter(Boolean).join(' · '), nutDaXuLy('UU_TIEN', d))).join('')}</div>`;
 }
 
 function veKhoiHuy(ds) {

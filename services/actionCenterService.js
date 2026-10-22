@@ -53,6 +53,15 @@ function layDonUuTienChuaXuLy(rows) {
       && !TRANG_THAI_DA_SHIP.includes(don.TRANG_THAI_XUONG))
     .map(don => ({ sttKey: don.STT_Key, trangThai: don.TRANG_THAI_XUONG, ngayLenDon: ngayLenDonNgan(don) }));
 }
+// "Đã xử lý" (22/10/2026, theo yêu cầu người dùng): ẩn đơn ưu tiên trong lúc đơn còn ở ĐÚNG trạng thái lúc bấm; trạng thái đổi mà đơn vẫn
+// ưu tiên, chưa xong -> hiện lại (cùng cơ chế các mục "Đã xử lý" khác — vanHanhService.locDaXuLy, loại UU_TIEN).
+const khoaUuTien = d => d.sttKey;
+const giaTriUuTien = d => d.trangThai || '';
+function layDonUuTienCanHien(rows) {
+  const { locDaXuLy } = require('./vanHanhService');
+  return locDaXuLy('UU_TIEN', layDonUuTienChuaXuLy(rows), khoaUuTien, giaTriUuTien)
+    .map(d => ({ ...d, khoa: khoaUuTien(d), giaTri: giaTriUuTien(d) }));
+}
 
 // Đọc bảng SQLite logs_tracking (bổ sung 19/09/2026, xem services/nhatKyDbService.js) — bọc try/catch
 // RIÊNG, lỗi đọc trả mảng rỗng, KHÔNG throw, không làm hỏng 3 mục còn lại của trung tâm hành động.
@@ -102,7 +111,7 @@ async function layTrungTamHanhDong(user) {
     ...layDonNhieuAoCanXuLy(tatCa, huyTatCa, trongPhamVi),
     huyGanDay,
     loiSanXuat: layDonLoiSanXuat(rows),
-    uuTienChuaXuLy: layDonUuTienChuaXuLy(rows),
+    uuTienChuaXuLy: layDonUuTienCanHien(rows),
     loiTrackingGke,
     // Chưa ghi được sang Sheet Seller (28/09/2026) — lần ghi gần nhất theo (đơn, loại) đang lỗi; Đẩy lại chỉ superadmin.
     loiSheetSeller: require('./nhatKyDbService').layLoiDongBoDangCho().filter(d => trongPhamVi(d.STT_Key)),

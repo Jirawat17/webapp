@@ -997,6 +997,8 @@ function renderDanhSachDon() {
         <div class="meta">${escapeHtml(o.TenKhachHang || '')} · Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgayNgan(o.NGAY_LEN_DON) : '—')}</div>
         <div class="badge-row">
           ${nhanHold(o)}
+          ${o.QuocGiaNgoai ? `<span class="badge trang-thai-danger" style="font-weight:800" title="Quốc gia: ${escapeHtml(o.QuocGiaNgoai.ten || '(trống)')}">${o.QuocGiaNgoai.loai === 'OTHERS'
+            ? `OTHERS · ${escapeHtml(o.QuocGiaNgoai.ten)}` : `Chưa rõ nước${o.QuocGiaNgoai.ten ? ` · ${escapeHtml(o.QuocGiaNgoai.ten)}` : ''}`}</span>` : ''}
           ${o.DonUuTien ? `<span class="badge trang-thai-danger">${icon('star', {size:14})} Ưu tiên</span>` : ''}
           ${nhanNhomNhieuAo(o.NhomNhieuAo)}
           <span class="badge ${lopTrangThai(o.TRANG_THAI_XUONG)}">${escapeHtml(o.TRANG_THAI_XUONG || '')}</span>

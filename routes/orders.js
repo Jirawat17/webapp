@@ -52,6 +52,32 @@ const { NHOM_LOC_TONG_QUAT } = orderService; // LỌC TỔNG QUÁT — 3 nhóm t
 // nữa, dù cột thật trong Sheet vẫn giữ giá trị cũ làm dấu vết.
 // `banDoNhom` (tuỳ chọn, bổ sung 26/09/2026) — kết quả donNhieuAoService.xayDungBanDoNhom() trên TOÀN BỘ
 // đơn (nhóm có thể gồm đơn nằm ngoài `rows` sau lọc) — gắn NhomNhieuAo cho giao diện.
+// Đơn giao ngoài US / UK (22/10/2026, theo yêu cầu người dùng — nhãn trên thẻ Danh sách đơn hàng): đọc DIA_CHI_NUOC bằng đúng bảng mã nước
+// dùng khi mua tracking (gkeService.maQuocGia: "United States"/"USA" -> US, "UK"/"United Kingdom" -> GB...). -> null (US / GB) |
+// { loai: 'OTHERS', ten } (nước khác, ten = giá trị gốc) | { loai: 'CHUA_RO', ten } (trống / tên nước app không nhận ra).
+// Tên nước tiếng Anh -> mã ISO cho MỌI quốc gia (Intl.DisplayNames có sẵn trong Node) — bảng gkeService chỉ có vài nước, thiếu thì
+// "Netherlands", "Mexico"... sẽ bị coi là "chưa rõ". Tạo 1 lần khi cần.
+let _tenNuocSangMa = null;
+function maTuTenNuoc(ten) {
+  if (!_tenNuocSangMa) {
+    _tenNuocSangMa = new Map();
+    const dn = new Intl.DisplayNames(['en'], { type: 'region', fallback: 'none' });
+    for (let a = 65; a <= 90; a++) for (let b = 65; b <= 90; b++) {
+      const ma = String.fromCharCode(a, b);
+      const tenNuoc = dn.of(ma);
+      if (tenNuoc) _tenNuocSangMa.set(tenNuoc.toLowerCase(), ma);
+    }
+  }
+  return _tenNuocSangMa.get(String(ten).trim().toLowerCase()) || null;
+}
+function quocGiaNgoaiUsUk(r) {
+  const ten = String(r.DIA_CHI_NUOC || '').trim();
+  let ma = null;
+  try { ma = require('../services/gkeService').maQuocGia(ten); } catch { ma = ten ? maTuTenNuoc(ten) : null; } // bảng GKE không có -> tên tiếng Anh
+  if (!ma) return { loai: 'CHUA_RO', ten };
+  return ma === 'US' || ma === 'GB' ? null : { loai: 'OTHERS', ten };
+}
+
 // user: người xem — vai trò không có menu Tracking không nhận 4 cột theo dõi mua tracking (orderService.anCotTheoDoiMuaTracking).
 async function lamGiauDon(rows, banDoNhom, user) {
   const daGanKH = await orderService.ganTenKhachHang(rows);
@@ -62,6 +88,7 @@ async function lamGiauDon(rows, banDoNhom, user) {
     ...orderService.anCotTheoDoiMuaTracking(r, user),
     TieuDeSanPham: orderService.tieuDeSanPham(r),
     ViTriTheu: orderService.danhSachViTriTheu(r),
+    QuocGiaNgoai: quocGiaNgoaiUsUk(r),
     CanhBao: alertService.tinhMucCanhBao(r),
     NguoiVanHanh: r.TRANG_THAI_XUONG === TRANG_THAI_DANG_CHAY_MAY ? (r.NGUOI_CHAY_MAY || null) : null,
     NguoiVeFile: r.TRANG_THAI_VE_FILE === 'Đang vẽ file' ? (r.NGUOI_VE_FILE || null) : null,
