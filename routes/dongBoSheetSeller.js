@@ -17,13 +17,15 @@ router.get('/loi-dang-cho', requireRole(), (req, res) => {
 
 // "Bỏ qua" 1 lỗi đang chờ (14/10/2026, theo yêu cầu người dùng) — CHỈ superadmin (cùng quyền Đẩy lại). Ghi nhận đúng LẦN lỗi hiện tại
 // (id dòng lỗi): đơn đó ghi lỗi lần mới thì hiện lại (nhatKyDbService.js#layLoiDongBoDangCho).
-// body { tatCa: true } (22/10/2026, theo yêu cầu người dùng — nút "Bỏ qua tất cả"): bỏ qua MỌI lỗi đang chờ, mỗi lỗi ghi nhận đúng lần lỗi
-// hiện tại như bỏ qua từng dòng (đơn nào ghi lỗi lần mới thì hiện lại).
+// body { ids: [id dòng lỗi] } (22/10/2026, theo yêu cầu người dùng — nút "Bỏ qua tất cả"): bỏ qua ĐÚNG các lỗi đang hiện trên màn hình người
+// bấm (lỗi mới phát sinh sau khi tải trang KHÔNG bị bỏ qua theo); mỗi lỗi ghi nhận đúng lần lỗi đó như bỏ qua từng dòng.
 router.post('/bo-qua', requireExactRole('superadmin'), (req, res) => {
-  const { sttKey, loai, tatCa } = req.body || {};
+  const { sttKey, loai, ids } = req.body || {};
   const dangCho = nhatKyDbService.layLoiDongBoDangCho();
-  const ds = tatCa === true ? dangCho : dangCho.filter(d => d.STT_Key === sttKey && d.Loai === loai);
-  if (!ds.length) return res.status(404).json({ error: tatCa === true ? 'Không còn lỗi nào đang chờ.' : 'Lỗi này không còn trong danh sách (đã ghi lại được hoặc đã bỏ qua).' });
+  const theoDs = Array.isArray(ids);
+  const dsId = new Set(theoDs ? ids.map(String) : []);
+  const ds = theoDs ? dangCho.filter(d => dsId.has(String(d.id))) : dangCho.filter(d => d.STT_Key === sttKey && d.Loai === loai);
+  if (!ds.length) return res.status(404).json({ error: theoDs ? 'Các lỗi này không còn trong danh sách (đã ghi lại được hoặc đã bỏ qua).' : 'Lỗi này không còn trong danh sách (đã ghi lại được hoặc đã bỏ qua).' });
   const luc = require('../services/dateUtils').thoiGianVNISOString();
   for (const loi of ds) {
     nhatKyDbService.danhDauDaXuLy({ loai: 'SHEET_SELLER', khoa: `${loi.STT_Key}|${loi.Loai}`, giaTri: String(loi.id), nguoi: req.session.user.ten, luc });

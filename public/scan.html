@@ -1156,9 +1156,48 @@ document.addEventListener('visibilitychange', () => {
 
 // Quét được mã trong trạng thái [Đang quét] — kiểm tra đơn đủ điều kiện chụp TRƯỚC khi cho chụp ảnh
 // thật (tránh lãng phí 1 lần chụp cho đơn sai trạng thái/không tồn tại).
+// Quét sai trạng thái lặp lại (22/10/2026, theo yêu cầu người dùng — Logs_UploadAnh 16–22/10: 10LT16 bị máy chủ từ chối 21 lần trong
+// 1,5 phút vì camera cứ để trên mã, người quét không đọc toast). Cùng mã + cùng chế độ bị máy chủ từ chối vì sai trạng thái lần thứ 4 trở
+// đi (lần bị chặn 6 giây không tính) -> màn đỏ che camera, dừng quét tới khi bấm "Đã hiểu". Chỉ đếm các lần cách lần trước không quá 10
+// phút — trang mở cả ngày: sai 3 lần buổi sáng rồi chiều quét nhầm 1 lần không bật màn đỏ.
+const SO_LAN_SAI_HIEN_MAN_DO = 4; // 22/10/2026: người dùng đổi 3 -> 4
+const KHOANG_DEM_SAI_MS = 10 * 60 * 1000;
+const demSaiTrangThai = new Map(); // `${cheDo}|${ma}` -> { so, luc } — số lần máy chủ từ chối vì sai trạng thái, lần gần nhất
+let manDoDangHien = false;
+function hienManDoSaiTrangThai(ma, loi, soLan, nut) {
+  manDoDangHien = true;
+  const el = document.createElement('div');
+  el.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(185,28,28,.96);color:#fff;display:flex;flex-direction:column;'
+    + 'align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center';
+  el.innerHTML = `<div style="font-size:3.5rem;line-height:1">⛔</div>
+    <div style="font-size:1.5rem;font-weight:800">${escapeHtml(ma)} — QUÉT SAI ${soLan} LẦN</div>
+    <div style="font-size:1.1rem;max-width:520px">${escapeHtml(loi)}</div>
+    <div style="font-size:1rem;opacity:.9">Đừng quét lại đơn này — kiểm tra chế độ chụp đang chọn và trạng thái của đơn.</div>`;
+  const dong = () => {
+    el.remove();
+    manDoDangHien = false;
+    // 6 giây để đưa camera ra khỏi mã — camera đọc lại đúng mã đó trong lúc này chỉ hiện toast, không hỏi máy chủ / không bật lại màn đỏ ngay.
+    if (loiQuetGanNhat && loiQuetGanNhat.ma === ma) { loiQuetGanNhat.luc = performance.now(); loiQuetGanNhat.soLanLap = 0; }
+  };
+  const taoNut = (nhan, nen, mau, bam) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = nhan;
+    b.style.cssText = `padding:12px 28px;border:0;border-radius:8px;background:${nen};color:${mau};font-size:1.1rem;font-weight:700`;
+    b.onclick = bam;
+    el.appendChild(b);
+  };
+  if (nut) taoNut(nut.nhan, '#fde68a', '#7f1d1d', () => { dong(); nut.bam(); });
+  taoNut('Đã hiểu', '#fff', '#b91c1c', dong);
+  document.body.appendChild(el);
+  phatAmThanhKetQua('SAI_TRANG_THAI');
+  if (navigator.vibrate) navigator.vibrate([400, 150, 400, 150, 400]);
+}
+
 async function xuLyQuetDeXacDinhDon(sttKeyThoDoc, nguon = 'CAMERA') {
   const cauHinh = CAU_HINH_ANH[mode];
   if (!cauHinh) { if (nguon !== 'CAMERA') dangXuLyQuet = false; return; } // phòng thêm: mã đọc từ camera tới muộn khi đã đổi chế độ — bỏ qua
+  if (manDoDangHien && nguon === 'CAMERA') return; // màn đỏ "quét sai nhiều lần" đang hiện — chờ bấm "Đã hiểu"
   if (dangXuLyQuet && nguon === 'CAMERA') return; // nút đổi chế độ tự giữ khoá trước khi gọi (nutChuyenSangDanTem)
   dangXuLyQuet = true;
   const loiCu = loiQuetGanNhat;
@@ -1179,6 +1218,7 @@ async function xuLyQuetDeXacDinhDon(sttKeyThoDoc, nguon = 'CAMERA') {
       method: 'POST', body: JSON.stringify({ sttKey: sttKeyThoDoc, moc: cauHinh.moc }),
     });
     const msKiemTra = Math.round(performance.now() - tKiemTra);
+    demSaiTrangThai.delete(`${mode}|${sttKeyThoDoc}`);
     ghiLogQuet({ suKien: 'QUET_QR', sttKey: ketQua.sttKey || sttKeyThoDoc, ketQua: 'OK', chiTiet: { nguon, msTimMa, msKiemTra } });
     const sttKeyMoi = ketQua.sttKey || sttKeyThoDoc;
     if (cauHinh.haiAnh && donChoXong && donChoXong.sttKey === sttKeyMoi) {
@@ -1205,11 +1245,21 @@ async function xuLyQuetDeXacDinhDon(sttKeyThoDoc, nguon = 'CAMERA') {
     }
   } catch (err) {
     const ketQuaLog = ketQuaLoi(err, 'SAI_TRANG_THAI');
-    ghiLogQuet({ suKien: 'QUET_QR', sttKey: sttKeyThoDoc, ketQua: ketQuaLog, loi: err.message, chiTiet: { nguon, msTimMa, msKiemTra: Math.round(performance.now() - tKiemTra) } });
+    const khoaSai = `${mode}|${sttKeyThoDoc}`;
+    const truocSai = demSaiTrangThai.get(khoaSai);
+    const soLanSai = ketQuaLog !== 'SAI_TRANG_THAI' ? 0
+      : (truocSai && performance.now() - truocSai.luc <= KHOANG_DEM_SAI_MS ? truocSai.so : 0) + 1;
+    if (soLanSai) demSaiTrangThai.set(khoaSai, { so: soLanSai, luc: performance.now() });
+    const manDo = soLanSai >= SO_LAN_SAI_HIEN_MAN_DO;
+    ghiLogQuet({ suKien: 'QUET_QR', sttKey: sttKeyThoDoc, ketQua: ketQuaLog, loi: err.message,
+      chiTiet: { nguon, msTimMa, msKiemTra: Math.round(performance.now() - tKiemTra), ...(manDo ? { manDo: soLanSai } : {}) } });
     const trangThaiHienTai = err.duLieu && err.duLieu.trangThaiHienTai;
     if (err.status >= 400 && err.status < 500) loiQuetGanNhat = { ma: sttKeyThoDoc, cheDo: mode, loi: err.message, ketQuaLog, luc: performance.now(), soLanLap: 0, trangThaiHienTai };
-    hienThiToast('SAI_TRANG_THAI', err.message, nutChuyenSangDanTem(sttKeyThoDoc, trangThaiHienTai));
-    phatAmThanhKetQua('SAI_TRANG_THAI');
+    if (manDo) hienManDoSaiTrangThai(sttKeyThoDoc, err.message, soLanSai, nutChuyenSangDanTem(sttKeyThoDoc, trangThaiHienTai));
+    else {
+      hienThiToast('SAI_TRANG_THAI', err.message, nutChuyenSangDanTem(sttKeyThoDoc, trangThaiHienTai));
+      phatAmThanhKetQua('SAI_TRANG_THAI');
+    }
   }
 
   setTimeout(() => { dangXuLyQuet = false; tSanSangQuet = performance.now(); }, 700);

@@ -683,6 +683,8 @@ function theTaiKhoanGke(tk, id, dungCho) {
     <div class="bao-cao-form st-cau-hinh-gke st-the-tk-gke" data-tk="${escapeHtml(id)}">
       <strong>${id === 'moi' ? 'Tài khoản mới' : escapeHtml(tk.ten || '(chưa đặt tên)')}</strong>
       <span class="st-ghi-chu-truong">${id === 'moi' ? '' : (dungCho.length ? 'Đang dùng cho Xưởng: ' + dungCho.map(escapeHtml).join(', ') : 'Chưa gán cho Xưởng nào')}</span>
+      ${tk.hetTienLuc ? `<div style="color:var(--color-danger-text);font-weight:600">⚠️ GKE báo HẾT TIỀN lúc ${escapeHtml(new Date(tk.hetTienLuc).toLocaleString('vi-VN'))} — tự động mua tracking đang DỪNG (${escapeHtml(tk.hetTienLyDo)}).
+        <button type="button" class="btn-hanh-dong" data-tk="${escapeHtml(id)}" onclick="daNapTienGke(this.dataset.tk, this)">Đã nạp tiền — bật lại tự mua</button></div>` : ''}
       <div class="st-luoi-gke">
         ${TRUONG_TK_GKE.map(([khoa, nhan, loai, goiY]) => `
           <div class="truong"><label for="gke-${id}-${khoa}">${nhan}</label>
@@ -738,6 +740,15 @@ async function luuTaiKhoanGke(id) {
     thongBaoGke(`Đã lưu tài khoản "${giaTri.ten}".`);
     await taiTaiKhoanGke();
   } catch (e) { thongBaoGke('Lỗi khi lưu: ' + e.message, true); }
+}
+
+async function daNapTienGke(id, btn) {
+  btn.disabled = true;
+  try {
+    await apiFetch('/tracking/tai-khoan-gke/' + encodeURIComponent(id) + '/da-nap-tien', { method: 'POST' });
+    thongBaoGke('Đã bật lại tự động mua tracking cho tài khoản này.');
+    await taiTaiKhoanGke();
+  } catch (e) { btn.disabled = false; thongBaoGke('Lỗi: ' + e.message, true); }
 }
 
 async function xoaTaiKhoanGke(id) {

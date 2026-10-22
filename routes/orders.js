@@ -57,18 +57,28 @@ const { NHOM_LOC_TONG_QUAT } = orderService; // LỌC TỔNG QUÁT — 3 nhóm t
 // { loai: 'OTHERS', ten } (nước khác, ten = giá trị gốc) | { loai: 'CHUA_RO', ten } (trống / tên nước app không nhận ra).
 // Tên nước tiếng Anh -> mã ISO cho MỌI quốc gia (Intl.DisplayNames có sẵn trong Node) — bảng gkeService chỉ có vài nước, thiếu thì
 // "Netherlands", "Mexico"... sẽ bị coi là "chưa rõ". Tạo 1 lần khi cần.
+// + tên hay gặp khác tên chuẩn (22/10/2026): "Czech Republic" (chuẩn "Czechia"), "Turkey" ("Türkiye"), "Holland"... So sánh sau khi chuẩn
+// hoá: thường, bỏ dấu chấm, "&" -> "and", "st " <-> "saint ", gộp khoảng trắng.
+const TEN_NUOC_KHAC = {
+  'czech republic': 'CZ', turkey: 'TR', holland: 'NL', 'the netherlands': 'NL', 'russian federation': 'RU', 'republic of korea': 'KR',
+  'korea, republic of': 'KR', burma: 'MM', 'ivory coast': 'CI', "cote d'ivoire": 'CI', macedonia: 'MK', swaziland: 'SZ', 'cape verde': 'CV',
+  'hong kong': 'HK', macau: 'MO', macao: 'MO', uae: 'AE', 'the bahamas': 'BS', 'the gambia': 'GM', 'vatican city': 'VA', 'palestine': 'PS',
+  'east timor': 'TL', deutschland: 'DE', espana: 'ES', españa: 'ES', nederland: 'NL', italia: 'IT', brasil: 'BR', schweiz: 'CH', suisse: 'CH',
+  osterreich: 'AT', österreich: 'AT', polska: 'PL', 'new zealand': 'NZ', nz: 'NZ',
+};
+const chuanTenNuoc = t => String(t || '').toLowerCase().replace(/\./g, '').replace(/&/g, ' and ').replace(/^saint\s+/, 'st ').replace(/\s+/g, ' ').trim();
 let _tenNuocSangMa = null;
 function maTuTenNuoc(ten) {
   if (!_tenNuocSangMa) {
-    _tenNuocSangMa = new Map();
+    _tenNuocSangMa = new Map(Object.entries(TEN_NUOC_KHAC).map(([k, v]) => [chuanTenNuoc(k), v]));
     const dn = new Intl.DisplayNames(['en'], { type: 'region', fallback: 'none' });
     for (let a = 65; a <= 90; a++) for (let b = 65; b <= 90; b++) {
       const ma = String.fromCharCode(a, b);
       const tenNuoc = dn.of(ma);
-      if (tenNuoc) _tenNuocSangMa.set(tenNuoc.toLowerCase(), ma);
+      if (tenNuoc && !_tenNuocSangMa.has(chuanTenNuoc(tenNuoc))) _tenNuocSangMa.set(chuanTenNuoc(tenNuoc), ma);
     }
   }
-  return _tenNuocSangMa.get(String(ten).trim().toLowerCase()) || null;
+  return _tenNuocSangMa.get(chuanTenNuoc(ten)) || null;
 }
 function quocGiaNgoaiUsUk(r) {
   const ten = String(r.DIA_CHI_NUOC || '').trim();

@@ -64,6 +64,8 @@ function cauHinhTuDong(dong) {
   const ch = { id: String(dong.id) };
   for (const [khoa, cot] of CAC_TRUONG_CAU_HINH_GKE) ch[khoa] = dong[cot] || MAC_DINH_CAU_HINH_GKE[khoa] || '';
   ch.canNangMoiAoKg = Number(dong.CanNangMoiAoKg) || 0.05;
+  ch.hetTienLuc = dong.HetTienLuc || ''; // khác '' = GKE đã báo hết tiền, tự động mua đang dừng (baoGkeHetTien)
+  ch.hetTienDaBao = dong.HetTienDaBao === '1';
   return ch;
 }
 
@@ -126,6 +128,8 @@ function layDanhSachTaiKhoanGke() {
     taiKhoan: caiDatDbService.layDanhSachTaiKhoanGke().map(d => {
       const ch = { id: String(d.id) };
       for (const [khoa, cot] of CAC_TRUONG_CAU_HINH_GKE) ch[khoa] = d[cot];
+      ch.hetTienLuc = d.HetTienLuc || '';
+      ch.hetTienLyDo = d.HetTienLyDo || '';
       return ch;
     }),
     danhSachXuong: caiDatDbService.layDanhSachXuong(),
@@ -283,9 +287,55 @@ async function goiApi(buoc, path, body, cauHinh, { daThuLai = false, extraHeader
       return goiApi(buoc, path, body, cauHinh, { daThuLai: true, extraHeaders }, nhatKy);
     }
     ghiLoi(nhatKy, `[GKE] [${buoc}] GKE từ chối:`, JSON.stringify(data));
-    throw new Error(`[${buoc}] ${data.detail || `Lỗi GKE (mã ${data.code ?? res.status})`}`);
+    const thongBao = `[${buoc}] ${data.detail || `Lỗi GKE (mã ${data.code ?? res.status})`}`;
+    // Hết tiền: lỗi CHUNG (không tính vào 10 lần thử của đơn — trước đây 21/10 2 đơn bị chuyển mua thủ công chỉ vì hết tiền).
+    if (laLoiHetTien(data.detail)) { baoGkeHetTien(cauHinh, body && body.customer_order_num, data.detail); throw loiChung(thongBao); }
+    throw new Error(thongBao);
   }
   return data.data;
+}
+
+// GKE hết tiền (22/10/2026, theo yêu cầu người dùng — log 21/10: "客户帐户余额不足, 待扣除金额14531" = số dư tài khoản không đủ, 2 đơn thử lại
+// mỗi 2 phút suốt 20 phút). Lần ĐẦU: ghi mốc vào tài khoản (tự động mua dừng — trackingAutoService) + báo Telegram nhóm Vận hành. Mua tay vẫn chạy.
+const laLoiHetTien = detail => /余额不足|insufficient balance/i.test(String(detail || ''));
+function baoGkeHetTien(cauHinh, sttKey, detail) {
+  try {
+    if (!cauHinh || !cauHinh.id || !caiDatDbService.danhDauGkeHetTien(cauHinh.id, new Date().toISOString(), String(detail || ''))) return;
+    console.error(`[GKE] Tài khoản "${cauHinh.ten}" HẾT TIỀN (đơn ${sttKey || '?'}) — đã dừng tự động mua tracking của tài khoản này.`);
+    guiTinGkeHetTien(cauHinh.id, sttKey).catch(e => console.error('[GKE] Lỗi gửi Telegram hết tiền:', e.message));
+  } catch (err) {
+    console.error('[GKE] Lỗi ghi nhận hết tiền:', err.message);
+  }
+}
+// Gửi (hoặc gửi lại) tin Telegram hết tiền — gửi được thì ghi HetTienDaBao; chưa được thì trackingAutoService gọi lại mỗi lượt 2 phút
+// (tài khoản đã dừng tự mua — không để dừng mà không ai biết). Lỗi chỉ in console 1 lần / tài khoản / lần hết tiền.
+const _daInLoiGuiHetTien = new Set();
+const _dangGuiHetTien = new Set(); // id tài khoản đang gửi — nhiều đơn cùng tài khoản trong 1 lượt chỉ gửi 1 tin
+async function guiTinGkeHetTien(id, sttKey) {
+  const tk = caiDatDbService.layTaiKhoanGke(id);
+  if (!tk || !tk.HetTienLuc || tk.HetTienDaBao === '1' || _dangGuiHetTien.has(String(id))) return;
+  _dangGuiHetTien.add(String(id));
+  try { await _guiTinGkeHetTien(id, sttKey, tk); } finally { _dangGuiHetTien.delete(String(id)); }
+}
+async function _guiTinGkeHetTien(id, sttKey, tk) {
+  const xuong = Object.entries(caiDatDbService.layGanTaiKhoanGke()).filter(([, v]) => v === String(id)).map(([x]) => x);
+  const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const kq = await require('./vanHanhService').guiTinVanHanh([
+    `⚠️ <b>GKE báo HẾT TIỀN</b> — tài khoản "${esc(tk.Ten || '#' + id)}"${xuong.length ? ` (Xưởng ${esc(xuong.join(', '))})` : ''}`,
+    `Lúc ${esc(new Date(tk.HetTienLuc).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }))}${sttKey ? ` · đơn ${esc(sttKey)}` : ''} · GKE: ${esc(tk.HetTienLyDo)}`,
+    'Đã DỪNG tự động mua tracking của tài khoản này (mua tay vẫn được). Nạp tiền xong vào Settings > Tài khoản GKE bấm "Đã nạp tiền" để bật lại.',
+  ].join('\n'));
+  const khoa = `${id}|${tk.HetTienLuc}`;
+  if (kq && kq.ok) { caiDatDbService.ghiDaBaoGkeHetTien(id); _daInLoiGuiHetTien.delete(khoa); return; }
+  if (!_daInLoiGuiHetTien.has(khoa)) {
+    _daInLoiGuiHetTien.add(khoa);
+    console.error(`[GKE] CHƯA gửi được Telegram báo tài khoản "${tk.Ten}" hết tiền: ${(kq && kq.loi) || 'không rõ'} — sẽ thử lại mỗi lượt tự động mua.`);
+  }
+}
+function daNapTienGke(id) {
+  const tk = caiDatDbService.layTaiKhoanGke(id);
+  if (!tk) throw new Error('Không tìm thấy tài khoản');
+  return caiDatDbService.boDanhDauGkeHetTien(id);
 }
 
 // Chuẩn hoá để so sánh không phân biệt hoa/thường/dấu — cùng tinh thần taiSanService.chuan(), nhưng
@@ -320,6 +370,13 @@ const MA_QUOC_GIA = {
   germany: 'DE', duc: 'DE',
 };
 
+// Mã vùng ISO 3166 có thật (Intl có sẵn trong Node) — "MY" có, "UC" không.
+let _tenVung = null;
+const laMaIsoHopLe = ma => {
+  if (!_tenVung) _tenVung = new Intl.DisplayNames(['en'], { type: 'region', fallback: 'none' });
+  try { return !!_tenVung.of(ma); } catch { return false; }
+};
+
 function khoaQuocGia(ten) {
   return chuanHoa(ten).replace(/\./g, '').replace(/\s+/g, ' ').trim();
 }
@@ -327,6 +384,9 @@ function khoaQuocGia(ten) {
 function maQuocGia(ten) {
   const goc = String(ten || '').trim();
   if (!goc) throw new Error('[chuẩn bị dữ liệu] Đơn thiếu DIA_CHI_NUOC — không xác định được mã quốc gia cho GKE');
+  // Mã ISO 2 chữ IN HOA hợp lệ (trừ "UK") dùng NGUYÊN — xét TRƯỚC bảng tên (22/10/2026): "MY" là Malaysia, trước đây bị bảng tra thành
+  // "my" (Mỹ) -> US; "UC"... tương tự. Viết thường / có dấu ("my", "Mỹ") vẫn tra bảng như cũ.
+  if (/^[A-Z]{2}$/.test(goc) && goc !== 'UK' && laMaIsoHopLe(goc)) return goc;
   // Tra bảng TRƯỚC, rồi mới coi chuỗi 2 chữ cái là mã ISO sẵn (sửa 27/09/2026 — trước đây "UK" được gửi
   // nguyên văn cho GKE thay vì mã ISO đúng "GB").
   const ma = MA_QUOC_GIA[khoaQuocGia(goc)] || (/^[a-zA-Z]{2}$/.test(goc) ? goc.toUpperCase() : null);
@@ -538,6 +598,6 @@ async function ghiChuLenTem(base64, chu) {
 
 module.exports = {
   duocMuaTrackingTheoQuocGia, diaChiGuiGke,
-  layCauHinhGkeChoDon, layDanhSachTaiKhoanGke, luuTaiKhoanGke, xoaTaiKhoanGke, ganTaiKhoanGkeChoXuong,
+  layCauHinhGkeChoDon, layDanhSachTaiKhoanGke, luuTaiKhoanGke, xoaTaiKhoanGke, ganTaiKhoanGkeChoXuong, daNapTienGke, guiTinGkeHetTien,
   ghiChuLenTem, tinhCanNangKg, taoDonGke, layTemIn, layLichSuTrackingGke, maQuocGia, MA_DANG_CHO_TEM, gopCacTemPdf,
   chuanHoa };

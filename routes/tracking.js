@@ -7,7 +7,7 @@ const {
   layDonChuyenThuCong, choTuDongThuLai, suaThongTinGke,
 } = require('../services/trackingAutoService');
 const {
-  gopCacTemPdf, layDanhSachTaiKhoanGke, luuTaiKhoanGke, xoaTaiKhoanGke, ganTaiKhoanGkeChoXuong,
+  gopCacTemPdf, layDanhSachTaiKhoanGke, luuTaiKhoanGke, xoaTaiKhoanGke, ganTaiKhoanGkeChoXuong, daNapTienGke,
 } = require('../services/gkeService');
 const orderService = require('../services/orderService');
 const sheetSellerService = require('../services/sheetSellerService');
@@ -93,6 +93,14 @@ router.put('/tai-khoan-gke/:id', requireExactRole('superadmin'), (req, res) => {
 router.delete('/tai-khoan-gke/:id', requireExactRole('superadmin'), (req, res) => {
   try { xoaTaiKhoanGke(req.params.id); res.json({ ok: true }); }
   catch (err) { res.status(400).json({ error: err.message }); }
+});
+// "Đã nạp tiền" (22/10/2026): bật lại tự động mua tracking cho tài khoản GKE đã báo hết tiền (gkeService#baoGkeHetTien).
+router.post('/tai-khoan-gke/:id/da-nap-tien', requireExactRole('superadmin'), (req, res) => {
+  try {
+    const coDoi = daNapTienGke(req.params.id);
+    if (coDoi) console.log(`[GKE] ${req.session.user.ten} báo đã nạp tiền tài khoản #${req.params.id} — bật lại tự động mua tracking.`);
+    res.json({ ok: true });
+  } catch (err) { res.status(400).json({ error: err.message }); }
 });
 // Gán (hoặc bỏ gán, taiKhoanId rỗng) tài khoản cho 1 Xưởng.
 router.post('/gan-tai-khoan-gke', requireExactRole('superadmin'), (req, res) => {
@@ -393,6 +401,10 @@ async function xuLyInLabelHangLoat(req, res, hamXuLy) {
   const labelBase64 = cacLabelBase64.length > 0 ? await gopCacTemPdf(cacLabelBase64) : null;
   // Log tách thời gian (16/10/2026) — từng đơn xem dòng "[Tracking] In label <mã>: đọc đơn / GKE / ..." (trackingAutoService.inLabelChoDon).
   console.log(`[Tracking] ${req.path} ${sttKeys.length} đơn (${thanhCong.length} OK): xử lý ${tGop - tVao}ms, ghép PDF ${Date.now() - tGop}ms, TỔNG ${Date.now() - tVao}ms`);
+  // Lý do từng đơn không được (22/10/2026, theo yêu cầu người dùng — log 21–22/10: 35/102 lượt "0 OK" mà log không có lý do).
+  // Tối đa 20 dòng / lượt (chọn hàng trăm đơn in 1 lần không làm ngập log).
+  for (const l of loi.slice(0, 20)) console.warn(`[Tracking] ${req.path} ${l.sttKey} KHÔNG được (${user.ten}): ${l.lyDo}`);
+  if (loi.length > 20) console.warn(`[Tracking] ${req.path} ... và ${loi.length - 20} đơn khác không được (${user.ten})`);
   res.json({ ok: true, thanhCong, loi, loiDaySheetKh, labelBase64 });
 }
 

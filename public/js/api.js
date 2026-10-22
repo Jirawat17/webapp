@@ -1130,7 +1130,9 @@ const hopNhap = (noiDung, giaTri = '', tuyChon = {}) => _moHopThoai({ ...tuyChon
 // superadmin (server cũng chặn). Sau khi đẩy lại, gọi taiLai() do trang truyền vào để vẽ lại.
 const NHAN_LOAI_SHEET_SELLER = { GHI_CHU: 'Ghi chú xưởng', TRACKING: 'Tracking', DELIVERED: 'Delivered', SO_MUI: 'Số mũi chỉ' };
 const tgNgan = iso => { const d = new Date(iso); return isNaN(d) ? String(iso || '') : d.toLocaleString('vi-VN'); };
+let _idLoiSheetSellerDangHien = []; // id các lỗi đang vẽ trên màn hình — "Bỏ qua tất cả" chỉ bỏ qua đúng các lỗi này (22/10/2026)
 function htmlLoiSheetSeller(ds, choDayLai) {
+  _idLoiSheetSellerDangHien = (ds || []).map(d => d.id);
   if (!ds || !ds.length) return '<p style="color:var(--color-text-muted)">Không có lần ghi nào sang Sheet Seller đang lỗi.</p>';
   return `${choDayLai ? `<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn-hanh-dong" onclick="dayLaiSheetSeller(null, this)">Đẩy lại tất cả (${ds.length})</button>
       <button type="button" class="btn-hanh-dong phu" onclick="boQuaTatCaLoiSheetSeller(${ds.length}, this)">Bỏ qua tất cả (${ds.length})</button></div>` : ''}
@@ -1166,10 +1168,10 @@ async function boQuaLoiSheetSeller(sttKey, loai, btn) {
 }
 // "Bỏ qua tất cả" (22/10/2026, theo yêu cầu người dùng — chỉ superadmin): bỏ qua MỌI lỗi đang chờ; đơn nào ghi lỗi lần mới thì hiện lại.
 async function boQuaTatCaLoiSheetSeller(soLuong, btn) {
-  if (!await hopXacNhan(`Bỏ qua TẤT CẢ ${soLuong} lỗi ghi Sheet Seller đang chờ? Các lỗi này sẽ không hiện ở đây và không được "Đẩy lại tất cả" nữa — đơn nào ghi lỗi lần mới thì hiện lại.`)) return;
+  if (!await hopXacNhan(`Bỏ qua TẤT CẢ ${soLuong} lỗi ghi Sheet Seller đang hiện? Các lỗi này sẽ không hiện ở đây và không được "Đẩy lại tất cả" nữa — đơn nào ghi lỗi lần mới thì hiện lại (lỗi mới phát sinh sau khi tải trang không bị bỏ qua).`)) return;
   btn.disabled = true;
   try {
-    const kq = await apiFetch('/dong-bo-sheet-seller/bo-qua', { method: 'POST', body: JSON.stringify({ tatCa: true }) });
+    const kq = await apiFetch('/dong-bo-sheet-seller/bo-qua', { method: 'POST', body: JSON.stringify({ ids: _idLoiSheetSellerDangHien }) });
     await hopThongBao(`Đã bỏ qua ${kq.soDaBoQua} lỗi.`);
     if (_taiLaiSauDayLai) await _taiLaiSauDayLai();
   } catch (e) {

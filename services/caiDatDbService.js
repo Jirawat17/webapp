@@ -242,11 +242,27 @@ if (!db.prepare(`PRAGMA table_info(danh_sach_xuong)`).all().some(c => c.name ===
   db.exec(`ALTER TABLE danh_sach_xuong ADD COLUMN TaiKhoanGke TEXT NOT NULL DEFAULT ''`);
 }
 
+// Hết tiền (22/10/2026, theo yêu cầu người dùng): GKE báo "余额不足" -> ghi mốc; tự động mua tracking của tài khoản DỪNG tới khi superadmin
+// bấm "Đã nạp tiền" (Settings). Không nằm trong CAC_COT_TAI_KHOAN_GKE -> "Lưu tài khoản" không ghi đè.
+for (const c of ['HetTienLuc', 'HetTienLyDo', 'HetTienDaBao']) {
+  if (!db.prepare(`PRAGMA table_info(tai_khoan_gke)`).all().some(x => x.name === c)) db.exec(`ALTER TABLE tai_khoan_gke ADD COLUMN ${c} TEXT NOT NULL DEFAULT ''`);
+}
 function layDanhSachTaiKhoanGke() {
-  return db.prepare(`SELECT id, ${CAC_COT_TAI_KHOAN_GKE.join(', ')} FROM tai_khoan_gke ORDER BY id`).all();
+  return db.prepare(`SELECT id, ${CAC_COT_TAI_KHOAN_GKE.join(', ')}, HetTienLuc, HetTienLyDo, HetTienDaBao FROM tai_khoan_gke ORDER BY id`).all();
 }
 function layTaiKhoanGke(id) {
-  return db.prepare(`SELECT id, ${CAC_COT_TAI_KHOAN_GKE.join(', ')} FROM tai_khoan_gke WHERE id = ?`).get(Number(id)) || null;
+  return db.prepare(`SELECT id, ${CAC_COT_TAI_KHOAN_GKE.join(', ')}, HetTienLuc, HetTienLyDo, HetTienDaBao FROM tai_khoan_gke WHERE id = ?`).get(Number(id)) || null;
+}
+// -> true nếu VỪA chuyển sang hết tiền (lần đầu) — nơi gọi chỉ báo Telegram 1 lần.
+function danhDauGkeHetTien(id, luc, lyDo) {
+  return db.prepare(`UPDATE tai_khoan_gke SET HetTienLuc = ?, HetTienLyDo = ? WHERE id = ? AND HetTienLuc = ''`).run(luc, lyDo, Number(id)).changes > 0;
+}
+function boDanhDauGkeHetTien(id) {
+  return db.prepare(`UPDATE tai_khoan_gke SET HetTienLuc = '', HetTienLyDo = '', HetTienDaBao = '' WHERE id = ? AND HetTienLuc != ''`).run(Number(id)).changes > 0;
+}
+// Tin Telegram "hết tiền" đã gửi được — chưa gửi được (chưa cấu hình chat / lỗi mạng) thì job tự động thử gửi lại mỗi lượt.
+function ghiDaBaoGkeHetTien(id) {
+  db.prepare(`UPDATE tai_khoan_gke SET HetTienDaBao = '1' WHERE id = ? AND HetTienLuc != ''`).run(Number(id));
 }
 function ghiTaiKhoanGke(id, giaTri) {
   const cot = CAC_COT_TAI_KHOAN_GKE.filter(c => giaTri[c] !== undefined);
@@ -478,6 +494,7 @@ const datCaiDatVanHanh = db.transaction(giaTri => {
 });
 
 module.exports = {
+  danhDauGkeHetTien, boDanhDauGkeHetTien, ghiDaBaoGkeHetTien,
   layCaiDatVanHanh, datCaiDatVanHanh,
   layCauHinhQc, datCauHinhQc, layMocApDungAutoQc, layTelegramQc, datTelegramQc, layGiaTokenQc, datGiaTokenQc,
   layPhienBanPromptQc, layPromptDangDungQc, datPromptDangDungQc, luuPhienBanPromptQc, layLichSuPromptQc,

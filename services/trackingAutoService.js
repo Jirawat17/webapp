@@ -695,6 +695,8 @@ async function muaTrackingVaInLabelChoDon(sttKey, user) {
 
 // 1 lượt quét — gọi từ services/trackingJob.js (cron mỗi 2 phút). Lỗi ở 1 đơn (thiếu địa chỉ, GKE từ
 // chối...) chỉ log, KHÔNG dừng cả lượt quét — đơn đó tự thử lại ở lượt sau.
+let _canhBaoBoQuaTruoc = '';
+const laTaiKhoanGkeHetTien = r => { try { return !!gkeService.layCauHinhGkeChoDon(r).hetTienLuc; } catch { return false; } };
 async function chayQuetTuDongMuaTracking() {
   const cauHinh = await layCauHinh();
   if (!cauHinh.bat) return { daQuet: false, soDonDaMua: 0 };
@@ -726,14 +728,29 @@ async function chayQuetTuDongMuaTracking() {
   // Tài khoản GKE theo Xưởng (bổ sung 27/09/2026): đơn không xác định được tài khoản (chưa gán Xưởng,
   // Xưởng chưa gán tài khoản...) — bỏ qua ở lượt tự động thay vì ghi lỗi mỗi 2 phút cho từng đơn; trang
   // Tracking hiện rõ trạng thái "Chưa có tài khoản GKE" cho các đơn này (xem layDanhSachDonAutoTracking).
+  // Tài khoản GKE đã báo hết tiền (22/10/2026): bỏ qua tới khi superadmin bấm "Đã nạp tiền" (gkeService#baoGkeHetTien). Đơn ĐÃ tạo vận
+  // đơn, chỉ còn chờ tem (TAM_THOI = MA_DANG_CHO_TEM) vẫn đi tiếp — lấy tem không tốn tiền. Tin Telegram chưa gửi được thì gửi lại mỗi lượt.
   const loiTaiKhoan = new Map();
   const donMua = donDuDieuKien.filter(r => {
-    try { gkeService.layCauHinhGkeChoDon(r); return true; } catch (err) { loiTaiKhoan.set(err.message, (loiTaiKhoan.get(err.message) || 0) + 1); return false; }
+    let lyDo;
+    try {
+      const ch = gkeService.layCauHinhGkeChoDon(r);
+      if (!ch.hetTienLuc || r.TAM_THOI === gkeService.MA_DANG_CHO_TEM) return true;
+      if (!ch.hetTienDaBao) gkeService.guiTinGkeHetTien(ch.id).catch(() => {});
+      lyDo = `tài khoản GKE "${ch.ten}" đang hết tiền (chờ "Đã nạp tiền" ở Settings)`;
+    } catch (err) { lyDo = err.message; }
+    loiTaiKhoan.set(lyDo, (loiTaiKhoan.get(lyDo) || 0) + 1);
+    return false;
   });
-  for (const [lyDo, so] of loiTaiKhoan) console.warn(`[TrackingTuDong] Bỏ qua ${so} đơn — ${lyDo}`);
+  // Chỉ in khi nội dung đổi so với lượt trước (22/10/2026) — trước đây in lại y hệt mỗi 2 phút suốt thời gian chờ.
+  const canhBaoBoQua = [...loiTaiKhoan].map(([lyDo, so]) => `[TrackingTuDong] Bỏ qua ${so} đơn — ${lyDo}`).join('\n');
+  if (canhBaoBoQua !== _canhBaoBoQuaTruoc && canhBaoBoQua) console.warn(canhBaoBoQua);
+  _canhBaoBoQuaTruoc = canhBaoBoQua;
 
   let soDonDaMua = 0;
   for (const don of donMua) {
+    // Đơn trước trong CÙNG lượt vừa làm tài khoản báo hết tiền -> không gọi GKE tạo đơn tiếp cho các đơn sau của tài khoản đó.
+    if (!don.TAM_THOI && laTaiKhoanGkeHetTien(don)) continue;
     try {
       const ketQua = await muaTrackingChoDon(don.STT_Key);
       if (ketQua && !ketQua.dungChung) soDonDaMua++;
@@ -921,7 +938,8 @@ async function chayQuetTrangThaiNeuDenLuot() {
 // thay cho lọc AUTO_TRACKING="YES"): đơn CHỜ tự động mua (thuộc 1 trong 2 điều kiện — thoiDiemDenHan, chưa có tracking)
 // + đơn ĐÃ có tracking mà sản xuất xong trong 7 ngày gần đây (bảng không dài vô hạn). Lọc theo Xưởng của `user`
 // (orderService.js#locTheoXuong) — hàm này CHỈ dùng cho route GET /tracking/danh-sach, không dùng bởi job nền.
-const coTaiKhoanGke = r => { try { gkeService.layCauHinhGkeChoDon(r); return true; } catch { return false; } };
+// null = không xác định được tài khoản GKE; ngược lại cấu hình tài khoản (1 lần tra / đơn — dùng cả cho "hết tiền").
+const taiKhoanGkeCuaDon = r => { try { return gkeService.layCauHinhGkeChoDon(r); } catch { return null; } };
 const SO_MS_GIU_DON_DA_MUA = 7 * 24 * 60 * 60 * 1000;
 
 async function layDanhSachDonAutoTracking(user) {
@@ -947,7 +965,7 @@ async function layDanhSachDonAutoTracking(user) {
       const han = thoiDiemDenHan(r, cauHinh);
 
       const nhom = banDoNhom.get(r.STT_Key);
-      let trangThai;
+      let trangThai, tkGke;
       if (daCoTrackingThat) trangThai = 'DA_MUA';
       else if (klService.dangTaoDonKl(r)) trangThai = 'DANG_TAO_DON_KL';
       else if (hpwService.dangMuaHpw(r)) trangThai = 'DANG_MUA_HPW';
@@ -956,8 +974,9 @@ async function layDanhSachDonAutoTracking(user) {
       else if (nhom && nhom.loiChan.length) trangThai = 'LOI_NHOM';
       else if (nhom && nhom.donMua.STT_Key !== r.STT_Key) trangThai = 'CHO_DON_MUA_NHOM';
       else if (!gkeService.duocMuaTrackingTheoQuocGia(r)) trangThai = 'KHONG_THUOC_US_UK';
-      else if (!coTaiKhoanGke(r)) trangThai = 'THIEU_TAI_KHOAN_GKE';
-      else if (dangChoTem) trangThai = 'DANG_CHO_TEM';
+      else if (!(tkGke = taiKhoanGkeCuaDon(r))) trangThai = 'THIEU_TAI_KHOAN_GKE';
+      else if (dangChoTem) trangThai = 'DANG_CHO_TEM'; // trước "hết tiền": đã tạo vận đơn, lấy tem không tốn tiền — vẫn tự chạy
+      else if (tkGke.hetTienLuc) trangThai = 'GKE_HET_TIEN';
       else if (han !== null && bayGio >= han) trangThai = 'DEN_HAN_CHO_XU_LY';
       else trangThai = 'DANG_CHO';
 

@@ -57,9 +57,12 @@ function layDonUuTienChuaXuLy(rows) {
 // ưu tiên, chưa xong -> hiện lại (cùng cơ chế các mục "Đã xử lý" khác — vanHanhService.locDaXuLy, loại UU_TIEN).
 const khoaUuTien = d => d.sttKey;
 const giaTriUuTien = d => d.trangThai || '';
-function layDonUuTienCanHien(rows) {
+// tatCa: MỌI đơn (chưa lọc Xưởng) — để dọn bản ghi "Đã xử lý" của đơn đã xong / hết ưu tiên (bảng không phình mãi); hiển thị lọc theo phạm vi.
+function layDonUuTienCanHien(tatCa, trongPhamVi) {
   const { locDaXuLy } = require('./vanHanhService');
-  return locDaXuLy('UU_TIEN', layDonUuTienChuaXuLy(rows), khoaUuTien, giaTriUuTien)
+  const tatCaUuTien = layDonUuTienChuaXuLy(tatCa);
+  require('./nhatKyDbService').donDaXuLyKhongConDung('UU_TIEN', new Set(tatCaUuTien.map(khoaUuTien)));
+  return locDaXuLy('UU_TIEN', tatCaUuTien.filter(d => trongPhamVi(d.sttKey)), khoaUuTien, giaTriUuTien)
     .map(d => ({ ...d, khoa: khoaUuTien(d), giaTri: giaTriUuTien(d) }));
 }
 
@@ -111,7 +114,7 @@ async function layTrungTamHanhDong(user) {
     ...layDonNhieuAoCanXuLy(tatCa, huyTatCa, trongPhamVi),
     huyGanDay,
     loiSanXuat: layDonLoiSanXuat(rows),
-    uuTienChuaXuLy: layDonUuTienCanHien(rows),
+    uuTienChuaXuLy: layDonUuTienCanHien(tatCa, trongPhamVi),
     loiTrackingGke,
     // Chưa ghi được sang Sheet Seller (28/09/2026) — lần ghi gần nhất theo (đơn, loại) đang lỗi; Đẩy lại chỉ superadmin.
     loiSheetSeller: require('./nhatKyDbService').layLoiDongBoDangCho().filter(d => trongPhamVi(d.STT_Key)),
