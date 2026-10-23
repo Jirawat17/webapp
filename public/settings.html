@@ -64,15 +64,19 @@
   </details>
 
   <!-- Thời gian cảnh báo tự động (bổ sung 23/09/2026, theo yêu cầu người dùng) — thay 3 ngưỡng ngày
-       hard-code 3/5/7 trong services/alertService.js#tinhMucCanhBao. -->
-  <h3 style="margin-top:var(--space-6)">Thời gian cảnh báo tự động</h3>
+       hard-code 3/5/7 trong services/alertService.js#tinhMucCanhBao. Gộp vào <details> (23/10/2026, theo yêu cầu người dùng — tiết
+       kiệm diện tích Settings). -->
+  <details style="margin-top:var(--space-6)">
+    <summary class="btn-hanh-dong phu">Thời gian cảnh báo tự động</summary>
   <p>Đơn đã vào <b>trạng thái đầu vào</b> quá số ngày mà vẫn chưa tới <b>trạng thái đầu ra</b> thì phát cảnh báo (badge trên đơn hàng, ô KPI ở BĐK). Tắt 1 mức = tắt hẳn mức đó ở mọi nơi. Đơn trúng nhiều mức hiện mức cao nhất (Đỏ &gt; Cam &gt; Vàng).</p>
   <div id="ds-cau-hinh-canh-bao" style="display:grid; gap:var(--space-3)"></div>
   <button type="button" class="btn-hanh-dong" id="btn-luu-canh-bao" style="margin-top:var(--space-3)">Lưu</button>
   <p id="thong-bao-canh-bao" style="display:none"></p>
+  </details>
 
-  <!-- Cảnh báo vận hành (11/10/2026, theo yêu cầu người dùng): Telegram vận hành (C3), Y6 đơn nhận quá lâu, L2 vận chuyển bất thường. -->
-  <h3 style="margin-top:var(--space-6)">Cảnh báo vận hành</h3>
+  <!-- Cảnh báo vận hành (11/10/2026, theo yêu cầu người dùng): Telegram vận hành (C3), Y6 đơn nhận quá lâu, L2 vận chuyển bất thường. Gộp vào <details> (23/10/2026, theo yêu cầu người dùng — tiết kiệm diện tích Settings). -->
+  <details style="margin-top:var(--space-6)">
+    <summary class="btn-hanh-dong phu">Cảnh báo vận hành</summary>
   <p>Hiện ở Trung tâm hành động; nếu có chat Telegram vận hành thì gửi 1 tin tổng hợp lúc 8 giờ sáng (báo lỗi app gửi ngay).</p>
   <div class="bao-cao-form">
     <div class="truong" style="flex:1;min-width:240px"><label for="vh-telegram">Chat Telegram vận hành (để trống = không gửi)</label><input id="vh-telegram" placeholder="vd -1001234567890"></div>
@@ -93,9 +97,11 @@
   <div id="vh-ds-r3" style="display:flex;flex-wrap:wrap;gap:6px 16px;max-height:240px;overflow:auto;padding:8px;border:1px solid var(--color-border);border-radius:var(--radius-md)"></div>
   <button type="button" class="btn-hanh-dong" id="btn-luu-van-hanh" style="margin-top:var(--space-3)">Lưu</button>
   <p id="thong-bao-van-hanh" style="display:none"></p>
+  </details>
 
-  <!-- Báo cáo logs hằng ngày qua Telegram (15/10/2026, theo yêu cầu người dùng) — routes/vanHanh.js + services/baoCaoLogService.js. -->
-  <h3 style="margin-top:var(--space-6)">Báo cáo logs hằng ngày (Telegram)</h3>
+  <!-- Báo cáo logs hằng ngày qua Telegram (15/10/2026, theo yêu cầu người dùng) — routes/vanHanh.js + services/baoCaoLogService.js. Gộp vào <details> (23/10/2026, theo yêu cầu người dùng — tiết kiệm diện tích Settings). -->
+  <details style="margin-top:var(--space-6)">
+    <summary class="btn-hanh-dong phu">Báo cáo logs hằng ngày (Telegram)</summary>
   <p>Mỗi ngày đúng giờ đã chọn, gửi 1 tin tóm tắt (phiên bản app, lỗi, tốc độ các thao tác chính) + file log server (.txt) + file
     Logs_UploadAnh (.csv) của 24 giờ gần nhất + danh sách lỗi dữ liệu cần Seller sửa (theo Team, file Excel — ngày không có lỗi thì không gửi).
     7 giờ sáng thứ 7: báo cáo vận hành tuần (thời gian từng khâu, đơn kẹt, QC — toàn xưởng và từng Xưởng) vào cùng chat.
@@ -114,11 +120,13 @@
     <button type="button" class="btn-hanh-dong phu" id="btn-xoa-token-bcl" style="display:none">Xoá token đã lưu</button>
   </div>
   <p id="thong-bao-bcl" style="display:none"></p>
+  </details>
 
   <!-- Tỷ lệ nén ảnh (bổ sung 23/09/2026, theo yêu cầu người dùng) — CHỈ áp dụng cho 2 chế độ chụp ảnh
        ở scan.html (Chụp ảnh đã sản xuất / Chụp ảnh ĐÃ DÁN TEM), không ảnh hưởng upload ảnh ở order.html
-       (xem public/js/api.js#nenAnhTruocKhiTaiLen). -->
-  <h3 style="margin-top:var(--space-6)">Tỷ lệ nén ảnh (Quét QR)</h3>
+       (xem public/js/api.js#nenAnhTruocKhiTaiLen). Gộp vào <details> (23/10/2026, theo yêu cầu người dùng — tiết kiệm diện tích Settings). -->
+  <details style="margin-top:var(--space-6)">
+    <summary class="btn-hanh-dong phu">Tỷ lệ nén ảnh (Quét QR)</summary>
   <p>Áp dụng khi chụp ảnh "Đã sản xuất"/"ĐÃ DÁN TEM" ở menu Quét mã QR. Không ảnh hưởng ảnh tải lên ở trang chi tiết đơn hàng.</p>
   <div class="bao-cao-form">
     <div class="truong">
@@ -132,6 +140,7 @@
     <button type="button" class="btn-hanh-dong" id="btn-luu-nen-anh" style="justify-self:start">Lưu</button>
   </div>
   <p id="thong-bao-nen-anh" style="display:none"></p>
+  </details>
 
   <!-- Quản lý Xưởng (mở rộng 24/09/2026, theo yêu cầu người dùng — trước đây danh sách Xưởng cố định
        trong code, chỉ đúng 2 Xưởng HN/BN chọn được màu; giờ tạo/đổi tên/xoá Xưởng được qua đây, MỌI
@@ -139,8 +148,9 @@
        thái "(chưa gán)" THẬT của đơn/nhân viên chưa có Xưởng nào, vẫn luôn giữ nền mặc định). Gộp CHUNG
        1 khối với màu nền vì 2 việc luôn đi cùng nhau (Xưởng mới tạo cũng cần chọn màu ngay) — thay 2 màu
        HN/BN hard-code cũ trong style.css bằng ô chọn màu tự do. Áp dụng cho thẻ đơn ở Đơn hàng/Chạy
-       máy/Vẽ file — xem public/js/api.js#lopVaStyleXuong. -->
-  <h3 style="margin-top:var(--space-6)">Quản lý Xưởng</h3>
+       máy/Vẽ file — xem public/js/api.js#lopVaStyleXuong. Gộp vào <details> (23/10/2026, theo yêu cầu người dùng — tiết kiệm diện tích Settings). -->
+  <details style="margin-top:var(--space-6)">
+    <summary class="btn-hanh-dong phu">Quản lý Xưởng</summary>
   <p style="color:var(--color-text-muted)">Tạo/đổi tên/xoá Xưởng, mỗi Xưởng 1 màu nền riêng cho thẻ đơn ở Đơn hàng/Chạy máy/Vẽ file. Chỉ xoá được Xưởng không còn đơn/nhân viên nào đang gán.</p>
   <div class="st-danh-sach-xuong" id="khoi-mau-xuong"></div>
   <div class="inline-form" style="margin-top:var(--space-3)">
@@ -151,9 +161,12 @@
     <button type="button" class="btn-hanh-dong phu" id="btn-them-xuong">Thêm Xưởng</button>
   </div>
   <p id="thong-bao-mau-xuong" style="display:none"></p>
+  </details>
 
-  <!-- Team -> Xưởng mặc định (bổ sung 27/09/2026, theo yêu cầu người dùng) — API routes/orders.js /team-xuong. -->
-  <h3 style="margin-top:var(--space-6)">Xưởng mặc định theo Team</h3>
+  <!-- Team -> Xưởng mặc định (bổ sung 27/09/2026, theo yêu cầu người dùng) — API routes/orders.js /team-xuong. Gộp vào <details>
+       (23/10/2026). -->
+  <details style="margin-top:var(--space-6)">
+    <summary class="btn-hanh-dong phu">Xưởng mặc định theo Team</summary>
   <p style="color:var(--color-text-muted)">Team = phần chữ cái trong mã đơn (9TRA471 → TRA). Mọi đơn đang <em>Chưa gán</em> của Team có cấu hình sẽ tự vào Xưởng đó — cả đơn đang có lẫn đơn mới về. Đổi cấu hình KHÔNG chuyển các đơn đã gán. Team để "Không tự gán" thì đơn vẫn Chưa gán như cũ.</p>
   <div class="st-danh-sach-xuong" id="khoi-team-xuong"></div>
   <div class="inline-form" style="margin-top:var(--space-3)">
@@ -164,10 +177,12 @@
     <button type="button" class="btn-hanh-dong phu" id="btn-them-team">Thêm Team</button>
   </div>
   <p id="thong-bao-team-xuong" style="display:none"></p>
+  </details>
 
   <!-- Nhóm hàng (29/09/2026, theo yêu cầu người dùng) — loại/keyword phân loại LOAI cho bộ lọc "Nhóm hàng" ở Danh
-       sách đơn hàng. API routes/orders.js /nhom-hang, kiểm tra/trùng ở services/nhomHangService.js. -->
-  <h3 style="margin-top:var(--space-6)">Nhóm hàng (phân loại theo LOAI)</h3>
+       sách đơn hàng. API routes/orders.js /nhom-hang, kiểm tra/trùng ở services/nhomHangService.js. Gộp vào <details> (23/10/2026). -->
+  <details style="margin-top:var(--space-6)">
+    <summary class="btn-hanh-dong phu">Nhóm hàng (phân loại theo LOAI)</summary>
   <p style="color:var(--color-text-muted)">Mỗi loại 1 dòng: tên loại, nhóm, các keyword cách nhau dấu phẩy (hoặc xuống dòng). Đơn thuộc loại khi LOAI của đơn <strong>trùng nguyên</strong> 1 keyword — không phân biệt hoa/thường, dấu tiếng Việt, khoảng trắng, dấu "-" (vd "T-Shirt" = "t shirt" = "tshirt"). Mỗi keyword chỉ được thuộc 1 loại. Lưu xong áp dụng ngay cho bộ lọc Nhóm hàng.</p>
   <div id="khoi-nhom-hang"></div>
   <div class="inline-form st-dong-nhom-hang" style="margin-top:var(--space-3)">
@@ -199,6 +214,7 @@
   </div>
   <h4 style="margin:var(--space-4) 0 var(--space-2)">LOAI đang chưa phân loại</h4>
   <div id="khoi-loai-chua-phan-loai"></div>
+  </details>
 
   <!-- Cấu hình GKE — CHUYỂN từ menu Tracking sang đây (bổ sung 23/09/2026, theo yêu cầu người dùng —
        hạn chế người không phải superadmin đổi được, gồm cả username/password API GKE THẬT + thông tin
@@ -233,6 +249,33 @@
     <p style="color:var(--color-text-muted)">Mật khẩu phải nhập trước các thao tác nhạy cảm của superadmin (chống bấm nhầm khi máy đang đăng nhập sẵn). Chưa đổi lần nào thì dùng mật khẩu mặc định. Mật khẩu được lưu mã hoá, không xem lại được — quên thì cần sửa trực tiếp cơ sở dữ liệu.</p>
     <div id="mkxn-ds" style="display:flex;flex-direction:column;gap:var(--space-4)"></div>
     <p id="thong-bao-mkxn" style="display:none"></p>
+  </details>
+
+  <!-- Trợ lý AI (23/10/2026, theo yêu cầu người dùng) — routes/chatbot.js /cau-hinh, services/troLyAiService.js + telegramAiService.js.
+       API key / bot token không bao giờ hiện lại (chỉ 4 ký tự cuối); để trống khi lưu = giữ giá trị cũ. -->
+  <details id="khoi-tro-ly-ai" style="margin-top:var(--space-6)">
+    <summary class="btn-hanh-dong phu">Trợ lý AI</summary>
+    <p style="color:var(--color-text-muted)">Trợ lý dùng Claude (Anthropic), chỉ đọc dữ liệu, chỉ superadmin dùng được (menu "Trợ lý" và Telegram). Câu hỏi và dữ liệu đơn liên quan (kể cả tên, địa chỉ khách) được gửi tới Anthropic để trả lời; chi phí tính theo token trên tài khoản Anthropic của bạn.</p>
+    <div class="bao-cao-form">
+      <div class="truong" style="flex:1;min-width:240px"><label for="ai-api-key">API key Anthropic <small id="ai-key-trang-thai" style="color:var(--color-text-muted)"></small></label>
+        <input type="password" id="ai-api-key" autocomplete="new-password" placeholder="sk-ant-..."></div>
+      <div class="truong"><label for="ai-model">Model</label><select id="ai-model"></select></div>
+    </div>
+    <h4>Hỏi qua Telegram</h4>
+    <p class="st-ghi-chu-truong">Tạo 1 bot RIÊNG cho Trợ lý: nhắn @BotFather trên Telegram → /newbot → dán token vào đây. Không dùng lại bot đang gửi báo cáo / cảnh báo hay bot đang gắn với n8n.</p>
+    <div class="bao-cao-form">
+      <div class="truong" style="flex:1;min-width:240px"><label for="ai-tg-token">Bot token <small id="ai-tg-trang-thai-token" style="color:var(--color-text-muted)"></small></label>
+        <input type="password" id="ai-tg-token" autocomplete="new-password" placeholder="123456789:AAE..."></div>
+    </div>
+    <p id="ai-tg-trang-thai" style="margin:var(--space-2) 0"></p>
+    <div class="bao-cao-form" style="margin-top:var(--space-3)">
+      <button type="button" class="btn-hanh-dong" id="btn-luu-ai">Lưu</button>
+      <button type="button" class="btn-hanh-dong phu" id="btn-ai-ma-lien-ket">Tạo mã liên kết Telegram</button>
+      <button type="button" class="btn-hanh-dong phu" id="btn-ai-huy-lien-ket" style="display:none">Huỷ liên kết</button>
+      <button type="button" class="btn-hanh-dong phu nguy-hiem" id="btn-ai-xoa-key" style="display:none">Xoá API key</button>
+      <button type="button" class="btn-hanh-dong phu nguy-hiem" id="btn-ai-xoa-tg" style="display:none">Xoá bot token</button>
+    </div>
+    <p id="thong-bao-ai" style="display:none"></p>
   </details>
 
   <details style="margin-top:var(--space-6)">
@@ -324,7 +367,7 @@
 </div>
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=131"></script>
+<script src="/js/api.js?v=133"></script>
 <script>
 (async () => {
   const user = await requireLoginOrRedirect();
@@ -360,6 +403,12 @@
   document.getElementById('btn-luu-gio-nghi').onclick = luuGioNghi;
   await taiGioNghi();
   await taiMatKhauXacNhan();
+  await taiTroLyAi();
+  document.getElementById('btn-luu-ai').onclick = () => luuTroLyAi({});
+  document.getElementById('btn-ai-xoa-key').onclick = () => luuTroLyAi({ apiKey: null }, 'Xoá API key Anthropic? Trợ lý sẽ ngừng trả lời.');
+  document.getElementById('btn-ai-xoa-tg').onclick = () => luuTroLyAi({ tgToken: null }, 'Xoá bot token và huỷ liên kết Telegram?');
+  document.getElementById('btn-ai-ma-lien-ket').onclick = () => hanhDongTelegramAi('ma-lien-ket');
+  document.getElementById('btn-ai-huy-lien-ket').onclick = () => hanhDongTelegramAi('huy-lien-ket', 'Huỷ liên kết Telegram? Bot sẽ không trả lời tài khoản đó nữa.');
   document.getElementById('btn-them-xuong').onclick = themXuongMoi;
   document.getElementById('btn-them-team').onclick = themTeamMoi;
   // Đồng bộ Sheet Seller — tải khi mở khối lần đầu.
@@ -825,6 +874,44 @@ async function moTamGioNghi(i, huy) {
     document.getElementById('gio-nghi-mat-khau').value = '';
     thongBaoGke(huy ? `Đã huỷ mở tạm Xưởng ${xuong}.` : `Đã mở tạm Xưởng ${xuong} tới ${den}.`, false, 'thong-bao-gio-nghi');
   } catch (e) { thongBaoGke('Chưa lưu: ' + e.message, true, 'thong-bao-gio-nghi'); }
+}
+
+// ---- Trợ lý AI (23/10/2026) — API /chatbot/cau-hinh (CHỈ superadmin) ----
+function veTroLyAi(kq) {
+  const { ai, telegram: tg } = kq;
+  document.getElementById('ai-model').innerHTML = ai.dsModel.map(m => `<option value="${escapeHtml(m.id)}" ${m.id === ai.model ? 'selected' : ''}>${escapeHtml(m.ten)}</option>`).join('');
+  document.getElementById('ai-key-trang-thai').textContent = ai.coApiKey ? `(đã lưu …${ai.apiKeyCuoi} — để trống = giữ)` : '(chưa có)';
+  document.getElementById('ai-tg-trang-thai-token').textContent = tg.coToken ? `(đã lưu …${tg.tokenCuoi} — để trống = giữ)` : '(chưa có)';
+  const dong = [];
+  if (tg.coToken) dong.push(tg.botTen ? `Bot: @${escapeHtml(tg.botTen)}` : 'Bot: đang kết nối…');
+  if (tg.loi) dong.push(`<span style="color:var(--color-danger-text)">${escapeHtml(tg.loi)}</span>`);
+  if (tg.daLienKet) dong.push(`Đã liên kết Telegram ID ${escapeHtml(tg.telegramId)} (quyền của tài khoản ${escapeHtml(tg.appUser)})`);
+  else if (tg.coToken) dong.push('Chưa liên kết tài khoản Telegram nào.');
+  if (tg.maDangCho) dong.push(`<strong>Nhắn cho bot: /lienket ${escapeHtml(tg.maDangCho.ma)}</strong> (mã hết hạn lúc ${escapeHtml(new Date(tg.maDangCho.het).toLocaleTimeString('vi-VN'))})`);
+  document.getElementById('ai-tg-trang-thai').innerHTML = dong.join('<br>');
+  document.getElementById('btn-ai-ma-lien-ket').style.display = tg.coToken ? '' : 'none';
+  document.getElementById('btn-ai-huy-lien-ket').style.display = tg.daLienKet ? '' : 'none';
+  document.getElementById('btn-ai-xoa-key').style.display = ai.coApiKey ? '' : 'none';
+  document.getElementById('btn-ai-xoa-tg').style.display = tg.coToken ? '' : 'none';
+}
+async function taiTroLyAi() {
+  try { veTroLyAi(await apiFetch('/chatbot/cau-hinh')); }
+  catch (e) { thongBaoGke('Không tải được Trợ lý AI: ' + e.message, true, 'thong-bao-ai'); }
+}
+async function luuTroLyAi(them, hoi) {
+  if (hoi && !await hopXacNhan(hoi)) return;
+  const body = { apiKey: document.getElementById('ai-api-key').value.trim(), model: document.getElementById('ai-model').value,
+    tgToken: document.getElementById('ai-tg-token').value.trim(), ...them };
+  try {
+    veTroLyAi(await apiFetch('/chatbot/cau-hinh', { method: 'PUT', body: JSON.stringify(body) }));
+    document.getElementById('ai-api-key').value = ''; document.getElementById('ai-tg-token').value = '';
+    thongBaoGke('Đã lưu. Bot Telegram mới cần khoảng 30 giây để bắt đầu nhận tin.', false, 'thong-bao-ai');
+  } catch (e) { thongBaoGke('Chưa lưu: ' + e.message, true, 'thong-bao-ai'); }
+}
+async function hanhDongTelegramAi(viec, hoi) {
+  if (hoi && !await hopXacNhan(hoi)) return;
+  try { veTroLyAi(await apiFetch('/chatbot/telegram/' + viec, { method: 'POST' })); }
+  catch (e) { thongBaoGke(e.message, true, 'thong-bao-ai'); }
 }
 
 // ---- Mật khẩu xác nhận (23/10/2026) — API /gio-truy-cap/mat-khau (CHỈ superadmin) ----

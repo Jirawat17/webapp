@@ -114,6 +114,7 @@ require('./services/thuVien/xuLyService').batDauVongXuLy();
 // Giai đoạn 3: quét DUONG_DAN_URL mỗi 10 phút — TẮT theo mặc định, superadmin bật ở menu Tìm ảnh (services/thuVien/dongBoSheetService.js).
 require('./services/thuVien/dongBoSheetService').batDauLichQuetSheet();
 require('./services/thuVien/goiYEmbService').batDauLichGoiY(); // A1 (11/10/2026): gợi ý "Có EMB sẵn" mỗi 10 phút
+require('./services/telegramAiService').batDau(); // hỏi Trợ lý AI qua Telegram (23/10/2026) — chỉ nhận tin khi có bot token ở Settings
 require('./services/vanHanhService').batDauLichVanHanh(); // Y6 + L2 (11/10/2026): tổng hợp Telegram vận hành 8 giờ sáng
 
 // Bật lịch backup SQLite (bổ sung 22/09/2026, theo yêu cầu người dùng — data/ trước đây không có

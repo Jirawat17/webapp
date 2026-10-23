@@ -151,9 +151,16 @@ function dongTachDoan(ds) {
 function thongKeMangMayChu(ms) {
   const ds = nhatKy.layDoMangMayChu(vn(ms - MOT_NGAY_MS), vn(ms));
   if (!ds.length) return { dong: [], ds };
-  const soLoi = ds.filter(d => d.loi).length;
+  // Lần đo lúc tên miền "đi thẳng" (DNS only, 23/10/2026 — doMangMayChuService.js) không có đoạn Cloudflare để đo: không tính vào số
+  // đo / tỷ lệ lỗi Cloudflare, chỉ báo số lần; số trong nước / quốc tế / CPU vẫn tính cả ngày.
+  const dsCF = ds.filter(d => d.duong_di !== 'thang');
+  const soThang = ds.length - dsCF.length;
+  const soLoi = dsCF.filter(d => d.loi).length;
   const moTa = v => `Máy chủ→Cloudflare ${giuaP90(cot(v, 'ms_cf'))} · Cloudflare→máy chủ ${giuaP90(cot(v, 'ms_cf_may_chu'))}`;
-  const dong = [`<b>Máy chủ tự đo mỗi phút</b> (${ds.length} lần, lỗi ${tyLe(soLoi, ds.length)}): ${moTa(ds)}${tramCF(ds) ? ` · trạm Cloudflare: ${esc(tramCF(ds))}` : ''}`];
+  const ghiThang = soThang ? ` · ${soThang} lần tên miền đi thẳng (không qua Cloudflare, không đo đoạn này)` : '';
+  const dong = [dsCF.length
+    ? `<b>Máy chủ tự đo mỗi phút</b> (${dsCF.length} lần qua Cloudflare, lỗi ${tyLe(soLoi, dsCF.length)}): ${moTa(dsCF)}${tramCF(dsCF) ? ` · trạm Cloudflare: ${esc(tramCF(dsCF))}` : ''}${ghiThang}`
+    : `<b>Máy chủ tự đo mỗi phút</b> (${ds.length} lần): tên miền đi thẳng cả ngày, không qua Cloudflare — không có đoạn Cloudflare để đo`];
   // Đích tham chiếu KHÔNG qua Cloudflare + tài nguyên máy chủ (21/10/2026) — cả ngày và đúng giờ chậm nhất.
   const thamChieu = v => (cot(v, 'ms_tcp_trong_nuoc').length || cot(v, 'ms_tcp_quoc_te').length
     ? ` · kết nối không qua Cloudflare: trong nước ${giuaP90(cot(v, 'ms_tcp_trong_nuoc'))}, quốc tế ${giuaP90(cot(v, 'ms_tcp_quoc_te'))}` : '');
@@ -162,10 +169,10 @@ function thongKeMangMayChu(ms) {
     ? ` · CPU bận ${so(cot(v, 'cpu_ban'), '%')}, steal tối đa ${cot(v, 'cpu_steal').reduce((a, b) => Math.max(a, b), 0)}%`
       + ` · card mạng máy chủ (gồm cả LAN/MinIO) vào ${so(cot(v, 'mang_vao_kbs'), ' KB/s')}, ra ${so(cot(v, 'mang_ra_kbs'), ' KB/s')}` : '');
   if (thamChieu(ds) || heThong(ds)) dong.push(`• Cả ngày (giữa / 90%)${thamChieu(ds)}${heThong(ds)}`);
-  const g = gioChamNhat(ds, 'ms_cf_may_chu');
+  const g = gioChamNhat(dsCF, 'ms_cf_may_chu');
   if (g) dong.push(`• Giờ chậm nhất ${g.g}h: ${moTa(g.v)}${thamChieu(g.v)}${heThong(g.v)}`);
   const loiNhieu = new Map();
-  for (const d of ds) if (d.loi) loiNhieu.set(d.loi, (loiNhieu.get(d.loi) || 0) + 1);
+  for (const d of dsCF) if (d.loi) loiNhieu.set(d.loi, (loiNhieu.get(d.loi) || 0) + 1);
   for (const [l, n] of [...loiNhieu].sort((a, b) => b[1] - a[1]).slice(0, 3)) dong.push(`• ${n}× ${esc(l)}`);
   return { dong, ds };
 }
@@ -208,7 +215,7 @@ const COT_CSV_TOC_DO = ['luc', 'nguon', 'huong', 'kb', 'ms', 'kbs', 'ms_rtt', 'c
 const taoCsvTocDo = ds => taoCsv(COT_CSV_TOC_DO, ds);
 
 const COT_CSV_MANG_MAY_CHU = ['luc', 'colo', 'ms_dns', 'ms_tcp', 'ms_tls', 'ms_cf', 'ms_cf_may_chu', 'ms_app', 'loi',
-  'ms_tcp_trong_nuoc', 'ms_tcp_quoc_te', 'tai_cpu', 'cpu_ban', 'cpu_steal', 'mang_vao_kbs', 'mang_ra_kbs'];
+  'ms_tcp_trong_nuoc', 'ms_tcp_quoc_te', 'tai_cpu', 'cpu_ban', 'cpu_steal', 'mang_vao_kbs', 'mang_ra_kbs', 'duong_di'];
 const taoCsvDoMangMayChu = ds => taoCsv(COT_CSV_MANG_MAY_CHU, ds);
 const COT_CSV_MANG = ['luc', 'nguoi', 'vai_tro', 'xuong', 'trang', 'ms', 'loi', 'loai_mang', 'mbps', 'rtt', 'he_dieu_hanh', 'trinh_duyet', 'may',
   'ms_cf', 'ms_cf_may_chu', 'ms_app', 'ms_xep_hang', 'ms_ket_noi', 'colo', 'nha_mang', 'kieu_ket_noi'];

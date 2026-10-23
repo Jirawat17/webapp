@@ -132,10 +132,38 @@ async function doMotLan() {
     dangDo = false;
   }
 }
+// Tên miền đang để "DNS only" (mây xám, 23/10/2026 — xưởng kết nối thẳng về máy chủ): DNS trả IP nhà, máy chủ gọi ra IP công cộng của chính
+// nhà thì router từ chối (không có NAT loopback) -> trước đây mỗi phút 1 dòng "lỗi Máy chủ -> Cloudflare: ECONNREFUSED" làm báo cáo trông như
+// mạng hỏng. Giờ: IP của tên miền KHÔNG thuộc dải Cloudflare -> ghi duong_di 'thang', bỏ 2 phép đo qua Cloudflare (không có đoạn đó để đo),
+// vẫn đo trong nước / quốc tế / CPU. Tốc độ đường đi thẳng thật xem ở số đo của điện thoại (nhà mạng "Mạng nội bộ").
+// ponytail: dải IPv4 công bố của Cloudflare (cloudflare.com/ips-v4) viết cứng — đổi hiếm; sai thì chỉ nhầm nhãn đường đi, không hỏng đo.
+const DAI_CLOUDFLARE = ['173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31.4.0/22', '141.101.64.0/18', '108.162.192.0/18',
+  '190.93.240.0/20', '188.114.96.0/20', '197.234.240.0/22', '198.41.128.0/17', '162.158.0.0/15', '104.16.0.0/13', '104.24.0.0/14',
+  '172.64.0.0/13', '131.0.72.0/22'];
+const soIp = ip => ip.split('.').reduce((s, o) => s * 256 + Number(o), 0);
+const laIpCloudflare = ip => DAI_CLOUDFLARE.some(dai => {
+  const [goc, bit] = dai.split('/');
+  const khoi = 2 ** (32 - Number(bit));
+  return Math.floor(soIp(ip) / khoi) === Math.floor(soIp(goc) / khoi);
+});
+// -> 'cloudflare' | 'thang' | '' (không tra được DNS — để lượt đo tự báo lỗi như cũ).
+async function duongDiTenMien() {
+  try {
+    const ds = await require('dns').promises.resolve4(tenMien);
+    return ds.length && !ds.some(laIpCloudflare) ? 'thang' : 'cloudflare';
+  } catch { return ''; }
+}
+
 async function doDoTre() {
   const d = { luc: thoiGianVNISOString(), ...docHeThong() };
   // 2 đích tham chiếu đo SONG SONG với lượt Cloudflare (đích chậm không kéo dài lượt đo; chỉ vài gói tin, không ảnh hưởng số đo Cloudflare).
   const thamChieu = Promise.all([doTcp(DICH_TRONG_NUOC), doTcp(DICH_QUOC_TE)]);
+  d.duongDi = await duongDiTenMien();
+  if (d.duongDi === 'thang') {
+    [d.msTcpTrongNuoc, d.msTcpQuocTe] = await thamChieu;
+    try { nhatKy.ghiDoMangMayChu(d); } catch (err) { console.error('[DoMang] Lỗi lưu số đo máy chủ:', err.message); }
+    return;
+  }
   try {
     const tr = await goi('/cdn-cgi/trace', 'GET');
     d.colo = ((tr.body.match(/colo=([A-Z]+)/) || [])[1] || '');

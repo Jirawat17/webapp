@@ -83,7 +83,14 @@ const _ghiVaoDs = (ds, x, toiDa) => { ds.push({ luc: new Date().toISOString(), .
 addEventListener('error', e => _ghiVaoDs(_loiJsGanDay, { loi: String(e.message || 'Lỗi').slice(0, 1000), noi: `${e.filename || ''}:${e.lineno || ''}:${e.colno || ''}`.slice(0, 300) }, 20));
 addEventListener('unhandledrejection', e => _ghiVaoDs(_loiJsGanDay, { loi: 'Promise: ' + String((e.reason && (e.reason.stack || e.reason.message)) || e.reason).slice(0, 500) }, 20));
 
+// Màn "đã đóng" (giờ nghỉ theo Xưởng) đang hiện -> KHÔNG gọi máy chủ nữa, trừ các lượt cần cho màn đóng / gửi nốt ảnh (23/10/2026, theo yêu
+// cầu người dùng — log 23/10: trang Tracking để mở vẫn tự tải log mỗi phút, mỗi lượt 1 dòng "bị chặn" trên máy chủ). Hết giờ đóng thì trang
+// tự tải lại (apDungGioTruyCap) nên không bị kẹt.
+const _VAN_GOI_KHI_DONG = ['/auth/', '/gio-truy-cap/trang-thai', '/photos/upload', '/photos/hoan-tat-san-xuat', '/nhat-ky-quet', '/bao-loi', '/ping'];
 async function apiFetch(url, options = {}) {
+  if (document.getElementById('man-dong-truy-cap') && !_VAN_GOI_KHI_DONG.some(p => String(url).startsWith(p))) {
+    throw Object.assign(new Error('Hệ thống đang tạm đóng (giờ nghỉ của Xưởng).'), { status: 423, nghiepVu: false, duLieu: {} });
+  }
   let res;
   try {
     res = await fetch(API + url, {
@@ -873,9 +880,9 @@ function renderNav(user, active) {
     // CHỈ superadmin — KHÁC mọi nhánh khác trong hàm này (đều dùng laAdmin(), coi admin/superadmin
     // ngang quyền). admin không còn thấy menu này nữa, dù vẫn thấy mọi menu khác như trước.
     if (user.vaiTro === 'superadmin') {
-      // "Trợ lý" ẨN khỏi menu (bổ sung 23/09/2026, theo yêu cầu người dùng — chưa dùng tới tính năng
-      // này) — CHỈ ẩn nav, route /chatbot.html + API vẫn hoạt động bình thường nếu gõ thẳng URL, dễ bật
-      // lại sau (đúng quy ước "ẩn menu, không khoá route" đã áp dụng nhất quán trong hàm này).
+      // "Trợ lý" — ẩn 23/09/2026, BẬT LẠI 23/10/2026 (theo yêu cầu người dùng) CHỈ cho superadmin: Trợ lý AI Claude (routes/chatbot.js
+      // cũng chặn vai trò khác), hỏi được cả qua Telegram (Settings > Trợ lý AI).
+      links.push({ href: '/chatbot.html', label: 'Trợ lý', icon: 'chat', key: 'chatbot' });
       // "QC" (bổ sung 30/09/2026, theo yêu cầu người dùng) — AI QC bằng Gemini, CHỈ superadmin (routes/qc.js cũng chặn).
       links.push({ href: '/qc.html', label: 'QC', icon: 'navReports', key: 'qc' });
       // "Notes" (bổ sung 02/10/2026, theo yêu cầu người dùng) — ghi chép kinh nghiệm, CHỈ superadmin (routes/notes.js cũng chặn).

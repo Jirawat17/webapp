@@ -44,8 +44,11 @@
           <option value="NGHIEP_VU">Sai đơn (sai trạng thái / không tìm thấy / trùng)</option><option value="BO_NGANG">Quét lại (bỏ ngang)</option></select></div>
       <label style="align-self:end"><input type="checkbox" id="ua-chi-cham"> Chỉ lượt chụp chậm</label>
       <button type="button" class="btn-hanh-dong" onclick="taiLogsUploadAnh()">Làm mới</button>
-      <button type="button" class="btn-hanh-dong phu" onclick="xuatCsvUploadAnh()">Xuất CSV</button>
+      <button type="button" class="btn-hanh-dong phu nut-xuat-file" onclick="xuatCsvUploadAnh()">Xuất CSV</button>
+      <button type="button" class="btn-hanh-dong phu nut-xuat-file" onclick="xuatCsvDoMang('do-mang-may-chu')">Tải DoMangMayChu</button>
+      <button type="button" class="btn-hanh-dong phu nut-xuat-file" onclick="xuatCsvDoMang('do-toc-do')">Tải DoTocDo</button>
     </div>
+    <p style="margin:4px 0 0;font-size:0.82rem;color:var(--color-text-muted)">"Tải DoMangMayChu" / "Tải DoTocDo": số đo mạng của máy chủ và tốc độ đường truyền, theo Từ ngày / Đến ngày ở trên (bỏ qua các bộ lọc khác), tối đa 31 ngày — cùng cột với file gửi Telegram hằng ngày.</p>
     <h3 style="margin-bottom:4px">Tổng hợp
       <select id="ua-nhom" onchange="taiTongHopUploadAnh()" style="font-size:0.9rem;margin-left:8px">
         <option value="thiet-bi">theo hệ điều hành + trình duyệt</option><option value="nguoi">theo người dùng</option></select></h3>
@@ -80,7 +83,7 @@
 </div>
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=131"></script>
+<script src="/js/api.js?v=133"></script>
 <script>
 let toanBoDong = [];
 
@@ -198,8 +201,40 @@ async function taiTongHopUploadAnh() {
       <td>${giayUA(g.tbNen)}</td><td>${giayUA(g.tbGui)}</td><td>${giayUA(g.tbMayChu)}</td><td>${giayUA(g.tbKiemTra)}</td><td>${giayUA(g.tbTimMa)}</td><td>${giayUA(g.tbMoCamera)}</td>
       <td style="font-size:0.78rem">${theoNguoi ? '' : g.soNguoi + ' người'}${g.dsMay.length ? (theoNguoi ? '' : ' · ') + escapeHtml(g.dsMay.join(', ')) : ''}</td></tr>`).join('');
 }
+// Lưu Blob thành file tải về — dùng chung cho mọi nút xuất của tab này.
+function luuFile(blob, tenFile) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = tenFile;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000); // không thu hồi ngay: Safari iPad mở blob ở tab mới, cần URL còn sống
+}
+// Khoá MỌI nút xuất file trong lúc 1 lượt đang chạy (không chạy 2 lượt tải lớn cùng lúc).
+async function khoaNutXuat(viec) {
+  const ds = [...document.querySelectorAll('.nut-xuat-file')];
+  if (ds.some(n => n.disabled)) return;
+  ds.forEach(n => { n.disabled = true; });
+  try { await viec(); } finally { ds.forEach(n => { n.disabled = false; }); }
+}
+// DoMangMayChu / DoTocDo (23/10/2026): máy chủ trả thẳng file CSV (routes/logs.js GET /logs/csv) — gọi fetch trực tiếp vì apiFetch chỉ đọc
+// JSON; lỗi máy chủ vẫn là JSON { error }.
+function xuatCsvDoMang(loai) {
+  const tu = document.getElementById('ua-tu').value, den = document.getElementById('ua-den').value;
+  if (!tu || !den) { alert('Chọn Từ ngày / Đến ngày trước.'); return; }
+  return khoaNutXuat(async () => {
+    try {
+      const res = await fetch(`${API}/logs/csv?${new URLSearchParams({ loai, tu, den })}`, { credentials: 'include' });
+      if (!res.ok) { alert('Lỗi: ' + ((await res.json().catch(() => ({}))).error || `Máy chủ trả ${res.status}`)); return; }
+      if (res.headers.get('X-So-Dong') === '0') { alert('Không có số đo nào trong khoảng ngày này.'); return; }
+      const ten = (/filename="?([^";]+)"?/.exec(res.headers.get('Content-Disposition') || '') || [])[1] || `${loai}_${tu}_${den}.csv`;
+      luuFile(await res.blob(), ten);
+    } catch (e) { alert('Lỗi: ' + e.message); }
+  });
+}
+
 // CSV có BOM (Excel đọc đúng tiếng Việt); ô bắt đầu bằng = + - @ thêm ' để Excel không hiểu là công thức.
-async function xuatCsvUploadAnh() {
+function xuatCsvUploadAnh() { return khoaNutXuat(xuatCsvUploadAnhThat); }
+async function xuatCsvUploadAnhThat() {
   // Tải lại theo bộ lọc hiện tại, tối đa 20000 dòng (bảng trên trang chỉ hiện 1000 dòng mới nhất).
   let ds;
   try { ds = (await apiFetch('/nhat-ky-quet?gioiHan=20000&' + locUploadAnh())).ds; } catch (e) { alert('Lỗi: ' + e.message); return; }
@@ -208,11 +243,8 @@ async function xuatCsvUploadAnh() {
   const o = v => `"${String(v ?? '').replace(/^[=+\-@\t\r]/, "'$&").replace(/"/g, '""')}"`;
   const cot = ['luc', 'nguoi', 'vai_tro', 'xuong', 'su_kien', 'che_do', 'stt_key', 'ket_qua', 'nhom_kq', 'loi', 'tong_ms', 'cham', 'he_dieu_hanh', 'trinh_duyet', 'may', 'phien_ban_app', 'chi_tiet', 'thong_tin'];
   const csv = '\ufeff' + [cot.join(','), ...ds.map(r => cot.map(k => o(r[k])).join(','))].join('\r\n');
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-  a.download = `Logs_UploadAnh_${document.getElementById('ua-tu').value}_${document.getElementById('ua-den').value}.csv`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  luuFile(new Blob([csv], { type: 'text/csv;charset=utf-8' }),
+    `Logs_UploadAnh_${document.getElementById('ua-tu').value}_${document.getElementById('ua-den').value}.csv`);
 }
 async function taiBaoLoiNhanVien() {
   const el = document.getElementById('ds-bao-loi');

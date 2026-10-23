@@ -616,16 +616,17 @@ db.exec(`CREATE TABLE IF NOT EXISTS do_mang_may_chu (
 )`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_do_mang_may_chu_luc ON do_mang_may_chu(luc)`);
 // 21/10/2026 (doMangMayChuService.js): kết nối TCP tới đích trong nước / quốc tế không qua Cloudflare + CPU / lưu lượng mạng của máy chủ.
+// duong_di (23/10/2026): 'cloudflare' | 'thang' (tên miền để DNS only — không đo đoạn Cloudflare) | '' (dòng cũ / không tra được DNS).
 const COT_MAY_CHU_THEM = { ms_tcp_trong_nuoc: 'INTEGER', ms_tcp_quoc_te: 'INTEGER', tai_cpu: 'REAL', cpu_ban: 'INTEGER', cpu_steal: 'REAL',
-  mang_vao_kbs: 'INTEGER', mang_ra_kbs: 'INTEGER' };
+  mang_vao_kbs: 'INTEGER', mang_ra_kbs: 'INTEGER', duong_di: "TEXT NOT NULL DEFAULT ''" };
 const cotMayChuDaCo = db.prepare(`PRAGMA table_info(do_mang_may_chu)`).all().map(c => c.name);
 for (const [cot, kieu] of Object.entries(COT_MAY_CHU_THEM)) if (!cotMayChuDaCo.includes(cot)) db.exec(`ALTER TABLE do_mang_may_chu ADD COLUMN ${cot} ${kieu}`);
 const cauGhiDoMangMayChu = db.prepare(`INSERT INTO do_mang_may_chu (luc, colo, ms_dns, ms_tcp, ms_tls, ms_cf, ms_cf_may_chu, ms_app, loi,
-    ms_tcp_trong_nuoc, ms_tcp_quoc_te, tai_cpu, cpu_ban, cpu_steal, mang_vao_kbs, mang_ra_kbs)
+    ms_tcp_trong_nuoc, ms_tcp_quoc_te, tai_cpu, cpu_ban, cpu_steal, mang_vao_kbs, mang_ra_kbs, duong_di)
   VALUES (@luc, @colo, @msDns, @msTcp, @msTls, @msCF, @msCFMayChu, @msApp, @loi,
-    @msTcpTrongNuoc, @msTcpQuocTe, @taiCpu, @cpuBan, @cpuSteal, @mangVaoKbs, @mangRaKbs)`);
+    @msTcpTrongNuoc, @msTcpQuocTe, @taiCpu, @cpuBan, @cpuSteal, @mangVaoKbs, @mangRaKbs, @duongDi)`);
 const ghiDoMangMayChu = d => cauGhiDoMangMayChu.run({ colo: '', msDns: null, msTcp: null, msTls: null, msCF: null, msCFMayChu: null, msApp: null, loi: '',
-  msTcpTrongNuoc: null, msTcpQuocTe: null, taiCpu: null, cpuBan: null, cpuSteal: null, mangVaoKbs: null, mangRaKbs: null, ...d });
+  msTcpTrongNuoc: null, msTcpQuocTe: null, taiCpu: null, cpuBan: null, cpuSteal: null, mangVaoKbs: null, mangRaKbs: null, duongDi: '', ...d });
 const layDoMangMayChu = (tuLuc, denLuc) => db.prepare(`SELECT * FROM do_mang_may_chu WHERE luc >= ? AND luc < ? ORDER BY luc`).all(tuLuc, denLuc);
 const xoaDoMangMayChuTruoc = luc => db.prepare(`DELETE FROM do_mang_may_chu WHERE luc < ?`).run(luc).changes;
 const layDoMang = (tuLuc, denLuc) => db.prepare(`SELECT * FROM do_mang WHERE luc >= ? AND luc < ? ORDER BY luc`).all(tuLuc, denLuc);
