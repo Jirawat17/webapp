@@ -41,6 +41,7 @@ app.use('/api', (req, res, next) => (req.method === 'GET' ? require('./services/
 // services/presenceService.js. Đặt sau session, trước mọi route, để áp dụng cho toàn bộ API.
 const { ghiNhanHoatDong } = require('./services/presenceService');
 app.use('/api', require('./services/logCapture').ghiLuotApi); // ghi lượt API bị từ chối/lỗi/chậm vào Logs (11/10/2026)
+app.use('/api', require('./services/gioTruyCapService').chanNgoaiGio); // giờ đóng truy cập theo Xưởng (23/10/2026) -> 423
 app.use((req, res, next) => {
   if (req.session.user) ghiNhanHoatDong(req.session.user);
   next();
@@ -72,6 +73,7 @@ app.use('/api/notes', require('./routes/notes')); // Notes (02/10/2026) — CH�
 app.use('/api/thu-vien', require('./routes/thuVien')); // Tìm ảnh — thư viện thiết kế thêu (03/10/2026)
 app.use('/api/van-hanh', require('./routes/vanHanh')); // Cấu hình cảnh báo vận hành Y6/L2 + Telegram vận hành (11/10/2026) — CHỈ superadmin
 app.use('/api/bao-loi', require('./routes/baoLoi')); // Y20 Báo lỗi app (11/10/2026)
+app.use('/api/gio-truy-cap', require('./routes/gioTruyCap')); // giờ đóng truy cập theo Xưởng (23/10/2026) — thiết lập CHỈ superadmin
 app.use('/api/nhat-ky-quet', require('./routes/nhatKyQuet')); // Logs_UploadAnh — thao tác menu Quét QR (12/10/2026)
 app.use('/api/ping', require('./routes/doMang')); // đo tốc độ mạng từ trình duyệt — chấm báo mạng trên menu mọi trang (16/10/2026)
 

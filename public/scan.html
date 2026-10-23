@@ -88,7 +88,7 @@
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=130"></script>
+<script src="/js/api.js?v=131"></script>
 <script>
 let user;
 // Mặc định mở vào "Quét kịch bản" (batch) khi vào trang — theo yêu cầu người dùng 05/09/2026, vì đây
@@ -154,6 +154,8 @@ const dsUploadDangCho = new Set(); // khoá: sttKey (ảnh 1 / ảnh duy nhất)
 // soAnh, huaAnh1: Promise<bool> ảnh 1 đã lưu, dong: dòng "Danh sách đã chụp" }. Xong lượt khi: chụp xong ảnh 2 / bấm "Xong đơn này" /
 // quét được đơn KHÁC (kiểm tra OK). Thoát trang thì đơn vẫn "Đang chạy máy"; quét lại đơn đó -> máy chủ báo đã có ảnh -> chụp tiếp.
 let donChoXong = null;
+// Giờ nghỉ theo Xưởng (23/10/2026): còn ảnh đang gửi / đơn chờ Xong -> màn "đã đóng" cho gửi nốt trong 10 phút (api.js#hienManDongTruyCap).
+window.coViecGuiNot = () => dsUploadDangCho.size > 0 || !!donChoXong;
 // LƯU donChoXong trên máy (15/10/2026, Logs 14/10: Tu tra cứu -> mở Chi tiết đơn -> quay lại, trang Quét QR tải lại, "đơn chờ Xong" chỉ
 // nằm trong bộ nhớ trang nên MẤT, quét đơn kế không còn gì để tự Xong -> 7 đơn kẹt "Đang chạy máy" 2–3 giờ). Mọi lần đổi donChoXong đi qua
 // datDonChoXong(); mở lại trang thì khoiPhucDonChoXong() hỏi lại máy chủ rồi dựng lại khung chờ. Chỉ lưu dữ liệu thuần (không lưu Promise).

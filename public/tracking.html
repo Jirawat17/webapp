@@ -185,7 +185,7 @@
      quy trình mua và bảng "Danh sách đơn tự động mua tracking" giữ nguyên. -->
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=130"></script>
+<script src="/js/api.js?v=131"></script>
 <script src="/js/suaThongTinGke.js?v=2"></script>
 <script>
 // Nhãn + class hiển thị cho từng trạng thái trả về từ services/trackingAutoService.js
@@ -263,7 +263,11 @@ document.getElementById('o-quet-in-label').addEventListener('keydown', async (e)
   }
 
   if (ketQua.loi && ketQua.loi.length > 0) {
-    hienThongBaoQuet('loi', `${sttKey}: ${ketQua.loi[0].lyDo}`);
+    // Đơn chưa có tracking (23/10/2026, theo yêu cầu người dùng — log 22/10: 26 lần bấm lại "IN LABEL"): kèm nút mua ngay cho đúng đơn
+    // này. Vẫn KHÔNG tự mua khi quét — phải bấm nút + xác nhận (cùng hộp của nút "MUA TRACKING và IN LABEL" trong bảng).
+    const nut = ketQua.loi[0].maLoi === 'CHUA_CO_TRACKING'
+      ? { nhan: 'Mua tracking và in label', bam: b => apDungMuaVaInLabelTuBang(b, ketQua.loi[0].sttKey, '') } : null;
+    hienThongBaoQuet('loi', `${sttKey}: ${ketQua.loi[0].lyDo}`, nut);
     resetOQuetInLabel(oQuet);
     return;
   }
@@ -289,13 +293,28 @@ function resetOQuetInLabel(oQuet) {
   dangXuLyQuetInLabel = false;
 }
 
-function hienThongBaoQuet(loai, noiDung) {
+// nut (tuỳ chọn, 23/10/2026): { nhan, bam(btn) } — nút ngay trong thông báo; có nút thì giữ thông báo 15 giây thay vì 4 giây.
+function hienThongBaoQuet(loai, noiDung, nut) {
   clearTimeout(quetThongBaoTimer);
   const el = document.getElementById('tk-quet-thong-bao');
   el.className = 'tk-quet-thong-bao ' + loai;
   el.style.display = 'block';
   el.textContent = noiDung;
-  quetThongBaoTimer = setTimeout(() => { el.style.display = 'none'; }, 4000);
+  if (nut) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn-hanh-dong';
+    b.style.cssText = 'display:block;margin-top:8px;padding:6px 12px;font-size:0.85rem';
+    b.textContent = nut.nhan;
+    b.onclick = async () => {
+      clearTimeout(quetThongBaoTimer);
+      await nut.bam(b);
+      el.style.display = 'none';
+      document.getElementById('o-quet-in-label').focus();
+    };
+    el.appendChild(b);
+  }
+  quetThongBaoTimer = setTimeout(() => { el.style.display = 'none'; }, nut ? 15000 : 4000);
 }
 
 // Ô "Tracking thủ công" (bổ sung 14/09/2026, theo yêu cầu người dùng — xem

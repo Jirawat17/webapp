@@ -218,6 +218,8 @@ function moTaLichSu(dong, { anXuong = false, xuongDuocThay = [] } = {}) {
     }
     case 'DANG_NHAP':
       return kq('đăng nhập');
+    case 'TRUY_CAP_NGOAI_GIO': // 23/10/2026 — services/gioTruyCapService.js (mỗi người tối đa 1 dòng / 15 phút)
+      return kq(`truy cập trong giờ đóng của Xưởng ${c.xuong || '?'} (${c.khung || '?'}) — bị chặn (${c.duongDan || ''})`);
     case 'CHATBOT_HOI':
       return kq(`hỏi trợ lý: "${String(c.cauHoi || '').slice(0, 120)}"`);
     default:

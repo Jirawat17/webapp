@@ -35,7 +35,7 @@
 </div>
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=130"></script>
+<script src="/js/api.js?v=131"></script>
 <script>
 const sttKey = new URLSearchParams(location.search).get('stt');
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
@@ -205,12 +205,19 @@ async function moDonTheoMa(e) {
   const ma = o.value.trim();
   loi.textContent = '';
   if (!ma) return;
+  // Xoá ô NGAY khi gửi (23/10/2026, theo yêu cầu người dùng — log 22/10: 7 lần mã bị nối nhau, vd "10SON28810SON288"): mã quét/gõ
+  // tiếp trong lúc đang tra hoặc đang mở trang (mạng chậm) bắt đầu từ ô trống. Trước đây chỉ chọn lại chữ khi lỗi — trên điện thoại
+  // ô thường đã mất focus sau phím "Đi" nên select() không có tác dụng.
+  o.value = '';
+  o.placeholder = ma;
   try {
     const { sttKey: maGoc } = await apiFetch('/orders/tra-ma?ma=' + encodeURIComponent(ma));
     location.href = '/order.html?stt=' + encodeURIComponent(maGoc);
   } catch (err) {
-    loi.textContent = err.message;
-    o.select();
+    // Ô đã xoá -> lỗi luôn kèm mã vừa tra (lỗi mạng "Load failed" không tự ghi mã), biết quét lại mã nào.
+    loi.textContent = String(err.message).includes(ma) ? err.message : `${ma}: ${err.message}`;
+    o.placeholder = 'Nhập mã đơn...';
+    o.focus();
   }
 }
 // Mở trang chi tiết đơn -> ô "Nhập mã đơn" trống, con trỏ sẵn trong ô để gõ mã tiếp (04/10/2026, theo yêu cầu người dùng).
@@ -220,6 +227,7 @@ function oTimMaDonSanSang() {
   const o = document.getElementById('tim-ma-don');
   if (!o) return;
   o.value = '';
+  o.placeholder = 'Nhập mã đơn...'; // Back về trang cũ: bỏ mã đang tra hiện tạm ở placeholder (moDonTheoMa)
   document.getElementById('loi-tim-ma-don').textContent = ''; // Back về trang cũ: bỏ cả dòng báo lỗi cũ
   o.focus(); // để trình duyệt tự cuộn tới ô nếu đang khuất (Back về trang đã cuộn) — gõ/quét mã tiếp là thấy ngay
 }

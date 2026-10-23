@@ -1009,10 +1009,15 @@ router.post('/danh-dau-uu-tien', async (req, res) => {
 // Mật khẩu xác nhận riêng cho 2 thao tác PHÁ HUỶ/KHÔI PHỤC dữ liệu đơn hàng (bổ sung 24/09/2026, theo
 // yêu cầu người dùng) — CHỈ là 1 lớp xác nhận CHỦ ĐÍCH thêm (đứng SAU laSuperAdmin(), vốn đã là lớp
 // phân quyền thật qua session), không phải mật khẩu tài khoản: mục đích là chặn bấm nhầm/dùng ẩu khi
-// phiên superadmin đang mở sẵn (vd người khác mượn máy), không phải để chống truy cập trái phép — vẫn
-// hardcode CỐ Ý (không cần cấu hình được ở Settings, người dùng không yêu cầu). Kiểm tra Ở SERVER (không
-// chỉ client) để không thể lách qua bằng cách gọi thẳng API.
-const MAT_KHAU_THAO_TAC_DU_LIEU_DON = '2511';
+// phiên superadmin đang mở sẵn (vd người khác mượn máy), không phải để chống truy cập trái phép. Kiểm tra Ở SERVER (không
+// chỉ client) để không thể lách qua bằng cách gọi thẳng API. Giá trị lấy từ biến MAT_KHAU_DU_LIEU_DON trong .env (23/10/2026, theo
+// yêu cầu người dùng — trước đây hardcode trong code / repo); chưa đặt biến -> không xoá / khôi phục được (báo rõ).
+// -> lỗi (chuỗi, đã kèm "không <việc> gì cả") hoặc '' nếu đúng.
+function kiemTraMatKhauDuLieuDon(mk, viec) {
+  const dung = String(process.env.MAT_KHAU_DU_LIEU_DON || '');
+  if (!dung) return `Máy chủ chưa đặt MAT_KHAU_DU_LIEU_DON trong .env — không ${viec} gì cả.`;
+  return String(mk ?? '') === dung ? '' : `Sai mật khẩu xác nhận — không ${viec} gì cả.`;
+}
 
 // "Xoá dữ liệu đơn hàng" (bổ sung 20/09/2026, theo yêu cầu người dùng) — CHỈ superadmin (laSuperAdmin(),
 // KHÁC mọi bulk action khác trong file này vốn cho cả admin qua laAdmin()) vì đây là thao tác PHÁ HUỶ
@@ -1029,9 +1034,8 @@ router.post('/xoa-du-lieu-hang-loat', async (req, res) => {
   if (!laSuperAdmin(user.vaiTro)) {
     return res.status(403).json({ error: 'Chỉ superadmin mới được xoá dữ liệu đơn hàng' });
   }
-  if (req.body.matKhau !== MAT_KHAU_THAO_TAC_DU_LIEU_DON) {
-    return res.status(403).json({ error: 'Sai mật khẩu xác nhận — không xoá gì cả.' });
-  }
+  const loiMatKhauXoa = kiemTraMatKhauDuLieuDon(req.body.matKhau, 'xoá');
+  if (loiMatKhauXoa) return res.status(403).json({ error: loiMatKhauXoa });
 
   const { sttKeys } = req.body;
   if (!Array.isArray(sttKeys) || sttKeys.length === 0) {
@@ -1076,9 +1080,8 @@ router.post('/khoi-phuc-du-lieu-hang-loat', async (req, res) => {
   if (!laSuperAdmin(user.vaiTro)) {
     return res.status(403).json({ error: 'Chỉ superadmin mới được khôi phục dữ liệu đơn hàng' });
   }
-  if (req.body.matKhau !== MAT_KHAU_THAO_TAC_DU_LIEU_DON) {
-    return res.status(403).json({ error: 'Sai mật khẩu xác nhận — không khôi phục gì cả.' });
-  }
+  const loiMatKhauKhoiPhuc = kiemTraMatKhauDuLieuDon(req.body.matKhau, 'khôi phục');
+  if (loiMatKhauKhoiPhuc) return res.status(403).json({ error: loiMatKhauKhoiPhuc });
 
   const { sttKeys } = req.body;
   if (!Array.isArray(sttKeys) || sttKeys.length === 0) {
@@ -1318,7 +1321,7 @@ router.post('/:sttKey/nut-trang-thai', async (req, res) => {
   if (!nut) return res.status(400).json({ error: 'Nút không hợp lệ' });
   if (nut.vaiTro && !nut.vaiTro.includes(user.vaiTro)) return res.status(403).json({ error: `Vai trò này không dùng nút "${nut.nhan}"` });
   // san_xuat bấm BÁO LỖI phải nhập mật khẩu xác nhận (29/09/2026, theo yêu cầu người dùng) — chống bấm nhầm, không
-  // phải lớp bảo mật (cùng tinh thần MAT_KHAU_THAO_TAC_DU_LIEU_DON); kiểm tra ở server để không lách qua giao diện.
+  // phải lớp bảo mật (cùng tinh thần kiemTraMatKhauDuLieuDon); kiểm tra ở server để không lách qua giao diện.
   if (req.body.nut === 'BAO_LOI_SAN_XUAT' && user.vaiTro === 'san_xuat' && String(req.body.matKhau ?? '') !== MAT_KHAU_BAO_LOI_SAN_XUAT) {
     return res.status(400).json({ error: 'Sai mật khẩu xác nhận — chưa báo lỗi.' });
   }

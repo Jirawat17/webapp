@@ -337,6 +337,23 @@ function ganTaiKhoanGkeChoXuong(xuong, id) {
   db.prepare(`UPDATE danh_sach_xuong SET TaiKhoanGke = ? WHERE Ten = ?`).run(id ? String(id) : '', xuong);
 }
 
+// Giờ đóng truy cập theo Xưởng (23/10/2026, theo yêu cầu người dùng — services/gioTruyCapService.js). Lưu NGAY TRONG danh_sach_xuong
+// như TaiKhoanGke: đổi tên / xoá Xưởng tự mang theo / xoá luôn. GioDongTu/Den 'HH:MM' giờ VN; MoTamDen = ISO, "mở tạm tới".
+for (const c of ['GioDongBat', 'GioDongTu', 'GioDongDen', 'MoTamDen']) {
+  if (!db.prepare(`PRAGMA table_info(danh_sach_xuong)`).all().some(x => x.name === c)) db.exec(`ALTER TABLE danh_sach_xuong ADD COLUMN ${c} TEXT NOT NULL DEFAULT ''`);
+}
+function layGioDongXuong() {
+  return db.prepare(`SELECT Ten, GioDongBat, GioDongTu, GioDongDen, MoTamDen FROM danh_sach_xuong ORDER BY rowid`).all();
+}
+// ds: [{ ten, bat, tu, den }] — 1 giao dịch; không đụng MoTamDen (mở tạm đặt riêng).
+const datGioDongXuong = db.transaction(ds => {
+  const cau = db.prepare(`UPDATE danh_sach_xuong SET GioDongBat = ?, GioDongTu = ?, GioDongDen = ? WHERE Ten = ?`);
+  for (const d of ds) cau.run(d.bat ? '1' : '', d.tu, d.den, d.ten);
+});
+function datMoTamXuong(ten, iso) {
+  db.prepare(`UPDATE danh_sach_xuong SET MoTamDen = ? WHERE Ten = ?`).run(iso || '', ten);
+}
+
 // Nhóm hàng theo LOAI (29/09/2026, theo yêu cầu người dùng — sửa ở Settings thay vì trong code): mỗi dòng 1 loại
 // (Tshirt, HoodieKID...), Nhom '1' Quần áo / '2' Không phải quần áo, TuKhoa phân cách dấu phẩy. Kiểm tra hợp lệ/trùng
 // ở services/nhomHangService.js. Bảng VỪA tạo -> nạp danh sách mặc định (services/nhomHangMacDinh.js) đúng 1 lần, CÙNG
@@ -494,6 +511,7 @@ const datCaiDatVanHanh = db.transaction(giaTri => {
 });
 
 module.exports = {
+  layGioDongXuong, datGioDongXuong, datMoTamXuong,
   danhDauGkeHetTien, boDanhDauGkeHetTien, ghiDaBaoGkeHetTien,
   layCaiDatVanHanh, datCaiDatVanHanh,
   layCauHinhQc, datCauHinhQc, layMocApDungAutoQc, layTelegramQc, datTelegramQc, layGiaTokenQc, datGiaTokenQc,

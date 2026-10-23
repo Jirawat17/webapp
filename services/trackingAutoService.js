@@ -597,7 +597,8 @@ async function inLabelChoDon(sttKey, user) {
     // Tem lấy theo vận đơn của đơn ĐÃ MUA — khác đơn bấm in khi .1 đã mua rồi mới bị huỷ riêng.
     const donLayTem = nhom ? nhom.donMua : row;
     if (!donLayTem.TRACKING_ID) {
-      throw new Error('Đơn chưa có mã tracking thật — dùng nút "MUA TRACKING và IN LABEL" thay vì "IN LABEL".');
+      // maLoi (23/10/2026): giao diện nhận ra lỗi này -> hiện ngay nút "Mua tracking và in label" cho đúng đơn (log 22/10: 26 lần bấm lại "IN LABEL").
+      throw Object.assign(new Error('Đơn chưa có mã tracking thật — dùng nút "MUA TRACKING và IN LABEL" thay vì "IN LABEL".'), { maLoi: 'CHUA_CO_TRACKING' });
     }
 
     // Tracking Seller (11/10/2026): chỉ in label GKE cho đơn US/UK/GB (người dùng chốt); GKE không có vận đơn -> báo rõ nguồn Seller.

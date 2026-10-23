@@ -18,6 +18,10 @@
 .st-the-tk-gke > div:last-child { align-self: flex-start; }
 /* Quản lý Xưởng (bổ sung 24/09/2026) — mỗi Xưởng 1 dòng: tên + màu + đổi tên + xoá. */
 .st-danh-sach-xuong { display: flex; flex-direction: column; gap: var(--space-2); }
+/* Giờ nghỉ theo Xưởng (23/10/2026) */
+.st-bang-gio-nghi { border-collapse: collapse; width: 100%; min-width: 640px; }
+.st-bang-gio-nghi th, .st-bang-gio-nghi td { padding: 6px 8px; border-bottom: 1px solid var(--color-border, #e2e8f0); text-align: left; vertical-align: middle; }
+.st-bang-gio-nghi th { font-size: 0.8rem; color: var(--color-text-muted); font-weight: 600; }
 .st-dong-xuong {
   display: flex; align-items: center; gap: var(--space-3); background: var(--color-surface);
   border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 8px 12px;
@@ -202,6 +206,26 @@
        ve_file/san_xuat cùng sửa (xem routes/tracking.js) — giờ CHỈ superadmin, khớp đúng phạm vi trang
        Settings này. Gộp vào <details> (mặc định đóng) — giữ đúng hành vi ẩn-mặc-định tracking.html
        từng có, dùng lại pattern <details> như Themes ở trên, không cần JS toggle riêng nữa. -->
+  <!-- Giờ nghỉ theo Xưởng (23/10/2026, theo yêu cầu người dùng — services/gioTruyCapService.js, API routes/gioTruyCap.js). Lưu / mở tạm
+       phải nhập mật khẩu xác nhận (máy chủ kiểm tra). -->
+  <details id="khoi-gio-nghi" style="margin-top:var(--space-6)">
+    <summary class="btn-hanh-dong phu">Giờ nghỉ theo Xưởng</summary>
+    <p style="color:var(--color-text-muted)">Trong khung giờ nghỉ, người dùng của Xưởng (mọi vai trò trừ superadmin) không vào được hệ thống. Người thuộc nhiều Xưởng bị chặn khi 1 trong các Xưởng của họ đang nghỉ. Hệ thống báo trước 60 phút và 30 phút; tới giờ, ảnh đang gửi dở được gửi nốt trong 10 phút. Khung vắt qua nửa đêm được (vd 22:00 → 06:00).</p>
+    <div style="overflow-x:auto">
+      <table class="st-bang-gio-nghi">
+        <thead><tr><th>Bật</th><th>Xưởng</th><th>Nghỉ từ</th><th>Mở lại lúc</th><th>Trạng thái</th><th>Mở tạm tới</th></tr></thead>
+        <tbody id="gio-nghi-ds"></tbody>
+      </table>
+    </div>
+    <div class="bao-cao-form" style="margin-top:var(--space-3)">
+      <div class="truong"><label for="gio-nghi-mat-khau">Mật khẩu xác nhận</label>
+        <input type="password" id="gio-nghi-mat-khau" inputmode="numeric" autocomplete="off" placeholder="Bắt buộc khi lưu / mở tạm"></div>
+      <button type="button" class="btn-hanh-dong" id="btn-luu-gio-nghi" style="align-self:end">Lưu khung giờ</button>
+    </div>
+    <p class="st-ghi-chu-truong">"Mở tạm tới": cho Xưởng làm thêm tới giờ chọn (phải nằm trong khung nghỉ; chọn đúng giờ mở lại = mở cả đêm), hết giờ đó tự nghỉ theo lịch. Mọi lần truy cập bị chặn được ghi ở Lịch sử hoạt động ("truy cập trong giờ đóng").</p>
+    <p id="thong-bao-gio-nghi" style="display:none"></p>
+  </details>
+
   <details style="margin-top:var(--space-6)">
     <summary class="btn-hanh-dong phu">Tài khoản GKE</summary>
     <p style="color:var(--color-text-muted)">Mỗi Xưởng dùng 1 tài khoản GKE riêng để mua tracking/in label. Đơn của Xưởng chưa được gán tài khoản sẽ KHÔNG mua được tracking (hệ thống không tự dùng tài khoản của Xưởng khác). Đơn đã mua tracking luôn in lại tem/tra trạng thái bằng đúng tài khoản đã mua.</p>
@@ -291,7 +315,7 @@
 </div>
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=130"></script>
+<script src="/js/api.js?v=131"></script>
 <script>
 (async () => {
   const user = await requireLoginOrRedirect();
@@ -324,6 +348,8 @@
   document.getElementById('btn-them-tk-kl').onclick = themTheTaiKhoanKl;
   document.getElementById('btn-them-tk-hpw').onclick = themTheTaiKhoanHpw;
   document.getElementById('btn-khoi-phuc-du-lieu-don').onclick = khoiPhucDuLieuDon;
+  document.getElementById('btn-luu-gio-nghi').onclick = luuGioNghi;
+  await taiGioNghi();
   document.getElementById('btn-them-xuong').onclick = themXuongMoi;
   document.getElementById('btn-them-team').onclick = themTeamMoi;
   // Đồng bộ Sheet Seller — tải khi mở khối lần đầu.
@@ -740,6 +766,55 @@ async function luuTaiKhoanGke(id) {
     thongBaoGke(`Đã lưu tài khoản "${giaTri.ten}".`);
     await taiTaiKhoanGke();
   } catch (e) { thongBaoGke('Lỗi khi lưu: ' + e.message, true); }
+}
+
+// ---- Giờ nghỉ theo Xưởng (23/10/2026) — API /gio-truy-cap (CHỈ superadmin, lưu / mở tạm cần mật khẩu xác nhận) ----
+function veGioNghi(ds) {
+  document.getElementById('gio-nghi-ds').innerHTML = ds.map((d, i) => `
+    <tr data-xuong="${escapeHtml(d.ten)}">
+      <td><input type="checkbox" id="gn-bat-${i}" ${d.bat ? 'checked' : ''} aria-label="Bật giờ nghỉ cho Xưởng ${escapeHtml(d.ten)}"></td>
+      <td><strong>${escapeHtml(d.ten)}</strong></td>
+      <td><input type="time" id="gn-tu-${i}" value="${escapeHtml(d.tu)}" aria-label="Nghỉ từ"></td>
+      <td><input type="time" id="gn-den-${i}" value="${escapeHtml(d.den)}" aria-label="Mở lại lúc"></td>
+      <td>${escapeHtml(d.trangThai || (d.bat ? '' : 'Không giới hạn'))}${d.moTamDen ? `<br><span style="color:var(--color-warning-text,#92400e)">Mở tạm tới ${escapeHtml(d.moTamDen)}</span>` : ''}</td>
+      <td style="white-space:nowrap">${d.bat ? `<input type="time" id="gn-mo-tam-${i}" aria-label="Mở tạm tới">
+        <button type="button" class="btn-hanh-dong phu" onclick="moTamGioNghi(${i}, false)">Mở tạm</button>
+        ${d.moTamDen ? `<button type="button" class="btn-hanh-dong phu" onclick="moTamGioNghi(${i}, true)">Huỷ mở tạm</button>` : ''}` : ''}</td>
+    </tr>`).join('');
+}
+async function taiGioNghi() {
+  try { veGioNghi(await apiFetch('/gio-truy-cap')); }
+  catch (e) { thongBaoGke('Không tải được giờ nghỉ: ' + e.message, true, 'thong-bao-gio-nghi'); }
+}
+function matKhauGioNghi() {
+  const mk = document.getElementById('gio-nghi-mat-khau').value.trim();
+  if (!mk) thongBaoGke('Nhập mật khẩu xác nhận trước.', true, 'thong-bao-gio-nghi');
+  return mk;
+}
+async function luuGioNghi() {
+  const matKhau = matKhauGioNghi();
+  if (!matKhau) return;
+  const ds = [...document.querySelectorAll('#gio-nghi-ds tr')].map((tr, i) => ({
+    ten: tr.dataset.xuong, bat: document.getElementById(`gn-bat-${i}`).checked,
+    tu: document.getElementById(`gn-tu-${i}`).value, den: document.getElementById(`gn-den-${i}`).value,
+  }));
+  try {
+    veGioNghi(await apiFetch('/gio-truy-cap', { method: 'PUT', body: JSON.stringify({ matKhau, ds }) }));
+    document.getElementById('gio-nghi-mat-khau').value = '';
+    thongBaoGke('Đã lưu khung giờ nghỉ.', false, 'thong-bao-gio-nghi');
+  } catch (e) { thongBaoGke('Chưa lưu: ' + e.message, true, 'thong-bao-gio-nghi'); }
+}
+async function moTamGioNghi(i, huy) {
+  const matKhau = matKhauGioNghi();
+  if (!matKhau) return;
+  const xuong = document.querySelectorAll('#gio-nghi-ds tr')[i].dataset.xuong;
+  const den = huy ? '' : document.getElementById(`gn-mo-tam-${i}`).value;
+  if (!huy && !den) { thongBaoGke('Chọn giờ mở tạm tới.', true, 'thong-bao-gio-nghi'); return; }
+  try {
+    veGioNghi(await apiFetch('/gio-truy-cap/mo-tam', { method: 'POST', body: JSON.stringify({ matKhau, xuong, den }) }));
+    document.getElementById('gio-nghi-mat-khau').value = '';
+    thongBaoGke(huy ? `Đã huỷ mở tạm Xưởng ${xuong}.` : `Đã mở tạm Xưởng ${xuong} tới ${den}.`, false, 'thong-bao-gio-nghi');
+  } catch (e) { thongBaoGke('Chưa lưu: ' + e.message, true, 'thong-bao-gio-nghi'); }
 }
 
 async function daNapTienGke(id, btn) {

@@ -349,7 +349,7 @@
 </div>
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=130"></script>
+<script src="/js/api.js?v=131"></script>
 <script src="/js/suaThongTinGke.js?v=2"></script>
 <script>
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
@@ -1483,6 +1483,7 @@ async function xuLyInLabel(duongDan, danhSach, idNut, nhanGoc) {
   const nut = document.getElementById(idNut);
   nut.disabled = true;
   nut.textContent = 'Đang xử lý...';
+  let chuaCoTracking = [];
   try {
     const ketQua = await apiFetch(duongDan, { method: 'POST', body: JSON.stringify({ sttKeys: danhSach }) });
     if (ketQua.labelBase64) {
@@ -1499,11 +1500,18 @@ async function xuLyInLabel(duongDan, danhSach, idNut, nhanGoc) {
     alert(thongBao);
     await baoLoiSheetSeller(ketQua.loiDaySheetKh);
     if (ketQua.thanhCong.length > 0) await taiDon();
+    // Chỉ admin: nút gộp "MUA TRACKING và IN LABEL" chỉ dành cho admin (ve_file/san_xuat dùng 2 nút riêng — xem khoi-mua-va-in-label).
+    if (duongDan === '/tracking/in-label' && laAdmin(user.vaiTro)) chuaCoTracking = loiKhac.filter(l => l.maLoi === 'CHUA_CO_TRACKING').map(l => l.sttKey);
   } catch (e) {
     alert('Lỗi: ' + e.message);
   } finally {
     nut.disabled = false;
     nut.innerHTML = nhanGoc;
+  }
+  // IN LABEL gặp đơn chưa có tracking (23/10/2026, theo yêu cầu người dùng — log 22/10: 26 lần bấm lại "IN LABEL"): hỏi mua luôn
+  // đúng các đơn đó (hộp này thay cho bước xác nhận của nút "MUA TRACKING và IN LABEL", cùng lời nhắc phát sinh phí).
+  if (chuaCoTracking.length && confirm(`${chuaCoTracking.length} đơn chưa có mã tracking nên chưa in label được:\n${chuaCoTracking.join(', ')}\n\nMua tracking và in label cho ${chuaCoTracking.length === 1 ? 'đơn' : 'các đơn'} này ngay? Có thể phát sinh phí thật.`)) {
+    await xuLyInLabel('/tracking/mua-va-in-label', chuaCoTracking, 'nut-mua-va-in-label', 'MUA TRACKING và IN LABEL');
   }
 }
 

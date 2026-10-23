@@ -71,7 +71,16 @@ router.post('/dang-nhap', async (req, res) => {
     _lanSaiMatKhau.delete(ten);
   }
 
-  req.session.user = { ten: user.Ten, vaiTro: user.VaiTro, xuong: user.Xuong || '' };
+  // Giờ đóng truy cập theo Xưởng (23/10/2026): đang đóng -> không tạo phiên (services/gioTruyCapService.js).
+  const gioTruyCap = require('../services/gioTruyCapService');
+  const nguoi = { ten: user.Ten, vaiTro: user.VaiTro, xuong: user.Xuong || '' };
+  const tt = gioTruyCap.trangThaiChoUser(nguoi);
+  if (tt && tt.dong) {
+    gioTruyCap.ghiTruyCapNgoaiGio(nguoi, tt, 'đăng nhập');
+    return res.status(423).json({ error: tt.thongBao, dongTruyCap: tt });
+  }
+
+  req.session.user = nguoi;
   await ghiLog({ nguoiDung: user.Ten, vaiTro: user.VaiTro, hanhDong: 'DANG_NHAP' });
   res.json(req.session.user);
 });
@@ -80,8 +89,10 @@ router.post('/dang-xuat', (req, res) => {
   req.session.destroy(() => res.json({ ok: true }));
 });
 
+// truyCap (23/10/2026): giờ đóng truy cập của người này (null = không giới hạn) — trang hiện thông báo trước 60 / 30 phút, màn "đã đóng".
 router.get('/hien-tai', (req, res) => {
-  res.json(req.session.user || null);
+  const u = req.session.user;
+  res.json(u ? { ...u, truyCap: require('../services/gioTruyCapService').trangThaiChoUser(u) } : null);
 });
 
 // Danh sách nhân viên đang hoạt động (có request trong 5 phút gần đây) — dùng cho Bảng điều khiển

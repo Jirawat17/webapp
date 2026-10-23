@@ -103,6 +103,9 @@ async function apiFetch(url, options = {}) {
     data = {};
   }
   if (!res.ok) {
+    // Giờ đóng truy cập (23/10/2026): máy chủ chặn vì Xưởng đang trong giờ nghỉ -> màn "đã đóng". Trang đăng nhập chỉ báo lỗi như thường
+    // (không che, để máy dùng chung vẫn đăng nhập được tài khoản khác).
+    if (res.status === 423 && data.dongTruyCap && url !== '/auth/dang-nhap') hienManDongTruyCap(data.dongTruyCap);
     if (url !== '/bao-loi') _ghiVaoDs(_loiApiGanDay, { url: String(url).slice(0, 300), ma: res.status, loi: String(data.error || '').slice(0, 300) }, 10);
     // status + nghiepVu (máy chủ đánh dấu đơn không hợp lệ): nơi gọi phân biệt từ chối nghiệp vụ với lỗi kỹ thuật (Logs_UploadAnh)
     throw Object.assign(new Error(data.error || (res.status >= 500 ? `Máy chủ lỗi ${res.status}` : 'Có lỗi xảy ra')),
@@ -607,11 +610,106 @@ async function requireLoginOrRedirect() {
   try {
     const user = await apiFetch('/auth/hien-tai');
     if (!user) { window.location.href = '/index.html'; return null; }
+    if (user.vaiTro !== 'superadmin') apDungGioTruyCap(user.truyCap); // superadmin không bao giờ bị giới hạn — không hỏi định kỳ
+    if (user.truyCap && user.truyCap.dong) return null; // đang đóng: dừng dựng trang (các trang đều `if (!user) return;`)
     return user;
   } catch (e) {
     window.location.href = '/index.html';
     return null;
   }
+}
+
+// ============================================================
+// GIỜ ĐÓNG TRUY CẬP THEO XƯỞNG (23/10/2026, theo yêu cầu người dùng — services/gioTruyCapService.js). Máy chủ trả trạng thái của người
+// đang đăng nhập (kèm /auth/hien-tai, và GET /gio-truy-cap/trang-thai): đang mở -> hẹn thông báo trước 60 và 30 phút (bấm "Đã hiểu" để
+// tắt từng lần, nhớ theo máy); tới giờ -> hỏi lại máy chủ -> màn "đã đóng". API bị chặn trả 423 -> apiFetch hiện màn này luôn.
+// Hẹn theo "còn lại bao nhiêu ms" máy chủ tính (không dựa vào đồng hồ điện thoại); hỏi lại mỗi 10 phút và khi quay lại tab (điện thoại
+// có thể dừng hẹn giờ lúc tắt màn hình, superadmin có thể đổi lịch / mở tạm).
+// ============================================================
+// Quay lại tab: chỉ hỏi lại nếu lần hỏi trước đã quá 2 phút (trang Quét QR ẩn / hiện mỗi lần mở camera chụp ảnh).
+const GIO_TRUY_CAP = { MOC_PHUT: [60, 30], HOI_LAI_MS: 10 * 60 * 1000, HOI_KHI_HIEN_SAU_MS: 2 * 60 * 1000 };
+const _gtc = { hen: [], hoiLai: null, daGanSuKien: false, lanHoi: 0, anManDenLuc: 0 };
+function apDungGioTruyCap(tt) {
+  _gtc.lanHoi = Date.now();
+  _gtc.hen.forEach(clearTimeout);
+  _gtc.hen = [];
+  if (!_gtc.daGanSuKien) {
+    _gtc.daGanSuKien = true;
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && Date.now() - _gtc.lanHoi > GIO_TRUY_CAP.HOI_KHI_HIEN_SAU_MS) hoiLaiGioTruyCap();
+    });
+  }
+  clearTimeout(_gtc.hoiLai);
+  _gtc.hoiLai = setTimeout(hoiLaiGioTruyCap, GIO_TRUY_CAP.HOI_LAI_MS);
+  // Đã mở lại (tới giờ mở / superadmin mở tạm) mà trang đang che màn "đã đóng" -> tải lại để dựng trang (lúc đóng trang không được dựng).
+  if ((!tt || !tt.dong) && document.getElementById('man-dong-truy-cap')) { location.reload(); return; }
+  if (!tt) { _anThongBaoGioTruyCap(); return; }
+  if (tt.dong) { hienManDongTruyCap(tt); return; }
+  const tDong = Date.now() + tt.conLaiMs;
+  for (const phut of GIO_TRUY_CAP.MOC_PHUT) {
+    const sau = tt.conLaiMs - phut * 60000;
+    // Đã qua mốc này nhưng chưa tới mốc nhỏ hơn -> hiện ngay; mốc chưa tới -> hẹn.
+    const mocNhoHon = GIO_TRUY_CAP.MOC_PHUT.filter(p => p < phut).sort((a, b) => b - a)[0] || 0;
+    if (sau > 0) _gtc.hen.push(setTimeout(() => _hienThongBaoGioTruyCap(tt, phut, tDong), sau));
+    else if (tt.conLaiMs > mocNhoHon * 60000) _hienThongBaoGioTruyCap(tt, phut, tDong);
+  }
+  _gtc.hen.push(setTimeout(hoiLaiGioTruyCap, tt.conLaiMs + 2000));
+}
+async function hoiLaiGioTruyCap() {
+  try { apDungGioTruyCap(await apiFetch('/gio-truy-cap/trang-thai')); } catch (e) { /* 423 đã hiện màn đóng; lỗi mạng: lần sau hỏi lại */ }
+}
+function _khoaDaXemGtc(tt, phut) { return `gtc-da-xem|${tt.xuong.join(',')}|${tt.dongLuc}|${phut}|${new Date().toDateString()}`; }
+function _hienThongBaoGioTruyCap(tt, phut, tDong) {
+  try { if (localStorage.getItem(_khoaDaXemGtc(tt, phut))) return; } catch (e) { /* bỏ */ }
+  _anThongBaoGioTruyCap();
+  const conLai = Math.max(1, Math.round((tDong - Date.now()) / 60000));
+  const el = document.createElement('div');
+  el.id = 'thong-bao-gio-truy-cap';
+  el.setAttribute('role', 'alert');
+  el.style.cssText = 'position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);left:8px;right:8px;max-width:560px;margin:0 auto;z-index:2001;'
+    + 'padding:12px 14px;border-radius:10px;background:var(--color-warning-bg,#fef3c7);color:var(--color-warning-text,#92400e);'
+    + 'box-shadow:0 4px 14px rgba(0,0,0,.2);font-size:15px;line-height:1.45;display:flex;flex-direction:column;gap:8px';
+  el.innerHTML = `<strong>⏰ Còn khoảng ${conLai} phút nữa hệ thống tạm đóng</strong>
+    <span>Xưởng ${escapeHtml(tt.xuong.join(', '))} nghỉ từ ${escapeHtml(tt.dongLuc)} (khung ${escapeHtml(tt.khung)}). Hãy hoàn tất và gửi xong ảnh trước giờ này.</span>
+    <button type="button" class="btn-hanh-dong" style="align-self:flex-end">Đã hiểu</button>`;
+  el.querySelector('button').onclick = () => {
+    try { localStorage.setItem(_khoaDaXemGtc(tt, phut), '1'); } catch (e) { /* bỏ */ }
+    el.remove();
+  };
+  document.body.appendChild(el);
+}
+function _anThongBaoGioTruyCap() { const el = document.getElementById('thong-bao-gio-truy-cap'); if (el) el.remove(); }
+// Màn "đã đóng": che cả trang, không tắt được (JavaScript của trang vẫn chạy — ảnh đang gửi dở được gửi nốt trong 10 phút).
+function hienManDongTruyCap(tt) {
+  _anThongBaoGioTruyCap();
+  const guiNot = tt.conGuiNotMs > 0 && typeof window.coViecGuiNot === 'function' && window.coViecGuiNot();
+  let el = document.getElementById('man-dong-truy-cap');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'man-dong-truy-cap';
+    el.setAttribute('role', 'alertdialog');
+    el.setAttribute('aria-modal', 'true');
+    el.style.cssText = 'position:fixed;inset:0;z-index:3000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;'
+      + 'padding:24px;text-align:center;background:var(--color-bg,#f8fafc);color:var(--color-text,#0f172a)';
+    document.body.appendChild(el);
+  }
+  el.innerHTML = `<div style="font-size:3rem;line-height:1">🌙</div>
+    <div style="font-size:1.4rem;font-weight:700">Hệ thống đang tạm đóng</div>
+    <div style="max-width:480px;font-size:1.05rem">Xưởng ${escapeHtml((tt.xuong || []).join(', '))} nghỉ theo khung giờ ${escapeHtml(tt.khung || '')}. Mở lại lúc <strong>${escapeHtml(tt.moLuc || '')}</strong>. Chúc bạn nghỉ ngơi tốt!</div>
+    <div style="max-width:480px;font-size:0.9rem;opacity:.8">Ảnh đã chụp đang gửi dở sẽ được gửi nốt trong 10 phút — đừng tắt trang ngay.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+      ${guiNot ? `<button type="button" class="btn-hanh-dong" data-viec="gui-not">Gửi nốt ảnh / bấm Xong (còn ${Math.ceil(tt.conGuiNotMs / 60000)} phút)</button>` : ''}
+      <button type="button" class="btn-hanh-dong phu" data-viec="thu-lai">Thử lại</button>
+      <button type="button" class="btn-hanh-dong phu" data-viec="dang-xuat">Đăng xuất</button>
+    </div>`;
+  el.querySelector('[data-viec="thu-lai"]').onclick = () => location.reload();
+  el.querySelector('[data-viec="dang-xuat"]').onclick = dangXuat;
+  // Trong 10 phút gửi nốt, trang còn việc dở (trang Quét QR khai báo window.coViecGuiNot): cho đóng màn để bấm Xong; hết hạn -> hỏi lại -> màn
+  // đóng hiện lại. Thao tác khác vẫn bị máy chủ chặn (423 -> màn hiện lại ngay).
+  if (guiNot) el.querySelector('[data-viec="gui-not"]').onclick = () => {
+    el.remove();
+    _gtc.hen.push(setTimeout(hoiLaiGioTruyCap, tt.conGuiNotMs + 2000));
+  };
 }
 
 function dangXuat() {
