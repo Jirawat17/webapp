@@ -137,4 +137,4 @@ function timTuongTu({ mau, boQuaStt = new Set(), duocXem = () => true, gioiHan =
   return { ketQua, tongSoSanh, ms: Date.now() - batDau };
 }
 
-module.exports = { timTuongTu };
+module.exports = { timTuongTu, SO_KET_QUA_TOI_DA };

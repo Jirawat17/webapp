@@ -72,6 +72,9 @@ const COT_ANH_THEO_MOC = {
 // (scan.html) lẫn nút tải ảnh đơn lẻ tương ứng (order.html, admin).
 //   da_san_xuat  (bổ sung 31/08/2026) — "Ảnh đã sản xuất": Đang chạy máy -> Đã sản xuất
 //   da_dan_tem   (bổ sung 09/09/2026 lần 4) — "Ảnh ĐÃ DÁN TEM": Đã sản xuất -> ĐÃ DÁN TEM
+const MOC_FILE_THEU = ['ve_file', 've_file_2', 've_file_3'];
+const COT_FILE_THEU = MOC_FILE_THEU.map(m => COT_ANH_THEO_MOC[m]);
+
 const MOC_TU_DONG_CHUYEN_TRANG_THAI = {
   da_san_xuat: { yeuCau: 'Đang chạy máy', chuyenSang: 'Đã sản xuất' },
   da_dan_tem: { yeuCau: 'Đã sản xuất', chuyenSang: 'ĐÃ DÁN TEM' },
@@ -213,9 +216,16 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
   }
 
   // Ảnh đã sản xuất 1/2 + có chuyển trạng thái luôn không (xem soAnhSanXuatLuotNay). Không gửi -> ảnh 1 + chuyển luôn (hành vi cũ).
-  const viTri = req.body.viTri === '2' ? 2 : 1;
+  // Ảnh file thêu nhiều ảnh (24/10/2026, order.html chọn 1–3 ảnh, THAY CẢ BỘ): moc ve_file + viTri 1..tong + tong — ảnh i ghi cột thứ i;
+  // ảnh CUỐI (viTri = tong) mới xoá các cột thừa phía sau -> lỗi giữa chừng không làm mất ảnh cũ chưa được thay.
+  const fileTheuNhieu = moc === 've_file' && req.body.tong != null;
+  const tong = Number(req.body.tong);
+  const viTri = fileTheuNhieu ? Number(req.body.viTri) : req.body.viTri === '2' ? 2 : 1;
+  if (fileTheuNhieu && !(Number.isInteger(tong) && tong >= 1 && tong <= COT_FILE_THEU.length && Number.isInteger(viTri) && viTri >= 1 && viTri <= tong)) {
+    return res.status(400).json({ error: `Ảnh file thêu tối đa ${COT_FILE_THEU.length} ảnh — vị trí ảnh không hợp lệ` });
+  }
   const xong = req.body.xong !== '0' && !thayAnh; // thay ảnh: không bao giờ đổi trạng thái
-  if (moc !== 'da_san_xuat' && (viTri !== 1 || req.body.xong === '0')) return res.status(400).json({ error: 'Mốc ảnh này chỉ có 1 ảnh' });
+  if (moc !== 'da_san_xuat' && !fileTheuNhieu && (viTri !== 1 || req.body.xong === '0')) return res.status(400).json({ error: 'Mốc ảnh này chỉ có 1 ảnh' });
   // Ảnh 2 phải thuộc đúng lượt có ảnh 1. Thay ảnh: ảnh 1 MỚI đã lưu sau lúc đơn sang "Đã sản xuất" (THOI_GIAN_ANH_SAN_XUAT > THOI_GIAN_SAN_XUAT)
   // và VỪA lưu (trong THAY_ANH_2_TRONG_MS) — thay cả lượt, không cho thay riêng ảnh 2 về sau.
   const vuaThayAnh1 = r => (r.THOI_GIAN_ANH_SAN_XUAT || '') > (r.THOI_GIAN_SAN_XUAT || '')
@@ -247,6 +257,8 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
     else { updates.Anh_Da_San_Xuat_URL_2 = ''; updates.THOI_GIAN_ANH_SAN_XUAT = thoiGianVNISOString(); } // ảnh 1 = bắt đầu lượt mới
   }
   if (chuyenTuDong && xong) updates.TRANG_THAI_XUONG = chuyenTuDong.chuyenSang;
+  const cotBo = fileTheuNhieu && viTri === tong ? COT_FILE_THEU.slice(tong) : []; // cột file thêu thừa sau ảnh cuối
+  if (fileTheuNhieu) { delete updates[cotAnh]; updates[COT_FILE_THEU[viTri - 1]] = url; cotBo.forEach(c => { updates[c] = ''; }); }
 
   let updated;
   try {
@@ -266,9 +278,10 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
 
   ghiLog({
     nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'UPLOAD_ANH',
-    sttKey, chiTiet: { moc, url, ...(viTri === 2 ? { viTri } : {}),
+    sttKey, chiTiet: { moc: fileTheuNhieu ? MOC_FILE_THEU[viTri - 1] : moc, url, ...(moc === 'da_san_xuat' && viTri === 2 ? { viTri } : {}),
       ...(thayAnh ? { thayAnh: true, urlCu: row[viTri === 2 ? 'Anh_Da_San_Xuat_URL_2' : 'Anh_Da_San_Xuat_URL'] || '',
         ...(viTri === 1 && row.Anh_Da_San_Xuat_URL_2 ? { urlCu2: row.Anh_Da_San_Xuat_URL_2 } : {}) } : {}),
+      ...(cotBo.some(c => row[c]) ? { boAnhCu: cotBo.map(c => row[c]).filter(Boolean) } : {}),
       ...(chuyenTuDong && xong ? { tu: chuyenTuDong.yeuCau, sang: chuyenTuDong.chuyenSang } : {}) },
   }).catch(err => console.error('[Photos] Lỗi ghi log nền:', err.message));
 

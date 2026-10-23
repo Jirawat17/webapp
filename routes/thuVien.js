@@ -3,7 +3,7 @@ const multer = require('multer');
 const db = require('../services/thuVien/thuVienDbService');
 const xuLy = require('../services/thuVien/xuLyService');
 const { nhapExcel, guiFileKetQua } = require('../services/thuVien/nhapExcelService');
-const { timTuongTu } = require('../services/thuVien/timKiemService');
+const { timTuongTu, SO_KET_QUA_TOI_DA } = require('../services/thuVien/timKiemService');
 const { taoTapMa, themMa, chuanHoaMa, khopSttKey } = require('../services/thuVien/khopTenFile');
 const { nhanDangKieuAnh, taiDsAnh } = require('../services/anhNguonService');
 const dongBoSheet = require('../services/thuVien/dongBoSheetService');
@@ -186,7 +186,8 @@ router.get('/don/:sttKey', requireRole(...VAI_TRO_MENU), async (req, res) => {
     const tenTheoId = new Map(png.map(f => [f.id, tenLuu(f)]));
     const mau = db.dsChiMucPng(png.map(f => f.id)).map(h => ({ sha256: h.sha256, dhash: h.dhash, dhashHinhDang: h.dhash_hinh_dang, nhan: tenTheoId.get(h.id) }));
     tim = timTuongTu({ mau, boQuaStt: new Set([sttKey]), duocXem: xem });
-    console.log(`[ThuVien] Tìm tương tự cho đơn ${sttKey}: ${png.length} PNG mẫu, so ${tim.tongSoSanh} file, ${tim.ms}ms`);
+    // ?tuDong=1 = Chi tiết đơn tự gọi mỗi lần mở trang -> chỉ ghi log khi chậm (không làm ngập log server).
+    if (!req.query.tuDong || tim.ms >= 2000) console.log(`[ThuVien] Tìm tương tự cho đơn ${sttKey}: ${png.length} PNG mẫu, so ${tim.tongSoSanh} file, ${tim.ms}ms`);
   }
   res.json({
     sttKey,
@@ -199,6 +200,7 @@ router.get('/don/:sttKey', requireRole(...VAI_TRO_MENU), async (req, res) => {
     quyetDinh: db.dsQuyetDinhCuaDon(sttKey),
     tuongTu: tim ? boSungKetQua(tim.ketQua, maSheet) : [],
     tongSoSanh: tim ? tim.tongSoSanh : 0,
+    duGioiHan: tim ? tim.ketQua.length >= SO_KET_QUA_TOI_DA : false, // kết quả bị cắt theo số file
     nguong: nguongService.layNguong(),
   });
 });

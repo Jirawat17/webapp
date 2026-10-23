@@ -83,7 +83,8 @@ function moTaLichSu(dong, { anXuong = false, xuongDuocThay = [] } = {}) {
       return kq(c.hoanTat ? `xác nhận xong chụp ảnh ${NHAN_MOC_ANH[c.moc] || c.moc || ''}${c.soAnh ? ` (${c.soAnh} ảnh)` : ''}`
         : `${c.thayAnh ? 'thay' : 'tải'} ảnh ${NHAN_MOC_ANH[c.moc] || c.moc || ''}${c.viTri === 2 ? ' thứ 2' : ''}`.trim(),
       c.sang ? [doi('Trạng thái chung', c.tu, c.sang)]
-        : c.thayAnh ? [doi(`Ảnh${c.viTri === 2 ? ' thứ 2' : ''}`, c.urlCu, c.url), ...(c.urlCu2 ? [doi('Ảnh thứ 2 (bỏ)', c.urlCu2, '')] : [])] : []);
+        : c.thayAnh ? [doi(`Ảnh${c.viTri === 2 ? ' thứ 2' : ''}`, c.urlCu, c.url), ...(c.urlCu2 ? [doi('Ảnh thứ 2 (bỏ)', c.urlCu2, '')] : [])]
+        : (c.boAnhCu || []).map(u => doi('Ảnh file thêu cũ (bỏ)', u, ''))); // ảnh file thêu thay cả bộ (24/10/2026)
     case 'GAN_XUONG': {
       const tuDong = LA_HE_THONG(dong.NguoiDung);
       const lyDo = c.lyDo ? ` (${c.lyDo})` : '';

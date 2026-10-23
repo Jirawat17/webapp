@@ -290,6 +290,7 @@ async function taiChiTiet() {
           ${don.Anh_Dong_Goi_URL ? linkAnToan(don.Anh_Dong_Goi_URL, `${icon('file', {size:14})} Ảnh đóng gói`) : ''}
         </div>` : ''}
         <div id="khu-vuc-emb" style="margin:8px 0"></div>
+        <div id="khu-thiet-ke-giong"></div>
         <table class="info-table">
           ${renderBangThongTin(don, viTri)}
         </table>
@@ -315,6 +316,7 @@ async function taiChiTiet() {
   `;
   renderKhuVucThaoTac(don);
   taiKhoiEmb();
+  hienThietKeGiong();
 }
 
 // U2 Đối chiếu ảnh (11/10/2026, theo yêu cầu người dùng — spec 2026-10-04-21-tinh-nang-design.md mục 11): xem cạnh nhau mọi ảnh của
@@ -327,10 +329,10 @@ async function moDoiChieuAnh(nut) {
   const duocMoGocThietKe = user.vaiTro !== 'nguoi_lay_phoi';
   const tuLink = (url, moGoc = true) => urlAnhHienThiList(url, 800).map(src => ({ src, goc: moGoc ? urlAnToan(url) : '' }));
   let thietKe = tuLink(don.DUONG_DAN_URL, duocMoGocThietKe);
-  if (['ve_file', 'admin', 'superadmin'].includes(user.vaiTro)) {
+  if (laVaiTroThuVien()) {
     nut.disabled = true;
     try {
-      const d = await apiFetch('/thu-vien/don/' + encodeURIComponent(don.STT_Key) + '?chiFile=1');
+      const d = await layDonThuVien();
       const png = d.png.filter(f => f.coThumb).slice(0, 6);
       if (png.length) thietKe = png.map(f => ({ src: '/api/thu-vien/thumb/' + f.id, goc: '/api/thu-vien/file/' + f.id }));
     } catch (e) { /* thư viện lỗi -> dùng link Sheet */ }
@@ -372,11 +374,14 @@ async function moDoiChieuAnh(nut) {
 
 // Khối "File EMB" (03/10/2026, thư viện "Tìm ảnh" — docs/superpowers/specs/2026-10-03-thu-vien-tim-anh-design.md mục 13).
 // Ai xem được đơn đều thấy trạng thái; tải về / tải lên chỉ ve_file, admin, superadmin (server kiểm lại). Không gắn với đổi trạng thái.
+let luotKhoiEmb = 0; // taiKhoiEmb gọi chồng nhau (mở trang + sau tải lên) -> chỉ lượt mới nhất được vẽ
 async function taiKhoiEmb() {
   const el = document.getElementById('khu-vuc-emb');
   if (!el) return;
+  const luot = ++luotKhoiEmb;
   let d;
-  try { d = await apiFetch('/thu-vien/emb/' + encodeURIComponent(sttKey)); } catch (e) { el.innerHTML = ''; return; }
+  try { d = await apiFetch('/thu-vien/emb/' + encodeURIComponent(sttKey)); } catch (e) { if (luot === luotKhoiEmb) el.innerHTML = ''; return; }
+  if (luot !== luotKhoiEmb) return;
   const ngay = s => String(s || '').slice(0, 16).replace('T', ' ');
   // Đơn có thể có NHIỀU file EMB chính (tải lên cùng 1 lượt, 12/10/2026) — mỗi file 1 dòng, có nút Tải về/Download riêng.
   const ds = d.dsChinh || (d.chinh ? [d.chinh] : []);
@@ -395,14 +400,62 @@ async function taiKhoiEmb() {
       <a href="/tim-anh.html?stt=${encodeURIComponent(sttKey)}">Tìm thiết kế tương tự</a>` : ''}
     ${d.cu.length && d.duocTai ? `<span style="color:var(--color-text-muted)">Bản cũ (Tải về/Download): ${d.cu.map(x => `<a href="/api/thu-vien/file/${x.id}?tai=1" title="${escapeHtml(x.ten)}">v${x.so_thu_tu}</a> (${escapeHtml(ngay(x.ngay_luu))})`).join(', ')}</span>` : ''}
   </div>`;
-  // A1 (11/10/2026): đơn chưa có EMB mà có gợi ý "Có EMB sẵn" -> hiện ngay dưới (chỉ vai trò dùng thư viện).
+  // A1 (11/10/2026): đơn chưa có EMB mà có gợi ý "Có EMB sẵn" -> hiện ngay dưới (chỉ vai trò dùng thư viện). Gợi ý Trùng file / Ảnh
+  // giống đã nằm trong khối "Thiết kế giống đã có" bên dưới -> ở đây chỉ còn hiện gợi ý Cùng hình dạng.
   if (!ds.length && d.duocTaiLen) {
-    const ma = (donHienTai && donHienTai.STT_Key) || sttKey;
+    const ma = maDonThat();
     try {
       const kq = await apiFetch('/thu-vien/tom-tat-don', { method: 'POST', body: JSON.stringify({ keys: [ma] }) });
-      if (kq[ma]) el.insertAdjacentHTML('beforeend', htmlGoiYEmb(ma, kq[ma].goiY));
+      const g = kq[ma] && kq[ma].goiY;
+      if (g && g.nhom === 'CUNG_HINH_DANG' && luot === luotKhoiEmb) el.insertAdjacentHTML('beforeend', htmlGoiYEmb(ma, g));
     } catch (e) { /* không có gợi ý cũng không sao */ }
   }
+}
+
+const laVaiTroThuVien = () => ['ve_file', 'admin', 'superadmin'].includes(user.vaiTro);
+const maDonThat = () => (donHienTai && donHienTai.STT_Key) || sttKey;
+// 1 lượt gọi thư viện cho cả trang (tìm tương tự tốn CPU): dùng chung cho "Thiết kế giống đã có" và "Đối chiếu ảnh"; tải lên EMB
+// không đổi kết quả tìm nên không gọi lại. ?tuDong=1: máy chủ không ghi log mỗi lần mở trang.
+let _donThuVien = null;
+function layDonThuVien() {
+  const ma = maDonThat();
+  if (!_donThuVien || _donThuVien.ma !== ma) {
+    const p = apiFetch('/thu-vien/don/' + encodeURIComponent(ma) + '?tuDong=1');
+    _donThuVien = { ma, p };
+    p.catch(() => { if (_donThuVien && _donThuVien.p === p) _donThuVien = null; }); // lỗi thì lần sau gọi lại
+  }
+  return _donThuVien.p;
+}
+
+// "Thiết kế giống đã có" (24/10/2026, theo yêu cầu người dùng): đơn cũ TRÙNG FILE / ẢNH GIỐNG — kể cả khi đơn đó chưa có EMB.
+// Cùng lượt tìm như "Tìm thiết kế tương tự"; mỗi đơn cũ 1 ô, tối đa 6 (Trùng file trước, rồi đơn có EMB).
+async function hienThietKeGiong() {
+  if (!laVaiTroThuVien()) return;
+  let d;
+  try { d = await layDonThuVien(); } catch (e) { return; }
+  const el = document.getElementById('khu-thiet-ke-giong');
+  if (!el) return;
+  const theoDon = new Map();
+  for (const r of d.tuongTu || []) {
+    if (r.nhom !== 'TRUNG_FILE' && r.nhom !== 'ANH_GIONG') continue;
+    const cu = theoDon.get(r.stt_key); // 1 đơn nhiều file: giữ dòng Trùng file nếu có
+    if (!cu || (r.nhom === 'TRUNG_FILE' && cu.nhom !== 'TRUNG_FILE')) theoDon.set(r.stt_key, r);
+  }
+  if (!theoDon.size) { el.innerHTML = ''; return; }
+  const ds = [...theoDon.values()].sort((a, b) => (b.nhom === 'TRUNG_FILE') - (a.nhom === 'TRUNG_FILE') || !!b.emb - !!a.emb).slice(0, 6);
+  const pct = v => String(v).replace('.', ',') + '%';
+  // Máy chủ cắt kết quả theo số FILE (d.duGioiHan) -> có thể còn đơn giống chưa đếm.
+  el.innerHTML = `<div style="margin:0 0 8px;font-size:0.9rem">
+    <strong>Thiết kế giống đã có (${theoDon.size}${d.duGioiHan ? '+' : ''} đơn):</strong>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">
+    ${ds.map(r => `<div style="display:flex;gap:6px;align-items:center;border:1px solid var(--color-border);border-radius:6px;padding:4px 8px">
+      ${r.coThumb ? `<img src="/api/thu-vien/thumb/${Number(r.id)}" alt="" loading="lazy" style="width:48px;height:48px;object-fit:contain">` : ''}
+      <span>${r.trongSheet !== false ? `<a href="/order.html?stt=${encodeURIComponent(r.stt_key)}" target="_blank" rel="noopener">${escapeHtml(r.stt_key)}</a>` : escapeHtml(r.stt_key)}<br>
+        ${r.nhom === 'TRUNG_FILE' ? 'Trùng file' : `Ảnh ${pct(r.phanTramAnh)}`} ·
+        ${r.emb ? `<a href="/api/thu-vien/file/${Number(r.emb.id)}?tai=1">${icon('download', {size:14})} EMB</a>` : '<span style="color:var(--color-text-muted)">chưa có EMB</span>'}</span>
+    </div>`).join('')}
+    ${theoDon.size > ds.length || d.duGioiHan ? `<a href="/tim-anh.html?stt=${encodeURIComponent(maDonThat())}" style="align-self:center">Xem tất cả</a>` : ''}
+    </div></div>`;
 }
 
 // Tải lên EMB (12/10/2026, theo yêu cầu người dùng): chọn 1 file -> như cũ (tên file tuỳ ý). Chọn NHIỀU file hoặc cả thư mục ->
@@ -513,12 +566,12 @@ function chuThich(ngan, day) {
 
 // Các loại ảnh tải ở trang chi tiết — moc khớp routes/photos.js. chiAdmin: ve_file không thấy (giữ đúng quyền cũ).
 // "Ảnh file thêu" (26/08/2026) chỉ lưu ảnh, không đụng trạng thái; 2/3 thêm 24/09/2026 (không bắt buộc).
+// 3 nút riêng (24/10/2026, theo yêu cầu người dùng — trước là 1 khối chọn loại ảnh): bấm nút -> chọn ảnh -> tự tải lên.
+// toiDa = số ảnh chọn được 1 lần; camera = mở thẳng camera trên điện thoại (nút nhiều ảnh thì cho chọn Camera hoặc Thư viện).
 const LOAI_ANH_TAI_LEN = [
-  { moc: 've_file', ten: 'Ảnh file thêu (sau khi vẽ file)', ghiChu: 'chỉ lưu ảnh, không đổi trạng thái đơn; tải lại sẽ thay ảnh cũ.' },
-  { moc: 've_file_2', ten: 'Ảnh File Thêu 2 (không bắt buộc)', ghiChu: 'chỉ lưu ảnh, không đổi trạng thái đơn; tải lại sẽ thay ảnh cũ.' },
-  { moc: 've_file_3', ten: 'Ảnh File Thêu 3 (không bắt buộc)', ghiChu: 'chỉ lưu ảnh, không đổi trạng thái đơn; tải lại sẽ thay ảnh cũ.' },
-  { moc: 'da_san_xuat', ten: 'Ảnh đã sản xuất (ngay khi chạy máy xong)', chiAdmin: true, ghiChu: 'chọn 1 hoặc 2 ảnh cùng lúc (tối đa 2 ảnh/đơn). Đơn đang ở "Đang chạy máy": tải xong cả lượt sẽ TỰ ĐỘNG chuyển đơn sang "Đã sản xuất". Đơn đang ở "Đã sản xuất": THAY toàn bộ ảnh đã sản xuất cũ (không đổi trạng thái; link ảnh cũ vẫn xem được trong lịch sử đơn). san_xuat/nguoi_lay_phoi nên dùng màn "Chụp ảnh đã sản xuất" ở trang Quét QR thay vì đây (nhanh hơn, không cần mở từng đơn).' },
-  { moc: 'da_dan_tem', ten: 'Ảnh ĐÃ DÁN TEM (sau khi dán tem lên kiện hàng)', chiAdmin: true, ghiChu: 'chỉ dùng được khi đơn đang ở "Đã sản xuất" VÀ đã có thông tin Tracking (mua trước ở khối "Vận chuyển (GKE)" ở trên hoặc menu Tracking) — tải ảnh xong sẽ TỰ ĐỘNG chuyển đơn sang "ĐÃ DÁN TEM". Bản thân việc tải ảnh này không tạo mã tracking. san_xuat/nguoi_lay_phoi nên dùng màn "Chụp ảnh ĐÃ DÁN TEM" ở trang Quét QR thay vì đây (nhanh hơn, không cần mở từng đơn).' },
+  { moc: 've_file', ten: 'Tải ảnh file thêu', toiDa: 3, ghiChu: 'chọn 1–3 ảnh cùng lúc; chỉ lưu ảnh, không đổi trạng thái đơn. Mỗi lần tải là THAY CẢ BỘ ảnh file thêu cũ (chọn 1 ảnh thì ảnh 2, 3 cũ bị bỏ).' },
+  { moc: 'da_san_xuat', ten: 'Tải ảnh Đã sản xuất', toiDa: 2, chiAdmin: true, chuyenSang: 'Đã sản xuất', ghiChu: 'chọn 1 hoặc 2 ảnh cùng lúc (tối đa 2 ảnh/đơn). Đơn đang ở "Đang chạy máy": tải xong cả lượt sẽ TỰ ĐỘNG chuyển đơn sang "Đã sản xuất". Đơn đang ở "Đã sản xuất": THAY toàn bộ ảnh đã sản xuất cũ (không đổi trạng thái; link ảnh cũ vẫn xem được trong lịch sử đơn). san_xuat/nguoi_lay_phoi nên dùng màn "Chụp ảnh đã sản xuất" ở trang Quét QR thay vì đây (nhanh hơn, không cần mở từng đơn).' },
+  { moc: 'da_dan_tem', ten: 'Tải ảnh ĐÃ DÁN TEM', toiDa: 1, camera: true, chiAdmin: true, chuyenSang: 'ĐÃ DÁN TEM', ghiChu: 'chỉ dùng được khi đơn đang ở "Đã sản xuất" VÀ đã có thông tin Tracking (mua trước ở khối "Vận chuyển (GKE)" ở trên hoặc menu Tracking) — tải ảnh xong sẽ TỰ ĐỘNG chuyển đơn sang "ĐÃ DÁN TEM". Bản thân việc tải ảnh này không tạo mã tracking. san_xuat/nguoi_lay_phoi nên dùng màn "Chụp ảnh ĐÃ DÁN TEM" ở trang Quét QR thay vì đây (nhanh hơn, không cần mở từng đơn).' },
 ];
 
 function renderKhuVucThaoTac(don) {
@@ -662,20 +715,16 @@ function renderKhuVucThaoTac(don) {
   if (user.vaiTro !== 'nguoi_lay_phoi' && user.vaiTro !== 'san_xuat') html += htmlKhoiKl(don) + htmlKhoiHpw(don);
 
   // Ảnh file thêu 1/2/3 (ve_file + admin; thuần lưu ảnh, KHÔNG đụng trạng thái) và ảnh Đã sản xuất / ĐÃ DÁN TEM (chỉ admin;
-  // tự chuyển trạng thái) — mỗi lần tải 1 ảnh vào đúng cột của loại đã chọn, không bắt buộc đủ, không theo thứ tự.
+  // tự chuyển trạng thái) — mỗi loại 1 nút (xem LOAI_ANH_TAI_LEN).
   if (user.vaiTro === 've_file' || laAdmin(user.vaiTro)) {
-    // 1 khối "Tải ảnh" (gộp 11/10/2026, theo yêu cầu người dùng — trước là 5 khối riêng). Bắt buộc chọn loại ảnh
-    // (không chọn sẵn) vì "Đã sản xuất"/"ĐÃ DÁN TEM" tự chuyển trạng thái đơn — tránh tải nhầm cột.
     const dsLoaiAnh = LOAI_ANH_TAI_LEN.filter(l => !l.chiAdmin || laAdmin(user.vaiTro));
     html += `
       <div class="upload-box">
-        <label for="loai-anh">${icon('camera', { size: 18 })} Tải ảnh</label>
-        <select id="loai-anh" onchange="document.getElementById('anh-tai-len').multiple = this.value === 'da_san_xuat'">
-          <option value="">Chọn loại ảnh...</option>
-          ${dsLoaiAnh.map(l => `<option value="${l.moc}">${escapeHtml(l.ten)}</option>`).join('')}
-        </select>
-        <input type="file" accept="image/*" capture="environment" id="anh-tai-len" aria-label="Chọn ảnh">
-        <div class="hang-nut"><button class="btn-hanh-dong" onclick="taiAnh(this)">${icon('download')} Tải ảnh lên</button></div>
+        <label>${icon('camera', { size: 18 })} Tải ảnh</label>
+        <div class="hang-nut">${dsLoaiAnh.map(l => `<button type="button" class="btn-hanh-dong nut-tai-anh" onclick="document.getElementById('anh-${l.moc}').click()"
+            title="Tối đa ${l.toiDa} ảnh">${icon('download')} ${escapeHtml(l.ten)}</button>
+          <input type="file" accept="image/*" id="anh-${l.moc}" hidden ${l.toiDa > 1 ? 'multiple' : ''} ${l.camera ? 'capture="environment"' : ''}
+            aria-label="${escapeHtml(l.ten)}" onchange="taiAnh('${l.moc}', this)">`).join('')}</div>
         ${chuThich(dsLoaiAnh.some(l => l.chiAdmin) ? 'Ảnh Đã sản xuất / ĐÃ DÁN TEM tự chuyển trạng thái đơn' : 'Chỉ lưu ảnh, không đổi trạng thái đơn', dsLoaiAnh.map(l => `${l.ten}: ${l.ghiChu}`).join(' · '))}
       </div>`;
     // Khối "Ảnh đóng gói" (Anh_Dong_Goi_URL) ĐÃ XOÁ 09/09/2026 lần 3 cùng lúc xoá trạng thái "Đã đóng
@@ -1230,23 +1279,29 @@ async function inDonHang(btn) {
   }
 }
 
-async function taiAnh(nut) {
-  const moc = document.getElementById('loai-anh').value;
-  const input = document.getElementById('anh-tai-len');
-  if (!moc) return await hopThongBao('Chưa chọn loại ảnh');
-  if (!input.files[0]) return await hopThongBao('Chưa chọn ảnh');
-  // Ảnh đã sản xuất: 1 hoặc 2 ảnh cùng lúc (14/10/2026, theo yêu cầu người dùng); loại khác 1 ảnh.
-  const toiDa = moc === 'da_san_xuat' ? 2 : 1;
-  if (input.files.length > toiDa) return await hopThongBao(`Chỉ chọn tối đa ${toiDa} ảnh cho loại này (đang chọn ${input.files.length}).`);
-  if (nut.disabled) return; // chặn bấm 2 lần khi đang tải (ảnh Đã sản xuất / ĐÃ DÁN TEM tự chuyển trạng thái)
+async function taiAnh(moc, input) {
+  const dsFile = [...input.files];
+  input.value = ''; // chọn lại đúng ảnh đó lần sau vẫn kích hoạt onchange
+  const loai = LOAI_ANH_TAI_LEN.find(l => l.moc === moc);
+  if (!loai || !dsFile.length) return;
+  if (dsFile.length > loai.toiDa) return await hopThongBao(`"${loai.ten}": chỉ chọn tối đa ${loai.toiDa} ảnh (đang chọn ${dsFile.length}).`);
+  if (dangTaiAnh) return await hopThongBao('Đang tải ảnh lượt trước — đợi xong rồi chọn lại.');
   // Thay ảnh đã sản xuất (14/10/2026, theo yêu cầu người dùng — chỉ ở đây, chỉ admin, đơn đang "Đã sản xuất"): thay CẢ lượt ảnh cũ.
   const thay = moc === 'da_san_xuat' && donHienTai && donHienTai.TRANG_THAI_XUONG === 'Đã sản xuất';
-  if (thay && !await hopXacNhan(`Đơn đã ở "Đã sản xuất". THAY toàn bộ ảnh đã sản xuất hiện có bằng ${input.files.length} ảnh mới?`
-    + (input.files.length === 1 && donHienTai.Anh_Da_San_Xuat_URL_2 ? '\n(Đơn đang có 2 ảnh — ảnh thứ 2 cũ sẽ bị bỏ.)' : '')
+  if (thay && !await hopXacNhan(`Đơn đã ở "Đã sản xuất". THAY toàn bộ ảnh đã sản xuất hiện có bằng ${dsFile.length} ảnh mới?`
+    + (dsFile.length === 1 && donHienTai.Anh_Da_San_Xuat_URL_2 ? '\n(Đơn đang có 2 ảnh — ảnh thứ 2 cũ sẽ bị bỏ.)' : '')
     + '\nTrạng thái đơn không đổi; link ảnh cũ vẫn xem được trong lịch sử đơn.')) return;
-  nut.disabled = true;
-  try { await guiAnh(moc, [...input.files], thay); } finally { nut.disabled = false; }
+  // Bấm 1 nút là tải luôn -> ảnh tự chuyển trạng thái phải hỏi lại (chống bấm nhầm nút bên cạnh).
+  if (!thay && loai.chuyenSang && !await hopXacNhan(`Tải ${dsFile.length} ảnh "${loai.ten.replace('Tải ảnh ', '')}" cho đơn ${maDonThat()}?`
+    + `\nTải xong, đơn sẽ TỰ CHUYỂN sang "${loai.chuyenSang}".`)) return;
+  dangTaiAnh = true; // cờ cấp trang — nút bị vẽ lại (taiChiTiet) giữa chừng vẫn không mở được lượt thứ 2
+  document.querySelectorAll('.nut-tai-anh').forEach(n => { n.disabled = true; });
+  try { await guiAnh(moc, dsFile, thay); } finally {
+    dangTaiAnh = false;
+    document.querySelectorAll('.nut-tai-anh').forEach(n => { n.disabled = false; });
+  }
 }
+let dangTaiAnh = false;
 let daBaoHeif = false; // cảnh báo ảnh HEIC 1 lần mỗi lần mở trang
 async function guiAnh(moc, dsFile, thay = false) {
   // Ảnh đã sản xuất 2 ảnh: gửi ảnh 1 (chưa chuyển trạng thái) rồi ảnh 2 (chuyển "Đã sản xuất") — xem routes/photos.js#soAnhSanXuatLuotNay.
@@ -1263,7 +1318,9 @@ async function guiAnh(moc, dsFile, thay = false) {
       form.append('sttKey', sttKey);
       form.append('moc', moc);
       form.append('viTri', String(i + 1));
-      form.append('xong', i === dsFile.length - 1 ? '1' : '0');
+      // File thêu: tong = số ảnh của bộ mới, máy chủ xoá cột thừa khi nhận ảnh cuối (routes/photos.js); Đã sản xuất: xong ở ảnh cuối.
+      if (moc === 've_file') form.append('tong', String(dsFile.length));
+      else form.append('xong', i === dsFile.length - 1 ? '1' : '0');
       if (thay) form.append('thay', '1');
       const res = await fetch('/api/photos/upload', { method: 'POST', body: form, credentials: 'include' });
       const data = await res.json();
@@ -1275,7 +1332,9 @@ async function guiAnh(moc, dsFile, thay = false) {
     // Trang mở lúc đơn còn "Đang chạy máy" nhưng đơn vừa được chụp xong ở nơi khác -> giờ là "thay ảnh": tải lại trang, bấm lại.
     if (!daLuu && !thay && moc === 'da_san_xuat' && e.trangThaiHienTai === 'Đã sản xuất') {
       await hopThongBao('Đơn vừa được chuyển sang "Đã sản xuất" (có người vừa chụp xong ảnh). Trang sẽ tải lại thông tin đơn — chọn lại ảnh rồi bấm "Tải ảnh lên" nếu muốn THAY ảnh đã sản xuất.');
-    } else await hopThongBao(!daLuu ? e.message : thay ? `Đã thay ảnh 1 nhưng ảnh 2 lỗi: ${e.message}\nĐơn hiện chỉ còn 1 ảnh mới — chọn lại cả 2 ảnh rồi thay lại.`
+    } else await hopThongBao(!daLuu ? e.message
+      : moc === 've_file' ? `Đã lưu ${daLuu}/${dsFile.length} ảnh file thêu, ảnh ${daLuu + 1} lỗi: ${e.message}\nẢnh cũ chưa được thay vẫn giữ nguyên — chọn lại cả ${dsFile.length} ảnh rồi tải lại.`
+      : thay ? `Đã thay ảnh 1 nhưng ảnh 2 lỗi: ${e.message}\nĐơn hiện chỉ còn 1 ảnh mới — chọn lại cả 2 ảnh rồi thay lại.`
       : `Đã lưu ảnh 1 nhưng ảnh 2 lỗi: ${e.message}\nĐơn CHƯA chuyển trạng thái — chọn lại cả 2 ảnh rồi tải lại.`);
   }
   await taiChiTiet();
