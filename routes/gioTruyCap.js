@@ -34,4 +34,15 @@ router.post('/mo-tam', requireExactRole('superadmin'), kiemMatKhau, async (req, 
   res.json(svc.layThietLap());
 });
 
+// Mật khẩu xác nhận (23/10/2026) — services/matKhauXacNhanService.js. Đặt ở router này vì cùng nhóm cài đặt CHỈ superadmin trên Settings.
+const mkxn = require('../services/matKhauXacNhanService');
+router.get('/mat-khau', requireExactRole('superadmin'), (req, res) => res.json(mkxn.layDanhSach()));
+router.post('/mat-khau', requireExactRole('superadmin'), async (req, res) => {
+  const { khoa, cu, moi } = req.body || {};
+  try { mkxn.doiMatKhau(khoa, cu, moi, req.session.user.ten); } catch (err) { return res.status(400).json({ error: err.message }); }
+  const u = req.session.user;
+  await ghiLog({ nguoiDung: u.ten, vaiTro: u.vaiTro, hanhDong: 'DOI_MAT_KHAU_XAC_NHAN', chiTiet: { _chu: `đổi mật khẩu xác nhận "${mkxn.LOAI[khoa]}"` } });
+  res.json(mkxn.layDanhSach());
+});
+
 module.exports = router;

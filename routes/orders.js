@@ -1010,13 +1010,11 @@ router.post('/danh-dau-uu-tien', async (req, res) => {
 // yêu cầu người dùng) — CHỈ là 1 lớp xác nhận CHỦ ĐÍCH thêm (đứng SAU laSuperAdmin(), vốn đã là lớp
 // phân quyền thật qua session), không phải mật khẩu tài khoản: mục đích là chặn bấm nhầm/dùng ẩu khi
 // phiên superadmin đang mở sẵn (vd người khác mượn máy), không phải để chống truy cập trái phép. Kiểm tra Ở SERVER (không
-// chỉ client) để không thể lách qua bằng cách gọi thẳng API. Giá trị lấy từ biến MAT_KHAU_DU_LIEU_DON trong .env (23/10/2026, theo
-// yêu cầu người dùng — trước đây hardcode trong code / repo); chưa đặt biến -> không xoá / khôi phục được (báo rõ).
+// chỉ client) để không thể lách qua bằng cách gọi thẳng API. Đổi được trên Settings (23/10/2026, theo yêu cầu người dùng —
+// services/matKhauXacNhanService.js, loại DU_LIEU_DON; chưa đổi = mặc định như trước).
 // -> lỗi (chuỗi, đã kèm "không <việc> gì cả") hoặc '' nếu đúng.
 function kiemTraMatKhauDuLieuDon(mk, viec) {
-  const dung = String(process.env.MAT_KHAU_DU_LIEU_DON || '');
-  if (!dung) return `Máy chủ chưa đặt MAT_KHAU_DU_LIEU_DON trong .env — không ${viec} gì cả.`;
-  return String(mk ?? '') === dung ? '' : `Sai mật khẩu xác nhận — không ${viec} gì cả.`;
+  return require('../services/matKhauXacNhanService').dung('DU_LIEU_DON', mk) ? '' : `Sai mật khẩu xác nhận — không ${viec} gì cả.`;
 }
 
 // "Xoá dữ liệu đơn hàng" (bổ sung 20/09/2026, theo yêu cầu người dùng) — CHỈ superadmin (laSuperAdmin(),

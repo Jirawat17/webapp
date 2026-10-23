@@ -226,6 +226,15 @@
     <p id="thong-bao-gio-nghi" style="display:none"></p>
   </details>
 
+  <!-- Mật khẩu xác nhận (23/10/2026, theo yêu cầu người dùng — services/matKhauXacNhanService.js, API /gio-truy-cap/mat-khau). Lưu dạng
+       hash ở máy chủ, không hiện lại; đổi phải nhập đúng mật khẩu hiện tại. -->
+  <details style="margin-top:var(--space-6)">
+    <summary class="btn-hanh-dong phu">Mật khẩu xác nhận</summary>
+    <p style="color:var(--color-text-muted)">Mật khẩu phải nhập trước các thao tác nhạy cảm của superadmin (chống bấm nhầm khi máy đang đăng nhập sẵn). Chưa đổi lần nào thì dùng mật khẩu mặc định. Mật khẩu được lưu mã hoá, không xem lại được — quên thì cần sửa trực tiếp cơ sở dữ liệu.</p>
+    <div id="mkxn-ds" style="display:flex;flex-direction:column;gap:var(--space-4)"></div>
+    <p id="thong-bao-mkxn" style="display:none"></p>
+  </details>
+
   <details style="margin-top:var(--space-6)">
     <summary class="btn-hanh-dong phu">Tài khoản GKE</summary>
     <p style="color:var(--color-text-muted)">Mỗi Xưởng dùng 1 tài khoản GKE riêng để mua tracking/in label. Đơn của Xưởng chưa được gán tài khoản sẽ KHÔNG mua được tracking (hệ thống không tự dùng tài khoản của Xưởng khác). Đơn đã mua tracking luôn in lại tem/tra trạng thái bằng đúng tài khoản đã mua.</p>
@@ -350,6 +359,7 @@
   document.getElementById('btn-khoi-phuc-du-lieu-don').onclick = khoiPhucDuLieuDon;
   document.getElementById('btn-luu-gio-nghi').onclick = luuGioNghi;
   await taiGioNghi();
+  await taiMatKhauXacNhan();
   document.getElementById('btn-them-xuong').onclick = themXuongMoi;
   document.getElementById('btn-them-team').onclick = themTeamMoi;
   // Đồng bộ Sheet Seller — tải khi mở khối lần đầu.
@@ -815,6 +825,34 @@ async function moTamGioNghi(i, huy) {
     document.getElementById('gio-nghi-mat-khau').value = '';
     thongBaoGke(huy ? `Đã huỷ mở tạm Xưởng ${xuong}.` : `Đã mở tạm Xưởng ${xuong} tới ${den}.`, false, 'thong-bao-gio-nghi');
   } catch (e) { thongBaoGke('Chưa lưu: ' + e.message, true, 'thong-bao-gio-nghi'); }
+}
+
+// ---- Mật khẩu xác nhận (23/10/2026) — API /gio-truy-cap/mat-khau (CHỈ superadmin) ----
+function veMatKhauXacNhan(ds) {
+  document.getElementById('mkxn-ds').innerHTML = ds.map(d => `
+    <div>
+    <strong>${escapeHtml(d.ten)}</strong>
+    <span class="st-ghi-chu-truong" style="display:block">${d.daDoi ? `Đã đổi lúc ${escapeHtml(new Date(d.capNhatLuc).toLocaleString('vi-VN'))} bởi ${escapeHtml(d.capNhatBoi)}` : 'Đang dùng mật khẩu mặc định'}</span>
+    <form class="bao-cao-form" data-khoa="${escapeHtml(d.khoa)}" onsubmit="doiMatKhauXacNhan(event)" style="margin-top:var(--space-2)">
+      <div class="truong"><label for="mkxn-cu-${d.khoa}">Mật khẩu hiện tại</label><input type="password" id="mkxn-cu-${d.khoa}" autocomplete="off" required></div>
+      <div class="truong"><label for="mkxn-moi-${d.khoa}">Mật khẩu mới</label><input type="password" id="mkxn-moi-${d.khoa}" autocomplete="new-password" minlength="4" maxlength="64" required></div>
+      <div class="truong"><label for="mkxn-lai-${d.khoa}">Nhập lại mật khẩu mới</label><input type="password" id="mkxn-lai-${d.khoa}" autocomplete="new-password" required></div>
+      <button type="submit" class="btn-hanh-dong" style="align-self:end">Đổi mật khẩu</button>
+    </form>
+    </div>`).join('');
+}
+async function taiMatKhauXacNhan() {
+  try { veMatKhauXacNhan(await apiFetch('/gio-truy-cap/mat-khau')); }
+  catch (e) { thongBaoGke('Không tải được: ' + e.message, true, 'thong-bao-mkxn'); }
+}
+async function doiMatKhauXacNhan(e) {
+  e.preventDefault();
+  const khoa = e.target.dataset.khoa, gt = id => document.getElementById(`mkxn-${id}-${khoa}`).value;
+  if (gt('moi') !== gt('lai')) { thongBaoGke('Mật khẩu mới nhập lại không khớp — chưa đổi.', true, 'thong-bao-mkxn'); return; }
+  try {
+    veMatKhauXacNhan(await apiFetch('/gio-truy-cap/mat-khau', { method: 'POST', body: JSON.stringify({ khoa, cu: gt('cu'), moi: gt('moi') }) }));
+    thongBaoGke('Đã đổi mật khẩu xác nhận.', false, 'thong-bao-mkxn');
+  } catch (err) { thongBaoGke(err.message, true, 'thong-bao-mkxn'); }
 }
 
 async function daNapTienGke(id, btn) {

@@ -3,8 +3,8 @@
 //  - chặn MỌI vai trò trừ superadmin; người thuộc nhiều Xưởng bị chặn khi CHỈ CẦN 1 Xưởng của họ đang đóng; người chưa gán Xưởng không bị chặn;
 //  - đến giờ đóng: chặn mọi thao tác mới, riêng gửi ảnh / bấm Xong được gửi nốt trong 10 phút (không mất ảnh đã chụp);
 //  - "Mở tạm" tới giờ chọn trong khung (superadmin, cùng mật khẩu xác nhận) — hết giờ đó tự đóng theo lịch;
-//  - lưu thiết lập / mở tạm phải nhập mật khẩu xác nhận — biến MAT_KHAU_GIO_NGHI trong .env (không để trong code / repo), kiểm tra ở máy
-//    chủ, không gửi xuống trình duyệt. Chưa đặt biến -> không lưu được (báo rõ).
+//  - lưu thiết lập / mở tạm phải nhập mật khẩu xác nhận — đổi được trên Settings (services/matKhauXacNhanService.js), kiểm tra ở máy
+//    chủ, không gửi xuống trình duyệt.
 // Giờ tính theo giờ Việt Nam (UTC+7, không đổi giờ mùa hè) — không phụ thuộc múi giờ của máy chủ.
 const caiDat = require('./caiDatDbService');
 const { ghiLog } = require('./logService');
@@ -20,11 +20,9 @@ const sangPhut = s => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5));
 const phutVN = ms => Math.floor(ms / MS_PHUT + LECH_VN_PHUT) % PHUT_NGAY;
 const gioVN = ms => { const m = phutVN(ms); return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`; };
 const trongKhung = (m, tu, den) => (tu < den ? m >= tu && m < den : m >= tu || m < den);
-// -> lỗi (chuỗi) hoặc '' nếu đúng.
+// -> lỗi (chuỗi) hoặc '' nếu đúng. Mật khẩu đổi được trên Settings (services/matKhauXacNhanService.js, loại GIO_NGHI).
 function kiemTraMatKhau(mk) {
-  const dung = String(process.env.MAT_KHAU_GIO_NGHI || '');
-  if (!dung) return 'Máy chủ chưa đặt MAT_KHAU_GIO_NGHI trong .env — chưa lưu gì.';
-  return String(mk || '') === dung ? '' : 'Sai mật khẩu xác nhận — chưa lưu gì.';
+  return require('./matKhauXacNhanService').dung('GIO_NGHI', mk) ? '' : 'Sai mật khẩu xác nhận — chưa lưu gì.';
 }
 
 // 1 Xưởng tại thời điểm `bayGio` (ms). null = không bật / cấu hình hỏng. Đang đóng -> { dong, batDau, moLuc }; đang mở -> { dongLuc }.

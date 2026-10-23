@@ -354,6 +354,18 @@ function datMoTamXuong(ten, iso) {
   db.prepare(`UPDATE danh_sach_xuong SET MoTamDen = ? WHERE Ten = ?`).run(iso || '', ten);
 }
 
+// Mật khẩu xác nhận đổi được trên Settings (23/10/2026 — services/matKhauXacNhanService.js). Hash = 'salt:scrypt' (hex), KHÔNG lưu bản rõ.
+db.exec(`CREATE TABLE IF NOT EXISTS mat_khau_xac_nhan (
+  Khoa TEXT PRIMARY KEY, Hash TEXT NOT NULL, CapNhatBoi TEXT NOT NULL DEFAULT '', CapNhatLuc TEXT NOT NULL DEFAULT ''
+)`);
+function layMatKhauXacNhan(khoa) {
+  return db.prepare(`SELECT * FROM mat_khau_xac_nhan WHERE Khoa = ?`).get(khoa) || null;
+}
+function datMatKhauXacNhan(khoa, hash, nguoi, luc) {
+  db.prepare(`INSERT INTO mat_khau_xac_nhan (Khoa, Hash, CapNhatBoi, CapNhatLuc) VALUES (?, ?, ?, ?)
+    ON CONFLICT(Khoa) DO UPDATE SET Hash = excluded.Hash, CapNhatBoi = excluded.CapNhatBoi, CapNhatLuc = excluded.CapNhatLuc`).run(khoa, hash, nguoi, luc);
+}
+
 // Nhóm hàng theo LOAI (29/09/2026, theo yêu cầu người dùng — sửa ở Settings thay vì trong code): mỗi dòng 1 loại
 // (Tshirt, HoodieKID...), Nhom '1' Quần áo / '2' Không phải quần áo, TuKhoa phân cách dấu phẩy. Kiểm tra hợp lệ/trùng
 // ở services/nhomHangService.js. Bảng VỪA tạo -> nạp danh sách mặc định (services/nhomHangMacDinh.js) đúng 1 lần, CÙNG
@@ -511,7 +523,7 @@ const datCaiDatVanHanh = db.transaction(giaTri => {
 });
 
 module.exports = {
-  layGioDongXuong, datGioDongXuong, datMoTamXuong,
+  layGioDongXuong, datGioDongXuong, datMoTamXuong, layMatKhauXacNhan, datMatKhauXacNhan,
   danhDauGkeHetTien, boDanhDauGkeHetTien, ghiDaBaoGkeHetTien,
   layCaiDatVanHanh, datCaiDatVanHanh,
   layCauHinhQc, datCauHinhQc, layMocApDungAutoQc, layTelegramQc, datTelegramQc, layGiaTokenQc, datGiaTokenQc,
