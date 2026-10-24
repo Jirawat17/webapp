@@ -428,7 +428,7 @@ function layDonThuVien() {
 }
 
 // "Thiết kế giống đã có" (24/10/2026, theo yêu cầu người dùng): đơn cũ TRÙNG FILE / ẢNH GIỐNG — kể cả khi đơn đó chưa có EMB.
-// Cùng lượt tìm như "Tìm thiết kế tương tự"; mỗi đơn cũ 1 ô, tối đa 6 (Trùng file trước, rồi đơn có EMB).
+// Cùng lượt tìm như "Tìm thiết kế tương tự"; mỗi đơn cũ 1 ô, tối đa 4 (Trùng file trước, rồi đơn có EMB).
 async function hienThietKeGiong() {
   if (!laVaiTroThuVien()) return;
   let d;
@@ -442,7 +442,7 @@ async function hienThietKeGiong() {
     if (!cu || (r.nhom === 'TRUNG_FILE' && cu.nhom !== 'TRUNG_FILE')) theoDon.set(r.stt_key, r);
   }
   if (!theoDon.size) { el.innerHTML = ''; return; }
-  const ds = [...theoDon.values()].sort((a, b) => (b.nhom === 'TRUNG_FILE') - (a.nhom === 'TRUNG_FILE') || !!b.emb - !!a.emb).slice(0, 6);
+  const ds = [...theoDon.values()].sort((a, b) => (b.nhom === 'TRUNG_FILE') - (a.nhom === 'TRUNG_FILE') || !!b.emb - !!a.emb).slice(0, 4);
   const pct = v => String(v).replace('.', ',') + '%';
   // Máy chủ cắt kết quả theo số FILE (d.duGioiHan) -> có thể còn đơn giống chưa đếm.
   el.innerHTML = `<div style="margin:0 0 8px;font-size:0.9rem">
