@@ -396,7 +396,6 @@ async function taiKhoiEmb() {
       <input type="file" id="chon-emb" accept=".emb" multiple hidden onchange="taiLenEmb(this)">
       <input type="file" id="chon-emb-thu-muc" webkitdirectory multiple hidden onchange="taiLenEmb(this)">
       <a href="javascript:void(0)" onclick="document.getElementById('chon-emb-thu-muc').click()">Chọn cả thư mục</a>
-      <a href="/tim-anh.html#ta-tai-len">${icon('upload', {size:14})} Tải lên/Upload nhiều đơn</a>
       <a href="/tim-anh.html?stt=${encodeURIComponent(sttKey)}">Tìm thiết kế tương tự</a>` : ''}
     ${d.cu.length && d.duocTai ? `<span style="color:var(--color-text-muted)">Bản cũ (Tải về/Download): ${d.cu.map(x => `<a href="/api/thu-vien/file/${x.id}?tai=1" title="${escapeHtml(x.ten)}">v${x.so_thu_tu}</a> (${escapeHtml(ngay(x.ngay_luu))})`).join(', ')}</span>` : ''}
   </div>`;
