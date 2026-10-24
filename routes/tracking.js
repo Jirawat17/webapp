@@ -7,7 +7,7 @@ const {
   layDonChuyenThuCong, choTuDongThuLai, suaThongTinGke,
 } = require('../services/trackingAutoService');
 const {
-  gopCacTemPdf, layDanhSachTaiKhoanGke, luuTaiKhoanGke, xoaTaiKhoanGke, ganTaiKhoanGkeChoXuong, daNapTienGke,
+  gopCacTemPdf, layDanhSachTaiKhoanGke, luuTaiKhoanGke, xoaTaiKhoanGke, ganTaiKhoanGkeChoXuong, daNapTienGke, luuSoDuGke,
 } = require('../services/gkeService');
 const orderService = require('../services/orderService');
 const sheetSellerService = require('../services/sheetSellerService');
@@ -97,10 +97,15 @@ router.delete('/tai-khoan-gke/:id', requireExactRole('superadmin'), (req, res) =
 // "Đã nạp tiền" (22/10/2026): bật lại tự động mua tracking cho tài khoản GKE đã báo hết tiền (gkeService#baoGkeHetTien).
 router.post('/tai-khoan-gke/:id/da-nap-tien', requireExactRole('superadmin'), (req, res) => {
   try {
-    const coDoi = daNapTienGke(req.params.id);
+    const coDoi = daNapTienGke(req.params.id, (req.body || {}).soDu);
     if (coDoi) console.log(`[GKE] ${req.session.user.ten} báo đã nạp tiền tài khoản #${req.params.id} — bật lại tự động mua tracking.`);
     res.json({ ok: true });
   } catch (err) { res.status(400).json({ error: err.message }); }
+});
+// Số dư ước tính (24/10/2026): body { soDu, giaMotDon, nguongSoDu } — xem gkeService#luuSoDuGke.
+router.put('/tai-khoan-gke/:id/so-du', requireExactRole('superadmin'), (req, res) => {
+  try { luuSoDuGke(req.params.id, req.body || {}); res.json({ ok: true }); }
+  catch (err) { res.status(400).json({ error: err.message }); }
 });
 // Gán (hoặc bỏ gán, taiKhoanId rỗng) tài khoản cho 1 Xưởng.
 router.post('/gan-tai-khoan-gke', requireExactRole('superadmin'), (req, res) => {

@@ -269,4 +269,76 @@ async function hoi({ user, cauHoi, khoa, nguon }) {
   }
 }
 
-module.exports = { hoi, batDauLai, thongTinCauHinh, luuCauHinh, CONG_CU, thucThi, MODEL };
+// ---------- Tóm tắt buổi sáng (24/10/2026, theo yêu cầu người dùng) ----------
+// Hệ thống gom số liệu theo quy tắc cố định; Claude (model đang chọn) viết thành bản tóm tắt + việc ưu tiên. Gửi qua bot Trợ lý
+// (baoCaoLogService#guiTomTatSang). AI lỗi / chưa có key -> vẫn trả bản số liệu ngắn để tin sáng không mất.
+const HUONG_DAN_SANG = [
+  'Viết bản TÓM TẮT BUỔI SÁNG gửi người quản lý xưởng qua Telegram (chữ thường: không Markdown, không **, không bảng).',
+  'Thứ tự: (1) 3–5 việc nên làm trước nhất hôm nay, nêu mã đơn cụ thể khi có; (2) tình hình chung: đơn đang làm, cảnh báo Đỏ/Cam, 24 giờ qua',
+  'chuyển được bao nhiêu đơn qua từng bước; (3) tracking và tài khoản GKE: hết tiền / sắp hết (số dư là ƯỚC TÍNH), đơn chuyển mua thủ công.',
+  'Tối đa khoảng 25 dòng. Chỉ dùng số liệu dưới đây, không suy đoán thêm; mục nào không có gì đáng chú ý thì nói ngắn 1 dòng.',
+].join('\n');
+async function duLieuBuoiSang(user, ms = Date.now()) {
+  const alertService = require('./alertService');
+  const { TRANG_THAI_KET_THUC } = require('../data/pipelineTinhTrang');
+  const { rows } = await orderService.getAll();
+  const donTheoQuyen = await orderService.ganTenKhachHang(orderService.filterForRole(rows, user));
+  const ctx = { user, donTheoQuyen };
+  const dangLam = donTheoQuyen.filter(r => !TRANG_THAI_KET_THUC.includes(r.TRANG_THAI_XUONG));
+  const cauHinhCb = alertService.layCauHinhCanhBao();
+  const canhBao = { DO: [], CAM: [], VANG: [] }, theoTrangThai = {}, chuyen24h = {};
+  for (const r of dangLam) {
+    const muc = alertService.tinhMucCanhBao(r, cauHinhCb);
+    if (canhBao[muc]) canhBao[muc].push(r);
+    theoTrangThai[r.TRANG_THAI_XUONG || 'Chưa in mã'] = (theoTrangThai[r.TRANG_THAI_XUONG || 'Chưa in mã'] || 0) + 1;
+  }
+  for (const l of require('./trangThaiDbService').layLichSuDoiTrangThaiTu(thoiGianVNISOString(new Date(ms - 24 * 3600 * 1000)))) {
+    if (l.Cot === 'TRANG_THAI_XUONG') chuyen24h[l.Sang] = (chuyen24h[l.Sang] || 0) + 1;
+  }
+  const tracking = await thucThi('tinh_trang_mua_tracking', {}, ctx);
+  return {
+    luc: thoiGianVNISOString(new Date(ms)).slice(0, 16).replace('T', ' '),
+    donDangLamTheoTrangThai: theoTrangThai,
+    canhBaoTreHan: { do: canhBao.DO.length, cam: canhBao.CAM.length, vang: canhBao.VANG.length,
+      dsDoVaCam: [...canhBao.DO.map(r => ['ĐỎ', r]), ...canhBao.CAM.map(r => ['CAM', r])].slice(0, 25)
+        .map(([muc, r]) => ({ muc, ma: r.STT_Key, trangThai: r.TRANG_THAI_XUONG, xuong: r.XUONG, ngayLenDon: r.NGAY_LEN_DON })) },
+    soDonVaoTungTrangThai24h: chuyen24h,
+    viecCanXuLy: await thucThi('trung_tam_hanh_dong', {}, ctx),
+    muaTracking: { soDonTheoTrangThai: tracking.soDonTheoTrangThai, ds: tracking.ds.slice(0, 10) },
+    taiKhoanGke: require('./gkeService').tomTatTaiKhoanGke().map(({ id, ...t }) => t),
+  };
+}
+function banTomTatTho(d) {
+  const kv = o => Object.entries(o).map(([k, v]) => `${k} ${v}`).join(' · ') || 'không có';
+  return [
+    `Đơn đang làm: ${kv(d.donDangLamTheoTrangThai)}`,
+    `Cảnh báo trễ: Đỏ ${d.canhBaoTreHan.do} · Cam ${d.canhBaoTreHan.cam} · Vàng ${d.canhBaoTreHan.vang}`,
+    `24 giờ qua: ${kv(d.soDonVaoTungTrangThai24h)}`,
+    `Mua tracking: ${kv(d.muaTracking.soDonTheoTrangThai)}`,
+    ...d.taiKhoanGke.map(t => `GKE ${t.ten}: ${t.hetTienLuc ? 'HẾT TIỀN' : t.soDu != null ? `số dư ước tính ${t.soDu}${t.conKhoangDon != null ? ` (≈ ${t.conKhoangDon} đơn)` : ''}` : 'chưa theo dõi số dư'}`),
+  ].join('\n');
+}
+// -> { chu, loi } (loi: AI không viết được, chu là bản số liệu thô).
+async function tomTatBuoiSang(user, ms = Date.now()) {
+  const duLieu = await duLieuBuoiSang(user, ms);
+  const { apiKey, model } = layCauHinh();
+  if (!apiKey) return { chu: banTomTatTho(duLieu) + '\n\n(Chưa có API key Anthropic — đây là bản số liệu, chưa qua AI.)', loi: 'Chưa có API key' };
+  try {
+    const res = await client(apiKey).beta.messages.create({
+      model, max_tokens: 4000, system: SYSTEM, output_config: { effort: 'medium' },
+      messages: [{ role: 'user', content: `${HUONG_DAN_SANG}\n\nSố liệu (JSON):\n${JSON.stringify(duLieu)}` }],
+      ...(CO_FALLBACK.has(model) ? { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' } : {}),
+    });
+    const chu = res.content.filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+    if (res.stop_reason === 'refusal' || !chu) throw new Error('AI không trả lời');
+    await ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'CHATBOT_HOI',
+      chiTiet: { nguon: 'tom-tat-sang', model, cauHoi: '(tóm tắt buổi sáng tự động)', traLoi: chu.slice(0, 300),
+        tokenVao: (res.usage.input_tokens || 0) + (res.usage.cache_read_input_tokens || 0) + (res.usage.cache_creation_input_tokens || 0), tokenRa: res.usage.output_tokens || 0 } });
+    return { chu };
+  } catch (err) {
+    console.error('[TroLyAi] Tóm tắt buổi sáng lỗi:', err.message);
+    return { chu: banTomTatTho(duLieu) + `\n\n(AI chưa viết được tóm tắt: ${loiHienThi(err)})`, loi: err.message };
+  }
+}
+
+module.exports = { hoi, batDauLai, thongTinCauHinh, luuCauHinh, CONG_CU, thucThi, MODEL, tomTatBuoiSang };

@@ -14,7 +14,7 @@
 .st-luoi-gke { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: var(--space-3); }
 .st-ghi-chu-truong { font-size: 0.78rem; color: var(--color-text-muted); margin: 4px 0 0; }
 /* Thẻ 1 tài khoản GKE (bổ sung 27/09/2026) — .bao-cao-form mặc định flex ngang, xếp dọc lại cho thẻ. */
-.st-the-tk-gke { flex-direction: column; align-items: stretch; }
+.st-the-tk-gke { flex-direction: column; align-items: stretch; flex-wrap: nowrap; } /* wrap (kế thừa .bao-cao-form) kéo giãn các hàng theo cột — 24/10/2026 */
 .st-the-tk-gke > div:last-child { align-self: flex-start; }
 /* Quản lý Xưởng (bổ sung 24/09/2026) — mỗi Xưởng 1 dòng: tên + màu + đổi tên + xoá. */
 .st-danh-sach-xuong { display: flex; flex-direction: column; gap: var(--space-2); }
@@ -268,6 +268,14 @@
         <input type="password" id="ai-tg-token" autocomplete="new-password" placeholder="123456789:AAE..."></div>
     </div>
     <p id="ai-tg-trang-thai" style="margin:var(--space-2) 0"></p>
+    <h4>Tin tự gửi qua bot Trợ lý (chỉ tới tài khoản Telegram đã liên kết)</h4>
+    <p class="st-ghi-chu-truong">Tóm tắt buổi sáng: hệ thống gom số liệu (đơn trễ hạn, việc cần xử lý, tracking, số dư GKE ước tính), Claude viết thành bản tóm tắt + việc nên làm trước — tốn phí token mỗi ngày. Báo cáo tuần theo người (số đơn mỗi người làm, thời gian khâu, quét sai, tải ảnh) gửi 7 giờ sáng thứ 7, không dùng AI.</p>
+    <div class="bao-cao-form">
+      <label style="align-self:end"><input type="checkbox" id="ai-sang-bat"> Gửi tóm tắt buổi sáng</label>
+      <div class="truong"><label for="ai-sang-gio">Giờ gửi</label><input type="time" id="ai-sang-gio"></div>
+      <button type="button" class="btn-hanh-dong phu" onclick="guiThuTinAi('sang', this)">Gửi thử tóm tắt sáng</button>
+      <button type="button" class="btn-hanh-dong phu" onclick="guiThuTinAi('theo-nguoi', this)">Gửi thử báo cáo theo người</button>
+    </div>
     <div class="bao-cao-form" style="margin-top:var(--space-3)">
       <button type="button" class="btn-hanh-dong" id="btn-luu-ai">Lưu</button>
       <button type="button" class="btn-hanh-dong phu" id="btn-ai-ma-lien-ket">Tạo mã liên kết Telegram</button>
@@ -770,6 +778,7 @@ function theTaiKhoanGke(tk, id, dungCho) {
       <span class="st-ghi-chu-truong">${id === 'moi' ? '' : (dungCho.length ? 'Đang dùng cho Xưởng: ' + dungCho.map(escapeHtml).join(', ') : 'Chưa gán cho Xưởng nào')}</span>
       ${tk.hetTienLuc ? `<div style="color:var(--color-danger-text);font-weight:600">⚠️ GKE báo HẾT TIỀN lúc ${escapeHtml(new Date(tk.hetTienLuc).toLocaleString('vi-VN'))} — tự động mua tracking đang DỪNG (${escapeHtml(tk.hetTienLyDo)}).
         <button type="button" class="btn-hanh-dong" data-tk="${escapeHtml(id)}" onclick="daNapTienGke(this.dataset.tk, this)">Đã nạp tiền — bật lại tự mua</button></div>` : ''}
+      ${id === 'moi' ? '' : htmlSoDuGke(tk, id)}
       <div class="st-luoi-gke">
         ${TRUONG_TK_GKE.map(([khoa, nhan, loai, goiY]) => `
           <div class="truong"><label for="gke-${id}-${khoa}">${nhan}</label>
@@ -893,6 +902,17 @@ function veTroLyAi(kq) {
   document.getElementById('btn-ai-huy-lien-ket').style.display = tg.daLienKet ? '' : 'none';
   document.getElementById('btn-ai-xoa-key').style.display = ai.coApiKey ? '' : 'none';
   document.getElementById('btn-ai-xoa-tg').style.display = tg.coToken ? '' : 'none';
+  document.getElementById('ai-sang-bat').checked = kq.sang.bat;
+  document.getElementById('ai-sang-gio').value = kq.sang.gio;
+}
+async function guiThuTinAi(loai, btn) {
+  btn.disabled = true;
+  thongBaoGke('Đang gửi…', false, 'thong-bao-ai');
+  try {
+    const kq = await apiFetch('/chatbot/gui-thu/' + loai, { method: 'POST' });
+    thongBaoGke(kq.ok ? 'Đã gửi — xem trong Telegram.' : 'Chưa gửi được: ' + kq.loi, !kq.ok, 'thong-bao-ai');
+  } catch (e) { thongBaoGke('Lỗi: ' + e.message, true, 'thong-bao-ai'); }
+  finally { btn.disabled = false; }
 }
 async function taiTroLyAi() {
   try { veTroLyAi(await apiFetch('/chatbot/cau-hinh')); }
@@ -901,7 +921,8 @@ async function taiTroLyAi() {
 async function luuTroLyAi(them, hoi) {
   if (hoi && !await hopXacNhan(hoi)) return;
   const body = { apiKey: document.getElementById('ai-api-key').value.trim(), model: document.getElementById('ai-model').value,
-    tgToken: document.getElementById('ai-tg-token').value.trim(), ...them };
+    tgToken: document.getElementById('ai-tg-token').value.trim(),
+    sangBat: document.getElementById('ai-sang-bat').checked, sangGio: document.getElementById('ai-sang-gio').value || '07:30', ...them };
   try {
     veTroLyAi(await apiFetch('/chatbot/cau-hinh', { method: 'PUT', body: JSON.stringify(body) }));
     document.getElementById('ai-api-key').value = ''; document.getElementById('ai-tg-token').value = '';
@@ -942,10 +963,43 @@ async function doiMatKhauXacNhan(e) {
   } catch (err) { thongBaoGke(err.message, true, 'thong-bao-mkxn'); }
 }
 
-async function daNapTienGke(id, btn) {
+// Số dư ước tính (24/10/2026) — GKE không có API số dư: nhập số dư lúc nạp + giá ước tính 1 đơn; mỗi vận đơn mới tự trừ, còn dưới mức báo
+// thì báo Telegram nhóm Vận hành (gkeService#ghiNhanDaMuaGke). Đơn vị tiền tự quy ước (cùng đơn vị cho cả 3 ô).
+function htmlSoDuGke(tk, id) {
+  const so = v => (v == null ? '' : String(v));
+  const dong = tk.soDu == null ? 'Chưa nhập số dư — chưa theo dõi.'
+    : `Số dư ước tính: <b>${escapeHtml(so(tk.soDu))}</b>${tk.conKhoangDon != null ? ` (≈ ${tk.conKhoangDon} đơn)` : ''}`
+      + (tk.nguongSoDu != null && tk.soDu <= tk.nguongSoDu ? ' <span style="color:var(--color-danger-text);font-weight:600">— dưới mức báo</span>' : '');
+  return `<div style="border-top:1px dashed var(--color-border);padding-top:var(--space-2)">
+      <div>${dong}</div>
+      <div class="st-luoi-gke">
+        <div class="truong"><label for="gke-${id}-so-du">Số dư hiện tại</label><input type="number" step="0.01" id="gke-${id}-so-du" value="${escapeHtml(so(tk.soDu))}" oninput="this.dataset.daSua = '1'"></div>
+        <div class="truong"><label for="gke-${id}-gia">Giá ước tính 1 đơn</label><input type="number" min="0" step="0.01" id="gke-${id}-gia" value="${escapeHtml(so(tk.giaMotDon))}"></div>
+        <div class="truong"><label for="gke-${id}-nguong">Báo khi số dư còn ≤</label><input type="number" min="0" step="0.01" id="gke-${id}-nguong" value="${escapeHtml(so(tk.nguongSoDu))}"></div>
+      </div>
+      <button type="button" class="btn-hanh-dong phu" data-tk="${escapeHtml(id)}" onclick="luuSoDuGke(this.dataset.tk, this)">Lưu số dư</button>
+    </div>`;
+}
+async function luuSoDuGke(id, btn) {
+  const gt = k => document.getElementById(`gke-${id}-${k}`).value.trim();
   btn.disabled = true;
   try {
-    await apiFetch('/tracking/tai-khoan-gke/' + encodeURIComponent(id) + '/da-nap-tien', { method: 'POST' });
+    await apiFetch('/tracking/tai-khoan-gke/' + encodeURIComponent(id) + '/so-du', { method: 'PUT',
+      // Số dư CHỈ gửi khi người dùng có gõ vào ô đó (kể cả gõ lại đúng số cũ): ô hiện số lúc tải trang — gửi lại sẽ xoá các lần trừ từ đó
+      // tới giờ và bật lại cảnh báo.
+      body: JSON.stringify({ giaMotDon: gt('gia'), nguongSoDu: gt('nguong'),
+        ...(document.getElementById(`gke-${id}-so-du`).dataset.daSua ? { soDu: gt('so-du') } : {}) }) });
+    thongBaoGke('Đã lưu số dư ước tính.');
+    await taiTaiKhoanGke();
+  } catch (e) { btn.disabled = false; thongBaoGke('Lỗi: ' + e.message, true); }
+}
+
+async function daNapTienGke(id, btn) {
+  const soDu = await hopNhap('Số dư tài khoản GKE sau khi nạp (để trống nếu không theo dõi số dư):');
+  if (soDu === null) return;
+  btn.disabled = true;
+  try {
+    await apiFetch('/tracking/tai-khoan-gke/' + encodeURIComponent(id) + '/da-nap-tien', { method: 'POST', body: JSON.stringify({ soDu: soDu.trim() }) });
     thongBaoGke('Đã bật lại tự động mua tracking cho tài khoản này.');
     await taiTaiKhoanGke();
   } catch (e) { btn.disabled = false; thongBaoGke('Lỗi: ' + e.message, true); }

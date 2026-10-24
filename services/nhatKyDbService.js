@@ -573,6 +573,15 @@ function duyetTongHopLogsUploadAnh(loc = {}) {
       FROM logs_upload_anh ${where} LIMIT -1 OFFSET 0)`).iterate(...ts); // chỉ các cột cần (không kéo loi/thong_tin qua truy vấn con)
 }
 
+// Báo cáo theo người (24/10/2026): mọi lượt quét QR + chụp ảnh trong [tu, den) — mốc giờ VN dạng thoiGianVNISOString.
+function dsQuetVaChupTrongKhoang(tu, den) {
+  // THOAT_GIUA_CHUNG = ảnh bỏ dở / mất giữa chừng (Logs_UploadAnh tính là lỗi kỹ thuật); lap_bi_chan = dòng TỔNG các lần camera đọc lặp
+  // đúng mã vừa lỗi bị chặn 6 giây (scan.html#ghiLogLapBiChan) — không phải 1 lượt quét riêng.
+  return db.prepare(`SELECT nguoi, su_kien, ket_qua, tong_ms, cham, json_extract(ct, '$.manDo') man_do, json_extract(ct, '$.soLanLapBiChan') lap_bi_chan
+    FROM (SELECT nguoi, su_kien, ket_qua, tong_ms, cham, ${SQL_CT} ct FROM logs_upload_anh
+      WHERE luc >= ? AND luc < ? AND su_kien IN ('QUET_QR', 'CHUP_ANH', 'THOAT_GIUA_CHUNG') LIMIT -1 OFFSET 0)`).all(String(tu), String(den)); // xem duyetTongHopLogsUploadAnh
+}
+
 // ---------- Số đo cho báo cáo hằng ngày / hằng tuần (16/10/2026) — services/baoCaoVanHanhService.js ----------
 // Thời gian máy chủ xử lý MỌI lượt của vài thao tác chính (logCapture.js#ghiLuotApi chọn thao tác) — để có số giữa / 90% từng thao tác,
 // so với hôm trước. Log server chỉ ghi lượt CHẬM/lỗi nên không tính được số này. Giữ 35 ngày (baoCaoLogService dọn mỗi ngày).
@@ -655,7 +664,7 @@ const layQcLogTrongKhoang = (tuLuc, denLuc) => db.prepare(`SELECT STT_Key, LoaiQ
 module.exports = {
   ghiThoiGianApi, layThoiGianApi, xoaThoiGianApiTruoc, layDoLogsUploadAnh, layQcLogTrongKhoang, ghiNhieuDoMang, layDoMang, xoaDoMangTruoc, ghiDoMangMayChu, layDoMangMayChu, xoaDoMangMayChuTruoc,
   ghiNhieuTocDo, layTocDo, xoaTocDoTruoc,
-  ghiNhieuLogsUploadAnh, dsLogsUploadAnh, duyetTongHopLogsUploadAnh, danhDauDaXuLy, layDaXuLy, donDaXuLyKhongConDung, themDonCanCheck, suaDonCanCheck, danhDauDaCheck, layDonCanCheck, themBaoLoi, ganAnhBaoLoi, demBaoLoiTu, layBaoLoi, dsBaoLoi, capNhatBaoLoi,
+  ghiNhieuLogsUploadAnh, dsLogsUploadAnh, duyetTongHopLogsUploadAnh, dsQuetVaChupTrongKhoang, danhDauDaXuLy, layDaXuLy, donDaXuLyKhongConDung, themDonCanCheck, suaDonCanCheck, danhDauDaCheck, layDonCanCheck, themBaoLoi, ganAnhBaoLoi, demBaoLoiTu, layBaoLoi, dsBaoLoi, capNhatBaoLoi,
   layNote, layDanhSachNote, layTatCaTheNote, taoNote, suaNote, datAnhNote, xoaNote,
   ghiQcLog, layQcLog, layQcLogTheoId, danhGiaQcLog, thongKeDanhGiaQc, thongKeTokenQc, layDongDaDanhGiaCoAi, maxQcLogId, layCclSauId, tongKetQcNgay,
   taoKinhNghiem, suaKinhNghiem, doiTrangThaiKinhNghiem, layKinhNghiemTheoId, layDanhSachKinhNghiem, layKinhNghiemApDung, tangSoLanDungKinhNghiem, giuQuyenAutoQc, ketThucAutoQc, layTatCaAutoQc, donDepAutoQcDangChay,

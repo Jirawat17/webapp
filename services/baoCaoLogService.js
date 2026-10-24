@@ -13,7 +13,9 @@ const { thoiGianVNISOString } = require('./dateUtils');
 const phienBan = require('./phienBanService');
 const baoCaoVanHanh = require('./baoCaoVanHanhService');
 
-const KHOA = { GIO: 'BAO_CAO_LOG_GIO', CHAT: 'BAO_CAO_LOG_CHAT', TOKEN: 'BAO_CAO_LOG_TOKEN', NGAY_CUOI: 'BAO_CAO_LOG_NGAY_CUOI', TUAN_NGAY_CUOI: 'BAO_CAO_TUAN_NGAY_CUOI' };
+const KHOA = { GIO: 'BAO_CAO_LOG_GIO', CHAT: 'BAO_CAO_LOG_CHAT', TOKEN: 'BAO_CAO_LOG_TOKEN', NGAY_CUOI: 'BAO_CAO_LOG_NGAY_CUOI', TUAN_NGAY_CUOI: 'BAO_CAO_TUAN_NGAY_CUOI',
+  THEO_NGUOI_NGAY_CUOI: 'BAO_CAO_THEO_NGUOI_NGAY_CUOI', SANG_BAT: 'AI_SANG_BAT', SANG_GIO: 'AI_SANG_GIO', SANG_NGAY_CUOI: 'AI_SANG_NGAY_CUOI' };
+const GIO_SANG_MAC_DINH = '07:30';
 const GIO_BAO_CAO_TUAN = '07:00'; // thứ 7 (người dùng chốt 16/10/2026)
 const THU_BAO_CAO_TUAN = 6; // getUTCDay của giờ VN: 0 = Chủ nhật ... 6 = thứ 7
 const MOT_NGAY_MS = 24 * 3600 * 1000;
@@ -168,6 +170,36 @@ async function guiBaoCaoTuan(bayGio = new Date()) {
   return baoCaoVanHanh.guiTinDai(telegramService.guiTinNhan, ch.chat, await baoCaoVanHanh.taoBaoCaoTuan(+bayGio), token);
 }
 
+// ---- Gửi RIÊNG superadmin qua bot Trợ lý AI (24/10/2026, theo yêu cầu người dùng) ----
+const telegramAi = () => require('./telegramAiService');
+// Báo cáo tuần theo người — cùng lịch báo cáo tuần (7 giờ sáng thứ 7) nhưng chỉ tới tài khoản Telegram đã liên kết.
+async function guiBaoCaoTheoNguoi(bayGio = new Date()) {
+  if (!telegramAi().nguoiLienKet()) return { ok: false, loi: 'Chưa liên kết Telegram với tài khoản superadmin (Settings > Trợ lý AI).' };
+  return telegramAi().guiRieng(await baoCaoVanHanh.taoBaoCaoTheoNguoi(+bayGio));
+}
+// Tóm tắt buổi sáng do Claude viết — giờ + bật/tắt ở Settings > Trợ lý AI.
+async function guiTomTatSang(bayGio = new Date()) {
+  const user = telegramAi().nguoiLienKet();
+  if (!user) return { ok: false, loi: 'Chưa liên kết Telegram với tài khoản superadmin (Settings > Trợ lý AI).' };
+  const { chu } = await require('./troLyAiService').tomTatBuoiSang(user, +bayGio);
+  const vn = thoiGianVNISOString(bayGio);
+  return telegramAi().guiRieng(`☀️ Tóm tắt sáng ${vn.slice(8, 10)}/${vn.slice(5, 7)}\n\n${chu}`);
+}
+function cauHinhSang() {
+  const l = caiDat.layCaiDatVanHanh();
+  return { bat: l[KHOA.SANG_BAT] === '1', gio: l[KHOA.SANG_GIO] || GIO_SANG_MAC_DINH };
+}
+// Bật / đổi giờ sang mốc ĐÃ QUA hôm nay -> lần đầu là ngày mai (như luuCauHinh ở trên).
+function luuCauHinhSang({ bat, gio }, bayGio = new Date()) {
+  if (gio !== undefined && !/^([01]\d|2[0-3]):[0-5]\d$/.test(gio)) throw new Error('Giờ gửi tóm tắt sáng phải dạng HH:MM');
+  const cu = cauHinhSang();
+  const moi = { ...(bat !== undefined ? { [KHOA.SANG_BAT]: bat ? '1' : '' } : {}), ...(gio !== undefined ? { [KHOA.SANG_GIO]: gio } : {}) };
+  const sau = { bat: bat !== undefined ? !!bat : cu.bat, gio: gio !== undefined ? gio : cu.gio };
+  const vn = thoiGianVNISOString(bayGio);
+  if (sau.bat && (!cu.bat || sau.gio !== cu.gio) && vn.slice(11, 16) >= sau.gio) moi[KHOA.SANG_NGAY_CUOI] = vn.slice(0, 10);
+  caiDat.datCaiDatVanHanh(moi);
+}
+
 // Lịch: kiểm tra mỗi phút; tới hạn và hôm nay chưa gửi -> gửi. Lỗi -> thử lại sau 10 phút, tối đa 3 lần/ngày (không nhắn lỗi mỗi phút
 // khi token/chat sai). Chỉ ghi "đã gửi hôm nay" khi gửi thành công; máy chủ khởi động lại sau giờ hẹn thì gửi bù trong ngày.
 // Dùng chung cho báo cáo hằng ngày và báo cáo tuần (mỗi loại 1 khoá "ngày đã gửi" + bộ đếm lỗi riêng).
@@ -203,9 +235,15 @@ const chayLuot = taoLich('báo cáo logs', KHOA.NGAY_CUOI, vn => {
 const thuVN = bayGio => new Date(+bayGio + 7 * 3600000).getUTCDay();
 const chayLuotTuan = taoLich('báo cáo vận hành tuần', KHOA.TUAN_NGAY_CUOI,
   (vn, bayGio) => !!layCauHinh().chat && thuVN(bayGio) === THU_BAO_CAO_TUAN && vn.slice(11, 16) >= GIO_BAO_CAO_TUAN, guiBaoCaoTuan);
+const chayLuotTheoNguoi = taoLich('báo cáo tuần theo người', KHOA.THEO_NGUOI_NGAY_CUOI,
+  (vn, bayGio) => !!telegramAi().nguoiLienKet() && thuVN(bayGio) === THU_BAO_CAO_TUAN && vn.slice(11, 16) >= GIO_BAO_CAO_TUAN, guiBaoCaoTheoNguoi);
+const chayLuotSang = taoLich('tóm tắt buổi sáng', KHOA.SANG_NGAY_CUOI, vn => {
+  const ch = cauHinhSang();
+  return ch.bat && vn.slice(11, 16) >= ch.gio && !!telegramAi().nguoiLienKet();
+}, guiTomTatSang);
 
 function batDauLichBaoCaoLog() {
-  cron.schedule('* * * * *', () => { chayLuot(); chayLuotTuan(); });
+  cron.schedule('* * * * *', () => { chayLuot(); chayLuotTuan(); chayLuotTheoNguoi(); chayLuotSang(); });
   // Dọn số đo tốc độ / đo mạng quá 35 ngày — 3 giờ sáng mỗi ngày, KHÔNG phụ thuộc báo cáo có bật/gửi được hay không (bảng do_mang
   // nhận số đo mỗi 30 giây của mọi tab đang mở; chưa cấu hình Telegram mà không dọn thì phình mãi).
   // Dọn thêm 1 lần sau khi khởi động 1 phút — máy chủ tắt / đang deploy đúng lúc 3 giờ thì lượt đó bị bỏ qua.
@@ -217,4 +255,5 @@ function batDauLichBaoCaoLog() {
   console.log('[BaoCaoLog] Đã bật lịch gửi báo cáo logs hằng ngày (giờ gửi ở Settings) + báo cáo vận hành tuần (7 giờ sáng thứ 7) qua Telegram.');
 }
 
-module.exports = { layCauHinh, luuCauHinh, tokenDung, guiBaoCao, guiBaoCaoTuan, guiLoiDuLieuNgay, chayLuot, chayLuotTuan, docLogServer, batDauLichBaoCaoLog };
+module.exports = { layCauHinh, luuCauHinh, tokenDung, guiBaoCao, guiBaoCaoTuan, guiLoiDuLieuNgay, chayLuot, chayLuotTuan, docLogServer, batDauLichBaoCaoLog,
+  guiBaoCaoTheoNguoi, guiTomTatSang, cauHinhSang, luuCauHinhSang, chayLuotTheoNguoi, chayLuotSang };

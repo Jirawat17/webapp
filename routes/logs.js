@@ -12,6 +12,11 @@ router.get('/', requireLogin, requireExactRole('superadmin'), (req, res) => {
   res.json({ text: docDongCuoi(soDong) });
 });
 
+// Sức khoẻ hệ thống (24/10/2026, theo yêu cầu người dùng — tab đầu menu Logs): xem services/sucKhoeService.js.
+router.get('/suc-khoe', requireLogin, requireExactRole('superadmin'), async (req, res) => {
+  res.json(await require('../services/sucKhoeService').laySucKhoe());
+});
+
 // Tải CSV số đo mạng (23/10/2026, theo yêu cầu người dùng — cạnh "Xuất CSV" của Logs_UploadAnh): DoMangMayChu (máy chủ tự đo mỗi phút) và
 // DoTocDo (tốc độ đường truyền máy chủ / điện thoại / nhận ảnh). Cùng cột với file gửi Telegram hằng ngày (baoCaoVanHanhService#taoCsv*).
 // tu / den = ngày VN (YYYY-MM-DD, tính cả 2 đầu), tối đa 31 ngày. Trả THẲNG file CSV (không bọc trong JSON — 31 ngày DoMangMayChu ~44 nghìn

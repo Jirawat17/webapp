@@ -443,6 +443,17 @@ function vanBanBaoCaoTuan({ tuMs, denMs, nhom }, moTaPhienBan) {
   return dong.join('\n');
 }
 
+// Nhật ký đổi trạng thái 37 ngày (tuần báo cáo + 30 ngày trước để có mốc đầu khâu) — báo cáo tuần nhóm và theo người chạy CÙNG phút sáng
+// thứ 7: đọc 1 lần dùng chung (mốc làm tròn theo phút để 2 lượt gọi cách nhau vài mili-giây vẫn trúng). Có dòng nhật ký mới (id lớn nhất
+// đổi) thì đọc lại — "Gửi ngay" lần 2 luôn thấy thay đổi mới.
+let _lichSu37 = null;
+function lichSu37Ngay(ms) {
+  const tu = vn(Math.floor((ms - 37 * MOT_NGAY_MS) / 60000) * 60000);
+  const idMoi = trangThaiDbService.idLichSuDoiMoiNhat();
+  if (!_lichSu37 || _lichSu37.tu !== tu || _lichSu37.idMoi !== idMoi) _lichSu37 = { tu, idMoi, ds: trangThaiDbService.layLichSuDoiTrangThaiTu(tu) };
+  return _lichSu37.ds;
+}
+
 async function taoBaoCaoTuan(ms = Date.now()) {
   const { rows } = await orderService.getAll();
   const alertService = require('./alertService');
@@ -452,13 +463,97 @@ async function taoBaoCaoTuan(ms = Date.now()) {
   const conLai = rows.filter(r => !daKetThuc(r));
   const duLieu = tinhBaoCaoTuan({
     ms, rows,
-    lichSu: trangThaiDbService.layLichSuDoiTrangThaiTu(vn(ms - 37 * MOT_NGAY_MS)),
+    lichSu: lichSu37Ngay(ms),
     qcLog: nhatKy.layQcLogTrongKhoang(vn(ms - 7 * MOT_NGAY_MS), vn(ms)),
     mucCanhBao: r => (daKetThuc(r) ? null : alertService.tinhMucCanhBao(r, cauHinhCanhBao)),
     donNhanQuaLau: vanHanhService.donDangNhan(conLai, vanHanhService.layCauHinh().y6).filter(d => d.quaHan).map(d => d.sttKey),
     donMuaThuCong: (await trackingAutoService.layDonChuyenThuCong({ vaiTro: 'superadmin' })).map(d => d.sttKey),
   });
   return vanBanBaoCaoTuan(duLieu, require('./phienBanService').moTa);
+}
+
+// ======================= (7) Báo cáo tuần THEO NGƯỜI (24/10/2026, theo yêu cầu người dùng) =======================
+// Gửi RIÊNG superadmin qua bot Trợ lý AI (baoCaoLogService#guiBaoCaoTheoNguoi) — số liệu nhân viên không lộ cho cả nhóm.
+// Việc = số lần người đó đưa đơn vào trạng thái (nhật ký đổi trạng thái); thời gian khâu tính cho người làm bước KẾT THÚC khâu;
+// quét sai / ảnh lấy từ Logs_UploadAnh. Tên "Hệ thống..." (tự chuyển) không tính.
+const VIEC_THEO_NGUOI = [
+  ['TRANG_THAI_XUONG', 'Đã in mã', 'in mã'], ['TRANG_THAI_PHOI', 'Đã lấy phôi', 'lấy phôi'], ['TRANG_THAI_VE_FILE', 'Đã vẽ file', 'vẽ file'],
+  ['TRANG_THAI_XUONG', 'Đang chạy máy', 'nhận chạy máy'], ['TRANG_THAI_XUONG', 'Đã sản xuất', 'sản xuất'], ['TRANG_THAI_XUONG', 'ĐÃ DÁN TEM', 'dán tem'],
+];
+const KHAU_THEO_NGUOI = [
+  { ten: 'Vẽ file (đang vẽ → đã vẽ)', cot: 'TRANG_THAI_VE_FILE', tu: 'Đang vẽ file', den: 'Đã vẽ file' },
+  { ten: 'Chạy máy (đang chạy → đã sản xuất)', cot: 'TRANG_THAI_XUONG', tu: 'Đang chạy máy', den: 'Đã sản xuất' },
+];
+const laHeThong = ten => !ten || /^Hệ thống/.test(ten);
+const BUOC_CHAY_MAY = ['Đang chạy máy', 'Đã sản xuất'];
+
+// -> { tuMs, denMs, nguoi: Map(tên -> { viec, khau, quet, sai, manDo, lapBiChan, anh: { ok, loi, cham, ms[] } }) } — thuần, dễ kiểm thử.
+// nguoiChayMay(sttKey): người chạy máy đang ghi ở đơn (NGUOI_CHAY_MAY) — "nhận chạy máy" do admin chỉ định thì người đổi trạng thái là admin,
+// "đã sản xuất" thường do người chụp ảnh (lấy phôi / admin) bấm: cả 2 bước + thời gian khâu Chạy máy tính cho người chạy máy. ponytail: lấy người chạy máy HIỆN TẠI của đơn — đơn chạy lại lượt 2 bằng người khác thì lượt 1 tính nhầm sang
+// người lượt 2 (hiếm); muốn chính xác thì đọc CHI_DINH_NGUOI_CHAY_MAY trong lịch sử hoạt động.
+function tinhBaoCaoTheoNguoi({ ms, lichSu, quetChup, nguoiChayMay = () => '' }) {
+  const tuMs = ms - 7 * MOT_NGAY_MS;
+  const nguoi = new Map();
+  const lay = t => nguoi.get(t) || nguoi.set(t, { viec: {}, khau: {}, quet: 0, sai: 0, manDo: 0, lapBiChan: 0, anh: { ok: 0, loi: 0, cham: 0, ms: [] } }).get(t);
+  const moc = new Map(); // `${key}|${cot}` -> { giá trị -> lúc vào }
+  for (const l of lichSu) {
+    const t = Date.parse(l.ThoiGian);
+    if (!Number.isFinite(t) || t >= ms) continue;
+    const k = `${l.STT_Key}|${l.Cot}`;
+    const m = moc.get(k) || moc.set(k, {}).get(k);
+    if (t >= tuMs) {
+      const ai = (l.Cot === 'TRANG_THAI_XUONG' && BUOC_CHAY_MAY.includes(l.Sang) && nguoiChayMay(l.STT_Key)) || l.Nguoi;
+      if (!laHeThong(ai)) {
+        const g = lay(ai);
+        for (const [cot, sang, nhan] of VIEC_THEO_NGUOI) if (l.Cot === cot && l.Sang === sang) g.viec[nhan] = (g.viec[nhan] || 0) + 1;
+        // Chỉ tính khi đơn đi THẲNG từ trạng thái đầu khâu (l.Tu) — mốc đầu khâu luôn là lần vào gần nhất, không lấy nhầm mốc của lượt trước.
+        for (const kh of KHAU_THEO_NGUOI) {
+          if (l.Cot === kh.cot && l.Sang === kh.den && l.Tu === kh.tu && m[kh.tu] != null && m[kh.tu] <= t) (g.khau[kh.ten] = g.khau[kh.ten] || []).push(t - m[kh.tu]);
+        }
+      }
+    }
+    m[l.Sang] = t;
+  }
+  for (const q of quetChup) {
+    if (laHeThong(q.nguoi)) continue;
+    const g = lay(q.nguoi);
+    if (q.lap_bi_chan) g.lapBiChan += Number(q.lap_bi_chan) || 0; // dòng tổng đọc lặp bị chặn — không phải lượt quét riêng
+    else if (q.su_kien === 'QUET_QR') {
+      g.quet++;
+      if (q.ket_qua === 'SAI_TRANG_THAI') g.sai++;
+      if (q.man_do) g.manDo++;
+    } else if (q.ket_qua === 'OK') {
+      g.anh.ok++;
+      if (q.cham) g.anh.cham++;
+      if (q.tong_ms != null) g.anh.ms.push(q.tong_ms);
+    } else if (q.ket_qua === 'LOI' || q.su_kien === 'THOAT_GIUA_CHUNG') g.anh.loi++; // lỗi kỹ thuật / bỏ dở giữa chừng
+  }
+  return { tuMs, denMs: ms, nguoi };
+}
+function vanBanBaoCaoTheoNguoi({ tuMs, denMs, nguoi }) {
+  const tongViec = g => Object.values(g.viec).reduce((a, b) => a + b, 0);
+  const ds = [...nguoi].filter(([, g]) => tongViec(g) || g.quet || g.anh.ok || g.anh.loi)
+    .sort((a, b) => tongViec(b[1]) - tongViec(a[1]) || a[0].localeCompare(b[0]));
+  const dong = [`📋 Báo cáo tuần theo người (${ngayGio(tuMs)} → ${ngayGio(denMs)})`, 'Số đơn = số lần người đó chuyển đơn sang bước đó.'];
+  if (!ds.length) dong.push('', 'Không có hoạt động nào trong tuần.');
+  for (const [ten, g] of ds) {
+    dong.push('', `• ${ten}: ${tongViec(g) ? VIEC_THEO_NGUOI.filter(([, , n]) => g.viec[n]).map(([, , n]) => `${n} ${g.viec[n]}`).join(' · ') : 'không chuyển trạng thái đơn nào'}`);
+    for (const kh of KHAU_THEO_NGUOI) if (g.khau[kh.ten]) dong.push(`   ${dongKhau(kh.ten, g.khau[kh.ten])}`);
+    if (g.quet) dong.push(`   Quét QR ${g.quet} lần · sai trạng thái ${g.sai} (${tyLe(g.sai, g.quet)})${g.manDo ? ` · hiện màn đỏ ${g.manDo} lần` : ''}`
+      + (g.lapBiChan ? ` · để camera đọc lặp mã vừa lỗi ${g.lapBiChan} lần` : ''));
+    const a = g.anh, tongAnh = a.ok + a.loi;
+    if (tongAnh) dong.push(`   Ảnh: ${a.ok} ảnh tải xong · giữa ${giay(phanVi(a.ms, 0.5))} · 90% ≤ ${giay(phanVi(a.ms, 0.9))} · chậm (>8s) ${tyLe(a.cham, a.ok)} · lỗi / bỏ dở ${a.loi}`);
+  }
+  return dong.join('\n');
+}
+async function taoBaoCaoTheoNguoi(ms = Date.now()) {
+  const nguoiChayMay = new Map(); // chỉ tra đơn có bước chạy máy trong tuần (không đọc cả bảng trạng thái)
+  return vanBanBaoCaoTheoNguoi(tinhBaoCaoTheoNguoi({
+    ms,
+    lichSu: lichSu37Ngay(ms),
+    quetChup: nhatKy.dsQuetVaChupTrongKhoang(vn(ms - 7 * MOT_NGAY_MS), vn(ms)),
+    nguoiChayMay: k => (nguoiChayMay.has(k) ? nguoiChayMay : nguoiChayMay.set(k, trangThaiDbService.layTheoKey(k).NGUOI_CHAY_MAY || '')).get(k),
+  }));
 }
 
 // Tin dài hơn giới hạn Telegram (4096 ký tự) -> tách theo dòng thành nhiều tin.
@@ -477,4 +572,5 @@ async function guiTinDai(guiTinNhan, chat, text, token) {
   return { ok: true };
 }
 
-module.exports = { thongKeTocDo, donSoDoCu, thongKeMang, taoCsvDoMang, thongKeMangMayChu, taoCsvDoMangMayChu, thongKeDuongTruyen, taoCsvTocDo, taoCsv, danhSachLoiDuLieu, taoFileLoiDuLieu, guiLoiDuLieu, tinhBaoCaoTuan, vanBanBaoCaoTuan, taoBaoCaoTuan, guiTinDai };
+module.exports = { thongKeTocDo, donSoDoCu, thongKeMang, taoCsvDoMang, thongKeMangMayChu, taoCsvDoMangMayChu, thongKeDuongTruyen, taoCsvTocDo, taoCsv, danhSachLoiDuLieu, taoFileLoiDuLieu, guiLoiDuLieu, tinhBaoCaoTuan, vanBanBaoCaoTuan, taoBaoCaoTuan, guiTinDai,
+  tinhBaoCaoTheoNguoi, vanBanBaoCaoTheoNguoi, taoBaoCaoTheoNguoi };

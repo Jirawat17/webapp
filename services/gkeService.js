@@ -130,6 +130,7 @@ function layDanhSachTaiKhoanGke() {
       for (const [khoa, cot] of CAC_TRUONG_CAU_HINH_GKE) ch[khoa] = d[cot];
       ch.hetTienLuc = d.HetTienLuc || '';
       ch.hetTienLyDo = d.HetTienLyDo || '';
+      Object.assign(ch, soDuCua(d));
       return ch;
     }),
     danhSachXuong: caiDatDbService.layDanhSachXuong(),
@@ -278,6 +279,8 @@ async function goiApi(buoc, path, body, cauHinh, { daThuLai = false, extraHeader
     // chặn trùng ở phía họ và trả thẳng data cũ, coi như thành công để đi tiếp lấy tem, không báo lỗi.
     if (data.code === 301 && data.data) {
       ghi(nhatKy, `[GKE] [${buoc}] GKE báo "đã tồn tại từ trước" (code 301) — dùng lại dữ liệu cũ:`, JSON.stringify(data.data));
+      // Không phải vận đơn mới -> không trừ số dư ước tính (taoDonGke). Thuộc tính ẩn: không lọt vào JSON / log.
+      if (data.data && typeof data.data === 'object') Object.defineProperty(data.data, 'daTonTai', { value: true });
       return data.data;
     }
     const loiTokenHong = res.status === 401 || /token/i.test(data.detail || '');
@@ -332,10 +335,68 @@ async function _guiTinGkeHetTien(id, sttKey, tk) {
     console.error(`[GKE] CHƯA gửi được Telegram báo tài khoản "${tk.Ten}" hết tiền: ${(kq && kq.loi) || 'không rõ'} — sẽ thử lại mỗi lượt tự động mua.`);
   }
 }
-function daNapTienGke(id) {
+// soDu (tuỳ chọn): số dư sau khi nạp — nhập thì ghi luôn số dư ước tính mới.
+function daNapTienGke(id, soDu) {
   const tk = caiDatDbService.layTaiKhoanGke(id);
   if (!tk) throw new Error('Không tìm thấy tài khoản');
+  if (soDu !== undefined && soDu !== null && soDu !== '') caiDatDbService.datSoDuGke(id, { SoDu: soMoney(soDu, 'Số dư') });
   return caiDatDbService.boDanhDauGkeHetTien(id);
+}
+
+// ---- Số dư ước tính (24/10/2026, theo yêu cầu người dùng) — xem caiDatDbService#datSoDuGke. Đơn vị tiền do người dùng tự quy ước. ----
+const soMoney = (v, ten) => {
+  const s = String(v ?? '').trim().replace(',', '.');
+  if (s === '') return '';
+  const n = Number(s);
+  if (!Number.isFinite(n) || n < 0) throw new Error(`${ten} phải là số ≥ 0`);
+  return String(Math.round(n * 100) / 100);
+};
+function soDuCua(d) {
+  const soDu = d.SoDu === '' ? null : Number(d.SoDu), gia = d.GiaMotDon === '' ? null : Number(d.GiaMotDon);
+  return { soDu, giaMotDon: gia, nguongSoDu: d.NguongSoDu === '' ? null : Number(d.NguongSoDu),
+    conKhoangDon: soDu != null && gia > 0 ? Math.max(0, Math.floor(soDu / gia)) : null };
+}
+// body: { soDu, giaMotDon, nguongSoDu } — '' = bỏ theo dõi trường đó; vắng = giữ.
+function luuSoDuGke(id, b) {
+  if (!caiDatDbService.layTaiKhoanGke(id)) throw new Error('Không tìm thấy tài khoản');
+  const ghi = {};
+  if (b.soDu !== undefined) ghi.SoDu = soMoney(b.soDu, 'Số dư');
+  if (b.giaMotDon !== undefined) ghi.GiaMotDon = soMoney(b.giaMotDon, 'Giá 1 đơn');
+  if (b.nguongSoDu !== undefined) ghi.NguongSoDu = soMoney(b.nguongSoDu, 'Mức báo');
+  caiDatDbService.datSoDuGke(id, ghi);
+}
+// Tóm tắt mọi tài khoản cho trang Sức khoẻ / tóm tắt buổi sáng.
+function tomTatTaiKhoanGke() {
+  const gan = caiDatDbService.layGanTaiKhoanGke();
+  return caiDatDbService.layDanhSachTaiKhoanGke().map(d => ({
+    id: String(d.id), ten: d.Ten || '#' + d.id, xuong: Object.keys(gan).filter(x => gan[x] === String(d.id)),
+    hetTienLuc: d.HetTienLuc || '', ...soDuCua(d), duoiMucBao: d.SoDu !== '' && d.NguongSoDu !== '' && Number(d.SoDu) <= Number(d.NguongSoDu),
+  }));
+}
+// Gọi sau mỗi vận đơn TẠO MỚI: trừ số dư; xuống ≤ mức báo -> báo Telegram nhóm Vận hành 1 lần (gửi lỗi thì lần mua sau thử lại).
+async function ghiNhanDaMuaGke(cauHinh) {
+  try {
+    const tk = caiDatDbService.truSoDuGke(cauHinh.id);
+    if (!tk || tk.SoDu === '' || tk.NguongSoDu === '' || tk.SoDuDaBao === '1' || Number(tk.SoDu) > Number(tk.NguongSoDu)) return;
+    const ma = caiDatDbService.giuBaoSoDuGke(cauHinh.id);
+    if (!ma) return; // lượt mua khác đang / đã báo
+    let kq = null;
+    try {
+      const { soDu, conKhoangDon } = soDuCua(tk);
+      const xuong = Object.entries(caiDatDbService.layGanTaiKhoanGke()).filter(([, v]) => v === String(cauHinh.id)).map(([x]) => x);
+      const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      kq = await require('./vanHanhService').guiTinVanHanh([
+        `💰 <b>GKE sắp hết tiền</b> — tài khoản "${esc(tk.Ten || '#' + tk.id)}"${xuong.length ? ` (Xưởng ${esc(xuong.join(', '))})` : ''}`,
+        `Số dư ƯỚC TÍNH còn ${esc(soDu)}${conKhoangDon != null ? ` (≈ ${conKhoangDon} đơn)` : ''} — dưới mức báo ${esc(tk.NguongSoDu)}.`,
+        'Nạp tiền rồi vào Settings > Tài khoản GKE nhập số dư mới.',
+      ].join('\n'));
+    } finally {
+      caiDatDbService.ketThucBaoSoDuGke(cauHinh.id, ma, !!(kq && kq.ok)); // lỗi / ném lỗi -> trả lại, lần mua sau báo lại
+    }
+    if (!kq.ok) console.error(`[GKE] Chưa gửi được Telegram báo tài khoản "${tk.Ten}" sắp hết tiền: ${kq.loi || 'không rõ'}`);
+  } catch (err) {
+    console.error('[GKE] Lỗi trừ số dư ước tính:', err.message);
+  }
 }
 
 // Chuẩn hoá để so sánh không phân biệt hoa/thường/dấu — cùng tinh thần taiSanService.chuan(), nhưng
@@ -507,7 +568,9 @@ async function taoDonGke(donHang, cauHinh, nhatKy) {
   };
   ghi(nhatKy, `[GKE] [tạo đơn] Body gửi cho đơn ${donHang.STT_Key}:`, JSON.stringify(body));
 
-  return goiApi('tạo đơn', '/order/create/', body, cauHinh, {}, nhatKy);
+  const kq = await goiApi('tạo đơn', '/order/create/', body, cauHinh, {}, nhatKy);
+  if (!(kq && kq.daTonTai)) ghiNhanDaMuaGke(cauHinh); // chạy nền — không làm chậm / hỏng lượt mua
+  return kq;
 }
 
 // Ngay sau khi order/create/ thành công, tem thường CHƯA generate xong ngay — gọi label/print/
@@ -599,5 +662,6 @@ async function ghiChuLenTem(base64, chu) {
 module.exports = {
   duocMuaTrackingTheoQuocGia, diaChiGuiGke,
   layCauHinhGkeChoDon, layDanhSachTaiKhoanGke, luuTaiKhoanGke, xoaTaiKhoanGke, ganTaiKhoanGkeChoXuong, daNapTienGke, guiTinGkeHetTien,
+  luuSoDuGke, tomTatTaiKhoanGke,
   ghiChuLenTem, tinhCanNangKg, taoDonGke, layTemIn, layLichSuTrackingGke, maQuocGia, MA_DANG_CHO_TEM, gopCacTemPdf,
   chuanHoa };

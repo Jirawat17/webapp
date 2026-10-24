@@ -1175,7 +1175,14 @@ function hienManDoSaiTrangThai(ma, loi, soLan, nut) {
     <div style="font-size:1.5rem;font-weight:800">${escapeHtml(ma)} — QUÉT SAI ${soLan} LẦN</div>
     <div style="font-size:1.1rem;max-width:520px">${escapeHtml(loi)}</div>
     <div style="font-size:1rem;opacity:.9">Đừng quét lại đơn này — kiểm tra chế độ chụp đang chọn và trạng thái của đơn.</div>`;
+  // Còi dài (24/10/2026, theo yêu cầu người dùng): 2 nốt lên xuống + rung, lặp tới khi bấm nút. ponytail: tự tắt sau 2 phút — để quên
+  // máy trên bàn không kêu mãi; màn đỏ vẫn còn tới khi bấm.
+  const coi = () => { phatBeep(940, 380, 0, 'sawtooth'); phatBeep(640, 380, 420, 'sawtooth'); if (navigator.vibrate) navigator.vibrate([350, 100, 350]); };
+  const henCoi = setInterval(coi, 1000);
+  const henTatCoi = setTimeout(() => clearInterval(henCoi), 2 * 60 * 1000);
   const dong = () => {
+    clearInterval(henCoi); clearTimeout(henTatCoi);
+    if (navigator.vibrate) navigator.vibrate(0);
     el.remove();
     manDoDangHien = false;
     // 6 giây để đưa camera ra khỏi mã — camera đọc lại đúng mã đó trong lúc này chỉ hiện toast, không hỏi máy chủ / không bật lại màn đỏ ngay.
@@ -1192,8 +1199,7 @@ function hienManDoSaiTrangThai(ma, loi, soLan, nut) {
   if (nut) taoNut(nut.nhan, '#fde68a', '#7f1d1d', () => { dong(); nut.bam(); });
   taoNut('Đã hiểu', '#fff', '#b91c1c', dong);
   document.body.appendChild(el);
-  phatAmThanhKetQua('SAI_TRANG_THAI');
-  if (navigator.vibrate) navigator.vibrate([400, 150, 400, 150, 400]);
+  coi();
 }
 
 async function xuLyQuetDeXacDinhDon(sttKeyThoDoc, nguon = 'CAMERA') {

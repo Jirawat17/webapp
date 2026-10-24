@@ -301,6 +301,7 @@ db.transaction(() => {
   db.prepare(`INSERT OR REPLACE INTO meta_he_thong (khoa, gia_tri) VALUES (?, ?)`).run(KHOA, bayGio);
 })();
 // -> [{ ThoiGian, STT_Key, Cot, Tu, Sang, Nguoi }] từ mốc `tu` (ISO giờ VN), cũ trước.
+const idLichSuDoiMoiNhat = () => db.prepare(`SELECT COALESCE(MAX(id), 0) FROM lich_su_doi_trang_thai`).pluck().get();
 const layLichSuDoiTrangThaiTu = tu => db.prepare(`SELECT ThoiGian, STT_Key, Cot, Tu, Sang, Nguoi FROM lich_su_doi_trang_thai WHERE ThoiGian >= ? ORDER BY id`).all(tu);
 // tuyChon.nguoi: tên người thực hiện (orderService.update truyền user.ten); không truyền thì lấy NguoiCapNhatCuoi trong updates.
 function ghiDe(sttKey, updates, tuyChon = {}) {
@@ -386,4 +387,4 @@ function layDonDoiTrangThaiTu(tu) {
     .all(tu).map(({ stt_key, ...r }) => ({ STT_Key: stt_key, ...apDungMacDinhThat(r) }));
 }
 
-module.exports = { CAC_COT, RONG_MAC_DINH, layTheoKey, layTatCa, dsKeyDungChungTracking, ghiDe, ghiDeNhieu, daKhoiTaoCanhBaoTinhTrang, ghiCanhBaoTinhTrang, demTheoXuong, dsKeyTheoXuong, doiTenXuongHangLoat, layDonDoiTrangThaiTu, layLichSuDoiTrangThaiTu };
+module.exports = { CAC_COT, RONG_MAC_DINH, layTheoKey, layTatCa, dsKeyDungChungTracking, ghiDe, ghiDeNhieu, daKhoiTaoCanhBaoTinhTrang, ghiCanhBaoTinhTrang, demTheoXuong, dsKeyTheoXuong, doiTenXuongHangLoat, layDonDoiTrangThaiTu, layLichSuDoiTrangThaiTu, idLichSuDoiMoiNhat };

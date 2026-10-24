@@ -121,4 +121,19 @@ function taoMaLienKet(appUser) {
 }
 function huyLienKet() { caiDat.datCaiDatVanHanh({ TG_AI_USER_ID: '', TG_AI_APP_USER: '' }); }
 
-module.exports = { batDau, trangThai, luuToken, taoMaLienKet, huyLienKet, _xuLyTin: xuLyTin };
+// Tin hệ thống tự gửi (24/10/2026 — tóm tắt buổi sáng, báo cáo tuần theo người): chỉ tới đúng tài khoản Telegram đã liên kết.
+// -> { ok, loi }. Chat riêng với bot có chat_id = ID người dùng.
+async function guiRieng(chu) {
+  const ch = cauHinh();
+  if (!ch.token || !ch.userId) return { ok: false, loi: 'Chưa có bot Trợ lý AI hoặc chưa liên kết Telegram (Settings > Trợ lý AI).' };
+  try { await guiChu(ch.token, ch.userId, chu); return { ok: true }; }
+  catch (err) { return { ok: false, loi: 'Gửi Telegram lỗi: ' + err.message }; }
+}
+// Tài khoản app (superadmin, đang hoạt động) đã liên kết — tin tự gửi dùng quyền của tài khoản này. null = không dùng được.
+function nguoiLienKet() {
+  const ch = cauHinh();
+  const tk = ch.userId ? taiKhoanService.layTheoTen(ch.appUser) : null;
+  return tk && tk.VaiTro === 'superadmin' && String(tk.KichHoat).toUpperCase() === 'TRUE' ? { ten: tk.Ten, vaiTro: tk.VaiTro, xuong: '' } : null;
+}
+
+module.exports = { batDau, trangThai, luuToken, taoMaLienKet, huyLienKet, guiRieng, nguoiLienKet, _xuLyTin: xuLyTin };

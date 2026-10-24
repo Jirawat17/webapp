@@ -21,11 +21,19 @@
 <div id="nav"></div>
 <div class="page">
   <h2>Logs</h2>
-  <!-- Y20 (11/10/2026): 2 tab — log server (như cũ) và báo lỗi từ nhân viên. -->
-  <div style="display:flex;gap:8px;margin-bottom:var(--space-3)">
-    <button type="button" class="btn-hanh-dong" id="nut-tab-log" onclick="chonTabLogs('log')">Log server</button>
+  <!-- Y20 (11/10/2026): 2 tab — log server (như cũ) và báo lỗi từ nhân viên. Sức khoẻ (24/10/2026): tab đầu, mở trang là thấy. -->
+  <div style="display:flex;gap:8px;margin-bottom:var(--space-3);flex-wrap:wrap">
+    <button type="button" class="btn-hanh-dong" id="nut-tab-suc-khoe" onclick="chonTabLogs('suc-khoe')">Sức khoẻ</button>
+    <button type="button" class="btn-hanh-dong phu" id="nut-tab-log" onclick="chonTabLogs('log')">Log server</button>
     <button type="button" class="btn-hanh-dong phu" id="nut-tab-bao-loi" onclick="chonTabLogs('bao-loi')">Báo lỗi từ nhân viên</button>
     <button type="button" class="btn-hanh-dong phu" id="nut-tab-upload-anh" onclick="chonTabLogs('upload-anh')">Logs_UploadAnh</button>
+  </div>
+  <div id="tab-suc-khoe">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button type="button" class="btn-hanh-dong" onclick="taiSucKhoe()">Làm mới</button>
+      <span id="sk-luc" style="color:var(--color-text-muted);font-size:0.85rem"></span>
+    </div>
+    <div id="sk-ds" style="display:grid;gap:var(--space-3);margin-top:var(--space-3);grid-template-columns:repeat(auto-fit,minmax(320px,1fr))"></div>
   </div>
   <!-- Logs_UploadAnh (12/10/2026): mọi thao tác ở menu Quét QR + thiết bị/phiên bản app (routes/nhatKyQuet.js), giữ 90 ngày. -->
   <div id="tab-upload-anh" style="display:none">
@@ -65,7 +73,7 @@
     </div>
     <div id="ds-bao-loi" style="display:grid;gap:var(--space-3);margin-top:var(--space-3)"></div>
   </div>
-  <div id="tab-log">
+  <div id="tab-log" style="display:none">
   <p>Log console của server (console.log/warn/error) — chỉ giữ tối đa ~5MB gần nhất, tự xoay vòng.</p>
   <div class="bao-cao-form">
     <div class="truong">
@@ -99,16 +107,17 @@ let toanBoDong = [];
   }
   document.getElementById('btn-lam-moi-log').onclick = taiLog;
   document.getElementById('loc-log').oninput = renderLog;
-  await taiLog();
+  await taiSucKhoe();
 })();
 
+let daTaiLog = false; // log server chỉ tải khi mở tab lần đầu (trước 24/10 là tab mặc định)
 function chonTabLogs(tab) {
-  document.getElementById('tab-log').style.display = tab === 'log' ? '' : 'none';
-  document.getElementById('tab-bao-loi').style.display = tab === 'bao-loi' ? '' : 'none';
-  document.getElementById('tab-upload-anh').style.display = tab === 'upload-anh' ? '' : 'none';
-  document.getElementById('nut-tab-log').className = 'btn-hanh-dong' + (tab === 'log' ? '' : ' phu');
-  document.getElementById('nut-tab-bao-loi').className = 'btn-hanh-dong' + (tab === 'bao-loi' ? '' : ' phu');
-  document.getElementById('nut-tab-upload-anh').className = 'btn-hanh-dong' + (tab === 'upload-anh' ? '' : ' phu');
+  for (const t of ['suc-khoe', 'log', 'bao-loi', 'upload-anh']) {
+    document.getElementById('tab-' + t).style.display = tab === t ? '' : 'none';
+    document.getElementById('nut-tab-' + t).className = 'btn-hanh-dong' + (tab === t ? '' : ' phu');
+  }
+  if (tab === 'suc-khoe') taiSucKhoe();
+  if (tab === 'log' && !daTaiLog) { daTaiLog = true; taiLog(); }
   if (tab === 'bao-loi') taiBaoLoiNhanVien();
   if (tab === 'upload-anh') {
     const o = document.getElementById('ua-tu');
@@ -118,6 +127,26 @@ function chonTabLogs(tab) {
     }
     taiLogsUploadAnh();
   }
+}
+
+// ---------- Sức khoẻ hệ thống (24/10/2026) — routes/logs.js GET /logs/suc-khoe ----------
+const MAU_SUC_KHOE = { tot: ['#16a34a', 'Ổn'], 'chu-y': ['#d97706', 'Cần chú ý'], loi: ['#dc2626', 'Có lỗi'], 'thong-tin': ['var(--color-border)', ''] };
+async function taiSucKhoe() {
+  const ds = document.getElementById('sk-ds'), luc = document.getElementById('sk-luc');
+  luc.textContent = 'Đang tải…'; // vài giây — chờ đọc toàn bộ đơn hàng (mục Tracking)
+  ds.style.opacity = '0.5';
+  try {
+    const kq = await apiFetch('/logs/suc-khoe');
+    document.getElementById('sk-luc').textContent = 'Cập nhật lúc ' + kq.luc;
+    ds.innerHTML = kq.muc.map(m => {
+      const [mau, nhan] = MAU_SUC_KHOE[m.muc] || MAU_SUC_KHOE['thong-tin'];
+      return `<div style="border:1px solid var(--color-border);border-left:5px solid ${mau};border-radius:var(--radius-md);padding:var(--space-3);background:var(--color-surface)">
+        <div style="display:flex;justify-content:space-between;gap:8px"><strong>${escapeHtml(m.ten)}</strong>${nhan ? `<span style="color:${mau};font-weight:600;font-size:0.85rem">${nhan}</span>` : ''}</div>
+        ${m.dong.map(d => `<div style="font-size:0.85rem;margin-top:4px;word-break:break-word">${escapeHtml(d)}</div>`).join('')}
+      </div>`;
+    }).join('');
+  } catch (e) { luc.textContent = ''; ds.innerHTML = `<p style="color:var(--color-danger-text)">Không tải được: ${escapeHtml(e.message)}</p>`; }
+  finally { ds.style.opacity = ''; }
 }
 
 // ---------- Logs_UploadAnh ----------

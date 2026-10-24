@@ -244,14 +244,47 @@ if (!db.prepare(`PRAGMA table_info(danh_sach_xuong)`).all().some(c => c.name ===
 
 // Hết tiền (22/10/2026, theo yêu cầu người dùng): GKE báo "余额不足" -> ghi mốc; tự động mua tracking của tài khoản DỪNG tới khi superadmin
 // bấm "Đã nạp tiền" (Settings). Không nằm trong CAC_COT_TAI_KHOAN_GKE -> "Lưu tài khoản" không ghi đè.
-for (const c of ['HetTienLuc', 'HetTienLyDo', 'HetTienDaBao']) {
+// Số dư ước tính (24/10/2026, theo yêu cầu người dùng — GKE không có API số dư): superadmin nhập số dư lúc nạp tiền + giá ước tính 1 đơn +
+// mức báo; mỗi vận đơn TẠO MỚI trừ GiaMotDon (gkeService#ghiNhanDaMuaGke); còn ≤ NguongSoDu -> báo Telegram 1 lần (SoDuDaBao) tới lần nhập
+// số dư sau. '' = chưa dùng. Cũng không nằm trong CAC_COT_TAI_KHOAN_GKE.
+const COT_THEM_GKE = ['HetTienLuc', 'HetTienLyDo', 'HetTienDaBao', 'SoDu', 'GiaMotDon', 'NguongSoDu', 'SoDuDaBao'];
+for (const c of COT_THEM_GKE) {
   if (!db.prepare(`PRAGMA table_info(tai_khoan_gke)`).all().some(x => x.name === c)) db.exec(`ALTER TABLE tai_khoan_gke ADD COLUMN ${c} TEXT NOT NULL DEFAULT ''`);
 }
 function layDanhSachTaiKhoanGke() {
-  return db.prepare(`SELECT id, ${CAC_COT_TAI_KHOAN_GKE.join(', ')}, HetTienLuc, HetTienLyDo, HetTienDaBao FROM tai_khoan_gke ORDER BY id`).all();
+  return db.prepare(`SELECT id, ${[...CAC_COT_TAI_KHOAN_GKE, ...COT_THEM_GKE].join(', ')} FROM tai_khoan_gke ORDER BY id`).all();
 }
 function layTaiKhoanGke(id) {
-  return db.prepare(`SELECT id, ${CAC_COT_TAI_KHOAN_GKE.join(', ')}, HetTienLuc, HetTienLyDo, HetTienDaBao FROM tai_khoan_gke WHERE id = ?`).get(Number(id)) || null;
+  return db.prepare(`SELECT id, ${[...CAC_COT_TAI_KHOAN_GKE, ...COT_THEM_GKE].join(', ')} FROM tai_khoan_gke WHERE id = ?`).get(Number(id)) || null;
+}
+// giaTri: { SoDu?, GiaMotDon?, NguongSoDu? } (chuỗi số hoặc '') — vắng = giữ. Nhập số dư mới -> được báo lại khi xuống dưới mức.
+function datSoDuGke(id, giaTri) {
+  const cot = ['SoDu', 'GiaMotDon', 'NguongSoDu'].filter(c => giaTri[c] !== undefined);
+  if (giaTri.SoDu !== undefined) cot.push('SoDuDaBao');
+  if (!cot.length) return;
+  const vals = cot.map(c => (c === 'SoDuDaBao' ? '' : String(giaTri[c])));
+  db.prepare(`UPDATE tai_khoan_gke SET ${cot.map(c => `${c} = ?`).join(', ')} WHERE id = ?`).run(...vals, Number(id));
+}
+// Trừ 1 đơn khỏi số dư (chỉ khi đã nhập cả số dư lẫn giá) -> dòng tài khoản sau khi trừ.
+function truSoDuGke(id) {
+  db.prepare(`UPDATE tai_khoan_gke SET SoDu = CAST(ROUND(CAST(SoDu AS REAL) - CAST(GiaMotDon AS REAL), 2) AS TEXT)
+    WHERE id = ? AND SoDu != '' AND GiaMotDon != ''`).run(Number(id));
+  return layTaiKhoanGke(id);
+}
+// Báo "sắp hết tiền": SoDuDaBao = '' (chưa báo) | 'dang:<ISO>' (1 lượt đang gửi) | '1' (đã báo). Giữ quyền TRƯỚC khi gửi -> mã giữ chỗ
+// nếu giành được, null nếu lượt khác đang gửi / đã báo. Giữ chỗ quá 10 phút (máy chủ khởi động lại giữa lúc gửi) coi như bỏ — lượt sau giành
+// lại được. Xong: ketThucBaoSoDuGke(da=true -> '1', false -> trả lại ''), CHỈ khi cờ vẫn đúng mã của lượt mình — superadmin vừa nhập số
+// dư mới (cờ về '') thì không đụng, số dư mới vẫn được báo.
+const GIU_BAO_SO_DU_MS = 10 * 60 * 1000;
+function giuBaoSoDuGke(id) {
+  const ma = 'dang:' + new Date().toISOString();
+  const het = 'dang:' + new Date(Date.now() - GIU_BAO_SO_DU_MS).toISOString();
+  const doi = db.prepare(`UPDATE tai_khoan_gke SET SoDuDaBao = ? WHERE id = ? AND (SoDuDaBao = '' OR (SoDuDaBao LIKE 'dang:%' AND SoDuDaBao < ?))`)
+    .run(ma, Number(id), het).changes;
+  return doi ? ma : null;
+}
+function ketThucBaoSoDuGke(id, ma, daBao) {
+  db.prepare(`UPDATE tai_khoan_gke SET SoDuDaBao = ? WHERE id = ? AND SoDuDaBao = ?`).run(daBao ? '1' : '', Number(id), ma);
 }
 // -> true nếu VỪA chuyển sang hết tiền (lần đầu) — nơi gọi chỉ báo Telegram 1 lần.
 function danhDauGkeHetTien(id, luc, lyDo) {
@@ -524,7 +557,7 @@ const datCaiDatVanHanh = db.transaction(giaTri => {
 
 module.exports = {
   layGioDongXuong, datGioDongXuong, datMoTamXuong, layMatKhauXacNhan, datMatKhauXacNhan,
-  danhDauGkeHetTien, boDanhDauGkeHetTien, ghiDaBaoGkeHetTien,
+  danhDauGkeHetTien, boDanhDauGkeHetTien, ghiDaBaoGkeHetTien, datSoDuGke, truSoDuGke, giuBaoSoDuGke, ketThucBaoSoDuGke,
   layCaiDatVanHanh, datCaiDatVanHanh,
   layCauHinhQc, datCauHinhQc, layMocApDungAutoQc, layTelegramQc, datTelegramQc, layGiaTokenQc, datGiaTokenQc,
   layPhienBanPromptQc, layPromptDangDungQc, datPromptDangDungQc, luuPhienBanPromptQc, layLichSuPromptQc,
