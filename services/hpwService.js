@@ -105,8 +105,9 @@ async function fetchHpw(buoc, method, url, { headers = {}, body, nhatKy } = {}) 
     return await fetch(url, { method, signal: huy.signal, headers, body });
   } catch (err) {
     const quaGio = err.name === 'AbortError';
-    ghi(nhatKy, `[HPW] [${buoc}] ${quaGio ? `Quá thời gian chờ (${TIMEOUT_MS / 1000}s)` : `Lỗi mạng: ${err.message}`}`);
-    throw Object.assign(new Error(`[${buoc}] ${quaGio ? `HPW không trả lời trong ${TIMEOUT_MS / 1000} giây` : `Lỗi kết nối tới HPW: ${err.message}`}`), { khongRoKetQua: true });
+    const loiMang = require('./klService').moTaLoiMang(err); // nguyên nhân thật trong err.cause (xem klService.js)
+    ghi(nhatKy, `[HPW] [${buoc}] ${quaGio ? `Quá thời gian chờ (${TIMEOUT_MS / 1000}s)` : `Lỗi mạng: ${loiMang}`}`);
+    throw Object.assign(new Error(`[${buoc}] ${quaGio ? `HPW không trả lời trong ${TIMEOUT_MS / 1000} giây` : `Lỗi kết nối tới HPW: ${loiMang}`}`), { khongRoKetQua: true });
   } finally {
     clearTimeout(hen);
   }

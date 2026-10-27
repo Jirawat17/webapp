@@ -147,6 +147,13 @@ function duDoanSkuKl(row, dsDon) {
 }
 
 // ---- Gọi API ----
+// fetch của Node chỉ báo "fetch failed" — nguyên nhân thật (ECONNRESET, UND_ERR_SOCKET "other side closed", ENOTFOUND, lỗi chứng chỉ...) nằm
+// trong err.cause (28/10/2026: lỗi tạo đơn KL chỉ hiện "fetch failed", không biết vì sao).
+const moTaLoiMang = err => {
+  const c = err && err.cause;
+  const chiTiet = c ? [c.code, c.message].filter(Boolean).join(' ') : '';
+  return chiTiet && chiTiet !== err.message ? `${err.message} (${chiTiet})` : err.message;
+};
 // Đọc dạng text rồi mới thử JSON (giống gkeService.fetchJson). Lỗi mạng / quá giờ -> err.khongRoKetQua = true: với lệnh TẠO ĐƠN nghĩa là
 // KHÔNG BIẾT KL đã tạo hay chưa — nơi gọi giữ dấu KL_DANG_TAO, lượt sau tra lại.
 async function goi(buoc, method, path, cauHinh, { body, nhatKy, nhiPhan = false } = {}) {
@@ -162,8 +169,9 @@ async function goi(buoc, method, path, cauHinh, { body, nhatKy, nhiPhan = false 
     });
   } catch (err) {
     const quaGio = err.name === 'AbortError';
-    ghi(nhatKy, `[KL] [${buoc}] ${quaGio ? `Quá thời gian chờ (${TIMEOUT_MS / 1000}s)` : `Lỗi mạng: ${err.message}`}`);
-    throw Object.assign(new Error(`[${buoc}] ${quaGio ? `KL không trả lời trong ${TIMEOUT_MS / 1000} giây` : `Lỗi kết nối tới KL: ${err.message}`}`), { khongRoKetQua: true });
+    const loiMang = moTaLoiMang(err);
+    ghi(nhatKy, `[KL] [${buoc}] ${quaGio ? `Quá thời gian chờ (${TIMEOUT_MS / 1000}s)` : `Lỗi mạng: ${loiMang}`}`);
+    throw Object.assign(new Error(`[${buoc}] ${quaGio ? `KL không trả lời trong ${TIMEOUT_MS / 1000} giây` : `Lỗi kết nối tới KL: ${loiMang}`}`), { khongRoKetQua: true });
   } finally {
     clearTimeout(hen);
   }
@@ -364,7 +372,7 @@ function taoBodyDonKl(row, dsDon, cauHinh, maQuocGia) {
 }
 
 module.exports = {
-  dangTaoDonKl, DON_VI_KL, BASE_URL,
+  dangTaoDonKl, DON_VI_KL, BASE_URL, moTaLoiMang,
   layCauHinhKlChoDon, layDanhSachTaiKhoanKl, luuTaiKhoanKl, xoaTaiKhoanKl, ganTaiKhoanKlChoXuong, docFileSkuKl, luuDanhSachSkuKl, maSkuCuaDon, chuanSku, timSkuKl, duDoanSkuKl,
   timDonTheoMa, laDonThanhCong, laDonChoCapMa, moTaTrangThaiKl, layDonKl, taoDonKl, layLabelKl, layTrackingKl, suKienMoiNhat, tenHangVanChuyen, maBangMy, taoBodyDonKl,
 };
