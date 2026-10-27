@@ -31,7 +31,7 @@ async function _muaHpw(sttKey, user) {
   const t = tas();
   const nhatKy = [];
   const nhan = `[HPW - ${user.ten}]`;
-  const log = (ketQua, chiTiet, them = {}) => t.ghiLogTrackingVaoDb({ sttKey, nguon: 'HPW - Thủ công', nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua, chiTiet, ...them });
+  const log = (ketQua, chiTiet, them = {}) => t.ghiLogTrackingVaoDb({ sttKey, nguon: user === t.NGUOI_HE_THONG ? 'HPW - Tự động' : 'HPW - Thủ công', nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua, chiTiet, ...them });
   try {
     if (!hangChung.duocMuaHangKhac(user.vaiTro)) throw new Error('Chỉ admin / vẽ file được mua tracking HPW — đơn đã có tracking HPW thì vẫn in label được.');
     const { rows } = await orderService.getAll({ docThat: true });

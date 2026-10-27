@@ -80,8 +80,9 @@ function hangChoThuVien() {
 const NHAN_TRACKING = { DA_MUA: 'đã mua', DANG_CHO_TEM: 'chờ tem GKE', DANG_TAO_DON_KL: 'đang mua KL', DANG_MUA_HPW: 'đang mua HPW',
   DEN_HAN_CHO_XU_LY: 'đến hạn chờ xử lý', DANG_CHO: 'chờ đủ giờ', CHO_DON_MUA_NHOM: 'chờ đơn .1 mua', DON_CON_CHUA_GHEP_NHOM: 'đơn con chưa ghép nhóm',
   LOI_NHOM: 'lỗi dữ liệu DonNhieuAo', THIEU_TAI_KHOAN_GKE: 'Xưởng chưa có tài khoản GKE', GKE_HET_TIEN: 'tạm dừng vì GKE hết tiền',
-  KHONG_THUOC_US_UK: 'không thuộc US/UK', DA_HUY: 'đã huỷ', CHUYEN_THU_CONG: 'chuyển MUA THỦ CÔNG' };
-const CAN_XEM = ['CHUYEN_THU_CONG', 'THIEU_TAI_KHOAN_GKE', 'LOI_NHOM', 'DON_CON_CHUA_GHEP_NHOM', 'GKE_HET_TIEN'];
+  KHONG_THUOC_US_UK: 'không thuộc US/UK', DA_HUY: 'đã huỷ', CHUYEN_THU_CONG: 'chuyển MUA THỦ CÔNG',
+  KHONG_TU_MUA_DUOC: 'không hãng nào tự mua được' };
+const CAN_XEM = ['CHUYEN_THU_CONG', 'KHONG_TU_MUA_DUOC', 'THIEU_TAI_KHOAN_GKE', 'LOI_NHOM', 'DON_CON_CHUA_GHEP_NHOM', 'GKE_HET_TIEN'];
 async function trackingGke() {
   const dsTk = require('./gkeService').tomTatTaiKhoanGke();
   const ds = await require('./trackingAutoService').layDanhSachDonAutoTracking({ vaiTro: 'superadmin', ten: 'Hệ thống (Sức khoẻ)' });

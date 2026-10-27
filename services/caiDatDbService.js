@@ -60,6 +60,9 @@ const CAC_COT_CAU_HINH_TRACKING = [
   // xem trackingAutoService.js#thoiDiemDenHan). MocApDungTheoInMa — lần khởi động ĐẦU TIÊN có tính năng này (ghi
   // bên dưới): CHỈ đơn chuyển "Đã in mã" từ mốc này trở đi mới áp dụng, đơn in mã trước đó không bị mua hàng loạt.
   'SoGioSauInMa', 'MocApDungTheoInMa',
+  // Tự mua KL / HPW (28/10/2026, theo yêu cầu người dùng) — công tắc riêng từng hãng ('TRUE'/'FALSE'; GKE vẫn là BatTuDongMuaTracking) +
+  // thứ tự ưu tiên chung "GKE,KL,HPW" (trackingAutoService.js#layCauHinh). Rỗng = tắt / thứ tự mặc định.
+  'TuMuaKl', 'TuMuaHpw', 'ThuTuHangTuMua',
 ];
 db.exec(`CREATE TABLE IF NOT EXISTS cau_hinh_tracking (
   id INTEGER PRIMARY KEY CHECK (id = 1),

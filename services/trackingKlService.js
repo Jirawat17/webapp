@@ -44,6 +44,7 @@ async function _muaTrackingKl(sttKey, user) {
   const t = tas();
   const nhatKy = [];
   const nhan = `[KL - ${user.ten}]`;
+  const nguon = user === t.NGUOI_HE_THONG ? 'KL - Tự động' : 'KL - Thủ công';
   try {
     if (!hangChung.duocMuaHangKhac(user.vaiTro)) throw new Error('Chỉ admin / vẽ file được mua tracking KL — đơn đã có tracking KL thì vẫn in label được.');
     const { rows } = await orderService.getAll({ docThat: true });
@@ -51,7 +52,7 @@ async function _muaTrackingKl(sttKey, user) {
     if (!row) throw new Error('Không tìm thấy đơn: ' + sttKey);
     t.chanMuaDonDaHuy(row);
     if (row.TRACKING_ID) {
-      t.ghiLogTrackingVaoDb({ sttKey, nguon: 'KL - Thủ công', nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: 'Bỏ qua', chiTiet: `Đơn đã có tracking ${row.TRACKING_ID} — không mua KL.` });
+      t.ghiLogTrackingVaoDb({ sttKey, nguon, nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: 'Bỏ qua', chiTiet: `Đơn đã có tracking ${row.TRACKING_ID} — không mua KL.` });
       return null;
     }
     if (row.TAM_THOI === gkeService.MA_DANG_CHO_TEM) {
@@ -154,12 +155,12 @@ async function _muaTrackingKl(sttKey, user) {
     t.ghiLogTracking(`${nhan} ${sttKey}: đã mua tracking KL ${don.barcode} (${hang})${phi ? ` · phí ${phi}` : ''}`, sttKey);
     ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'MUA_TRACKING_KL', sttKey, chiTiet: { trackingNum: String(don.barcode), hangVanChuyen: hang, klSid: don.sid ? String(don.sid) : '', vendorSid: don.vendor_sid || '', phiUsd: don.usd ?? null, phiVnd: don.vnd ?? null } })
       .catch(err => console.error('[TrackingKL] Lỗi ghi log nền:', err.message));
-    t.ghiLogTrackingVaoDb({ sttKey, nguon: 'KL - Thủ công', nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: 'Thành công', trackingId: String(don.barcode), hangVanChuyen: hang, chiTiet: nhatKy.join('\n') });
+    t.ghiLogTrackingVaoDb({ sttKey, nguon, nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: 'Thành công', trackingId: String(don.barcode), hangVanChuyen: hang, chiTiet: nhatKy.join('\n') });
     return { tracking_num: String(don.barcode), delivery_carrier: hang, kl: { sid: don.sid ? String(don.sid) : '', usd: don.usd ?? null, vnd: don.vnd ?? null }, dayCheKhachHang, loiSheetCon,
       canhBaoHang: [canhBaoHang, canhBaoSid].filter(Boolean).join(' ') };
   } catch (err) {
     t.ghiLogTracking(`${nhan} ${sttKey}: LỖI — ${err.message}`, sttKey);
-    t.ghiLogTrackingVaoDb({ sttKey, nguon: 'KL - Thủ công', nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: 'Lỗi', chiTiet: nhatKy.concat(`LỖI: ${err.message}`).join('\n') });
+    t.ghiLogTrackingVaoDb({ sttKey, nguon, nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: 'Lỗi', chiTiet: nhatKy.concat(`LỖI: ${err.message}`).join('\n') });
     throw err;
   }
 }

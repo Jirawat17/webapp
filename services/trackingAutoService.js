@@ -101,17 +101,17 @@ function themSo0ZipMy(row, nhatKy) {
 }
 const XOA_THEO_DOI_THU = { TU_MUA_SO_LAN_THU: '', TU_MUA_CHE_DO: '', TU_MUA_LOI_GAN_NHAT: '', TU_MUA_THOI_GIAN_THU: '' };
 
-// Không throw — lỗi ghi chỉ in console (không che lỗi mua gốc).
-function ghiNhanLanThuTuDong(row, err) {
+// Không throw — lỗi ghi chỉ in console (không che lỗi mua gốc). chuyenNgay: chuyển thủ công luôn, không chờ đủ 10 lần (HPW gợi ý địa chỉ).
+function ghiNhanLanThuTuDong(row, err, chuyenNgay = false) {
   try {
     const soLan = (Number(row.TU_MUA_SO_LAN_THU) || 0) + 1;
-    const chuyenThuCong = soLan >= SO_LAN_THU_TU_DONG_TOI_DA;
+    const chuyenThuCong = chuyenNgay || soLan >= SO_LAN_THU_TU_DONG_TOI_DA;
     trangThaiDbService.ghiDe(row.STT_Key, {
       TU_MUA_SO_LAN_THU: String(soLan), TU_MUA_LOI_GAN_NHAT: err.message, TU_MUA_THOI_GIAN_THU: thoiGianVNISOString(),
       ...(chuyenThuCong ? { TU_MUA_CHE_DO: CHE_DO_THU_CONG } : {}),
     });
     if (!chuyenThuCong) return;
-    ghiLogTracking(`[Tự động] ${row.STT_Key}: đã thử ${soLan} lần không mua được — CHUYỂN SANG MUA THỦ CÔNG. Lỗi gần nhất: ${err.message}`, row.STT_Key, true);
+    ghiLogTracking(`[Tự động] ${row.STT_Key}: ${chuyenNgay ? 'HPW gợi ý sửa địa chỉ' : `đã thử ${soLan} lần không mua được`} — CHUYỂN SANG MUA THỦ CÔNG. Lỗi gần nhất: ${err.message}`, row.STT_Key, true);
     ghiLog({
       nguoiDung: NGUOI_HE_THONG.ten, vaiTro: NGUOI_HE_THONG.vaiTro, hanhDong: 'TU_DONG_MUA_CHUYEN_THU_CONG', sttKey: row.STT_Key,
       chiTiet: { soLanThu: soLan, lyDo: err.message },
@@ -203,11 +203,26 @@ async function ghiLogTrackingVaoDb({ sttKey, nguon, nguoiDung, vaiTro, ketQua, t
 // services/caiDatDbService.js). Chưa từng lưu lần nào (chưa migrate/chưa ai lưu) thì coi như TẮT (mặc
 // định an toàn), không chặn phần còn lại của app.
 // mocApDungTheoInMa: ms, NaN nếu thiếu -> điều kiện "Đã in mã" không áp dụng cho đơn nào (an toàn).
+// Tự mua KL / HPW (28/10/2026, theo yêu cầu người dùng): công tắc riêng từng hãng (batHang) + thứ tự ưu tiên chung (thuTu) — đơn đến hạn
+// mua ở hãng ĐẦU TIÊN đang bật mà đơn đủ điều kiện (chonHangTuMua). GKE dùng lại cột BatTuDongMuaTracking cũ (đang bật = GKE bật).
+// bat = có ít nhất 1 hãng bật.
+const HANG_TU_MUA = ['GKE', 'KL', 'HPW'];
+const docThuTuHang = s => {
+  const ds = String(s || '').split(',').filter(h => HANG_TU_MUA.includes(h));
+  return new Set(ds).size === HANG_TU_MUA.length ? ds : [...HANG_TU_MUA];
+};
 async function layCauHinh() {
   const dong = caiDatDbService.layCauHinhTracking();
-  if (!dong) return { bat: false, soPhutCho: SO_PHUT_MAC_DINH, soGioSauInMa: SO_GIO_SAU_IN_MA_MAC_DINH, mocApDungTheoInMa: NaN, daCoDongDuLieu: false };
+  if (!dong) {
+    return { bat: false, batHang: { GKE: false, KL: false, HPW: false }, thuTu: [...HANG_TU_MUA],
+      soPhutCho: SO_PHUT_MAC_DINH, soGioSauInMa: SO_GIO_SAU_IN_MA_MAC_DINH, mocApDungTheoInMa: NaN, daCoDongDuLieu: false };
+  }
+  const laBat = v => String(v).toUpperCase() === 'TRUE';
+  const batHang = { GKE: laBat(dong.BatTuDongMuaTracking), KL: laBat(dong.TuMuaKl), HPW: laBat(dong.TuMuaHpw) };
   return {
-    bat: String(dong.BatTuDongMuaTracking).toUpperCase() === 'TRUE',
+    bat: HANG_TU_MUA.some(h => batHang[h]),
+    batHang,
+    thuTu: docThuTuHang(dong.ThuTuHangTuMua),
     soPhutCho: Number(dong.SoPhutCho) > 0 ? Number(dong.SoPhutCho) : SO_PHUT_MAC_DINH,
     soGioSauInMa: Number(dong.SoGioSauInMa) > 0 ? Number(dong.SoGioSauInMa) : SO_GIO_SAU_IN_MA_MAC_DINH,
     mocApDungTheoInMa: new Date(dong.MocApDungTheoInMa || '').getTime(),
@@ -217,8 +232,13 @@ async function layCauHinh() {
 
 // Ghi cấu hình — UPSERT ghi 1 phần (chỉ BatTuDongMuaTracking/SoPhutCho/SoGioSauInMa, không đụng các cột Gke* mà
 // gkeService.js#luuCauHinhGke ghi riêng trên CÙNG dòng — xem caiDatDbService.js#datCauHinhTracking).
-async function luuCauHinh({ bat, soPhutCho, soGioSauInMa }) {
-  caiDatDbService.datCauHinhTracking({ BatTuDongMuaTracking: bat ? 'TRUE' : 'FALSE', SoPhutCho: soPhutCho, SoGioSauInMa: soGioSauInMa });
+// batHang {GKE, KL, HPW: boolean}, thuTu: hoán vị của HANG_TU_MUA — nơi gọi (routes/tracking.js) đã kiểm tra.
+async function luuCauHinh({ batHang, thuTu, soPhutCho, soGioSauInMa }) {
+  const tf = v => (v ? 'TRUE' : 'FALSE');
+  caiDatDbService.datCauHinhTracking({
+    BatTuDongMuaTracking: tf(batHang.GKE), TuMuaKl: tf(batHang.KL), TuMuaHpw: tf(batHang.HPW), ThuTuHangTuMua: thuTu.join(','),
+    SoPhutCho: soPhutCho, SoGioSauInMa: soGioSauInMa,
+  });
 }
 
 // Khoảng cách quét trạng thái tracking thật — bổ sung 21/09/2026, theo yêu cầu người dùng: cho chỉnh
@@ -448,7 +468,7 @@ async function _muaTrackingChoDonThat(sttKey, user) {
       TAM_THOI: '', // đã có tracking thật — không còn "tạm" nữa
       TAI_KHOAN_GKE: cauHinhGke.id,
     }, user);
-    if (row.TU_MUA_SO_LAN_THU || row.TU_MUA_CHE_DO) trangThaiDbService.ghiDe(sttKey, XOA_THEO_DOI_THU); // mua được -> hết theo dõi lần thử
+    if (row.TU_MUA_SO_LAN_THU || row.TU_MUA_CHE_DO || row.TU_MUA_HANG) trangThaiDbService.ghiDe(sttKey, { ...XOA_THEO_DOI_THU, TU_MUA_HANG: '' }); // mua được -> hết theo dõi lần thử
 
     let loiSheetCon = [];
     if (nhom) {
@@ -698,6 +718,77 @@ async function muaTrackingVaInLabelChoDon(sttKey, user) {
 // chối...) chỉ log, KHÔNG dừng cả lượt quét — đơn đó tự thử lại ở lượt sau.
 let _canhBaoBoQuaTruoc = '';
 const laTaiKhoanGkeHetTien = r => { try { return !!gkeService.layCauHinhGkeChoDon(r).hetTienLuc; } catch { return false; } };
+
+// Đơn có tự mua được ở `hang` không — '' = được, ngược lại lý do. KHÔNG gọi API hãng: chỉ kiểm tra đúng như lúc mua thật (quốc gia, tài khoản
+// theo Xưởng, GKE hết tiền; KL / HPW dựng thử dữ liệu gửi — thiếu SKU / bang / dịch vụ... đều báo ở đây). baoHetTien: job gửi tin Telegram
+// GKE hết tiền (như trước); trang Tracking chỉ xem, không gửi.
+function lyDoKhongTuMuaDuoc(hang, r, nhom, baoHetTien = false) {
+  const dsDon = nhom ? nhom.thanhVien.filter(d => d.TRANG_THAI_XUONG !== donNhieuAoService.TRANG_THAI_HUY) : [r];
+  try {
+    if (hang === 'GKE') {
+      if (!gkeService.duocMuaTrackingTheoQuocGia(r)) return 'GKE chỉ mua cho đơn giao tới US/UK';
+      const ch = gkeService.layCauHinhGkeChoDon(r);
+      // Đơn ĐÃ tạo vận đơn, chỉ còn chờ tem vẫn đi tiếp — lấy tem không tốn tiền.
+      if (ch.hetTienLuc && r.TAM_THOI !== gkeService.MA_DANG_CHO_TEM) {
+        if (baoHetTien && !ch.hetTienDaBao) gkeService.guiTinGkeHetTien(ch.id).catch(() => {});
+        return `tài khoản GKE "${ch.ten}" đang hết tiền (chờ "Đã nạp tiền" ở Settings)`;
+      }
+    } else if (hang === 'KL') {
+      klService.taoBodyDonKl(r, dsDon, klService.layCauHinhKlChoDon(r), gkeService.maQuocGia);
+    } else {
+      hpwService.taoBodyHpw(r, dsDon, hpwService.layCauHinhHpwChoDon(r), r.HPW_MA_GUI || r.STT_Key, { maQuocGia: gkeService.maQuocGia, maBangMy: klService.maBangMy });
+    }
+    return '';
+  } catch (err) {
+    return err.message;
+  }
+}
+
+// Hãng đã chốt cho đơn: đang mua dở ở hãng nào (vận đơn GKE chờ tem / dấu đang mua KL / lô HPW) hoặc hãng job đã chọn (TU_MUA_HANG).
+const hangDaChot = r => {
+  if (r.TAM_THOI === gkeService.MA_DANG_CHO_TEM) return 'GKE';
+  if (klService.dangTaoDonKl(r)) return 'KL';
+  if (hpwService.dangMuaHpw(r)) return 'HPW';
+  return HANG_TU_MUA.includes(r.TU_MUA_HANG) ? r.TU_MUA_HANG : '';
+};
+
+// -> { hang } hoặc { lyDo } (không tự mua). Đã chốt hãng -> CHỈ hãng đó (lỗi không đổi hãng — người dùng chốt 28/10/2026); chưa chốt ->
+// hãng đầu tiên theo thuTu đang bật mà đơn đủ điều kiện.
+function chonHangTuMua(r, cauHinh, nhom, baoHetTien = false) {
+  const daChot = hangDaChot(r);
+  if (daChot) {
+    // KL / HPW đang mua dở do người bấm tay (job chưa từng chọn hãng cho đơn) -> để người mua tiếp, job không chen (như trước 28/10/2026).
+    if (daChot !== 'GKE' && r.TU_MUA_HANG !== daChot) return { lyDo: `đang mua ${daChot} bằng tay — tự động không chen vào` };
+    if (!cauHinh.batHang[daChot]) return { lyDo: `đã chọn ${daChot} nhưng tự mua ${daChot} đang tắt (không đổi hãng)` };
+    const lyDo = lyDoKhongTuMuaDuoc(daChot, r, nhom, baoHetTien);
+    return lyDo ? { lyDo: `${daChot}: ${lyDo}` } : { hang: daChot };
+  }
+  const dsLyDo = [];
+  for (const hang of cauHinh.thuTu) {
+    if (!cauHinh.batHang[hang]) continue;
+    const lyDo = lyDoKhongTuMuaDuoc(hang, r, nhom, baoHetTien);
+    if (!lyDo) return { hang };
+    dsLyDo.push(`${hang}: ${lyDo}`);
+  }
+  return { lyDo: dsLyDo.join(' · ') || 'chưa bật tự mua hãng nào' };
+}
+
+// Mua theo hãng cho job. GKE tự đếm lần thử bên trong (_muaTrackingChoDonThat); KL / HPW đếm ở đây — trừ lỗi chung (tài khoản / đăng nhập /
+// dữ liệu chưa đủ: err.loiChung, cùng quy tắc GKE). HPW gợi ý sửa địa chỉ -> chuyển thủ công NGAY (người dùng chốt: dừng, không tự sửa).
+async function muaTuDongTheoHang(hang, don) {
+  if (hang === 'GKE') return muaTrackingChoDon(don.STT_Key);
+  try {
+    const ketQua = hang === 'KL'
+      ? await trackingKlService().muaTrackingKlChoDon(don.STT_Key, NGUOI_HE_THONG)
+      : await trackingHpwService().muaTrackingHpwChoDon(don.STT_Key, NGUOI_HE_THONG);
+    trangThaiDbService.ghiDe(don.STT_Key, { ...XOA_THEO_DOI_THU, TU_MUA_HANG: '' }); // mua được (hoặc đơn đã có tracking) -> hết theo dõi
+    return ketQua;
+  } catch (err) {
+    if (!err.loiChung) ghiNhanLanThuTuDong(don, err, !!err.goiYDiaChi);
+    throw err;
+  }
+}
+
 async function chayQuetTuDongMuaTracking() {
   const cauHinh = await layCauHinh();
   if (!cauHinh.bat) return { daQuet: false, soDonDaMua: 0 };
@@ -712,48 +803,44 @@ async function chayQuetTuDongMuaTracking() {
 
   const donDuDieuKien = rows.filter(r => {
     if (r.TRACKING_ID) return false; // đã có tracking thật (kể cả mã Seller đã chép — orderService#dongBoTrackingSeller)
-    if (klService.dangTaoDonKl(r)) return false; // đang mua tracking KL (22/10/2026) — KL chỉ mua tay, không chen GKE
-    if (hpwService.dangMuaHpw(r)) return false; // đang mua tracking HPW (22/10/2026)
+    // Đơn đang mua dở KL / HPW: chonHangTuMua bên dưới quyết định (job tự chọn hãng đó -> mua tiếp; người bấm tay -> bỏ qua).
     if (String(r.TRACKING_ID2 || '').trim() && !r.TAM_THOI) return false; // Seller đã điền mã (đơn chưa chép được, vd đã kết thúc) — không mua thêm
     if (r.TU_MUA_CHE_DO === CHE_DO_THU_CONG) return false; // đã thử đủ 10 lần — chỉ còn mua tay
     if (laDonConNhieuAo(r)) return false; // đơn ".2" trở lên — dùng tracking của đơn ".1"
     // DonNhieuAo: chỉ đơn mua (".1") — tính giờ theo mốc của CHÍNH đơn đó.
     const nhom = banDoNhom.get(r.STT_Key);
     if (nhom && (nhom.loiChan.length || nhom.donMua.STT_Key !== r.STT_Key)) return false;
-    if (!gkeService.duocMuaTrackingTheoQuocGia(r)) return false; // chỉ US/UK — trang Tracking hiện rõ lý do
     // Trạng thái + thời gian: điều kiện nào đến trước (thoiDiemDenHan) — đơn huỷ/hoàn/đã giao/Chưa in mã không thuộc cả 2.
     const han = thoiDiemDenHan(r, cauHinh);
     return han !== null && bayGio >= han;
   });
 
-  // Tài khoản GKE theo Xưởng (bổ sung 27/09/2026): đơn không xác định được tài khoản (chưa gán Xưởng,
-  // Xưởng chưa gán tài khoản...) — bỏ qua ở lượt tự động thay vì ghi lỗi mỗi 2 phút cho từng đơn; trang
-  // Tracking hiện rõ trạng thái "Chưa có tài khoản GKE" cho các đơn này (xem layDanhSachDonAutoTracking).
-  // Tài khoản GKE đã báo hết tiền (22/10/2026): bỏ qua tới khi superadmin bấm "Đã nạp tiền" (gkeService#baoGkeHetTien). Đơn ĐÃ tạo vận
-  // đơn, chỉ còn chờ tem (TAM_THOI = MA_DANG_CHO_TEM) vẫn đi tiếp — lấy tem không tốn tiền. Tin Telegram chưa gửi được thì gửi lại mỗi lượt.
+  // Chọn hãng cho từng đơn (chonHangTuMua): không hãng nào mua được (quốc gia, chưa có tài khoản theo Xưởng, GKE hết tiền, thiếu SKU KL...)
+  // -> bỏ qua ở lượt này, KHÔNG đếm lần thử (trang Tracking hiện rõ lý do); đủ điều kiện lại thì lượt sau tự mua. Tin Telegram GKE hết tiền
+  // chưa gửi được thì gửi lại mỗi lượt.
   const loiTaiKhoan = new Map();
-  const donMua = donDuDieuKien.filter(r => {
-    let lyDo;
-    try {
-      const ch = gkeService.layCauHinhGkeChoDon(r);
-      if (!ch.hetTienLuc || r.TAM_THOI === gkeService.MA_DANG_CHO_TEM) return true;
-      if (!ch.hetTienDaBao) gkeService.guiTinGkeHetTien(ch.id).catch(() => {});
-      lyDo = `tài khoản GKE "${ch.ten}" đang hết tiền (chờ "Đã nạp tiền" ở Settings)`;
-    } catch (err) { lyDo = err.message; }
-    loiTaiKhoan.set(lyDo, (loiTaiKhoan.get(lyDo) || 0) + 1);
-    return false;
-  });
+  const donMua = [];
+  for (const r of donDuDieuKien) {
+    const { hang, lyDo } = chonHangTuMua(r, cauHinh, banDoNhom.get(r.STT_Key), true);
+    if (hang) donMua.push({ don: r, hang });
+    else loiTaiKhoan.set(lyDo, (loiTaiKhoan.get(lyDo) || 0) + 1);
+  }
   // Chỉ in khi nội dung đổi so với lượt trước (22/10/2026) — trước đây in lại y hệt mỗi 2 phút suốt thời gian chờ.
   const canhBaoBoQua = [...loiTaiKhoan].map(([lyDo, so]) => `[TrackingTuDong] Bỏ qua ${so} đơn — ${lyDo}`).join('\n');
   if (canhBaoBoQua !== _canhBaoBoQuaTruoc && canhBaoBoQua) console.warn(canhBaoBoQua);
   _canhBaoBoQuaTruoc = canhBaoBoQua;
 
   let soDonDaMua = 0;
-  for (const don of donMua) {
+  for (const { don, hang } of donMua) {
     // Đơn trước trong CÙNG lượt vừa làm tài khoản báo hết tiền -> không gọi GKE tạo đơn tiếp cho các đơn sau của tài khoản đó.
-    if (!don.TAM_THOI && laTaiKhoanGkeHetTien(don)) continue;
+    if (hang === 'GKE' && !don.TAM_THOI && laTaiKhoanGkeHetTien(don)) continue;
     try {
-      const ketQua = await muaTrackingChoDon(don.STT_Key);
+      // Chốt hãng TRƯỚC khi gọi hãng — mọi lần thử sau dùng lại hãng này (kể cả khi đổi thứ tự / đơn đủ điều kiện hãng khác).
+      if (don.TU_MUA_HANG !== hang) {
+        trangThaiDbService.ghiDe(don.STT_Key, { TU_MUA_HANG: hang });
+        ghiLogTracking(`[Tự động] ${don.STT_Key}: chọn mua tracking ${hang}.`, don.STT_Key);
+      }
+      const ketQua = await muaTuDongTheoHang(hang, don);
       if (ketQua && !ketQua.dungChung) soDonDaMua++;
     } catch (err) {
       // Đã ghi vào layLogTracking() BÊN TRONG muaTrackingChoDon() rồi (xem ghi chú ở đó) — ở đây chỉ
@@ -939,8 +1026,6 @@ async function chayQuetTrangThaiNeuDenLuot() {
 // thay cho lọc AUTO_TRACKING="YES"): đơn CHỜ tự động mua (thuộc 1 trong 2 điều kiện — thoiDiemDenHan, chưa có tracking)
 // + đơn ĐÃ có tracking mà sản xuất xong trong 7 ngày gần đây (bảng không dài vô hạn). Lọc theo Xưởng của `user`
 // (orderService.js#locTheoXuong) — hàm này CHỈ dùng cho route GET /tracking/danh-sach, không dùng bởi job nền.
-// null = không xác định được tài khoản GKE; ngược lại cấu hình tài khoản (1 lần tra / đơn — dùng cả cho "hết tiền").
-const taiKhoanGkeCuaDon = r => { try { return gkeService.layCauHinhGkeChoDon(r); } catch { return null; } };
 const SO_MS_GIU_DON_DA_MUA = 7 * 24 * 60 * 60 * 1000;
 
 async function layDanhSachDonAutoTracking(user) {
@@ -966,18 +1051,18 @@ async function layDanhSachDonAutoTracking(user) {
       const han = thoiDiemDenHan(r, cauHinh);
 
       const nhom = banDoNhom.get(r.STT_Key);
-      let trangThai, tkGke;
+      let trangThai, chon = {};
       if (daCoTrackingThat) trangThai = 'DA_MUA';
-      else if (klService.dangTaoDonKl(r)) trangThai = 'DANG_TAO_DON_KL';
-      else if (hpwService.dangMuaHpw(r)) trangThai = 'DANG_MUA_HPW';
+      else if (r.TU_MUA_CHE_DO === CHE_DO_THU_CONG && !laDonConNhieuAo(r)) trangThai = 'CHUYEN_THU_CONG';
+      else if (klService.dangTaoDonKl(r) && r.TU_MUA_HANG !== 'KL') trangThai = 'DANG_TAO_DON_KL'; // KL / HPW mua tay đang dở
+      else if (hpwService.dangMuaHpw(r) && r.TU_MUA_HANG !== 'HPW') trangThai = 'DANG_MUA_HPW';
       else if (laDonConNhieuAo(r) && !(nhom && !nhom.loiChan.length)) trangThai = 'DON_CON_CHUA_GHEP_NHOM';
-      else if (r.TU_MUA_CHE_DO === CHE_DO_THU_CONG) trangThai = 'CHUYEN_THU_CONG';
       else if (nhom && nhom.loiChan.length) trangThai = 'LOI_NHOM';
       else if (nhom && nhom.donMua.STT_Key !== r.STT_Key) trangThai = 'CHO_DON_MUA_NHOM';
-      else if (!gkeService.duocMuaTrackingTheoQuocGia(r)) trangThai = 'KHONG_THUOC_US_UK';
-      else if (!(tkGke = taiKhoanGkeCuaDon(r))) trangThai = 'THIEU_TAI_KHOAN_GKE';
-      else if (dangChoTem) trangThai = 'DANG_CHO_TEM'; // trước "hết tiền": đã tạo vận đơn, lấy tem không tốn tiền — vẫn tự chạy
-      else if (tkGke.hetTienLuc) trangThai = 'GKE_HET_TIEN';
+      else if (!(chon = chonHangTuMua(r, cauHinh, nhom)).hang) trangThai = 'KHONG_TU_MUA_DUOC'; // 28/10/2026: lý do ở lyDoKhongTuMua
+      else if (dangChoTem) trangThai = 'DANG_CHO_TEM';
+      else if (klService.dangTaoDonKl(r)) trangThai = 'DANG_TAO_DON_KL';
+      else if (hpwService.dangMuaHpw(r)) trangThai = 'DANG_MUA_HPW';
       else if (han !== null && bayGio >= han) trangThai = 'DEN_HAN_CHO_XU_LY';
       else trangThai = 'DANG_CHO';
 
@@ -989,6 +1074,9 @@ async function layDanhSachDonAutoTracking(user) {
         hangVanChuyen: daCoTrackingThat ? (r.HANG_VAN_CHUYEN || '') : '',
         donVi: daCoTrackingThat ? (r.DON_VI_VAN_CHUYEN || '') : '', // 'KL' = mua qua KL (22/10/2026); '' = GKE / Seller
         hanTuMua: !daCoTrackingThat && han !== null ? new Date(han).toISOString() : '',
+        // Hãng tự mua (28/10/2026): đã chốt (TU_MUA_HANG) hoặc hãng sẽ chọn nếu mua lúc này; lý do khi không hãng nào tự mua được.
+        hangTuMua: daCoTrackingThat ? '' : (r.TU_MUA_HANG || chon.hang || ''),
+        lyDoKhongTuMua: trangThai === 'KHONG_TU_MUA_DUOC' ? chon.lyDo : '',
         soLanThu: daCoTrackingThat ? 0 : Number(r.TU_MUA_SO_LAN_THU) || 0,
         loiGanNhat: daCoTrackingThat ? '' : r.TU_MUA_LOI_GAN_NHAT || '',
         thoiGianSanXuat: r.THOI_GIAN_SAN_XUAT || '',
@@ -1064,6 +1152,7 @@ module.exports = {
   // Hàm nội bộ dùng lại cho các hãng ngoài GKE (KL, HPW — trackingKlService / trackingHpwService / hangVanChuyenKhacService, 22/10/2026).
   _dungChoHangKhac: {
     xepHangMuaTracking, chanMuaDonDaHuy, kiemTraDieuKienInLabel, kiemTraNhomKhiInLabel, ghiChuNhomLenTem, ghiDaInLabel,
-    ghiLogTracking, ghiLogTrackingVaoDb, saoTrackingXuongNhom, baoLoiSheetSeller, trackingCuaDon, luuTemNen, docTemDaLuu,
+    ghiLogTracking, ghiLogTrackingVaoDb, saoTrackingXuongNhom, baoLoiSheetSeller, trackingCuaDon, luuTemNen, docTemDaLuu, NGUOI_HE_THONG,
   },
+  HANG_TU_MUA,
 };

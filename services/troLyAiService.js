@@ -95,7 +95,7 @@ const CONG_CU = [
   { name: 'trung_tam_hanh_dong', description: 'Các việc đang cần xử lý (như menu "Cần xử lý"): đơn ưu tiên chưa xử lý, lỗi sản xuất, đơn nhận quá lâu, vận chuyển bất thường, lỗi tracking, lỗi ghi Sheet Seller, đơn huỷ gần đây...',
     input_schema: { type: 'object', properties: {} } },
   { name: 'tinh_trang_mua_tracking', description: 'Tình trạng tự động mua tracking: số đơn theo trạng thái (đã mua, đến hạn, chuyển mua thủ công, GKE hết tiền, thiếu tài khoản...) và danh sách đơn.',
-    input_schema: { type: 'object', properties: { trangThai: { type: 'string', description: 'Lọc 1 trạng thái, vd CHUYEN_THU_CONG, GKE_HET_TIEN, DEN_HAN_CHO_XU_LY' } } } },
+    input_schema: { type: 'object', properties: { trangThai: { type: 'string', description: 'Lọc 1 trạng thái, vd CHUYEN_THU_CONG, KHONG_TU_MUA_DUOC, DEN_HAN_CHO_XU_LY' } } } },
   { name: 'tinh_hinh_mang_24h', description: 'Tốc độ mạng 24 giờ qua: độ trễ từ điện thoại ở xưởng, máy chủ tới Cloudflare, tốc độ gửi ảnh.',
     input_schema: { type: 'object', properties: {} } },
   { name: 'ket_qua_qc', description: 'Kết quả AI QC (kiểm tra ảnh) gần nhất: của 1 đơn, hoặc lọc theo kết quả (PASS / FAIL / CAN_CHECK_LAI).',
