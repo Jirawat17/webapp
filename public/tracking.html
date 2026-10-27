@@ -7,6 +7,13 @@
 <link rel="stylesheet" href="/css/style.css?v=112">
 <script src="/js/theme.js?v=104"></script>
 <style>
+/* Bảng danh sách tracking (28/10/2026): bảng chung .bang-xem-truoc không xuống dòng -> lý do lỗi / không tự mua dài kéo cả trang ra ngang.
+   Cho ô Trạng thái + Hành động xuống dòng trong độ rộng giới hạn; bảng vẫn dài hơn màn hình thì chỉ bảng cuộn ngang. */
+#bang-danh-sach { overflow-x: auto; }
+#bang-danh-sach .tk-o-trang-thai { white-space: normal; min-width: 200px; max-width: 340px; }
+#bang-danh-sach .tk-o-hanh-dong { white-space: normal; min-width: 230px; }
+.tk-o-hanh-dong > div { display: flex; gap: 6px; flex-wrap: wrap; }
+.tk-cau-hinh { justify-content: flex-start; column-gap: var(--space-5); }
 .tk-trang-thai { font-size: 0.82rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
 .tk-trang-thai.da-mua { background: color-mix(in srgb, #16a34a 15%, transparent); color: #16a34a; }
 .tk-trang-thai.dang-cho-tem { background: color-mix(in srgb, #2563eb 15%, transparent); color: #2563eb; }
@@ -102,7 +109,7 @@
        lưu 1 cột SoPhutCho như cũ, không đổi schema. -->
   <!-- Tự mua KL / HPW (28/10/2026, theo yêu cầu người dùng): công tắc riêng từng hãng + thứ tự ưu tiên chung — đơn đến hạn mua ở hãng đầu tiên
        đang bật mà đơn đủ điều kiện; đã chọn hãng thì các lần thử sau giữ nguyên hãng đó (services/trackingAutoService.js#chonHangTuMua). -->
-  <div class="cong-tac-hang" style="flex-wrap:wrap;row-gap:var(--space-2)">
+  <div class="cong-tac-hang tk-cau-hinh" style="flex-wrap:wrap;row-gap:var(--space-2)">
     <span class="cong-tac-nhan">Tự động mua tracking</span>
     <span class="cong-tac-nhan" style="font-weight:600">GKE
       <span class="cong-tac"><input type="checkbox" id="cong-tac-tu-mua-GKE"><span class="cong-tac-slider"></span></span>
@@ -121,8 +128,7 @@
       <span aria-hidden="true">→</span>
       <select id="thu-tu-hang-3" aria-label="Ưu tiên 3"></select>
     </span>
-  </div>
-  <div class="cong-tac-hang" style="flex-wrap:wrap;row-gap:var(--space-2);margin-top:var(--space-2)">
+    <span style="flex-basis:100%;height:0" aria-hidden="true"></span><!-- xuống dòng: thời gian chờ chung 1 khung với công tắc -->
     <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap" title="Chờ bao lâu kể từ lúc đơn chuyển &quot;Đã sản xuất&quot; thì mua (giờ + phút cộng dồn)">
       <span style="font-size:0.85rem;color:var(--color-text-muted)">Chờ</span>
       <input type="number" id="so-gio-cho" min="0" step="1" style="width:56px" aria-label="Số giờ">
@@ -143,7 +149,7 @@
        ... phút" ở trên (2 ô cộng dồn thành 1 tổng số phút khi lưu — xem luuCauHinhQuetTrangThai()) —
        KHÁC tính năng "Tự động mua tracking" ở trên (không có công tắc bật/tắt riêng, job này luôn chạy
        nền, chỉ đổi được KHOẢNG CÁCH giữa các lượt). -->
-  <div class="cong-tac-hang" style="flex-wrap:wrap;row-gap:var(--space-2);margin-top:var(--space-2)">
+  <div class="cong-tac-hang tk-cau-hinh" style="flex-wrap:wrap;row-gap:var(--space-2);margin-top:var(--space-2)">
     <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap" title="Khoảng cách giữa các lượt tự động tra cứu trạng thái vận chuyển thật từ GKE cho đơn đã có mã tracking">
       <span style="font-size:0.85rem;color:var(--color-text-muted)">Quét trạng thái vận chuyển mỗi</span>
       <input type="number" id="so-gio-quet-trang-thai" min="0" step="1" style="width:56px" aria-label="Số giờ">
@@ -542,19 +548,19 @@ async function taiDanhSach() {
             const tt = NHAN_TRANG_THAI[d.trangThai] || { nhan: d.trangThai, lop: 'dang-cho' };
             return `<tr>
               <td><a href="/order.html?stt=${encodeURIComponent(d.sttKey)}">${escapeHtml(d.sttKey)}</a></td>
-              <td><span class="tk-trang-thai ${tt.lop}">${escapeHtml(tt.nhan)}</span>${d.soLanThu ? `<div style="font-size:0.78rem;color:var(--color-danger-text);margin-top:4px">Tự động thử ${d.soLanThu}/10 lần — ${escapeHtml(d.loiGanNhat)}</div>` : ''}${d.lyDoKhongTuMua ? `<div style="font-size:0.78rem;color:var(--color-text-muted);margin-top:4px">${escapeHtml(d.lyDoKhongTuMua)}</div>` : ''}</td>
+              <td class="tk-o-trang-thai"><span class="tk-trang-thai ${tt.lop}">${escapeHtml(tt.nhan)}</span>${d.soLanThu ? `<div style="font-size:0.78rem;color:var(--color-danger-text);margin-top:4px">Tự động thử ${d.soLanThu}/10 lần — ${escapeHtml(d.loiGanNhat)}</div>` : ''}${d.lyDoKhongTuMua ? `<div style="font-size:0.78rem;color:var(--color-text-muted);margin-top:4px">${escapeHtml(d.lyDoKhongTuMua)}</div>` : ''}</td>
               <td>${d.hangTuMua ? `<strong>${escapeHtml(d.hangTuMua)}</strong>` : '—'}</td>
               <td>${escapeHtml(d.trackingId || '—')}${d.trackingId ? nutSaoChep(d.trackingId, 'Sao chép mã tracking') : ''}${d.nguonSeller ? ' <small style="color:var(--color-text-muted)">(Seller cung cấp)</small>' : ''}</td>
               <td>${d.donVi ? `<strong>${escapeHtml(d.donVi)}</strong> · ` : ''}${escapeHtml(d.hangVanChuyen || '—')}</td>
               <td>${d.thoiGianSanXuat ? dinhDangNgayGioNganAnToan(d.thoiGianSanXuat) : '—'}</td>
               <td>${d.hanTuMua ? dinhDangNgayGioNganAnToan(d.hanTuMua) : '—'}</td>
-              <td style="display:flex;gap:6px;flex-wrap:wrap">
+              <td class="tk-o-hanh-dong"><div>
                 ${d.trangThai === 'DA_MUA' ? '' : `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="muaThuCongTuBang(this, '${escapeJsChuoi(d.sttKey)}', '${d.trangThai}')">Mua GKE</button>`}
                 ${d.trangThai === 'DA_MUA' || !laAdmin(_user.vaiTro) ? '' : ['KL', 'HPW'].map(h => `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="muaHangKhacTuBang(this, '${escapeJsChuoi(d.sttKey)}', '${d.trangThai}', '${h}')">Mua ${h}</button>`).join('')}
                 ${d.trangThai === 'DA_MUA' ? `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="apDungInLabelTuBang(this, '${escapeJsChuoi(d.sttKey)}')">IN LABEL</button>` : ''}
                 <button type="button" class="btn-hanh-dong" style="padding:6px 10px;font-size:0.82rem" onclick="apDungMuaVaInLabelTuBang(this, '${escapeJsChuoi(d.sttKey)}', '${d.trangThai}')">MUA TRACKING và IN LABEL</button>
                 ${d.trangThai === 'CHUYEN_THU_CONG' ? `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="choTuDongLaiTuBang(this, '${escapeJsChuoi(d.sttKey)}')">Cho tự động thử lại</button>` : ''}
-              </td>
+              </div></td>
             </tr>`;
           }).join('')}
         </tbody>

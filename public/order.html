@@ -1007,7 +1007,8 @@ const muaTrackingHpwNgay = btn => muaTrackingHangNgay(btn, 'hpw', 'HPW');
 async function apDungMuaVaInLabelHpw(btn) {
   if (laDonDaHuy()) return hienThongBaoDonDaHuy([sttKey]);
   const daCo = donHienTai && donHienTai.TRACKING_ID && donHienTai.DON_VI_VAN_CHUYEN === 'HPW';
-  if (!await hopXacNhan(daCo ? `In label HPW cho đơn ${sttKey}?` : `Mua tracking HPW và in label cho đơn ${sttKey}? Tạo lô hàng + mua label THẬT bên HPW, có thể phát sinh phí.`)) return;
+  // Đã có tracking HPW -> in luôn, không hỏi (28/10/2026, như KL). Chưa có -> vẫn hỏi vì sẽ mua thật.
+  if (!daCo && !await hopXacNhan(`Mua tracking HPW và in label cho đơn ${sttKey}? Tạo lô hàng + mua label THẬT bên HPW, có thể phát sinh phí.`)) return;
   await xuLyInLabelChiTiet(btn, '/tracking/hpw/mua-va-in-label');
 }
 // Thao tác superadmin HPW: gửi rồi tải lại đơn.
@@ -1103,7 +1104,8 @@ async function boDauDangMuaKl(btn) {
 async function apDungMuaVaInLabelKl(btn) {
   if (laDonDaHuy()) return hienThongBaoDonDaHuy([sttKey]);
   const daCo = donHienTai && donHienTai.TRACKING_ID && donHienTai.DON_VI_VAN_CHUYEN === 'KL';
-  if (!await hopXacNhan(daCo ? `In label KL cho đơn ${sttKey}?` : `Mua tracking KL và in label cho đơn ${sttKey}? Tạo đơn vận chuyển THẬT bên KL, có thể phát sinh phí.`)) return;
+  // Đã có tracking KL -> chỉ in, không tốn phí: in luôn, không hỏi (28/10/2026, theo yêu cầu người dùng). Chưa có -> vẫn hỏi vì sẽ mua thật.
+  if (!daCo && !await hopXacNhan(`Mua tracking KL và in label cho đơn ${sttKey}? Tạo đơn vận chuyển THẬT bên KL, có thể phát sinh phí.`)) return;
   await xuLyInLabelChiTiet(btn, '/tracking/kl/mua-va-in-label');
 }
 
