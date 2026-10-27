@@ -59,8 +59,9 @@
     <p style="margin:4px 0 0;font-size:0.82rem;color:var(--color-text-muted)">"Tải DoMangMayChu" / "Tải DoTocDo": số đo mạng của máy chủ và tốc độ đường truyền, theo Từ ngày / Đến ngày ở trên (bỏ qua các bộ lọc khác), tối đa 31 ngày — cùng cột với file gửi Telegram hằng ngày.</p>
     <h3 style="margin-bottom:4px">Tổng hợp
       <select id="ua-nhom" onchange="taiTongHopUploadAnh()" style="font-size:0.9rem;margin-left:8px">
-        <option value="thiet-bi">theo hệ điều hành + trình duyệt</option><option value="nguoi">theo người dùng</option></select></h3>
-    <p style="margin:0 0 6px;font-size:0.82rem;color:var(--color-text-muted)">Thời gian trung bình (giây) của các lượt chụp THÀNH CÔNG. "Tổng chụp" = từ lúc có ảnh tới lúc tải xong; "10% chậm nhất" = mốc mà 10% số lượt chậm hơn.</p>
+        <option value="thiet-bi">theo hệ điều hành + trình duyệt</option><option value="nguoi">theo người dùng</option>
+        <option value="quet-sai">quét sai theo người × chế độ</option></select></h3>
+    <p id="ua-ghi-chu-tong-hop" style="margin:0 0 6px;font-size:0.82rem;color:var(--color-text-muted)">Thời gian trung bình (giây) của các lượt chụp THÀNH CÔNG. "Tổng chụp" = từ lúc có ảnh tới lúc tải xong; "10% chậm nhất" = mốc mà 10% số lượt chậm hơn.</p>
     <div style="overflow-x:auto"><table class="info-table" id="ua-tong-hop" style="font-size:0.85rem"></table></div>
     <h3 style="margin-bottom:4px">Chi tiết <span id="ua-dem" style="font-size:0.85rem;font-weight:400;color:var(--color-text-muted)"></span></h3>
     <div style="overflow-x:auto"><table class="info-table" id="ua-chi-tiet" style="font-size:0.8rem"></table></div>
@@ -91,7 +92,7 @@
 </div>
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=133"></script>
+<script src="/js/api.js?v=134"></script>
 <script>
 let toanBoDong = [];
 
@@ -214,9 +215,30 @@ function moTaChiTietUA(r) {
   if (c.catBot) p.push(`[bị rút gọn${Array.isArray(c.catBot) && c.catBot.length ? ': ' + c.catBot.join(', ') : ''}]`);
   return p.join(' · ');
 }
+// Quét sai theo người × chế độ (26/10/2026) — routes/nhatKyQuet.js#tongHopQuetSai. Chỉ theo Từ ngày / Đến ngày / Người dùng.
+const GHI_CHU_TONG_HOP = {
+  'quet-sai': 'Lượt quét QR trong khoảng ngày (theo Người dùng nếu có nhập; bỏ qua các bộ lọc khác). "Sai trạng thái" = máy chủ từ chối vì đơn không ở đúng bước của chế độ đang chọn — tô đỏ khi từ 15% trở lên. "Lỗi khác" = không tìm thấy đơn / đơn chưa có tracking (không phải quét nhầm chế độ). "Đọc lặp" = số lần camera đọc lại đúng mã vừa lỗi (bị chặn, không tính là lượt quét) — cao nghĩa là để camera trên mã mà không nhìn màn hình.',
+  macDinh: 'Thời gian trung bình (giây) của các lượt chụp THÀNH CÔNG. "Tổng chụp" = từ lúc có ảnh tới lúc tải xong; "10% chậm nhất" = mốc mà 10% số lượt chậm hơn.',
+};
+async function taiQuetSaiUploadAnh(bang) {
+  let ds;
+  try { ds = await apiFetch('/nhat-ky-quet/tong-hop?nhom=quet-sai&' + locUploadAnh()); }
+  catch (e) { bang.innerHTML = `<tr><td>Lỗi: ${escapeHtml(e.message)}</td></tr>`; return; }
+  if (!ds.length) { bang.innerHTML = '<tr><td>Không có lượt quét QR nào trong khoảng này.</td></tr>'; return; }
+  bang.innerHTML = '<tr><th>Người dùng</th><th>Chế độ</th><th>Lượt quét</th><th>Sai trạng thái</th><th>Đơn đang ở (khi quét sai)</th><th>Lỗi khác</th><th>Màn đỏ</th><th>Đọc lặp</th></tr>'
+    + ds.map(g => `<tr><td><b>${escapeHtml(g.nguoi)}</b></td><td>${escapeHtml(NHAN_CHE_DO_UA[g.cheDo] || g.cheDo || '—')}</td><td>${g.soQuet}</td>
+      <td style="${g.tyLeSai >= 15 ? 'color:var(--color-danger-text);font-weight:700' : ''}">${g.soSai} (${String(g.tyLeSai).replace('.', ',')}%)</td>
+      <td style="font-size:0.8rem">${g.trangThaiDon.map(t => `${escapeHtml(t.ten)} ×${t.so}`).join(' · ')}</td>
+      <td style="font-size:0.8rem">${[g.soKhongThay ? `không thấy đơn ×${g.soKhongThay}` : '', g.soThieuTracking ? `chưa có tracking ×${g.soThieuTracking}` : ''].filter(Boolean).join(' · ')}</td>
+      <td>${g.soManDo || ''}</td><td>${g.soLap || ''}</td></tr>`).join('');
+}
 async function taiTongHopUploadAnh() {
   const bang = document.getElementById('ua-tong-hop');
-  const theoNguoi = document.getElementById('ua-nhom').value === 'nguoi';
+  const kieu = document.getElementById('ua-nhom').value;
+  document.getElementById('ua-ghi-chu-tong-hop').textContent = GHI_CHU_TONG_HOP[kieu] || GHI_CHU_TONG_HOP.macDinh;
+  bang.innerHTML = '<tr><td>Đang tải…</td></tr>'; // đổi kiểu xem: không để bảng cũ dưới tiêu đề mới
+  if (kieu === 'quet-sai') return taiQuetSaiUploadAnh(bang);
+  const theoNguoi = kieu === 'nguoi';
   let ds;
   try { ds = await apiFetch(`/nhat-ky-quet/tong-hop?nhom=${theoNguoi ? 'nguoi' : 'thiet-bi'}&` + locUploadAnh()); }
   catch (e) { bang.innerHTML = `<tr><td>Lỗi: ${escapeHtml(e.message)}</td></tr>`; return; }

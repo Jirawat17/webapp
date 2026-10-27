@@ -32,6 +32,16 @@ async function layDonHuyGanDay() {
 // dây chuyền (bổ sung 18/09/2026, theo yêu cầu người dùng, thay cho mục "Đơn cảnh báo trễ hạn" cũ).
 // Kèm trạng thái phôi/vẽ file hiện tại — hữu ích để biết đơn đã được reset lại chưa hay còn nguyên như
 // lúc lỗi.
+// Đơn kẹt "đang mua KL" (27/10/2026, rà soát thiết kế KL): KL_DANG_TAO (lúc gửi lệnh tạo đơn, giờ VN) quá 30 phút mà chưa có tracking — mất
+// phản hồi / KL chưa cấp mã. Job GKE bỏ qua đơn này nên không ai mua tiếp nếu không có người xử lý. Tự hết khi có tracking / bỏ dấu.
+const PHUT_KET_MUA_KL = 30;
+function layDonKetMuaKl(rows, bayGio = Date.now()) {
+  return rows
+    .filter(r => r.KL_DANG_TAO && !r.TRACKING_ID && bayGio - Date.parse(r.KL_DANG_TAO) >= PHUT_KET_MUA_KL * 60000)
+    .map(r => ({ sttKey: r.STT_Key, tuLuc: r.KL_DANG_TAO, soPhut: Math.floor((bayGio - Date.parse(r.KL_DANG_TAO)) / 60000), ngayLenDon: ngayLenDonNgan(r) }))
+    .sort((a, b) => b.soPhut - a.soPhut);
+}
+
 function layDonLoiSanXuat(rows) {
   return rows
     .filter(don => don.TRANG_THAI_XUONG === 'LỖI SẢN XUẤT CẦN LÀM LẠI')
@@ -114,6 +124,7 @@ async function layTrungTamHanhDong(user) {
     ...layDonNhieuAoCanXuLy(tatCa, huyTatCa, trongPhamVi),
     huyGanDay,
     loiSanXuat: layDonLoiSanXuat(rows),
+    ketMuaKl: layDonKetMuaKl(rows),
     uuTienChuaXuLy: layDonUuTienCanHien(tatCa, trongPhamVi),
     loiTrackingGke,
     // Chưa ghi được sang Sheet Seller (28/09/2026) — lần ghi gần nhất theo (đơn, loại) đang lỗi; Đẩy lại chỉ superadmin.
@@ -193,4 +204,4 @@ function layCanhBaoVanHanh(rows) {
   };
 }
 
-module.exports = { layTrungTamHanhDong, ganThongTinDonCanCheck };
+module.exports = { layTrungTamHanhDong, ganThongTinDonCanCheck, layDonKetMuaKl };

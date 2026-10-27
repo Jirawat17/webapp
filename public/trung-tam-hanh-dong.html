@@ -71,7 +71,7 @@
 </div>
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=133"></script>
+<script src="/js/api.js?v=134"></script>
 <script>
 function dinhDangThoiGian(iso) {
   const d = new Date(iso);
@@ -94,6 +94,12 @@ function veKhoiLoiSanXuat(ds) {
   return `<div class="ttha-danh-sach">${ds.map(d =>
     dongDon(d.sttKey, `Phôi: ${escapeHtml(d.trangThaiPhoi || '')} · File: ${escapeHtml(d.trangThaiVeFile || '')}`)
   ).join('')}</div>`;
+}
+
+function veKhoiKetMuaKl(ds) {
+  if (ds.length === 0) return khoiRong('Không có đơn nào kẹt ở bước mua tracking KL.');
+  const thoiGian = p => (p >= 1440 ? `${Math.floor(p / 1440)} ngày` : p >= 60 ? `${Math.floor(p / 60)} giờ` : `${p} phút`);
+  return `<div class="ttha-danh-sach">${ds.map(d => dongDon(d.sttKey, `đang mua KL ${thoiGian(d.soPhut)}${d.ngayLenDon ? ` · lên đơn ${escapeHtml(d.ngayLenDon)}` : ''}`)).join('')}</div>`;
 }
 
 // Ngày lên đơn (22/10/2026, theo yêu cầu người dùng) — "lên đơn 15/10", cùng cách mục DonNhieuAo.
@@ -237,6 +243,8 @@ async function taiTrungTamHanhDong() {
     kh('van-chuyen', 'Vận chuyển bất thường', kq.vanChuyenBatThuong.length,
       `<p class="ttha-mo-ta">Đã "Đã xử lý" mà trạng thái tracking đổi tiếp và vẫn bất thường thì hiện lại.</p>${veKhoiVanChuyen(kq.vanChuyenBatThuong)}`),
     kh('loi-tracking-gke', 'Lỗi tự động mua tracking GKE (48 giờ gần đây)', kq.loiTrackingGke.length, veKhoiLoiTracking(kq.loiTrackingGke)),
+    kh('ket-mua-kl', 'Đơn kẹt "đang mua KL" (quá 30 phút)', (kq.ketMuaKl || []).length,
+      `<p class="ttha-mo-ta">Đã gửi lệnh mua KL nhưng chưa nhận được mã tracking — tự động mua GKE đang bỏ qua các đơn này. Mở đơn, bấm "Mua Tracking KL" lại (app tra KL trước, không tạo trùng)${laSA ? ', hoặc "Bỏ dấu đang mua KL" để mua GKE' : ''}.</p>${veKhoiKetMuaKl(kq.ketMuaKl || [])}`),
     kh('sheet-seller', 'Chưa ghi được sang Sheet Seller', kq.loiSheetSeller.length,
       `<p class="ttha-mo-ta">Ghi chú xưởng / tracking / Delivered chưa có trên Sheet của Seller. Sửa nguyên nhân (quyền Sheet, CONFIG, cột, mã đơn…) rồi Đẩy lại, hoặc Bỏ qua lỗi không cần xử lý (lỗi lần mới của đơn đó sẽ hiện lại)${laSA ? '' : ' — chỉ superadmin đẩy lại / bỏ qua được'}. Chi tiết và nhật ký: Settings.</p>${htmlLoiSheetSeller(kq.loiSheetSeller, laSA)}`),
   ].join('');

@@ -444,6 +444,10 @@ function donDaXuLyKhongConDung(loai, dsKhoaConDung) {
   for (const khoa of layDaXuLy(loai).keys()) if (!dsKhoaConDung.has(khoa)) n += cauXoa.run(loai, khoa).changes;
   return n;
 }
+// Xoá 1 bản ghi "Đã xử lý" (27/10/2026 — KL_DON_BO_QUA: mua được tracking / xoá dữ liệu đơn thì bỏ, không dùng nhầm khi mã đơn được dùng lại).
+function xoaDaXuLy(loai, khoa) {
+  db.prepare(`DELETE FROM canh_bao_da_xu_ly WHERE loai = ? AND khoa = ?`).run(loai, khoa);
+}
 function layDaXuLy(loai) {
   return new Map(db.prepare(`SELECT * FROM canh_bao_da_xu_ly WHERE loai = ?`).all(loai).map(r => [r.khoa, r]));
 }
@@ -573,12 +577,27 @@ function duyetTongHopLogsUploadAnh(loc = {}) {
       FROM logs_upload_anh ${where} LIMIT -1 OFFSET 0)`).iterate(...ts); // chỉ các cột cần (không kéo loi/thong_tin qua truy vấn con)
 }
 
+// Ở các chế độ chụp ảnh, trang Quét QR ghi MỌI lỗi nghiệp vụ là SAI_TRANG_THAI (scan.html#ketQuaLoi) — kể cả "không tìm thấy đơn" và "chưa
+// có Tracking". Tách lại theo câu báo lỗi của máy chủ (routes/photos.js) để "sai trạng thái" chỉ còn đúng nghĩa; áp được cả cho log cũ.
+function phanLoaiLoiQuet(ketQua, loi) {
+  if (ketQua !== 'SAI_TRANG_THAI') return ketQua;
+  if (/Không tìm thấy đơn/i.test(loi || '')) return 'KHONG_TIM_THAY';
+  if (/chưa có thông tin Tracking/i.test(loi || '')) return 'THIEU_TRACKING';
+  return 'SAI_TRANG_THAI';
+}
+// Quét sai theo người × chế độ (26/10/2026, Logs > Logs_UploadAnh): mọi lượt QUET_QR theo bộ lọc ngày / người (bỏ qua lọc sự kiện / kết
+// quả / chậm). Chỉ cột cần + số lần đọc lặp / màn đỏ rút bằng json_extract.
+function dsQuetQrDeTongHop(loc = {}) {
+  const { where, ts } = dieuKienLogsUploadAnh({ tu: loc.tu, den: loc.den, nguoi: loc.nguoi, suKien: 'QUET_QR' });
+  return db.prepare(`SELECT nguoi, che_do, ket_qua, loi, json_extract(ct, '$.soLanLapBiChan') lap_bi_chan, json_extract(ct, '$.manDo') man_do
+    FROM (SELECT nguoi, che_do, ket_qua, loi, ${SQL_CT} ct FROM logs_upload_anh ${where} LIMIT -1 OFFSET 0)`).iterate(...ts);
+}
 // Báo cáo theo người (24/10/2026): mọi lượt quét QR + chụp ảnh trong [tu, den) — mốc giờ VN dạng thoiGianVNISOString.
 function dsQuetVaChupTrongKhoang(tu, den) {
   // THOAT_GIUA_CHUNG = ảnh bỏ dở / mất giữa chừng (Logs_UploadAnh tính là lỗi kỹ thuật); lap_bi_chan = dòng TỔNG các lần camera đọc lặp
   // đúng mã vừa lỗi bị chặn 6 giây (scan.html#ghiLogLapBiChan) — không phải 1 lượt quét riêng.
-  return db.prepare(`SELECT nguoi, su_kien, ket_qua, tong_ms, cham, json_extract(ct, '$.manDo') man_do, json_extract(ct, '$.soLanLapBiChan') lap_bi_chan
-    FROM (SELECT nguoi, su_kien, ket_qua, tong_ms, cham, ${SQL_CT} ct FROM logs_upload_anh
+  return db.prepare(`SELECT nguoi, su_kien, ket_qua, loi, tong_ms, cham, json_extract(ct, '$.manDo') man_do, json_extract(ct, '$.soLanLapBiChan') lap_bi_chan
+    FROM (SELECT nguoi, su_kien, ket_qua, loi, tong_ms, cham, ${SQL_CT} ct FROM logs_upload_anh
       WHERE luc >= ? AND luc < ? AND su_kien IN ('QUET_QR', 'CHUP_ANH', 'THOAT_GIUA_CHUNG') LIMIT -1 OFFSET 0)`).all(String(tu), String(den)); // xem duyetTongHopLogsUploadAnh
 }
 
@@ -664,7 +683,7 @@ const layQcLogTrongKhoang = (tuLuc, denLuc) => db.prepare(`SELECT STT_Key, LoaiQ
 module.exports = {
   ghiThoiGianApi, layThoiGianApi, xoaThoiGianApiTruoc, layDoLogsUploadAnh, layQcLogTrongKhoang, ghiNhieuDoMang, layDoMang, xoaDoMangTruoc, ghiDoMangMayChu, layDoMangMayChu, xoaDoMangMayChuTruoc,
   ghiNhieuTocDo, layTocDo, xoaTocDoTruoc,
-  ghiNhieuLogsUploadAnh, dsLogsUploadAnh, duyetTongHopLogsUploadAnh, dsQuetVaChupTrongKhoang, danhDauDaXuLy, layDaXuLy, donDaXuLyKhongConDung, themDonCanCheck, suaDonCanCheck, danhDauDaCheck, layDonCanCheck, themBaoLoi, ganAnhBaoLoi, demBaoLoiTu, layBaoLoi, dsBaoLoi, capNhatBaoLoi,
+  ghiNhieuLogsUploadAnh, dsLogsUploadAnh, duyetTongHopLogsUploadAnh, dsQuetVaChupTrongKhoang, dsQuetQrDeTongHop, phanLoaiLoiQuet, danhDauDaXuLy, layDaXuLy, xoaDaXuLy, donDaXuLyKhongConDung, themDonCanCheck, suaDonCanCheck, danhDauDaCheck, layDonCanCheck, themBaoLoi, ganAnhBaoLoi, demBaoLoiTu, layBaoLoi, dsBaoLoi, capNhatBaoLoi,
   layNote, layDanhSachNote, layTatCaTheNote, taoNote, suaNote, datAnhNote, xoaNote,
   ghiQcLog, layQcLog, layQcLogTheoId, danhGiaQcLog, thongKeDanhGiaQc, thongKeTokenQc, layDongDaDanhGiaCoAi, maxQcLogId, layCclSauId, tongKetQcNgay,
   taoKinhNghiem, suaKinhNghiem, doiTrangThaiKinhNghiem, layKinhNghiemTheoId, layDanhSachKinhNghiem, layKinhNghiemApDung, tangSoLanDungKinhNghiem, giuQuyenAutoQc, ketThucAutoQc, layTatCaAutoQc, donDepAutoQcDangChay,

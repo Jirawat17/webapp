@@ -51,11 +51,12 @@ function mang(ms) {
 }
 
 function taiAnh(ms) {
-  const ds = require('./nhatKyDbService').dsQuetVaChupTrongKhoang(vn(ms - 24 * MOT_GIO_MS), vn(ms));
+  const nk = require('./nhatKyDbService');
+  const ds = nk.dsQuetVaChupTrongKhoang(vn(ms - 24 * MOT_GIO_MS), vn(ms));
   const ok = ds.filter(d => d.su_kien === 'CHUP_ANH' && d.ket_qua === 'OK');
   const loi = ds.filter(d => (d.su_kien === 'CHUP_ANH' && d.ket_qua === 'LOI') || d.su_kien === 'THOAT_GIUA_CHUNG').length; // gồm ảnh bỏ dở
   const cham = ok.filter(d => d.cham).length, msOk = ok.map(d => d.tong_ms).filter(v => v != null);
-  const quet = ds.filter(d => d.su_kien === 'QUET_QR' && !d.lap_bi_chan), sai = quet.filter(d => d.ket_qua === 'SAI_TRANG_THAI').length; // bỏ dòng tổng đọc lặp
+  const quet = ds.filter(d => d.su_kien === 'QUET_QR' && !d.lap_bi_chan), sai = quet.filter(d => nk.phanLoaiLoiQuet(d.ket_qua, d.loi) === 'SAI_TRANG_THAI').length; // bỏ dòng tổng đọc lặp
   const lap = ds.reduce((s, d) => s + (Number(d.lap_bi_chan) || 0), 0);
   const tyLoi = pt(loi, ok.length + loi);
   return { ten: 'Quét QR / tải ảnh (24 giờ)', muc: tyLoi > 10 ? 'loi' : tyLoi > 3 || pt(cham, ok.length) > 20 ? 'chu-y' : 'tot', dong: [

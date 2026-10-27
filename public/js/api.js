@@ -809,9 +809,10 @@ function renderNav(user, active) {
   } else if (user.vaiTro === 'san_xuat') {
     // Thu hẹp xuống ĐÚNG 2 menu (bổ sung 23/09/2026, theo yêu cầu người dùng — bỏ nốt "Đơn hàng"/"Lịch
     // sử"). CHỈ ẩn menu điều hướng, KHÔNG khoá route backend (cùng quy ước như trên).
+    // Quét QR đứng trước Chạy máy (27/10/2026, theo yêu cầu người dùng — chỉ đổi thứ tự hiển thị).
     links = [
-      { href: '/my-orders.html', label: 'Chạy máy', icon: 'navMyOrders', key: 'my-orders' },
       { href: '/scan.html', label: 'Quét QR', icon: 'navScan', key: 'scan' },
+      { href: '/my-orders.html', label: 'Chạy máy', icon: 'navMyOrders', key: 'my-orders' },
     ];
   } else if (user.vaiTro === 've_file') {
     // Nhánh riêng cho ve_file (bổ sung 23/09/2026, theo yêu cầu người dùng) — trước đây dùng chung
@@ -829,45 +830,31 @@ function renderNav(user, active) {
   } else {
     // Chỉ còn admin/superadmin đi qua nhánh này (nguoi_lay_phoi/san_xuat/ve_file đã tách nhánh riêng ở
     // trên, bổ sung 23/09/2026).
+    // Thứ tự menu (27/10/2026, theo yêu cầu người dùng — chỉ đổi thứ tự hiển thị, trước đây ghép bằng nhiều lần splice):
+    // Cần xử lý · Quét QR · Chạy máy · Vẽ file · Đơn hàng · Đơn hàng loạt · Tracking · BĐK · TK · SL Phôi · Báo cáo · …
+    // chiAdmin = chỉ admin/superadmin (laAdmin) — vai trò khác lọt vào nhánh này (hiện không có) chỉ thấy các mục còn lại.
+    //   - "Cần xử lý" (Trung tâm hành động, 14/09/2026 — docs/superpowers/specs/2026-09-14-trung-tam-hanh-dong-design.md): trang CHÍNH
+    //     sau đăng nhập (trangChuTheoVaiTro) nên đứng đầu.
+    //   - "Chạy máy" (31/08/2026, trước tên "Đơn của tôi"): admin xem mọi đơn "Đang chạy máy" (routes/orders.js chỉ lọc theo NguoiVanHanh
+    //     cho san_xuat).
+    //   - "Đơn hàng loạt" (13/09/2026): LUÔN hiện.
+    //   - "Tracking" (09/09/2026 — docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md): bật/tắt + cấu hình tự động mua
+    //     tracking GKE (có chi phí thật). nguoi_lay_phoi không có mục này (nhánh riêng ở trên).
+    //   - "BĐK" (Bảng điều khiển, 08/09/2026 — docs/superpowers/specs/2026-09-08-bang-dieu-khien-admin-design.md): admin + superadmin.
     links = [
-      { href: '/orders.html', label: 'Đơn hàng', icon: 'navOrders', key: 'orders' },
+      { href: '/trung-tam-hanh-dong.html', label: 'Cần xử lý', icon: 'navAlert', key: 'trung-tam-hanh-dong', chiAdmin: true },
       { href: '/scan.html', label: 'Quét QR', icon: 'navScan', key: 'scan' },
+      { href: '/my-orders.html', label: 'Chạy máy', icon: 'navMyOrders', key: 'my-orders', chiAdmin: true },
+      { href: '/my-orders-ve-file.html', label: 'Vẽ file', icon: 'navMyOrders', key: 'my-orders-ve-file', chiAdmin: true },
+      { href: '/orders.html', label: 'Đơn hàng', icon: 'navOrders', key: 'orders' },
+      { href: '/don-hang-loat.html', label: 'Đơn hàng loạt', icon: 'navOrders', key: 'don-hang-loat', chiAdmin: true },
+      { href: '/tracking.html', label: 'Tracking', icon: 'navTracking', key: 'tracking', chiAdmin: true },
+      { href: '/bang-dieu-khien.html', label: 'BĐK', icon: 'navChart', key: 'bang-dieu-khien', chiAdmin: true },
       { href: '/dashboard.html', label: 'TK', icon: 'navChart', key: 'dashboard' },
       { href: '/tai-san.html', label: 'SL Phôi', icon: 'navAssets', key: 'tai-san' },
       { href: '/reports.html', label: 'Báo cáo', icon: 'navReports', key: 'reports' },
-    ];
-    // "Đơn của tôi" (bổ sung 31/08/2026) — CHỈ admin còn dùng nhánh này (san_xuat có nhánh riêng ở
-    // trên từ 08/09/2026). Admin xem nhanh mọi đơn đang "Đang chạy máy" — routes/orders.js
-    // (locDonDangChayMayTheoNguoiVanHanh) chỉ lọc theo NguoiVanHanh cho san_xuat, admin xem được hết.
-    // Đổi nhãn "Đơn của tôi · <tên>" → "Chạy máy" và "Đơn của tôi (Vẽ file) · <tên>" → "Vẽ file"
-    // (bổ sung 09/09/2026, theo yêu cầu người dùng — áp dụng cho MỌI vai trò dùng nhãn này, kể cả
-    // san_xuat/ve_file ở các nhánh khác trong hàm, không chỉ riêng admin) — bỏ hẳn phần ghép tên
-    // (+ escapeHtml(user.ten)) vì tên không còn xuất hiện trong nhãn nữa.
+    ].filter(l => !l.chiAdmin || laAdmin(user.vaiTro));
     if (laAdmin(user.vaiTro)) {
-      // "Bảng điều khiển" (bổ sung 08/09/2026, xem
-      // docs/superpowers/specs/2026-09-08-bang-dieu-khien-admin-design.md) — CHỈ admin, lên ĐẦU TIÊN
-      // (khác "Thống kê" vẫn mở cho cả ve_file) vì là màn hình tổng quan nhanh, hợp lý để thấy ngay.
-      links.splice(0, 0, { href: '/bang-dieu-khien.html', label: 'BĐK', icon: 'navChart', key: 'bang-dieu-khien' });
-      // "Trung tâm hành động" (bổ sung 14/09/2026, xem
-      // docs/superpowers/specs/2026-09-14-trung-tam-hanh-dong-design.md) — CHỈ admin, giờ là trang
-      // CHÍNH sau đăng nhập (xem trangChuTheoVaiTro ở trên) nên đứng TRƯỚC cả BĐK trong nav.
-      links.splice(0, 0, { href: '/trung-tam-hanh-dong.html', label: 'Cần xử lý', icon: 'navAlert', key: 'trung-tam-hanh-dong' });
-      links.splice(2, 0, { href: '/my-orders.html', label: 'Chạy máy', icon: 'navMyOrders', key: 'my-orders' });
-      links.splice(3, 0, { href: '/my-orders-ve-file.html', label: 'Vẽ file', icon: 'navMyOrders', key: 'my-orders-ve-file' });
-      // "Đơn hàng loạt" (bổ sung 13/09/2026, theo yêu cầu người dùng — LUÔN hiện, khác nút toolbar ẩn/
-      // hiện theo vai trò trước đây ở orders.html) — đặt cạnh nhóm "Đơn hàng/Chạy máy/Vẽ file", TRƯỚC
-      // Quét QR. Mảng lúc này: [BĐK, Đơn hàng, Chạy máy, Vẽ file, Quét QR, TK, SL Phôi, Trợ lý, Báo cáo]
-      // (index 0-8) — chèn tại index 4 là đúng ngay sau "Vẽ file", trước "Quét QR".
-      links.splice(4, 0, { href: '/don-hang-loat.html', label: 'Đơn hàng loạt', icon: 'navOrders', key: 'don-hang-loat' });
-      // "Tracking" (bổ sung 09/09/2026, xem
-      // docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md) — quản lý bật/tắt + cấu hình
-      // tự động mua tracking GKE, có thể phát sinh chi phí thật. Ban đầu CHỈ admin; mở thêm cho
-      // ve_file/san_xuat từ 09/09/2026 lần 2 (theo yêu cầu người dùng, để dùng 2 nút "IN LABEL"/"MUA
-      // TRACKING và IN LABEL") — người dùng đã cân nhắc và CHỌN mở toàn bộ trang, không chỉ riêng 2 nút
-      // đó (xem routes/tracking.js). nguoi_lay_phoi vẫn KHÔNG có mục này (nhánh riêng ở trên, không đi
-      // qua đây). Đặt GIỮA "Quét QR" và "TK" — sau khi chèn "Đơn hàng loạt" ở trên, Quét QR đã đẩy từ
-      // index 4 lên 5, TK từ 5 lên 6, nên chèn TRƯỚC index 6 (đã tăng từ 5, đổi theo, xem 13/09/2026).
-      links.splice(6, 0, { href: '/tracking.html', label: 'Tracking', icon: 'navTracking', key: 'tracking' });
       // "Tìm ảnh" (03/10/2026) — thư viện thiết kế thêu PNG/EMB (docs/superpowers/specs/2026-10-03-thu-vien-tim-anh-design.md);
       // ve_file có mục riêng ở nhánh ve_file phía trên.
       links.push({ href: '/tim-anh.html', label: 'Tìm ảnh', icon: 'camera', key: 'tim-anh' });

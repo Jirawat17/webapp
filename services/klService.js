@@ -132,13 +132,21 @@ async function timDonTheoMa(orderNumber, cauHinh, nhatKy) {
   }
   const khop = ds.filter(d => d && String(d.orderNumber) === String(orderNumber));
   if (khop.length > 1) ghi(nhatKy, `[KL] [tra đơn] CÓ ${khop.length} đơn cùng mã ${orderNumber} trên KL — dùng đơn thành công đầu tiên.`);
-  return khop.find(laDonThanhCong) || khop[0] || null;
+  return khop.find(laDonThanhCong) || khop.find(laDonChoCapMa) || khop[0] || null; // đơn dùng được > đơn đang chờ cấp mã > đơn lỗi
 }
 // Đơn KL dùng được = có barcode + sid và KHÔNG ở trạng thái lỗi / cảnh báo. KL dùng CẢ mã số (tài liệu: -1 Warning, 5 Failed, 6 Order Failed)
 // lẫn chữ ("failed", "success", status_text) -> xét cả 2; trạng thái lỗi / cảnh báo KHÔNG tự nhận (người dùng kiểm tra trên trang KL).
 const TRANG_THAI_KL_LOI = new Set(['-1', '5', '6']);
-const laTrangThaiKlLoi = d => TRANG_THAI_KL_LOI.has(String(d.status).trim()) || /fail|warn/i.test(`${d.status || ''} ${d.status_text || ''}`);
+// 27/10/2026: thêm chữ huỷ / xoá / từ chối — tài liệu KL không liệt kê mã của các trạng thái này; đơn huỷ không được coi là "đang chờ cấp mã".
+// So NGUYÊN TỪ, chỉ trạng thái ĐÃ xảy ra: "Refund requested", "Cancel requested", "Cancellation pending"… vẫn là đơn còn hiệu lực, không
+// bị coi là lỗi (không được khuyên xoá).
+const MAU_TRANG_THAI_LOI = /\b(fail|failed|failure|warn|warning|canceled|cancelled|deleted|voided|rejected)\b/i;
+const laTrangThaiKlLoi = d => TRANG_THAI_KL_LOI.has(String(d.status).trim()) || MAU_TRANG_THAI_LOI.test(`${d.status || ''} ${d.status_text || ''}`);
+// "status – status_text" của đơn KL để báo lỗi ('' nếu trống) — dùng chung mọi câu báo.
+const moTaTrangThaiKl = d => [d.status, d.status_text].filter(v => v != null && v !== '').join(' – ');
 const laDonThanhCong = d => !!(d && d.barcode && d.sid && !laTrangThaiKlLoi(d));
+// KL có đơn, KHÔNG lỗi nhưng chưa đủ barcode / sid (27/10/2026): đơn có thể hợp lệ, đã trừ phí — KHÔNG được khuyên xoá; chờ KL cấp đủ.
+const laDonChoCapMa = d => !!(d && !laTrangThaiKlLoi(d) && !laDonThanhCong(d));
 
 // Chi tiết 1 đơn KL (GET /api/v1/orders/<sid>) — dùng khi DÙNG LẠI đơn tìm được qua tra theo mã: danh sách có thể thiếu shipping_partner /
 // usd / vnd (ví dụ tài liệu: "shipping_partner": null). Lỗi -> ném (nơi gọi tự quyết dùng dữ liệu đang có).
@@ -149,15 +157,24 @@ async function layDonKl(sid, cauHinh, nhatKy) {
 }
 
 // Tạo đơn (MUA tracking — có thể phát sinh phí). KHÔNG thử lại. -> { barcode, sid, shipping_partner, usd, vnd }.
+// "KL từ chối" (nơi gọi bỏ dấu đang tạo -> job GKE được mua): HTTP 4xx thường (kể cả trang lỗi không phải JSON — vd 401/403 token bị thu hồi,
+// chặn ở biên: KL chưa tạo gì), hoặc 2xx kèm JSON có status khác "success". Còn lại là CHƯA RÕ -> khongRoKetQua: giữ dấu, lượt sau tra KL theo
+// mã đơn trước: 2xx không phải JSON / thiếu status (trang bảo trì của proxy), 408 quá giờ, 409 trùng (có thể đơn đã có), 425/429, 5xx
+// (27/10/2026, rà soát thiết kế KL).
+const HTTP_KHONG_RO = new Set([408, 409, 425, 429]);
 async function taoDonKl(body, cauHinh, nhatKy) {
   ghi(nhatKy, `[KL] [tạo đơn] Body: ${JSON.stringify(body)}`);
   const { res, data, text } = await goi('tạo đơn', 'POST', '/api/v1/orders', cauHinh, { body, nhatKy });
-  if (res.ok && data && String(data.status).toLowerCase() === 'success' && data.barcode && data.sid) return data;
-  if (res.ok && data && String(data.status).toLowerCase() === 'success') {
+  const coJson = !!data && typeof data === 'object';
+  if (res.ok && coJson && String(data.status).toLowerCase() === 'success' && data.barcode && data.sid) return data;
+  if (res.ok && coJson && String(data.status).toLowerCase() === 'success') {
     // Thành công nhưng thiếu barcode/sid: KHÔNG ghi tracking rỗng; giữ dấu đang tạo (nơi gọi) -> lượt sau tra lại theo mã đơn.
     throw Object.assign(new Error('[tạo đơn] KL báo thành công nhưng thiếu barcode / sid'), { khongRoKetQua: true });
   }
-  if (res.status >= 500) throw Object.assign(new Error(`[tạo đơn] KL lỗi máy chủ (HTTP ${res.status}): ${lyDoLoi(data, text, res)}`), { khongRoKetQua: true });
+  const loi4xx = res.status >= 400 && res.status < 500 && !HTTP_KHONG_RO.has(res.status);
+  if (!loi4xx && (!coJson || res.status >= 500 || HTTP_KHONG_RO.has(res.status) || (res.ok && data.status == null))) {
+    throw Object.assign(new Error(`[tạo đơn] KL trả phản hồi không rõ kết quả (HTTP ${res.status}${coJson ? '' : ', không phải JSON'}): ${lyDoLoi(data, text, res)}`), { khongRoKetQua: true });
+  }
   throw new Error(`[tạo đơn] KL từ chối: ${lyDoLoi(data, text, res)}`);
 }
 
@@ -180,7 +197,9 @@ async function layTrackingKl(barcode, cauHinh, nhatKy) {
 }
 const suKienMoiNhat = ds => ds.reduce((a, b) => (!a || new Date(b.eventTime) > new Date(a.eventTime) ? b : a), null);
 
-const tenHangVanChuyen = ma => ({ 1: 'USPS', 5: 'DHL' }[String(ma)] || (ma ? String(ma) : ''));
+// Mã hãng giao KL -> tên. Mã lạ / trống -> '' (27/10/2026: không ghi mã số thô kiểu "3" sang Sheet Seller của khách — nơi gọi báo cảnh báo).
+const TEN_HANG_KL = { 1: 'USPS', 5: 'DHL' };
+const tenHangVanChuyen = ma => TEN_HANG_KL[String(ma)] || '';
 
 // ---- Chuẩn bị dữ liệu đơn ----
 const BANG_MY = {
@@ -252,5 +271,5 @@ function taoBodyDonKl(row, dsDon, cauHinh, maQuocGia) {
 module.exports = {
   dangTaoDonKl, DON_VI_KL, BASE_URL,
   layCauHinhKlChoDon, layDanhSachTaiKhoanKl, luuTaiKhoanKl, xoaTaiKhoanKl, ganTaiKhoanKlChoXuong,
-  timDonTheoMa, laDonThanhCong, layDonKl, taoDonKl, layLabelKl, layTrackingKl, suKienMoiNhat, tenHangVanChuyen, maBangMy, taoBodyDonKl,
+  timDonTheoMa, laDonThanhCong, laDonChoCapMa, moTaTrangThaiKl, layDonKl, taoDonKl, layLabelKl, layTrackingKl, suKienMoiNhat, tenHangVanChuyen, maBangMy, taoBodyDonKl,
 };

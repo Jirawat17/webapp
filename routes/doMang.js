@@ -20,7 +20,7 @@ const datThoiGianXuLy = (req, res) => {
 const soDoan = v => (so(v) === null ? null : Math.max(0, Math.round(so(v))));
 
 router.post('/', (req, res) => {
-  doMangMayChu.hocTenMien(req); // lượt đi qua Cloudflare -> biết tên miền để máy chủ tự đo (khi chưa đặt TEN_MIEN_APP)
+  doMangMayChu.hocTenMien(req); // người đã đăng nhập vào bằng tên miền -> máy chủ biết tên miền để tự đo (khi chưa đặt TEN_MIEN_APP)
   const u = req.session && req.session.user;
   if (!u) { datThoiGianXuLy(req, res); return res.status(401).json({ ok: false, error: 'Chưa đăng nhập' }); }
   // Bỏ số đo ghi dưới tên NGƯỜI KHÁC (máy dùng chung: số đo lúc người trước hết phiên không bị ghi sang người vừa đăng nhập).

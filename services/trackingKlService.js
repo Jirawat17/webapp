@@ -20,6 +20,18 @@ const hangChung = require('./hangVanChuyenKhacService');
 const { DON_VI_KL } = klService;
 const { thoiGianVNISOString } = require('./dateUtils');
 const laDonKl = r => !!r && r.DON_VI_VAN_CHUYEN === DON_VI_KL;
+const trangThaiKl = d => (klService.moTaTrangThaiKl(d) ? `, trạng thái "${klService.moTaTrangThaiKl(d)}"` : '');
+// Superadmin xác nhận đơn KL "chưa đủ mã" là đơn đã huỷ / không dùng (Bỏ dấu, 27/10/2026) — lưu mã đơn KL đó (canh_bao_da_xu_ly, loại
+// KL_DON_BO_QUA): lần mua KL sau gặp lại đúng đơn này thì KHÔNG đặt lại dấu "đang mua KL" (không khoá lại đơn), báo mua GKE.
+// Đơn KL không có cả sid lẫn barcode: không có gì để nhận ra đúng đơn đó -> không ghi (maDonKl = '') — tránh coi nhầm 1 đơn KL mới cũng
+// thiếu mã là "đã bỏ qua". Bản ghi bỏ khi mua được tracking KL / xoá dữ liệu đơn (xoaDuLieuDonService).
+const LOAI_BO_QUA = 'KL_DON_BO_QUA';
+const maDonKl = d => String(d.sid || d.barcode || '');
+const daBoQuaDonKl = (sttKey, d) => {
+  const ma = maDonKl(d);
+  const ghi = ma && require('./nhatKyDbService').layDaXuLy(LOAI_BO_QUA).get(sttKey);
+  return !!ghi && ghi.gia_tri === ma;
+};
 
 // Tem KL lưu sẵn trên MinIO (orders/<mã>/tem-kl_<tracking>.pdf) — dùng chung hàm lưu / đọc tem GKE (trackingAutoService, tham số 'kl').
 // Cùng thư mục đơn: "Xoá dữ liệu đơn" xoá luôn; routes/photos.js /file/* chặn tem-kl_*.
@@ -33,6 +45,7 @@ async function _muaTrackingKl(sttKey, user) {
   const nhatKy = [];
   const nhan = `[KL - ${user.ten}]`;
   try {
+    if (!hangChung.duocMuaHangKhac(user.vaiTro)) throw new Error('Chỉ admin / vẽ file được mua tracking KL — đơn đã có tracking KL thì vẫn in label được.');
     const { rows } = await orderService.getAll({ docThat: true });
     const row = rows.find(r => r.STT_Key === sttKey);
     if (!row) throw new Error('Không tìm thấy đơn: ' + sttKey);
@@ -62,8 +75,19 @@ async function _muaTrackingKl(sttKey, user) {
 
     // Bước 1: tra KL theo mã đơn TRƯỚC khi tạo.
     let don = await klService.timDonTheoMa(sttKey, cauHinh, nhatKy);
-    if (don && !klService.laDonThanhCong(don)) {
-      throw new Error(`KL đã có đơn mã ${sttKey} (sid ${don.sid || '?'}) ở trạng thái "${[don.status, don.status_text].filter(v => v != null && v !== '').join(' – ') || '?'}"`
+    if (don && klService.laDonChoCapMa(don) && daBoQuaDonKl(sttKey, don)) {
+      throw new Error(`Đơn KL ${maDonKl(don)} của mã ${sttKey} đã được superadmin xác nhận là huỷ / không dùng — KL không cho tạo đơn mới cùng mã đơn. `
+        + 'Mua tracking GKE cho đơn này (hoặc xoá hẳn đơn đó trên trang KL rồi mua KL lại).');
+    }
+    if (don && klService.laDonChoCapMa(don)) {
+      // Giữ / đặt dấu đang mua KL: job GKE không chen vào trong lúc chờ KL cấp mã.
+      if (!row.KL_DANG_TAO) await orderService.update(sttKey, { KL_DANG_TAO: thoiGianVNISOString(), TAI_KHOAN_KL: cauHinh.id, DON_VI_VAN_CHUYEN: DON_VI_KL }, user);
+      throw new Error(`KL đã có đơn mã ${sttKey} (sid ${don.sid || '?'}${don.barcode ? `, tracking ${don.barcode}` : ''}${trangThaiKl(don)}) nhưng CHƯA đủ `
+        + `${don.barcode ? 'mã đơn KL (sid)' : 'mã tracking'} — KHÔNG xoá trên trang KL. Đợi vài phút rồi bấm mua lại: app nhận đơn này, không tạo đơn mới. `
+        + 'Nếu trên trang KL đơn này đã bị huỷ: superadmin "Bỏ dấu đang mua KL" để MUA GKE thay (KL không cho tạo đơn thứ 2 cùng mã đơn).');
+    }
+    if (don && !klService.laDonThanhCong(don)) { // còn lại: KL báo lỗi / cảnh báo / huỷ
+      throw new Error(`KL đã có đơn mã ${sttKey} (sid ${don.sid || '?'}) ở trạng thái "${klService.moTaTrangThaiKl(don) || '?'}"`
         + `${don.reason || don.Reason ? ` — ${don.reason || don.Reason}` : ''}${don.barcode ? ` (barcode ${don.barcode})` : ''}. `
         + 'App KHÔNG tự nhận đơn lỗi / cảnh báo và KL không cho tạo trùng mã đơn: kiểm tra / xoá đơn đó trên trang KL rồi bấm lại.');
     }
@@ -95,6 +119,10 @@ async function _muaTrackingKl(sttKey, user) {
     }
 
     const hang = klService.tenHangVanChuyen(don.shipping_partner);
+    const canhBaoHang = hang ? '' : (don.shipping_partner
+      ? `KL trả hãng giao mã "${don.shipping_partner}" (app chưa biết tên) — cột hãng vận chuyển để trống, kể cả trên Sheet Seller.`
+      : 'KL không cho biết hãng giao — cột hãng vận chuyển để trống, kể cả trên Sheet Seller.');
+    if (canhBaoHang) nhatKy.push('CẢNH BÁO: ' + canhBaoHang);
     await orderService.update(sttKey, {
       TRACKING_ID: String(don.barcode), HANG_VAN_CHUYEN: hang, KL_DANG_TAO: '', DON_VI_VAN_CHUYEN: DON_VI_KL, TAI_KHOAN_KL: cauHinh.id,
       KL_ORDER_SID: String(don.sid), KL_PHI_USD: don.usd != null ? String(don.usd) : '', KL_PHI_VND: don.vnd != null ? String(don.vnd) : '',
@@ -106,6 +134,7 @@ async function _muaTrackingKl(sttKey, user) {
       loiSheetCon = loiSheet;
       nhatKy.push(`[DonNhieuAo] Đã sao tracking xuống: ${daSao.join(', ') || '(không có đơn nào cần sao)'}.`);
     }
+    require('./nhatKyDbService').xoaDaXuLy(LOAI_BO_QUA, sttKey); // đã có tracking KL — bản ghi "đơn KL bị bỏ qua" (nếu có) hết tác dụng
     const [kqDay] = await sheetSellerService.ghiHangLoat([{ sttKey, loai: 'TRACKING', giaTri: { TRACKING_ID2: String(don.barcode), HANG_VAN_CHUYEN2: hang } }], user);
     const dayCheKhachHang = kqDay.ok ? { ok: true } : { ok: false, lyDo: kqDay.lyDo };
     nhatKy.push(kqDay.ok ? `Đã ghi tracking vào Sheet Seller (tab "${kqDay.tab}", dòng ${kqDay.dong}).` : `LỖI ghi tracking vào Sheet Seller: ${kqDay.lyDo}`);
@@ -116,7 +145,7 @@ async function _muaTrackingKl(sttKey, user) {
     ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'MUA_TRACKING_KL', sttKey, chiTiet: { trackingNum: String(don.barcode), hangVanChuyen: hang, klSid: String(don.sid), phiUsd: don.usd ?? null, phiVnd: don.vnd ?? null } })
       .catch(err => console.error('[TrackingKL] Lỗi ghi log nền:', err.message));
     t.ghiLogTrackingVaoDb({ sttKey, nguon: 'KL - Thủ công', nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: 'Thành công', trackingId: String(don.barcode), hangVanChuyen: hang, chiTiet: nhatKy.join('\n') });
-    return { tracking_num: String(don.barcode), delivery_carrier: hang, kl: { sid: String(don.sid), usd: don.usd ?? null, vnd: don.vnd ?? null }, dayCheKhachHang, loiSheetCon };
+    return { tracking_num: String(don.barcode), delivery_carrier: hang, kl: { sid: String(don.sid), usd: don.usd ?? null, vnd: don.vnd ?? null }, dayCheKhachHang, loiSheetCon, canhBaoHang };
   } catch (err) {
     t.ghiLogTracking(`${nhan} ${sttKey}: LỖI — ${err.message}`, sttKey);
     t.ghiLogTrackingVaoDb({ sttKey, nguon: 'KL - Thủ công', nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: 'Lỗi', chiTiet: nhatKy.concat(`LỖI: ${err.message}`).join('\n') });
@@ -127,7 +156,9 @@ async function _muaTrackingKl(sttKey, user) {
 // "Bỏ dấu đang mua KL" (22/10/2026, CHỈ superadmin — routes/tracking.js): đơn kẹt KL_DANG_TAO (KL mất phản hồi, KL lỗi lâu / hết tiền) để mua
 // GKE hoặc mua KL lại từ đầu. Tra KL theo mã đơn TRƯỚC: KL có đơn -> không bỏ (bấm Mua để nhận tracking, hoặc xoá đơn trên trang KL).
 // Không tra được KL -> lỗi maLoi 'KHONG_TRA_DUOC_KL'; superadmin xác nhận đã tự kiểm tra trên trang KL thì gửi lại với boQuaKiemTra.
-function boDauDangMuaKl(sttKey, user, { boQuaKiemTra = false } = {}) {
+// KL có đơn "chưa đủ mã" -> maLoi 'KL_DON_CHUA_DU'; superadmin xác nhận đơn đó đã huỷ thì gửi lại với boQuaDonChuaDu: tra lại, ghi nhận đơn
+// bị bỏ qua (daBoQuaDonKl) rồi bỏ dấu — lần mua KL sau không khoá lại đơn.
+function boDauDangMuaKl(sttKey, user, { boQuaKiemTra = false, boQuaDonChuaDu = false } = {}) {
   return tas().xepHangMuaTracking(sttKey, async () => {
     const t = tas();
     const { row } = await orderService.getByKey(sttKey, { fresh: true });
@@ -141,18 +172,33 @@ function boDauDangMuaKl(sttKey, user, { boQuaKiemTra = false } = {}) {
       } catch (err) {
         throw Object.assign(new Error(`Không tra được KL để kiểm tra (${err.message}).`), { maLoi: 'KHONG_TRA_DUOC_KL' });
       }
-      if (don) {
-        throw new Error(klService.laDonThanhCong(don)
-          ? `KL ĐÃ có đơn mã ${sttKey} (barcode ${don.barcode}) — không bỏ dấu; bấm "Mua Tracking KL" để nhận tracking này (không tạo đơn mới).`
-          : `KL có đơn mã ${sttKey} ở trạng thái "${[don.status, don.status_text].filter(v => v != null && v !== '').join(' – ')}" — xoá đơn đó trên trang KL trước rồi bỏ dấu.`);
+      if (don && klService.laDonThanhCong(don)) {
+        throw new Error(`KL ĐÃ có đơn mã ${sttKey} (barcode ${don.barcode}) — không bỏ dấu; bấm "Mua Tracking KL" để nhận tracking này (không tạo đơn mới).`);
+      }
+      // Đơn KL chưa đủ mã mà không báo lỗi: có thể đang chờ cấp mã, có thể đã bị huỷ dưới tên trạng thái app chưa biết -> superadmin tự kiểm
+      // tra trên trang KL rồi xác nhận (giao diện gửi lại với boQuaKiemTra), không từ chối hẳn (đơn kẹt mãi).
+      if (don && klService.laDonChoCapMa(don)) {
+        if (!boQuaDonChuaDu) {
+          throw Object.assign(new Error(`KL có đơn mã ${sttKey}${trangThaiKl(don)} chưa có đủ mã tracking — có thể đang chờ KL cấp mã (KHÔNG xoá).`), { maLoi: 'KL_DON_CHUA_DU' });
+        }
+        if (maDonKl(don)) {
+          require('./nhatKyDbService').danhDauDaXuLy({ loai: LOAI_BO_QUA, khoa: sttKey, giaTri: maDonKl(don), nguoi: user.ten, luc: thoiGianVNISOString(),
+            ghiChu: `superadmin xác nhận đơn KL${trangThaiKl(don)} đã huỷ / không dùng` });
+          nhatKy.push(`Superadmin xác nhận đơn KL ${maDonKl(don)}${trangThaiKl(don)} đã huỷ / không dùng — lần mua KL sau không khoá lại đơn.`);
+        } else {
+          nhatKy.push(`Superadmin xác nhận đơn KL${trangThaiKl(don)} đã huỷ — KL không cho mã đơn nên KHÔNG ghi nhớ được: bấm "Mua Tracking KL" lần sau có thể khoá lại đơn (mua GKE thay).`);
+        }
+      } else if (don) {
+        throw new Error(`KL có đơn mã ${sttKey} ở trạng thái "${klService.moTaTrangThaiKl(don)}" — xoá đơn đó trên trang KL trước rồi bỏ dấu.`);
       }
     }
     await orderService.update(sttKey, { KL_DANG_TAO: '', DON_VI_VAN_CHUYEN: '', TAI_KHOAN_KL: '' }, user);
-    const chiTiet = boQuaKiemTra ? 'Bỏ dấu KHÔNG tra KL (superadmin xác nhận đã tự kiểm tra trên trang KL).' : 'Đã tra KL: không có đơn mã này — bỏ dấu.';
-    ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'BO_DAU_DANG_MUA_KL', sttKey, chiTiet: { boQuaKiemTra } })
+    const chiTiet = boQuaKiemTra ? 'Bỏ dấu KHÔNG tra KL (superadmin xác nhận đã tự kiểm tra trên trang KL).'
+      : boQuaDonChuaDu ? 'Bỏ dấu (đơn KL chưa đủ mã được xác nhận đã huỷ).' : 'Đã tra KL: không có đơn mã này — bỏ dấu.';
+    ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'BO_DAU_DANG_MUA_KL', sttKey, chiTiet: { boQuaKiemTra, boQuaDonChuaDu } })
       .catch(err => console.error('[TrackingKL] Lỗi ghi log nền:', err.message));
     t.ghiLogTrackingVaoDb({ sttKey, nguon: 'KL - Bỏ dấu', nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: 'Thành công', chiTiet: nhatKy.concat(chiTiet).join('\n') });
-    t.ghiLogTracking(`[KL - ${user.ten}] ${sttKey}: bỏ dấu đang mua KL${boQuaKiemTra ? ' (không tra KL)' : ''}`, sttKey);
+    t.ghiLogTracking(`[KL - ${user.ten}] ${sttKey}: bỏ dấu đang mua KL${boQuaKiemTra ? ' (không tra KL)' : boQuaDonChuaDu ? ' (xác nhận đơn KL chưa đủ mã đã huỷ)' : ''}`, sttKey);
     return { ok: true };
   });
 }

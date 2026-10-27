@@ -520,7 +520,7 @@ function tinhBaoCaoTheoNguoi({ ms, lichSu, quetChup, nguoiChayMay = () => '' }) 
     if (q.lap_bi_chan) g.lapBiChan += Number(q.lap_bi_chan) || 0; // dòng tổng đọc lặp bị chặn — không phải lượt quét riêng
     else if (q.su_kien === 'QUET_QR') {
       g.quet++;
-      if (q.ket_qua === 'SAI_TRANG_THAI') g.sai++;
+      if (nhatKy.phanLoaiLoiQuet(q.ket_qua, q.loi) === 'SAI_TRANG_THAI') g.sai++; // không tính "không tìm thấy đơn" / "chưa có Tracking"
       if (q.man_do) g.manDo++;
     } else if (q.ket_qua === 'OK') {
       g.anh.ok++;

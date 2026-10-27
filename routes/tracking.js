@@ -145,7 +145,7 @@ router.post('/kl/mua', async (req, res) => {
       if (!kq) { loi.push({ sttKey, lyDo: 'Đơn này đã có mã tracking — không mua KL.' }); continue; }
       loiDaySheetKh.push(...(kq.loiSheetCon || []));
       if (kq.dungChung) { loi.push({ sttKey, lyDo: `Không mua — đơn DonNhieuAo dùng chung tracking ${kq.tracking_num} của ${kq.donMua} (đã gán).` }); continue; }
-      thanhCong.push({ sttKey, tracking: kq.tracking_num, hang: kq.delivery_carrier, phiUsd: kq.kl.usd, phiVnd: kq.kl.vnd });
+      thanhCong.push({ sttKey, tracking: kq.tracking_num, hang: kq.delivery_carrier, phiUsd: kq.kl.usd, phiVnd: kq.kl.vnd, canhBao: kq.canhBaoHang || '' });
       if (kq.dayCheKhachHang && !kq.dayCheKhachHang.ok) loiDaySheetKh.push({ sttKey, lyDo: kq.dayCheKhachHang.lyDo });
     } catch (err) {
       if (!err.maLoi) console.error(`[TrackingKL] Lỗi mua tracking KL cho ${sttKey}:`, err.message);
@@ -213,7 +213,7 @@ router.post('/kl/bo-dau', requireExactRole('superadmin'), async (req, res) => {
   const { row } = await orderService.getByKey(sttKey);
   if (!row || !orderService.coQuyenTheoXuong(req.session.user, row)) return res.status(404).json({ error: 'Không tìm thấy đơn hàng' });
   try {
-    res.json(await boDauDangMuaKl(sttKey, req.session.user, { boQuaKiemTra: req.body.boQuaKiemTra === true }));
+    res.json(await boDauDangMuaKl(sttKey, req.session.user, { boQuaKiemTra: req.body.boQuaKiemTra === true, boQuaDonChuaDu: req.body.boQuaDonChuaDu === true }));
   } catch (err) {
     res.status(400).json({ error: err.message, maLoi: err.maLoi || '' });
   }
@@ -422,6 +422,7 @@ router.post('/in-label', (req, res) => xuLyInLabelHangLoat(req, res, inLabelChoD
 router.post('/mua-va-in-label', (req, res) => xuLyInLabelHangLoat(req, res, muaTrackingVaInLabelChoDon));
 
 // "Mua Tracking KL và In Label KL" (22/10/2026) — cùng phạm vi vai trò với "MUA TRACKING và IN LABEL" (GKE), ghép PDF như in hàng loạt.
+// Bước MUA: admin, superadmin, vẽ file (27/10/2026 — chặn trong trackingKlService#_muaTrackingKl); vai trò khác chỉ in label đơn đã có tracking KL.
 router.post('/kl/mua-va-in-label', (req, res) => xuLyInLabelHangLoat(req, res, muaTrackingKlVaInLabelChoDon));
 router.post('/hpw/mua-va-in-label', (req, res) => xuLyInLabelHangLoat(req, res, trackingHpw.muaTrackingHpwVaInLabelChoDon)); // HPW (22/10/2026)
 

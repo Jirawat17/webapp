@@ -35,6 +35,7 @@ async function xoaDuLieuDon(sttKey) {
   nhatKyDbService.xoaNhatKyQuetHangLoatTheoDon(sttKey);
   nhatKyDbService.xoaLogsTrackingTheoDon(sttKey);
   nhatKyDbService.xoaDongBoSheetSellerTheoDon(sttKey);
+  nhatKyDbService.xoaDaXuLy('KL_DON_BO_QUA', sttKey); // đơn KL đã được superadmin bỏ qua (trackingKlService) — mã đơn có thể được dùng lại
 
   trangThaiDbService.ghiDe(sttKey, { ...trangThaiDbService.RONG_MAC_DINH, DA_XOA: 'TRUE' });
 }

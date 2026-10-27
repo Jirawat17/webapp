@@ -305,7 +305,7 @@ Bộ lọc theo LOAI ↔ keyword (`nhom_hang_loai`), so khớp nguyên giá tr�
 
 ## 12. Frontend / UI
 
-Menu theo vai trò (`public/js/api.js#renderNav`): nguoi_lay_phoi (Quét QR…), san_xuat (Chạy máy, Quét QR), ve_file (Đơn hàng, Vẽ file, Quét QR, Tracking, Đơn hàng loạt…), admin/superadmin (BĐK, Cần xử lý, Đơn hàng, Chạy máy, Vẽ file, Đơn hàng loạt, Tracking, TK, SL Phôi, Báo cáo, Lịch sử, Setting…); chỉ superadmin: Kịch bản quét, QC, Nhân viên, Logs.
+Menu theo vai trò (`public/js/api.js#renderNav`): nguoi_lay_phoi (Quét QR…), san_xuat (Quét QR, Chạy máy), ve_file (Đơn hàng, Vẽ file, Quét QR, Tracking, Tìm ảnh), admin/superadmin theo thứ tự (27/10/2026): Cần xử lý, Quét QR, Chạy máy, Vẽ file, Đơn hàng, Đơn hàng loạt, Tracking, BĐK, TK, SL Phôi, Báo cáo, Tìm ảnh, …, Lịch sử, Setting; chỉ superadmin: Kịch bản quét, QC, Nhân viên, Logs.
 
 **Menu QC (`public/qc.html`, chỉ superadmin) — thứ tự khối:**
 1. Cấu hình AI: mỗi QC 1 dòng — chọn nhà cung cấp (Gemini AI Studio / Gemini Agent Platform-Vertex / Claude), API key (password, che), model (datalist gợi ý), Lưu / Thử kết nối / Xoá key.

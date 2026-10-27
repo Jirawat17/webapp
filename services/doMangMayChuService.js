@@ -4,7 +4,10 @@
 //   1. GET  /cdn-cgi/trace — Cloudflare tự trả lời, không vào máy chủ: ms_cf = 1 vòng Máy chủ -> Cloudflare (+ trạm colo máy chủ đi qua)
 //   2. POST /api/ping      — đi vòng Cloudflare -> vào lại máy chủ này (chưa đăng nhập -> 401 ngay, không ghi gì):
 //                            ms_cf_may_chu = byte đầu (2) - byte đầu (1) - thời gian app xử lý (Server-Timing) = đoạn Cloudflare <-> máy chủ
-// Tên miền: TEN_MIEN_APP trong .env, không có thì tự lấy từ lượt truy cập đầu tiên đi qua Cloudflare (header cf-ray — routes/doMang.js).
+// Tên miền: TEN_MIEN_APP trong .env, không có thì tự lấy từ lượt truy cập đầu tiên của người ĐÃ ĐĂNG NHẬP vào bằng tên miền (routes/doMang.js).
+// 26/10/2026: trước chỉ học từ lượt qua Cloudflare (header cf-ray) — tên miền chuyển "đi thẳng" (DNS only) thì sau mỗi lần khởi động lại máy
+// chủ không bao giờ học được, ngừng đo cả ngày 24–26/10. Chỉ học từ người đã đăng nhập: truy cập thẳng bằng IP nội bộ kèm Host tự đặt
+// không khiến máy chủ đi đo tới 1 tên miền lạ.
 // Chưa biết tên miền (vd chạy thử trên máy, không có Cloudflare) -> không đo.
 // Đo thêm (21/10/2026, theo yêu cầu người dùng — log 19–20/10: chính máy chủ bắt tay tới Cloudflare chậm gấp ~9 lần giờ cao điểm), cùng lượt:
 //   - ms_tcp_trong_nuoc / ms_tcp_quoc_te: thời gian mở kết nối TCP (không tính DNS) tới 1 đích trong nước và 1 đích quốc tế KHÔNG qua
@@ -26,12 +29,22 @@ const UA_DO_MANG = 'xuong-theu-do-mang'; // logCapture.js bỏ qua lượt 401 c
 const MAU_TEN_MIEN = /^(?=.{4,253}$)([a-z0-9-]+\.)+[a-z]{2,}$/i; // tên miền, không nhận IP / localhost
 let tenMien = MAU_TEN_MIEN.test(process.env.TEN_MIEN_APP || '') ? process.env.TEN_MIEN_APP.toLowerCase() : '';
 
+// Chỉ nhận tên có trên DNS công khai (dns.resolve4 không đọc file hosts) — tên nội bộ kiểu xuong.lan / tên trong file hosts bị bỏ qua.
+// ponytail: tên miền công khai ĐẦU TIÊN được giữ tới khi khởi động lại; dùng nhiều tên miền thật cho app thì đặt TEN_MIEN_APP để cố định.
+let _dangThuTenMien = false;
 function hocTenMien(req) {
-  if (tenMien || !req.headers['cf-ray']) return;
+  if (tenMien || _dangThuTenMien || !(req.session && req.session.user)) return;
   const h = String(req.hostname || '').toLowerCase();
   if (!MAU_TEN_MIEN.test(h)) return;
-  tenMien = h;
-  console.log(`[DoMang] Máy chủ tự đo mạng qua Cloudflare tới https://${h} (tên miền lấy từ lượt truy cập — đặt TEN_MIEN_APP trong .env để cố định).`);
+  _dangThuTenMien = true;
+  require('dns').promises.resolve4(h)
+    .then(ds => {
+      if (!ds.length || tenMien) return;
+      tenMien = h;
+      console.log(`[DoMang] Máy chủ tự đo mạng tới https://${h} (tên miền lấy từ lượt truy cập — đặt TEN_MIEN_APP trong .env để cố định).`);
+    })
+    .catch(() => { /* không có trên DNS công khai — chờ lượt truy cập bằng tên khác */ })
+    .finally(() => { _dangThuTenMien = false; });
 }
 
 // 1 request HTTPS trên kết nối MỚI. -> { batDau, lookup, connect, tls, byteDau, status, headers, body }

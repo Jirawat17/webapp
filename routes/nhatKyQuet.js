@@ -96,7 +96,40 @@ router.get('/', requireExactRole('superadmin'), (req, res) => {
 // Tổng hợp theo nhóm thiết bị (hệ điều hành + trình duyệt, lấy số phiên bản CHÍNH) hoặc theo người dùng: số lượt, trung bình
 // từng chặng của lượt chụp, nhóm 10% chậm nhất, tỉ lệ lỗi. Tính ở JS (90 ngày dữ liệu vẫn nhỏ với SQLite + 1 lần quét).
 const banChinh = s => String(s || '').replace(/^(\D*\d+)[.\d]*/, '$1'); // "iOS 17.5" -> "iOS 17", "Chrome 138.0" -> "Chrome 138"
+// Quét sai theo người × chế độ (26/10/2026, theo yêu cầu người dùng — 24–25/10 quét sai trạng thái 18–20%/ngày, để biết nên hướng dẫn lại
+// ai, ở chế độ nào). Dòng tổng "camera đọc lặp mã vừa lỗi" (scan.html#ghiLogLapBiChan) không tính là 1 lượt quét, đếm riêng.
+// trangThaiDon: đơn đang ở trạng thái nào khi bị quét sai (lấy từ câu báo lỗi của máy chủ) — 3 trạng thái hay gặp nhất. Câu chữ khác nhau
+// theo chế độ: chụp ảnh (routes/photos.js) 'đang ở trạng thái "X"'; quét kịch bản (routes/qr.js) 'lỗi do đơn đang "X"', 'kết thúc ở trạng thái
+// "X"', 'chưa được đánh dấu "Đã in mã"' (= đơn còn "Chưa in mã").
+// "Không tìm thấy đơn" / "chưa có Tracking" không phải sai trạng thái (nhatKyDbService#phanLoaiLoiQuet) — đếm riêng.
+const MAU_TRANG_THAI_LOI = /(?:trạng thái|lỗi do đơn đang) "([^"]+)"/;
+function trangThaiTuLoi(loi) {
+  if (/chưa được đánh dấu "Đã in mã"/.test(loi || '')) return 'Chưa in mã';
+  const m = MAU_TRANG_THAI_LOI.exec(loi || '');
+  return m ? m[1] : 'khác';
+}
+function tongHopQuetSai(loc) {
+  const nhom = new Map();
+  for (const r of nhatKy.dsQuetQrDeTongHop(loc)) {
+    const khoa = `${r.nguoi}|${r.che_do}`;
+    const g = nhom.get(khoa) || nhom.set(khoa, { nguoi: r.nguoi, cheDo: r.che_do, soQuet: 0, soSai: 0, soKhongThay: 0, soThieuTracking: 0, soManDo: 0, soLap: 0, trangThai: {} }).get(khoa);
+    if (r.lap_bi_chan) { g.soLap += Number(r.lap_bi_chan) || 0; continue; }
+    g.soQuet++;
+    if (r.man_do) g.soManDo++;
+    const loai = nhatKy.phanLoaiLoiQuet(r.ket_qua, r.loi);
+    if (loai === 'KHONG_TIM_THAY') g.soKhongThay++;
+    else if (loai === 'THIEU_TRACKING') g.soThieuTracking++;
+    if (loai !== 'SAI_TRANG_THAI') continue;
+    g.soSai++;
+    const tt = trangThaiTuLoi(r.loi);
+    g.trangThai[tt] = (g.trangThai[tt] || 0) + 1;
+  }
+  return [...nhom.values()].map(({ trangThai, ...g }) => ({ ...g, tyLeSai: g.soQuet ? Math.round((g.soSai * 1000) / g.soQuet) / 10 : 0,
+    trangThaiDon: Object.entries(trangThai).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([ten, so]) => ({ ten, so })) }))
+    .sort((a, b) => b.soSai - a.soSai || b.soQuet - a.soQuet);
+}
 router.get('/tong-hop', requireExactRole('superadmin'), (req, res) => {
+  if (req.query.nhom === 'quet-sai') return res.json(tongHopQuetSai(docLoc(req.query)));
   const theoNguoi = req.query.nhom === 'nguoi';
   const nhom = new Map();
   const them = (ds, v) => { if (Number.isFinite(v)) ds.push(v); };

@@ -5,6 +5,10 @@ const orderService = require('./orderService');
 // trackingAutoService require ngược các file hãng -> nạp khi dùng.
 const tas = () => require('./trackingAutoService')._dungChoHangKhac;
 
+// Vai trò được MUA tracking hãng ngoài GKE (KL, HPW — 27/10/2026, người dùng chốt, giống GKE "MUA TRACKING và IN LABEL"): admin, superadmin,
+// vẽ file. Hàm mua của từng hãng tự chặn (mọi lối gọi đều qua đó). "Mua … ngay" vẫn chỉ admin (routes/tracking.js).
+const duocMuaHangKhac = vaiTro => require('../middleware/auth').laAdmin(vaiTro) || vaiTro === 've_file';
+
 // hang = { ten: 'KL', maTem: 'kl', laDon(row), thieuDuLieu(don) -> lý do | null, layLabel(don, nhatKy) -> base64 PDF }
 async function inLabelHangKhac(hang, sttKey, user) {
   const t = tas();
@@ -70,4 +74,4 @@ async function muaVaInLabelHangKhac(hang, sttKey, user) {
   }
 }
 
-module.exports = { inLabelHangKhac, muaVaInLabelHangKhac };
+module.exports = { inLabelHangKhac, muaVaInLabelHangKhac, duocMuaHangKhac };
