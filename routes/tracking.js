@@ -118,6 +118,30 @@ router.get('/tai-khoan-kl', requireExactRole('superadmin'), (req, res) => res.js
 router.post('/tai-khoan-kl', requireExactRole('superadmin'), (req, res) => {
   try { res.json({ ok: true, id: klService.luuTaiKhoanKl(null, req.body || {}) }); } catch (err) { res.status(400).json({ error: err.message }); }
 });
+// SKU KL dự kiến của 1 đơn (28/10/2026 — khối KL ở Chi tiết đơn): chưa bấm mua đã biết đơn nào thiếu SKU. DonNhieuAo: theo cả kiện (đơn ".1"
+// + đơn con chưa huỷ), cùng cách taoBodyDonKl. Chặn khác Xưởng.
+router.get('/kl/sku/:sttKey', async (req, res) => {
+  const { rows } = await orderService.getAll();
+  const row = rows.find(r => r.STT_Key === req.params.sttKey);
+  if (!row || !orderService.coQuyenTheoXuong(req.session.user, row)) return res.status(404).json({ error: 'Không tìm thấy đơn hàng' });
+  const dnaService = require('../services/donNhieuAoService');
+  const nhom = dnaService.layNhomCuaDon(row.STT_Key, rows);
+  const donMua = nhom ? nhom.donMua : row;
+  const dsDon = nhom ? nhom.thanhVien.filter(r => r.TRANG_THAI_XUONG !== dnaService.TRANG_THAI_HUY) : [row];
+  res.json(klService.duDoanSkuKl(donMua, dsDon));
+});
+
+// Nạp danh sách SKU KL (28/10/2026): file "Item Declarations" (.xlsx, xuất ở trang KL) — thay toàn bộ SKU của tài khoản. CHỈ superadmin.
+const uploadSkuKl = require('multer')({ storage: require('multer').memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1 } });
+router.post('/tai-khoan-kl/:id/sku', requireExactRole('superadmin'), (req, res) => uploadSkuKl.single('file')(req, res, async loi => {
+  if (loi) return res.status(400).json({ error: loi.code === 'LIMIT_FILE_SIZE' ? 'File quá lớn (tối đa 5MB)' : loi.message });
+  if (!req.file) return res.status(400).json({ error: 'Chưa chọn file' });
+  try {
+    const kq = await klService.luuDanhSachSkuKl(req.params.id, req.file.buffer, req.session.user);
+    console.log(`[KL] ${req.session.user.ten} nạp ${kq.soSku} SKU cho tài khoản KL #${req.params.id}.`);
+    res.json({ ok: true, ...kq });
+  } catch (err) { res.status(400).json({ error: err.message }); }
+}));
 router.put('/tai-khoan-kl/:id', requireExactRole('superadmin'), (req, res) => {
   try { res.json({ ok: true, id: klService.luuTaiKhoanKl(req.params.id, req.body || {}) }); } catch (err) { res.status(400).json({ error: err.message }); }
 });

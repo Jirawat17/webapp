@@ -308,7 +308,7 @@
     <h3 style="margin-top:var(--space-5)">Danh sách tài khoản</h3>
     <div id="kl-danh-sach-tk" style="display:flex;flex-direction:column;gap:var(--space-4)"></div>
     <button type="button" class="btn-hanh-dong phu" id="btn-them-tk-kl" style="margin-top:var(--space-3)">+ Thêm tài khoản KL</button>
-    <p class="st-ghi-chu-truong">Token: API key tạo ở trang KL (Accounts → Account API keys). SKU: mã hàng đã khai báo sẵn ở mục Item Declarations trên trang KL (mô tả, kích thước, giá trị) — mỗi đơn chỉ gửi SKU + số lượng áo. Cân nặng = TRONG_LUONG × Số lượng (đổi sang gram); đơn thiếu TRONG_LUONG dùng "Cân nặng mỗi áo (gram)".</p>
+    <p class="st-ghi-chu-truong">Token: API key tạo ở trang KL (Accounts → Account API keys). Danh sách SKU: tải file Excel xuất từ mục Item Declarations trên trang KL (cột skuNumber, itemWeight). Mỗi đơn dùng SKU "US" + LOAI + KICH_THUOC (vd USHoodie2XL); cân nặng = cân nặng của SKU × Số lượng. Đơn không tìm thấy SKU sẽ KHÔNG mua được — thêm SKU trên trang KL rồi tải lại file.</p>
     <p id="thong-bao-kl" style="display:none"></p>
   </details>
 
@@ -1025,8 +1025,34 @@ async function ganTaiKhoanGke(xuong, taiKhoanId) {
 // ---- Tài khoản KL theo Xưởng (22/10/2026) — cùng khuôn tài khoản GKE ở trên; token không hiện lại, để trống = giữ token cũ ----
 const TRUONG_TK_KL = [
   ['ten', 'Tên tài khoản', 'text'], ['token', 'Token (API key)', 'password'],
-  ['skuNumber', 'SKU đã khai báo trên KL', 'text', 'EMB-GARMENT'], ['canNangMoiAoGram', 'Cân nặng mỗi áo (gram)', 'number', '300'],
 ];
+// Danh sách SKU KL (28/10/2026) — nạp file Item Declarations (routes/tracking.js POST /tai-khoan-kl/:id/sku), thay toàn bộ.
+function htmlSkuKl(tk, id) {
+  const luc = tk.skuNapLuc ? new Date(tk.skuNapLuc).toLocaleString('vi-VN') : '';
+  return `<div style="border-top:1px dashed var(--color-border);padding-top:var(--space-2)">
+      <div>Danh sách SKU: ${tk.soSku ? `<b>${tk.soSku} SKU</b> · nạp lúc ${escapeHtml(luc)}${tk.skuNapBoi ? ` bởi ${escapeHtml(tk.skuNapBoi)}` : ''}`
+        : '<span style="color:var(--color-danger-text);font-weight:600">CHƯA NẠP — chưa mua được tracking KL</span>'}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px">
+        <input type="file" accept=".xlsx" id="kl-${id}-file-sku" aria-label="File Item Declarations (.xlsx)">
+        <button type="button" class="btn-hanh-dong phu" data-tk="${escapeHtml(id)}" onclick="napSkuKl(this.dataset.tk, this)">Tải lên danh sách SKU</button>
+      </div>
+    </div>`;
+}
+async function napSkuKl(id, btn) {
+  const o = document.getElementById(`kl-${id}-file-sku`);
+  if (!o.files[0]) { thongBaoGke('Chọn file .xlsx (Item Declarations) trước.', true, 'thong-bao-kl'); return; }
+  if (!await hopXacNhan('Thay TOÀN BỘ danh sách SKU của tài khoản này bằng file vừa chọn?')) return;
+  const fd = new FormData();
+  fd.append('file', o.files[0]);
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${API}/tracking/tai-khoan-kl/${encodeURIComponent(id)}/sku`, { method: 'POST', body: fd, credentials: 'include' });
+    const kq = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(kq.error || `Máy chủ trả ${res.status}`);
+    thongBaoGke(`Đã nạp ${kq.soSku} SKU.${kq.canhBao && kq.canhBao.length ? ` (${kq.canhBao.length} dòng lặp lại đã bỏ qua)` : ''}`, false, 'thong-bao-kl');
+    await taiTaiKhoanKl();
+  } catch (e) { btn.disabled = false; thongBaoGke('Chưa nạp: ' + e.message, true, 'thong-bao-kl'); }
+}
 function theTaiKhoanKl(tk, id, dungCho) {
   return `
     <div class="bao-cao-form st-cau-hinh-gke st-the-tk-gke" data-tk-kl="${escapeHtml(id)}">
@@ -1040,6 +1066,7 @@ function theTaiKhoanKl(tk, id, dungCho) {
               ${loai === 'number' ? 'min="1" step="1"' : ''} autocomplete="${loai === 'password' ? 'new-password' : 'off'}">
           </div>`).join('')}
       </div>
+      ${id === 'moi' ? '<p class="st-ghi-chu-truong" style="margin:0">Lưu tài khoản trước, rồi tải lên danh sách SKU.</p>' : htmlSkuKl(tk, id)}
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button type="button" class="btn-hanh-dong" data-tk="${escapeHtml(id)}" onclick="luuTaiKhoanKl(this.dataset.tk)">Lưu tài khoản</button>
         ${id === 'moi'

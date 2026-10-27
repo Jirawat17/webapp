@@ -739,6 +739,7 @@ function renderKhuVucThaoTac(don) {
   }
 
   el.innerHTML = html;
+  if (document.getElementById('kl-sku-du-doan')) taiSkuDuDoanKl(don.STT_Key);
   if (document.getElementById('sua-tinh-trang')) { // khối "Sửa trạng thái thủ công" chỉ có với admin/superadmin
     canhBaoToHopSai();
     capNhatMauChonTrangThai(document.getElementById('sua-phoi'));
@@ -934,6 +935,7 @@ function htmlKhoiKl(don) {
         + (user.vaiTro === 'superadmin' ? ` Muốn mua GKE thay: <button type="button" class="btn-hanh-dong phu" style="padding:4px 10px;font-size:0.82rem" onclick="boDauDangMuaKl(this)">Bỏ dấu đang mua KL</button>` : '')
         + '</p>';
     }
+    nd += '<div id="kl-sku-du-doan" style="font-size:0.85rem;margin:0 0 8px"></div>';
     nd += `<div class="hang-nut">
         ${laAdmin(user.vaiTro) ? `<button class="btn-hanh-dong phu" onclick="muaTrackingKlNgay(this)">${icon('package')} Mua Tracking KL ngay</button>` : ''}
         ${nhom && !nhom.laDonIn ? '' : `<button class="btn-hanh-dong" onclick="apDungMuaVaInLabelKl(this)">${icon('printer')} Mua Tracking KL và In Label KL</button>`}
@@ -1029,6 +1031,19 @@ function ganMaLoHangHpw(btn) {
 }
 
 const muaTrackingKlNgay = btn => muaTrackingHangNgay(btn, 'kl', 'KL');
+// SKU KL dự kiến (28/10/2026 — routes/tracking.js GET /tracking/kl/sku/:sttKey): đơn nào thiếu SKU thì thấy ngay, chưa cần bấm mua.
+async function taiSkuDuDoanKl(ma) {
+  const el = document.getElementById('kl-sku-du-doan');
+  let kq;
+  try { kq = await apiFetch('/tracking/kl/sku/' + encodeURIComponent(ma)); } catch (e) { el.textContent = ''; return; }
+  const loi = s => `<span style="color:var(--color-danger-text);font-weight:600">${s}</span>`;
+  if (kq.loi) { el.innerHTML = loi(escapeHtml(kq.loi)); return; }
+  if (!kq.soSku) { el.innerHTML = loi(`Tài khoản KL "${escapeHtml(kq.taiKhoan)}" chưa nạp danh sách SKU — chưa mua được (Settings > Tài khoản KL).`); return; }
+  const nhieu = kq.ds.length > 1;
+  el.innerHTML = kq.ds.map(d => (nhieu ? `${escapeHtml(d.sttKey)}: ` : '') + (d.thieu ? loi('thiếu LOAI / KICH_THUOC — không ghép được SKU')
+    : d.sku ? `SKU KL: <b>${escapeHtml(d.sku)}</b> · ${d.canNangGram} g × ${d.soLuong}`
+      : loi(`không có SKU "${escapeHtml(d.ma)}" trong danh sách KL — chưa mua được KL (thêm SKU trên trang KL rồi nạp lại)`))).join('<br>');
+}
 // "Mua Tracking <hãng> ngay" — dùng chung KL / HPW (22/10/2026).
 async function muaTrackingHangNgay(btn, ma, ten) {
   if (laDonDaHuy()) return hienThongBaoDonDaHuy([sttKey]);

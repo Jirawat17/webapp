@@ -71,7 +71,8 @@ async function _muaTrackingKl(sttKey, user) {
     const cauHinh = klService.layCauHinhKlChoDon(row);
     const dsDon = nhom ? nhom.thanhVien.filter(r => r.TRANG_THAI_XUONG !== donNhieuAoService.TRANG_THAI_HUY) : [row];
     const body = klService.taoBodyDonKl(row, dsDon, cauHinh, gkeService.maQuocGia);
-    if (nhom) nhatKy.push(`[DonNhieuAo] Nhóm ${nhom.goc} (${dsDon.length} đơn) — 1 đơn KL cho cả nhóm, ${body.weight} g, ${body.items[0].quantity} áo.`);
+    if (nhom) nhatKy.push(`[DonNhieuAo] Nhóm ${nhom.goc} (${dsDon.length} đơn) — 1 đơn KL cho cả nhóm, ${body.weight} g, `
+      + `${body.items.map(i => `${i.skuNumber} × ${i.quantity}`).join(', ')}.`);
 
     // Bước 1: tra KL theo mã đơn TRƯỚC khi tạo.
     let don = await klService.timDonTheoMa(sttKey, cauHinh, nhatKy);

@@ -310,8 +310,8 @@ function xoaTaiKhoanGke(id) {
   db.prepare(`DELETE FROM tai_khoan_gke WHERE id = ?`).run(Number(id));
 }
 // ---------- Tài khoản KL theo Xưởng (22/10/2026, theo yêu cầu người dùng — cùng khuôn tài khoản GKE) ----------
-// Token = API key tạo ở trang KL (vantage.klportal.com). SkuNumber = SKU đã khai báo sẵn ở mục Item Declarations trên trang KL (mô tả,
-// kích thước, giá trị) — mỗi đơn chỉ gửi SKU + số lượng. CanNangMoiAoGram: dùng khi đơn thiếu TRONG_LUONG.
+// Token = API key tạo ở trang KL (vantage.klportal.com). SkuNumber / CanNangMoiAoGram: KHÔNG CÒN DÙNG từ 28/10/2026 (trước là 1 SKU cố định
+// cho mọi đơn + cân nặng dự phòng) — SKU + cân nặng giờ theo TỪNG đơn, tra trong bảng kl_sku bên dưới. Giữ cột cho dữ liệu cũ.
 const CAC_COT_TAI_KHOAN_KL = ['Ten', 'Token', 'SkuNumber', 'CanNangMoiAoGram'];
 db.exec(`CREATE TABLE IF NOT EXISTS tai_khoan_kl (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -320,8 +320,31 @@ db.exec(`CREATE TABLE IF NOT EXISTS tai_khoan_kl (
 if (!db.prepare(`PRAGMA table_info(danh_sach_xuong)`).all().some(c => c.name === 'TaiKhoanKl')) {
   db.exec(`ALTER TABLE danh_sach_xuong ADD COLUMN TaiKhoanKl TEXT NOT NULL DEFAULT ''`);
 }
-const layDanhSachTaiKhoanKl = () => db.prepare(`SELECT id, ${CAC_COT_TAI_KHOAN_KL.join(', ')} FROM tai_khoan_kl ORDER BY id`).all();
-const layTaiKhoanKl = id => db.prepare(`SELECT id, ${CAC_COT_TAI_KHOAN_KL.join(', ')} FROM tai_khoan_kl WHERE id = ?`).get(Number(id)) || null;
+// Danh sách SKU KL theo tài khoản (28/10/2026, theo yêu cầu người dùng — KL khai báo 1 SKU cho MỖI loại + size, vd "USHoodie2XL"; app chọn SKU
+// theo từng đơn: "US" + LOAI + KICH_THUOC, cân nặng lấy theo SKU). Nạp từ file "Item Declarations" xuất ở trang KL (klService#docFileSkuKl).
+// khoa = SKU đã chuẩn hoá (NFC, bỏ khoảng trắng 2 đầu, gộp khoảng trắng — PHÂN BIỆT hoa/thường) để so; sku = đúng chuỗi KL khai báo (gửi lên KL).
+// SkuNapLuc / SkuNapBoi: lần nạp gần nhất (không thuộc CAC_COT_TAI_KHOAN_KL -> "Lưu tài khoản" không ghi đè).
+db.exec(`CREATE TABLE IF NOT EXISTS kl_sku (
+  tai_khoan_kl_id INTEGER NOT NULL, khoa TEXT NOT NULL, sku TEXT NOT NULL, ten TEXT NOT NULL DEFAULT '', can_nang_gram REAL NOT NULL,
+  PRIMARY KEY (tai_khoan_kl_id, khoa)
+)`);
+for (const c of ['SkuNapLuc', 'SkuNapBoi']) {
+  if (!db.prepare(`PRAGMA table_info(tai_khoan_kl)`).all().some(x => x.name === c)) db.exec(`ALTER TABLE tai_khoan_kl ADD COLUMN ${c} TEXT NOT NULL DEFAULT ''`);
+}
+const COT_DOC_TAI_KHOAN_KL = [...CAC_COT_TAI_KHOAN_KL, 'SkuNapLuc', 'SkuNapBoi'];
+const layDanhSachTaiKhoanKl = () => db.prepare(`SELECT id, ${COT_DOC_TAI_KHOAN_KL.join(', ')},
+  (SELECT COUNT(*) FROM kl_sku s WHERE s.tai_khoan_kl_id = tai_khoan_kl.id) SoSku FROM tai_khoan_kl ORDER BY id`).all();
+const layTaiKhoanKl = id => db.prepare(`SELECT id, ${COT_DOC_TAI_KHOAN_KL.join(', ')} FROM tai_khoan_kl WHERE id = ?`).get(Number(id)) || null;
+// Thay TOÀN BỘ danh sách SKU của 1 tài khoản (1 giao dịch). ds: [{ khoa, sku, ten, canNangGram }].
+const thayDanhSachSkuKl = db.transaction((id, ds, luc, nguoi) => {
+  db.prepare(`DELETE FROM kl_sku WHERE tai_khoan_kl_id = ?`).run(Number(id));
+  const st = db.prepare(`INSERT INTO kl_sku (tai_khoan_kl_id, khoa, sku, ten, can_nang_gram) VALUES (?, ?, ?, ?, ?)`);
+  for (const d of ds) st.run(Number(id), d.khoa, d.sku, d.ten || '', d.canNangGram);
+  db.prepare(`UPDATE tai_khoan_kl SET SkuNapLuc = ?, SkuNapBoi = ? WHERE id = ?`).run(luc, nguoi, Number(id));
+});
+// -> Map(khoa -> { sku, ten, canNangGram })
+const layDanhSachSkuKl = id => new Map(db.prepare(`SELECT khoa, sku, ten, can_nang_gram FROM kl_sku WHERE tai_khoan_kl_id = ?`).all(Number(id))
+  .map(r => [r.khoa, { sku: r.sku, ten: r.ten, canNangGram: r.can_nang_gram }]));
 function ghiTaiKhoanKl(id, giaTri) {
   const cot = CAC_COT_TAI_KHOAN_KL.filter(c => giaTri[c] !== undefined);
   const vals = cot.map(c => String(giaTri[c] ?? ''));
@@ -331,7 +354,7 @@ function ghiTaiKhoanKl(id, giaTri) {
   }
   return Number(db.prepare(`INSERT INTO tai_khoan_kl (${cot.join(', ')}) VALUES (${cot.map(() => '?').join(', ')})`).run(...vals).lastInsertRowid);
 }
-const xoaTaiKhoanKl = id => db.prepare(`DELETE FROM tai_khoan_kl WHERE id = ?`).run(Number(id));
+const xoaTaiKhoanKl = id => { db.prepare(`DELETE FROM kl_sku WHERE tai_khoan_kl_id = ?`).run(Number(id)); db.prepare(`DELETE FROM tai_khoan_kl WHERE id = ?`).run(Number(id)); };
 const layGanTaiKhoanKl = () => Object.fromEntries(db.prepare(`SELECT Ten, TaiKhoanKl FROM danh_sach_xuong WHERE TaiKhoanKl != ''`).all().map(r => [r.Ten, r.TaiKhoanKl]));
 const ganTaiKhoanKlChoXuong = (xuong, id) => db.prepare(`UPDATE danh_sach_xuong SET TaiKhoanKl = ? WHERE Ten = ?`).run(id ? String(id) : '', xuong);
 
@@ -563,7 +586,7 @@ module.exports = {
   layPhienBanPromptQc, layPromptDangDungQc, datPromptDangDungQc, luuPhienBanPromptQc, layLichSuPromptQc,
   CAC_COT_TAI_KHOAN_GKE, layDanhSachTaiKhoanGke, layTaiKhoanGke, ghiTaiKhoanGke, xoaTaiKhoanGke,
   layGanTaiKhoanGke, ganTaiKhoanGkeChoXuong,
-  layDanhSachTaiKhoanKl, layTaiKhoanKl, ghiTaiKhoanKl, xoaTaiKhoanKl, layGanTaiKhoanKl, ganTaiKhoanKlChoXuong,
+  layDanhSachTaiKhoanKl, layTaiKhoanKl, ghiTaiKhoanKl, xoaTaiKhoanKl, layGanTaiKhoanKl, ganTaiKhoanKlChoXuong, thayDanhSachSkuKl, layDanhSachSkuKl,
   layDanhSachTaiKhoanHpw, layTaiKhoanHpw, ghiTaiKhoanHpw, xoaTaiKhoanHpw, layGanTaiKhoanHpw, ganTaiKhoanHpwChoXuong,
   layCaiDatHangLoat, datCaiDatHangLoat,
   layCauHinhTracking, datCauHinhTracking, CAC_COT_CAU_HINH_TRACKING,

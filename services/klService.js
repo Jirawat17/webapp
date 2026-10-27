@@ -37,30 +37,26 @@ function layCauHinhKlChoDon(row) {
   const dong = caiDatDbService.layTaiKhoanKl(id);
   if (!dong) throw loiChung(`[tài khoản KL] Tài khoản KL #${id} (dùng cho đơn ${row.STT_Key}) không còn tồn tại — kiểm tra lại ở Settings.`);
   if (!dong.Token) throw loiChung(`[tài khoản KL] Tài khoản "${dong.Ten}" chưa có token — cập nhật ở Settings.`);
-  return { id: String(dong.id), ten: dong.Ten, token: dong.Token, skuNumber: dong.SkuNumber, canNangMoiAoGram: Number(dong.CanNangMoiAoGram) };
+  return { id: String(dong.id), ten: dong.Ten, token: dong.Token };
 }
 
 // Settings (CHỈ superadmin): token KHÔNG trả về giao diện — chỉ báo đã có + 4 ký tự cuối; lưu với token rỗng = giữ token cũ.
 function layDanhSachTaiKhoanKl() {
   return {
     taiKhoan: caiDatDbService.layDanhSachTaiKhoanKl().map(d => ({
-      id: String(d.id), ten: d.Ten, skuNumber: d.SkuNumber, canNangMoiAoGram: d.CanNangMoiAoGram,
-      coToken: !!d.Token, duoiToken: d.Token ? d.Token.slice(-4) : '',
+      id: String(d.id), ten: d.Ten, coToken: !!d.Token, duoiToken: d.Token ? d.Token.slice(-4) : '',
+      soSku: d.SoSku, skuNapLuc: d.SkuNapLuc, skuNapBoi: d.SkuNapBoi,
     })),
     danhSachXuong: caiDatDbService.layDanhSachXuong(),
     ganXuong: caiDatDbService.layGanTaiKhoanKl(),
   };
 }
+// SKU / cân nặng không còn nhập tay (28/10/2026) — nạp file Item Declarations (luuDanhSachSkuKl); cột SkuNumber / CanNangMoiAoGram cũ giữ nguyên.
 function luuTaiKhoanKl(id, giaTri) {
-  const ghiDb = {
-    Ten: String(giaTri.ten ?? '').trim(), SkuNumber: String(giaTri.skuNumber ?? '').trim(),
-    CanNangMoiAoGram: String(giaTri.canNangMoiAoGram ?? '').trim(),
-  };
+  const ghiDb = { Ten: String(giaTri.ten ?? '').trim() };
   const token = String(giaTri.token ?? '').trim();
   if (token) ghiDb.Token = token;
   if (!ghiDb.Ten) throw new Error('Thiếu tên tài khoản');
-  if (!ghiDb.SkuNumber) throw new Error('Thiếu SKU (mã hàng đã khai báo trên trang KL)');
-  if (!(Number(ghiDb.CanNangMoiAoGram) > 0)) throw new Error('Cân nặng mỗi áo (gram) phải là số > 0');
   if (id && !caiDatDbService.layTaiKhoanKl(id)) throw new Error('Không tìm thấy tài khoản');
   if (!id && !token) throw new Error('Thiếu token (API key KL)');
   return String(caiDatDbService.ghiTaiKhoanKl(id, ghiDb));
@@ -74,6 +70,80 @@ function ganTaiKhoanKlChoXuong(xuong, id) {
   if (!caiDatDbService.layDanhSachXuong().includes(xuong)) throw new Error(`Xưởng không hợp lệ: "${xuong}"`);
   if (id && !caiDatDbService.layTaiKhoanKl(id)) throw new Error('Không tìm thấy tài khoản');
   caiDatDbService.ganTaiKhoanKlChoXuong(xuong, id);
+}
+
+// ---- Danh sách SKU (file "Item Declarations" xuất ở trang KL) ----
+// SKU đã chuẩn hoá để so khớp: NFC (dấu tiếng Việt gõ / xuất khác kiểu), bỏ khoảng trắng 2 đầu, gộp khoảng trắng. PHÂN BIỆT hoa/thường — 2 SKU
+// KL chỉ khác hoa/thường là 2 SKU khác nhau (timSkuKl mới thử không phân biệt, khi khớp DUY NHẤT 1 SKU).
+const chuanSku = s => String(s ?? '').normalize('NFC').trim().replace(/\s+/g, ' ');
+// Giá trị ô ExcelJS -> chuỗi: richText / hyperlink (text) / công thức (result); ô lỗi (#N/A…), ô trống, giá trị lạ -> ''.
+const giaTriO = v => {
+  let x = v;
+  if (v && typeof v === 'object' && !(v instanceof Date)) x = v.richText ? v.richText.map(t => t.text).join('') : v.text ?? v.result;
+  return x == null || (typeof x === 'object' && !(x instanceof Date)) ? '' : String(x);
+};
+// buffer .xlsx -> { ds: [{ khoa, sku, ten, canNangGram }], canhBao: [] }. Cần cột skuNumber + itemWeight (gram) ở dòng tiêu đề. Có dòng sai
+// (thiếu / cân nặng không phải số > 0 / SKU trùng khác cân nặng) -> lỗi cả file, liệt kê dòng — KHÔNG nạp 1 phần.
+async function docFileSkuKl(buffer) {
+  const ExcelJS = require('exceljs');
+  const wb = new ExcelJS.Workbook();
+  try { await wb.xlsx.load(buffer); } catch (err) { throw new Error('Không đọc được file Excel (.xlsx) — chọn đúng file Item Declarations xuất từ trang KL'); }
+  const ws = wb.worksheets.find(w => w.rowCount > 0);
+  if (!ws) throw new Error('File không có dữ liệu');
+  const tieuDe = ws.getRow(1).values.map(v => String(giaTriO(v)).trim().toLowerCase());
+  const cot = ten => tieuDe.indexOf(ten.toLowerCase());
+  const [cSku, cTen, cNang] = [cot('skuNumber'), cot('name'), cot('itemWeight')];
+  if (cSku < 0 || cNang < 0) throw new Error('Dòng 1 phải có cột "skuNumber" và "itemWeight" (file Item Declarations xuất từ trang KL)');
+  const theoKhoa = new Map(), loi = [], canhBao = [];
+  ws.eachRow((r, i) => {
+    if (i === 1) return;
+    const sku = String(giaTriO(r.getCell(cSku).value)); // giữ NGUYÊN chuỗi KL khai báo (gửi lên KL); chỉ khoá so khớp mới chuẩn hoá
+    if (!sku.trim()) return;
+    const gram = Number(giaTriO(r.getCell(cNang).value));
+    if (!(gram > 0)) { loi.push(`dòng ${i} (${sku}): itemWeight "${giaTriO(r.getCell(cNang).value)}" không phải số gram > 0`); return; }
+    const khoa = chuanSku(sku);
+    const cu = theoKhoa.get(khoa);
+    if (cu && cu.canNangGram !== gram) { loi.push(`dòng ${i}: SKU "${sku}" trùng dòng trước nhưng khác cân nặng (${cu.canNangGram} g / ${gram} g)`); return; }
+    if (cu) canhBao.push(`dòng ${i}: SKU "${sku}" lặp lại — bỏ qua`);
+    else theoKhoa.set(khoa, { khoa, sku, ten: cTen > 0 ? String(giaTriO(r.getCell(cTen).value)).trim() : '', canNangGram: gram });
+  });
+  if (loi.length) throw new Error(`File có ${loi.length} dòng sai — chưa nạp gì: ${loi.slice(0, 10).join('; ')}${loi.length > 10 ? '; …' : ''}`);
+  if (!theoKhoa.size) throw new Error('File không có SKU nào');
+  return { ds: [...theoKhoa.values()], canhBao };
+}
+// Nạp (thay toàn bộ) danh sách SKU của 1 tài khoản KL. -> { soSku, canhBao }
+async function luuDanhSachSkuKl(id, buffer, user) {
+  if (!caiDatDbService.layTaiKhoanKl(id)) throw new Error('Không tìm thấy tài khoản');
+  const { ds, canhBao } = await docFileSkuKl(buffer);
+  caiDatDbService.thayDanhSachSkuKl(id, ds, new Date().toISOString(), user.ten);
+  return { soSku: ds.length, canhBao };
+}
+// SKU KL của 1 đơn: "US" + LOAI + KICH_THUOC (người dùng xác nhận 28/10/2026 — cùng cách đặt tên trên trang KL, vd "USHoodie2XL").
+const maSkuCuaDon = d => `US${String(d.LOAI ?? '').trim()}${String(d.KICH_THUOC ?? '').trim()}`;
+// Tìm SKU trong danh sách đã nạp (Map khoa -> sku): đúng khoá trước; không có thì thử không phân biệt hoa/thường — CHỈ nhận khi khớp đúng
+// 1 SKU (vd Sheet ghi "hoodie" mà KL là "Hoodie"); khớp nhiều SKU -> coi như không thấy (không đoán).
+function timSkuKl(dsSku, ma) {
+  const khoa = chuanSku(ma);
+  if (dsSku.has(khoa)) return dsSku.get(khoa);
+  const thuong = khoa.toLowerCase();
+  const khop = [...dsSku.values()].filter(x => chuanSku(x.sku).toLowerCase() === thuong);
+  return khop.length === 1 ? khop[0] : null;
+}
+// Dự đoán SKU cho khối KL ở Chi tiết đơn (28/10/2026): chưa mua đã biết đơn nào thiếu SKU. dsDon: các đơn trong kiện (như taoBodyDonKl).
+// -> { taiKhoan, soSku, ds: [{ sttKey, ma, sku, canNangGram, soLuong, thieu }] } | { loi }
+function duDoanSkuKl(row, dsDon) {
+  let cauHinh;
+  try { cauHinh = layCauHinhKlChoDon(row); } catch (err) { return { loi: err.message }; }
+  const dsSku = caiDatDbService.layDanhSachSkuKl(cauHinh.id);
+  return {
+    taiKhoan: cauHinh.ten, soSku: dsSku.size,
+    ds: dsDon.map(d => {
+      const ma = maSkuCuaDon(d);
+      const thieu = !String(d.LOAI ?? '').trim() || !String(d.KICH_THUOC ?? '').trim();
+      const sku = thieu ? null : timSkuKl(dsSku, ma);
+      return { sttKey: d.STT_Key, ma, sku: sku ? sku.sku : '', canNangGram: sku ? sku.canNangGram : null, soLuong: Number(d.SO_LUONG) || 1, thieu };
+    }),
+  };
 }
 
 // ---- Gọi API ----
@@ -248,28 +318,37 @@ function taoBodyDonKl(row, dsDon, cauHinh, maQuocGia) {
   let postalCode = s(row.MA_ZIPCODE);
   if (/^\d{4}(-\d{4})?$/.test(postalCode)) postalCode = '0' + postalCode; // ZIP Mỹ mất số 0 đầu (Sheet đọc thành số) — giống GKE
   if (postalCode.length < 5 || postalCode.length > 11) loi.push(`mã ZIP (MA_ZIPCODE) "${postalCode || '(trống)'}" phải dài 5–11 ký tự`);
-  if (!cauHinh.skuNumber) loi.push(`tài khoản KL "${cauHinh.ten}" chưa có SKU`);
-  if (!(cauHinh.canNangMoiAoGram > 0)) loi.push(`tài khoản KL "${cauHinh.ten}" chưa có cân nặng mỗi áo (gram)`);
+  // SKU + cân nặng theo TỪNG đơn trong kiện (28/10/2026, người dùng chốt): SKU = "US" + LOAI + KICH_THUOC tra trong danh sách SKU đã nạp của
+  // tài khoản; cân nặng = cân nặng của SKU × SO_LUONG (KHÔNG dùng TRONG_LUONG). Không thấy SKU -> chặn, báo lỗi (không dùng SKU dự phòng).
+  const dsSku = caiDatDbService.layDanhSachSkuKl(cauHinh.id);
+  const theoSku = new Map(); // sku KL -> số lượng (đơn nhiều áo cùng SKU gộp 1 dòng)
+  let weight = 0;
+  if (!dsSku.size) loi.push(`tài khoản KL "${cauHinh.ten}" chưa nạp danh sách SKU — tải file Item Declarations ở Settings > Tài khoản KL`);
+  else {
+    // Kiện nhiều đơn (DonNhieuAo) mới ghi mã từng đơn — kiện 1 đơn thì mã đã có ở đầu câu báo ("Đơn X: …").
+    const nhanDon = d => (dsDon.length > 1 ? `đơn ${s(d.STT_Key)}: ` : '');
+    for (const d of dsDon) {
+      const soLuong = Number(d.SO_LUONG) || 1;
+      const ma = maSkuCuaDon(d);
+      if (!s(d.LOAI) || !s(d.KICH_THUOC)) { loi.push(`${nhanDon(d)}thiếu LOAI / KICH_THUOC — không ghép được SKU`); continue; }
+      const sku = timSkuKl(dsSku, ma);
+      if (!sku) { loi.push(`${nhanDon(d)}không có SKU "${ma}" trong danh sách SKU KL của tài khoản "${cauHinh.ten}" (thêm SKU trên trang KL rồi nạp lại file)`); continue; }
+      theoSku.set(sku.sku, (theoSku.get(sku.sku) || 0) + soLuong);
+      weight += sku.canNangGram * soLuong;
+    }
+  }
   if (loi.length) throw loiChung(`[chuẩn bị dữ liệu KL] Đơn ${orderNumber}: ${loi.join('; ')}.`);
 
-  // Cân nặng (gram): TRONG_LUONG (kg / áo, cột Sheet — cùng cách GKE) × SO_LUONG; thiếu TRONG_LUONG -> cân nặng mỗi áo của tài khoản KL.
-  let weight = 0, quantity = 0;
-  for (const d of dsDon) {
-    const soLuong = Number(d.SO_LUONG) || 1;
-    const kg = Number(d.TRONG_LUONG);
-    weight += soLuong * (kg > 0 ? kg * 1000 : cauHinh.canNangMoiAoGram);
-    quantity += soLuong;
-  }
   return {
     orderNumber, name, ...(phone ? { phone } : {}), address1, ...(address2 ? { address2 } : {}), city, country: 'US', state, postalCode,
     weight: Math.max(1, Math.round(weight)),
-    items: [{ skuNumber: cauHinh.skuNumber, quantity }],
+    items: [...theoSku].map(([skuNumber, quantity]) => ({ skuNumber, quantity })),
     // route_shipping_partner: KHÔNG gửi — để KL tự chọn (người dùng chốt 22/10/2026).
   };
 }
 
 module.exports = {
   dangTaoDonKl, DON_VI_KL, BASE_URL,
-  layCauHinhKlChoDon, layDanhSachTaiKhoanKl, luuTaiKhoanKl, xoaTaiKhoanKl, ganTaiKhoanKlChoXuong,
+  layCauHinhKlChoDon, layDanhSachTaiKhoanKl, luuTaiKhoanKl, xoaTaiKhoanKl, ganTaiKhoanKlChoXuong, docFileSkuKl, luuDanhSachSkuKl, maSkuCuaDon, chuanSku, timSkuKl, duDoanSkuKl,
   timDonTheoMa, laDonThanhCong, laDonChoCapMa, moTaTrangThaiKl, layDonKl, taoDonKl, layLabelKl, layTrackingKl, suKienMoiNhat, tenHangVanChuyen, maBangMy, taoBodyDonKl,
 };
