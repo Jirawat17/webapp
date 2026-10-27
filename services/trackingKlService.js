@@ -93,9 +93,9 @@ async function _muaTrackingKl(sttKey, user) {
         + 'App KHÔNG tự nhận đơn lỗi / cảnh báo và KL không cho tạo trùng mã đơn: kiểm tra / xoá đơn đó trên trang KL rồi bấm lại.');
     }
     if (don) {
-      nhatKy.push(`KL đã có đơn thành công cho mã ${sttKey} (sid ${don.sid}) — dùng lại, KHÔNG tạo đơn mới.`);
-      // Danh sách có thể thiếu hãng giao / phí -> lấy chi tiết đơn; lỗi thì dùng dữ liệu đang có (đã có barcode + sid là đủ để lưu tracking).
-      if (!don.shipping_partner || don.usd == null) {
+      nhatKy.push(`KL đã có đơn thành công cho mã ${sttKey} (sid ${don.sid || '?'}, tracking ${don.barcode}) — dùng lại, KHÔNG tạo đơn mới.`);
+      // Danh sách có thể thiếu hãng giao / phí -> lấy chi tiết đơn (cần sid); lỗi thì dùng dữ liệu đang có (barcode là đủ để lưu tracking).
+      if (don.sid && (!don.shipping_partner || don.usd == null)) {
         try {
           const ct = await klService.layDonKl(don.sid, cauHinh, nhatKy);
           don = { ...don, ...Object.fromEntries(['shipping_partner', 'usd', 'vnd'].filter(k => ct[k] != null && ct[k] !== '').map(k => [k, ct[k]])) };
@@ -109,6 +109,12 @@ async function _muaTrackingKl(sttKey, user) {
       await orderService.update(sttKey, { KL_DANG_TAO: thoiGianVNISOString(), TAI_KHOAN_KL: cauHinh.id, DON_VI_VAN_CHUYEN: DON_VI_KL }, user);
       try {
         don = await klService.taoDonKl(body, cauHinh, nhatKy);
+        if (!don.sid) { // phản hồi tạo đơn không có sid -> tra KL theo mã đơn để lấy (cần cho label); không lấy được vẫn lưu tracking
+          try {
+            const tim = await klService.timDonTheoMa(sttKey, cauHinh, nhatKy);
+            if (tim && tim.sid && String(tim.barcode) === String(don.barcode)) don = { ...tim, ...don, sid: tim.sid };
+          } catch (err) { nhatKy.push(`Không tra được KL để lấy mã đơn KL (sid): ${err.message}`); }
+        }
       } catch (err) {
         if (err.khongRoKetQua) {
           throw new Error(`${err.message}. CHƯA BIẾT KL đã tạo đơn hay chưa — bấm lại: app tra KL theo mã đơn trước, KHÔNG tạo trùng.`);
@@ -119,6 +125,9 @@ async function _muaTrackingKl(sttKey, user) {
       }
     }
 
+    // Thiếu sid: vẫn lưu tracking (đơn KL đã tạo — không để job GKE mua thêm), báo rõ chưa lấy được label KL.
+    const canhBaoSid = don.sid ? '' : `KL không trả mã đơn KL (sid) — đã lưu tracking nhưng CHƯA lấy được label KL qua app${don.vendor_sid ? ` (vendor_sid ${don.vendor_sid})` : ''}; lấy label trên trang KL.`;
+    if (canhBaoSid) nhatKy.push('CẢNH BÁO: ' + canhBaoSid);
     const hang = klService.tenHangVanChuyen(don.shipping_partner);
     const canhBaoHang = hang ? '' : (don.shipping_partner
       ? `KL trả hãng giao mã "${don.shipping_partner}" (app chưa biết tên) — cột hãng vận chuyển để trống, kể cả trên Sheet Seller.`
@@ -126,7 +135,7 @@ async function _muaTrackingKl(sttKey, user) {
     if (canhBaoHang) nhatKy.push('CẢNH BÁO: ' + canhBaoHang);
     await orderService.update(sttKey, {
       TRACKING_ID: String(don.barcode), HANG_VAN_CHUYEN: hang, KL_DANG_TAO: '', DON_VI_VAN_CHUYEN: DON_VI_KL, TAI_KHOAN_KL: cauHinh.id,
-      KL_ORDER_SID: String(don.sid), KL_PHI_USD: don.usd != null ? String(don.usd) : '', KL_PHI_VND: don.vnd != null ? String(don.vnd) : '',
+      KL_ORDER_SID: don.sid ? String(don.sid) : '', KL_PHI_USD: don.usd != null ? String(don.usd) : '', KL_PHI_VND: don.vnd != null ? String(don.vnd) : '',
     }, user);
 
     let loiSheetCon = [];
@@ -143,10 +152,11 @@ async function _muaTrackingKl(sttKey, user) {
 
     const phi = [don.usd != null ? `$${don.usd}` : '', don.vnd != null ? `${don.vnd}₫` : ''].filter(Boolean).join(' / ');
     t.ghiLogTracking(`${nhan} ${sttKey}: đã mua tracking KL ${don.barcode} (${hang})${phi ? ` · phí ${phi}` : ''}`, sttKey);
-    ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'MUA_TRACKING_KL', sttKey, chiTiet: { trackingNum: String(don.barcode), hangVanChuyen: hang, klSid: String(don.sid), phiUsd: don.usd ?? null, phiVnd: don.vnd ?? null } })
+    ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'MUA_TRACKING_KL', sttKey, chiTiet: { trackingNum: String(don.barcode), hangVanChuyen: hang, klSid: don.sid ? String(don.sid) : '', vendorSid: don.vendor_sid || '', phiUsd: don.usd ?? null, phiVnd: don.vnd ?? null } })
       .catch(err => console.error('[TrackingKL] Lỗi ghi log nền:', err.message));
     t.ghiLogTrackingVaoDb({ sttKey, nguon: 'KL - Thủ công', nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: 'Thành công', trackingId: String(don.barcode), hangVanChuyen: hang, chiTiet: nhatKy.join('\n') });
-    return { tracking_num: String(don.barcode), delivery_carrier: hang, kl: { sid: String(don.sid), usd: don.usd ?? null, vnd: don.vnd ?? null }, dayCheKhachHang, loiSheetCon, canhBaoHang };
+    return { tracking_num: String(don.barcode), delivery_carrier: hang, kl: { sid: don.sid ? String(don.sid) : '', usd: don.usd ?? null, vnd: don.vnd ?? null }, dayCheKhachHang, loiSheetCon,
+      canhBaoHang: [canhBaoHang, canhBaoSid].filter(Boolean).join(' ') };
   } catch (err) {
     t.ghiLogTracking(`${nhan} ${sttKey}: LỖI — ${err.message}`, sttKey);
     t.ghiLogTrackingVaoDb({ sttKey, nguon: 'KL - Thủ công', nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: 'Lỗi', chiTiet: nhatKy.concat(`LỖI: ${err.message}`).join('\n') });
@@ -208,7 +218,7 @@ function boDauDangMuaKl(sttKey, user, { boQuaKiemTra = false, boQuaDonChuaDu = f
 // "IN LABEL" GKE / in hàng loạt khi đơn là đơn KL (trackingAutoService.inLabelChoDon).
 const HANG_KL = {
   ten: 'KL', maTem: 'kl', laDon: r => laDonKl(r),
-  thieuDuLieu: don => (don.KL_ORDER_SID ? null : `Đơn ${don.STT_Key} thiếu mã đơn KL (sid) — không lấy được label.`),
+  thieuDuLieu: don => (don.KL_ORDER_SID ? null : `Đơn ${don.STT_Key} chưa có mã đơn KL (sid) — KL không trả khi mua; chưa lấy được label qua app, lấy label trên trang KL (tracking ${don.TRACKING_ID}).`),
   layLabel: (don, nhatKy) => klService.layLabelKl(don.KL_ORDER_SID, klService.layCauHinhKlChoDon(don), nhatKy),
   mua: (sttKey, user) => muaTrackingKlChoDon(sttKey, user),
   inLabel: (sttKey, user) => inLabelKlChoDon(sttKey, user),

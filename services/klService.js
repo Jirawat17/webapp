@@ -214,8 +214,10 @@ const MAU_TRANG_THAI_LOI = /\b(fail|failed|failure|warn|warning|canceled|cancell
 const laTrangThaiKlLoi = d => TRANG_THAI_KL_LOI.has(String(d.status).trim()) || MAU_TRANG_THAI_LOI.test(`${d.status || ''} ${d.status_text || ''}`);
 // "status – status_text" của đơn KL để báo lỗi ('' nếu trống) — dùng chung mọi câu báo.
 const moTaTrangThaiKl = d => [d.status, d.status_text].filter(v => v != null && v !== '').join(' – ');
-const laDonThanhCong = d => !!(d && d.barcode && d.sid && !laTrangThaiKlLoi(d));
-// KL có đơn, KHÔNG lỗi nhưng chưa đủ barcode / sid (27/10/2026): đơn có thể hợp lệ, đã trừ phí — KHÔNG được khuyên xoá; chờ KL cấp đủ.
+// Đơn KL dùng được = có barcode, không lỗi. sid KHÔNG bắt buộc (28/10/2026: phản hồi thật có thể không có "sid") — thiếu sid vẫn nhận tracking
+// (để không mua thêm hãng khác), chỉ chưa lấy được label KL.
+const laDonThanhCong = d => !!(d && d.barcode && !laTrangThaiKlLoi(d));
+// KL có đơn, KHÔNG lỗi nhưng chưa có barcode (27/10/2026): đơn có thể hợp lệ, đã trừ phí — KHÔNG được khuyên xoá; chờ KL cấp mã.
 const laDonChoCapMa = d => !!(d && !laTrangThaiKlLoi(d) && !laDonThanhCong(d));
 
 // Chi tiết 1 đơn KL (GET /api/v1/orders/<sid>) — dùng khi DÙNG LẠI đơn tìm được qua tra theo mã: danh sách có thể thiếu shipping_partner /
@@ -236,7 +238,13 @@ async function taoDonKl(body, cauHinh, nhatKy) {
   ghi(nhatKy, `[KL] [tạo đơn] Body: ${JSON.stringify(body)}`);
   const { res, data, text } = await goi('tạo đơn', 'POST', '/api/v1/orders', cauHinh, { body, nhatKy });
   const coJson = !!data && typeof data === 'object';
-  if (res.ok && coJson && String(data.status).toLowerCase() === 'success' && data.barcode && data.sid) return data;
+  // Phản hồi CÓ barcode = KL ĐÃ tạo đơn (28/10/2026 — phản hồi thật: {"status":0,"barcode":"9214…","shipping_partner":"USPS",
+  // "account_sid":…,"vendor_sid":…} — status là SỐ, không có "sid"). KHÔNG BAO GIỜ coi là từ chối (từng bỏ dấu đang mua -> nguy cơ mua thêm GKE).
+  // Không có trạng thái lỗi -> trả về (thiếu sid thì nơi gọi tra lại KL để bổ sung); trạng thái lỗi -> chưa rõ (giữ dấu, lượt sau tra KL).
+  if (coJson && data.barcode) {
+    if (laTrangThaiKlLoi(data)) throw Object.assign(new Error(`[tạo đơn] KL tạo đơn (barcode ${data.barcode}) nhưng ở trạng thái lỗi "${moTaTrangThaiKl(data)}"`), { khongRoKetQua: true });
+    return data;
+  }
   if (res.ok && coJson && String(data.status).toLowerCase() === 'success') {
     // Thành công nhưng thiếu barcode/sid: KHÔNG ghi tracking rỗng; giữ dấu đang tạo (nơi gọi) -> lượt sau tra lại theo mã đơn.
     throw Object.assign(new Error('[tạo đơn] KL báo thành công nhưng thiếu barcode / sid'), { khongRoKetQua: true });
@@ -269,7 +277,11 @@ const suKienMoiNhat = ds => ds.reduce((a, b) => (!a || new Date(b.eventTime) > n
 
 // Mã hãng giao KL -> tên. Mã lạ / trống -> '' (27/10/2026: không ghi mã số thô kiểu "3" sang Sheet Seller của khách — nơi gọi báo cảnh báo).
 const TEN_HANG_KL = { 1: 'USPS', 5: 'DHL' };
-const tenHangVanChuyen = ma => TEN_HANG_KL[String(ma)] || '';
+// 28/10/2026: phản hồi thật trả TÊN hãng ("shipping_partner":"USPS") chứ không phải mã số như tài liệu -> chữ thì dùng nguyên (tên hãng).
+const tenHangVanChuyen = ma => {
+  const s = String(ma ?? '').trim();
+  return TEN_HANG_KL[s] || (/^[A-Za-z][A-Za-z0-9 .&-]{1,30}$/.test(s) ? s : '');
+};
 
 // ---- Chuẩn bị dữ liệu đơn ----
 const BANG_MY = {
