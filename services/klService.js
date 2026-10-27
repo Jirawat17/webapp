@@ -147,13 +147,7 @@ function duDoanSkuKl(row, dsDon) {
 }
 
 // ---- Gọi API ----
-// fetch của Node chỉ báo "fetch failed" — nguyên nhân thật (ECONNRESET, UND_ERR_SOCKET "other side closed", ENOTFOUND, lỗi chứng chỉ...) nằm
-// trong err.cause (28/10/2026: lỗi tạo đơn KL chỉ hiện "fetch failed", không biết vì sao).
-const moTaLoiMang = err => {
-  const c = err && err.cause;
-  const chiTiet = c ? [c.code, c.message].filter(Boolean).join(' ') : '';
-  return chiTiet && chiTiet !== err.message ? `${err.message} (${chiTiet})` : err.message;
-};
+const { moTaLoiMang } = require('./loiMangUtils');
 // Đọc dạng text rồi mới thử JSON (giống gkeService.fetchJson). Lỗi mạng / quá giờ -> err.khongRoKetQua = true: với lệnh TẠO ĐƠN nghĩa là
 // KHÔNG BIẾT KL đã tạo hay chưa — nơi gọi giữ dấu KL_DANG_TAO, lượt sau tra lại.
 async function goi(buoc, method, path, cauHinh, { body, nhatKy, nhiPhan = false } = {}) {
@@ -315,6 +309,7 @@ function maBangMy(giaTri) {
 
 // dsDon: các đơn trong kiện (DonNhieuAo: mọi đơn chưa huỷ của nhóm; đơn thường: [row]). row = đơn mua (".1" nếu DonNhieuAo) — địa chỉ lấy
 // từ đơn này. Kiểm tra ĐỦ mọi trường rồi mới báo lỗi 1 lần (liệt kê hết), KHÔNG tự cắt / tự sửa dữ liệu (người dùng chốt).
+const QUOC_GIA_KL = ['US']; // dùng cả ở trackingAutoService#ngoaiQuocGiaHang
 function taoBodyDonKl(row, dsDon, cauHinh, maQuocGia) {
   const loi = [];
   const s = v => String(v ?? '').trim();
@@ -336,7 +331,7 @@ function taoBodyDonKl(row, dsDon, cauHinh, maQuocGia) {
   kiemDai('city', 'thành phố (DIA_CHI_TEN_TP)', city, true);
   let quocGia = null;
   try { quocGia = maQuocGia(row.DIA_CHI_NUOC); } catch { /* báo bên dưới */ }
-  if (quocGia !== 'US') loi.push(`KL chỉ nhận đơn giao tới Mỹ (US) — đơn có quốc gia "${s(row.DIA_CHI_NUOC) || '(trống)'}"`);
+  if (!QUOC_GIA_KL.includes(quocGia)) loi.push(`KL chỉ nhận đơn giao tới Mỹ (US) — đơn có quốc gia "${s(row.DIA_CHI_NUOC) || '(trống)'}"`);
   const state = maBangMy(row.DIA_CHI_BANG);
   if (!state) loi.push(`bang (DIA_CHI_BANG) "${s(row.DIA_CHI_BANG) || '(trống)'}" không nhận ra được mã 2 chữ của Mỹ`);
   let postalCode = s(row.MA_ZIPCODE);
@@ -372,7 +367,7 @@ function taoBodyDonKl(row, dsDon, cauHinh, maQuocGia) {
 }
 
 module.exports = {
-  dangTaoDonKl, DON_VI_KL, BASE_URL, moTaLoiMang,
+  dangTaoDonKl, DON_VI_KL, BASE_URL, QUOC_GIA_KL,
   layCauHinhKlChoDon, layDanhSachTaiKhoanKl, luuTaiKhoanKl, xoaTaiKhoanKl, ganTaiKhoanKlChoXuong, docFileSkuKl, luuDanhSachSkuKl, maSkuCuaDon, chuanSku, timSkuKl, duDoanSkuKl,
   timDonTheoMa, laDonThanhCong, laDonChoCapMa, moTaTrangThaiKl, layDonKl, taoDonKl, layLabelKl, layTrackingKl, suKienMoiNhat, tenHangVanChuyen, maBangMy, taoBodyDonKl,
 };

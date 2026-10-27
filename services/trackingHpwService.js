@@ -83,11 +83,12 @@ async function _muaHpw(sttKey, user) {
       try {
         lo = await hpwService.taoLoHang(body, cauHinh, nhatKy);
       } catch (err) {
-        if (err.khongRoKetQua) throw new Error(`${err.message}. CHƯA BIẾT HPW đã tạo lô hàng hay chưa — bấm lại: HPW không cho trùng mã đơn nên KHÔNG tạo được lô thứ 2.`);
+        if (err.khongRoKetQua) throw Object.assign(new Error(`${err.message}. CHƯA BIẾT HPW đã tạo lô hàng hay chưa — bấm lại: HPW không cho trùng mã đơn nên KHÔNG tạo được lô thứ 2.`), { khongRoKetQua: true });
         if (lanTruocMatPhanHoi && hpwService.laLoiTrungMa(err.message)) {
           // HPW báo TRÙNG mã sau lần mất phản hồi -> lô ĐÃ được tạo lần trước: GIỮ dấu, superadmin gắn mã lô / bỏ dấu.
-          throw new Error(`${err.message}. Lần trước đã gửi tạo lô với mã "${maGui}" nhưng mất phản hồi và HPW báo trùng mã — lô đã có trên HPW. `
-            + 'Superadmin tìm mã lô (HPW...) trên trang HPW rồi bấm "Gắn mã lô hàng HPW".');
+          // chuyenThuCongNgay: chỉ superadmin gỡ được — job tự mua không gửi tạo lô lại thêm (trackingAutoService#muaTuDongTheoHang).
+          throw Object.assign(new Error(`${err.message}. Lần trước đã gửi tạo lô với mã "${maGui}" nhưng mất phản hồi và HPW báo trùng mã — lô đã có trên HPW. `
+            + 'Superadmin tìm mã lô (HPW...) trên trang HPW rồi bấm "Gắn mã lô hàng HPW".'), { chuyenThuCongNgay: 'HPW báo trùng mã lô (cần superadmin gắn mã lô)' });
         }
         // Lỗi khác (dữ liệu...) -> HPW chưa có lô với mã này: bỏ dấu như từ chối bình thường, sửa dữ liệu rồi mua lại.
         await orderService.update(sttKey, { ...BO_DAU_HPW, HPW_MA_GUI: row.HPW_MA_GUI || '' }, user); // từ chối rõ ràng -> sửa dữ liệu rồi mua lại
@@ -108,7 +109,7 @@ async function _muaHpw(sttKey, user) {
       try {
         ketQua = await hpwService.muaLabel(referenceId, cauHinh, nhatKy);
       } catch (err) {
-        if (err.khongRoKetQua) throw new Error(`${err.message}. CHƯA BIẾT đã mua label chưa — bấm lại: app xem lô ${referenceId} trên HPW trước, KHÔNG mua 2 lần.`);
+        if (err.khongRoKetQua) throw Object.assign(new Error(`${err.message}. CHƯA BIẾT đã mua label chưa — bấm lại: app xem lô ${referenceId} trên HPW trước, KHÔNG mua 2 lần.`), { khongRoKetQua: true });
         await orderService.update(sttKey, { HPW_DANG_TAO: '' }, user); // HPW từ chối mua label: lô vẫn còn (mã đã lưu), bấm lại sẽ mua tiếp lô đó
         throw err;
       }
@@ -159,7 +160,7 @@ function huyLoHangHpw(sttKey, user) {
     if (hpwService.laLoDaHuy(lh)) nhatKy.push(`Lô ${row.HPW_REFERENCE_ID} đã bị huỷ trên HPW từ trước — chỉ dọn trong app.`);
     else await hpwService.huyLoHang(row.HPW_REFERENCE_ID, ch, nhatKy);
     const maGuiMoi = hpwService.maGuiKeTiep(sttKey, row.HPW_MA_GUI || sttKey);
-    await orderService.update(sttKey, { ...BO_DAU_HPW, HPW_MA_GUI: maGuiMoi, HPW_PHI_USD: '' }, user);
+    await orderService.update(sttKey, { ...BO_DAU_HPW, TU_MUA_CHUA_RO_TU: '', HPW_MA_GUI: maGuiMoi, HPW_PHI_USD: '' }, user);
     ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'HUY_LO_HANG_HPW', sttKey, chiTiet: { hpwRef: row.HPW_REFERENCE_ID, maGuiMoi } }).catch(() => {});
     tas().ghiLogTrackingVaoDb({ sttKey, nguon: 'HPW - Huỷ lô', nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: 'Thành công', chiTiet: nhatKy.concat(`Đã huỷ lô ${row.HPW_REFERENCE_ID}; lần mua sau dùng mã đơn ${maGuiMoi}.`).join('\n') });
     return { ok: true, maGuiMoi };
@@ -198,7 +199,7 @@ function boDauDangMuaHpw(sttKey, user) {
     if (!row) throw new Error('Không tìm thấy đơn: ' + sttKey);
     if (row.HPW_REFERENCE_ID) throw new Error(`Đơn đã có lô HPW ${row.HPW_REFERENCE_ID} — dùng "Huỷ lô hàng HPW" thay vì bỏ dấu.`);
     if (!row.HPW_DANG_TAO) throw new Error('Đơn không ở trạng thái "đang mua HPW".');
-    await orderService.update(sttKey, { ...BO_DAU_HPW, HPW_MA_GUI: row.HPW_MA_GUI || '' }, user);
+    await orderService.update(sttKey, { ...BO_DAU_HPW, TU_MUA_CHUA_RO_TU: '', HPW_MA_GUI: row.HPW_MA_GUI || '' }, user);
     ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'BO_DAU_DANG_MUA_HPW', sttKey, chiTiet: {} }).catch(() => {});
     tas().ghiLogTrackingVaoDb({ sttKey, nguon: 'HPW - Bỏ dấu', nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: 'Thành công', chiTiet: 'Bỏ dấu đang mua HPW (superadmin xác nhận đã kiểm tra trên trang HPW).' });
     return { ok: true };

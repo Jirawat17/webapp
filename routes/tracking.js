@@ -75,7 +75,8 @@ router.post('/cau-hinh-quet-trang-thai', (req, res) => {
 router.get('/danh-sach', async (req, res) => {
   const ds = await layDanhSachDonAutoTracking(req.session.user);
   if (orderService.VAI_TRO_MENU_TRACKING.includes(req.session.user.vaiTro)) return res.json(ds);
-  res.json(ds.map(({ soLanThu, loiGanNhat, ...d }) => (d.trangThai === 'CHUYEN_THU_CONG' ? { ...d, trangThai: 'DEN_HAN_CHO_XU_LY' } : d)));
+  // lyDoKhongTuMua / hangTuMua (28/10/2026): có tên tài khoản hãng, "hết tiền"... — cùng nhóm thông tin theo dõi tự mua, ẩn như soLanThu.
+  res.json(ds.map(({ soLanThu, loiGanNhat, lyDoKhongTuMua, hangTuMua, canXuLy, ...d }) => (d.trangThai === 'CHUYEN_THU_CONG' ? { ...d, trangThai: 'DEN_HAN_CHO_XU_LY' } : d)));
 });
 
 // Tài khoản GKE theo Xưởng (bổ sung 27/09/2026, theo yêu cầu người dùng — thay cho /cau-hinh-gke, 1 bộ

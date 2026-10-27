@@ -22,6 +22,7 @@ const SDT_MAC_DINH_KHI_THIEU = '0000000000'; // HPW bắt buộc SĐT — như G
 const dangMuaHpw = r => !!(r && (r.HPW_DANG_TAO || (r.HPW_REFERENCE_ID && !r.TRACKING_ID)));
 
 const loiChung = msg => Object.assign(new Error(msg), { loiChung: true });
+const { moTaLoiMang } = require('./loiMangUtils');
 const ghi = (nhatKy, dong) => { console.log(dong); if (nhatKy) nhatKy.push(dong); };
 
 // ---- Tài khoản theo Xưởng ----
@@ -105,7 +106,7 @@ async function fetchHpw(buoc, method, url, { headers = {}, body, nhatKy } = {}) 
     return await fetch(url, { method, signal: huy.signal, headers, body });
   } catch (err) {
     const quaGio = err.name === 'AbortError';
-    const loiMang = require('./klService').moTaLoiMang(err); // nguyên nhân thật trong err.cause (xem klService.js)
+    const loiMang = moTaLoiMang(err);
     ghi(nhatKy, `[HPW] [${buoc}] ${quaGio ? `Quá thời gian chờ (${TIMEOUT_MS / 1000}s)` : `Lỗi mạng: ${loiMang}`}`);
     throw Object.assign(new Error(`[${buoc}] ${quaGio ? `HPW không trả lời trong ${TIMEOUT_MS / 1000} giây` : `Lỗi kết nối tới HPW: ${loiMang}`}`), { khongRoKetQua: true });
   } finally {
@@ -275,12 +276,13 @@ const laDaGiao = moTa => /\bDELIVERED\b/i.test(moTa || '') && !/NOT DELIVERED|UN
 
 // ---- Chuẩn bị dữ liệu lô hàng ----
 // maGui = ShippingReferenceId (STT_Key, hoặc STT_Key-2... sau khi huỷ lô). Chỉ US / UK (người dùng chốt). Kiểm tra đủ rồi báo 1 lần, không tự sửa.
+const QUOC_GIA_HPW = ['US', 'GB']; // dùng cả ở trackingAutoService#ngoaiQuocGiaHang
 function taoBodyHpw(row, dsDon, ch, maGui, { maQuocGia, maBangMy }) {
   const loi = [];
   const s = v => String(v ?? '').trim();
   let quocGia = null;
   try { quocGia = maQuocGia(row.DIA_CHI_NUOC); } catch { /* báo bên dưới */ }
-  if (quocGia !== 'US' && quocGia !== 'GB') loi.push(`HPW chỉ mua cho đơn giao tới Mỹ (US) hoặc Anh (UK) — đơn có quốc gia "${s(row.DIA_CHI_NUOC) || '(trống)'}"`);
+  if (!QUOC_GIA_HPW.includes(quocGia)) loi.push(`HPW chỉ mua cho đơn giao tới Mỹ (US) hoặc Anh (UK) — đơn có quốc gia "${s(row.DIA_CHI_NUOC) || '(trống)'}"`);
   const name = s(row.TEN), address1 = s(row.DIA_CHI_TEN_DUONG || row.TEN_DIA_CHI), city = s(row.DIA_CHI_TEN_TP);
   if (!name) loi.push('thiếu tên người nhận (TEN)');
   if (!address1) loi.push('thiếu địa chỉ (DIA_CHI_TEN_DUONG)');
@@ -331,7 +333,7 @@ const maGuiKeTiep = (sttKey, maGuiCu) => {
 };
 
 module.exports = {
-  DON_VI_HPW, BASE_URL, dangMuaHpw,
+  DON_VI_HPW, BASE_URL, dangMuaHpw, QUOC_GIA_HPW,
   layCauHinhHpwChoDon, layDanhSachTaiKhoanHpw, luuTaiKhoanHpw, canhBaoDichVuHpw, DICH_VU_HPW, xoaTaiKhoanHpw, ganTaiKhoanHpwChoXuong,
   taoLoHang, muaLabel, xemLoHang, huyLoHang, laLoDaHuy, laLoiTrungMa, layLabelHpw, layTrackingHpw, suKienMoiNhat, laDaGiao, taoBodyHpw, maGuiKeTiep,
 };

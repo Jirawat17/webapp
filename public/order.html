@@ -1009,7 +1009,8 @@ async function apDungMuaVaInLabelHpw(btn) {
   const daCo = donHienTai && donHienTai.TRACKING_ID && donHienTai.DON_VI_VAN_CHUYEN === 'HPW';
   // Đã có tracking HPW -> in luôn, không hỏi (28/10/2026, như KL). Chưa có -> vẫn hỏi vì sẽ mua thật.
   if (!daCo && !await hopXacNhan(`Mua tracking HPW và in label cho đơn ${sttKey}? Tạo lô hàng + mua label THẬT bên HPW, có thể phát sinh phí.`)) return;
-  await xuLyInLabelChiTiet(btn, '/tracking/hpw/mua-va-in-label');
+  // Không hỏi -> gọi route CHỈ IN (/tracking/in-label, không bao giờ mua): dữ liệu trang cũ (tracking vừa bị gỡ) cũng không mua mà không hỏi.
+  await xuLyInLabelChiTiet(btn, daCo ? '/tracking/in-label' : '/tracking/hpw/mua-va-in-label');
 }
 // Thao tác superadmin HPW: gửi rồi tải lại đơn.
 async function thaoTacHpw(btn, duongDan, cauHoi, them = {}) {
@@ -1106,7 +1107,7 @@ async function apDungMuaVaInLabelKl(btn) {
   const daCo = donHienTai && donHienTai.TRACKING_ID && donHienTai.DON_VI_VAN_CHUYEN === 'KL';
   // Đã có tracking KL -> chỉ in, không tốn phí: in luôn, không hỏi (28/10/2026, theo yêu cầu người dùng). Chưa có -> vẫn hỏi vì sẽ mua thật.
   if (!daCo && !await hopXacNhan(`Mua tracking KL và in label cho đơn ${sttKey}? Tạo đơn vận chuyển THẬT bên KL, có thể phát sinh phí.`)) return;
-  await xuLyInLabelChiTiet(btn, '/tracking/kl/mua-va-in-label');
+  await xuLyInLabelChiTiet(btn, daCo ? '/tracking/in-label' : '/tracking/kl/mua-va-in-label'); // không hỏi -> CHỈ IN (xem HPW)
 }
 
 async function xuLyInLabelChiTiet(btn, duongDan) {

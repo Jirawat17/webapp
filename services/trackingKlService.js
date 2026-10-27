@@ -84,9 +84,10 @@ async function _muaTrackingKl(sttKey, user) {
     if (don && klService.laDonChoCapMa(don)) {
       // Giữ / đặt dấu đang mua KL: job GKE không chen vào trong lúc chờ KL cấp mã.
       if (!row.KL_DANG_TAO) await orderService.update(sttKey, { KL_DANG_TAO: thoiGianVNISOString(), TAI_KHOAN_KL: cauHinh.id, DON_VI_VAN_CHUYEN: DON_VI_KL }, user);
-      throw new Error(`KL đã có đơn mã ${sttKey} (sid ${don.sid || '?'}${don.barcode ? `, tracking ${don.barcode}` : ''}${trangThaiKl(don)}) nhưng CHƯA đủ `
+      // khongRoKetQua: KL đang cấp mã, không phải lỗi của đơn — job tự mua không đếm vào 10 lần thử (trackingAutoService#muaTuDongTheoHang).
+      throw Object.assign(new Error(`KL đã có đơn mã ${sttKey} (sid ${don.sid || '?'}${don.barcode ? `, tracking ${don.barcode}` : ''}${trangThaiKl(don)}) nhưng CHƯA đủ `
         + `${don.barcode ? 'mã đơn KL (sid)' : 'mã tracking'} — KHÔNG xoá trên trang KL. Đợi vài phút rồi bấm mua lại: app nhận đơn này, không tạo đơn mới. `
-        + 'Nếu trên trang KL đơn này đã bị huỷ: superadmin "Bỏ dấu đang mua KL" để MUA GKE thay (KL không cho tạo đơn thứ 2 cùng mã đơn).');
+        + 'Nếu trên trang KL đơn này đã bị huỷ: superadmin "Bỏ dấu đang mua KL" để MUA GKE thay (KL không cho tạo đơn thứ 2 cùng mã đơn).'), { khongRoKetQua: true });
     }
     if (don && !klService.laDonThanhCong(don)) { // còn lại: KL báo lỗi / cảnh báo / huỷ
       throw new Error(`KL đã có đơn mã ${sttKey} (sid ${don.sid || '?'}) ở trạng thái "${klService.moTaTrangThaiKl(don) || '?'}"`
@@ -118,7 +119,7 @@ async function _muaTrackingKl(sttKey, user) {
         }
       } catch (err) {
         if (err.khongRoKetQua) {
-          throw new Error(`${err.message}. CHƯA BIẾT KL đã tạo đơn hay chưa — bấm lại: app tra KL theo mã đơn trước, KHÔNG tạo trùng.`);
+          throw Object.assign(new Error(`${err.message}. CHƯA BIẾT KL đã tạo đơn hay chưa — bấm lại: app tra KL theo mã đơn trước, KHÔNG tạo trùng.`), { khongRoKetQua: true });
         }
         // KL từ chối rõ ràng -> bỏ dấu + tài khoản (lần sau lấy lại tài khoản ĐANG gán cho Xưởng), sửa dữ liệu rồi mua lại.
         await orderService.update(sttKey, { KL_DANG_TAO: '', DON_VI_VAN_CHUYEN: '', TAI_KHOAN_KL: '' }, user);
@@ -204,7 +205,7 @@ function boDauDangMuaKl(sttKey, user, { boQuaKiemTra = false, boQuaDonChuaDu = f
         throw new Error(`KL có đơn mã ${sttKey} ở trạng thái "${klService.moTaTrangThaiKl(don)}" — xoá đơn đó trên trang KL trước rồi bỏ dấu.`);
       }
     }
-    await orderService.update(sttKey, { KL_DANG_TAO: '', DON_VI_VAN_CHUYEN: '', TAI_KHOAN_KL: '' }, user);
+    await orderService.update(sttKey, { KL_DANG_TAO: '', DON_VI_VAN_CHUYEN: '', TAI_KHOAN_KL: '', TU_MUA_CHUA_RO_TU: '' }, user); // hết đợt "chưa rõ" của job tự mua
     const chiTiet = boQuaKiemTra ? 'Bỏ dấu KHÔNG tra KL (superadmin xác nhận đã tự kiểm tra trên trang KL).'
       : boQuaDonChuaDu ? 'Bỏ dấu (đơn KL chưa đủ mã được xác nhận đã huỷ).' : 'Đã tra KL: không có đơn mã này — bỏ dấu.';
     ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'BO_DAU_DANG_MUA_KL', sttKey, chiTiet: { boQuaKiemTra, boQuaDonChuaDu } })

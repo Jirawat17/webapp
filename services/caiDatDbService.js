@@ -340,14 +340,24 @@ const layDanhSachTaiKhoanKl = () => db.prepare(`SELECT id, ${COT_DOC_TAI_KHOAN_K
 const layTaiKhoanKl = id => db.prepare(`SELECT id, ${COT_DOC_TAI_KHOAN_KL.join(', ')} FROM tai_khoan_kl WHERE id = ?`).get(Number(id)) || null;
 // Thay TOÀN BỘ danh sách SKU của 1 tài khoản (1 giao dịch). ds: [{ khoa, sku, ten, canNangGram }].
 const thayDanhSachSkuKl = db.transaction((id, ds, luc, nguoi) => {
+  _cacheSkuKl.delete(Number(id)); // cache khai báo bên dưới (layDanhSachSkuKl) — chỉ chạy khi gọi, sau khi đã khai báo
   db.prepare(`DELETE FROM kl_sku WHERE tai_khoan_kl_id = ?`).run(Number(id));
   const st = db.prepare(`INSERT INTO kl_sku (tai_khoan_kl_id, khoa, sku, ten, can_nang_gram) VALUES (?, ?, ?, ?, ?)`);
   for (const d of ds) st.run(Number(id), d.khoa, d.sku, d.ten || '', d.canNangGram);
   db.prepare(`UPDATE tai_khoan_kl SET SkuNapLuc = ?, SkuNapBoi = ? WHERE id = ?`).run(luc, nguoi, Number(id));
 });
 // -> Map(khoa -> { sku, ten, canNangGram })
-const layDanhSachSkuKl = id => new Map(db.prepare(`SELECT khoa, sku, ten, can_nang_gram FROM kl_sku WHERE tai_khoan_kl_id = ?`).all(Number(id))
-  .map(r => [r.khoa, { sku: r.sku, ten: r.ten, canNangGram: r.can_nang_gram }]));
+// Cache theo tài khoản (28/10/2026): job tự mua + trang Tracking xét điều kiện KL cho TỪNG đơn -> trước đây SELECT cả danh sách mỗi đơn.
+// Xoá cache ở mọi chỗ ghi kl_sku (thayDanhSachSkuKl, xoaTaiKhoanKl). Nơi gọi chỉ đọc Map trả về, không sửa.
+const _cacheSkuKl = new Map();
+const layDanhSachSkuKl = id => {
+  const k = Number(id);
+  if (!_cacheSkuKl.has(k)) {
+    _cacheSkuKl.set(k, new Map(db.prepare(`SELECT khoa, sku, ten, can_nang_gram FROM kl_sku WHERE tai_khoan_kl_id = ?`).all(k)
+      .map(r => [r.khoa, { sku: r.sku, ten: r.ten, canNangGram: r.can_nang_gram }])));
+  }
+  return _cacheSkuKl.get(k);
+};
 function ghiTaiKhoanKl(id, giaTri) {
   const cot = CAC_COT_TAI_KHOAN_KL.filter(c => giaTri[c] !== undefined);
   const vals = cot.map(c => String(giaTri[c] ?? ''));
@@ -357,7 +367,7 @@ function ghiTaiKhoanKl(id, giaTri) {
   }
   return Number(db.prepare(`INSERT INTO tai_khoan_kl (${cot.join(', ')}) VALUES (${cot.map(() => '?').join(', ')})`).run(...vals).lastInsertRowid);
 }
-const xoaTaiKhoanKl = id => { db.prepare(`DELETE FROM kl_sku WHERE tai_khoan_kl_id = ?`).run(Number(id)); db.prepare(`DELETE FROM tai_khoan_kl WHERE id = ?`).run(Number(id)); };
+const xoaTaiKhoanKl = id => { _cacheSkuKl.delete(Number(id)); db.prepare(`DELETE FROM kl_sku WHERE tai_khoan_kl_id = ?`).run(Number(id)); db.prepare(`DELETE FROM tai_khoan_kl WHERE id = ?`).run(Number(id)); };
 const layGanTaiKhoanKl = () => Object.fromEntries(db.prepare(`SELECT Ten, TaiKhoanKl FROM danh_sach_xuong WHERE TaiKhoanKl != ''`).all().map(r => [r.Ten, r.TaiKhoanKl]));
 const ganTaiKhoanKlChoXuong = (xuong, id) => db.prepare(`UPDATE danh_sach_xuong SET TaiKhoanKl = ? WHERE Ten = ?`).run(id ? String(id) : '', xuong);
 

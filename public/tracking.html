@@ -225,12 +225,7 @@ const NHAN_TRANG_THAI = {
   // 12/10/2026: đơn ".2" trở lên chưa ghép được nhóm (OrderID trống/khác đơn ".1") — không tự mua; sửa OrderID cho khớp đơn ".1".
   DON_CON_CHUA_GHEP_NHOM: { nhan: 'Đơn con nhiều áo chưa ghép được nhóm — không tự mua (kiểm tra OrderID với đơn .1)', lop: 'thieu-du-lieu' },
   LOI_NHOM: { nhan: 'Lỗi dữ liệu DonNhieuAo', lop: 'thieu-du-lieu' },
-  // Tài khoản GKE theo Xưởng (bổ sung 27/09/2026): Xưởng của đơn chưa gán tài khoản / đơn chưa gán Xưởng.
-  THIEU_TAI_KHOAN_GKE: { nhan: 'Chưa có tài khoản GKE cho Xưởng', lop: 'thieu-du-lieu' },
-  // 22/10/2026: GKE báo hết tiền — tự động mua dừng tới khi superadmin bấm "Đã nạp tiền" (Settings > Tài khoản GKE).
-  GKE_HET_TIEN: { nhan: 'Tài khoản GKE hết tiền — tạm dừng tự mua', lop: 'thieu-du-lieu' },
-  // Chỉ mua tracking GKE cho đơn giao tới US/UK (bổ sung 27/09/2026, xét cột DIA_CHI_NUOC).
-  KHONG_THUOC_US_UK: { nhan: 'Không thuộc US/UK — không mua GKE', lop: 'thieu-du-lieu' },
+  // Thiếu tài khoản theo Xưởng / GKE hết tiền / ngoài US-UK: từ 28/10/2026 gộp vào KHONG_TU_MUA_DUOC (lý do từng hãng hiện bên dưới).
   DA_HUY: { nhan: 'Đơn đã huỷ — không mua', lop: 'thieu-du-lieu' },
   // Tự động thử 10 lần không được (30/09/2026) — job bỏ qua, chỉ còn mua tay / "Cho tự động thử lại".
   CHUYEN_THU_CONG: { nhan: 'Đã chuyển MUA THỦ CÔNG', lop: 'thieu-du-lieu' },
@@ -558,7 +553,7 @@ async function taiDanhSach() {
                 ${d.trangThai === 'DA_MUA' ? '' : `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="muaThuCongTuBang(this, '${escapeJsChuoi(d.sttKey)}', '${d.trangThai}')">Mua GKE</button>`}
                 ${d.trangThai === 'DA_MUA' || !laAdmin(_user.vaiTro) ? '' : ['KL', 'HPW'].map(h => `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="muaHangKhacTuBang(this, '${escapeJsChuoi(d.sttKey)}', '${d.trangThai}', '${h}')">Mua ${h}</button>`).join('')}
                 ${d.trangThai === 'DA_MUA' ? `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="apDungInLabelTuBang(this, '${escapeJsChuoi(d.sttKey)}')">IN LABEL</button>` : ''}
-                <button type="button" class="btn-hanh-dong" style="padding:6px 10px;font-size:0.82rem" onclick="apDungMuaVaInLabelTuBang(this, '${escapeJsChuoi(d.sttKey)}', '${d.trangThai}')">MUA TRACKING và IN LABEL</button>
+                ${d.trangThai === 'DA_MUA' ? '' : `<button type="button" class="btn-hanh-dong" style="padding:6px 10px;font-size:0.82rem" onclick="apDungMuaVaInLabelTuBang(this, '${escapeJsChuoi(d.sttKey)}', '${d.trangThai}')">MUA GKE và IN LABEL</button>`}
                 ${d.trangThai === 'CHUYEN_THU_CONG' ? `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="choTuDongLaiTuBang(this, '${escapeJsChuoi(d.sttKey)}')">Cho tự động thử lại</button>` : ''}
               </div></td>
             </tr>`;
@@ -693,8 +688,14 @@ function veCanhBaoThuCong() {
       ${ds.map(d => `
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 0;border-top:1px solid color-mix(in srgb, var(--color-danger-text) 25%, transparent)">
           <a href="/order.html?stt=${encodeURIComponent(d.sttKey)}" style="font-weight:700;color:inherit">${escapeHtml(d.sttKey)}</a>
-          <span style="flex:1 1 260px;min-width:0;word-break:break-word">${escapeHtml(d.lyDo || '(không rõ nguyên nhân)')} <small>(thử ${d.soLanThu} lần${d.thoiGianThu ? `, gần nhất ${dinhDangNgayGioNganAnToan(d.thoiGianThu)}` : ''})</small></span>
-          <button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="muaThuCongTuBang(this, '${escapeJsChuoi(d.sttKey)}', 'CHUYEN_THU_CONG')">Mua ngay</button>
+          <span style="flex:1 1 260px;min-width:0;word-break:break-word">${d.hangTuMua ? `<strong>[${escapeHtml(d.hangTuMua)}]</strong> ` : ''}${escapeHtml(d.lyDo || '(không rõ nguyên nhân)')} <small>(thử ${d.soLanThu} lần${d.thoiGianThu ? `, gần nhất ${dinhDangNgayGioNganAnToan(d.thoiGianThu)}` : ''})</small></span>
+          ${d.hangTuMua === 'KL' || d.hangTuMua === 'HPW'
+            ? (laAdmin(_user.vaiTro)
+              ? `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="muaHangKhacTuBang(this, '${escapeJsChuoi(d.sttKey)}', 'CHUYEN_THU_CONG', '${d.hangTuMua}')">Mua ${d.hangTuMua} ngay</button>`
+              : d.duInLabel
+                ? `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="muaHangKhacVaInLabelTuBang(this, '${escapeJsChuoi(d.sttKey)}', '${d.hangTuMua}')">MUA ${d.hangTuMua} và IN LABEL</button>`
+                : `<small>Chưa sản xuất xong — admin mua ${escapeHtml(d.hangTuMua)}, hoặc mua + in label khi đã sản xuất</small>`)
+            : `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="muaThuCongTuBang(this, '${escapeJsChuoi(d.sttKey)}', 'CHUYEN_THU_CONG')">Mua ngay</button>`}
           <button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="choTuDongLaiTuBang(this, '${escapeJsChuoi(d.sttKey)}')">Cho tự động thử lại</button>
           ${htmlNutBoQuaCanhBao(d.sttKey)}
           ${htmlSuaThongTinGke(d)}
@@ -782,9 +783,15 @@ async function apDungInLabelTuBang(btn, sttKey) {
   await xuLyInLabelTuBang(btn, sttKey, '/tracking/in-label');
 }
 
+// Vẽ file (28/10/2026): "Mua KL/HPW ngay" chỉ admin — vẽ file được mua KL / HPW qua "Mua + In label" (hangVanChuyenKhacService#duocMuaHangKhac).
+async function muaHangKhacVaInLabelTuBang(btn, sttKey, ten) {
+  if (!confirm(`Mua tracking ${ten} và in label cho đơn ${sttKey}? Tạo đơn vận chuyển THẬT bên ${ten}, có thể phát sinh phí.`)) return;
+  await xuLyInLabelTuBang(btn, sttKey, `/tracking/${ten.toLowerCase()}/mua-va-in-label`);
+}
+
 async function apDungMuaVaInLabelTuBang(btn, sttKey, trangThai) {
   if (trangThai === 'DA_HUY') return hienThongBaoDonDaHuy([sttKey]);
-  if (!confirm(`Mua tracking (nếu chưa có) và in label cho đơn ${sttKey}? Có thể phát sinh phí thật với đơn chưa có tracking.`)) return;
+  if (!confirm(`Mua tracking GKE (nếu chưa có) và in label cho đơn ${sttKey}? Có thể phát sinh phí thật với đơn chưa có tracking.`)) return;
   await xuLyInLabelTuBang(btn, sttKey, '/tracking/mua-va-in-label');
 }
 

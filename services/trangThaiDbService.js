@@ -73,6 +73,9 @@ const CAC_COT = [
   // TU_MUA_HANG (28/10/2026): hãng job tự mua đã chọn cho đơn ('GKE'/'KL'/'HPW') — ghi TRƯỚC lần gọi hãng đầu tiên, các lần thử sau
   // LUÔN dùng lại hãng này (người dùng chốt: lỗi không đổi hãng). Xoá khi mua được.
   'TU_MUA_HANG',
+  // TU_MUA_CHUA_RO_TU (28/10/2026): lúc job tự mua KL / HPW gặp lỗi "chưa rõ kết quả" ĐẦU TIÊN (mất kết nối, KL đang cấp mã...) — lỗi loại này
+  // không đếm vào 10 lần thử trong 24 giờ đầu, quá 24 giờ thì đếm (trackingAutoService#muaTuDongTheoHang). Xoá cùng các cột theo dõi lần thử.
+  'TU_MUA_CHUA_RO_TU',
   // THONG_TIN_GKE_CHO_DON_LOI (01/10/2026, theo yêu cầu người dùng) — JSON {cột: giá trị} người dùng sửa tay ở hộp đỏ
   // "mua thủ công" (vd {"MA_ZIPCODE":"75432"}); CHỈ đè lên dữ liệu đơn trong lượt gửi GKE (trackingAutoService.js#apDungThongTinGke),
   // KHÔNG ghi Google Sheet, không hiển thị thay dữ liệu gốc ở nơi khác.
