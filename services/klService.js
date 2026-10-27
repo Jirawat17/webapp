@@ -202,7 +202,11 @@ async function timDonTheoMa(orderNumber, cauHinh, nhatKy) {
   }
   const khop = ds.filter(d => d && String(d.orderNumber) === String(orderNumber));
   if (khop.length > 1) ghi(nhatKy, `[KL] [tra đơn] CÓ ${khop.length} đơn cùng mã ${orderNumber} trên KL — dùng đơn thành công đầu tiên.`);
-  return khop.find(laDonThanhCong) || khop.find(laDonChoCapMa) || khop[0] || null; // đơn dùng được > đơn đang chờ cấp mã > đơn lỗi
+  const chon = khop.find(laDonThanhCong) || khop.find(laDonChoCapMa) || khop[0] || null; // đơn dùng được > đơn đang chờ cấp mã > đơn lỗi
+  // 28/10/2026: phản hồi thật khác tài liệu (không có "sid") — ghi TÊN các trường + các mã định danh (không ghi địa chỉ / tên khách) để biết
+  // KL dùng trường nào làm mã đơn cho API label.
+  if (chon) ghi(nhatKy, `[KL] [tra đơn] Đơn khớp ${orderNumber}: trường [${Object.keys(chon).join(', ')}] · sid=${chon.sid ?? '-'} · vendor_sid=${chon.vendor_sid ?? '-'} · id=${chon.id ?? '-'} · status=${chon.status ?? '-'}`);
+  return chon;
 }
 // Đơn KL dùng được = có barcode + sid và KHÔNG ở trạng thái lỗi / cảnh báo. KL dùng CẢ mã số (tài liệu: -1 Warning, 5 Failed, 6 Order Failed)
 // lẫn chữ ("failed", "success", status_text) -> xét cả 2; trạng thái lỗi / cảnh báo KHÔNG tự nhận (người dùng kiểm tra trên trang KL).
