@@ -180,9 +180,20 @@ async function goi(buoc, method, path, cauHinh, { body, nhatKy, nhiPhan = false 
   ghi(nhatKy, `[KL] [${buoc}] Phản hồi: HTTP ${res.status}${data && data.status ? `, status=${data.status}` : ''}${data === null && text ? ' (không phải JSON)' : ''}`);
   return { res, data, text };
 }
+// KL lồng lỗi trong "msg" là chuỗi JSON nhiều lớp (28/10/2026, phản hồi thật: {"msg":"{\"status\":400,\"msg\":\"{\\\"error\\\":{...,\\\"message\\\":
+// \\\"Phone number format is invalid...\\\"}}\"}"}) — trước đây chỉ hiện 200 ký tự đầu của chuỗi thô, bị cắt mất câu lỗi. Bóc tới message trong cùng.
+function thongDiepLongNhau(v) {
+  for (let i = 0; i < 6; i++) {
+    if (typeof v === 'string') { try { v = JSON.parse(v); } catch { return v; } continue; }
+    if (!v || typeof v !== 'object') return v == null ? '' : String(v);
+    v = (v.error && typeof v.error === 'object' ? v.error.message : v.error) || v.message || v.msg;
+  }
+  return typeof v === 'string' ? v : '';
+}
 const lyDoLoi = (data, text, res) => {
   const d = data && typeof data === 'object' ? data : {};
-  return String(d.reason || d.Reason || d.message || d.error || d.detail || (text || '').slice(0, 200) || `HTTP ${res.status}`);
+  // d.error có thể là object {name, message} -> lấy message (trước đây hiện "[object Object]").
+  return String(d.reason || d.Reason || d.message || thongDiepLongNhau(d.msg) || thongDiepLongNhau(d.error) || d.detail || (text || '').slice(0, 200) || `HTTP ${res.status}`);
 };
 
 // Tra đơn trên KL theo orderNumber (khớp ĐÚNG). -> đơn hoặc null. Lỗi -> ném (nơi gọi KHÔNG tạo đơn khi chưa tra được: tránh tạo trùng).
@@ -367,7 +378,7 @@ function taoBodyDonKl(row, dsDon, cauHinh, maQuocGia) {
 }
 
 module.exports = {
-  dangTaoDonKl, DON_VI_KL, BASE_URL, QUOC_GIA_KL,
+  dangTaoDonKl, DON_VI_KL, BASE_URL, QUOC_GIA_KL, thongDiepLongNhau,
   layCauHinhKlChoDon, layDanhSachTaiKhoanKl, luuTaiKhoanKl, xoaTaiKhoanKl, ganTaiKhoanKlChoXuong, docFileSkuKl, luuDanhSachSkuKl, maSkuCuaDon, chuanSku, timSkuKl, duDoanSkuKl,
   timDonTheoMa, laDonThanhCong, laDonChoCapMa, moTaTrangThaiKl, layDonKl, taoDonKl, layLabelKl, layTrackingKl, suKienMoiNhat, tenHangVanChuyen, maBangMy, taoBodyDonKl,
 };

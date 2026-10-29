@@ -907,7 +907,8 @@ async function apDungMuaVaInLabelChiTiet(btn) {
 }
 
 // ---- Khối "Vận chuyển (KL)" (22/10/2026, theo yêu cầu người dùng — services/trackingKlService.js) ----
-// Quyền (27/10/2026, người dùng chốt): "Mua Tracking KL ngay" chỉ admin/superadmin; "Mua Tracking KL và In Label KL" admin/superadmin/vẽ file
+// Quyền: "Mua Tracking KL ngay" admin/superadmin + vẽ file (29/10/2026, người dùng chốt — cùng quyền nút "Mua Tracking KL" hàng loạt ở Danh sách
+// đơn hàng; trước đó chỉ admin); "Mua Tracking KL và In Label KL" admin/superadmin/vẽ file
 // (máy chủ cũng chặn — trackingKlService#duocMuaHangKhac). Khối này chỉ hiện cho các vai trò đó.
 // 1 đơn chỉ 1 tracking: đơn đã có tracking hãng khác (GKE / Seller) không mua KL.
 function htmlKhoiKl(don) {
@@ -937,7 +938,7 @@ function htmlKhoiKl(don) {
     }
     nd += '<div id="kl-sku-du-doan" style="font-size:0.85rem;margin:0 0 8px"></div>';
     nd += `<div class="hang-nut">
-        ${laAdmin(user.vaiTro) ? `<button class="btn-hanh-dong phu" onclick="muaTrackingKlNgay(this)">${icon('package')} Mua Tracking KL ngay</button>` : ''}
+        ${laAdmin(user.vaiTro) || user.vaiTro === 've_file' ? `<button class="btn-hanh-dong phu" onclick="muaTrackingKlNgay(this)">${icon('package')} Mua Tracking KL ngay</button>` : ''}
         ${nhom && !nhom.laDonIn ? '' : `<button class="btn-hanh-dong" onclick="apDungMuaVaInLabelKl(this)">${icon('printer')} Mua Tracking KL và In Label KL</button>`}
       </div>`;
   }

@@ -36,18 +36,21 @@ const daBoQuaDonKl = (sttKey, d) => {
 // Tem KL lưu sẵn trên MinIO (orders/<mã>/tem-kl_<tracking>.pdf) — dùng chung hàm lưu / đọc tem GKE (trackingAutoService, tham số 'kl').
 // Cùng thư mục đơn: "Xoá dữ liệu đơn" xoá luôn; routes/photos.js /file/* chặn tem-kl_*.
 
-function muaTrackingKlChoDon(sttKey, user) {
-  return tas().xepHangMuaTracking(sttKey, () => _muaTrackingKl(sttKey, user));
+// docThat=false (29/10/2026 — nút "Mua Tracking KL" hàng loạt ở Danh sách đơn hàng): dùng bản Sheet ≤ 30 giây (orderService làm mới nền mỗi 25
+// giây) thay vì đọc thật cả Don_Hang_ALL cho TỪNG đơn — mua 80 đơn từng là ~80 lượt đọc Sheet trong vài phút (dễ chạm giới hạn Google). Dấu
+// chống mua trùng (KL_DANG_TAO, TRACKING_ID...) nằm ở SQLite, luôn mới nhất; chỉ địa chỉ sửa trên Sheet trong 30 giây gần nhất là có thể chưa thấy.
+function muaTrackingKlChoDon(sttKey, user, { docThat = true } = {}) {
+  return tas().xepHangMuaTracking(sttKey, () => _muaTrackingKl(sttKey, user, docThat));
 }
 
-async function _muaTrackingKl(sttKey, user) {
+async function _muaTrackingKl(sttKey, user, docThat = true) {
   const t = tas();
   const nhatKy = [];
   const nhan = `[KL - ${user.ten}]`;
   const nguon = user === t.NGUOI_HE_THONG ? 'KL - Tự động' : 'KL - Thủ công';
   try {
     if (!hangChung.duocMuaHangKhac(user.vaiTro)) throw new Error('Chỉ admin / vẽ file được mua tracking KL — đơn đã có tracking KL thì vẫn in label được.');
-    const { rows } = await orderService.getAll({ docThat: true });
+    const { rows } = await orderService.getAll(docThat ? { docThat: true } : {});
     const row = rows.find(r => r.STT_Key === sttKey);
     if (!row) throw new Error('Không tìm thấy đơn: ' + sttKey);
     t.chanMuaDonDaHuy(row);

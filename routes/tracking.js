@@ -1,4 +1,5 @@
 const express = require('express');
+const { duocMuaHangKhac } = require('../services/hangVanChuyenKhacService');
 const router = express.Router();
 const {
   layCauHinh, luuCauHinh, layDanhSachDonAutoTracking, layLogTracking, muaTrackingChoDon, HANG_TU_MUA,
@@ -157,22 +158,25 @@ router.post('/gan-tai-khoan-kl', requireExactRole('superadmin'), (req, res) => {
   catch (err) { res.status(400).json({ error: err.message }); }
 });
 
-// "Mua Tracking KL ngay" (22/10/2026) — CHỈ admin/superadmin (chặn ở máy chủ, không chỉ ẩn nút). Cùng khuôn /mua-thu-cong: chặn khác
-// Xưởng, lỗi 1 đơn không dừng cả lượt. Trả thêm thông tin tracking để giao diện hiện ngay.
+// "Mua Tracking KL ngay" (22/10/2026) + "Mua Tracking KL" hàng loạt ở Danh sách đơn hàng (29/10/2026). Quyền: admin / superadmin / vẽ file
+// (29/10/2026, người dùng chốt cho nút hàng loạt — trước đó CHỈ admin; nút ở Chi tiết đơn vẫn chỉ hiện với admin). Cùng khuôn /mua-thu-cong:
+// chặn khác Xưởng, lỗi 1 đơn không dừng cả lượt. Trả thêm thông tin tracking để giao diện hiện ngay.
 router.post('/kl/mua', async (req, res) => {
   const user = req.session.user;
-  if (!laAdmin(user.vaiTro)) return res.status(403).json({ error: 'Chỉ admin mới được mua tracking KL thủ công' });
-  const { sttKeys } = req.body;
+  if (!duocMuaHangKhac(user.vaiTro)) return res.status(403).json({ error: 'Chỉ admin / vẽ file được mua tracking KL thủ công' });
+  const { sttKeys, hangLoat } = req.body;
   if (!Array.isArray(sttKeys) || sttKeys.length === 0) return res.status(400).json({ error: 'Danh sách đơn trống' });
   const thanhCong = [], loi = [], loiDaySheetKh = [];
   for (const sttKey of sttKeys) {
     try {
       const { row } = await orderService.getByKey(sttKey);
       if (!row || !orderService.coQuyenTheoXuong(user, row)) { loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng' }); continue; }
-      const kq = await muaTrackingKlChoDon(sttKey, user);
-      if (!kq) { loi.push({ sttKey, lyDo: 'Đơn này đã có mã tracking — không mua KL.' }); continue; }
+      // hangLoat (nút hàng loạt, 29/10/2026): đọc Sheet bản ≤ 30 giây — xem trackingKlService#muaTrackingKlChoDon.
+      const kq = await muaTrackingKlChoDon(sttKey, user, { docThat: hangLoat !== true });
+      // boQua (29/10/2026): không phải lỗi — giao diện hàng loạt tách riêng khỏi danh sách "Không mua được".
+      if (!kq) { loi.push({ sttKey, lyDo: 'Đơn này đã có mã tracking — không mua KL.', boQua: true }); continue; }
       loiDaySheetKh.push(...(kq.loiSheetCon || []));
-      if (kq.dungChung) { loi.push({ sttKey, lyDo: `Không mua — đơn DonNhieuAo dùng chung tracking ${kq.tracking_num} của ${kq.donMua} (đã gán).` }); continue; }
+      if (kq.dungChung) { loi.push({ sttKey, lyDo: `Không mua — đơn DonNhieuAo dùng chung tracking ${kq.tracking_num} của ${kq.donMua} (đã gán).`, boQua: true }); continue; }
       thanhCong.push({ sttKey, tracking: kq.tracking_num, hang: kq.delivery_carrier, phiUsd: kq.kl.usd, phiVnd: kq.kl.vnd, canhBao: kq.canhBaoHang || '' });
       if (kq.dayCheKhachHang && !kq.dayCheKhachHang.ok) loiDaySheetKh.push({ sttKey, lyDo: kq.dayCheKhachHang.lyDo });
     } catch (err) {
@@ -266,7 +270,7 @@ router.get('/logs', (req, res) => {
 // rơi vào `loi[]` thay vì làm hỏng cả yêu cầu — khớp đúng "lỗi 1 đơn không dừng cả lượt" đã áp dụng ở
 // job tự động.
 router.post('/mua-thu-cong', async (req, res) => {
-  const { sttKeys } = req.body;
+  const { sttKeys, hangLoat } = req.body;
   const user = req.session.user;
   if (!Array.isArray(sttKeys) || sttKeys.length === 0) {
     return res.status(400).json({ error: 'Danh sách đơn trống' });
@@ -282,17 +286,18 @@ router.post('/mua-thu-cong', async (req, res) => {
   for (const sttKey of sttKeys) {
     try {
       // Chặn mua tracking cho đơn khác Xưởng (bổ sung 13/09/2026) — đọc qua cache, đủ dùng vì chỉ để
-      // kiểm tra quyền, muaTrackingChoDon() bên dưới tự đọc thật riêng trước khi ghi.
+      // kiểm tra quyền, muaTrackingChoDon() bên dưới tự đọc thật riêng trước khi ghi (trừ nút hàng loạt — hangLoat, bản ≤ 30 giây).
       const { row } = await orderService.getByKey(sttKey);
       if (!row || !orderService.coQuyenTheoXuong(user, row)) {
         loi.push({ sttKey, lyDo: 'Không tìm thấy đơn hàng' });
         continue;
       }
-      const ketQua = await muaTrackingChoDon(sttKey, user);
-      if (!ketQua) { loi.push({ sttKey, lyDo: 'Đơn này đã có mã tracking thật rồi — không mua lại.' }); continue; }
+      // hangLoat (nút hàng loạt, 29/10/2026): đọc Sheet bản ≤ 30 giây — xem trackingAutoService#muaTrackingChoDon.
+      const ketQua = await muaTrackingChoDon(sttKey, user, { docThat: hangLoat !== true });
+      if (!ketQua) { loi.push({ sttKey, lyDo: 'Đơn này đã có mã tracking thật rồi — không mua lại.', boQua: true }); continue; }
       loiDaySheetKh.push(...(ketQua.loiSheetCon || [])); // đơn con DonNhieuAo chưa ghi được sang Sheet Seller
       if (ketQua.dungChung) {
-        loi.push({ sttKey, lyDo: `Không mua — đơn DonNhieuAo dùng chung tracking ${ketQua.tracking_num} của ${ketQua.donMua} (đã gán).` });
+        loi.push({ sttKey, lyDo: `Không mua — đơn DonNhieuAo dùng chung tracking ${ketQua.tracking_num} của ${ketQua.donMua} (đã gán).`, boQua: true });
         continue;
       }
       thanhCong.push(sttKey);

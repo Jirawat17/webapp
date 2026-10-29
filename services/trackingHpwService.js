@@ -23,18 +23,19 @@ const { DON_VI_HPW } = hpwService;
 const laDonHpw = r => !!r && r.DON_VI_VAN_CHUYEN === DON_VI_HPW;
 const BO_DAU_HPW = { HPW_DANG_TAO: '', HPW_REFERENCE_ID: '', HPW_GOI_Y_DIA_CHI: '', DON_VI_VAN_CHUYEN: '', TAI_KHOAN_HPW: '' };
 
-function muaTrackingHpwChoDon(sttKey, user) {
-  return tas().xepHangMuaTracking(sttKey, () => _muaHpw(sttKey, user));
+// docThat=false: bản Sheet ≤ 30 giây (job tự mua — xem trackingKlService#muaTrackingKlChoDon). Mua tay mặc định đọc thật.
+function muaTrackingHpwChoDon(sttKey, user, { docThat = true } = {}) {
+  return tas().xepHangMuaTracking(sttKey, () => _muaHpw(sttKey, user, docThat));
 }
 
-async function _muaHpw(sttKey, user) {
+async function _muaHpw(sttKey, user, docThat = true) {
   const t = tas();
   const nhatKy = [];
   const nhan = `[HPW - ${user.ten}]`;
   const log = (ketQua, chiTiet, them = {}) => t.ghiLogTrackingVaoDb({ sttKey, nguon: user === t.NGUOI_HE_THONG ? 'HPW - Tự động' : 'HPW - Thủ công', nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua, chiTiet, ...them });
   try {
     if (!hangChung.duocMuaHangKhac(user.vaiTro)) throw new Error('Chỉ admin / vẽ file được mua tracking HPW — đơn đã có tracking HPW thì vẫn in label được.');
-    const { rows } = await orderService.getAll({ docThat: true });
+    const { rows } = await orderService.getAll(docThat ? { docThat: true } : {});
     const row = rows.find(r => r.STT_Key === sttKey);
     if (!row) throw new Error('Không tìm thấy đơn: ' + sttKey);
     t.chanMuaDonDaHuy(row);

@@ -341,6 +341,12 @@
     <span class="thanh-hanh-dong-cach"></span>
     <button id="nut-mua-va-in-label" class="btn-hanh-dong" onclick="apDungMuaVaInLabel()">MUA TRACKING và IN LABEL</button>
   </span>
+  <!-- KL hàng loạt (29/10/2026, theo yêu cầu người dùng): admin / superadmin / vẽ file. -->
+  <span id="khoi-kl-hang-loat" style="display:none">
+    <span class="thanh-hanh-dong-cach"></span>
+    <button id="nut-mua-tracking-kl" class="btn-hanh-dong" onclick="apDungMuaTrackingKl()">Mua Tracking KL</button>
+    <button id="nut-mua-kl-va-in-label" class="btn-hanh-dong" onclick="apDungMuaKlVaInLabel()">MUA KL và IN LABEL KL</button>
+  </span>
   <span id="khoi-xoa-du-lieu-don" style="display:none">
     <span class="thanh-hanh-dong-cach"></span>
     <button id="nut-xoa-du-lieu-don" class="btn-hanh-dong phu nguy-hiem" onclick="apDungXoaDuLieuDon(this)">Xoá dữ liệu đơn</button>
@@ -625,6 +631,10 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   // tracking" + "IN LABEL") thay vì nút gộp này.
   if (laAdmin(user.vaiTro)) {
     document.getElementById('khoi-mua-va-in-label').style.display = 'contents';
+  }
+  // KL hàng loạt (29/10/2026): cùng quyền mua KL ở máy chủ (hangVanChuyenKhacService#duocMuaHangKhac).
+  if (laAdmin(user.vaiTro) || user.vaiTro === 've_file') {
+    document.getElementById('khoi-kl-hang-loat').style.display = 'contents';
   }
 
   // G1 (10/10/2026): khôi phục bộ lọc/sắp xếp/tìm nhanh TRƯỚC lượt tải đầu, số thẻ + vị trí cuộn SAU khi vẽ.
@@ -1414,10 +1424,20 @@ async function apDungChiDinhNguoiVeFile() {
 // tracking.html/order.html (route nhận `sttKeys` dạng mảng, ở đây chỉ khác là gọi lặp mỗi lần 1 phần
 // tử để lấy được tiến độ từng đơn một — xem routes/tracking.js).
 async function apDungMuaTrackingThuCong() {
-  const soLuong = donDaChonSet.size;
-  if (!confirm(`Mua tracking GKE thủ công cho ${soLuong} đơn đã chọn? Đây là thao tác tạo vận đơn THẬT, có thể phát sinh chi phí — đơn đã có tracking thật rồi sẽ tự bỏ qua.`)) return;
+  await muaTrackingHangLoat('/tracking/mua-thu-cong', 'nut-mua-tracking-thu-cong', 'GKE');
+}
+// "Mua Tracking KL" hàng loạt (29/10/2026) — cùng khuôn mua GKE ở trên, route /tracking/kl/mua (đơn đã có tracking: báo bỏ qua).
+async function apDungMuaTrackingKl() {
+  await muaTrackingHangLoat('/tracking/kl/mua', 'nut-mua-tracking-kl', 'KL');
+}
 
-  const nutApDung = document.getElementById('nut-mua-tracking-thu-cong');
+async function muaTrackingHangLoat(duongDan, idNut, ten) {
+  const soLuong = donDaChonSet.size;
+  if (!soLuong) return;
+  if (!confirm(`Mua tracking ${ten} thủ công cho ${soLuong} đơn đã chọn? Đây là thao tác tạo vận đơn THẬT, có thể phát sinh chi phí — đơn đã có tracking thật rồi sẽ tự bỏ qua.`
+    + '\n\nDùng dữ liệu Sheet cập nhật trong khoảng 30 giây gần nhất: vừa sửa địa chỉ trên Sheet thì chờ 30 giây rồi mới bấm.')) return;
+
+  const nutApDung = document.getElementById(idNut);
   const nhanGoc = nutApDung.innerHTML;
   nutApDung.disabled = true;
   nutApDung.textContent = 'Đang xử lý...';
@@ -1429,21 +1449,29 @@ async function apDungMuaTrackingThuCong() {
 
   const ketQua = await chayHangLoatCoTienDo(
     danhSach,
-    sttKey => apiFetch('/tracking/mua-thu-cong', {
-      method: 'POST', body: JSON.stringify({ sttKeys: [sttKey] }),
+    sttKey => apiFetch(duongDan, {
+      method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], hangLoat: true }), // hangLoat: máy chủ đọc Sheet bản ≤ 30 giây (/mua-thu-cong, /kl/mua)
     }),
     { onTienDo: (hienTai, tong) => thanhTienDo.capNhat(hienTai, tong), kiemTraHuy: () => daHuy }
   );
   thanhTienDo.xoa();
 
   const loiKhac = await tachVaBaoDonDaHuy(ketQua.loi); // đơn đã huỷ: hộp đỏ riêng trước
-  let thongBao = `Đã mua tracking cho ${ketQua.thanhCong.length}/${soLuong} đơn.`;
+  // GKE trả mã đơn (chuỗi), KL trả { sttKey, tracking, canhBao... }.
+  const daMua = ketQua.thanhCong.map(t => (typeof t === 'string' ? t : t.sttKey));
+  let thongBao = `Đã mua tracking ${ten} cho ${daMua.length}/${soLuong} đơn.`;
+  const canhBao = ketQua.thanhCong.filter(t => t && t.canhBao);
+  if (canhBao.length) thongBao += `\n\nLưu ý (${canhBao.length}):\n` + canhBao.map(t => `- ${t.sttKey}: ${t.canhBao}`).join('\n');
   if (ketQua.loi.length > loiKhac.length) thongBao += `\n\nBỏ qua ${ketQua.loi.length - loiKhac.length} đơn ĐÃ HỦY (không mua tracking).`;
   if (ketQua.daHuy) thongBao += `\n\nĐã HỦY giữa chừng — các đơn còn lại vẫn đang được chọn, bấm lại nếu muốn tiếp tục.`;
-  if (loiKhac.length > 0) {
-    thongBao += `\n\nKhông mua được ${loiKhac.length} đơn:\n` +
-      loiKhac.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
+  // Đơn đã có tracking / dùng chung tracking nhóm (boQua — routes/tracking.js): KHÔNG phải lỗi, liệt kê gọn riêng để lỗi thật dễ thấy.
+  const boQua = loiKhac.filter(l => l.boQua);
+  const loiThat = loiKhac.filter(l => !l.boQua);
+  if (loiThat.length > 0) {
+    thongBao += `\n\nKhông mua được ${loiThat.length} đơn:\n` +
+      loiThat.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
   }
+  if (boQua.length > 0) thongBao += `\n\nBỏ qua ${boQua.length} đơn đã có tracking / dùng chung tracking nhóm: ${boQua.map(l => l.sttKey).join(', ')}`;
   // Ghi tracking sang Sheet Seller (21/09/2026; hộp đỏ từ 28/09/2026) — TÁCH RIÊNG khỏi
   // "Không mua được" ở trên vì tracking THẬT đã mua thành công, chỉ bước ghi sang Sheet Seller
   // thất bại (thiếu quyền sửa Sheet, sai cấu hình...).
@@ -1455,7 +1483,7 @@ async function apDungMuaTrackingThuCong() {
 
   nutApDung.disabled = false;
   nutApDung.innerHTML = nhanGoc;
-  if (ketQua.daHuy) ketQua.thanhCong.forEach(sttKey => donDaChonSet.delete(sttKey));
+  if (ketQua.daHuy) daMua.forEach(sttKey => donDaChonSet.delete(sttKey));
   else donDaChonSet.clear();
   await taiDon();
 }
@@ -1477,6 +1505,15 @@ async function apDungMuaVaInLabel() {
   if (danhSach.length === 0) return;
   if (!confirm(`Mua tracking (nếu chưa có) và in label cho ${danhSach.length} đơn đã chọn?\n\nCó thể phát sinh phí thật với đơn chưa có tracking. Chỉ đơn đang "Đã sản xuất"/"ĐÃ DÁN TEM" mới thực hiện được — đơn khác sẽ báo lỗi riêng, không chặn cả lượt.`)) return;
   await xuLyInLabel('/tracking/mua-va-in-label', danhSach, 'nut-mua-va-in-label', 'MUA TRACKING và IN LABEL');
+}
+
+// "MUA KL và IN LABEL KL" (29/10/2026): đơn chưa có tracking -> mua KL rồi in; đã có tracking KL -> chỉ in; tracking hãng khác -> lỗi riêng
+// đơn đó (hangVanChuyenKhacService#muaVaInLabelHangKhac). Cùng khuôn nút GKE: 1 lượt gọi, ghép 1 file PDF.
+async function apDungMuaKlVaInLabel() {
+  const danhSach = Array.from(donDaChonSet);
+  if (danhSach.length === 0) return;
+  if (!confirm(`Mua tracking KL (nếu chưa có) và in label KL cho ${danhSach.length} đơn đã chọn?\n\nCó thể phát sinh phí thật bên KL với đơn chưa có tracking. Chỉ đơn đang "Đã sản xuất"/"ĐÃ DÁN TEM" mới thực hiện được — đơn khác sẽ báo lỗi riêng, không chặn cả lượt.`)) return;
+  await xuLyInLabel('/tracking/kl/mua-va-in-label', danhSach, 'nut-mua-kl-va-in-label', 'MUA KL và IN LABEL KL');
 }
 
 async function xuLyInLabel(duongDan, danhSach, idNut, nhanGoc) {

@@ -403,6 +403,8 @@ async function taiLogs() {
 }
 
 let _user = null;
+// "Mua <hãng> ngay": admin / superadmin; KL thêm vẽ file (29/10/2026 — routes/tracking.js /kl/mua). HPW vẫn chỉ admin (/hpw/mua).
+const duocMuaNgay = h => laAdmin(_user.vaiTro) || (h === 'KL' && _user.vaiTro === 've_file');
 const HANG_TU_MUA = ['GKE', 'KL', 'HPW'];
 async function taiCauHinh() {
   try {
@@ -551,7 +553,7 @@ async function taiDanhSach() {
               <td>${d.hanTuMua ? dinhDangNgayGioNganAnToan(d.hanTuMua) : '—'}</td>
               <td class="tk-o-hanh-dong"><div>
                 ${d.trangThai === 'DA_MUA' ? '' : `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="muaThuCongTuBang(this, '${escapeJsChuoi(d.sttKey)}', '${d.trangThai}')">Mua GKE</button>`}
-                ${d.trangThai === 'DA_MUA' || !laAdmin(_user.vaiTro) ? '' : ['KL', 'HPW'].map(h => `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="muaHangKhacTuBang(this, '${escapeJsChuoi(d.sttKey)}', '${d.trangThai}', '${h}')">Mua ${h}</button>`).join('')}
+                ${d.trangThai === 'DA_MUA' ? '' : ['KL', 'HPW'].filter(duocMuaNgay).map(h => `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="muaHangKhacTuBang(this, '${escapeJsChuoi(d.sttKey)}', '${d.trangThai}', '${h}')">Mua ${h}</button>`).join('')}
                 ${d.trangThai === 'DA_MUA' ? `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="apDungInLabelTuBang(this, '${escapeJsChuoi(d.sttKey)}')">IN LABEL</button>` : ''}
                 ${d.trangThai === 'DA_MUA' ? '' : `<button type="button" class="btn-hanh-dong" style="padding:6px 10px;font-size:0.82rem" onclick="apDungMuaVaInLabelTuBang(this, '${escapeJsChuoi(d.sttKey)}', '${d.trangThai}')">MUA GKE và IN LABEL</button>`}
                 ${d.trangThai === 'CHUYEN_THU_CONG' ? `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="choTuDongLaiTuBang(this, '${escapeJsChuoi(d.sttKey)}')">Cho tự động thử lại</button>` : ''}
@@ -690,7 +692,7 @@ function veCanhBaoThuCong() {
           <a href="/order.html?stt=${encodeURIComponent(d.sttKey)}" style="font-weight:700;color:inherit">${escapeHtml(d.sttKey)}</a>
           <span style="flex:1 1 260px;min-width:0;word-break:break-word">${d.hangTuMua ? `<strong>[${escapeHtml(d.hangTuMua)}]</strong> ` : ''}${escapeHtml(d.lyDo || '(không rõ nguyên nhân)')} <small>(thử ${d.soLanThu} lần${d.thoiGianThu ? `, gần nhất ${dinhDangNgayGioNganAnToan(d.thoiGianThu)}` : ''})</small></span>
           ${d.hangTuMua === 'KL' || d.hangTuMua === 'HPW'
-            ? (laAdmin(_user.vaiTro)
+            ? (duocMuaNgay(d.hangTuMua)
               ? `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="muaHangKhacTuBang(this, '${escapeJsChuoi(d.sttKey)}', 'CHUYEN_THU_CONG', '${d.hangTuMua}')">Mua ${d.hangTuMua} ngay</button>`
               : d.duInLabel
                 ? `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="muaHangKhacVaInLabelTuBang(this, '${escapeJsChuoi(d.sttKey)}', '${d.hangTuMua}')">MUA ${d.hangTuMua} và IN LABEL</button>`
@@ -749,7 +751,7 @@ async function muaThuCongTuBang(btn, sttKey, trangThai) {
   }
 }
 
-// "Mua KL" / "Mua HPW" theo hàng (28/10/2026, theo yêu cầu người dùng — nút riêng từng hãng; CHỈ admin, như khối KL / HPW ở Chi tiết đơn).
+// "Mua KL" / "Mua HPW" theo hàng (28/10/2026, theo yêu cầu người dùng — nút riêng từng hãng; quyền theo duocMuaNgay: KL admin + vẽ file, HPW chỉ admin — như khối KL / HPW ở Chi tiết đơn).
 async function muaHangKhacTuBang(btn, sttKey, trangThai, ten) {
   if (trangThai === 'DA_HUY') return hienThongBaoDonDaHuy([sttKey]);
   if (!confirm(`Mua tracking ${ten} cho đơn ${sttKey} ngay bây giờ? Đây là thao tác tạo đơn vận chuyển THẬT bên ${ten}, có thể phát sinh phí.`)) return;

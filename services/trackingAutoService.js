@@ -286,8 +286,10 @@ function luuCauHinhQuetTrangThai({ soPhutQuet }) {
 // không phải suy luận "không có hậu tố nghĩa là tự động" như cách làm cũ.
 // Từ 27/09/2026 KHÔNG còn nhận cauHinhGke từ nơi gọi — mỗi đơn tự lấy đúng tài khoản GKE của Xưởng mình
 // (gkeService.layCauHinhGkeChoDon) BÊN TRONG hàm, vì 1 lô/1 lượt job có thể gồm đơn của nhiều Xưởng.
-function muaTrackingChoDon(sttKey, user = NGUOI_HE_THONG) {
-  return xepHangMuaTracking(sttKey, () => _muaTrackingChoDonThat(sttKey, user));
+// docThat=false (29/10/2026 — nút "Mua tracking" hàng loạt ở Danh sách đơn hàng): dùng bản Sheet ≤ 30 giây thay vì đọc thật cả Don_Hang_ALL cho
+// TỪNG đơn (giới hạn đọc Google). Dấu chống mua trùng (TAM_THOI, TRACKING_ID...) ở SQLite, luôn mới nhất — xem trackingKlService#muaTrackingKlChoDon.
+function muaTrackingChoDon(sttKey, user = NGUOI_HE_THONG, { docThat = true } = {}) {
+  return xepHangMuaTracking(sttKey, () => _muaTrackingChoDonThat(sttKey, user, docThat));
 }
 
 // DonNhieuAo (bổ sung 26/09/2026) — SAO tracking của đơn ".1" xuống các đơn con chưa có tracking (bỏ qua
@@ -377,7 +379,7 @@ async function dongBoTrackingCacNhom(rows) {
   }
 }
 
-async function _muaTrackingChoDonThat(sttKey, user) {
+async function _muaTrackingChoDonThat(sttKey, user, docThat = true) {
   const laThuCong = user !== NGUOI_HE_THONG;
   const nhanNguon = laThuCong ? `[Thủ công - ${user.ten}]` : '[Tự động]';
   const nguonSheet = laThuCong ? 'Thủ công' : 'Tự động';
@@ -389,7 +391,7 @@ async function _muaTrackingChoDonThat(sttKey, user) {
   let daToiBuocGke = false; // chỉ lỗi từ bước gọi GKE trở đi mới tính là 1 lần thử (ghiNhanLanThuTuDong)
 
   try {
-    const { headers, rows } = await orderService.getAll({ docThat: true });
+    const { headers, rows } = await orderService.getAll(docThat ? { docThat: true } : {});
     row = rows.find(r => r.STT_Key === sttKey);
     if (!row) throw new Error('Không tìm thấy đơn: ' + sttKey);
     chanMuaDonDaHuy(row);
@@ -797,9 +799,11 @@ const MS_CHUA_RO_KHONG_DEM = 24 * 60 * 60 * 1000;
 async function muaTuDongTheoHang(hang, don) {
   if (hang === 'GKE') return muaTrackingChoDon(don.STT_Key);
   try {
+    // docThat: false (29/10/2026) — job thử mỗi 2 phút cho mọi đơn đến hạn: không đọc thật cả Sheet cho từng đơn (giới hạn đọc Google); đơn đã
+    // chờ đủ giờ nên bản Sheet ≤ 30 giây là đủ. GKE giữ đọc thật như trước (job GKE đã chạy ổn định với cách này).
     const ketQua = hang === 'KL'
-      ? await trackingKlService().muaTrackingKlChoDon(don.STT_Key, NGUOI_HE_THONG)
-      : await trackingHpwService().muaTrackingHpwChoDon(don.STT_Key, NGUOI_HE_THONG);
+      ? await trackingKlService().muaTrackingKlChoDon(don.STT_Key, NGUOI_HE_THONG, { docThat: false })
+      : await trackingHpwService().muaTrackingHpwChoDon(don.STT_Key, NGUOI_HE_THONG, { docThat: false });
     trangThaiDbService.ghiDe(don.STT_Key, { ...XOA_THEO_DOI_THU, TU_MUA_HANG: '' }); // mua được (hoặc đơn đã có tracking) -> hết theo dõi
     return ketQua;
   } catch (err) {
