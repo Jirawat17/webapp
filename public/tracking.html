@@ -284,9 +284,8 @@ document.getElementById('o-quet-in-label').addEventListener('keydown', async (e)
   if (ketQua.loi && ketQua.loi.length > 0) {
     // Đơn chưa có tracking (23/10/2026, theo yêu cầu người dùng — log 22/10: 26 lần bấm lại "IN LABEL"): kèm nút mua ngay cho đúng đơn
     // này. Vẫn KHÔNG tự mua khi quét — phải bấm nút + xác nhận (cùng hộp của nút "MUA TRACKING và IN LABEL" trong bảng).
-    const nut = ketQua.loi[0].maLoi === 'CHUA_CO_TRACKING'
-      ? { nhan: 'Mua tracking và in label', bam: b => apDungMuaVaInLabelTuBang(b, ketQua.loi[0].sttKey, '') } : null;
-    hienThongBaoQuet('loi', `${sttKey}: ${ketQua.loi[0].lyDo}`, nut);
+    const { thongDiep, nut } = xuLyLoiQuetInLabel(ketQua.loi[0]);
+    hienThongBaoQuet('loi', `${sttKey}: ${thongDiep}`, nut);
     resetOQuetInLabel(oQuet);
     return;
   }
@@ -797,13 +796,25 @@ async function apDungMuaVaInLabelTuBang(btn, sttKey, trangThai) {
   await xuLyInLabelTuBang(btn, sttKey, '/tracking/mua-va-in-label');
 }
 
-async function xuLyInLabelTuBang(btn, sttKey, duongDan) {
+// Lỗi ở ô quét in label (30/10/2026, người dùng ưu tiên KL) -> { thongDiep, nut | null }: đơn chờ tem GKE -> nút lấy tem GKE (chiLayTem: không
+// bao giờ tạo vận đơn mới); đơn chưa có tracking -> nút mua KL nếu KL mua được (máy chủ báo lyDoKhongMuaKl rỗng) và người xem được mua KL;
+// không thì chỉ báo lý do. Vẫn KHÔNG tự mua khi quét — phải bấm nút (+ xác nhận phí).
+function xuLyLoiQuetInLabel(l0) {
+  const nut = l0.maLoi === 'CHO_TEM_GKE'
+    ? { nhan: 'Lấy tem GKE và in', bam: b => xuLyInLabelTuBang(b, l0.sttKey, '/tracking/mua-va-in-label', { chiLayTem: true }) }
+    : l0.maLoi === 'CHUA_CO_TRACKING' && !l0.lyDoKhongMuaKl && duocMuaNgay('KL')
+      ? { nhan: 'Mua KL và in label KL', bam: b => muaHangKhacVaInLabelTuBang(b, l0.sttKey, 'KL') } : null;
+  return { thongDiep: `${l0.lyDo}${l0.lyDoKhongMuaKl ? ` (KL không mua được: ${l0.lyDoKhongMuaKl})` : ''}`, nut };
+}
+
+// them: trường gửi thêm trong body (vd { chiLayTem: true }).
+async function xuLyInLabelTuBang(btn, sttKey, duongDan, them = {}) {
   const nhanGoc = btn.innerHTML;
   btn.disabled = true;
   btn.textContent = 'Đang xử lý...';
 
   try {
-    const ketQua = await apiFetch(duongDan, { method: 'POST', body: JSON.stringify({ sttKeys: [sttKey] }) });
+    const ketQua = await apiFetch(duongDan, { method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], ...them }) });
     if (ketQua.loi && ketQua.loi.length > 0) {
       const loiKhac = await tachVaBaoDonDaHuy(ketQua.loi);
       if (loiKhac.length) alert('Lỗi: ' + loiKhac[0].lyDo);

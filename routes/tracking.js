@@ -430,7 +430,10 @@ async function xuLyInLabelHangLoat(req, res, hamXuLy) {
       if (ketQua && ketQua.loiSheetCon) loiDaySheetKh.push(...ketQua.loiSheetCon);
       if (ketQua && ketQua.label_base64) cacLabelBase64.push(ketQua.label_base64);
     } catch (err) {
-      loi.push({ sttKey, lyDo: err.message, maLoi: err.maLoi, ...(err.daMua ? { daMua: true } : {}), ...(err.goiYDiaChi ? { goiYDiaChi: err.goiYDiaChi } : {}) });
+      loi.push({ sttKey, lyDo: err.message, maLoi: err.maLoi, ...(err.daMua ? { daMua: true } : {}), ...(err.goiYDiaChi ? { goiYDiaChi: err.goiYDiaChi } : {}),
+        // IN LABEL: KL mua được không (trackingAutoService#inLabelChoDon). Lý do có tên tài khoản / cấu hình KL -> chỉ vai trò có menu Tracking
+        // (cùng quy tắc GET /danh-sach ẩn lý do không tự mua).
+        ...(err.lyDoKhongMuaKl !== undefined && orderService.VAI_TRO_MENU_TRACKING.includes(user.vaiTro) ? { lyDoKhongMuaKl: err.lyDoKhongMuaKl } : {}) });
       if (err.loiDaySheetKh) loiDaySheetKh.push(...err.loiDaySheetKh); // KL: đã mua nhưng label lỗi — lỗi ghi Sheet Seller vẫn báo
     }
   }
@@ -452,7 +455,8 @@ router.post('/in-label', (req, res) => xuLyInLabelHangLoat(req, res, inLabelChoD
 
 // "MUA TRACKING và IN LABEL" — 1 nút làm cả 2 việc, tự bỏ qua bước mua nếu đơn đã có tracking rồi (xem
 // services/trackingAutoService.js#muaTrackingVaInLabelChoDon).
-router.post('/mua-va-in-label', (req, res) => xuLyInLabelHangLoat(req, res, muaTrackingVaInLabelChoDon));
+// chiLayTem (30/10/2026): nút "Lấy tem GKE và in" — chỉ lấy tem cho đơn đang chờ tem, không bao giờ tạo vận đơn mới (trackingAutoService#muaTrackingChoDon).
+router.post('/mua-va-in-label', (req, res) => xuLyInLabelHangLoat(req, res, (sttKey, user) => muaTrackingVaInLabelChoDon(sttKey, user, { chiLayTem: req.body.chiLayTem === true })));
 
 // "Mua Tracking KL và In Label KL" (22/10/2026) — cùng phạm vi vai trò với "MUA TRACKING và IN LABEL" (GKE), ghép PDF như in hàng loạt.
 // Bước MUA: admin, superadmin, vẽ file (27/10/2026 — chặn trong trackingKlService#_muaTrackingKl); vai trò khác chỉ in label đơn đã có tracking KL.

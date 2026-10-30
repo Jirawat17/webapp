@@ -614,26 +614,16 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
     document.getElementById('btn-bo-uu-tien').innerHTML = icon('undo', { size: 16 }) + ' Bỏ Ưu tiên';
   }
 
-  // "Mua tracking" (đứng riêng) + "IN LABEL" (bổ sung 09/09/2026 lần 2, theo yêu cầu người dùng) — mọi
-  // vai trò TRỪ nguoi_lay_phoi (server routes/tracking.js#/mua-thu-cong, /in-label chặn lại y hệt nếu
-  // lỡ gọi trực tiếp API — nguoi_lay_phoi thực ra không có menu vào được trang này nên chỉ là phòng hờ).
-  // "Mua tracking" mở RỘNG từ CHỈ admin (bổ sung 09/09/2026 lần 1) sang thêm ve_file/san_xuat (bổ sung
-  // 21/09/2026, theo yêu cầu người dùng) — 2 vai trò này giờ mua tracking TÁCH RIÊNG khỏi in label bằng
-  // 2 nút riêng, thay vì chỉ có mỗi nút gộp "MUA TRACKING và IN LABEL" (nay thu hẹp lại CHỈ admin, xem
-  // khối ngay dưới).
+  // "IN LABEL" (bổ sung 09/09/2026 lần 2, theo yêu cầu người dùng) — mọi vai trò TRỪ nguoi_lay_phoi (server routes/tracking.js#/in-label chặn lại
+  // y hệt nếu lỡ gọi trực tiếp API — nguoi_lay_phoi thực ra không có menu vào được trang này nên chỉ là phòng hờ).
+  // ẨN 2 nút mua GKE "Mua tracking" + "MUA TRACKING và IN LABEL" với MỌI vai trò (30/10/2026, theo yêu cầu người dùng — đang ưu tiên dùng KL).
+  // Chỉ ẩn nút: máy chủ (/mua-thu-cong, /mua-va-in-label), trang Tracking, Chi tiết đơn và job tự mua GKE giữ nguyên. Hiện lại: thêm lại dòng
+  // display cho khoi-mua-tracking-thu-cong (mọi vai trò trừ nguoi_lay_phoi) và khoi-mua-va-in-label (chỉ admin).
   if (user.vaiTro !== 'nguoi_lay_phoi') {
-    document.getElementById('khoi-mua-tracking-thu-cong').style.display = 'contents';
     document.getElementById('khoi-in-label').style.display = 'contents';
   }
-
-  // "MUA TRACKING và IN LABEL" (nút gộp) — thu hẹp từ [admin, ve_file, san_xuat] xuống CHỈ admin (bổ
-  // sung 21/09/2026, theo yêu cầu người dùng) — ve_file/san_xuat giờ dùng 2 nút riêng ở trên ("Mua
-  // tracking" + "IN LABEL") thay vì nút gộp này.
-  if (laAdmin(user.vaiTro)) {
-    document.getElementById('khoi-mua-va-in-label').style.display = 'contents';
-  }
   // KL hàng loạt (29/10/2026): cùng quyền mua KL ở máy chủ (hangVanChuyenKhacService#duocMuaHangKhac).
-  if (laAdmin(user.vaiTro) || user.vaiTro === 've_file') {
+  if (duocMuaKl()) {
     document.getElementById('khoi-kl-hang-loat').style.display = 'contents';
   }
 
@@ -1423,6 +1413,8 @@ async function apDungChiDinhNguoiVeFile() {
 // đơn cộng dồn có thể khá lâu). Gọi CHUNG route POST /tracking/mua-thu-cong với nút đơn lẻ ở
 // tracking.html/order.html (route nhận `sttKeys` dạng mảng, ở đây chỉ khác là gọi lặp mỗi lần 1 phần
 // tử để lấy được tiến độ từng đơn một — xem routes/tracking.js).
+// apDungMuaTrackingThuCong / apDungMuaVaInLabel: nút GKE ĐANG ẨN (30/10/2026 — xem khối hiển thị nút ở đầu trang). Giữ lại để hiện lại khi cần;
+// sửa muaTrackingHangLoat / xuLyInLabel thì giữ 2 hàm này còn chạy được.
 async function apDungMuaTrackingThuCong() {
   await muaTrackingHangLoat('/tracking/mua-thu-cong', 'nut-mua-tracking-thu-cong', 'GKE');
 }
@@ -1516,13 +1508,17 @@ async function apDungMuaKlVaInLabel() {
   await xuLyInLabel('/tracking/kl/mua-va-in-label', danhSach, 'nut-mua-kl-va-in-label', 'MUA KL và IN LABEL KL');
 }
 
-async function xuLyInLabel(duongDan, danhSach, idNut, nhanGoc) {
+// Quyền mua KL (admin / superadmin / vẽ file) — cùng máy chủ (hangVanChuyenKhacService#duocMuaHangKhac). 1 chỗ cho mọi nút / câu hỏi KL ở trang này.
+const duocMuaKl = () => laAdmin(user.vaiTro) || user.vaiTro === 've_file';
+
+// them: trường gửi thêm trong body (vd { chiLayTem: true } cho "Lấy tem GKE").
+async function xuLyInLabel(duongDan, danhSach, idNut, nhanGoc, them = {}) {
   const nut = document.getElementById(idNut);
   nut.disabled = true;
   nut.textContent = 'Đang xử lý...';
-  let chuaCoTracking = [];
+  let chuaCoTracking = [], khongMuaKl = [], choTemGke = [];
   try {
-    const ketQua = await apiFetch(duongDan, { method: 'POST', body: JSON.stringify({ sttKeys: danhSach }) });
+    const ketQua = await apiFetch(duongDan, { method: 'POST', body: JSON.stringify({ sttKeys: danhSach, ...them }) });
     if (ketQua.labelBase64) {
       const goiIn = moHopThoaiInPdf(ketQua.labelBase64);
       if (goiIn) goiIn();
@@ -1531,14 +1527,23 @@ async function xuLyInLabel(duongDan, danhSach, idNut, nhanGoc) {
     let thongBao = `Thành công: ${ketQua.thanhCong.length}/${danhSach.length}`;
     if (ketQua.loi.length > loiKhac.length) thongBao += `\n\nBỏ qua ${ketQua.loi.length - loiKhac.length} đơn ĐÃ HỦY (không mua tracking).`;
     if (loiKhac.length > 0) {
-      thongBao += `\n\nLỗi (${loiKhac.length}):\n` + loiKhac.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
+      thongBao += `\n\nLỗi (${loiKhac.length}):\n` + loiKhac.map(l => `- ${l.sttKey}: ${l.lyDo}${l.lyDoKhongMuaKl ? ` (KL không mua được: ${l.lyDoKhongMuaKl})` : ''}`).join('\n');
     }
     if ((ketQua.loiDaySheetKh || []).length) thongBao += `\n\nĐã mua tracking nhưng CHƯA ghi được sang Sheet Seller cho ${ketQua.loiDaySheetKh.length} đơn (xem hộp đỏ).`;
     alert(thongBao);
     await baoLoiSheetSeller(ketQua.loiDaySheetKh);
     if (ketQua.thanhCong.length > 0) await taiDon();
-    // Chỉ admin: nút gộp "MUA TRACKING và IN LABEL" chỉ dành cho admin (ve_file/san_xuat dùng 2 nút riêng — xem khoi-mua-va-in-label).
-    if (duongDan === '/tracking/in-label' && laAdmin(user.vaiTro)) chuaCoTracking = loiKhac.filter(l => l.maLoi === 'CHUA_CO_TRACKING').map(l => l.sttKey);
+    if (duongDan === '/tracking/in-label') {
+      // Đơn đã tạo vận đơn GKE, đang chờ tem (30/10/2026): mời lấy tem GKE — không tốn phí, mọi vai trò thấy nút IN LABEL.
+      choTemGke = loiKhac.filter(l => l.maLoi === 'CHO_TEM_GKE').map(l => l.sttKey);
+      // Từ 30/10/2026 hỏi mua KL (không còn GKE) — vai trò thấy nút "MUA KL và IN LABEL KL" (admin / superadmin / vẽ file); CHỈ mời đơn KL mua
+      // được (máy chủ báo lyDoKhongMuaKl rỗng), đơn khác liệt kê kèm lý do.
+      if (duocMuaKl()) {
+        const ds = loiKhac.filter(l => l.maLoi === 'CHUA_CO_TRACKING');
+        chuaCoTracking = ds.filter(l => !l.lyDoKhongMuaKl).map(l => l.sttKey);
+        khongMuaKl = ds.filter(l => l.lyDoKhongMuaKl);
+      }
+    }
   } catch (e) {
     alert('Lỗi: ' + e.message);
   } finally {
@@ -1547,8 +1552,15 @@ async function xuLyInLabel(duongDan, danhSach, idNut, nhanGoc) {
   }
   // IN LABEL gặp đơn chưa có tracking (23/10/2026, theo yêu cầu người dùng — log 22/10: 26 lần bấm lại "IN LABEL"): hỏi mua luôn
   // đúng các đơn đó (hộp này thay cho bước xác nhận của nút "MUA TRACKING và IN LABEL", cùng lời nhắc phát sinh phí).
-  if (chuaCoTracking.length && confirm(`${chuaCoTracking.length} đơn chưa có mã tracking nên chưa in label được:\n${chuaCoTracking.join(', ')}\n\nMua tracking và in label cho ${chuaCoTracking.length === 1 ? 'đơn' : 'các đơn'} này ngay? Có thể phát sinh phí thật.`)) {
-    await xuLyInLabel('/tracking/mua-va-in-label', chuaCoTracking, 'nut-mua-va-in-label', 'MUA TRACKING và IN LABEL');
+  if (choTemGke.length && confirm(`${choTemGke.length} đơn đã tạo vận đơn GKE nhưng đang chờ tem:\n${choTemGke.join(', ')}\n\nLấy tem GKE và in ngay? Không tạo vận đơn mới, không tốn phí thêm.`)) {
+    // chiLayTem: máy chủ chỉ lấy tem; đơn không còn chờ tem thì báo lỗi, KHÔNG tạo vận đơn mới (trackingAutoService#muaTrackingChoDon).
+    await xuLyInLabel('/tracking/mua-va-in-label', choTemGke, idNut, nhanGoc, { chiLayTem: true });
+  }
+  const ghiChuKhongMuaKl = khongMuaKl.length
+    ? `\n\nKHÔNG mua KL được ${khongMuaKl.length} đơn (bỏ ra):\n` + khongMuaKl.map(l => `- ${l.sttKey}: ${l.lyDoKhongMuaKl}`).join('\n') : '';
+  if (chuaCoTracking.length && confirm(`${chuaCoTracking.length} đơn chưa có mã tracking nên chưa in label được:\n${chuaCoTracking.join(', ')}\n\nMua tracking KL và in label KL cho ${chuaCoTracking.length === 1 ? 'đơn' : 'các đơn'} này ngay? Có thể phát sinh phí thật bên KL.${ghiChuKhongMuaKl}`)) {
+    // 30/10/2026: mua KL thay GKE (nút GKE đã ẩn).
+    await xuLyInLabel('/tracking/kl/mua-va-in-label', chuaCoTracking, 'nut-mua-kl-va-in-label', 'MUA KL và IN LABEL KL');
   }
 }
 

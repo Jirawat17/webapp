@@ -288,8 +288,10 @@ function luuCauHinhQuetTrangThai({ soPhutQuet }) {
 // (gkeService.layCauHinhGkeChoDon) BÊN TRONG hàm, vì 1 lô/1 lượt job có thể gồm đơn của nhiều Xưởng.
 // docThat=false (29/10/2026 — nút "Mua tracking" hàng loạt ở Danh sách đơn hàng): dùng bản Sheet ≤ 30 giây thay vì đọc thật cả Don_Hang_ALL cho
 // TỪNG đơn (giới hạn đọc Google). Dấu chống mua trùng (TAM_THOI, TRACKING_ID...) ở SQLite, luôn mới nhất — xem trackingKlService#muaTrackingKlChoDon.
-function muaTrackingChoDon(sttKey, user = NGUOI_HE_THONG, { docThat = true } = {}) {
-  return xepHangMuaTracking(sttKey, () => _muaTrackingChoDonThat(sttKey, user, docThat));
+// chiLayTem (30/10/2026 — "Lấy tem GKE và in" cho đơn đã tạo vận đơn, đang chờ tem): đơn KHÔNG còn chờ tem GKE thì báo lỗi, KHÔNG tạo vận đơn mới
+// (giao diện đã hứa "không tốn phí"). Kiểm tra trong hàng đợi của đơn, sau khi đọc dữ liệu mới nhất.
+function muaTrackingChoDon(sttKey, user = NGUOI_HE_THONG, { docThat = true, chiLayTem = false } = {}) {
+  return xepHangMuaTracking(sttKey, () => _muaTrackingChoDonThat(sttKey, user, docThat, chiLayTem));
 }
 
 // DonNhieuAo (bổ sung 26/09/2026) — SAO tracking của đơn ".1" xuống các đơn con chưa có tracking (bỏ qua
@@ -379,7 +381,7 @@ async function dongBoTrackingCacNhom(rows) {
   }
 }
 
-async function _muaTrackingChoDonThat(sttKey, user, docThat = true) {
+async function _muaTrackingChoDonThat(sttKey, user, docThat = true, chiLayTem = false) {
   const laThuCong = user !== NGUOI_HE_THONG;
   const nhanNguon = laThuCong ? `[Thủ công - ${user.ten}]` : '[Tự động]';
   const nguonSheet = laThuCong ? 'Thủ công' : 'Tự động';
@@ -402,6 +404,9 @@ async function _muaTrackingChoDonThat(sttKey, user, docThat = true) {
         ketQua: 'Bỏ qua', chiTiet: 'Đơn này đã có mã tracking thật rồi — không mua lại.',
       });
       return null; // đã có tracking thật rồi (vd vừa được quét tay) — bỏ qua
+    }
+    if (chiLayTem && row.TAM_THOI !== gkeService.MA_DANG_CHO_TEM) {
+      throw new Error('Đơn không còn ở trạng thái chờ tem GKE — KHÔNG tạo vận đơn mới. Tải lại trang để xem trạng thái hiện tại.');
     }
     // Đơn đang tạo đơn KL (22/10/2026 — trackingKlService.js): lần gửi KL trước chưa rõ kết quả -> KHÔNG mua thêm GKE (1 đơn chỉ 1 hãng).
     if (klService.dangTaoDonKl(row)) {
@@ -620,9 +625,17 @@ async function inLabelChoDon(sttKey, user) {
     // Tem lấy theo vận đơn của đơn ĐÃ MUA — khác đơn bấm in khi .1 đã mua rồi mới bị huỷ riêng.
     const donLayTem = nhom ? nhom.donMua : row;
     if (!donLayTem.TRACKING_ID) {
-      // maLoi (23/10/2026): giao diện nhận ra lỗi này -> hiện ngay nút "Mua tracking và in label" cho đúng đơn (log 22/10: 26 lần bấm lại "IN LABEL").
+      // Đã tạo vận đơn GKE, chỉ còn chờ tem (30/10/2026): giao diện mời "lấy tem GKE" (route /mua-va-in-label chỉ lấy tem, không tạo vận đơn
+      // mới, không tốn phí) — KHÔNG mời mua KL (KL từ chối đơn đã có vận đơn GKE).
+      if (donLayTem.TAM_THOI === gkeService.MA_DANG_CHO_TEM) {
+        throw Object.assign(new Error('Đơn đã tạo vận đơn GKE, đang chờ tem GKE — lấy tem GKE (không tốn phí thêm) rồi in.'), { maLoi: 'CHO_TEM_GKE' });
+      }
+      // maLoi (23/10/2026): giao diện nhận ra lỗi này -> mời mua + in label cho đúng đơn (log 22/10: 26 lần bấm lại "IN LABEL").
       // Không nêu tên nút của 1 hãng (28/10/2026): lối gọi này có cả nút In Label KL / HPW ở Chi tiết đơn khi dữ liệu trang đã cũ.
-      throw Object.assign(new Error('Đơn chưa có mã tracking thật — tải lại trang, rồi dùng nút mua tracking + in label của hãng cần mua (GKE / KL / HPW).'), { maLoi: 'CHUA_CO_TRACKING' });
+      // lyDoKhongMuaKl (30/10/2026): '' = KL mua được (giao diện mời mua KL); khác '' = lý do KL không mua được (quốc gia, SKU, đang mua HPW...).
+      const lyDoKhongMuaKl = hpwService.dangMuaHpw(donLayTem) ? 'đơn đang mua tracking HPW' : lyDoKhongTuMuaDuoc('KL', donLayTem, nhom);
+      throw Object.assign(new Error('Đơn chưa có mã tracking thật — tải lại trang, rồi dùng nút mua tracking + in label của hãng cần mua (GKE / KL / HPW).'),
+        { maLoi: 'CHUA_CO_TRACKING', lyDoKhongMuaKl });
     }
 
     // Tracking Seller (11/10/2026): chỉ in label GKE cho đơn US/UK/GB (người dùng chốt); GKE không có vận đơn -> báo rõ nguồn Seller.
@@ -683,7 +696,7 @@ function chanMuaDonDaHuy(row) {
 // Bắt buộc "Đã sản xuất"/"ĐÃ DÁN TEM" cho CẢ 2 nhánh — khác nút "Mua Tracking" gốc (không kiểm tra
 // trạng thái): đã xác nhận với người dùng, 2 nút MỚI này dành riêng cho lúc chuẩn bị gửi hàng, không
 // phải để lấy mã tracking sớm như nút gốc.
-async function muaTrackingVaInLabelChoDon(sttKey, user) {
+async function muaTrackingVaInLabelChoDon(sttKey, user, { chiLayTem = false } = {}) {
   const { rows, banDoTheoKey } = await orderService.getManyByKeys([sttKey], { fresh: true });
   const row = banDoTheoKey.get(sttKey);
   if (!row) throw new Error('Không tìm thấy đơn: ' + sttKey);
@@ -706,7 +719,7 @@ async function muaTrackingVaInLabelChoDon(sttKey, user) {
     return inLabelChoDon(sttKey, user);
   }
 
-  const ketQuaTem = await ghiChuNhomLenTem(await muaTrackingChoDon(sttKey, user), nhom); // tự ghi log riêng (Nguồn "Thủ công"), cả 2 chiều
+  const ketQuaTem = await ghiChuNhomLenTem(await muaTrackingChoDon(sttKey, user, { chiLayTem }), nhom); // tự ghi log riêng (Nguồn "Thủ công"), cả 2 chiều
   if (!ketQuaTem) throw new Error('Đơn vừa được mua tracking bởi người khác — thử lại thao tác này.');
 
   await ghiDaInLabel(sttKey, user);
