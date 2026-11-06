@@ -43,7 +43,7 @@ async function inLabelHangKhac(hang, sttKey, user) {
 // "Mua Tracking <hãng> và In Label <hãng>": cần "Đã sản xuất"/"ĐÃ DÁN TEM". Đã có tracking hãng này -> chỉ in; hãng khác -> lỗi. Mua được mà
 // lấy label lỗi -> lỗi daMua (giao diện tải lại đơn) + lỗi ghi Sheet Seller của lượt mua vẫn báo; bấm lại chỉ lấy label, không mua lần 2.
 // hang thêm: mua(sttKey, user) -> kết quả mua (null = đã có tracking), inLabel(sttKey, user).
-async function muaVaInLabelHangKhac(hang, sttKey, user) {
+async function muaVaInLabelHangKhac(hang, sttKey, user, tuyChon) {
   const t = tas();
   const { rows, banDoTheoKey } = await orderService.getManyByKeys([sttKey], { fresh: true });
   const row = banDoTheoKey.get(sttKey);
@@ -62,7 +62,7 @@ async function muaVaInLabelHangKhac(hang, sttKey, user) {
     if (hang.laDon(donMua)) return hang.inLabel(sttKey, user);
     throw new Error(`Đơn đã có tracking ${donMua.TRACKING_ID} (không phải ${hang.ten}) — in label ở khối của hãng đã mua.`);
   }
-  const kq = await hang.mua(sttKey, user);
+  const kq = await hang.mua(sttKey, user, tuyChon);
   if (!kq) throw new Error('Đơn vừa được mua tracking bởi người khác — thử lại thao tác này.');
   try {
     const tem = await hang.inLabel(sttKey, user);

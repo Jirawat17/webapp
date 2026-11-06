@@ -1017,16 +1017,28 @@ async function ghiKetQuaTrangThai(cacDonGhi, capNhat, { headers, gomDelivered })
 // trạng thái vận chuyển đổi chậm hơn nhiều). Quét mọi đơn có TRACKING_ID, TRỪ đơn đã xác nhận giao
 // thành công ở lượt quét trước (daGiaoThanhCongGke — xem comment trên) để đỡ tốn lượt gọi GKE vô ích.
 // Lỗi ở 1 đơn chỉ log console, KHÔNG dừng cả lượt — đơn đó tự thử lại ở lượt sau.
+// Đơn tracking Seller mà GKE VỪA trả lời không có thông tin (06/11/2026, theo yêu cầu người dùng — log 06/11: 145 lỗi / lượt quét, ngày nào cũng hỏi
+// lại): job hỏi lại mỗi 7 ngày thay vì mỗi lượt — KHÔNG bỏ hẳn, vì câu trả lời này cũng có thể chỉ là vận đơn chưa có sự kiện nào. Mốc = thời gian đầu
+// LOI_TRA_TRACKING ("lúc|lý do"), mỗi lần hỏi lại lỗi tiếp thì mốc mới. Đơn Seller chưa hỏi lần nào / GKE có vận đơn vẫn quét bình thường; lỗi mạng không
+// khớp nên lượt sau vẫn thử. Nút tra thủ công luôn hỏi GKE; GKE trả được thì LOI_TRA_TRACKING bị xoá.
+const SO_MS_HOI_LAI_GKE_DON_SELLER = 7 * 24 * 60 * 60 * 1000;
+const gkeVuaBaoKhongCoVanDonSeller = (r, bayGio = Date.now()) => {
+  const loi = String(r.LOI_TRA_TRACKING || '');
+  return r.NGUON_TRACKING === orderService.NGUON_TRACKING_SELLER && loi.includes('Không có thông tin theo dõi')
+    && bayGio - new Date(loi.split('|')[0]).getTime() < SO_MS_HOI_LAI_GKE_DON_SELLER;
+};
+
 async function chayQuetCapNhatTrangThaiTracking() {
   const duLieuDon = await orderService.getAll({ docThat: true }); // đọc Sheets ĐÚNG 1 lần cho cả lượt
   const { rows } = duLieuDon;
   // Bỏ đơn dùng chung tracking (DonNhieuAo) — cập nhật theo đơn ".1" của nó (xem capNhatTrangThaiTrackingChoDon).
   const donCoTracking = rows.filter(r => r.TRACKING_ID && !r.TRACKING_CHUNG_CUA);
-  const donCanQuet = donCoTracking.filter(r => !daGiaoThanhCongGke(r.MA_NODE_TRACKING, r.MA_TRANG_THAI_NODE_TRACKING)
+  const donChuaXong = donCoTracking.filter(r => !daGiaoThanhCongGke(r.MA_NODE_TRACKING, r.MA_TRANG_THAI_NODE_TRACKING)
     && !trackingKlService().daGiaoXongKl(r) // đơn KL đã giao xong (trackingComplete) — 22/10/2026
     && !trackingHpwService().daGiaoXongHpw(r) // đơn HPW đã giao xong (DELIVERED) — 22/10/2026
     // Tracking Seller của đơn đã kết thúc: GKE có thể không bao giờ báo "đã giao" -> không quét mãi (người dùng chốt 11/10/2026).
     && !(r.NGUON_TRACKING === orderService.NGUON_TRACKING_SELLER && TRANG_THAI_KHONG_CAN_MUA.includes(r.TRANG_THAI_XUONG)));
+  const donCanQuet = donChuaXong.filter(r => !gkeVuaBaoKhongCoVanDonSeller(r));
 
   let soDaCapNhat = 0;
   const gomDelivered = [];
@@ -1043,7 +1055,8 @@ async function chayQuetCapNhatTrangThaiTracking() {
 
   return {
     daQuet: true, soDaCapNhat, tongSoCoTracking: donCoTracking.length,
-    soDaBoQuaDaXong: donCoTracking.length - donCanQuet.length,
+    soDaBoQuaDaXong: donCoTracking.length - donChuaXong.length,
+    soBoQuaDonSeller: donChuaXong.length - donCanQuet.length,
   };
 }
 

@@ -460,7 +460,8 @@ router.post('/mua-va-in-label', (req, res) => xuLyInLabelHangLoat(req, res, (stt
 
 // "Mua Tracking KL và In Label KL" (22/10/2026) — cùng phạm vi vai trò với "MUA TRACKING và IN LABEL" (GKE), ghép PDF như in hàng loạt.
 // Bước MUA: admin, superadmin, vẽ file (27/10/2026 — chặn trong trackingKlService#_muaTrackingKl); vai trò khác chỉ in label đơn đã có tracking KL.
-router.post('/kl/mua-va-in-label', (req, res) => xuLyInLabelHangLoat(req, res, muaTrackingKlVaInLabelChoDon));
+// hangLoat: đọc Sheet bản ≤ 30 giây — xem trackingKlService#muaTrackingKlChoDon.
+router.post('/kl/mua-va-in-label', (req, res) => xuLyInLabelHangLoat(req, res, (sttKey, user) => muaTrackingKlVaInLabelChoDon(sttKey, user, { docThat: req.body.hangLoat !== true })));
 router.post('/hpw/mua-va-in-label', (req, res) => xuLyInLabelHangLoat(req, res, trackingHpw.muaTrackingHpwVaInLabelChoDon)); // HPW (22/10/2026)
 
 // Tra cứu/cập nhật trạng thái tracking THẬT thủ công (bổ sung 14/09/2026, theo yêu cầu người dùng — xem

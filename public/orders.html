@@ -1504,8 +1504,8 @@ async function apDungMuaVaInLabel() {
 async function apDungMuaKlVaInLabel() {
   const danhSach = Array.from(donDaChonSet);
   if (danhSach.length === 0) return;
-  if (!confirm(`Mua tracking KL (nếu chưa có) và in label KL cho ${danhSach.length} đơn đã chọn?\n\nCó thể phát sinh phí thật bên KL với đơn chưa có tracking. Chỉ đơn đang "Đã sản xuất"/"ĐÃ DÁN TEM" mới thực hiện được — đơn khác sẽ báo lỗi riêng, không chặn cả lượt.`)) return;
-  await xuLyInLabel('/tracking/kl/mua-va-in-label', danhSach, 'nut-mua-kl-va-in-label', 'MUA KL và IN LABEL KL');
+  if (!confirm(`Mua tracking KL (nếu chưa có) và in label KL cho ${danhSach.length} đơn đã chọn?\n\nCó thể phát sinh phí thật bên KL với đơn chưa có tracking. Chỉ đơn đang "Đã sản xuất"/"ĐÃ DÁN TEM" mới thực hiện được — đơn khác sẽ báo lỗi riêng, không chặn cả lượt.\n\nDùng dữ liệu Sheet cập nhật trong khoảng 30 giây gần nhất: vừa sửa địa chỉ trên Sheet thì chờ 30 giây rồi mới bấm.`)) return;
+  await xuLyInLabel('/tracking/kl/mua-va-in-label', danhSach, 'nut-mua-kl-va-in-label', 'MUA KL và IN LABEL KL', { hangLoat: true });
 }
 
 // Quyền mua KL (admin / superadmin / vẽ file) — cùng máy chủ (hangVanChuyenKhacService#duocMuaHangKhac). 1 chỗ cho mọi nút / câu hỏi KL ở trang này.
@@ -1558,9 +1558,9 @@ async function xuLyInLabel(duongDan, danhSach, idNut, nhanGoc, them = {}) {
   }
   const ghiChuKhongMuaKl = khongMuaKl.length
     ? `\n\nKHÔNG mua KL được ${khongMuaKl.length} đơn (bỏ ra):\n` + khongMuaKl.map(l => `- ${l.sttKey}: ${l.lyDoKhongMuaKl}`).join('\n') : '';
-  if (chuaCoTracking.length && confirm(`${chuaCoTracking.length} đơn chưa có mã tracking nên chưa in label được:\n${chuaCoTracking.join(', ')}\n\nMua tracking KL và in label KL cho ${chuaCoTracking.length === 1 ? 'đơn' : 'các đơn'} này ngay? Có thể phát sinh phí thật bên KL.${ghiChuKhongMuaKl}`)) {
+  if (chuaCoTracking.length && confirm(`${chuaCoTracking.length} đơn chưa có mã tracking nên chưa in label được:\n${chuaCoTracking.join(', ')}\n\nMua tracking KL và in label KL cho ${chuaCoTracking.length === 1 ? 'đơn' : 'các đơn'} này ngay? Có thể phát sinh phí thật bên KL. Dùng dữ liệu Sheet cập nhật trong khoảng 30 giây gần nhất.${ghiChuKhongMuaKl}`)) {
     // 30/10/2026: mua KL thay GKE (nút GKE đã ẩn).
-    await xuLyInLabel('/tracking/kl/mua-va-in-label', chuaCoTracking, 'nut-mua-kl-va-in-label', 'MUA KL và IN LABEL KL');
+    await xuLyInLabel('/tracking/kl/mua-va-in-label', chuaCoTracking, 'nut-mua-kl-va-in-label', 'MUA KL và IN LABEL KL', { hangLoat: true });
   }
 }
 

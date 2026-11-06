@@ -51,7 +51,7 @@ async function chayCapNhatTrangThaiTracking() {
   try {
     const ketQua = await chayQuetTrangThaiNeuDenLuot();
     if (ketQua.daChayLuotNay) {
-      console.log(`[TrackingTuDong] Đã cập nhật trạng thái tracking cho ${ketQua.soDaCapNhat}/${ketQua.tongSoCoTracking} đơn có tracking (bỏ qua ${ketQua.soDaBoQuaDaXong} đơn đã giao xong).`);
+      console.log(`[TrackingTuDong] Đã cập nhật trạng thái tracking cho ${ketQua.soDaCapNhat}/${ketQua.tongSoCoTracking} đơn có tracking (bỏ qua ${ketQua.soDaBoQuaDaXong} đơn đã giao xong${ketQua.soBoQuaDonSeller ? `, ${ketQua.soBoQuaDonSeller} đơn Seller GKE vừa báo không có thông tin — hỏi lại sau 7 ngày` : ''}).`);
     }
   } catch (err) {
     console.error('[TrackingTuDong] Lỗi khi cập nhật trạng thái tracking:', err.message);

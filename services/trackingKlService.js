@@ -39,11 +39,20 @@ const daBoQuaDonKl = (sttKey, d) => {
 // docThat=false (29/10/2026 — nút "Mua Tracking KL" hàng loạt ở Danh sách đơn hàng): dùng bản Sheet ≤ 30 giây (orderService làm mới nền mỗi 25
 // giây) thay vì đọc thật cả Don_Hang_ALL cho TỪNG đơn — mua 80 đơn từng là ~80 lượt đọc Sheet trong vài phút (dễ chạm giới hạn Google). Dấu
 // chống mua trùng (KL_DANG_TAO, TRACKING_ID...) nằm ở SQLite, luôn mới nhất; chỉ địa chỉ sửa trên Sheet trong 30 giây gần nhất là có thể chưa thấy.
-function muaTrackingKlChoDon(sttKey, user, { docThat = true } = {}) {
-  return tas().xepHangMuaTracking(sttKey, () => _muaTrackingKl(sttKey, user, docThat));
+// taiLabelNen=false: nơi gọi in label ngay sau khi mua (HANG_KL.mua) — không tải sẵn, tránh gọi KL 2 lần.
+function muaTrackingKlChoDon(sttKey, user, { docThat = true, taiLabelNen = true } = {}) {
+  return tas().xepHangMuaTracking(sttKey, () => _muaTrackingKl(sttKey, user, docThat, taiLabelNen));
 }
 
-async function _muaTrackingKl(sttKey, user, docThat = true) {
+// Tải sẵn label KL ngay khi mua (06/11/2026, theo yêu cầu người dùng — log 05/11: IN LABEL KL mất ~3,4 giây/đơn vì lấy từ KL). Chạy nền, không làm
+// chậm lượt mua; lỗi / KL chưa có label thì chỉ ghi console — IN LABEL vẫn tự lấy từ KL như trước.
+function taiSanLabelKl(sttKey, tracking, sid, cauHinh) {
+  klService.layLabelKl(sid, cauHinh, [])
+    .then(base64 => tas().luuTemNen(sttKey, tracking, { label_base64: base64 }, 'kl'))
+    .catch(err => console.warn(`[TrackingKL] Chưa tải sẵn được label ${sttKey} (IN LABEL sẽ lấy từ KL):`, err.message));
+}
+
+async function _muaTrackingKl(sttKey, user, docThat = true, taiLabelNen = true) {
   const t = tas();
   const nhatKy = [];
   const nhan = `[KL - ${user.ten}]`;
@@ -160,6 +169,7 @@ async function _muaTrackingKl(sttKey, user, docThat = true) {
     ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'MUA_TRACKING_KL', sttKey, chiTiet: { trackingNum: String(don.barcode), hangVanChuyen: hang, klSid: don.sid ? String(don.sid) : '', vendorSid: don.vendor_sid || '', phiUsd: don.usd ?? null, phiVnd: don.vnd ?? null } })
       .catch(err => console.error('[TrackingKL] Lỗi ghi log nền:', err.message));
     t.ghiLogTrackingVaoDb({ sttKey, nguon, nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: 'Thành công', trackingId: String(don.barcode), hangVanChuyen: hang, chiTiet: nhatKy.join('\n') });
+    if (taiLabelNen && don.sid) taiSanLabelKl(sttKey, String(don.barcode), String(don.sid), cauHinh);
     return { tracking_num: String(don.barcode), delivery_carrier: hang, kl: { sid: don.sid ? String(don.sid) : '', usd: don.usd ?? null, vnd: don.vnd ?? null }, dayCheKhachHang, loiSheetCon,
       canhBaoHang: [canhBaoHang, canhBaoSid].filter(Boolean).join(' ') };
   } catch (err) {
@@ -225,11 +235,12 @@ const HANG_KL = {
   ten: 'KL', maTem: 'kl', laDon: r => laDonKl(r),
   thieuDuLieu: don => (don.KL_ORDER_SID ? null : `Đơn ${don.STT_Key} chưa có mã đơn KL (sid) — KL không trả khi mua; chưa lấy được label qua app, lấy label trên trang KL (tracking ${don.TRACKING_ID}).`),
   layLabel: (don, nhatKy) => klService.layLabelKl(don.KL_ORDER_SID, klService.layCauHinhKlChoDon(don), nhatKy),
-  mua: (sttKey, user) => muaTrackingKlChoDon(sttKey, user),
+  mua: (sttKey, user, tuyChon) => muaTrackingKlChoDon(sttKey, user, { ...tuyChon, taiLabelNen: false }),
   inLabel: (sttKey, user) => inLabelKlChoDon(sttKey, user),
 };
 const inLabelKlChoDon = (sttKey, user) => hangChung.inLabelHangKhac(HANG_KL, sttKey, user);
-const muaTrackingKlVaInLabelChoDon = (sttKey, user) => hangChung.muaVaInLabelHangKhac(HANG_KL, sttKey, user);
+// tuyChon { docThat: false }: nút hàng loạt — xem muaTrackingKlChoDon.
+const muaTrackingKlVaInLabelChoDon = (sttKey, user, tuyChon) => hangChung.muaVaInLabelHangKhac(HANG_KL, sttKey, user, tuyChon);
 
 // Trạng thái vận chuyển đơn KL — gọi từ trackingAutoService.capNhatTrangThaiTrackingChoDon (cùng job / nút tra thủ công với GKE).
 // -> { capNhat } | { lyDo } (chưa có sự kiện). trackingComplete -> MA_TRANG_THAI_NODE_TRACKING 'DONE' (job thôi quét đơn đó).

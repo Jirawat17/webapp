@@ -186,7 +186,8 @@ function thongDiepLongNhau(v) {
   for (let i = 0; i < 6; i++) {
     if (typeof v === 'string') { try { v = JSON.parse(v); } catch { return v; } continue; }
     if (!v || typeof v !== 'object') return v == null ? '' : String(v);
-    v = (v.error && typeof v.error === 'object' ? v.error.message : v.error) || v.message || v.msg;
+    // name: KL có khi chỉ trả tên lỗi — {"msg":"{\"name\":\"AddressVerificationError\"}"} (log 05/11/2026, đơn 11U9 / 11F1).
+    v = (v.error && typeof v.error === 'object' ? v.error.message : v.error) || v.message || v.msg || v.name;
   }
   return typeof v === 'string' ? v : '';
 }
@@ -321,6 +322,23 @@ function maBangMy(giaTri) {
 // dsDon: các đơn trong kiện (DonNhieuAo: mọi đơn chưa huỷ của nhóm; đơn thường: [row]). row = đơn mua (".1" nếu DonNhieuAo) — địa chỉ lấy
 // từ đơn này. Kiểm tra ĐỦ mọi trường rồi mới báo lỗi 1 lần (liệt kê hết), KHÔNG tự cắt / tự sửa dữ liệu (người dùng chốt).
 const QUOC_GIA_KL = ['US']; // dùng cả ở trackingAutoService#ngoaiQuocGiaHang
+// Cột SDT có thể dính email ("(603) 854-2090\nabc@gmail.com") — KL từ chối cả đơn "Phone number format is invalid" (log 05/11/2026: 52/52 lần có
+// email bị từ chối; 8/8 lần chỉ có số, kể cả dạng "(603) 854-2090", được nhận). Chỉ đổi dữ liệu GỬI KL, Sheet giữ nguyên: bỏ email (dính liền bằng
+// , ; : / | cũng tách được), lấy số điện thoại đầu tiên có 10–11 chữ số (mọi số KL đã nhận trong log; bỏ luôn đuôi "ext. 123"). Nhiều số trên 1 dòng
+// ("6038542090 7082612055") -> lấy số đầu. Không có số hợp lệ -> không gửi SĐT (KL vẫn nhận đơn không có SĐT; số thiếu thì có thể bị từ chối cả đơn).
+function sdtGuiKl(v) {
+  const sach = String(v ?? '').replace(/[\u00a0\u2000-\u200b\u202f\u3000]/g, ' ').replace(/[^\s,;:/|]+@[^\s,;:/|]+/g, ' ');
+  for (const [doan] of sach.matchAll(/\+?\(?\d[\d ().-]*\d/g)) {
+    const chuSo = doan.replace(/\D/g, '');
+    if (chuSo.length < 10) continue;
+    const doDai = chuSo[0] === '1' ? 11 : 10; // số Mỹ: 10 chữ số, có đầu "1" thì 11
+    if (chuSo.length === doDai) return doan;
+    // Dài hơn (số thứ 2, "6038542090 5"...): chỉ cắt khi số đầu kết thúc ở dấu ngăn; dãy số liền nhau không tách được thì bỏ.
+    const cat = doan.match(new RegExp(`^\\D*(?:\\d\\D*){${doDai - 1}}\\d(?!\\d)`));
+    if (cat) return cat[0];
+  }
+  return '';
+}
 function taoBodyDonKl(row, dsDon, cauHinh, maQuocGia) {
   const loi = [];
   const s = v => String(v ?? '').trim();
@@ -330,7 +348,7 @@ function taoBodyDonKl(row, dsDon, cauHinh, maQuocGia) {
   };
   const orderNumber = s(row.STT_Key);
   const name = s(row.TEN);
-  const phone = s(row.SDT);
+  const phone = sdtGuiKl(row.SDT);
   const address1 = s(row.DIA_CHI_TEN_DUONG || row.TEN_DIA_CHI);
   const address2 = s(row.DIA_CHI_TEN_DUONG_2);
   const city = s(row.DIA_CHI_TEN_TP);
