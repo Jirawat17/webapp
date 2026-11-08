@@ -351,7 +351,9 @@ function taoBodyDonKl(row, dsDon, cauHinh, maQuocGia) {
   const phone = sdtGuiKl(row.SDT);
   const address1 = s(row.DIA_CHI_TEN_DUONG || row.TEN_DIA_CHI);
   const address2 = s(row.DIA_CHI_TEN_DUONG_2);
-  const city = s(row.DIA_CHI_TEN_TP);
+  // Bỏ dấu phẩy thừa ở cuối tên thành phố (08/11/2026, người dùng chốt): KL báo AddressVerificationError với "Bastrop,", "Orangeburg,", "Jackson,"
+  // (log 05–07/11). Chỉ dữ liệu GỬI KL, Sheet giữ nguyên.
+  const city = s(row.DIA_CHI_TEN_TP).replace(/(\s*,)+$/, '').trim();
   kiemDai('orderNumber', 'mã đơn (STT_Key)', orderNumber, true);
   kiemDai('name', 'tên người nhận (TEN)', name, true);
   kiemDai('phone', 'SĐT', phone, false);
