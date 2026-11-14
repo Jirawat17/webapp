@@ -152,7 +152,13 @@ async function taiAnh(url) {
     }
   }
 
-  if (layFileIdTuLinkDrive(url)) return taiAnhTuLinkDrive(url);
+  if (layFileIdTuLinkDrive(url)) {
+    const anh = await taiAnhTuLinkDrive(url);
+    if (anh) return anh;
+    // Link file hoá ra là thư mục (12/11/2026 — driveService.js#_laThuMucTheoId): nơi cần 1 ảnh lấy ảnh đầu tiên trong thư mục.
+    const dsThuMuc = await layDsAnhTrongThuMucDrive(url, { gioiHan: 1, hoiGoogle: true });
+    return dsThuMuc && dsThuMuc.length ? dsThuMuc[0] : null;
+  }
 
   if (laLinkChiaSeGemini(url)) return taiAnhTuTrangGemini(url);
 
@@ -168,6 +174,11 @@ async function taiDsAnh(url, tuyChon = {}) {
   const dsThuMuc = await layDsAnhTrongThuMucDrive(url, tuyChon);
   if (dsThuMuc !== null) return dsThuMuc; // đúng là link thư mục (kể cả khi rỗng) — không thử nguồn khác nữa
 
+  if (layFileIdTuLinkDrive(url)) {
+    const anh = await taiAnhTuLinkDrive(url);
+    if (anh) return [anh];
+    return (await layDsAnhTrongThuMucDrive(url, { ...tuyChon, hoiGoogle: true })) || []; // link file hoá ra là thư mục: lấy như link thư mục (12/11/2026)
+  }
   const mot = await taiAnh(url);
   return mot ? [mot] : [];
 }

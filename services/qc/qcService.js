@@ -8,7 +8,7 @@ const donNhieuAoService = require('../donNhieuAoService');
 const caiDatDbService = require('../caiDatDbService');
 const nhatKyDbService = require('../nhatKyDbService');
 const { taiAnh } = require('../anhNguonService');
-const { layChiTietAnhThuMucDrive, taiFileDriveTheoId } = require('../driveService');
+const { layChiTietAnhThuMucDrive, taiFileDriveTheoId, chayVoiMaDon } = require('../driveService');
 const { tachLink, ghiChuXuongHienThi, chuanHoaAnh } = require('../thueTeamKhacService');
 const { thoiGianVNISOString } = require('../dateUtils');
 const aiProvider = require('./aiProvider');
@@ -448,7 +448,8 @@ const dauPrompt = nhiemVu => [
 ];
 
 // Link ảnh tham khảo (Design/Mockup) CHƯA tải, theo từng nguồn: [[{ nguon, ten, link, tai }], ...] + lỗi đọc link/thư mục.
-async function lietKeAnhThamKhao(row) {
+const lietKeAnhThamKhao = row => chayVoiMaDon(row.STT_Key, () => _lietKeAnhThamKhao(row)); // mã đơn vào log lỗi Drive
+async function _lietKeAnhThamKhao(row) {
   const theoNguon = [];
   const loi = [];
   for (const { cot, nhan } of NGUON_THAM_KHAO) {
@@ -504,7 +505,8 @@ function hoanThienKetQuaDoiChieu(ai, tenHopLe, { hangMuc, batBuoc }, nguong) {
 // Chạy 1 lượt QC đối chiếu. qc = {
 //   loai, anhCanKiem(row) -> [{ ten, nguon, url }] (ảnh BẮT BUỘC, đọc được ít nhất 1), thieuAnh: lý do khi không có ảnh cần kiểm,
 //   anhPhu(row) -> [{ ten, nguon, url }] (gửi thêm nếu đọc được), hangMuc, batBuoc, prompt(duLieu, dsAnh) }
-async function chayDoiChieu(sttKey, qc, nguong, thongKe, mau) {
+const chayDoiChieu = (sttKey, ...thamSo) => chayVoiMaDon(sttKey, () => _chayDoiChieu(sttKey, ...thamSo));
+async function _chayDoiChieu(sttKey, qc, nguong, thongKe, mau) {
   const { rows, banDoTheoKey } = await orderService.getManyByKeys([sttKey], { fresh: true }); // bản Sheet ≤ 30 giây (16/10/2026)
   const row = banDoTheoKey.get(sttKey);
   if (!row) throw loiNghiepVu(`Không tìm thấy đơn ${sttKey}.`, 404);

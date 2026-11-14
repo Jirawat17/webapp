@@ -390,6 +390,12 @@ function donDepKhiKhoiDong() {
   db.prepare(`DELETE FROM tv_file WHERE trang_thai = 'DANG_LUU'`).run();
   // Đang tính hash dở thì server tắt: file đã nằm trên MinIO -> LOI_HASH để hiện ở "Cần xử lý" (nút Tính lại).
   db.prepare(`UPDATE tv_file SET trang_thai = 'LOI_HASH' WHERE trang_thai = 'DANG_TINH'`).run();
+  // Link THƯ MỤC dán dạng link file: trước 12/11/2026 bị bỏ qua "không phải PNG/JPEG (application/vnd.google-apps.folder)" và
+  // không bao giờ chạy lại (chỉ chạy lại khi đổi link). Giờ đã lấy được ảnh trong thư mục -> đưa về hàng chờ. Chạy lại xong
+  // ghi chú không còn chuỗi này, nên các lần khởi động sau không đụng tới nữa.
+  const n = db.prepare(`UPDATE tv_hang_cho SET trang_thai = 'CHO', so_lan_thu = 0, thu_lai_luc = 0, ghi_chu = '', cap_nhat_luc = ?
+    WHERE trang_thai = 'XONG' AND ghi_chu LIKE '%(application/vnd.google-apps.folder)%'`).run(thoiGianVNISOString()).changes;
+  if (n) console.log(`[ThuVien] Chạy lại ${n} việc link thư mục Drive dạng link file (trước đây bị bỏ qua)`);
 }
 
 // ---------- lô Excel ----------

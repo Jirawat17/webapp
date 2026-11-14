@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
+const { chayVoiMaDon } = require('../services/driveService');
 const orderService = require('../services/orderService');
 const donNhieuAoService = require('../services/donNhieuAoService');
 const nhomHangService = require('../services/nhomHangService');
@@ -1637,7 +1638,7 @@ router.post('/quet-hang-loat/bat-dau', async (req, res) => {
         if (job.daHuy) break;
         const lo = donThieuHash.slice(i, i + SO_SONG_SONG_TINH_HASH);
         await Promise.all(lo.map(async don => {
-          const dsMau = await taiDsAnh(anhSoSanhCuaDon(don));
+          const dsMau = await chayVoiMaDon(don.STT_Key, () => taiDsAnh(anhSoSanhCuaDon(don)));
           const hash = dsMau[0] ? await tinhHashAnh(dsMau[0]) : null;
           if (hash) {
             // Ghi theo STT_Key (SQLite, xem trangThaiDbService.js) — không còn cần đọc lại Sheet để tra

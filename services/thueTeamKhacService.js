@@ -8,7 +8,7 @@ const path = require('path');
 const sharp = require('sharp');
 const PDFDocument = require('pdfkit');
 const { taiAnh } = require('./anhNguonService');
-const { layChiTietAnhThuMucDrive, taiFileDriveTheoId } = require('./driveService');
+const { layChiTietAnhThuMucDrive, taiFileDriveTheoId, chayVoiMaDon } = require('./driveService');
 const { dinhDangNgay } = require('./dateUtils');
 const nhatKyDbService = require('./nhatKyDbService');
 const { layAnhThietKeTuThuVien } = require('./thuVien/anhInDonService');
@@ -92,7 +92,8 @@ async function taiMotLink(link) {
 }
 
 // -> [{ nhan: 'PNG'|'Mockup', anh: [{ link, linkThuMuc?, ten?, anh?, rong?, cao?, loi? }] }]
-async function taiAnhCuaDon(don) {
+const taiAnhCuaDon = don => chayVoiMaDon(don.STT_Key, () => _taiAnhCuaDon(don)); // mã đơn vào log lỗi Drive
+async function _taiAnhCuaDon(don) {
   const ketQua = [];
   for (const { cot, nhan } of NGUON_ANH) {
     const giaTriO = String(don[cot] || '').trim();

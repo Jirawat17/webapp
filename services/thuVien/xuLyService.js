@@ -4,7 +4,7 @@ const { fork } = require('child_process');
 const db = require('./thuVienDbService');
 const storageService = require('../storageService');
 const { taiAnh, nhanDangKieuAnh } = require('../anhNguonService');
-const { layFolderIdTuLinkDrive, layFileIdTuLinkDrive, layChiTietAnhThuMucDrive, layThongTinFileDrive, taiFileDriveTheoId } = require('../driveService');
+const { layFileIdTuLinkDrive, layChiTietAnhThuMucDrive, layThongTinFileDrive, taiFileDriveTheoId, chayVoiMaDon } = require('../driveService');
 const { laLinkChiaSeGemini } = require('../trangWebService');
 
 // ============================================================
@@ -283,7 +283,8 @@ function danhDauLoi(viec, loi, them = {}) {
 // ---------- xử lý 1 việc (1 link) ----------
 // conHieuLuc(): false khi bộ canh đã coi lượt chạy này là treo và bỏ qua — lượt treo nếu sau này chạy tiếp thì KHÔNG được
 // ghi đè trạng thái việc (lượt mới đã xử lý). File đã lưu thì vẫn giữ (là file thật, chống trùng theo sha256).
-async function xuLyViec(viec, conHieuLuc = () => true) {
+const xuLyViec = (viec, conHieuLuc) => chayVoiMaDon(viec.stt_key, () => _xuLyViec(viec, conHieuLuc)); // mã đơn vào log lỗi Drive
+async function _xuLyViec(viec, conHieuLuc = () => true) {
   db.capNhatViec(viec.id, { trang_thai: 'DANG_CHAY' });
   let soLuu = 0;
   const boQua = [];   // vĩnh viễn — ghi chú, không thử lại
@@ -296,8 +297,16 @@ async function xuLyViec(viec, conHieuLuc = () => true) {
 
   let dungGiuaChung = false; // tạm dừng (bấm tay / điểm dừng đo / tự dừng) giữa 1 thư mục lớn -> việc về CHO
   try {
-    if (layFolderIdTuLinkDrive(viec.url)) {
-      const dsFile = await layChiTietAnhThuMucDrive(viec.url); // lỗi liệt kê -> throw (khác thư mục rỗng)
+    // Cùng thứ tự nhận diện như anhNguonService.js#taiAnh: link MinIO trước, rồi mới tới link Drive. File Drive đã lưu thì chắc
+    // chắn không phải thư mục -> khỏi hỏi Google. Link dạng file mà là thư mục (12/11/2026): layChiTietAnhThuMucDrive tự nhận ra.
+    // Hỏi thông tin file TRƯỚC (không có quyền / không tồn tại -> throw, lý do của Google vào loiTam): kết quả được nhớ nên
+    // layChiTietAnhThuMucDrive không hỏi lại — 1 lượt gọi cho mỗi link file.
+    const laMinio = !!storageService.proxyUrlToObjectKey(viec.url);
+    const driveFileId = !laMinio && layFileIdTuLinkDrive(viec.url);
+    const daCoFile = !!driveFileId && db.daCoDriveFile(viec.stt_key, driveFileId);
+    const tt = driveFileId && !daCoFile ? await layThongTinFileDrive(driveFileId) : null;
+    const dsFile = !laMinio && !daCoFile ? await layChiTietAnhThuMucDrive(viec.url) : null; // lỗi liệt kê -> throw (khác thư mục rỗng)
+    if (dsFile) {
       if (!dsFile.length) boQua.push('Thư mục Drive không có ảnh nào');
       for (const f of dsFile) {
         if (!conHieuLuc()) return;
@@ -311,11 +320,8 @@ async function xuLyViec(viec, conHieuLuc = () => true) {
         try { ghiNhan(f.ten, await luuMotFile({ ...chung, buffer, tenFileGoc: f.ten, driveFileId: f.id })); } catch (err) { loiTam.push(`${f.ten}: ${err.message}`); }
       }
     } else {
-      // Cùng thứ tự nhận diện như anhNguonService.js#taiAnh: link MinIO trước, rồi mới tới link file Drive.
-      const driveFileId = !storageService.proxyUrlToObjectKey(viec.url) && layFileIdTuLinkDrive(viec.url);
       if (driveFileId) {
-        if (!db.daCoDriveFile(viec.stt_key, driveFileId)) {
-          const tt = await layThongTinFileDrive(driveFileId); // không có quyền / không tồn tại -> throw, lý do của Google vào loiTam
+        if (tt) {
           const lyDo = lyDoBoQuaTheoDrive(tt);
           if (lyDo) boQua.push(`${tt.ten}: ${lyDo}`);
           else {
