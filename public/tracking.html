@@ -208,6 +208,7 @@
 <script src="/js/icons.js?v=106"></script>
 <script src="/js/api.js?v=134"></script>
 <script src="/js/suaThongTinGke.js?v=2"></script>
+<script src="/js/suaThongTinKl.js?v=1"></script>
 <script>
 // Nhãn + class hiển thị cho từng trạng thái trả về từ services/trackingAutoService.js
 // (layDanhSachDonAutoTracking) — xem docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md.
@@ -245,7 +246,7 @@ const NHAN_TRANG_THAI = {
   // chạy SONG SONG thay vì xếp hàng tuần tự (bổ sung 22/09/2026, theo yêu cầu người dùng cải thiện tốc
   // độ tải trang) — trước đây thời gian tải = TỔNG round-trip, giờ = round-trip CHẬM NHẤT trong số đó.
   // Cấu hình GKE ĐÃ CHUYỂN sang settings.html (bổ sung 23/09/2026) — bớt 1 lượt tải khỏi danh sách này.
-  await Promise.all([taiCauHinh(), taiCauHinhQuetTrangThai(), taiDanhSach(), taiLogs()]);
+  await Promise.all([taiCauHinh(), taiCauHinhQuetTrangThai(), taiDanhSach(), taiLogs(), taiBangGgSheet()]);
   // Cùng chu kỳ với Bảng điều khiển ("hiển thị động" — tự tải lại, không cần bấm gì thêm).
   setInterval(taiLogs, 60000);
 })();
@@ -671,6 +672,26 @@ async function taiExcelXeg(nut, taiKhoanId) {
 // bấm Hiện/Thu gọn chỉ giữ trong lượt xem hiện tại (tải lại danh sách sau khi mua không đổi lựa chọn).
 let _dsCanhBaoThuCong = [];
 let _thuGonCanhBao = true;
+let _bangGgSheet = {}; // team -> sheet_url, nạp 1 lần
+
+async function taiBangGgSheet() {
+  try {
+    const ds = await apiFetch('/google-sheet-team');
+    _bangGgSheet = Object.fromEntries(ds.map(r => [r.team, r.sheet_url]));
+  } catch { /* không bắt buộc */ }
+}
+
+function layTeamTuSttKey(sttKey) {
+  const m = String(sttKey || '').match(/^\d+([A-Za-z]+)/);
+  return m ? m[1].toUpperCase() : '';
+}
+
+function htmlLinkGgSheet(sttKey) {
+  const team = layTeamTuSttKey(sttKey);
+  const url = team && _bangGgSheet[team];
+  if (!url || !/^https?:\/\//i.test(url)) return '';
+  return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener" style="font-size:0.8rem;white-space:nowrap" title="Google Sheet Team ${escapeHtml(team)}">📋 Sheet ${escapeHtml(team)}</a>`;
+}
 function batTatCanhBaoThuCong() { _thuGonCanhBao = !_thuGonCanhBao; veCanhBaoThuCong(); }
 function veCanhBaoThuCong() {
   const ds = _dsCanhBaoThuCong;
@@ -689,6 +710,7 @@ function veCanhBaoThuCong() {
       ${ds.map(d => `
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 0;border-top:1px solid color-mix(in srgb, var(--color-danger-text) 25%, transparent)">
           <a href="/order.html?stt=${encodeURIComponent(d.sttKey)}" style="font-weight:700;color:inherit">${escapeHtml(d.sttKey)}</a>
+          ${d.hangTuMua === 'KL' ? htmlLinkGgSheet(d.sttKey) : ''}
           <span style="flex:1 1 260px;min-width:0;word-break:break-word">${d.hangTuMua ? `<strong>[${escapeHtml(d.hangTuMua)}]</strong> ` : ''}${escapeHtml(d.lyDo || '(không rõ nguyên nhân)')} <small>(thử ${d.soLanThu} lần${d.thoiGianThu ? `, gần nhất ${dinhDangNgayGioNganAnToan(d.thoiGianThu)}` : ''})</small></span>
           ${d.hangTuMua === 'KL' || d.hangTuMua === 'HPW'
             ? (duocMuaNgay(d.hangTuMua)
@@ -700,6 +722,7 @@ function veCanhBaoThuCong() {
           <button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="choTuDongLaiTuBang(this, '${escapeJsChuoi(d.sttKey)}')">Cho tự động thử lại</button>
           ${htmlNutBoQuaCanhBao(d.sttKey)}
           ${htmlSuaThongTinGke(d)}
+          ${htmlSuaThongTinKl(d)}
         </div>`).join('')}
     </div>`;
 }

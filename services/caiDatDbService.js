@@ -591,6 +591,32 @@ const datCaiDatVanHanh = db.transaction(giaTri => {
   for (const [k, v] of Object.entries(giaTri)) ghi.run(k, String(v ?? ''));
 });
 
+// ---------- GoogleSheet — link Google Sheet theo Team Seller (16/11/2026, theo yêu cầu người dùng) ----------
+// Team = nhóm chữ cái đầu trong STT_Key (vd "11DUC62" -> "DUC"). Link hiển thị ở Tab Tracking khi đơn KL lỗi.
+db.exec(`CREATE TABLE IF NOT EXISTS google_sheet_team (
+  team TEXT PRIMARY KEY,
+  sheet_url TEXT NOT NULL DEFAULT '',
+  ghi_chu TEXT NOT NULL DEFAULT '',
+  cap_nhat_luc TEXT NOT NULL DEFAULT ''
+)`);
+function layDanhSachGoogleSheet() {
+  return db.prepare(`SELECT team, sheet_url, ghi_chu, cap_nhat_luc FROM google_sheet_team ORDER BY team`).all();
+}
+function layGoogleSheetCuaTeam(team) {
+  return db.prepare(`SELECT team, sheet_url, ghi_chu, cap_nhat_luc FROM google_sheet_team WHERE team = ?`).get(String(team).toUpperCase());
+}
+function luuGoogleSheet(team, sheetUrl, ghiChu) {
+  const t = String(team).toUpperCase().trim();
+  if (!t) throw new Error('Team không được để trống.');
+  db.prepare(`
+    INSERT INTO google_sheet_team (team, sheet_url, ghi_chu, cap_nhat_luc) VALUES (?, ?, ?, ?)
+    ON CONFLICT(team) DO UPDATE SET sheet_url = excluded.sheet_url, ghi_chu = excluded.ghi_chu, cap_nhat_luc = excluded.cap_nhat_luc
+  `).run(t, String(sheetUrl || ''), String(ghiChu || ''), new Date().toISOString());
+}
+function xoaGoogleSheet(team) {
+  db.prepare(`DELETE FROM google_sheet_team WHERE team = ?`).run(String(team).toUpperCase());
+}
+
 module.exports = {
   layGioDongXuong, datGioDongXuong, datMoTamXuong, layMatKhauXacNhan, datMatKhauXacNhan,
   danhDauGkeHetTien, boDanhDauGkeHetTien, ghiDaBaoGkeHetTien, datSoDuGke, truSoDuGke, giuBaoSoDuGke, ketThucBaoSoDuGke,
@@ -610,4 +636,5 @@ module.exports = {
   layTeamXuongMacDinh, ganTeamXuongMacDinh,
   layDanhSachLoaiHang, themLoaiHang, suaLoaiHang, xoaLoaiHang,
   layNhomLoaiTrong, datNhomLoaiTrong,
+  layDanhSachGoogleSheet, layGoogleSheetCuaTeam, luuGoogleSheet, xoaGoogleSheet,
 };

@@ -55,6 +55,12 @@
     <div class="chart-card" style="margin-bottom:var(--space-4)"><h3 style="margin-top:0">Sản xuất — số đơn chạy máy xong</h3><canvas id="bd-chay-may-xong"></canvas></div>
   </div>
 
+  <!-- Thống kê hiện tại (16/11/2026, theo yêu cầu người dùng): admin/superadmin thấy số đơn đang chạy máy + đã vẽ file tách theo người. -->
+  <div id="khoi-hien-tai" style="display:none;margin-bottom:var(--space-4)">
+    <h3 style="margin-top:var(--space-4)">Trạng thái hiện tại</h3>
+    <div id="the-hien-tai" class="thong-ke-nhanh"></div>
+  </div>
+
   <div id="khoi-ca-nhan">
   <div id="khoi-chi-tieu-vai-tro" style="display:none">
     <h3 style="margin-top:0">Chỉ tiêu công việc</h3>
@@ -139,6 +145,9 @@ const NHAN_MOC_ANH = { mau: 'Ảnh mẫu (PNG)', mockup: 'Ảnh Mockup', ve_file
   });
   document.getElementById('btn-ap-dung-khoang').onclick = () => taiHoatDong();
 
+  if (laAdmin(user.vaiTro)) {
+    taiHienTai().catch(() => {});
+  }
   await Promise.all([taiHoatDong(), taiDsNhanVien]);
 })();
 
@@ -318,6 +327,28 @@ function renderChiTieuVaiTro(ct, vaiTroXem) {
   }
   khoi.style.display = '';
   document.getElementById('the-chi-tieu-vai-tro').innerHTML = html;
+}
+
+async function taiHienTai() {
+  const data = await apiFetch('/reports/hieu-suat-theo-nguoi');
+  renderHienTai(data.hienTai);
+}
+
+function renderHienTai(ht) {
+  const khoi = document.getElementById('khoi-hien-tai');
+  if (!ht || (!ht.dangChayMay.length && !ht.daVeFile.length)) { khoi.style.display = 'none'; return; }
+  const the = (so, nhan, ten) => `<div class="the-nhanh" style="min-width:120px"><div class="so">${so}</div><div class="nhan" style="font-size:0.78rem">${escapeHtml(ten)}<br><span style="font-size:0.72rem;opacity:0.75">${escapeHtml(nhan)}</span></div></div>`;
+  let html = '';
+  if (ht.dangChayMay.length) {
+    html += '<div style="font-size:0.82rem;font-weight:600;color:var(--color-text-muted);margin:4px 0 2px">Đang chạy máy</div>';
+    html += ht.dangChayMay.map(r => the(r.soDon, 'đơn đang chạy', r.ten)).join('');
+  }
+  if (ht.daVeFile.length) {
+    html += '<div style="font-size:0.82rem;font-weight:600;color:var(--color-text-muted);margin:8px 0 2px">Đã vẽ file</div>';
+    html += ht.daVeFile.map(r => the(r.soDon, 'đơn đã vẽ file', r.ten)).join('');
+  }
+  document.getElementById('the-hien-tai').innerHTML = html;
+  khoi.style.display = '';
 }
 
 function dongRong(chuThich) {

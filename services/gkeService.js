@@ -501,7 +501,7 @@ function thongTinNguoiNhan(donHang) {
     throw new Error(`[chuẩn bị dữ liệu] Đơn ${donHang.STT_Key} thiếu cột ${thieu.join(', ')} — không đủ thông tin người nhận cho GKE`);
   }
   return {
-    full_name: donHang.TEN || '',
+    full_name: String(donHang.TEN || '').replace(/[,/’]/g, ' ').replace(/  +/g, ' ').trim(),
     phone: donHang.SDT || SDT_MAC_DINH_KHI_THIEU,
     country: maQuocGia(donHang.DIA_CHI_NUOC),
     postcode: donHang.MA_ZIPCODE || '',

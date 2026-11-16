@@ -72,6 +72,7 @@ app.use('/api/qc', require('./routes/qc')); // AI QC (30/09/2026) — CHỈ supe
 app.use('/api/notes', require('./routes/notes')); // Notes (02/10/2026) — CHỈ superadmin
 app.use('/api/thu-vien', require('./routes/thuVien')); // Tìm ảnh — thư viện thiết kế thêu (03/10/2026)
 app.use('/api/van-hanh', require('./routes/vanHanh')); // Cấu hình cảnh báo vận hành Y6/L2 + Telegram vận hành (11/10/2026) — CHỈ superadmin
+app.use('/api/google-sheet-team', require('./routes/googleSheetTeam')); // Link Google Sheet theo Team Seller (16/11/2026)
 app.use('/api/bao-loi', require('./routes/baoLoi')); // Y20 Báo lỗi app (11/10/2026)
 app.use('/api/gio-truy-cap', require('./routes/gioTruyCap')); // giờ đóng truy cập theo Xưởng (23/10/2026) — thiết lập CHỈ superadmin
 app.use('/api/nhat-ky-quet', require('./routes/nhatKyQuet')); // Logs_UploadAnh — thao tác menu Quét QR (12/10/2026)

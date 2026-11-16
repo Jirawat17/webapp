@@ -347,7 +347,8 @@ function taoBodyDonKl(row, dsDon, cauHinh, maQuocGia) {
     if (gt.length > GIOI_HAN[truong]) loi.push(`${nhan} dài ${gt.length} ký tự (KL tối đa ${GIOI_HAN[truong]})`);
   };
   const orderNumber = s(row.STT_Key);
-  const name = s(row.TEN);
+  // Xóa ký tự KL từ chối (16/11/2026): `,` `/` `'` → dấu cách, gộp cách thừa. Sheet giữ nguyên.
+  const name = s(row.TEN).replace(/[,/’]/g, ' ').replace(/  +/g, ' ').trim();
   const phone = sdtGuiKl(row.SDT);
   const address1 = s(row.DIA_CHI_TEN_DUONG || row.TEN_DIA_CHI);
   const address2 = s(row.DIA_CHI_TEN_DUONG_2);

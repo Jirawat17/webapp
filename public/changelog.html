@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ghi chú cập nhật</title>
+  <link rel="stylesheet" href="/style.css?v=1">
+</head>
+<body>
+<div id="nav"></div>
+<main class="page-content">
+  <h2>Ghi chú cập nhật</h2>
+  <div id="ds-cap-nhat"><p>Đang tải…</p></div>
+</main>
+<script src="/js/icons.js?v=106"></script>
+<script src="/js/api.js?v=134"></script>
+<script>
+(async () => {
+  const user = await requireLoginOrRedirect();
+  if (!user) return;
+  renderNav(user, 'changelog');
+
+  const res = await fetch('/changelog.json?v=' + Date.now());
+  if (!res.ok) { document.getElementById('ds-cap-nhat').innerHTML = '<p>Không tải được dữ liệu.</p>'; return; }
+  const ds = await res.json();
+
+  document.getElementById('ds-cap-nhat').innerHTML = ds.map(p => `
+    <div style="margin-bottom:var(--space-6)">
+      <h3 style="margin-bottom:var(--space-2)">${escapeHtml(p.phienBan)}</h3>
+      <ul style="margin:0;padding-left:1.4em">
+        ${p.capNhat.map(d => `<li>${escapeHtml(d)}</li>`).join('')}
+      </ul>
+    </div>
+  `).join('') || '<p>Chưa có ghi chú nào.</p>';
+})();
+</script>
+</body>
+</html>

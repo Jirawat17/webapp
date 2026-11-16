@@ -80,6 +80,9 @@ const CAC_COT = [
   // "mua thủ công" (vd {"MA_ZIPCODE":"75432"}); CHỈ đè lên dữ liệu đơn trong lượt gửi GKE (trackingAutoService.js#apDungThongTinGke),
   // KHÔNG ghi Google Sheet, không hiển thị thay dữ liệu gốc ở nơi khác.
   'THONG_TIN_GKE_CHO_DON_LOI',
+  // THONG_TIN_KL_CHO_DON_LOI (16/11/2026, theo yêu cầu người dùng) — JSON {cột: giá trị} người dùng sửa tay ở hộp đỏ KL
+  // "mua thủ công"; CHỈ đè lên dữ liệu đơn trong lượt gửi KL (trackingAutoService.js#apDungThongTinKl), KHÔNG ghi Google Sheet.
+  'THONG_TIN_KL_CHO_DON_LOI',
   // GHI_CHU_XUONG_NOI_BO (bổ sung 28/09/2026, theo yêu cầu người dùng) — bản lưu trong app của ô "Ghi chú
   // xưởng" ở Chi tiết đơn, LUÔN ghi mỗi lần bấm Lưu (kể cả khi ghi sang Sheet Seller lỗi). Bản chính là cột
   // GHI_CHU_XUONG (cột Q) trong Sheet của Seller — app ghi ngược vào đó (services/sheetSellerService.js) và

@@ -565,6 +565,22 @@ router.get('/hieu-suat-theo-nguoi', async (req, res) => {
   ketQua.ve_file.sort((a, b) => b.soFileDaVe - a.soFileDaVe);
   ketQua.nguoi_lay_phoi.sort((a, b) => (b.soDonDaLayPhoi + b.soDonDaDongGoi) - (a.soDonDaLayPhoi + a.soDonDaDongGoi));
 
+  // Thống kê hiện tại (16/11/2026, theo yêu cầu người dùng): đơn ĐANG chạy máy / đã vẽ file tính đến thời điểm này.
+  const donXem = donTrongPhamVi ? orderService.locTheoXuong(donRows, req.session.user) : donRows;
+  const dangChayMay = new Map();
+  const daVeFile = new Map();
+  for (const r of donXem) {
+    if (r.DA_XOA === 'YES') continue;
+    if (r.TRANG_THAI_XUONG === 'Đang chạy máy' && r.NGUOI_CHAY_MAY)
+      dangChayMay.set(r.NGUOI_CHAY_MAY, (dangChayMay.get(r.NGUOI_CHAY_MAY) || 0) + 1);
+    if (r.TRANG_THAI_VE_FILE === 'Đã vẽ file' && r.NGUOI_VE_FILE)
+      daVeFile.set(r.NGUOI_VE_FILE, (daVeFile.get(r.NGUOI_VE_FILE) || 0) + 1);
+  }
+  ketQua.hienTai = {
+    dangChayMay: [...dangChayMay.entries()].map(([ten, soDon]) => ({ ten, soDon })).sort((a, b) => b.soDon - a.soDon),
+    daVeFile: [...daVeFile.entries()].map(([ten, soDon]) => ({ ten, soDon })).sort((a, b) => b.soDon - a.soDon),
+  };
+
   res.json(ketQua);
 });
 

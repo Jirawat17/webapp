@@ -83,7 +83,8 @@ async function _muaTrackingKl(sttKey, user, docThat = true, taiLabelNen = true) 
 
     const cauHinh = klService.layCauHinhKlChoDon(row);
     const dsDon = nhom ? nhom.thanhVien.filter(r => r.TRANG_THAI_XUONG !== donNhieuAoService.TRANG_THAI_HUY) : [row];
-    const body = klService.taoBodyDonKl(row, dsDon, cauHinh, gkeService.maQuocGia);
+    const rowDeSua = t.apDungThongTinKl(row, nhatKy);
+    const body = klService.taoBodyDonKl(rowDeSua, dsDon, cauHinh, gkeService.maQuocGia);
     if (nhom) nhatKy.push(`[DonNhieuAo] Nhóm ${nhom.goc} (${dsDon.length} đơn) — 1 đơn KL cho cả nhóm, ${body.weight} g, `
       + `${body.items.map(i => `${i.skuNumber} × ${i.quantity}`).join(', ')}.`);
 

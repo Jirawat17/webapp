@@ -99,6 +99,75 @@ function themSo0ZipMy(row, nhatKy) {
   nhatKy.push(`[ZIP Mỹ thiếu số 0 đầu] "${zip}" -> "0${zip}".`);
   return { ...row, MA_ZIPCODE: '0' + zip };
 }
+// Sửa dữ liệu gửi KL cho đơn đã chuyển mua thủ công (16/11/2026, theo yêu cầu người dùng). Cột THONG_TIN_KL_CHO_DON_LOI
+// (SQLite) = JSON {cột: giá trị}; chỉ 5 cột người nhận dưới đây, CHỈ dùng khi gửi KL — Sheet giữ nguyên.
+const TRUONG_SUA_KL = {
+  TEN: 'Tên người nhận', SDT: 'Số điện thoại', MA_ZIPCODE: 'ZIP code',
+  DIA_CHI_TEN_DUONG: 'Địa chỉ', DIA_CHI_TEN_TP: 'Thành phố',
+};
+const DO_DAI_GIA_TRI_KL_TOI_DA = 200;
+function docThongTinKl(row) {
+  let o;
+  try { o = JSON.parse(row.THONG_TIN_KL_CHO_DON_LOI || '{}'); } catch { return {}; }
+  if (!o || typeof o !== 'object' || Array.isArray(o)) return {};
+  return Object.fromEntries(Object.entries(o).filter(([k, v]) => Object.hasOwn(TRUONG_SUA_KL, k) && typeof v === 'string' && v));
+}
+const giaTriGocKl = (row, truong) => String(row[truong] || '');
+function apDungThongTinKl(row, nhatKy) {
+  const sua = docThongTinKl(row);
+  if (!Object.keys(sua).length) return row;
+  nhatKy.push(`[Sửa tay dữ liệu gửi KL] ${Object.entries(sua).map(([k, v]) => `${TRUONG_SUA_KL[k]}: "${giaTriGocKl(row, k)}" -> "${v}"`).join('; ')}.`);
+  return { ...row, ...sua };
+}
+// Phát hiện trường lỗi từ nội dung lỗi KL + trả về gợi ý điền sẵn. Nếu không nhận ra lỗi cụ thể -> trả tất cả trường.
+function thongTinKlGoiY(row) {
+  const loi = String(row.TU_MUA_LOI_GAN_NHAT || '').toLowerCase();
+  const sua = docThongTinKl(row);
+  const tatCa = Object.entries(TRUONG_SUA_KL).map(([truong, nhan]) => ({ truong, nhan, goc: giaTriGocKl(row, truong), sua: sua[truong] || '', goiY: '' }));
+  const hienTen = loi.includes('special') || loi.includes('recipient') || loi.includes('tên người nhận') || loi.includes('name');
+  const hienZip = loi.includes('zip') || loi.includes('postal') || loi.includes('ma_zipcode');
+  const hienDiaChi = loi.includes('address') || loi.includes('địa chỉ');
+  const hienCity = loi.includes('city') || loi.includes('thành phố') || loi.includes('dia_chi_ten_tp');
+  const hienSdt = loi.includes('phone') || loi.includes('sdt') || loi.includes('số điện thoại');
+  const coNhanRa = hienTen || hienZip || hienDiaChi || hienCity || hienSdt;
+  return tatCa
+    .filter(f => !coNhanRa || f.sua ||
+      (f.truong === 'TEN' && hienTen) || (f.truong === 'MA_ZIPCODE' && hienZip) ||
+      (f.truong === 'DIA_CHI_TEN_DUONG' && hienDiaChi) || (f.truong === 'DIA_CHI_TEN_TP' && hienCity) ||
+      (f.truong === 'SDT' && hienSdt))
+    .map(f => {
+      if (f.truong === 'TEN' && hienTen) {
+        const sach = f.goc.replace(/[,/’]/g, ' ').replace(/  +/g, ' ').trim();
+        return { ...f, goiY: f.goc !== sach ? sach : '' };
+      }
+      return f;
+    });
+}
+function suaThongTinKl(row, user, truong, giaTri) {
+  if (row.TU_MUA_CHE_DO !== CHE_DO_THU_CONG) return 'Chỉ sửa được khi đơn đang ở chế độ mua thủ công.';
+  if (row.TU_MUA_HANG !== 'KL') return 'Chỉ dùng cho đơn tự mua bằng KL.';
+  if (!Object.hasOwn(TRUONG_SUA_KL, truong)) return 'Trường thông tin không hợp lệ.';
+  const xoa = giaTri === null;
+  const moi = xoa ? '' : String(giaTri ?? '').trim();
+  if (!xoa && !moi) return 'Chưa nhập giá trị mới.';
+  if (moi.length > DO_DAI_GIA_TRI_KL_TOI_DA) return `Giá trị quá dài (tối đa ${DO_DAI_GIA_TRI_KL_TOI_DA} ký tự).`;
+  const hienTai = docThongTinKl(row);
+  const cu = hienTai[truong] || '';
+  if (xoa && !cu) return 'Trường này chưa có giá trị sửa tay.';
+  if (xoa) delete hienTai[truong]; else hienTai[truong] = moi;
+  trangThaiDbService.ghiDe(row.STT_Key, { THONG_TIN_KL_CHO_DON_LOI: Object.keys(hienTai).length ? JSON.stringify(hienTai) : '' });
+  const goc = giaTriGocKl(row, truong);
+  ghiLog({
+    nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: xoa ? 'XOA_THONG_TIN_KL' : 'SUA_THONG_TIN_KL', sttKey: row.STT_Key,
+    chiTiet: { truong, nhan: TRUONG_SUA_KL[truong], giaTriGoc: goc, giaTriCu: cu, giaTriMoi: moi },
+  }).catch(e => console.error('[TrackingTuDong] Lỗi ghi log nền:', e.message));
+  const moTa = xoa
+    ? `XOÁ dữ liệu sửa tay gửi KL — ${TRUONG_SUA_KL[truong]} "${cu}" (quay về dữ liệu gốc "${goc}").`
+    : `SỬA dữ liệu gửi KL — ${TRUONG_SUA_KL[truong]}: gốc "${goc}"${cu ? `, đang sửa "${cu}"` : ''} -> "${moi}" (chỉ dùng khi gửi KL, Sheet giữ nguyên).`;
+  ghiLogTracking(`[Thủ công - ${user.ten}] ${row.STT_Key}: ${moTa}`, row.STT_Key, true);
+  ghiLogTrackingVaoDb({ sttKey: row.STT_Key, nguon: 'Thủ công', nguoiDung: user.ten, vaiTro: user.vaiTro, ketQua: xoa ? 'Xoá dữ liệu sửa KL' : 'Sửa dữ liệu KL', chiTiet: moTa });
+  return null;
+}
 const XOA_THEO_DOI_THU = { TU_MUA_SO_LAN_THU: '', TU_MUA_CHE_DO: '', TU_MUA_LOI_GAN_NHAT: '', TU_MUA_THOI_GIAN_THU: '', TU_MUA_CHUA_RO_TU: '' };
 
 // Không throw — lỗi ghi chỉ in console (không che lỗi mua gốc). lyDoChuyenNgay: chuyển thủ công luôn, không chờ đủ 10 lần (HPW gợi ý địa
@@ -1164,6 +1233,7 @@ async function layDonChuyenThuCong(user) {
         duInLabel: TRANG_THAI_DU_DIEU_KIEN_IN_LABEL.includes(r.TRANG_THAI_XUONG), // nút "MUA <hãng> và IN LABEL" (vẽ file) cần đã sản xuất xong
         // Sửa dữ liệu gửi GKE chỉ có tác dụng khi mua GKE — đơn job đã chọn KL / HPW: sửa dữ liệu trên Sheet (28/10/2026).
         thongTinGke: laHangKhacGke(r) ? [] : Object.entries(TRUONG_SUA_GKE).map(([truong, nhan]) => ({ truong, nhan, goc: giaTriGocGke(r, truong), sua: sua[truong] || '' })),
+        thongTinKl: r.TU_MUA_HANG === 'KL' ? thongTinKlGoiY(r) : [],
       };
     });
 }
@@ -1211,7 +1281,7 @@ function choTuDongThuLai(row, user) {
 }
 
 module.exports = {
-  layDonChuyenThuCong, choTuDongThuLai, suaThongTinGke, SO_LAN_THU_TU_DONG_TOI_DA, apDungThongTinGke, docThongTinGke,
+  layDonChuyenThuCong, choTuDongThuLai, suaThongTinGke, suaThongTinKl, SO_LAN_THU_TU_DONG_TOI_DA, apDungThongTinGke, docThongTinGke,
   layCauHinh, luuCauHinh, chayQuetTuDongMuaTracking, layDanhSachDonAutoTracking, layLogTracking,
   muaTrackingChoDon, inLabelChoDon, muaTrackingVaInLabelChoDon,
   capNhatTrangThaiTrackingChoDon, chayQuetCapNhatTrangThaiTracking, themSo0ZipMy, chayQuetTrangThaiNeuDenLuot, daGiaoThanhCongGke,
@@ -1220,6 +1290,7 @@ module.exports = {
   _dungChoHangKhac: {
     xepHangMuaTracking, chanMuaDonDaHuy, kiemTraDieuKienInLabel, kiemTraNhomKhiInLabel, ghiChuNhomLenTem, ghiDaInLabel,
     ghiLogTracking, ghiLogTrackingVaoDb, saoTrackingXuongNhom, baoLoiSheetSeller, trackingCuaDon, luuTemNen, docTemDaLuu, NGUOI_HE_THONG,
+    apDungThongTinKl, docThongTinKl,
   },
   HANG_TU_MUA,
 };

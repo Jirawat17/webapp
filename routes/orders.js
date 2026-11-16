@@ -208,13 +208,16 @@ function sapXepDon(list, kieu) {
 
 // Danh sách đơn hàng — tự lọc theo vai trò, có thể lọc thêm qua query string
 router.get('/', async (req, res) => {
+  const _t0 = Date.now();
   const { rows } = await orderService.getAll();
+  const _t1 = Date.now();
   let list = orderService.filterForRole(rows, req.session.user);
 
   // Gắn CanhBao/TenKhachHang SỚM (trước khi lọc/sắp xếp) — cần có CanhBao để lọc theo "canhBao" và
   // sắp theo "canh_bao" bên dưới; đọc dữ liệu để gắn không phụ thuộc số dòng còn lại sau lọc nên
   // gắn sớm hay muộn cũng cùng 1 chi phí, không tốn thêm gì.
   list = await lamGiauDon(list, donNhieuAoService.xayDungBanDoNhom(rows), req.session.user);
+  const _t2 = Date.now();
   // Lọc DonNhieuAo (bổ sung 26/09/2026): '1' = chỉ đơn thuộc nhóm, '0' = chỉ đơn lẻ.
   if (req.query.donNhieuAo === '1' || req.query.donNhieuAo === '0') list = list.filter(r => !!r.NhomNhieuAo === (req.query.donNhieuAo === '1'));
   // Đã mua Tracking (29/09/2026): 'YES'/'NO' — cột DA_MUA_TRACKING (quy tắc ở orderService.js#tinhDaMuaTracking).
@@ -319,6 +322,8 @@ router.get('/', async (req, res) => {
   // Trả cả XUONG cho admin (29/09/2026, theo yêu cầu người dùng — trước đó ẩn qua orderService.anXuongVoiAdmin):
   // filterForRole/locTheoXuong ở trên đã giới hạn admin CHỈ còn đơn thuộc các Xưởng mình phụ trách, nên XUONG trả về
   // luôn là Xưởng của chính admin đó.
+  const _dtTong = Date.now() - _t0;
+  if (_dtTong > 10000) console.log(`[DonHang] GET / chậm ${_dtTong}ms — đọc Sheet ${_t1 - _t0}ms, làm giàu ${_t2 - _t1}ms, lọc/sắp ${_dtTong - (_t2 - _t0)}ms`);
   res.json(locDonDangChayMayTheoNguoiVanHanh(list, req.session.user));
 });
 

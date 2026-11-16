@@ -5,7 +5,7 @@ const {
   layCauHinh, luuCauHinh, layDanhSachDonAutoTracking, layLogTracking, muaTrackingChoDon, HANG_TU_MUA,
   inLabelChoDon, muaTrackingVaInLabelChoDon, capNhatTrangThaiTrackingChoDon,
   layCauHinhQuetTrangThai, luuCauHinhQuetTrangThai, SO_PHUT_QUET_TRANG_THAI_TOI_THIEU,
-  layDonChuyenThuCong, choTuDongThuLai, suaThongTinGke,
+  layDonChuyenThuCong, choTuDongThuLai, suaThongTinGke, suaThongTinKl,
 } = require('../services/trackingAutoService');
 const {
   gopCacTemPdf, layDanhSachTaiKhoanGke, luuTaiKhoanGke, xoaTaiKhoanGke, ganTaiKhoanGkeChoXuong, daNapTienGke, luuSoDuGke,
@@ -394,6 +394,18 @@ router.post('/thong-tin-gke', coMenuTracking, async (req, res) => {
   const row = rows.find(r => r.STT_Key === sttKey);
   if (!row || !orderService.coQuyenTheoXuong(req.session.user, row)) return res.status(404).json({ error: 'Không tìm thấy đơn hàng' });
   const loi = suaThongTinGke(row, req.session.user, truong, giaTri);
+  if (loi) return res.status(400).json({ error: loi });
+  res.json({ ok: true });
+});
+
+// Sửa dữ liệu gửi KL (16/11/2026) — body: { sttKey, truong, giaTri } (giaTri: null = xoá). Chỉ KL thủ công.
+router.post('/thong-tin-kl', coMenuTracking, async (req, res) => {
+  const { sttKey, truong } = req.body;
+  const giaTri = req.body.giaTri === null ? null : String(req.body.giaTri ?? '');
+  const { rows } = await orderService.getAll({ docThat: true });
+  const row = rows.find(r => r.STT_Key === sttKey);
+  if (!row || !orderService.coQuyenTheoXuong(req.session.user, row)) return res.status(404).json({ error: 'Không tìm thấy đơn hàng' });
+  const loi = suaThongTinKl(row, req.session.user, truong, giaTri);
   if (loi) return res.status(400).json({ error: loi });
   res.json({ ok: true });
 });

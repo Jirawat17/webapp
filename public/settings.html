@@ -355,6 +355,20 @@
     <div id="ds-config-seller"></div>
   </details>
 
+  <!-- Link Google Sheet theo Team Seller (16/11/2026, theo yêu cầu người dùng) — CHỈ superadmin ghi. -->
+  <details id="khoi-gg-sheet" style="margin-top:var(--space-6)">
+    <summary class="btn-hanh-dong phu">Link Google Sheet theo Team</summary>
+    <p style="color:var(--color-text-muted)">Team = nhóm chữ cái trong mã đơn (STT_Key). Ví dụ: đơn 11DUC62 → Team <strong>DUC</strong>. Link hiển thị ở Tab Tracking khi đơn KL lỗi để tra cứu nhanh.</p>
+    <div id="ds-gg-sheet" style="margin-bottom:var(--space-3)">Đang tải...</div>
+    <div class="bao-cao-form" id="form-them-gg-sheet">
+      <div class="truong"><label for="gg-team">Team</label><input id="gg-team" placeholder="VD: DUC" maxlength="20" style="width:8em"></div>
+      <div class="truong truong-rong"><label for="gg-url">Link Google Sheet</label><input id="gg-url" placeholder="https://docs.google.com/spreadsheets/d/..." style="min-width:260px"></div>
+      <div class="truong truong-rong"><label for="gg-ghi-chu">Ghi chú</label><input id="gg-ghi-chu" placeholder="Tên sheet, nhóm Seller..." style="min-width:160px"></div>
+      <button type="button" class="btn-hanh-dong" onclick="luuGgSheet()">Lưu</button>
+    </div>
+    <p id="thong-bao-gg-sheet" style="display:none"></p>
+  </details>
+
   <!-- "Khôi phục đơn đã xoá dữ liệu" (bổ sung 24/09/2026, theo yêu cầu người dùng) — bản web của
        scripts/khoi-phuc-don-da-xoa.js (script dòng lệnh gốc vẫn giữ nguyên). CHỈ khôi phục đúng các
        STT_Key được nhập tay (không có nút "khôi phục tất cả") — chủ động chọn đúng đơn, tránh khôi phục
@@ -419,6 +433,8 @@
   document.getElementById('btn-ai-huy-lien-ket').onclick = () => hanhDongTelegramAi('huy-lien-ket', 'Huỷ liên kết Telegram? Bot sẽ không trả lời tài khoản đó nữa.');
   document.getElementById('btn-them-xuong').onclick = themXuongMoi;
   document.getElementById('btn-them-team').onclick = themTeamMoi;
+  await taiDsGgSheet();
+  document.getElementById('khoi-gg-sheet').addEventListener('toggle', ev => { if (ev.target.open) taiDsGgSheet(); });
   // Đồng bộ Sheet Seller — tải khi mở khối lần đầu.
   const khoiSeller = document.getElementById('khoi-dong-bo-seller');
   khoiSeller.addEventListener('toggle', () => {
@@ -1369,6 +1385,49 @@ function renderCongTacCheDoToi() {
     apDungCheDoToi(cb.checked);
     renderCongTacCheDoToi();
   };
+}
+
+async function taiDsGgSheet() {
+  const el = document.getElementById('ds-gg-sheet');
+  try {
+    const ds = await apiFetch('/google-sheet-team');
+    if (!ds.length) { el.innerHTML = '<p style="color:var(--color-text-muted)">Chưa có link nào được lưu.</p>'; return; }
+    el.innerHTML = `<table style="border-collapse:collapse;width:100%">
+      <thead><tr>
+        <th style="text-align:left;padding:4px 8px;font-size:0.82rem;color:var(--color-text-muted)">Team</th>
+        <th style="text-align:left;padding:4px 8px;font-size:0.82rem;color:var(--color-text-muted)">Link Google Sheet</th>
+        <th style="text-align:left;padding:4px 8px;font-size:0.82rem;color:var(--color-text-muted)">Ghi chú</th>
+        <th></th>
+      </tr></thead>
+      <tbody>${ds.map(r => `<tr>
+        <td style="padding:4px 8px;font-weight:700">${escapeHtml(r.team)}</td>
+        <td style="padding:4px 8px"><a href="${escapeHtml(r.sheet_url)}" target="_blank" rel="noopener" style="word-break:break-all">${escapeHtml(r.sheet_url)}</a></td>
+        <td style="padding:4px 8px;color:var(--color-text-muted)">${escapeHtml(r.ghi_chu || '—')}</td>
+        <td style="padding:4px 8px"><button class="btn-hanh-dong phu nguy-hiem" style="padding:3px 8px;font-size:0.78rem" onclick="xoaGgSheet('${escapeHtml(r.team)}')">Xoá</button></td>
+      </tr>`).join('')}</tbody></table>`;
+  } catch (e) { el.innerHTML = '<p style="color:var(--color-danger-text)">Lỗi tải: ' + escapeHtml(e.message) + '</p>'; }
+}
+async function luuGgSheet() {
+  const team = document.getElementById('gg-team').value.trim();
+  const url = document.getElementById('gg-url').value.trim();
+  const ghiChu = document.getElementById('gg-ghi-chu').value.trim();
+  const tb = document.getElementById('thong-bao-gg-sheet');
+  if (!team || !url) { tb.style.display = 'block'; tb.style.color = 'var(--color-primary)'; tb.textContent = 'Nhập đủ Team và Link.'; return; }
+  try {
+    await apiFetch('/google-sheet-team', { method: 'POST', body: JSON.stringify({ team, sheet_url: url, ghi_chu: ghiChu }) });
+    document.getElementById('gg-team').value = '';
+    document.getElementById('gg-url').value = '';
+    document.getElementById('gg-ghi-chu').value = '';
+    tb.style.display = 'block'; tb.style.color = '#16a34a'; tb.textContent = 'Đã lưu.';
+    await taiDsGgSheet();
+  } catch (e) { tb.style.display = 'block'; tb.style.color = 'var(--color-primary)'; tb.textContent = 'Lỗi: ' + e.message; }
+}
+async function xoaGgSheet(team) {
+  if (!confirm(`Xoá link Google Sheet của Team ${team}?`)) return;
+  try {
+    await apiFetch('/google-sheet-team/' + encodeURIComponent(team), { method: 'DELETE' });
+    await taiDsGgSheet();
+  } catch (e) { alert('Lỗi: ' + e.message); }
 }
 
 function renderBangMau() {

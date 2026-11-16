@@ -880,6 +880,7 @@ function renderNav(user, active) {
       links.push({ href: '/logs.html', label: 'Logs', icon: 'navLogs', key: 'logs' });
     }
     links.push({ href: '/hoat-dong.html', label: 'Lịch sử', icon: 'navActivity', key: 'hoat-dong' });
+    links.push({ href: '/changelog.html', label: 'Cập nhật', icon: 'navReports', key: 'changelog' });
     // Setting (thu hẹp từ admin/ve_file/superadmin xuống CHỈ superadmin, bổ sung 23/09/2026, theo yêu
     // cầu người dùng — Settings giờ có thêm Cảnh báo tự động/Tỷ lệ nén ảnh, ảnh hưởng toàn hệ thống,
     // không còn chỉ là cài đặt giao diện cá nhân như trước). Chặn thật nằm ở settings.html (giống
