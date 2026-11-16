@@ -414,6 +414,7 @@ function layTuCacheAnhNgoai(khoa) {
 }
 
 function luuVaoCacheAnhNgoai(khoa, danhSachAnh) {
+  if (!danhSachAnh.length) return; // không cache rỗng — tránh lock 6 giờ khi Drive chưa cấp quyền
   _cacheAnhNgoai.delete(khoa);
   _cacheAnhNgoai.set(khoa, { danhSachAnh, luuLucNao: Date.now() });
   while (_cacheAnhNgoai.size > SO_URL_TOI_DA_TRONG_CACHE) {

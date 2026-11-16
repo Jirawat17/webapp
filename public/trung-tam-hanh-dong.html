@@ -78,10 +78,29 @@ function dinhDangThoiGian(iso) {
   return isNaN(d) ? String(iso) : d.toLocaleString('vi-VN');
 }
 
+let _bangGgSheet = {};
+async function taiBangGgSheet() {
+  try {
+    const ds = await apiFetch('/google-sheet-team');
+    _bangGgSheet = Object.fromEntries(ds.map(r => [r.team, r.sheet_url]));
+  } catch {}
+}
+function spanGgSheet(sttKey) {
+  const m = String(sttKey || '').match(/^\d+([A-Za-z]+)/);
+  const team = m ? m[1].toUpperCase() : '';
+  const url = team && _bangGgSheet[team];
+  if (!url || !/^https?:\/\//i.test(url)) return '';
+  return `<span role="link" tabindex="0" data-url="${escapeHtml(url)}"
+    style="font-size:0.75rem;color:var(--color-primary);cursor:pointer;text-decoration:underline;white-space:nowrap"
+    onclick="event.stopPropagation();event.preventDefault();window.open(this.dataset.url,'_blank')"
+    onkeydown="if(event.key==='Enter'){event.stopPropagation();window.open(this.dataset.url,'_blank')}">Sheet ${escapeHtml(team)}</span>`;
+}
+
 function dongDon(sttKey, phuHtml) {
+  const gs = spanGgSheet(sttKey);
   return `<a class="ttha-dong" href="/order.html?stt=${encodeURIComponent(sttKey)}">
     <span class="stt">${escapeHtml(sttKey)}</span>
-    ${phuHtml ? `<span class="phu">${phuHtml}</span>` : ''}
+    ${(phuHtml || gs) ? `<span class="phu">${phuHtml || ''}${phuHtml && gs ? ' · ' : ''}${gs}</span>` : ''}
   </a>`;
 }
 
@@ -133,7 +152,8 @@ function veKhoiLoiTracking(ds) {
 function maDonNhieuAo(d) {
   return `<a class="stt" href="/order.html?stt=${encodeURIComponent(d.sttKey)}">${escapeHtml(d.sttKey)}</a>`
     + (d.ngayLenDon ? ` <span style="color:var(--color-text-muted)">(lên đơn ${escapeHtml(d.ngayLenDon)})</span>` : '')
-    + (d.mucCanhBao ? ` <span class="badge-canh-bao ${d.mucCanhBao.toLowerCase()}">${NHAN_MUC_CANH_BAO[d.mucCanhBao]}</span>` : '');
+    + (d.mucCanhBao ? ` <span class="badge-canh-bao ${d.mucCanhBao.toLowerCase()}">${NHAN_MUC_CANH_BAO[d.mucCanhBao]}</span>` : '')
+    + (gs => gs ? ' ' + gs : '')(spanGgSheet(d.sttKey));
 }
 function dongDonNhieuAo(d, moTaHtml) {
   return `<div class="ttha-dong ${d.mucCanhBao ? 'muc-' + d.mucCanhBao.toLowerCase() : ''}">
@@ -150,8 +170,9 @@ function veKhoiDonNhieuAo(loi, huy) {
 
 // Y6 / L2 (11/10/2026): dòng có nút thao tác (không bọc cả dòng trong <a> như dongDon — nút trong link sẽ mở đơn khi bấm).
 function dongCoNut(sttKey, phuHtml, nutHtml, lop = '') {
+  const gs = spanGgSheet(sttKey);
   return `<div class="ttha-dong ${lop}"><a class="stt" href="/order.html?stt=${encodeURIComponent(sttKey)}">${escapeHtml(sttKey)}</a>
-    <span class="phu" style="flex:1">${phuHtml}</span><span style="display:flex;gap:6px;flex-wrap:wrap">${nutHtml}</span></div>`;
+    <span class="phu" style="flex:1">${phuHtml}${gs ? ' · ' + gs : ''}</span><span style="display:flex;gap:6px;flex-wrap:wrap">${nutHtml}</span></div>`;
 }
 const NHAN_NHAN = { VE_FILE: 'Đang vẽ file', CHAY_MAY: 'Đang chạy máy' };
 function nutDaXuLy(loai, d) {
@@ -371,6 +392,7 @@ async function xemDaCheck(nut) { // nut null = vẽ lại sau khi trang tự t�
     nguoiDung = user;
     renderNav(user, 'trung-tam-hanh-dong');
     datTaiLaiSauDayLai(taiTrungTamHanhDong);
+    await taiBangGgSheet();
     await taiTrungTamHanhDong();
   } catch (e) {
     // Bắt lỗi TOÀN TRANG, hiện rõ ngay trên trang (không chỉ Console) — cùng lý do đã áp dụng ở
