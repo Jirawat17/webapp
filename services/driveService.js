@@ -93,6 +93,12 @@ async function taiFileDriveTheoId(fileId, { timeoutMs = THOI_GIAN_CHO_TOI_DA_MS 
       { responseType: 'arraybuffer', timeout: timeoutMs }
     );
 
+    const contentType = res.headers?.['content-type'] || '';
+    if (contentType.includes('text/html')) {
+      console.error(`[Drive] Drive trả trang HTML thay vì file (virus scan warning): ${fileId}${nhanMaDon()}`);
+      return null;
+    }
+
     return Buffer.from(res.data);
   } catch (err) {
     // "Only files with binary content..." = mã này không phải file thường -> hỏi loại 1 lần; là thư mục thì nhớ lại (không ghi lỗi).
