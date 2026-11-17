@@ -71,6 +71,7 @@ function urlAnhHienThiList(rawUrl, chieuRong = CHIEU_RONG_ANH_THU_NHO) {
   if (!rawUrl) return [];
   const duongDan = String(rawUrl).replace(/^https?:\/\/[^/]+/, ''); // bỏ host nếu URL là dạng tuyệt đối cùng gốc, cùng quy ước storageService.js#proxyUrlToObjectKey
   if (duongDan.startsWith('/api/photos/file/')) return [rawUrl];
+  if (/^https?:\/\/pub-[0-9a-f]+\.r2\.dev\//i.test(String(rawUrl))) return [rawUrl]; // R2 public CDN — VPS không reach được r2.dev, browser fetch thẳng
   const goc = '/api/photos/anh-ngoai?url=' + encodeURIComponent(rawUrl) + '&w=' + chieuRong;
   const laThuMucDrive = /\/folders\//.test(rawUrl);
   return laThuMucDrive ? [goc + '&index=0', goc + '&index=1'] : [goc + '&index=0'];
