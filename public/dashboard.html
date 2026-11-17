@@ -50,7 +50,7 @@
     <div class="bang-cuon-ngang">
       <table class="bang-xem-truoc" id="bang-theo-khach-hang">
         <thead><tr>
-          <th>Khách hàng</th><th>Tổng đơn</th><th>Đơn đã SX</th><th>SP đã SX</th><th>Đơn chưa SX</th><th>SP chưa SX</th><th>Đơn giao/hoàn/hủy</th><th>SP giao/hoàn/hủy</th>
+          <th>Khách hàng</th><th>Tổng đơn</th><th>Tổng SP</th><th>Đơn đã SX</th><th>SP đã SX</th><th>Đơn chưa SX</th><th>SP chưa SX</th><th>Đơn giao/hoàn/hủy</th><th>SP giao/hoàn/hủy</th>
         </tr></thead>
         <tbody id="bang-theo-khach-hang-body"></tbody>
       </table>
@@ -60,10 +60,13 @@
   <!-- Bảng + biểu đồ "theo Xưởng" ĐÃ XOÁ 29/09/2026, theo yêu cầu người dùng. -->
   <div class="chart-grid">
     <div class="chart-card"><canvas id="chart-khach-hang"></canvas></div>
+    <div class="chart-card"><canvas id="chart-sp-khach-hang"></canvas></div>
     <div class="chart-card"><canvas id="chart-trangthai"></canvas></div>
     <div class="chart-card"><canvas id="chart-loai"></canvas></div>
     <div class="chart-card"><canvas id="chart-tuan"></canvas></div>
+    <div class="chart-card"><canvas id="chart-sp-tuan"></canvas></div>
     <div class="chart-card"><canvas id="chart-ngay"></canvas></div>
+    <div class="chart-card"><canvas id="chart-sp-ngay"></canvas></div>
   </div>
 </div>
 
@@ -168,14 +171,18 @@ async function taiThongKe() {
   mauTheoKhach = Object.fromEntries(stats.danhSachKhachHang.map((k, i) => [k, `hsl(${Math.round(i * 137.5) % 360} 65% 52%)`]));
 
   const tongDonTheoNhom = list => Object.fromEntries(list.map(n => [n.khachHang, n.tongDon]));
+  const tongSpTheoNhom = list => Object.fromEntries(list.map(n => [n.khachHang, n.tongSanPham ?? 0]));
   veBieuDoCot('chart-khach-hang', 'Số đơn theo khách hàng', tongDonTheoNhom(stats.theoKhachHangChiTiet));
+  veBieuDoCot('chart-sp-khach-hang', 'Số sản phẩm theo khách hàng', tongSpTheoNhom(stats.theoKhachHangChiTiet));
   // 05/10/2026 (theo yêu cầu người dùng): 2 biểu đồ dưới đây bỏ chia theo khách hàng, chỉ còn TỔNG tất cả khách (vẫn theo ô
   // lọc khách/kỳ) — trạng thái: cột 1 màu (trục là các nhóm riêng, không phải thời gian); theo tuần: biểu đồ đường.
   veBieuDoCot('chart-trangthai', 'Theo trạng thái (tất cả khách hàng)', stats.theoTrangThai);
   veBieuDoChong('chart-loai', 'Theo loại sản phẩm (chia theo khách hàng)', stats.chongTheoKhach.loai);
   veBieuDoDuong('chart-tuan', 'Đơn theo tuần — ngày lên đơn (tất cả khách hàng)', dienTuanTrong(stats.theoTuan), soSanhTuan);
+  veBieuDoDuong('chart-sp-tuan', 'Sản phẩm theo tuần — ngày lên đơn (tất cả khách hàng)', dienTuanTrong(stats.spTheoTuan), soSanhTuan);
   // Theo ngày (07/10/2026): server đã xếp theo thời gian + điền 0 ngày trống — KHÔNG sắp lại theo chuỗi DD/MM/YYYY.
   veBieuDoDuong('chart-ngay', 'Xu hướng đơn theo ngày — ngày lên đơn (tất cả khách hàng)', stats.theoNgay);
+  veBieuDoDuong('chart-sp-ngay', 'Sản phẩm theo ngày — ngày lên đơn (tất cả khách hàng)', stats.spTheoNgay);
   veBangTheoNhom('bang-theo-khach-hang-body', stats.theoKhachHangChiTiet);
 }
 
@@ -191,16 +198,16 @@ function soSanhTuan(a, b) {
 function veBangTheoNhom(tbodyId, danhSach) {
   const tbody = document.getElementById(tbodyId);
   if (!danhSach || danhSach.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8">Không có dữ liệu.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9">Không có dữ liệu.</td></tr>';
     return;
   }
   // Hàng TỔNG cuối bảng (17/10/2026, theo yêu cầu người dùng): cộng từng cột của các khách hàng đang hiện.
-  const COT = ['tongDon', 'daSanXuat', 'spDaSanXuat', 'chuaSanXuat', 'spChuaSanXuat', 'giaoHoanHuy', 'spGiaoHoanHuy'];
+  const COT = ['tongDon', 'tongSanPham', 'daSanXuat', 'spDaSanXuat', 'chuaSanXuat', 'spChuaSanXuat', 'giaoHoanHuy', 'spGiaoHoanHuy'];
   const tong = Object.fromEntries(COT.map(c => [c, danhSach.reduce((s, n) => s + (Number(n[c]) || 0), 0)]));
   tbody.innerHTML = danhSach.map(n => `
     <tr>
       <td>${escapeHtml(n.khachHang)}</td>
-      <td><strong>${n.tongDon}</strong></td>
+      <td><strong>${n.tongDon}</strong></td><td>${n.tongSanPham ?? 0}</td>
       <td><strong>${n.daSanXuat}</strong></td><td>${n.spDaSanXuat ?? 0}</td>
       <td><strong>${n.chuaSanXuat}</strong></td><td>${n.spChuaSanXuat ?? 0}</td>
       <td><strong>${n.giaoHoanHuy}</strong></td><td>${n.spGiaoHoanHuy ?? 0}</td>

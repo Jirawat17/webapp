@@ -25,10 +25,11 @@ function thongKeTheoNhom(rows, layNhom, nhomCuoi) {
   const theoNhom = new Map();
   for (const r of rows) {
     const ten = layNhom(r);
-    if (!theoNhom.has(ten)) theoNhom.set(ten, { khachHang: ten, tongDon: 0, daSanXuat: 0, spDaSanXuat: 0, chuaSanXuat: 0, spChuaSanXuat: 0, giaoHoanHuy: 0, spGiaoHoanHuy: 0 });
+    if (!theoNhom.has(ten)) theoNhom.set(ten, { khachHang: ten, tongDon: 0, tongSanPham: 0, daSanXuat: 0, spDaSanXuat: 0, chuaSanXuat: 0, spChuaSanXuat: 0, giaoHoanHuy: 0, spGiaoHoanHuy: 0 });
     const nhom = theoNhom.get(ten);
     nhom.tongDon++;
     const sl = Number(r.SO_LUONG) || 0;
+    nhom.tongSanPham += sl;
     if (NHOM_LOC_TONG_QUAT.DA_SAN_XUAT.includes(r.TRANG_THAI_XUONG)) { nhom.daSanXuat++; nhom.spDaSanXuat += sl; }
     else if (NHOM_LOC_TONG_QUAT.CHUA_SAN_XUAT.includes(r.TRANG_THAI_XUONG)) { nhom.chuaSanXuat++; nhom.spChuaSanXuat += sl; }
     else if (NHOM_LOC_TONG_QUAT.GIAO_HOAN_HUY.includes(r.TRANG_THAI_XUONG)) { nhom.giaoHoanHuy++; nhom.spGiaoHoanHuy += sl; }
@@ -55,14 +56,15 @@ function tuanCuaDon(r) {
 // theo thứ tự thời gian, điền 0 cho MỌI ngày trống giữa ngày đầu và ngày cuối (đường liền mạch). Hiện tất cả các ngày của kỳ đang lọc.
 // CHỈ tính ngày hợp lệ từ 01/01/2026 tới hôm nay (người dùng chốt) — 1 ô gõ sai (vd "45000" -> năm 45000) không được kéo vòng điền 0
 // ra hàng triệu ngày làm treo server.
-function demTheoNgay(rows) {
+// layGiaTri(r): giá trị cộng vào mỗi ngày — mặc định 1 (đếm đơn); truyền r => SO_LUONG để tính tổng sản phẩm.
+function demTheoNgay(rows, layGiaTri = () => 1) {
   const dem = new Map();
   // "Hôm nay" theo giờ VN (container chạy UTC: 0h-7h sáng VN server vẫn là hôm qua) — cùng kiểu ngày local như parseNgay trả về.
   const cuoiHomNay = parseNgay(thoiGianVNISOString());
   cuoiHomNay.setHours(23, 59, 59, 999);
   for (const r of rows) {
     const d = parseNgay(r.NGAY_LEN_DON);
-    if (d && d.getFullYear() >= 2026 && d <= cuoiHomNay) dem.set(d.toDateString(), (dem.get(d.toDateString()) || 0) + 1);
+    if (d && d.getFullYear() >= 2026 && d <= cuoiHomNay) dem.set(d.toDateString(), (dem.get(d.toDateString()) || 0) + layGiaTri(r));
   }
   const cacNgay = [...dem.keys()].map(k => new Date(k)).sort((a, b) => a - b);
   const kq = {};
@@ -106,6 +108,12 @@ router.get('/thong-ke', async (req, res) => {
     acc[v] = (acc[v] || 0) + 1;
     return acc;
   }, {});
+  const tongTheo = (list, layGiaTri) => list.reduce((acc, r) => {
+    const v = layGiaTri(r);
+    if (v === null) return acc;
+    acc[v] = (acc[v] || 0) + (Number(r.SO_LUONG) || 0);
+    return acc;
+  }, {});
   // Đếm CHỒNG theo khách hàng: { giaTri: { maKhach: soDon } } — cho biểu đồ cột chồng ở dashboard.html.
   const demChongTheoKhach = (list, layGiaTri) => list.reduce((acc, r) => {
     const v = layGiaTri(r);
@@ -128,6 +136,8 @@ router.get('/thong-ke', async (req, res) => {
     theoLoaiSanPham: demTheo(rows, layLoai),
     theoTuan: demTheo(rows, tuanCuaDon),
     theoNgay: demTheoNgay(rows),
+    spTheoTuan: tongTheo(rows, tuanCuaDon),
+    spTheoNgay: demTheoNgay(rows, r => Number(r.SO_LUONG) || 0),
     // Chỉ còn "loại" chia theo khách — trạng thái/tuần đã chuyển sang biểu đồ TỔNG (theoTrangThai/theoTuan ở trên),
     // 05/10/2026 theo yêu cầu người dùng; bỏ 2 lượt đếm thừa.
     chongTheoKhach: {

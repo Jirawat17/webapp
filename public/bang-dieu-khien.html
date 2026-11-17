@@ -237,6 +237,16 @@
     <h3>Xu hướng đơn theo ngày</h3>
     <canvas id="chart-ngay"></canvas>
   </div>
+
+  <div class="bdk-card bdk-full">
+    <h3>Xu hướng sản phẩm theo tuần</h3>
+    <canvas id="chart-sp-tuan"></canvas>
+  </div>
+
+  <div class="bdk-card bdk-full">
+    <h3>Xu hướng sản phẩm theo ngày</h3>
+    <canvas id="chart-sp-ngay"></canvas>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -531,6 +541,8 @@ async function taiBangDieuKhien() {
   veBieuDoCot('chart-khach-hang', topN(demTheoKhachHang, 8));
   veBieuDoDuong('chart-tuan', thongKe.theoTuan);
   veBieuDoDuong('chart-ngay', thongKe.theoNgay);
+  veBieuDoDuong('chart-sp-tuan', thongKe.spTheoTuan);
+  veBieuDoDuong('chart-sp-ngay', thongKe.spTheoNgay);
 }
 
 function huyBieuDoCu(id) {
