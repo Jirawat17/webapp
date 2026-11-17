@@ -25,12 +25,13 @@ function thongKeTheoNhom(rows, layNhom, nhomCuoi) {
   const theoNhom = new Map();
   for (const r of rows) {
     const ten = layNhom(r);
-    if (!theoNhom.has(ten)) theoNhom.set(ten, { khachHang: ten, tongDon: 0, daSanXuat: 0, chuaSanXuat: 0, giaoHoanHuy: 0 });
+    if (!theoNhom.has(ten)) theoNhom.set(ten, { khachHang: ten, tongDon: 0, daSanXuat: 0, spDaSanXuat: 0, chuaSanXuat: 0, spChuaSanXuat: 0, giaoHoanHuy: 0, spGiaoHoanHuy: 0 });
     const nhom = theoNhom.get(ten);
     nhom.tongDon++;
-    if (NHOM_LOC_TONG_QUAT.DA_SAN_XUAT.includes(r.TRANG_THAI_XUONG)) nhom.daSanXuat++;
-    else if (NHOM_LOC_TONG_QUAT.CHUA_SAN_XUAT.includes(r.TRANG_THAI_XUONG)) nhom.chuaSanXuat++;
-    else if (NHOM_LOC_TONG_QUAT.GIAO_HOAN_HUY.includes(r.TRANG_THAI_XUONG)) nhom.giaoHoanHuy++;
+    const sl = Number(r.SO_LUONG) || 0;
+    if (NHOM_LOC_TONG_QUAT.DA_SAN_XUAT.includes(r.TRANG_THAI_XUONG)) { nhom.daSanXuat++; nhom.spDaSanXuat += sl; }
+    else if (NHOM_LOC_TONG_QUAT.CHUA_SAN_XUAT.includes(r.TRANG_THAI_XUONG)) { nhom.chuaSanXuat++; nhom.spChuaSanXuat += sl; }
+    else if (NHOM_LOC_TONG_QUAT.GIAO_HOAN_HUY.includes(r.TRANG_THAI_XUONG)) { nhom.giaoHoanHuy++; nhom.spGiaoHoanHuy += sl; }
   }
 
   return [...theoNhom.values()]
@@ -117,8 +118,10 @@ router.get('/thong-ke', async (req, res) => {
   const layTrangThai = r => r.TRANG_THAI_XUONG || '(Trống)';
   const layLoai = r => r.LOAI || '(Trống)';
 
+  const tongSanPham = rows.reduce((t, r) => t + (Number(r.SO_LUONG) || 0), 0);
   res.json({
     tongSoDon: rows.length,
+    tongSanPham,
     danhSachKhachHang,
     theoTrangThai: demTheo(rows, layTrangThai),
     theoKhachHangChiTiet: thongKeTheoNhom(rows, r => maKhachTuSttKey(r.STT_Key), KHACH_KHONG_RO),

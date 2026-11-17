@@ -150,6 +150,10 @@
       <div class="bdk-kpi-nhan">Tổng số đơn</div>
       <div class="bdk-kpi-so" id="kpi-tong-don">0</div>
     </div>
+    <div class="bdk-kpi-card">
+      <div class="bdk-kpi-nhan">Tổng sản phẩm</div>
+      <div class="bdk-kpi-so" id="kpi-tong-sp">0</div>
+    </div>
     <div class="bdk-kpi-card bdk-kpi-vang">
       <div class="bdk-kpi-nhan">Cảnh báo Vàng</div>
       <div class="bdk-kpi-so" id="kpi-vang">0</div>
@@ -460,6 +464,7 @@ async function taiBangDieuKhien() {
   document.getElementById('bdk-gio-cap-nhat').textContent = new Date().toLocaleTimeString('vi-VN');
 
   demSo(document.getElementById('kpi-tong-don'), thongKe.tongSoDon);
+  demSo(document.getElementById('kpi-tong-sp'), thongKe.tongSanPham ?? 0);
 
   // Server đã đếm sẵn (routes/orders.js GET /thong-ke-nhanh) — chỉ cần đọc lại, không tự đếm từ danh
   // sách đơn đầy đủ nữa (bổ sung 22/09/2026, theo yêu cầu người dùng cải thiện hiệu năng).
