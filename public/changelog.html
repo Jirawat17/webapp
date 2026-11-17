@@ -99,12 +99,12 @@
   if (!user) return;
   renderNav(user, 'changelog');
 
-  const res = await fetch('/changelog.json?v=' + Date.now());
-  if (!res.ok) {
+  const res = await apiFetch('/changelog').catch(() => null);
+  if (!res) {
     document.getElementById('ds-cap-nhat').innerHTML = '<p class="cl-loading">Không tải được dữ liệu.</p>';
     return;
   }
-  const ds = await res.json();
+  const ds = res;
 
   document.getElementById('ds-cap-nhat').innerHTML = ds.map(p => `
     <div class="cl-entry">

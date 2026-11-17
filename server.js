@@ -76,6 +76,7 @@ app.use('/api/google-sheet-team', require('./routes/googleSheetTeam')); // Link 
 app.use('/api/bao-loi', require('./routes/baoLoi')); // Y20 Báo lỗi app (11/10/2026)
 app.use('/api/gio-truy-cap', require('./routes/gioTruyCap')); // giờ đóng truy cập theo Xưởng (23/10/2026) — thiết lập CHỈ superadmin
 app.use('/api/nhat-ky-quet', require('./routes/nhatKyQuet')); // Logs_UploadAnh — thao tác menu Quét QR (12/10/2026)
+app.use('/api/changelog', require('./routes/changelog'));
 app.use('/api/ping', require('./routes/doMang')); // đo tốc độ mạng từ trình duyệt — chấm báo mạng trên menu mọi trang (16/10/2026)
 
 app.use(express.static(path.join(__dirname, 'public')));
