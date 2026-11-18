@@ -17,7 +17,18 @@
       <button type="button" class="btn-hanh-dong phu" data-ky="hom_nay">Hôm nay</button>
       <button type="button" class="btn-hanh-dong phu" data-ky="tuan_nay">Tuần này</button>
       <button type="button" class="btn-hanh-dong phu" data-ky="thang_nay">Tháng này</button>
+      <button type="button" class="btn-hanh-dong phu" data-ky="chon_thang">Tháng...</button>
       <button type="button" class="btn-hanh-dong phu" data-ky="tuy_chon">Tuỳ chọn...</button>
+    </div>
+  </div>
+
+  <div id="panel-chon-thang" class="panel-dieu-khien" style="display:none">
+    <div class="inline-form">
+      <div class="truong">
+        <label for="dt-thang">Tháng</label>
+        <input type="month" id="dt-thang">
+      </div>
+      <button type="button" class="btn-hanh-dong" id="btn-ap-dung-thang">Áp dụng</button>
     </div>
   </div>
 
@@ -95,10 +106,12 @@ const dinhDangTien = n => '$' + n.toLocaleString('en-US', { minimumFractionDigit
     btn.onclick = () => {
       kyHienTai = btn.dataset.ky;
       document.querySelectorAll('#thanh-chon-ky button').forEach(b => b.classList.toggle('dang-mo', b === btn));
+      document.getElementById('panel-chon-thang').style.display = kyHienTai === 'chon_thang' ? 'block' : 'none';
       document.getElementById('panel-khoang-ngay').style.display = kyHienTai === 'tuy_chon' ? 'block' : 'none';
-      if (kyHienTai !== 'tuy_chon') taiDoanhThu();
+      if (kyHienTai !== 'tuy_chon' && kyHienTai !== 'chon_thang') taiDoanhThu();
     };
   });
+  document.getElementById('btn-ap-dung-thang').onclick = () => taiDoanhThu();
   document.getElementById('btn-ap-dung-khoang').onclick = () => taiDoanhThu();
 
   await taiDoanhThu();
@@ -136,6 +149,15 @@ async function taiDoanhThu() {
     const den = document.getElementById('dt-den-ngay').value;
     if (tu) qs.set('tuNgay', tu);
     if (den) qs.set('denNgay', den);
+  } else if (kyHienTai === 'chon_thang') {
+    const val = document.getElementById('dt-thang').value; // "YYYY-MM"
+    if (val) {
+      const [y, m] = val.split('-').map(Number);
+      const dau = new Date(y, m - 1, 1);
+      const cuoi = new Date(y, m, 0);
+      qs.set('tuNgay', dinhDangYMD(dau));
+      qs.set('denNgay', dinhDangYMD(cuoi));
+    }
   } else {
     const khoang = tinhKhoangTheoKy(kyHienTai);
     if (khoang) { qs.set('tuNgay', dinhDangYMD(khoang.tu)); qs.set('denNgay', dinhDangYMD(khoang.den)); }
