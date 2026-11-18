@@ -31,7 +31,7 @@ router.get('/', async (req, res) => {
     if (!theoXuong.has(xuong)) theoXuong.set(xuong, { xuong, tongTien: 0, soDon: 0 });
     const nhom = theoXuong.get(xuong);
     nhom.soDon++;
-    nhom.tongTien += Number(r.TOTAL) || 0;
+    nhom.tongTien += Number(String(r.TOTAL || '').replace(/[$,\s]/g, '')) || 0;
   }
 
   const danhSach = [...theoXuong.values()].sort((a, b) => b.tongTien - a.tongTien);

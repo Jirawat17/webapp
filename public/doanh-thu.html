@@ -64,7 +64,7 @@ const cacBieuDo = {};
 Chart.register(ChartDataLabels);
 let dangCheDoToiHienTai = false;
 
-const dinhDangTien = n => n.toLocaleString('vi-VN') + ' ₫';
+const dinhDangTien = n => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 (async () => {
   const user = await requireLoginOrRedirect();
@@ -173,7 +173,7 @@ function veBieuDoCotDT(canvasId, title, danhSach) {
         tooltip: { callbacks: { label: ctx => dinhDangTien(ctx.parsed.y) } },
       },
       scales: {
-        y: { ticks: { callback: v => v.toLocaleString('vi-VN') } },
+        y: { ticks: { callback: v => '$' + v.toLocaleString('en-US') } },
       },
     },
   });
