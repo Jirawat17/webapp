@@ -8,6 +8,16 @@ const { requireLogin, laSuperAdmin } = require('../middleware/auth');
 router.use(requireLogin);
 router.use((req, res, next) => laSuperAdmin(req.session.user?.vaiTro) ? next() : res.status(403).json({ loi: 'Chỉ superadmin' }));
 
+// "$25,50" (phẩy thập phân) → 25.50 | "$1,234.50" (phẩy ngàn) → 1234.50 | "$103.50" → 103.50
+function parseTien(s) {
+  const clean = String(s || '').replace(/[$\s]/g, '');
+  if (!clean) return 0;
+  // Phẩy ở cuối sau đúng 2 chữ số, không có dấu chấm → phẩy là thập phân
+  if (/,\d{2}$/.test(clean) && !clean.includes('.'))
+    return Number(clean.replace(',', '.')) || 0;
+  return Number(clean.replace(/,/g, '')) || 0;
+}
+
 router.get('/', async (req, res) => {
   const { rows: tatCa } = await orderService.getAll();
   const rows = orderService.locTheoXuong(tatCa, req.session.user);
@@ -33,7 +43,7 @@ router.get('/', async (req, res) => {
     const nhom = theoXuong.get(xuong);
     nhom.soDon++;
     nhom.tongSanPham += Number(r.SO_LUONG) || 0;
-    nhom.tongTien += Number(String(r.TOTAL || '').replace(/[$,\s]/g, '')) || 0;
+    nhom.tongTien += parseTien(r.TOTAL);
   }
 
   const danhSach = [...theoXuong.values()].sort((a, b) => b.tongTien - a.tongTien);
@@ -47,7 +57,7 @@ router.get('/', async (req, res) => {
     const nhom = theoTeam.get(team);
     nhom.soDon++;
     nhom.tongSanPham += Number(r.SO_LUONG) || 0;
-    nhom.tongTien += Number(String(r.TOTAL || '').replace(/[$,\s]/g, '')) || 0;
+    nhom.tongTien += parseTien(r.TOTAL);
   }
   const danhSachTeam = [...theoTeam.values()].sort((a, b) => b.tongTien - a.tongTien);
 
