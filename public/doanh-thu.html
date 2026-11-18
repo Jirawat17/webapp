@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Doanh thu — Xưởng Thêu</title>
+<link rel="stylesheet" href="/css/style.css?v=112">
+<script src="/js/theme.js?v=104"></script>
+</head>
+<body>
+<div id="nav"></div>
+<div class="page">
+  <div class="tieu-de-cong-cu">
+    <h2>Doanh thu</h2>
+    <div class="thanh-cong-cu-danh-sach" id="thanh-chon-ky">
+      <button type="button" class="btn-hanh-dong phu dang-mo" data-ky="toan_bo">Toàn bộ</button>
+      <button type="button" class="btn-hanh-dong phu" data-ky="hom_nay">Hôm nay</button>
+      <button type="button" class="btn-hanh-dong phu" data-ky="tuan_nay">Tuần này</button>
+      <button type="button" class="btn-hanh-dong phu" data-ky="thang_nay">Tháng này</button>
+      <button type="button" class="btn-hanh-dong phu" data-ky="tuy_chon">Tuỳ chọn...</button>
+    </div>
+  </div>
+
+  <div id="panel-khoang-ngay" class="panel-dieu-khien" style="display:none">
+    <div class="inline-form">
+      <div class="truong">
+        <label for="dt-tu-ngay">Từ ngày</label>
+        <input type="date" id="dt-tu-ngay">
+      </div>
+      <div class="truong">
+        <label for="dt-den-ngay">Đến ngày</label>
+        <input type="date" id="dt-den-ngay">
+      </div>
+      <button type="button" class="btn-hanh-dong" id="btn-ap-dung-khoang">Áp dụng</button>
+    </div>
+  </div>
+
+  <div id="tong-so" class="tong-so-the">Đang tải...</div>
+
+  <div class="chart-card" style="margin-bottom:var(--space-4)">
+    <canvas id="chart-dt-xuong"></canvas>
+  </div>
+
+  <div class="chart-card">
+    <h3 style="margin-top:0">Theo xưởng</h3>
+    <div class="bang-cuon-ngang">
+      <table class="bang-xem-truoc" id="bang-doanh-thu">
+        <thead><tr>
+          <th>Xưởng</th><th>Số đơn</th><th>Doanh thu</th>
+        </tr></thead>
+        <tbody id="bang-doanh-thu-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="/js/icons.js?v=106"></script>
+<script src="/js/api.js?v=134"></script>
+<script>
+let kyHienTai = 'toan_bo';
+const cacBieuDo = {};
+Chart.register(ChartDataLabels);
+let dangCheDoToiHienTai = false;
+
+const dinhDangTien = n => n.toLocaleString('vi-VN') + ' ₫';
+
+(async () => {
+  const user = await requireLoginOrRedirect();
+  if (!user) return;
+  renderNav(user, 'doanh-thu');
+  if (user.vaiTro !== 'superadmin') {
+    document.querySelector('.page').innerHTML = '<p>Bạn không có quyền truy cập trang này.</p>';
+    return;
+  }
+
+  dangCheDoToiHienTai = typeof dangCheDoToi === 'function' && dangCheDoToi();
+  Chart.defaults.color = dangCheDoToiHienTai ? '#a6a6ad' : '#52525b';
+  Chart.defaults.borderColor = dangCheDoToiHienTai ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
+
+  document.querySelectorAll('#thanh-chon-ky button').forEach(btn => {
+    btn.onclick = () => {
+      kyHienTai = btn.dataset.ky;
+      document.querySelectorAll('#thanh-chon-ky button').forEach(b => b.classList.toggle('dang-mo', b === btn));
+      document.getElementById('panel-khoang-ngay').style.display = kyHienTai === 'tuy_chon' ? 'block' : 'none';
+      if (kyHienTai !== 'tuy_chon') taiDoanhThu();
+    };
+  });
+  document.getElementById('btn-ap-dung-khoang').onclick = () => taiDoanhThu();
+
+  await taiDoanhThu();
+})();
+
+function tinhKhoangTheoKy(ky) {
+  const homNay = new Date(); homNay.setHours(0, 0, 0, 0);
+  if (ky === 'hom_nay') return { tu: homNay, den: homNay };
+  if (ky === 'tuan_nay') {
+    const thu = homNay.getDay();
+    const lech = thu === 0 ? 6 : thu - 1;
+    const dau = new Date(homNay); dau.setDate(homNay.getDate() - lech);
+    const cuoi = new Date(dau); cuoi.setDate(dau.getDate() + 6);
+    return { tu: dau, den: cuoi };
+  }
+  if (ky === 'thang_nay') {
+    const dau = new Date(homNay.getFullYear(), homNay.getMonth(), 1);
+    const cuoi = new Date(homNay.getFullYear(), homNay.getMonth() + 1, 0);
+    return { tu: dau, den: cuoi };
+  }
+  return null;
+}
+
+function dinhDangYMD(d) {
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+async function taiDoanhThu() {
+  document.getElementById('tong-so').textContent = 'Đang tải...';
+
+  const qs = new URLSearchParams();
+  if (kyHienTai === 'tuy_chon') {
+    const tu = document.getElementById('dt-tu-ngay').value;
+    const den = document.getElementById('dt-den-ngay').value;
+    if (tu) qs.set('tuNgay', tu);
+    if (den) qs.set('denNgay', den);
+  } else {
+    const khoang = tinhKhoangTheoKy(kyHienTai);
+    if (khoang) { qs.set('tuNgay', dinhDangYMD(khoang.tu)); qs.set('denNgay', dinhDangYMD(khoang.den)); }
+  }
+
+  let data;
+  try {
+    data = await apiFetch('/doanh-thu?' + qs.toString());
+  } catch (e) {
+    document.getElementById('tong-so').textContent = 'Không tải được: ' + e.message;
+    return;
+  }
+
+  document.getElementById('tong-so').textContent =
+    `Tổng doanh thu: ${dinhDangTien(data.tongDoanhThu)} · ${data.tongDon} đơn`;
+
+  veBieuDoCotDT('chart-dt-xuong', 'Doanh thu theo xưởng', data.theoXuong);
+  veBang(data.theoXuong);
+}
+
+function mauTheoIndex(i) {
+  return `hsl(${Math.round(i * 137.5) % 360} 65% 52%)`;
+}
+
+function veBieuDoCotDT(canvasId, title, danhSach) {
+  if (cacBieuDo[canvasId]) cacBieuDo[canvasId].destroy();
+  const nhan = danhSach.map(x => x.xuong);
+  const giaTri = danhSach.map(x => x.tongTien);
+  const mau = danhSach.map((_, i) => mauTheoIndex(i));
+  cacBieuDo[canvasId] = new Chart(document.getElementById(canvasId), {
+    type: 'bar',
+    data: {
+      labels: nhan,
+      datasets: [{ label: title, data: giaTri, backgroundColor: mau, borderRadius: 4 }],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        title: { display: true, text: title },
+        datalabels: {
+          anchor: 'end', align: 'end', font: { size: 11 },
+          // Nhiều xưởng thì label chồng nhau — ẩn khi > 8 cột, rê chuột để xem tooltip.
+          display: danhSach.length <= 8,
+          formatter: v => v === 0 ? '' : dinhDangTien(v),
+        },
+        tooltip: { callbacks: { label: ctx => dinhDangTien(ctx.parsed.y) } },
+      },
+      scales: {
+        y: { ticks: { callback: v => v.toLocaleString('vi-VN') } },
+      },
+    },
+  });
+}
+
+function veBang(danhSach) {
+  const tbody = document.getElementById('bang-doanh-thu-body');
+  if (!danhSach.length) { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--color-text-muted)">Không có dữ liệu</td></tr>'; return; }
+  tbody.innerHTML = danhSach.map(x => `
+    <tr>
+      <td>${escapeHtml(x.xuong)}</td>
+      <td>${x.soDon}</td>
+      <td><strong>${dinhDangTien(x.tongTien)}</strong></td>
+    </tr>
+  `).join('');
+}
+</script>
+</body>
+</html>
