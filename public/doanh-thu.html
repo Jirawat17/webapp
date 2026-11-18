@@ -46,7 +46,7 @@
     <div class="bang-cuon-ngang">
       <table class="bang-xem-truoc" id="bang-doanh-thu">
         <thead><tr>
-          <th>Xưởng</th><th>Số đơn</th><th>Doanh thu</th>
+          <th>Xưởng</th><th>Số đơn</th><th>Số SP</th><th>Doanh thu</th>
         </tr></thead>
         <tbody id="bang-doanh-thu-body"></tbody>
       </table>
@@ -138,7 +138,7 @@ async function taiDoanhThu() {
   }
 
   document.getElementById('tong-so').textContent =
-    `Tổng doanh thu: ${dinhDangTien(data.tongDoanhThu)} · ${data.tongDon} đơn`;
+    `Tổng doanh thu: ${dinhDangTien(data.tongDoanhThu)} · ${data.tongDon} đơn · ${data.tongSanPham ?? 0} sản phẩm`;
 
   veBieuDoCotDT('chart-dt-xuong', 'Doanh thu theo xưởng', data.theoXuong);
   veBang(data.theoXuong);
@@ -181,11 +181,12 @@ function veBieuDoCotDT(canvasId, title, danhSach) {
 
 function veBang(danhSach) {
   const tbody = document.getElementById('bang-doanh-thu-body');
-  if (!danhSach.length) { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--color-text-muted)">Không có dữ liệu</td></tr>'; return; }
+  if (!danhSach.length) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--color-text-muted)">Không có dữ liệu</td></tr>'; return; }
   tbody.innerHTML = danhSach.map(x => `
     <tr>
       <td>${escapeHtml(x.xuong)}</td>
       <td>${x.soDon}</td>
+      <td>${x.tongSanPham ?? 0}</td>
       <td><strong>${dinhDangTien(x.tongTien)}</strong></td>
     </tr>
   `).join('');

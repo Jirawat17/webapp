@@ -28,16 +28,18 @@ router.get('/', async (req, res) => {
   const theoXuong = new Map();
   for (const r of filtered) {
     const xuong = (r.XUONG || '').trim() || '(Chưa gán)';
-    if (!theoXuong.has(xuong)) theoXuong.set(xuong, { xuong, tongTien: 0, soDon: 0 });
+    if (!theoXuong.has(xuong)) theoXuong.set(xuong, { xuong, tongTien: 0, soDon: 0, tongSanPham: 0 });
     const nhom = theoXuong.get(xuong);
     nhom.soDon++;
+    nhom.tongSanPham += Number(r.SO_LUONG) || 0;
     nhom.tongTien += Number(String(r.TOTAL || '').replace(/[$,\s]/g, '')) || 0;
   }
 
   const danhSach = [...theoXuong.values()].sort((a, b) => b.tongTien - a.tongTien);
   const tongDoanhThu = danhSach.reduce((t, x) => t + x.tongTien, 0);
+  const tongSanPham = danhSach.reduce((t, x) => t + x.tongSanPham, 0);
 
-  res.json({ tongDoanhThu, tongDon: filtered.length, theoXuong: danhSach });
+  res.json({ tongDoanhThu, tongDon: filtered.length, tongSanPham, theoXuong: danhSach });
 });
 
 module.exports = router;
