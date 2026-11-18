@@ -871,6 +871,7 @@ function renderNav(user, active) {
       // "Trợ lý" — ẩn 23/09/2026, BẬT LẠI 23/10/2026 (theo yêu cầu người dùng) CHỈ cho superadmin: Trợ lý AI Claude (routes/chatbot.js
       // cũng chặn vai trò khác), hỏi được cả qua Telegram (Settings > Trợ lý AI).
       links.push({ href: '/doanh-thu.html', label: 'DT', icon: 'navChart', key: 'doanh-thu' });
+      links.push({ href: '/chi-phi.html', label: 'Chi phí', icon: 'navReports', key: 'chi-phi' });
       links.push({ href: '/chatbot.html', label: 'Trợ lý', icon: 'chat', key: 'chatbot' });
       // "QC" (bổ sung 30/09/2026, theo yêu cầu người dùng) — AI QC bằng Gemini, CHỈ superadmin (routes/qc.js cũng chặn).
       links.push({ href: '/qc.html', label: 'QC', icon: 'navReports', key: 'qc' });

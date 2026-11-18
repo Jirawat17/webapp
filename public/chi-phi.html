@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chi phí — Xưởng Thêu</title>
+<link rel="stylesheet" href="/css/style.css?v=112">
+<script src="/js/theme.js?v=104"></script>
+</head>
+<body>
+<div id="nav"></div>
+<div class="page">
+  <div class="tieu-de-cong-cu">
+    <h2>Chi phí</h2>
+    <div class="inline-form" style="align-items:center;gap:var(--space-3)">
+      <input type="month" id="inp-thang" style="font-size:1rem;padding:6px 10px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface);color:var(--color-text)">
+    </div>
+  </div>
+
+  <div id="tong-chi-phi" class="tong-so-the" style="margin-bottom:var(--space-4)">Đang tải...</div>
+
+  <!-- Form thêm/sửa -->
+  <div class="chart-card" style="margin-bottom:var(--space-4)">
+    <h3 id="form-tieu-de" style="margin-top:0">Thêm khoản chi</h3>
+    <form id="form-chi-phi" class="inline-form" style="flex-wrap:wrap;gap:var(--space-3)">
+      <div class="truong" style="flex:2;min-width:160px">
+        <label for="inp-ten">Tên khoản chi</label>
+        <input type="text" id="inp-ten" placeholder="VD: Thuê nhà tháng 11" maxlength="200" required>
+      </div>
+      <div class="truong" style="flex:1;min-width:120px">
+        <label for="inp-loai">Loại</label>
+        <select id="inp-loai">
+          <option>Thuê nhà</option>
+          <option>Lương nhân viên</option>
+          <option>Điện nước</option>
+          <option>Khác</option>
+        </select>
+      </div>
+      <div class="truong" style="flex:1;min-width:120px">
+        <label for="inp-so-tien">Số tiền ($)</label>
+        <input type="number" id="inp-so-tien" min="0.01" step="0.01" placeholder="0.00" required>
+      </div>
+      <div class="truong" style="flex:2;min-width:160px">
+        <label for="inp-ghi-chu">Ghi chú</label>
+        <input type="text" id="inp-ghi-chu" placeholder="Tuỳ chọn" maxlength="500">
+      </div>
+      <div class="truong" style="flex:0 0 auto;align-self:flex-end">
+        <button type="submit" class="btn-hanh-dong" id="btn-luu">Thêm</button>
+        <button type="button" class="btn-hanh-dong phu" id="btn-huy" style="display:none">Huỷ</button>
+      </div>
+    </form>
+    <div id="thong-bao-form" style="margin-top:var(--space-2);font-size:0.9rem;color:var(--color-danger)"></div>
+  </div>
+
+  <!-- Bảng -->
+  <div class="chart-card">
+    <div class="bang-cuon-ngang">
+      <table class="bang-xem-truoc" id="bang-chi-phi">
+        <thead><tr>
+          <th>Tên khoản</th><th>Loại</th><th>Số tiền</th><th>Ghi chú</th><th></th>
+        </tr></thead>
+        <tbody id="bang-chi-phi-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="/js/icons.js?v=106"></script>
+<script src="/js/api.js?v=134"></script>
+<script>
+let thangHienTai = '';
+let dangSuaId = null;
+
+(async () => {
+  const user = await requireLoginOrRedirect();
+  if (!user) return;
+  renderNav(user, 'chi-phi');
+  if (user.vaiTro !== 'superadmin') {
+    document.querySelector('.page').innerHTML = '<p>Bạn không có quyền truy cập trang này.</p>';
+    return;
+  }
+
+  const inp = document.getElementById('inp-thang');
+  const now = new Date();
+  inp.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  thangHienTai = inp.value;
+  inp.onchange = () => { thangHienTai = inp.value; taiDuLieu(); };
+
+  document.getElementById('form-chi-phi').onsubmit = async e => {
+    e.preventDefault();
+    await luuChiPhi();
+  };
+  document.getElementById('btn-huy').onclick = () => datLaiForm();
+
+  await taiDuLieu();
+})();
+
+async function taiDuLieu() {
+  document.getElementById('tong-chi-phi').textContent = 'Đang tải...';
+  let data;
+  try {
+    data = await apiFetch('/chi-phi?thang=' + thangHienTai);
+  } catch (e) {
+    document.getElementById('tong-chi-phi').textContent = 'Không tải được: ' + e.message;
+    return;
+  }
+  const thangHienThi = thangHienTai.split('-').reverse().join('/');
+  document.getElementById('tong-chi-phi').textContent =
+    `Tổng chi phí tháng ${thangHienThi}: ${dinhDangTien(data.tong)} · ${data.ds.length} khoản`;
+  veoBang(data.ds);
+}
+
+function veoBang(ds) {
+  const tbody = document.getElementById('bang-chi-phi-body');
+  if (!ds.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--color-text-muted)">Chưa có khoản chi nào.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = ds.map(x => `
+    <tr>
+      <td>${escapeHtml(x.ten)}</td>
+      <td><span class="badge-loai loai-${slugLoai(x.loai)}">${escapeHtml(x.loai)}</span></td>
+      <td><strong>${dinhDangTien(x.so_tien)}</strong></td>
+      <td style="color:var(--color-text-muted)">${escapeHtml(x.ghi_chu)}</td>
+      <td style="white-space:nowrap">
+        <button class="btn-hanh-dong phu nho" onclick="batDauSua(${x.id})">Sửa</button>
+        <button class="btn-hanh-dong nguy-hiem nho" onclick="xoaChiPhi(${x.id}, '${escapeAttr(x.ten)}')">Xoá</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function luuChiPhi() {
+  const ten = document.getElementById('inp-ten').value.trim();
+  const loai = document.getElementById('inp-loai').value;
+  const so_tien = document.getElementById('inp-so-tien').value;
+  const ghi_chu = document.getElementById('inp-ghi-chu').value.trim();
+  document.getElementById('thong-bao-form').textContent = '';
+
+  try {
+    if (dangSuaId) {
+      await apiFetch(`/chi-phi/${dangSuaId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ten, loai, so_tien, thang: thangHienTai, ghi_chu }) });
+    } else {
+      await apiFetch('/chi-phi', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ten, loai, so_tien, thang: thangHienTai, ghi_chu }) });
+    }
+    datLaiForm();
+    await taiDuLieu();
+  } catch (e) {
+    document.getElementById('thong-bao-form').textContent = e.message;
+  }
+}
+
+function batDauSua(id) {
+  const cells = [...document.querySelectorAll('#bang-chi-phi-body tr')];
+  // Tìm lại từ API thay vì đọc DOM — dùng data đã load
+  apiFetch('/chi-phi?thang=' + thangHienTai).then(data => {
+    const x = data.ds.find(r => r.id === id);
+    if (!x) return;
+    dangSuaId = id;
+    document.getElementById('inp-ten').value = x.ten;
+    document.getElementById('inp-loai').value = x.loai;
+    document.getElementById('inp-so-tien').value = x.so_tien;
+    document.getElementById('inp-ghi-chu').value = x.ghi_chu;
+    document.getElementById('form-tieu-de').textContent = 'Sửa khoản chi';
+    document.getElementById('btn-luu').textContent = 'Lưu';
+    document.getElementById('btn-huy').style.display = '';
+    document.getElementById('inp-ten').focus();
+  });
+}
+
+async function xoaChiPhi(id, ten) {
+  if (!confirm(`Xoá khoản "${ten}"?`)) return;
+  try {
+    await apiFetch(`/chi-phi/${id}`, { method: 'DELETE' });
+    await taiDuLieu();
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
+  }
+}
+
+function datLaiForm() {
+  dangSuaId = null;
+  document.getElementById('form-chi-phi').reset();
+  document.getElementById('form-tieu-de').textContent = 'Thêm khoản chi';
+  document.getElementById('btn-luu').textContent = 'Thêm';
+  document.getElementById('btn-huy').style.display = 'none';
+  document.getElementById('thong-bao-form').textContent = '';
+}
+
+const dinhDangTien = n => '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function slugLoai(l) { return { 'Thuê nhà': 'thue', 'Lương nhân viên': 'luong', 'Điện nước': 'dien', 'Khác': 'khac' }[l] || 'khac'; }
+function escapeAttr(s) { return String(s).replace(/'/g, '&#39;').replace(/"/g, '&quot;'); }
+</script>
+
+<style>
+.badge-loai { display:inline-block; padding:2px 8px; border-radius:var(--radius-full); font-size:0.8rem; font-weight:600; }
+.loai-thue  { background:#fef3c7; color:#92400e; }
+.loai-luong { background:#dbeafe; color:#1e40af; }
+.loai-dien  { background:#d1fae5; color:#065f46; }
+.loai-khac  { background:var(--color-surface-alt,#f4f4f5); color:var(--color-text-muted); }
+.btn-hanh-dong.nho { padding:4px 10px; font-size:0.82rem; }
+.btn-hanh-dong.nguy-hiem { background:var(--color-danger,#ef4444); color:#fff; border-color:transparent; }
+.btn-hanh-dong.nguy-hiem:hover { opacity:0.85; }
+</style>
+</body>
+</html>
