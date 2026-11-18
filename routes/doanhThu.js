@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const orderService = require('../services/orderService');
+const { layTeam } = require('../services/donNhieuAoService');
 const { parseNgay } = require('../services/dateUtils');
 const { requireLogin, laSuperAdmin } = require('../middleware/auth');
 
@@ -39,7 +40,18 @@ router.get('/', async (req, res) => {
   const tongDoanhThu = danhSach.reduce((t, x) => t + x.tongTien, 0);
   const tongSanPham = danhSach.reduce((t, x) => t + x.tongSanPham, 0);
 
-  res.json({ tongDoanhThu, tongDon: filtered.length, tongSanPham, theoXuong: danhSach });
+  const theoTeam = new Map();
+  for (const r of filtered) {
+    const team = layTeam(r.STT_Key) || '(Không rõ)';
+    if (!theoTeam.has(team)) theoTeam.set(team, { team, tongTien: 0, soDon: 0, tongSanPham: 0 });
+    const nhom = theoTeam.get(team);
+    nhom.soDon++;
+    nhom.tongSanPham += Number(r.SO_LUONG) || 0;
+    nhom.tongTien += Number(String(r.TOTAL || '').replace(/[$,\s]/g, '')) || 0;
+  }
+  const danhSachTeam = [...theoTeam.values()].sort((a, b) => b.tongTien - a.tongTien);
+
+  res.json({ tongDoanhThu, tongDon: filtered.length, tongSanPham, theoXuong: danhSach, theoTeam: danhSachTeam });
 });
 
 module.exports = router;
