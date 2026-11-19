@@ -152,19 +152,24 @@ function dongSoMuiChi(don) {
     </td></tr>`;
 }
 
+function dongSoLuong(don) {
+  if (!don.SO_LUONG) return '';
+  return `<tr><td>Số lượng</td><td style="font-size:3em;font-weight:700;line-height:1.1;color:var(--color-danger)">${escapeHtml(String(don.SO_LUONG))}${don.SO_LUONG_AO_TREN_DON ? `<span style="font-size:0.45em;font-weight:400"> (áo trên đơn: ${escapeHtml(don.SO_LUONG_AO_TREN_DON)})</span>` : ''}</td></tr>`;
+}
+
 function renderBangThongTin(don, viTri) {
   if (user.vaiTro === 'san_xuat') {
     return `
       ${dongGhiChu(don)}
+      ${dongSoLuong(don)}
       <tr><td><strong>Vị trí thêu</strong></td><td>${don.ViTriTheu?.length ? `<strong>${viTri}</strong>` : viTri}</td></tr>
-      <tr><td>Số lượng</td><td style="font-size:3em;font-weight:700;line-height:1.1">${escapeHtml(don.SO_LUONG || '')} ${don.SO_LUONG_AO_TREN_DON ? `<span style="font-size:0.45em;font-weight:400">(áo trên đơn: ${escapeHtml(don.SO_LUONG_AO_TREN_DON)})</span>` : ''}</td></tr>
       <tr><td>Ngày lên đơn</td><td>${don.NGAY_LEN_DON ? dinhDangNgay(don.NGAY_LEN_DON) : ''}</td></tr>`;
   }
   return `
     ${dongGhiChu(don)}
+    ${dongSoLuong(don)}
     ${dongNhomNhieuAo(don.NhomNhieuAo)}
     <tr><td>Vị trí thêu</td><td>${viTri}</td></tr>
-    <tr><td>Số lượng</td><td style="font-size:3em;font-weight:700;line-height:1.1">${escapeHtml(don.SO_LUONG || '')} ${don.SO_LUONG_AO_TREN_DON ? `<span style="font-size:0.45em;font-weight:400">(áo trên đơn: ${escapeHtml(don.SO_LUONG_AO_TREN_DON)})</span>` : ''}</td></tr>
     <tr><td>Ngày lên đơn</td><td>${don.NGAY_LEN_DON ? dinhDangNgay(don.NGAY_LEN_DON) : ''}</td></tr>
     <tr><td>Địa chỉ giao hàng</td><td>${dongDiaChi(don)}</td></tr>
     <tr><td>Hãng vận chuyển</td><td>${escapeHtml(don.HANG_VAN_CHUYEN || '')}</td></tr>
@@ -249,7 +254,7 @@ async function taiChiTiet() {
   document.getElementById('don-hang').innerHTML = `
     <div class="dau-don ${don.DonHold ? 'vong-hold' : ''} ${don.TinhTrangDacBiet ? 'the-canh-bao-vang' : ''}" style="margin-bottom:16px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-      <h2 style="margin:0" class="${don.DonUuTien ? 'uu-tien' : ''}">${escapeHtml(don.TieuDeSanPham || don.STT_Key)}${don.SO_LUONG ? ` <span style="font-weight:500;color:var(--color-text-muted)">· SL:${escapeHtml(String(don.SO_LUONG))}</span>` : ''}${nutSaoChep(don.STT_Key, 'Sao chép mã đơn')}</h2>
+      <h2 style="margin:0" class="${don.DonUuTien ? 'uu-tien' : ''}">${escapeHtml(don.STT_Key)}${don.SO_LUONG ? `<strong style="font-size:2em;line-height:1;vertical-align:middle;margin:0 6px"> SL:${escapeHtml(String(don.SO_LUONG))}</strong>` : ''}${don.TieuDeSanPham && don.TieuDeSanPham !== don.STT_Key ? escapeHtml(don.TieuDeSanPham.slice(don.STT_Key.length)) : ''}${nutSaoChep(don.STT_Key, 'Sao chép mã đơn')}</h2>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         ${htmlOTimMaDon()}
         <button type="button" class="btn-hanh-dong phu" onclick="moDoiChieuAnh(this)">${icon('file')} Đối chiếu ảnh</button>
