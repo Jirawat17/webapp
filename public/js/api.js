@@ -67,16 +67,13 @@ function nutSaoChep(giaTri, nhan = 'Sao chép') {
 // (trang Chi tiết đơn, khung .anh-mau tới 320px) tự truyền CHIEU_RONG_ANH_CHI_TIET.
 const CHIEU_RONG_ANH_THU_NHO = 320;
 const CHIEU_RONG_ANH_CHI_TIET = 1000;
-// Google Docs/Sheets đôi khi lưu link dưới dạng https://www.google.com/url?q=<url thật>&... — trích URL thật ra.
+// Google Docs/Sheets đôi khi lưu link dưới dạng https://www.google.com/url?q=<url thật>&sa=D&...
+// q= không được percent-encode nên new URL() parse sai — dùng regex lấy từ https đến trước dấu &.
 function tachUrlGogle(url) {
-  try {
-    const u = new URL(String(url));
-    if (/google\.com$/.test(u.hostname) && u.pathname === '/url') {
-      const q = u.searchParams.get('q');
-      if (q) return q;
-    }
-  } catch {}
-  return url;
+  const s = String(url || '');
+  if (!/google\.com\/url/i.test(s)) return url;
+  const m = /[?&]q=(https?:[^&]+)/.exec(s);
+  return m ? m[1] : url;
 }
 
 function urlAnhHienThiList(rawUrl, chieuRong = CHIEU_RONG_ANH_THU_NHO) {
