@@ -83,6 +83,7 @@ function urlAnhHienThiList(rawUrl, chieuRong = CHIEU_RONG_ANH_THU_NHO) {
   if (duongDan.startsWith('/api/photos/file/')) return [rawUrl];
   if (/^https?:\/\/pub-[0-9a-f]+\.r2\.dev\//i.test(String(rawUrl))) return [rawUrl]; // R2 public CDN — VPS không reach được r2.dev, browser fetch thẳng
   if (/^https?:\/\/res\.cloudinary\.com\//i.test(String(rawUrl))) return [rawUrl]; // Cloudinary CDN — browser fetch thẳng
+  if (/^https?:\/\/[a-z0-9-]+\.media-amazon\.com\//i.test(String(rawUrl))) return [rawUrl]; // Amazon media CDN — browser fetch thẳng
   const goc = '/api/photos/anh-ngoai?url=' + encodeURIComponent(rawUrl) + '&w=' + chieuRong;
   const laThuMucDrive = /\/folders\//.test(rawUrl);
   return laThuMucDrive ? [goc + '&index=0', goc + '&index=1'] : [goc + '&index=0'];
