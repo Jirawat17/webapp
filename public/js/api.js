@@ -67,11 +67,25 @@ function nutSaoChep(giaTri, nhan = 'Sao chép') {
 // (trang Chi tiết đơn, khung .anh-mau tới 320px) tự truyền CHIEU_RONG_ANH_CHI_TIET.
 const CHIEU_RONG_ANH_THU_NHO = 320;
 const CHIEU_RONG_ANH_CHI_TIET = 1000;
+// Google Docs/Sheets đôi khi lưu link dưới dạng https://www.google.com/url?q=<url thật>&... — trích URL thật ra.
+function tachUrlGogle(url) {
+  try {
+    const u = new URL(String(url));
+    if (/google\.com$/.test(u.hostname) && u.pathname === '/url') {
+      const q = u.searchParams.get('q');
+      if (q) return q;
+    }
+  } catch {}
+  return url;
+}
+
 function urlAnhHienThiList(rawUrl, chieuRong = CHIEU_RONG_ANH_THU_NHO) {
   if (!rawUrl) return [];
+  rawUrl = tachUrlGogle(rawUrl);
   const duongDan = String(rawUrl).replace(/^https?:\/\/[^/]+/, ''); // bỏ host nếu URL là dạng tuyệt đối cùng gốc, cùng quy ước storageService.js#proxyUrlToObjectKey
   if (duongDan.startsWith('/api/photos/file/')) return [rawUrl];
   if (/^https?:\/\/pub-[0-9a-f]+\.r2\.dev\//i.test(String(rawUrl))) return [rawUrl]; // R2 public CDN — VPS không reach được r2.dev, browser fetch thẳng
+  if (/^https?:\/\/res\.cloudinary\.com\//i.test(String(rawUrl))) return [rawUrl]; // Cloudinary CDN — browser fetch thẳng
   const goc = '/api/photos/anh-ngoai?url=' + encodeURIComponent(rawUrl) + '&w=' + chieuRong;
   const laThuMucDrive = /\/folders\//.test(rawUrl);
   return laThuMucDrive ? [goc + '&index=0', goc + '&index=1'] : [goc + '&index=0'];

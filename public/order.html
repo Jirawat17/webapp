@@ -331,7 +331,7 @@ async function moDoiChieuAnh(nut) {
   const don = donHienTai;
   if (!don) return;
   const duocMoGocThietKe = user.vaiTro !== 'nguoi_lay_phoi';
-  const tuLink = (url, moGoc = true) => urlAnhHienThiList(url, 800).map(src => ({ src, goc: moGoc ? urlAnToan(url) : '' }));
+  const tuLink = (url, moGoc = true) => { const u = tachUrlGogle(url); return urlAnhHienThiList(u, 800).map(src => ({ src, goc: moGoc ? urlAnToan(u) : '' })); };
   let thietKe = tuLink(don.DUONG_DAN_URL, duocMoGocThietKe);
   if (laVaiTroThuVien()) {
     nut.disabled = true;
