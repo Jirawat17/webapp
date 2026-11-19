@@ -135,6 +135,7 @@ function dongGhiChu(don) {
   return `<tr><td><strong>Ghi chú</strong></td><td><strong>${escapeHtml(don.GHI_CHU || '')}</strong></td></tr>
     <tr><td><strong>Ghi chú xưởng</strong></td><td><strong>${escapeHtml(don.GHI_CHU_XUONG || '')}</strong></td></tr>
     ${dongGhiChuNoiBo(don)}
+    ${dongSoLuong(don)}
     ${dongSoMuiChi(don)}`;
 }
 
@@ -161,13 +162,11 @@ function renderBangThongTin(don, viTri) {
   if (user.vaiTro === 'san_xuat') {
     return `
       ${dongGhiChu(don)}
-      ${dongSoLuong(don)}
       <tr><td><strong>Vị trí thêu</strong></td><td>${don.ViTriTheu?.length ? `<strong>${viTri}</strong>` : viTri}</td></tr>
       <tr><td>Ngày lên đơn</td><td>${don.NGAY_LEN_DON ? dinhDangNgay(don.NGAY_LEN_DON) : ''}</td></tr>`;
   }
   return `
     ${dongGhiChu(don)}
-    ${dongSoLuong(don)}
     ${dongNhomNhieuAo(don.NhomNhieuAo)}
     <tr><td>Vị trí thêu</td><td>${viTri}</td></tr>
     <tr><td>Ngày lên đơn</td><td>${don.NGAY_LEN_DON ? dinhDangNgay(don.NGAY_LEN_DON) : ''}</td></tr>
