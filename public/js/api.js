@@ -73,7 +73,9 @@ function tachUrlGogle(url) {
   const s = String(url || '');
   if (!/google\.com\/url/i.test(s)) return url;
   const m = /[?&]q=(https?:[^&]+)/.exec(s);
-  return m ? m[1] : url;
+  if (!m) return url;
+  // Google encode URL trong tham số q một lần nữa: %20 → %2520; decode lại để có URL gốc
+  try { return decodeURIComponent(m[1]); } catch { return m[1]; }
 }
 
 function urlAnhHienThiList(rawUrl, chieuRong = CHIEU_RONG_ANH_THU_NHO) {
