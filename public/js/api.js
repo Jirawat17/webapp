@@ -1018,7 +1018,7 @@ function urlAnToan(u) {
 }
 // <a> mở tab mới tới url (đã qua urlAnToan); url không hợp lệ -> chữ thường kèm gợi ý, KHÔNG bấm được. noiDung là HTML đã an toàn.
 function linkAnToan(url, noiDung) {
-  const an = urlAnToan(url);
+  const an = urlAnToan(tachUrlGogle(url));
   return an ? `<a href="${escapeHtml(an)}" target="_blank" rel="noopener">${noiDung}</a>`
     : `<span title="Link không hợp lệ (chỉ nhận link http/https)" style="color:var(--color-text-muted)">${noiDung} (link không hợp lệ)</span>`;
 }
