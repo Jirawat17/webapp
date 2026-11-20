@@ -960,9 +960,9 @@ function renderNav(user, active) {
     addEventListener('resize', () => { clearTimeout(hen); hen = setTimeout(canChoTenHeader, 150); });
   }
 
-  khoiDongTicker(user);
+  if (active === 'orders') khoiDongTicker(user);
 }
-// Ticker đơn ưu tiên — hiển thị sau #nav, chỉ superadmin/admin/ve_file
+// Ticker đơn ưu tiên — chỉ hiển thị ở trang Đơn hàng (orders), sau #nav, chỉ superadmin/admin/ve_file
 async function khoiDongTicker(user) {
   if (!laAdmin(user.vaiTro) && user.vaiTro !== 've_file') return;
   if (window._tickerDaKhoiDong) return; // tránh gọi lại khi renderNav chạy nhiều lần

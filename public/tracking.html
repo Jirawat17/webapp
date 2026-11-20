@@ -206,7 +206,7 @@
      quy trình mua và bảng "Danh sách đơn tự động mua tracking" giữ nguyên. -->
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=138"></script>
+<script src="/js/api.js?v=139"></script>
 <script src="/js/suaThongTinGke.js?v=2"></script>
 <script src="/js/suaThongTinKl.js?v=1"></script>
 <script>
@@ -246,7 +246,7 @@ const NHAN_TRANG_THAI = {
   // chạy SONG SONG thay vì xếp hàng tuần tự (bổ sung 22/09/2026, theo yêu cầu người dùng cải thiện tốc
   // độ tải trang) — trước đây thời gian tải = TỔNG round-trip, giờ = round-trip CHẬM NHẤT trong số đó.
   // Cấu hình GKE ĐÃ CHUYỂN sang settings.html (bổ sung 23/09/2026) — bớt 1 lượt tải khỏi danh sách này.
-  await Promise.all([taiCauHinh(), taiCauHinhQuetTrangThai(), taiDanhSach(), taiLogs(), taiBangGgSheet()]);
+  await Promise.all([taiCauHinh(), taiCauHinhQuetTrangThai(), taiDanhSach(), taiLogs(), taiBangGgSheet(), taiCanhBaoThuCong()]);
   // Cùng chu kỳ với Bảng điều khiển ("hiển thị động" — tự tải lại, không cần bấm gì thêm).
   setInterval(taiLogs, 60000);
 })();
