@@ -906,8 +906,8 @@ function suaDonKetSanSang() {
 // Tự động bỏ ưu tiên sau 24h kể từ Đã sản xuất (21/11/2026, theo yêu cầu người dùng). Chỉ đọc/ghi SQLite.
 function tuDongBoUuTien() {
   const { ghiLog } = require('./logService');
-  const GIO_24 = 24 * 60 * 60 * 1000;
-  const mocCat = Date.now() - GIO_24;
+  const GIO_72 = 72 * 60 * 60 * 1000;
+  const mocCat = Date.now() - GIO_72;
   const daXuLy = [];
   for (const [sttKey, r] of trangThaiDbService.layTatCa()) {
     if (r.DA_XOA === 'TRUE') continue;
@@ -918,11 +918,11 @@ function tuDongBoUuTien() {
     trangThaiDbService.ghiDe(sttKey, { DON_UU_TIEN: 'FALSE', NguoiCapNhatCuoi: 'Hệ thống', ThoiGianCapNhatCuoi: new Date().toISOString() });
     ghiLog({
       nguoiDung: 'Hệ thống', vaiTro: 'he_thong', hanhDong: 'CAP_NHAT_DON', sttKey,
-      chiTiet: { DON_UU_TIEN: 'FALSE', _truocKhiSua: { DON_UU_TIEN: 'TRUE' }, _chu: 'Tự động bỏ ưu tiên sau 24h kể từ Đã sản xuất' },
+      chiTiet: { DON_UU_TIEN: 'FALSE', _truocKhiSua: { DON_UU_TIEN: 'TRUE' }, _chu: 'Tự động bỏ ưu tiên sau 72h kể từ Đã sản xuất' },
     }).catch(err => console.error('[Orders] Lỗi ghi log bỏ ưu tiên tự động:', err.message));
     daXuLy.push(sttKey);
   }
-  if (daXuLy.length) console.log(`[Orders] Tự động bỏ ưu tiên ${daXuLy.length} đơn (Đã sản xuất > 24h): ${daXuLy.join(', ')}`);
+  if (daXuLy.length) console.log(`[Orders] Tự động bỏ ưu tiên ${daXuLy.length} đơn (Đã sản xuất > 72h): ${daXuLy.join(', ')}`);
   return daXuLy;
 }
 
