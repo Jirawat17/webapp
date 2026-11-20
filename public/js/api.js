@@ -996,11 +996,12 @@ async function khoiDongTicker(user) {
     let data;
     try { data = await apiFetch('/ticker'); } catch (e) { console.error('[ticker] lỗi API:', e.message, e.status); return; }
     if (!data.donUuTien || !data.donUuTien.length) { wrap.style.display = 'none'; return; }
-    const nhan = data.donUuTien.map(({ ma, sl }) =>
-      `<span class="ticker-ma" onclick="location.href='/order.html?stt=${encodeURIComponent(ma)}'">${escapeHtml(ma)}${sl ? `<span style="margin-left:4px;font-weight:400;font-size:0.9em">SL:${escapeHtml(String(sl))}</span>` : ''}</span>`
+    const tongSL = data.donUuTien.reduce((s, { sl }) => s + (parseInt(sl, 10) || 0), 0);
+    const nhan = data.donUuTien.map(({ ma }) =>
+      `<span class="ticker-ma" onclick="location.href='/order.html?stt=${encodeURIComponent(ma)}'">${escapeHtml(ma)}</span>`
     ).join('');
     // Duplicate để CSS -50% loop mượt
-    const mot = `🔴 Đơn ưu tiên: ${nhan}    `;
+    const mot = `🔴 Đơn ưu tiên${tongSL ? ` · Tổng SL: ${tongSL}` : ''}: ${nhan}    `;
     wrap.innerHTML = `<span class="ticker-track">${mot}${mot}</span>`;
     wrap.style.display = '';
   }
