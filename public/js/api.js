@@ -993,7 +993,7 @@ async function khoiDongTicker(user) {
 
   async function capNhat() {
     let data;
-    try { data = await apiFetch('/ticker'); } catch { return; }
+    try { data = await apiFetch('/ticker'); } catch (e) { console.error('[ticker] lỗi API:', e.message, e.status); return; }
     if (!data.donUuTien || !data.donUuTien.length) { wrap.style.display = 'none'; return; }
     const nhan = data.donUuTien.map(ma =>
       `<span class="ticker-ma" onclick="location.href='/order.html?stt=${encodeURIComponent(ma)}'">${escapeHtml(ma)}</span>`
