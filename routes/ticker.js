@@ -12,7 +12,7 @@ router.use((req, res, next) => {
 
 router.get('/', async (req, res) => {
   const { rows } = await orderService.getAll();
-  const uu = rows.filter(r => r.DonUuTien).map(r => r.STT_Key).filter(Boolean);
+  const uu = rows.filter(r => orderService.laUuTien(r)).map(r => r.STT_Key).filter(Boolean);
   res.json({ donUuTien: uu });
 });
 
