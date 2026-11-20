@@ -194,6 +194,21 @@ function veKhoiVanChuyen(ds) {
     `${escapeHtml(d.trackingId)} · ${d.quyTac.map(q => NHAN_QUY_TAC[q.ma] + (q.soNgay !== null ? ` ${q.soNgay} ngày` : '')).join(', ')}${d.trangThai ? ' · ' + escapeHtml(d.trangThai) : ''}${d.ngayLenDon ? ' · ' + nhanNgayLenDon(d) : ''}`,
     nutDaXuLy('VAN_CHUYEN', d))).join('')}</div>`;
 }
+// 5-nhóm bất thường (21/11/2026) — hiển thị các đơn tracking bất thường theo phân tích 5 nhóm.
+const TEN_NHOM_NGAN = { 1: 'N1·Nhãn chưa nhận', 2: 'N2·Pre-advice', 3: 'N3·Hoàn trả', 4: 'N4·OFD đứng', 5: 'N5·Treo' };
+function veKhoiBatThuongNhom(ds) {
+  if (!ds.length) return khoiRong('Không có đơn tracking nào bất thường theo 5 nhóm.');
+  return `<div class="ttha-danh-sach">${ds.map(d => {
+    const phu = [
+      TEN_NHOM_NGAN[d.nhom] || `N${d.nhom}`,
+      d.nhom !== 3 && d.soNgay ? `đứng yên ${d.soNgay} ngày` : null,
+      d.trangThai ? escapeHtml(d.trangThai.length > 60 ? d.trangThai.slice(0, 60) + '…' : d.trangThai) : null,
+      d.quocGia ? `(${escapeHtml(d.quocGia)})` : null,
+    ].filter(Boolean).join(' · ');
+    return dongDon(d.sttKey, phu);
+  }).join('')}</div>
+  <p style="margin-top:8px"><a href="/tracking.html">Xem chi tiết từng nhóm tại Tracking →</a></p>`;
+}
 async function danhDauDaXuLy(loai, khoa, giaTri, nut) {
   nut.disabled = true;
   try { await apiFetch('/trung-tam-hanh-dong/da-xu-ly', { method: 'POST', body: JSON.stringify({ loai, khoa, giaTri }) }); await taiTrungTamHanhDong(); }
@@ -261,7 +276,9 @@ async function taiTrungTamHanhDong() {
     kh('nhan-qua-lau', 'Đơn nhận quá lâu', soNhanLau,
       `<p class="ttha-mo-ta">Vẽ file quá ${kq.nguongNhan.gioVe} giờ${kq.nguongNhan.batVe ? '' : ' (đang tắt)'}, chạy máy quá ${kq.nguongNhan.gioChay} giờ${kq.nguongNhan.batChay ? '' : ' (đang tắt)'} — chỉnh ở Settings. Đơn được nhận lại thì nhắc hiện lại. Màu dòng = mức cảnh báo trễ hạn của đơn (Đỏ / Cam / Vàng).</p>${veKhoiNhanQuaLau(kq.nhanQuaLau)}`,
       { phu: soKhongRo ? ` <small>+ ${soKhongRo} không rõ lúc nhận</small>` : '' }),
-    kh('van-chuyen', 'Vận chuyển bất thường', kq.vanChuyenBatThuong.length,
+    kh('bat-thuong-nhom', 'Tracking bất thường — 5 nhóm', (kq.donBatThuongTracking || []).length,
+      `<p class="ttha-mo-ta">Phát hiện tự động: nhãn chưa nhận, pre-advice, hoàn trả, OFD đứng yên, trạng thái treo kéo dài.</p>${veKhoiBatThuongNhom(kq.donBatThuongTracking || [])}`),
+    kh('van-chuyen', 'Vận chuyển bất thường (cài đặt R1/R2/R3)', kq.vanChuyenBatThuong.length,
       `<p class="ttha-mo-ta">Đã "Đã xử lý" mà trạng thái tracking đổi tiếp và vẫn bất thường thì hiện lại.</p>${veKhoiVanChuyen(kq.vanChuyenBatThuong)}`),
     kh('loi-tracking-gke', 'Lỗi tự động mua tracking GKE (48 giờ gần đây)', kq.loiTrackingGke.length, veKhoiLoiTracking(kq.loiTrackingGke)),
     kh('ket-mua-kl', 'Đơn kẹt "đang mua KL" (quá 30 phút)', (kq.ketMuaKl || []).length,

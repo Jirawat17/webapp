@@ -1326,8 +1326,7 @@ function nhanDangNhomBatThuong(r) {
   return null;
 }
 
-async function layDonBatThuongTracking() {
-  const { rows } = await orderService.getAll();
+function layDonBatThuongTrackingTuRows(rows) {
   return rows
     .filter(r =>
       r.TRACKING_ID && !r.TRACKING_CHUNG_CUA &&
@@ -1346,8 +1345,13 @@ async function layDonBatThuongTracking() {
     .sort((a, b) => a.nhom - b.nhom || b.soNgay - a.soNgay);
 }
 
+async function layDonBatThuongTracking() {
+  const { rows } = await orderService.getAll();
+  return layDonBatThuongTrackingTuRows(rows);
+}
+
 module.exports = {
-  layDonChuyenThuCong, layDonBatThuongTracking, choTuDongThuLai, suaThongTinGke, suaThongTinKl, SO_LAN_THU_TU_DONG_TOI_DA, apDungThongTinGke, docThongTinGke,
+  layDonChuyenThuCong, layDonBatThuongTracking, layDonBatThuongTrackingTuRows, choTuDongThuLai, suaThongTinGke, suaThongTinKl, SO_LAN_THU_TU_DONG_TOI_DA, apDungThongTinGke, docThongTinGke,
   layCauHinh, luuCauHinh, chayQuetTuDongMuaTracking, layDanhSachDonAutoTracking, layLogTracking,
   muaTrackingChoDon, inLabelChoDon, muaTrackingVaInLabelChoDon,
   capNhatTrangThaiTrackingChoDon, chayQuetCapNhatTrangThaiTracking, themSo0ZipMy, chayQuetTrangThaiNeuDenLuot, daGiaoThanhCongGke,

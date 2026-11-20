@@ -187,7 +187,7 @@ async function ganThongTinDonCanCheck(dsGhiChu, tatCa) {
 
 function layCanhBaoVanHanh(rows) {
   const vanHanh = require('./vanHanhService');
-  const { daGiaoThanhCongGke } = require('./trackingAutoService');
+  const { daGiaoThanhCongGke, layDonBatThuongTrackingTuRows } = require('./trackingAutoService');
   const cauHinh = vanHanh.layCauHinh();
   // mucCanhBao (14/10/2026, theo yêu cầu người dùng): mức cảnh báo trễ hạn của đơn (DO/CAM/VANG/null — cùng mức ở Danh sách đơn,
   // services/alertService.js) để admin thấy ngay đơn nhận lâu nào đang trễ nặng; giữ nguyên thứ tự (người dùng chốt).
@@ -200,6 +200,7 @@ function layCanhBaoVanHanh(rows) {
     vanChuyenBatThuong: vanHanh.locDaXuLy('VAN_CHUYEN',
       vanHanh.vanChuyenBatThuong(rows, cauHinh.l2, r => daGiaoThanhCongGke(r.MA_NODE_TRACKING, r.MA_TRANG_THAI_NODE_TRACKING)), vanHanh.khoaL2, vanHanh.giaTriL2)
       .map(d => ({ ...d, khoa: vanHanh.khoaL2(d), giaTri: vanHanh.giaTriL2(d), ngayLenDon: ngayLenDonNgan(theoKey.get(d.sttKey)) })),
+    donBatThuongTracking: layDonBatThuongTrackingTuRows(rows),
     nguongNhan: cauHinh.y6,
   };
 }
