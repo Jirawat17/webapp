@@ -1007,7 +1007,8 @@ async function khoiDongTicker(user) {
   }
 
   await capNhat();
-  setInterval(capNhat, 60 * 60 * 1000); // làm mới mỗi giờ
+  const tanSuat = Math.max(5, Math.min(120, parseInt(localStorage.getItem('ticker_tan_suat') || '60', 10)));
+  setInterval(capNhat, tanSuat * 60 * 1000);
 }
 
 // Tên vẫn bị cắt -> ẩn chữ "Xưởng Thêu" cạnh logo (chỉ trang trí) để nhường chỗ cho tên — dùng chung máy vẫn biết ai đang đăng nhập.

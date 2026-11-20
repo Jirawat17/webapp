@@ -903,6 +903,30 @@ function suaDonKetSanSang() {
   return ketQua;
 }
 
+// Tự động bỏ ưu tiên sau 24h kể từ ĐÃ DÁN TEM (20/11/2026, theo yêu cầu người dùng). Chỉ đọc/ghi SQLite.
+function tuDongBoUuTien() {
+  const { ghiLog } = require('./logService');
+  const GIO_24 = 24 * 60 * 60 * 1000;
+  const mocCat = Date.now() - GIO_24;
+  const daXuLy = [];
+  for (const [sttKey, r] of trangThaiDbService.layTatCa()) {
+    if (r.DA_XOA === 'TRUE') continue;
+    if (r.DON_UU_TIEN !== 'TRUE') continue;
+    if (r.TRANG_THAI_XUONG !== 'ĐÃ DÁN TEM') continue;
+    if (!r.THOI_GIAN_DAN_TEM) continue;
+    const tDanTem = new Date(r.THOI_GIAN_DAN_TEM).getTime();
+    if (isNaN(tDanTem) || tDanTem > mocCat) continue;
+    trangThaiDbService.ghiDe(sttKey, { DON_UU_TIEN: 'FALSE', NguoiCapNhatCuoi: 'Hệ thống', ThoiGianCapNhatCuoi: new Date().toISOString() });
+    ghiLog({
+      nguoiDung: 'Hệ thống', vaiTro: 'he_thong', hanhDong: 'CAP_NHAT_DON', sttKey,
+      chiTiet: { DON_UU_TIEN: 'FALSE', _truocKhiSua: { DON_UU_TIEN: 'TRUE' }, _chu: 'Tự động bỏ ưu tiên sau 24h kể từ ĐÃ DÁN TEM' },
+    }).catch(err => console.error('[Orders] Lỗi ghi log bỏ ưu tiên tự động:', err.message));
+    daXuLy.push(sttKey);
+  }
+  if (daXuLy.length) console.log(`[Orders] Tự động bỏ ưu tiên ${daXuLy.length} đơn (ĐÃ DÁN TEM > 24h): ${daXuLy.join(', ')}`);
+  return daXuLy;
+}
+
 // 4 cột theo dõi TỰ ĐỘNG mua tracking (30/09/2026, trackingAutoService.js#ghiNhanLanThuTuDong) — CHỈ vai trò có menu Tracking
 // được thấy (yêu cầu người dùng: chặn cả ở API). Gỡ khỏi dữ liệu đơn trả về cho vai trò khác (routes/orders.js, routes/qr.js).
 // + THONG_TIN_GKE_CHO_DON_LOI (01/10/2026): dữ liệu sửa tay gửi GKE — cùng nhóm, cùng quyền xem.
@@ -917,7 +941,7 @@ function anCotTheoDoiMuaTracking(row, user) {
 
 module.exports = {
   VAI_TRO_MENU_TRACKING, anCotTheoDoiMuaTracking, NGUON_TRACKING_SELLER,
-  suaDonKetSanSang,
+  suaDonKetSanSang, tuDongBoUuTien,
   TAB, KEY_COL, getAll, getByKey, batDauLamMoiNen, getManyByKeys, update, filterForRole, ganTenKhachHang, tieuDeSanPham, danhSachViTriTheu,
   layDanhSachXuong, locTheoXuong, coQuyenTheoXuong, phamViDon, laUuTien, laDonHold, loaiTinhTrangDacBiet, canhBaoTinhTrangConHan, canhBaoNhomKhiQuet, timDonTheoMaGoTay, docSoMuiChi, lyDoDaMuaTracking, NHOM_LOC_TONG_QUAT,
 };

@@ -97,6 +97,9 @@ app.listen(PORT, () => console.log(`Xưởng Thêu app đang chạy tại http:/
 
 // Sửa 1 lần các đơn kẹt ở "Đã in mã" dù đủ phôi + file (bổ sung 25/09/2026, xem orderService.js).
 try { require('./services/orderService').suaDonKetSanSang(); } catch (err) { console.error('[Orders] Lỗi sửa đơn kẹt:', err.message); }
+// Tự động bỏ ưu tiên sau 24h kể từ ĐÃ DÁN TEM (20/11/2026) — chạy ngay khi khởi động + mỗi 30 phút.
+try { require('./services/orderService').tuDongBoUuTien(); } catch (err) { console.error('[Orders] Lỗi bỏ ưu tiên tự động:', err.message); }
+setInterval(() => { try { require('./services/orderService').tuDongBoUuTien(); } catch (err) { console.error('[Orders] Lỗi bỏ ưu tiên tự động:', err.message); } }, 30 * 60 * 1000).unref();
 
 // Lịch gửi Telegram cảnh báo 3 tầng (services/canhBaoJob.js) ĐÃ BỎ 16/10/2026, theo yêu cầu người dùng — không dùng (chưa từng cấu
 // hình chat), lại ghi cờ "đã gửi" dù không gửi được. Mức cảnh báo trên giao diện vẫn tính trực tiếp (alertService.tinhMucCanhBao).

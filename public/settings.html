@@ -65,11 +65,21 @@
 
   <details id="details-ticker" style="margin-top:var(--space-6)">
     <summary class="btn-hanh-dong phu">Ticker đơn ưu tiên</summary>
-    <p>Dải chữ chạy ngang phía dưới menu, hiển thị các đơn đang được đánh dấu ưu tiên (chỉ superadmin/admin/vẽ file thấy). Thay đổi tốc độ có hiệu lực sau khi tải lại trang.</p>
+    <p>Dải chữ chạy ngang phía dưới menu, hiển thị các đơn đang được đánh dấu ưu tiên (chỉ superadmin/admin/vẽ file thấy). Thay đổi có hiệu lực sau khi tải lại trang.</p>
     <label style="display:flex;align-items:center;gap:var(--space-3);margin-top:var(--space-3)">
-      <span style="white-space:nowrap">Tốc độ:</span>
+      <span style="white-space:nowrap">Tốc độ chạy:</span>
       <input type="range" id="ticker-speed-inp" min="10" max="120" step="5" style="flex:1;accent-color:var(--color-primary)">
       <span id="ticker-speed-val" style="min-width:60px;text-align:right;font-weight:600"></span>
+    </label>
+    <label style="display:flex;align-items:center;gap:var(--space-3);margin-top:var(--space-3)">
+      <span style="white-space:nowrap">Tần suất đọc lại:</span>
+      <select id="ticker-interval-inp" style="padding:6px 10px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface);color:var(--color-text);font-size:1rem">
+        <option value="5">5 phút</option>
+        <option value="15">15 phút</option>
+        <option value="30">30 phút</option>
+        <option value="60">1 giờ</option>
+        <option value="120">2 giờ</option>
+      </select>
     </label>
     <button type="button" class="btn-hanh-dong" id="btn-luu-ticker" style="margin-top:var(--space-3)">Lưu</button>
     <span id="ticker-speed-msg" style="margin-left:var(--space-3);font-size:0.9rem;color:var(--color-success);display:none">Đã lưu, tải lại trang để áp dụng.</span>
@@ -401,7 +411,7 @@
 </div>
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=137"></script>
+<script src="/js/api.js?v=138"></script>
 <script>
 (async () => {
   const user = await requireLoginOrRedirect();
@@ -456,17 +466,22 @@
   document.getElementById('btn-kiem-tra-config').onclick = () => taiConfigSeller(true);
   datTaiLaiSauDayLai(taiDongBoSeller);
 
-  // Ticker speed
+  // Ticker speed + interval
   (() => {
     const inp = document.getElementById('ticker-speed-inp');
     const lbl = document.getElementById('ticker-speed-val');
     const msg = document.getElementById('ticker-speed-msg');
+    const selInterval = document.getElementById('ticker-interval-inp');
     const hienThi = v => { lbl.textContent = v + ' giây'; };
     const cur = Math.max(10, Math.min(120, parseInt(localStorage.getItem('ticker_toc_do') || '40', 10)));
     inp.value = cur; hienThi(cur);
     inp.oninput = () => hienThi(inp.value);
+    const curInterval = localStorage.getItem('ticker_tan_suat') || '60';
+    const optInterval = selInterval.querySelector(`option[value="${curInterval}"]`);
+    if (optInterval) optInterval.selected = true;
     document.getElementById('btn-luu-ticker').onclick = () => {
       localStorage.setItem('ticker_toc_do', inp.value);
+      localStorage.setItem('ticker_tan_suat', selInterval.value);
       msg.style.display = '';
       setTimeout(() => { msg.style.display = 'none'; }, 3000);
     };
