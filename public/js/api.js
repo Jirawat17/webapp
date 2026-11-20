@@ -959,7 +959,55 @@ function renderNav(user, active) {
     let hen;
     addEventListener('resize', () => { clearTimeout(hen); hen = setTimeout(canChoTenHeader, 150); });
   }
+
+  khoiDongTicker(user);
 }
+// Ticker đơn ưu tiên — hiển thị sau #nav, chỉ superadmin/admin/ve_file
+async function khoiDongTicker(user) {
+  if (!laAdmin(user.vaiTro) && user.vaiTro !== 've_file') return;
+  if (window._tickerDaKhoiDong) return; // tránh gọi lại khi renderNav chạy nhiều lần
+  window._tickerDaKhoiDong = true;
+
+  // Tạo container 1 lần, gắn ngay sau #nav
+  let wrap = document.getElementById('ticker-uu-tien');
+  if (!wrap) {
+    wrap = document.createElement('div');
+    wrap.id = 'ticker-uu-tien';
+    wrap.style.cssText = 'overflow:hidden;white-space:nowrap;background:var(--color-warning-bg,#fef9c3);color:var(--color-warning-text,#854d0e);border-bottom:1px solid var(--color-border);font-size:0.88rem;font-weight:600;display:none';
+    const nav = document.getElementById('nav');
+    if (nav && nav.parentNode) nav.parentNode.insertBefore(wrap, nav.nextSibling);
+    else document.body.prepend(wrap);
+  }
+
+  if (!document.getElementById('ticker-style')) {
+    const st = document.createElement('style');
+    st.id = 'ticker-style';
+    // translateX(0→-50%): nội dung duplicate 2 lần nên -50% = đúng 1 bản → loop mượt không giật
+    st.textContent = `@keyframes ticker-scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}` +
+      `#ticker-uu-tien .ticker-track{display:inline-block;padding:5px 0;animation:ticker-scroll 40s linear infinite}` +
+      `#ticker-uu-tien .ticker-track:hover{animation-play-state:paused}` +
+      `#ticker-uu-tien .ticker-ma{margin:0 24px;cursor:pointer;text-decoration:underline;text-underline-offset:2px}` +
+      `#ticker-uu-tien .ticker-ma:hover{opacity:0.75}`;
+    document.head.appendChild(st);
+  }
+
+  async function capNhat() {
+    let data;
+    try { data = await apiFetch('/ticker'); } catch { return; }
+    if (!data.donUuTien || !data.donUuTien.length) { wrap.style.display = 'none'; return; }
+    const nhan = data.donUuTien.map(ma =>
+      `<span class="ticker-ma" onclick="location.href='/order.html?stt=${encodeURIComponent(ma)}'">${escapeHtml(ma)}</span>`
+    ).join('');
+    // Duplicate để CSS -50% loop mượt
+    const mot = `🔴 Đơn ưu tiên: ${nhan}    `;
+    wrap.innerHTML = `<span class="ticker-track">${mot}${mot}</span>`;
+    wrap.style.display = '';
+  }
+
+  await capNhat();
+  setInterval(capNhat, 60 * 60 * 1000); // làm mới mỗi giờ
+}
+
 // Tên vẫn bị cắt -> ẩn chữ "Xưởng Thêu" cạnh logo (chỉ trang trí) để nhường chỗ cho tên — dùng chung máy vẫn biết ai đang đăng nhập.
 // Hiện lại chữ trước rồi mới đo (màn rộng ra thì chữ quay lại). Máy tính .app-header ẩn (đo ra 0) nên không ẩn gì.
 function canChoTenHeader() {

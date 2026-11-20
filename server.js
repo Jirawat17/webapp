@@ -79,6 +79,7 @@ app.use('/api/nhat-ky-quet', require('./routes/nhatKyQuet')); // Logs_UploadAnh 
 app.use('/api/changelog', require('./routes/changelog'));
 app.use('/api/doanh-thu', require('./routes/doanhThu'));
 app.use('/api/chi-phi', require('./routes/chiPhi'));
+app.use('/api/ticker', require('./routes/ticker'));
 app.use('/api/ping', require('./routes/doMang')); // đo tốc độ mạng từ trình duyệt — chấm báo mạng trên menu mọi trang (16/10/2026)
 
 app.use(express.static(path.join(__dirname, 'public')));
