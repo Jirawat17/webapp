@@ -226,7 +226,13 @@ async function traTrangThaiHpw(donTra) {
   if (!moi) return { lyDo: 'HPW chưa có sự kiện tracking nào cho đơn này (có thể vừa mua label, chưa được quét nhận).' };
   return {
     suKien: moi,
-    capNhat: { TRANG_THAI_TRACKING: String(moi.description || ''), MA_NODE_TRACKING: 'HPW', MA_TRANG_THAI_NODE_TRACKING: hpwService.laDaGiao(moi.description) ? 'DONE' : '' },
+    capNhat: {
+      TRANG_THAI_TRACKING: String(moi.description || ''),
+      MA_NODE_TRACKING: 'HPW',
+      MA_TRANG_THAI_NODE_TRACKING: hpwService.laDaGiao(moi.description) ? 'DONE' : '',
+      THOI_GIAN_SU_KIEN_TRACKING: String(moi.date || ''),
+      DIA_DIEM_TRACKING: String(moi.location || ''),
+    },
   };
 }
 const daGiaoXongHpw = r => laDonHpw(r) && r.MA_TRANG_THAI_NODE_TRACKING === 'DONE';

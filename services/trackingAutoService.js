@@ -1060,6 +1060,8 @@ async function capNhatTrangThaiTrackingChoDon(sttKey, { gomDelivered, duLieuDon 
     THOI_GIAN_CAP_NHAT_TRACKING: dinhDangNgayGioNgan(new Date()),
     MA_NODE_TRACKING: suKienMoiNhat.order_node || '',
     MA_TRANG_THAI_NODE_TRACKING: suKienMoiNhat.node_status || '',
+    THOI_GIAN_SU_KIEN_TRACKING: String(suKienMoiNhat.create_time || suKienMoiNhat.event_time || suKienMoiNhat.eventTime || ''),
+    DIA_DIEM_TRACKING: String(suKienMoiNhat.location || ''),
   };
   await ghiKetQuaTrangThai(cacDonGhi, capNhat, { headers, gomDelivered });
   return { ok: true, suKien: suKienMoiNhat };
@@ -1280,8 +1282,72 @@ function choTuDongThuLai(row, user) {
   return true;
 }
 
+// ============================================================
+// PHÁT HIỆN ĐƠN VẬN CHUYỂN BẤT THƯỜNG (21/11/2026)
+// 5 nhóm theo phân tích thực tế ~500 đơn:
+//   1. Nhãn tạo chưa được quét nhận ≥21 ngày (node OL002)
+//   2. Pre-advice chặng cuối ≥21 ngày
+//   3. Return/hoàn trả — cảnh báo ngay
+//   4. Out for Delivery đứng yên ≥20 ngày (OL022/555)
+//   5. Trạng thái treo kéo dài (Last-Mile Quá Cảnh >15d, v.v.)
+// ============================================================
+const NGAY_MS_BAT_THUONG = 24 * 60 * 60 * 1000;
+
+function soNgayDungYen(r) {
+  // Ưu tiên eventTime của hãng (chính xác nhất) → lúc status đổi (hệ thống) → lúc mua tracking (fallback xa nhất).
+  const t = new Date(r.THOI_GIAN_SU_KIEN_TRACKING || r.THOI_GIAN_DOI_TRANG_THAI_TRACKING || r.THOI_GIAN_MUA_TRACKING || '').getTime();
+  if (!t || isNaN(t)) return 0;
+  return Math.floor((Date.now() - t) / NGAY_MS_BAT_THUONG);
+}
+
+const TU_KHOA_RETURN = ['Return', 'Trả Lại', 'Returned to Original', 'Returned to Sender', 'Bất Thường-Return', 'Abnormal Return', 'Abnormal Shipment'];
+const LINGER_NHOM5 = [
+  { match: s => s.includes('Last-Mile trong Quá Cảnh') || s.includes('Quá Cảnh Dặm Cuối'), ngay: 15 },
+  { match: s => s.includes('Arrived at USPS Facility') || s.includes('Arrived at Facility'), ngay: 10 },
+  { match: s => s.includes('Chưa được quét nhận'), ngay: 10 },
+  { match: s => /\bin transit\b/i.test(s) || s.includes('Đang Vận Chuyển Đường Trục'), ngay: 20 },
+  { match: s => s.includes('Arrived at Destination') && !s.includes('Delivered'), ngay: 15 },
+];
+
+function nhanDangNhomBatThuong(r) {
+  const tt = r.TRANG_THAI_TRACKING || '';
+  const maNode = r.MA_NODE_TRACKING || '';
+  const maTTNode = r.MA_TRANG_THAI_NODE_TRACKING || '';
+  const ngay = soNgayDungYen(r);
+  if (TU_KHOA_RETURN.some(k => tt.includes(k))) return { nhom: 3, moTa: 'Đơn hoàn trả / bất thường', soNgay: ngay };
+  if ((maNode === 'OL002' || tt.includes('Tạo đơn hàng') || tt.includes('Label Generated') || tt.includes('Nhãn đã được tạo')) && ngay >= 21)
+    return { nhom: 1, moTa: 'Nhãn tạo chưa được quét nhận', soNgay: ngay };
+  if ((tt.includes('Đã nhận thông tin đơn hàng chặng cuối') || /pre.?advice/i.test(tt)) && ngay >= 21)
+    return { nhom: 2, moTa: 'Chỉ có thông báo trước (pre-advice)', soNgay: ngay };
+  if (((maNode === 'OL022' && maTTNode === '555') || /out for delivery/i.test(tt) || /giao hàng dặm cuối cùng/i.test(tt)) && ngay >= 20)
+    return { nhom: 4, moTa: 'Đang giao hàng cuối nhưng không có cập nhật', soNgay: ngay };
+  for (const { match, ngay: nguong } of LINGER_NHOM5)
+    if (match(tt) && ngay >= nguong) return { nhom: 5, moTa: 'Trạng thái treo kéo dài', soNgay: ngay };
+  return null;
+}
+
+async function layDonBatThuongTracking() {
+  const { rows } = await orderService.getAll();
+  return rows
+    .filter(r =>
+      r.TRACKING_ID && !r.TRACKING_CHUNG_CUA &&
+      !TRANG_THAI_KHONG_CAN_MUA.includes(r.TRANG_THAI_XUONG) &&
+      !daGiaoThanhCongGke(r.MA_NODE_TRACKING, r.MA_TRANG_THAI_NODE_TRACKING) &&
+      !trackingKlService().daGiaoXongKl(r) &&
+      !trackingHpwService().daGiaoXongHpw(r) &&
+      r.TRANG_THAI_TRACKING
+    )
+    .map(r => {
+      const nd = nhanDangNhomBatThuong(r);
+      if (!nd) return null;
+      return { sttKey: r.STT_Key, ...nd, trangThai: r.TRANG_THAI_TRACKING, quocGia: r.QUOC_GIA || '', diaDiem: r.DIA_DIEM_TRACKING || '', thoiGianSuKien: r.THOI_GIAN_SU_KIEN_TRACKING || '' };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.nhom - b.nhom || b.soNgay - a.soNgay);
+}
+
 module.exports = {
-  layDonChuyenThuCong, choTuDongThuLai, suaThongTinGke, suaThongTinKl, SO_LAN_THU_TU_DONG_TOI_DA, apDungThongTinGke, docThongTinGke,
+  layDonChuyenThuCong, layDonBatThuongTracking, choTuDongThuLai, suaThongTinGke, suaThongTinKl, SO_LAN_THU_TU_DONG_TOI_DA, apDungThongTinGke, docThongTinGke,
   layCauHinh, luuCauHinh, chayQuetTuDongMuaTracking, layDanhSachDonAutoTracking, layLogTracking,
   muaTrackingChoDon, inLabelChoDon, muaTrackingVaInLabelChoDon,
   capNhatTrangThaiTrackingChoDon, chayQuetCapNhatTrangThaiTracking, themSo0ZipMy, chayQuetTrangThaiNeuDenLuot, daGiaoThanhCongGke,

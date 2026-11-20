@@ -255,6 +255,8 @@ async function traTrangThaiKl(donTra) {
       TRANG_THAI_TRACKING: String(moi.description || ''),
       MA_NODE_TRACKING: 'KL',
       MA_TRANG_THAI_NODE_TRACKING: ds.some(e => e.trackingComplete === true) ? 'DONE' : '',
+      THOI_GIAN_SU_KIEN_TRACKING: String(moi.eventTime || ''),
+      DIA_DIEM_TRACKING: String(moi.location || ''),
     },
   };
 }

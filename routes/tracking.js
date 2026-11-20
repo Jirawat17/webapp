@@ -5,7 +5,7 @@ const {
   layCauHinh, luuCauHinh, layDanhSachDonAutoTracking, layLogTracking, muaTrackingChoDon, HANG_TU_MUA,
   inLabelChoDon, muaTrackingVaInLabelChoDon, capNhatTrangThaiTrackingChoDon,
   layCauHinhQuetTrangThai, luuCauHinhQuetTrangThai, SO_PHUT_QUET_TRANG_THAI_TOI_THIEU,
-  layDonChuyenThuCong, choTuDongThuLai, suaThongTinGke, suaThongTinKl,
+  layDonChuyenThuCong, layDonBatThuongTracking, choTuDongThuLai, suaThongTinGke, suaThongTinKl,
 } = require('../services/trackingAutoService');
 const {
   gopCacTemPdf, layDanhSachTaiKhoanGke, luuTaiKhoanGke, xoaTaiKhoanGke, ganTaiKhoanGkeChoXuong, daNapTienGke, luuSoDuGke,
@@ -323,6 +323,10 @@ function coMenuTracking(req, res, next) {
 
 router.get('/canh-bao-thu-cong', coMenuTracking, async (req, res) => {
   res.json(await layDonChuyenThuCong(req.session.user));
+});
+
+router.get('/canh-bao-bat-thuong', coMenuTracking, async (req, res) => {
+  res.json(await layDonBatThuongTracking());
 });
 
 // "Bỏ qua" cảnh báo đơn chuyển mua thủ công (11/10/2026, theo yêu cầu người dùng) — CHỈ superadmin. boQua=false = "Hiện lại cảnh báo"

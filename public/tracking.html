@@ -85,6 +85,8 @@
   <!-- Cảnh báo đơn đã thử TỰ ĐỘNG mua 10 lần không được -> chuyển mua thủ công (30/09/2026) — API tự chặn vai trò không có
        menu Tracking, xem routes/tracking.js GET /canh-bao-thu-cong. -->
   <div id="canh-bao-thu-cong" style="display:none"></div>
+  <!-- Cảnh báo đơn vận chuyển bất thường 5 nhóm (21/11/2026) — API /tracking/canh-bao-bat-thuong. -->
+  <div id="canh-bao-bat-thuong" style="display:none"></div>
 
   <div class="tk-o-quet-nhanh">
     <label for="o-quet-in-label">Quét/nhập mã đơn để in label ngay</label>
@@ -246,7 +248,7 @@ const NHAN_TRANG_THAI = {
   // chạy SONG SONG thay vì xếp hàng tuần tự (bổ sung 22/09/2026, theo yêu cầu người dùng cải thiện tốc
   // độ tải trang) — trước đây thời gian tải = TỔNG round-trip, giờ = round-trip CHẬM NHẤT trong số đó.
   // Cấu hình GKE ĐÃ CHUYỂN sang settings.html (bổ sung 23/09/2026) — bớt 1 lượt tải khỏi danh sách này.
-  await Promise.all([taiCauHinh(), taiCauHinhQuetTrangThai(), taiDanhSach(), taiLogs(), taiBangGgSheet(), taiCanhBaoThuCong()]);
+  await Promise.all([taiCauHinh(), taiCauHinhQuetTrangThai(), taiDanhSach(), taiLogs(), taiBangGgSheet(), taiCanhBaoThuCong(), taiCanhBaoBatThuong()]);
   // Cùng chu kỳ với Bảng điều khiển ("hiển thị động" — tự tải lại, không cần bấm gì thêm).
   setInterval(taiLogs, 60000);
 })();
@@ -576,6 +578,58 @@ async function taiCanhBaoThuCong() {
   _dsCanhBaoThuCong = ds;
   veCanhBaoThuCong();
 }
+// ---- CẢNH BÁO VẬN CHUYỂN BẤT THƯỜNG (21/11/2026) — 5 nhóm, API /tracking/canh-bao-bat-thuong.
+let _dsCanhBaoBatThuong = [];
+let _thuGonCanhBaoBatThuong = false;
+async function taiCanhBaoBatThuong() {
+  const el = document.getElementById('canh-bao-bat-thuong');
+  let ds = [];
+  try { ds = await apiFetch('/tracking/canh-bao-bat-thuong'); } catch (e) { /* không có quyền / mạng lỗi -> không hiện */ }
+  if (!ds.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  _dsCanhBaoBatThuong = ds;
+  veCanhBaoBatThuong();
+}
+function batTatCanhBaoBatThuong() { _thuGonCanhBaoBatThuong = !_thuGonCanhBaoBatThuong; veCanhBaoBatThuong(); }
+const MAU_NHOM_BAT_THUONG = { 1: 'var(--color-warning-bg)', 2: 'var(--color-warning-bg)', 3: 'var(--color-danger-bg)', 4: 'var(--color-warning-bg)', 5: 'var(--color-warning-bg)' };
+const MAU_TEXT_NHOM_BAT_THUONG = { 1: 'var(--color-warning-text,#92400e)', 2: 'var(--color-warning-text,#92400e)', 3: 'var(--color-danger-text)', 4: 'var(--color-warning-text,#92400e)', 5: 'var(--color-warning-text,#92400e)' };
+const TEN_NHOM_BAT_THUONG = { 1: 'Nhóm 1 — Nhãn chưa được nhận', 2: 'Nhóm 2 — Pre-advice chặng cuối', 3: 'Nhóm 3 — Hoàn trả / bất thường', 4: 'Nhóm 4 — OFD đứng yên', 5: 'Nhóm 5 — Trạng thái treo' };
+function veCanhBaoBatThuong() {
+  const ds = _dsCanhBaoBatThuong;
+  const el = document.getElementById('canh-bao-bat-thuong');
+  const nhom3 = ds.filter(d => d.nhom === 3).length;
+  const mauNen = nhom3 ? 'var(--color-danger-bg)' : 'var(--color-warning-bg)';
+  const mauVien = nhom3 ? 'var(--color-danger-text)' : 'var(--color-warning-text,#92400e)';
+  const mauText = mauVien;
+  const nut = `<button type="button" onclick="batTatCanhBaoBatThuong()" aria-expanded="${!_thuGonCanhBaoBatThuong}" style="margin-left:auto;background:transparent;border:1px solid currentColor;color:inherit;border-radius:6px;padding:2px 10px;font-weight:700;cursor:pointer;white-space:nowrap">${_thuGonCanhBaoBatThuong ? 'Hiện ▾' : 'Thu gọn ▴'}</button>`;
+  el.style.display = '';
+  if (_thuGonCanhBaoBatThuong) {
+    el.innerHTML = `<div style="background:${mauNen};color:${mauText};border:2px solid ${mauVien};border-radius:8px;padding:4px 10px;margin-bottom:var(--space-4);display:flex;gap:8px;align-items:center;font-weight:700">
+      ${icon('alert', { size: 18 })} ${ds.length} đơn vận chuyển bất thường cần kiểm tra ${nut}</div>`;
+    return;
+  }
+  el.innerHTML = `
+    <div style="background:${mauNen};color:${mauText};border:3px solid ${mauVien};border-radius:8px;padding:14px 16px;margin-bottom:var(--space-4)">
+      <div style="font-size:1.2rem;font-weight:700;display:flex;gap:8px;align-items:center;flex-wrap:wrap">${icon('alert', { size: 24 })} ${ds.length} ĐƠN VẬN CHUYỂN BẤT THƯỜNG CẦN KIỂM TRA ${nut}</div>
+      <p style="margin:6px 0 10px">Các đơn có trạng thái tracking đáng nghi ngờ — cần liên hệ hãng vận chuyển hoặc xử lý thủ công.</p>
+      <table style="width:100%;border-collapse:collapse;font-size:0.88rem">
+        <thead><tr style="border-bottom:2px solid color-mix(in srgb, ${mauVien} 30%, transparent)">
+          <th style="text-align:left;padding:4px 8px">Mã đơn</th>
+          <th style="text-align:left;padding:4px 8px">Nhóm</th>
+          <th style="text-align:left;padding:4px 8px">Trạng thái tracking</th>
+          <th style="text-align:right;padding:4px 8px">Đứng yên</th>
+        </tr></thead>
+        <tbody>
+          ${ds.map(d => `<tr style="border-top:1px solid color-mix(in srgb, ${MAU_TEXT_NHOM_BAT_THUONG[d.nhom] || mauVien} 20%, transparent)">
+            <td style="padding:4px 8px"><a href="/order.html?stt=${encodeURIComponent(d.sttKey)}" target="_blank" rel="noopener" style="font-weight:700;color:inherit">${escapeHtml(d.sttKey)}</a>${d.quocGia ? ` <small>(${escapeHtml(d.quocGia)})</small>` : ''}</td>
+            <td style="padding:4px 8px"><span style="background:${MAU_NHOM_BAT_THUONG[d.nhom] || mauNen};color:${MAU_TEXT_NHOM_BAT_THUONG[d.nhom] || mauText};border-radius:4px;padding:1px 6px;font-size:0.8rem;white-space:nowrap">${escapeHtml(TEN_NHOM_BAT_THUONG[d.nhom] || `Nhóm ${d.nhom}`)}</span></td>
+            <td style="padding:4px 8px;word-break:break-word">${escapeHtml(d.trangThai || '')}</td>
+            <td style="padding:4px 8px;text-align:right;white-space:nowrap">${d.nhom === 3 ? '—' : `${d.soNgay} ngày`}${d.diaDiem ? `<br><small style="color:inherit;opacity:.75">${escapeHtml(d.diaDiem)}</small>` : ''}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
 // ---- XUẤT EXCEL MUA TRACKING THỦ CÔNG (02/10/2026) — server kiểm tra lại mọi thứ (kể cả lúc tải file).
 let dsGoiYXeg = [];
 const xegChon = new Set();

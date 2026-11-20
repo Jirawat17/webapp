@@ -107,6 +107,9 @@ const CAC_COT = [
   // L2 (11/10/2026): lúc mua tracking (TRACKING_ID đổi sang giá trị mới khác rỗng) và lúc TRANG_THAI_TRACKING ĐỔI giá trị — ghiDe() tự
   // đóng dấu (mọi đường ghi đều qua đây). Đơn đang có tracking lúc triển khai: mốc = lúc triển khai (người dùng chốt 11/10/2026).
   'THOI_GIAN_MUA_TRACKING', 'THOI_GIAN_DOI_TRANG_THAI_TRACKING',
+  // THOI_GIAN_SU_KIEN_TRACKING (21/11/2026): timestamp sự kiện gần nhất từ chính hãng vận chuyển (KL: eventTime, HPW: date, GKE: chưa rõ).
+  // Chính xác hơn THOI_GIAN_DOI_TRANG_THAI_TRACKING cho "đứng yên X ngày". DIA_DIEM_TRACKING: location từ hãng (KL/HPW), ví dụ "Los Angeles, CA, US".
+  'THOI_GIAN_SU_KIEN_TRACKING', 'DIA_DIEM_TRACKING',
   // NGUON_TRACKING (11/10/2026, theo yêu cầu người dùng): 'SELLER' = TRACKING_ID chép từ mã Seller điền trong Sheet (TRACKING_ID2) —
   // orderService.js#dongBoTrackingSeller tự ghi/cập nhật/xoá; '' = app mua hoặc nhập tay. BO_QUA_CANH_BAO_THU_CONG: "người|lúc"
   // superadmin bấm "Bỏ qua" ở khung cảnh báo đơn chuyển mua thủ công — đơn không hiện lại ở khung đó (trống = hiện bình thường).
