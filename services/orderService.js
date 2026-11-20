@@ -903,7 +903,7 @@ function suaDonKetSanSang() {
   return ketQua;
 }
 
-// Tự động bỏ ưu tiên sau 24h kể từ ĐÃ DÁN TEM (20/11/2026, theo yêu cầu người dùng). Chỉ đọc/ghi SQLite.
+// Tự động bỏ ưu tiên sau 24h kể từ Đã sản xuất (21/11/2026, theo yêu cầu người dùng). Chỉ đọc/ghi SQLite.
 function tuDongBoUuTien() {
   const { ghiLog } = require('./logService');
   const GIO_24 = 24 * 60 * 60 * 1000;
@@ -912,18 +912,17 @@ function tuDongBoUuTien() {
   for (const [sttKey, r] of trangThaiDbService.layTatCa()) {
     if (r.DA_XOA === 'TRUE') continue;
     if (r.DON_UU_TIEN !== 'TRUE') continue;
-    if (r.TRANG_THAI_XUONG !== 'ĐÃ DÁN TEM') continue;
-    if (!r.THOI_GIAN_DAN_TEM) continue;
-    const tDanTem = new Date(r.THOI_GIAN_DAN_TEM).getTime();
-    if (isNaN(tDanTem) || tDanTem > mocCat) continue;
+    if (!r.THOI_GIAN_SAN_XUAT) continue;
+    const tSanXuat = new Date(r.THOI_GIAN_SAN_XUAT).getTime();
+    if (isNaN(tSanXuat) || tSanXuat > mocCat) continue;
     trangThaiDbService.ghiDe(sttKey, { DON_UU_TIEN: 'FALSE', NguoiCapNhatCuoi: 'Hệ thống', ThoiGianCapNhatCuoi: new Date().toISOString() });
     ghiLog({
       nguoiDung: 'Hệ thống', vaiTro: 'he_thong', hanhDong: 'CAP_NHAT_DON', sttKey,
-      chiTiet: { DON_UU_TIEN: 'FALSE', _truocKhiSua: { DON_UU_TIEN: 'TRUE' }, _chu: 'Tự động bỏ ưu tiên sau 24h kể từ ĐÃ DÁN TEM' },
+      chiTiet: { DON_UU_TIEN: 'FALSE', _truocKhiSua: { DON_UU_TIEN: 'TRUE' }, _chu: 'Tự động bỏ ưu tiên sau 24h kể từ Đã sản xuất' },
     }).catch(err => console.error('[Orders] Lỗi ghi log bỏ ưu tiên tự động:', err.message));
     daXuLy.push(sttKey);
   }
-  if (daXuLy.length) console.log(`[Orders] Tự động bỏ ưu tiên ${daXuLy.length} đơn (ĐÃ DÁN TEM > 24h): ${daXuLy.join(', ')}`);
+  if (daXuLy.length) console.log(`[Orders] Tự động bỏ ưu tiên ${daXuLy.length} đơn (Đã sản xuất > 24h): ${daXuLy.join(', ')}`);
   return daXuLy;
 }
 
