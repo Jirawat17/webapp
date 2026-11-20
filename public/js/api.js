@@ -982,9 +982,10 @@ async function khoiDongTicker(user) {
   if (!document.getElementById('ticker-style')) {
     const st = document.createElement('style');
     st.id = 'ticker-style';
+    const tocDo = Math.max(10, Math.min(120, parseInt(localStorage.getItem('ticker_toc_do') || '40', 10)));
     // translateX(0→-50%): nội dung duplicate 2 lần nên -50% = đúng 1 bản → loop mượt không giật
     st.textContent = `@keyframes ticker-scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}` +
-      `#ticker-uu-tien .ticker-track{display:inline-block;padding:5px 0;animation:ticker-scroll 40s linear infinite}` +
+      `#ticker-uu-tien .ticker-track{display:inline-block;padding:5px 0;animation:ticker-scroll ${tocDo}s linear infinite}` +
       `#ticker-uu-tien .ticker-track:hover{animation-play-state:paused}` +
       `#ticker-uu-tien .ticker-ma{margin:0 24px;cursor:pointer;text-decoration:underline;text-underline-offset:2px}` +
       `#ticker-uu-tien .ticker-ma:hover{opacity:0.75}`;
@@ -995,8 +996,8 @@ async function khoiDongTicker(user) {
     let data;
     try { data = await apiFetch('/ticker'); } catch (e) { console.error('[ticker] lỗi API:', e.message, e.status); return; }
     if (!data.donUuTien || !data.donUuTien.length) { wrap.style.display = 'none'; return; }
-    const nhan = data.donUuTien.map(ma =>
-      `<span class="ticker-ma" onclick="location.href='/order.html?stt=${encodeURIComponent(ma)}'">${escapeHtml(ma)}</span>`
+    const nhan = data.donUuTien.map(({ ma, sl }) =>
+      `<span class="ticker-ma" onclick="location.href='/order.html?stt=${encodeURIComponent(ma)}'">${escapeHtml(ma)}${sl ? `<span style="margin-left:4px;font-weight:400;font-size:0.9em">SL:${escapeHtml(String(sl))}</span>` : ''}</span>`
     ).join('');
     // Duplicate để CSS -50% loop mượt
     const mot = `🔴 Đơn ưu tiên: ${nhan}    `;
