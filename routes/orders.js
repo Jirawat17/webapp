@@ -127,7 +127,7 @@ async function lamGiauDon(rows, banDoNhom, user) {
 // TẤT CẢ san_xuat thấy (an toàn hơn, tránh thất lạc đơn) — order.html/orders.html tự hiển thị cảnh
 // báo rõ ràng trong trường hợp này (xem NHAN_NGUOI_VAN_HANH_KHONG_RO ở phía client).
 function locDonDangChayMayTheoNguoiVanHanh(rows, user) {
-  if (user.vaiTro !== 'san_xuat') return rows;
+  if (user.vaiTro !== 'san_xuat' && user.vaiTro !== 've_file') return rows;
   return rows.filter(r => {
     if (r.TRANG_THAI_XUONG !== TRANG_THAI_DANG_CHAY_MAY) return true;
     if (!r.NguoiVanHanh) return true; // không xác định được -> vẫn cho thấy
