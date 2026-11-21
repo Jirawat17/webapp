@@ -1,19 +1,19 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QC â€” XÆ°á»Ÿng ThÃªu</title>
+<title>QC — Xưởng Thêu</title>
 <link rel="stylesheet" href="/css/style.css?v=112">
 <script src="/js/theme.js?v=104"></script>
 <style>
-/* AI QC (30/09/2026) â€” style riÃªng trang nÃ y, khÃ´ng Ä‘Ã¡ng thÃªm vÃ o style.css dÃ¹ng chung. */
+/* AI QC (30/09/2026) — style riêng trang này, không đáng thêm vào style.css dùng chung. */
 .qc-khoi { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-4); margin-bottom: var(--space-5); }
 .qc-khoi h3 { margin-top: 0; }
-/* Thu gá»n tá»«ng khá»‘i (02/10/2026): máº·c Ä‘á»‹nh Ä‘Ã³ng, báº¥m tiÃªu Ä‘á» Ä‘á»ƒ má»Ÿ; má»Ÿ Ä‘Æ°á»£c nhiá»u khá»‘i cÃ¹ng lÃºc. */
+/* Thu gọn từng khối (02/10/2026): mặc định đóng, bấm tiêu đề để mở; mở được nhiều khối cùng lúc. */
 .qc-khoi > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: var(--space-2); user-select: none; }
 .qc-khoi > summary::-webkit-details-marker { display: none; }
-.qc-khoi > summary::before { content: 'â–¸'; font-size: 1.1rem; color: var(--color-text-muted); transition: transform .15s; }
+.qc-khoi > summary::before { content: '▸'; font-size: 1.1rem; color: var(--color-text-muted); transition: transform .15s; }
 .qc-khoi[open] > summary::before { transform: rotate(90deg); }
 .qc-khoi > summary h3 { margin: 0; }
 .qc-khoi[open] > summary { margin-bottom: var(--space-3); }
@@ -49,25 +49,25 @@
   <h2>QC</h2>
 
   <details class="qc-khoi">
-    <summary><h3>ÄÆ¡n hÃ ng vá»«a cáº­p nháº­t tráº¡ng thÃ¡i <span id="vcn-so" style="font-weight:400;color:var(--color-text-muted)"></span></h3></summary>
-    <p style="color:var(--color-text-muted);margin-top:0">ÄÆ¡n cÃ³ Tráº¡ng thÃ¡i chung, PhÃ´i hoáº·c Váº½ file Ä‘á»•i trong <strong>1 giá»</strong> gáº§n nháº¥t (tÃ­nh tá»« lÃºc tráº¡ng thÃ¡i tháº­t sá»± Ä‘á»•i, má»i ngÆ°á»i dÃ¹ng vÃ  há»‡ thá»‘ng). Má»—i Ä‘Æ¡n 1 dÃ²ng â€” láº§n Ä‘á»•i gáº§n nháº¥t; cá»™t in Ä‘áº­m lÃ  tráº¡ng thÃ¡i vá»«a Ä‘á»•i, "Tráº¡ng thÃ¡i trÆ°á»›c Ä‘Ã³" lÃ  giÃ¡ trá»‹ ngay trÆ°á»›c láº§n Ä‘á»•i Ä‘Ã³. Tá»± táº£i láº¡i má»—i phÃºt; Ä‘Æ¡n quÃ¡ 1 giá» tá»± rá»i danh sÃ¡ch. Chá»‰ cÃ³ dá»¯ liá»‡u tá»« khi cÃ³ tÃ­nh nÄƒng nÃ y.</p>
-    <div id="khoi-vua-cap-nhat" class="qc-cuon-ngang">Äang táº£i...</div>
+    <summary><h3>Đơn hàng vừa cập nhật trạng thái <span id="vcn-so" style="font-weight:400;color:var(--color-text-muted)"></span></h3></summary>
+    <p style="color:var(--color-text-muted);margin-top:0">Đơn có Trạng thái chung, Phôi hoặc Vẽ file đổi trong <strong>1 giờ</strong> gần nhất (tính từ lúc trạng thái thật sự đổi, mọi người dùng và hệ thống). Mỗi đơn 1 dòng — lần đổi gần nhất; cột in đậm là trạng thái vừa đổi, "Trạng thái trước đó" là giá trị ngay trước lần đổi đó. Tự tải lại mỗi phút; đơn quá 1 giờ tự rời danh sách. Chỉ có dữ liệu từ khi có tính năng này.</p>
+    <div id="khoi-vua-cap-nhat" class="qc-cuon-ngang">Đang tải...</div>
   </details>
 
   <details class="qc-khoi">
-    <summary><h3>Cáº¥u hÃ¬nh AI (Gemini / Claude)</h3></summary>
-    <p style="color:var(--color-text-muted);margin-top:0">Má»—i QC chá»n riÃªng nhÃ  cung cáº¥p AI, key + model riÃªng (key Gemini AI Studio láº¥y á»Ÿ aistudio.google.com; key Gemini Agent Platform / Vertex AI láº¥y á»Ÿ Google Cloud â†’ "Get Agent Platform API Key" â€” dÃ¹ng Ä‘Æ°á»£c credits Google Cloud; key Claude láº¥y á»Ÿ console.anthropic.com). Key cÃ¡c nhÃ  cung cáº¥p lÆ°u song song â€” Ä‘á»•i nhÃ  cung cáº¥p khÃ´ng máº¥t key bÃªn kia. Báº¥m LÆ°u = lÆ°u key/model cá»§a nhÃ  cung cáº¥p Ä‘ang chá»n VÃ€ dÃ¹ng nhÃ  cung cáº¥p Ä‘Ã³ cho QC. Key chá»‰ hiá»‡n dáº¡ng che; Ä‘á»ƒ trá»‘ng Ã´ key khi LÆ°u = giá»¯ key cÅ©.</p>
+    <summary><h3>Cấu hình AI (Gemini / Claude)</h3></summary>
+    <p style="color:var(--color-text-muted);margin-top:0">Mỗi QC chọn riêng nhà cung cấp AI, key + model riêng (key Gemini AI Studio lấy ở aistudio.google.com; key Gemini Agent Platform / Vertex AI lấy ở Google Cloud → "Get Agent Platform API Key" — dùng được credits Google Cloud; key Claude lấy ở console.anthropic.com). Key các nhà cung cấp lưu song song — đổi nhà cung cấp không mất key bên kia. Bấm Lưu = lưu key/model của nhà cung cấp đang chọn VÀ dùng nhà cung cấp đó cho QC. Key chỉ hiện dạng che; để trống ô key khi Lưu = giữ key cũ.</p>
     <datalist id="goi-y-model-gemini"><option value="gemini-2.5-flash"><option value="gemini-2.5-pro"></datalist>
     <datalist id="goi-y-model-vertex"><option value="gemini-2.5-flash"><option value="gemini-2.5-pro"></datalist>
     <datalist id="goi-y-model-claude"><option value="claude-sonnet-5-5"><option value="claude-haiku-4-5-20251001"><option value="claude-opus-5-5"></datalist>
-    <div id="khoi-cau-hinh">Äang táº£i...</div>
+    <div id="khoi-cau-hinh">Đang tải...</div>
     <p id="thong-bao-cau-hinh" style="display:none"></p>
   </details>
 
   <details class="qc-khoi">
     <summary><h3>Prompt AI</h3></summary>
-    <p style="color:var(--color-text-muted);margin-top:0">Sá»­a toÃ n bá»™ prompt gá»­i cho AI cá»§a tá»«ng QC. CÃ¡c <strong>chá»— giá»¯ chá»—</strong> dáº¡ng <code>{{...}}</code> há»‡ thá»‘ng tá»± Ä‘iá»n má»—i láº§n QC â€” pháº£i giá»¯ ÄÃšNG 1 láº§n má»—i chá»—. Má»—i láº§n <strong>LÆ°u</strong> táº¡o 1 phiÃªn báº£n má»›i vÃ  dÃ¹ng ngay cho cÃ¡c láº§n QC sau (thá»§ cÃ´ng + tá»± Ä‘á»™ng); phiÃªn báº£n cÅ© luÃ´n cÃ²n Ä‘á»ƒ dÃ¹ng láº¡i. Log QC ghi phiÃªn báº£n Ä‘Ã£ dÃ¹ng.</p>
-    <p style="color:var(--color-danger-text);margin-top:0"><strong>Cáº©n tháº­n pháº§n "CÃCH TRáº¢ Káº¾T QUáº¢":</strong> há»‡ thá»‘ng cáº§n AI tráº£ Ä‘á»§ result, score, confidence, evidence, checked_itemsâ€¦ â€” xoÃ¡/sá»­a sai pháº§n nÃ y AI sáº½ tráº£ thiáº¿u vÃ  má»i Ä‘Æ¡n ra Cáº¦N CHECK Láº I. NÃªn <strong>Cháº¡y thá»­</strong> trÆ°á»›c khi LÆ°u.</p>
+    <p style="color:var(--color-text-muted);margin-top:0">Sửa toàn bộ prompt gửi cho AI của từng QC. Các <strong>chỗ giữ chỗ</strong> dạng <code>{{...}}</code> hệ thống tự điền mỗi lần QC — phải giữ ĐÚNG 1 lần mỗi chỗ. Mỗi lần <strong>Lưu</strong> tạo 1 phiên bản mới và dùng ngay cho các lần QC sau (thủ công + tự động); phiên bản cũ luôn còn để dùng lại. Log QC ghi phiên bản đã dùng.</p>
+    <p style="color:var(--color-danger-text);margin-top:0"><strong>Cẩn thận phần "CÁCH TRẢ KẾT QUẢ":</strong> hệ thống cần AI trả đủ result, score, confidence, evidence, checked_items… — xoá/sửa sai phần này AI sẽ trả thiếu và mọi đơn ra CẦN CHECK LẠI. Nên <strong>Chạy thử</strong> trước khi Lưu.</p>
     <div class="inline-form" style="align-items:flex-end">
       <div class="truong"><label for="pr-loai">QC</label><select id="pr-loai" onchange="vePrompt()"></select></div>
       <span id="pr-dang-dung" style="padding-bottom:8px"></span>
@@ -76,136 +76,136 @@
     <textarea id="pr-noi-dung" spellcheck="false" style="width:100%;box-sizing:border-box;min-height:420px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:0.8rem" oninput="danhDauSua()"></textarea>
     <p id="pr-trang-thai-sua" style="margin:4px 0;font-size:0.85rem"></p>
     <div class="inline-form" style="align-items:flex-end;margin-top:8px">
-      <div class="truong"><label for="pr-ghi-chu">Ghi chÃº phiÃªn báº£n</label><input id="pr-ghi-chu" maxlength="300" placeholder="vd Bá» Ä‘Ã¡nh giÃ¡ kÃ­ch thÆ°á»›c" style="min-width:260px"></div>
-      <button type="button" class="btn-hanh-dong" onclick="luuPrompt(this)">LÆ°u thÃ nh phiÃªn báº£n má»›i</button>
-      <button type="button" class="btn-hanh-dong phu" onclick="napMacDinhVaoO()">Náº¡p máº«u máº·c Ä‘á»‹nh vÃ o Ã´</button>
-      <button type="button" class="btn-hanh-dong phu" onclick="napDangDungVaoO()">Bá» thay Ä‘á»•i</button>
+      <div class="truong"><label for="pr-ghi-chu">Ghi chú phiên bản</label><input id="pr-ghi-chu" maxlength="300" placeholder="vd Bỏ đánh giá kích thước" style="min-width:260px"></div>
+      <button type="button" class="btn-hanh-dong" onclick="luuPrompt(this)">Lưu thành phiên bản mới</button>
+      <button type="button" class="btn-hanh-dong phu" onclick="napMacDinhVaoO()">Nạp mẫu mặc định vào ô</button>
+      <button type="button" class="btn-hanh-dong phu" onclick="napDangDungVaoO()">Bỏ thay đổi</button>
     </div>
     <div class="inline-form" style="align-items:flex-end;margin-top:8px">
-      <div class="truong"><label for="pr-ma-thu">Cháº¡y thá»­ báº£n Ä‘ang sá»­a trÃªn mÃ£ Ä‘Æ¡n</label><input id="pr-ma-thu" placeholder="VD: 10TRA5332" autocomplete="off"></div>
-      <button type="button" class="btn-hanh-dong phu" onclick="chayThuPrompt(this)">Cháº¡y thá»­ (chÆ°a lÆ°u)</button>
+      <div class="truong"><label for="pr-ma-thu">Chạy thử bản đang sửa trên mã đơn</label><input id="pr-ma-thu" placeholder="VD: 10TRA5332" autocomplete="off"></div>
+      <button type="button" class="btn-hanh-dong phu" onclick="chayThuPrompt(this)">Chạy thử (chưa lưu)</button>
     </div>
     <div id="pr-ket-qua-thu" style="margin-top:8px"></div>
     <p id="pr-thong-bao" style="display:none"></p>
-    <h4 style="margin-bottom:6px">PhiÃªn báº£n</h4>
+    <h4 style="margin-bottom:6px">Phiên bản</h4>
     <div id="pr-lich-su" class="qc-cuon-ngang"></div>
   </details>
 
   <details class="qc-khoi">
-    <summary><h3>Tá»± Ä‘á»™ng quÃ©t QC</h3></summary>
-    <p style="color:var(--color-text-muted);margin-top:0">Há»‡ thá»‘ng tá»± QC má»—i 2 phÃºt, <strong>má»—i Ä‘Æ¡n tá»‘i Ä‘a 1 láº§n auto cho tá»«ng QC</strong> (QC thá»§ cÃ´ng khÃ´ng bá»‹ áº£nh hÆ°á»Ÿng). Chá»‰ Ã¡p dá»¥ng cho Ä‘Æ¡n chuyá»ƒn tráº¡ng thÃ¡i <strong>sau khi</strong> cÃ³ tÃ­nh nÄƒng nÃ y. Lá»—i ká»¹ thuáº­t (key sai, háº¿t quotaâ€¦) tá»± thá»­ láº¡i tá»‘i Ä‘a 2 láº§n, cÃ¡ch nhau 30 phÃºt. Má»—i QC tá»‘i Ä‘a 10 Ä‘Æ¡n má»—i lÆ°á»£t.</p>
+    <summary><h3>Tự động quét QC</h3></summary>
+    <p style="color:var(--color-text-muted);margin-top:0">Hệ thống tự QC mỗi 2 phút, <strong>mỗi đơn tối đa 1 lần auto cho từng QC</strong> (QC thủ công không bị ảnh hưởng). Chỉ áp dụng cho đơn chuyển trạng thái <strong>sau khi</strong> có tính năng này. Lỗi kỹ thuật (key sai, hết quota…) tự thử lại tối đa 2 lần, cách nhau 30 phút. Mỗi QC tối đa 10 đơn mỗi lượt.</p>
     <div class="qc-cuon-ngang"><table class="qc-bang-nguong">
-      <thead><tr><th>QC</th><th>Tá»± Ä‘á»™ng</th><th>Chá» (giá»)</th><th>Chá» (phÃºt)</th><th>Äiá»u kiá»‡n</th></tr></thead>
-      <tbody id="bang-auto"><tr><td colspan="5">Äang táº£i...</td></tr></tbody>
+      <thead><tr><th>QC</th><th>Tự động</th><th>Chờ (giờ)</th><th>Chờ (phút)</th><th>Điều kiện</th></tr></thead>
+      <tbody id="bang-auto"><tr><td colspan="5">Đang tải...</td></tr></tbody>
     </table></div>
-    <p style="margin-bottom:0"><button type="button" class="btn-hanh-dong" onclick="luuAuto(this)">LÆ°u tá»± Ä‘á»™ng quÃ©t</button></p>
+    <p style="margin-bottom:0"><button type="button" class="btn-hanh-dong" onclick="luuAuto(this)">Lưu tự động quét</button></p>
     <p id="thong-bao-auto" style="display:none"></p>
   </details>
 
   <details class="qc-khoi">
-    <summary><h3>NgÆ°á»¡ng káº¿t luáº­n</h3></summary>
-    <p style="color:var(--color-text-muted);margin-top:0">AI chá»‰ phÃ¢n tÃ­ch vÃ  cháº¥m <strong>score</strong> (0â€“100, má»©c khá»›p yÃªu cáº§u â€” cÃ ng cao cÃ ng tá»‘t) + <strong>Ä‘á»™ cháº¯c cháº¯n</strong>; há»‡ thá»‘ng tá»± káº¿t luáº­n theo ngÆ°á»¡ng dÆ°á»›i Ä‘Ã¢y. Luáº­t cá»©ng luÃ´n Æ°u tiÃªn (vd tem mang mÃ£ tracking khÃ¡c â†’ FAIL; chÆ°a xÃ¡c Ä‘á»‹nh Ä‘Æ°á»£c Design / háº¡ng má»¥c báº¯t buá»™c chÆ°a PASS â†’ khÃ´ng PASS; FAIL pháº£i cÃ³ báº±ng chá»©ng).</p>
+    <summary><h3>Ngưỡng kết luận</h3></summary>
+    <p style="color:var(--color-text-muted);margin-top:0">AI chỉ phân tích và chấm <strong>score</strong> (0–100, mức khớp yêu cầu — càng cao càng tốt) + <strong>độ chắc chắn</strong>; hệ thống tự kết luận theo ngưỡng dưới đây. Luật cứng luôn ưu tiên (vd tem mang mã tracking khác → FAIL; chưa xác định được Design / hạng mục bắt buộc chưa PASS → không PASS; FAIL phải có bằng chứng).</p>
     <ul style="color:var(--color-text-muted);margin-top:0">
-      <li>Äá»™ cháº¯c cháº¯n &lt; ngÆ°á»¡ng <strong>CAN_CHECK_LAI</strong> (%) â†’ CAN_CHECK_LAI</li>
-      <li>score â‰¥ ngÆ°á»¡ng <strong>PASS</strong> â†’ PASS Â· score â‰¤ ngÆ°á»¡ng <strong>FAIL</strong> â†’ FAIL Â· á»Ÿ giá»¯a â†’ CAN_CHECK_LAI</li>
-      <li>Quy táº¯c: cáº£ 3 lÃ  sá»‘ tá»« 0 Ä‘áº¿n 100, vÃ  FAIL &lt; PASS.</li>
+      <li>Độ chắc chắn &lt; ngưỡng <strong>CAN_CHECK_LAI</strong> (%) → CAN_CHECK_LAI</li>
+      <li>score ≥ ngưỡng <strong>PASS</strong> → PASS · score ≤ ngưỡng <strong>FAIL</strong> → FAIL · ở giữa → CAN_CHECK_LAI</li>
+      <li>Quy tắc: cả 3 là số từ 0 đến 100, và FAIL &lt; PASS.</li>
     </ul>
     <div class="qc-cuon-ngang"><table class="qc-bang-nguong">
-      <thead><tr><th>QC</th><th>PASS (score â‰¥)</th><th>FAIL (score â‰¤)</th><th>CAN_CHECK_LAI (cháº¯c cháº¯n &lt; %)</th><th></th></tr></thead>
-      <tbody id="bang-nguong"><tr><td colspan="5">Äang táº£i...</td></tr></tbody>
+      <thead><tr><th>QC</th><th>PASS (score ≥)</th><th>FAIL (score ≤)</th><th>CAN_CHECK_LAI (chắc chắn &lt; %)</th><th></th></tr></thead>
+      <tbody id="bang-nguong"><tr><td colspan="5">Đang tải...</td></tr></tbody>
     </table></div>
-    <p style="margin-bottom:0"><button type="button" class="btn-hanh-dong" onclick="luuNguong(this)">LÆ°u ngÆ°á»¡ng</button> <span id="nguong-mac-dinh" style="color:var(--color-text-muted)"></span></p>
+    <p style="margin-bottom:0"><button type="button" class="btn-hanh-dong" onclick="luuNguong(this)">Lưu ngưỡng</button> <span id="nguong-mac-dinh" style="color:var(--color-text-muted)"></span></p>
     <p id="thong-bao-nguong" style="display:none"></p>
   </details>
 
   <details class="qc-khoi">
-    <summary><h3>Cáº£nh bÃ¡o Telegram</h3></summary>
-    <p style="color:var(--color-text-muted);margin-top:0">Tá»± gá»­i tin khi QC ra <strong>FAIL</strong>, <strong>Cáº¦N CHECK Láº I</strong> hoáº·c <strong>lá»—i API</strong> (cáº£ 3 QC, cÃ¹ng 1 Chat ID). Bot Token láº¥y tá»« @BotFather (Ä‘á»ƒ trá»‘ng = dÃ¹ng TELEGRAM_BOT_TOKEN trong .env náº¿u cÃ³) â€” nhá»› thÃªm bot vÃ o group nháº­n tin. Token chá»‰ hiá»‡n dáº¡ng che; Ä‘á»ƒ trá»‘ng Ã´ token khi LÆ°u = giá»¯ token cÅ©. Äá»ƒ trá»‘ng Chat ID = táº¯t cáº£nh bÃ¡o.</p>
+    <summary><h3>Cảnh báo Telegram</h3></summary>
+    <p style="color:var(--color-text-muted);margin-top:0">Tự gửi tin khi QC ra <strong>FAIL</strong>, <strong>CẦN CHECK LẠI</strong> hoặc <strong>lỗi API</strong> (cả 3 QC, cùng 1 Chat ID). Bot Token lấy từ @BotFather (để trống = dùng TELEGRAM_BOT_TOKEN trong .env nếu có) — nhớ thêm bot vào group nhận tin. Token chỉ hiện dạng che; để trống ô token khi Lưu = giữ token cũ. Để trống Chat ID = tắt cảnh báo.</p>
     <div class="qc-dong-cau-hinh">
-      <div class="ten">Telegram<small id="tg-trang-thai">Äang táº£i...</small><small id="tg-token-trang-thai"></small></div>
+      <div class="ten">Telegram<small id="tg-trang-thai">Đang tải...</small><small id="tg-token-trang-thai"></small></div>
       <div class="truong"><label for="tg-bot-token">Bot Token</label><input type="password" id="tg-bot-token" autocomplete="new-password" placeholder="123456789:AAE..."></div>
-      <div class="truong"><label for="tg-chat-id">Chat ID nháº­n cáº£nh bÃ¡o</label><input id="tg-chat-id" placeholder="vd -1001234567890"></div>
-      <button type="button" class="btn-hanh-dong phu" onclick="luuTelegram()">LÆ°u</button>
-      <button type="button" class="btn-hanh-dong phu" onclick="guiThuTelegram(this)">Gá»­i thá»­</button>
-      <button type="button" class="btn-hanh-dong phu nguy-hiem" id="tg-xoa-token" style="display:none" onclick="luuTelegram(true)">XoÃ¡ token</button>
+      <div class="truong"><label for="tg-chat-id">Chat ID nhận cảnh báo</label><input id="tg-chat-id" placeholder="vd -1001234567890"></div>
+      <button type="button" class="btn-hanh-dong phu" onclick="luuTelegram()">Lưu</button>
+      <button type="button" class="btn-hanh-dong phu" onclick="guiThuTelegram(this)">Gửi thử</button>
+      <button type="button" class="btn-hanh-dong phu nguy-hiem" id="tg-xoa-token" style="display:none" onclick="luuTelegram(true)">Xoá token</button>
     </div>
     <div class="qc-dong-cau-hinh">
-      <div class="ten">Gá»™p cáº£nh bÃ¡o<small>FAIL vÃ  Lá»–I API luÃ´n gá»­i ngay. Cáº¦N CHECK Láº I: 0 = gá»­i ngay tá»«ng tin; hoáº·c gá»™p thÃ nh 1 tin má»—i N phÃºt (15â€“1440). Tá»•ng káº¿t ngÃ y: 1 tin lÃºc giá» Ä‘Ã£ chá»n (giá» VN) â€” Ä‘á»ƒ trá»‘ng = táº¯t.</small></div>
-      <div class="truong"><label for="tg-gop-phut">Gá»™p Cáº¦N CHECK Láº I (phÃºt)</label><input type="number" id="tg-gop-phut" min="0" max="1440" step="1" style="width:110px"></div>
-      <div class="truong"><label for="tg-gio-tong-ket">Giá» tá»•ng káº¿t ngÃ y</label><input type="time" id="tg-gio-tong-ket"></div>
-      <button type="button" class="btn-hanh-dong phu" onclick="luuGopTelegram(this)">LÆ°u gá»™p</button>
+      <div class="ten">Gộp cảnh báo<small>FAIL và LỖI API luôn gửi ngay. CẦN CHECK LẠI: 0 = gửi ngay từng tin; hoặc gộp thành 1 tin mỗi N phút (15–1440). Tổng kết ngày: 1 tin lúc giờ đã chọn (giờ VN) — để trống = tắt.</small></div>
+      <div class="truong"><label for="tg-gop-phut">Gộp CẦN CHECK LẠI (phút)</label><input type="number" id="tg-gop-phut" min="0" max="1440" step="1" style="width:110px"></div>
+      <div class="truong"><label for="tg-gio-tong-ket">Giờ tổng kết ngày</label><input type="time" id="tg-gio-tong-ket"></div>
+      <button type="button" class="btn-hanh-dong phu" onclick="luuGopTelegram(this)">Lưu gộp</button>
     </div>
     <p id="thong-bao-telegram" style="display:none"></p>
   </details>
 
   <details class="qc-khoi">
-    <summary><h3>QC thá»§ cÃ´ng</h3></summary>
+    <summary><h3>QC thủ công</h3></summary>
     <div class="inline-form" style="align-items:flex-end">
       <div class="truong">
-        <label for="qc-ma-don">MÃ£ Ä‘Æ¡n (STT_Key)</label>
+        <label for="qc-ma-don">Mã đơn (STT_Key)</label>
         <input id="qc-ma-don" placeholder="VD: 10TRA5332" autocomplete="off">
       </div>
       <div class="truong">
-        <label for="qc-loai">Loáº¡i QC</label>
+        <label for="qc-loai">Loại QC</label>
         <select id="qc-loai"></select>
       </div>
-      <button type="button" class="btn-hanh-dong" id="btn-chay-qc">Thá»±c hiá»‡n QC</button>
+      <button type="button" class="btn-hanh-dong" id="btn-chay-qc">Thực hiện QC</button>
     </div>
     <div id="qc-ket-qua" style="margin-top:var(--space-4)"></div>
   </details>
 
   <details class="qc-khoi">
-    <summary><h3>Äá»™ chÃ­nh xÃ¡c</h3></summary>
-    <p style="color:var(--color-text-muted);margin-top:0">TÃ­nh tá»« cÃ¡c láº§n QC Ä‘Ã£ Ä‘Æ°á»£c Ä‘Ã¡nh giÃ¡ káº¿t quáº£ thá»±c táº¿ á»Ÿ Log QC bÃªn dÆ°á»›i. <strong>PASS sai</strong> = AI cho qua nhÆ°ng thá»±c táº¿ lá»—i (nguy hiá»ƒm nháº¥t). <strong>FAIL sai</strong> = AI bÃ¡o lá»—i nhÆ°ng thá»±c táº¿ Ä‘áº¡t. Tá»‰ lá»‡ Ä‘Ãºng chá»‰ tÃ­nh trÃªn cÃ¡c láº§n AI káº¿t luáº­n PASS/FAIL. Náº¿u chá»‰ Ä‘Ã¡nh giÃ¡ Ä‘Æ¡n FAIL/Cáº¦N CHECK Láº I thÃ¬ khÃ´ng bao giá» tháº¥y PASS sai â€” hÃ£y Ä‘Ã¡nh giÃ¡ cáº£ bá»™ lá»c <strong>"Máº«u kiá»ƒm PASS (10%)"</strong> á»Ÿ Log QC (há»‡ thá»‘ng chá»n cá»‘ Ä‘á»‹nh 10% láº§n QC PASS).</p>
+    <summary><h3>Độ chính xác</h3></summary>
+    <p style="color:var(--color-text-muted);margin-top:0">Tính từ các lần QC đã được đánh giá kết quả thực tế ở Log QC bên dưới. <strong>PASS sai</strong> = AI cho qua nhưng thực tế lỗi (nguy hiểm nhất). <strong>FAIL sai</strong> = AI báo lỗi nhưng thực tế đạt. Tỉ lệ đúng chỉ tính trên các lần AI kết luận PASS/FAIL. Nếu chỉ đánh giá đơn FAIL/CẦN CHECK LẠI thì không bao giờ thấy PASS sai — hãy đánh giá cả bộ lọc <strong>"Mẫu kiểm PASS (10%)"</strong> ở Log QC (hệ thống chọn cố định 10% lần QC PASS).</p>
     <div class="inline-form" style="align-items:flex-end">
-      <div class="truong"><label for="dcx-ngay">Khoáº£ng thá»i gian</label>
-        <select id="dcx-ngay" onchange="taiDoChinhXac()"><option value="7">7 ngÃ y</option><option value="30" selected>30 ngÃ y</option><option value="">Táº¥t cáº£</option></select></div>
+      <div class="truong"><label for="dcx-ngay">Khoảng thời gian</label>
+        <select id="dcx-ngay" onchange="taiDoChinhXac()"><option value="7">7 ngày</option><option value="30" selected>30 ngày</option><option value="">Tất cả</option></select></div>
     </div>
-    <div id="khoi-do-chinh-xac" class="qc-cuon-ngang" style="margin-top:var(--space-3)">Äang táº£i...</div>
+    <div id="khoi-do-chinh-xac" class="qc-cuon-ngang" style="margin-top:var(--space-3)">Đang tải...</div>
   </details>
 
   <details class="qc-khoi">
-    <summary><h3>Chi phÃ­ AI</h3></summary>
-    <p style="color:var(--color-text-muted);margin-top:0">Sá»‘ token láº¥y tá»« chÃ­nh API tráº£ vá» cho má»—i láº§n gá»i AI (chá»‰ cÃ¡c láº§n QC tá»« khi cÃ³ tÃ­nh nÄƒng nÃ y). Chi phÃ­ lÃ  <strong>Æ°á»›c tÃ­nh</strong> theo giÃ¡ báº¡n nháº­p bÃªn dÆ°á»›i (USD / 1 triá»‡u token â€” xem báº£ng giÃ¡ trÃªn trang cá»§a Google / Anthropic); model chÆ°a nháº­p giÃ¡ thÃ¬ khÃ´ng tÃ­nh tiá»n. Gemini: token output gá»“m cáº£ token "suy nghÄ©".</p>
+    <summary><h3>Chi phí AI</h3></summary>
+    <p style="color:var(--color-text-muted);margin-top:0">Số token lấy từ chính API trả về cho mỗi lần gọi AI (chỉ các lần QC từ khi có tính năng này). Chi phí là <strong>ước tính</strong> theo giá bạn nhập bên dưới (USD / 1 triệu token — xem bảng giá trên trang của Google / Anthropic); model chưa nhập giá thì không tính tiền. Gemini: token output gồm cả token "suy nghĩ".</p>
     <div class="qc-cuon-ngang"><table class="qc-bang-nguong">
-      <thead><tr><th>Model</th><th>GiÃ¡ input (USD / 1M token)</th><th>GiÃ¡ output (USD / 1M token)</th></tr></thead>
-      <tbody id="bang-gia-token"><tr><td colspan="3">Äang táº£i...</td></tr></tbody>
+      <thead><tr><th>Model</th><th>Giá input (USD / 1M token)</th><th>Giá output (USD / 1M token)</th></tr></thead>
+      <tbody id="bang-gia-token"><tr><td colspan="3">Đang tải...</td></tr></tbody>
     </table></div>
-    <p><button type="button" class="btn-hanh-dong phu" onclick="luuGiaToken(this)">LÆ°u giÃ¡</button> <span id="thong-bao-gia"></span></p>
+    <p><button type="button" class="btn-hanh-dong phu" onclick="luuGiaToken(this)">Lưu giá</button> <span id="thong-bao-gia"></span></p>
     <div class="inline-form" style="align-items:flex-end">
-      <div class="truong"><label for="cp-ngay">Khoáº£ng thá»i gian</label>
-        <select id="cp-ngay" onchange="taiChiPhi()"><option value="7">7 ngÃ y</option><option value="30" selected>30 ngÃ y</option><option value="">Táº¥t cáº£</option></select></div>
+      <div class="truong"><label for="cp-ngay">Khoảng thời gian</label>
+        <select id="cp-ngay" onchange="taiChiPhi()"><option value="7">7 ngày</option><option value="30" selected>30 ngày</option><option value="">Tất cả</option></select></div>
       <div class="truong"><label for="cp-gom">Gom theo</label>
-        <select id="cp-gom" onchange="taiChiPhi()"><option value="NGAY">NgÃ y</option><option value="THANG">ThÃ¡ng</option></select></div>
+        <select id="cp-gom" onchange="taiChiPhi()"><option value="NGAY">Ngày</option><option value="THANG">Tháng</option></select></div>
     </div>
-    <div id="khoi-chi-phi" class="qc-cuon-ngang" style="margin-top:var(--space-3)">Äang táº£i...</div>
+    <div id="khoi-chi-phi" class="qc-cuon-ngang" style="margin-top:var(--space-3)">Đang tải...</div>
   </details>
 
   <details class="qc-khoi">
     <summary><h3>Log QC</h3></summary>
     <div class="inline-form" style="align-items:flex-end">
-      <div class="truong"><label for="log-loai">Loáº¡i</label><select id="log-loai"><option value="">Táº¥t cáº£</option></select></div>
-      <div class="truong"><label for="log-ket-qua">Káº¿t quáº£</label>
-        <select id="log-ket-qua"><option value="">Táº¥t cáº£</option><option>PASS</option><option>FAIL</option><option>CAN_CHECK_LAI</option><option value="LOI">Lá»–I</option></select></div>
-      <div class="truong"><label for="log-danh-gia">ÄÃ¡nh giÃ¡</label>
-        <select id="log-danh-gia"><option value="">Táº¥t cáº£</option><option value="CHUA">ChÆ°a Ä‘Ã¡nh giÃ¡</option><option value="SAI">AI sai</option><option value="MAU_PASS">Máº«u kiá»ƒm PASS (10%) chÆ°a Ä‘Ã¡nh giÃ¡</option></select></div>
-      <div class="truong"><label for="log-ma-don">MÃ£ Ä‘Æ¡n</label><input id="log-ma-don" autocomplete="off"></div>
-      <button type="button" class="btn-hanh-dong phu" id="btn-tai-log">Lá»c</button>
+      <div class="truong"><label for="log-loai">Loại</label><select id="log-loai"><option value="">Tất cả</option></select></div>
+      <div class="truong"><label for="log-ket-qua">Kết quả</label>
+        <select id="log-ket-qua"><option value="">Tất cả</option><option>PASS</option><option>FAIL</option><option>CAN_CHECK_LAI</option><option value="LOI">LỖI</option></select></div>
+      <div class="truong"><label for="log-danh-gia">Đánh giá</label>
+        <select id="log-danh-gia"><option value="">Tất cả</option><option value="CHUA">Chưa đánh giá</option><option value="SAI">AI sai</option><option value="MAU_PASS">Mẫu kiểm PASS (10%) chưa đánh giá</option></select></div>
+      <div class="truong"><label for="log-ma-don">Mã đơn</label><input id="log-ma-don" autocomplete="off"></div>
+      <button type="button" class="btn-hanh-dong phu" id="btn-tai-log">Lọc</button>
     </div>
     <div id="khoi-log" class="qc-cuon-ngang" style="margin-top:var(--space-3)"></div>
   </details>
 
   <details class="qc-khoi">
-    <summary><h3>Kinh nghiá»‡m QC</h3></summary>
-    <p style="color:var(--color-text-muted);margin-top:0">Giáº£i thÃ­ch cá»§a Superadmin vá» lá»—i AI (táº¡o tá»« nÃºt "Giáº£i thÃ­ch lá»—i AI" á»Ÿ Log QC). Chá»‰ kinh nghiá»‡m <strong>ÄÃ£ xÃ¡c nháº­n</strong> má»›i Ä‘Æ°á»£c Ä‘Æ°a cho AI á»Ÿ cÃ¡c láº§n QC sau â€” cÃ¹ng QC, pháº¡m vi khá»›p Ä‘Æ¡n, tá»‘i Ä‘a 5 kinh nghiá»‡m / 1000 kÃ½ tá»± má»—i láº§n, chá»‰ gá»­i pháº§n "Kinh nghiá»‡m cáº§n tÃ­ch luá»¹". Sá»­a ná»™i dung thÃ¬ kinh nghiá»‡m quay vá» ChÆ°a xÃ¡c nháº­n. KhÃ´ng xoÃ¡ Ä‘Æ°á»£c â€” chá»‰ chuyá»ƒn "KhÃ´ng sá»­ dá»¥ng"; káº¿t quáº£ QC cÅ© khÃ´ng bá»‹ thay Ä‘á»•i.</p>
+    <summary><h3>Kinh nghiệm QC</h3></summary>
+    <p style="color:var(--color-text-muted);margin-top:0">Giải thích của Superadmin về lỗi AI (tạo từ nút "Giải thích lỗi AI" ở Log QC). Chỉ kinh nghiệm <strong>Đã xác nhận</strong> mới được đưa cho AI ở các lần QC sau — cùng QC, phạm vi khớp đơn, tối đa 5 kinh nghiệm / 1000 ký tự mỗi lần, chỉ gửi phần "Kinh nghiệm cần tích luỹ". Sửa nội dung thì kinh nghiệm quay về Chưa xác nhận. Không xoá được — chỉ chuyển "Không sử dụng"; kết quả QC cũ không bị thay đổi.</p>
     <div class="inline-form" style="align-items:flex-end">
-      <div class="truong"><label for="kn-loai">QC</label><select id="kn-loai"><option value="">Táº¥t cáº£</option><option>QC1</option><option>QC2</option><option>QC3</option></select></div>
-      <div class="truong"><label for="kn-trang-thai">Tráº¡ng thÃ¡i</label><select id="kn-trang-thai"><option value="">Táº¥t cáº£</option></select></div>
-      <div class="truong"><label for="kn-hang-muc">Háº¡ng má»¥c</label><select id="kn-hang-muc"><option value="">Táº¥t cáº£</option></select></div>
-      <div class="truong"><label for="kn-nguyen-nhan">NguyÃªn nhÃ¢n</label><select id="kn-nguyen-nhan"><option value="">Táº¥t cáº£</option></select></div>
-      <div class="truong"><label for="kn-loai-sp">Loáº¡i sáº£n pháº©m</label><input id="kn-loai-sp" autocomplete="off" placeholder="vd Hoodie"></div>
-      <div class="truong"><label for="kn-tu-khoa">Tá»« khoÃ¡</label><input id="kn-tu-khoa" autocomplete="off"></div>
-      <button type="button" class="btn-hanh-dong phu" onclick="taiKinhNghiem()">Lá»c</button>
+      <div class="truong"><label for="kn-loai">QC</label><select id="kn-loai"><option value="">Tất cả</option><option>QC1</option><option>QC2</option><option>QC3</option></select></div>
+      <div class="truong"><label for="kn-trang-thai">Trạng thái</label><select id="kn-trang-thai"><option value="">Tất cả</option></select></div>
+      <div class="truong"><label for="kn-hang-muc">Hạng mục</label><select id="kn-hang-muc"><option value="">Tất cả</option></select></div>
+      <div class="truong"><label for="kn-nguyen-nhan">Nguyên nhân</label><select id="kn-nguyen-nhan"><option value="">Tất cả</option></select></div>
+      <div class="truong"><label for="kn-loai-sp">Loại sản phẩm</label><input id="kn-loai-sp" autocomplete="off" placeholder="vd Hoodie"></div>
+      <div class="truong"><label for="kn-tu-khoa">Từ khoá</label><input id="kn-tu-khoa" autocomplete="off"></div>
+      <button type="button" class="btn-hanh-dong phu" onclick="taiKinhNghiem()">Lọc</button>
     </div>
     <div id="khoi-kinh-nghiem" class="qc-cuon-ngang" style="margin-top:var(--space-3)"></div>
   </details>
@@ -214,11 +214,11 @@
 <script src="/js/icons.js?v=106"></script>
 <script src="/js/api.js?v=141"></script>
 <script>
-const NHAN_KET_QUA = { PASS: 'PASS', FAIL: 'FAIL', CAN_CHECK_LAI: 'Cáº¦N CHECK Láº I', LOI: 'Lá»–I' };
-const NHAN_HANG_MUC = { tracking: 'MÃ£ tracking', nguoi_nhan: 'NgÆ°á»i nháº­n', dia_chi: 'Äá»‹a chá»‰', ma_don_gom: 'MÃ£ Ä‘Æ¡n kiá»‡n gom',
-  design: 'Design', text: 'Chá»¯/kÃ½ tá»±', chi_tiet: 'Chi tiáº¿t', color: 'MÃ u', position: 'Vá»‹ trÃ­', huong: 'HÆ°á»›ng', size: 'KÃ­ch thÆ°á»›c/tá»· lá»‡', loi_san_xuat: 'Lá»—i sáº£n xuáº¥t',
-  ty_le: 'Tá»· lá»‡/biáº¿n dáº¡ng', design_mockup: 'Design â†” Mockup nháº¥t quÃ¡n' };
-const NHAN_VAI_TRO_ANH = { DESIGN: 'Design', MOCKUP: 'Mockup', FILE_THEU: 'File thÃªu', SAN_PHAM: 'Sáº£n pháº©m', THAM_KHAO: 'Tham kháº£o', KHONG_LIEN_QUAN: 'KhÃ´ng liÃªn quan' };
+const NHAN_KET_QUA = { PASS: 'PASS', FAIL: 'FAIL', CAN_CHECK_LAI: 'CẦN CHECK LẠI', LOI: 'LỖI' };
+const NHAN_HANG_MUC = { tracking: 'Mã tracking', nguoi_nhan: 'Người nhận', dia_chi: 'Địa chỉ', ma_don_gom: 'Mã đơn kiện gom',
+  design: 'Design', text: 'Chữ/ký tự', chi_tiet: 'Chi tiết', color: 'Màu', position: 'Vị trí', huong: 'Hướng', size: 'Kích thước/tỷ lệ', loi_san_xuat: 'Lỗi sản xuất',
+  ty_le: 'Tỷ lệ/biến dạng', design_mockup: 'Design ↔ Mockup nhất quán' };
+const NHAN_VAI_TRO_ANH = { DESIGN: 'Design', MOCKUP: 'Mockup', FILE_THEU: 'File thêu', SAN_PHAM: 'Sản phẩm', THAM_KHAO: 'Tham khảo', KHONG_LIEN_QUAN: 'Không liên quan' };
 let dsLoai = [];
 
 (async () => {
@@ -226,7 +226,7 @@ let dsLoai = [];
   if (!user) return;
   renderNav(user, 'qc');
   if (user.vaiTro !== 'superadmin') {
-    document.querySelector('.page').innerHTML = '<p>Báº¡n khÃ´ng cÃ³ quyá»n truy cáº­p trang nÃ y.</p>';
+    document.querySelector('.page').innerHTML = '<p>Bạn không có quyền truy cập trang này.</p>';
     return;
   }
   document.getElementById('btn-chay-qc').onclick = chayQc;
@@ -255,18 +255,18 @@ function thongBao(chu, loi) {
 }
 
 const TEN_NCC = { gemini: 'Gemini (AI Studio)', vertex: 'Gemini (Agent Platform / Vertex AI)', claude: 'Claude' };
-// ncc: nhÃ  cung cáº¥p Ä‘ang CHá»ŒN trÃªn Ã´ (chÆ°a cháº¯c Ä‘Ã£ lÆ°u) â€” c.nhaCungCap lÃ  nhÃ  cung cáº¥p Ä‘ang DÃ™NG.
+// ncc: nhà cung cấp đang CHỌN trên ô (chưa chắc đã lưu) — c.nhaCungCap là nhà cung cấp đang DÙNG.
 function hangCauHinh(c, ncc) {
   const ch = c.theoNcc[ncc];
   const dangDung = ncc === c.nhaCungCap;
   return `
-      <div class="ten">${escapeHtml(c.ten)}<small>Äang dÃ¹ng: ${TEN_NCC[c.nhaCungCap]}${dangDung ? '' : ` Â· Ã´ bÃªn cáº¡nh Ä‘ang xem ${TEN_NCC[ncc]} (chÆ°a lÆ°u)`}</small><small>${ch.coKey ? `Key ${TEN_NCC[ncc]} Ä‘ang lÆ°u: ` + escapeHtml(ch.keyChe) : `ChÆ°a cÃ³ API key ${TEN_NCC[ncc]}`}${c.daTrienKhai ? '' : ' Â· chÆ°a triá»ƒn khai QC'}</small></div>
-      <div class="truong"><label for="ncc-${c.loai}">NhÃ  cung cáº¥p</label><select id="ncc-${c.loai}" onchange="doiNcc('${c.loai}')">${Object.keys(TEN_NCC).map(k => `<option value="${k}" ${k === ncc ? 'selected' : ''}>${TEN_NCC[k]}</option>`).join('')}</select></div>
-      <div class="truong"><label for="key-${c.loai}">API key ${TEN_NCC[ncc]}</label><input type="password" id="key-${c.loai}" placeholder="${ch.coKey ? 'Äá»ƒ trá»‘ng = giá»¯ key cÅ©' : 'DÃ¡n API key'}" autocomplete="new-password"></div>
+      <div class="ten">${escapeHtml(c.ten)}<small>Đang dùng: ${TEN_NCC[c.nhaCungCap]}${dangDung ? '' : ` · ô bên cạnh đang xem ${TEN_NCC[ncc]} (chưa lưu)`}</small><small>${ch.coKey ? `Key ${TEN_NCC[ncc]} đang lưu: ` + escapeHtml(ch.keyChe) : `Chưa có API key ${TEN_NCC[ncc]}`}${c.daTrienKhai ? '' : ' · chưa triển khai QC'}</small></div>
+      <div class="truong"><label for="ncc-${c.loai}">Nhà cung cấp</label><select id="ncc-${c.loai}" onchange="doiNcc('${c.loai}')">${Object.keys(TEN_NCC).map(k => `<option value="${k}" ${k === ncc ? 'selected' : ''}>${TEN_NCC[k]}</option>`).join('')}</select></div>
+      <div class="truong"><label for="key-${c.loai}">API key ${TEN_NCC[ncc]}</label><input type="password" id="key-${c.loai}" placeholder="${ch.coKey ? 'Để trống = giữ key cũ' : 'Dán API key'}" autocomplete="new-password"></div>
       <div class="truong"><label for="model-${c.loai}">Model</label><input id="model-${c.loai}" list="goi-y-model-${ncc}" value="${escapeHtml(ch.model)}"></div>
-      <button type="button" class="btn-hanh-dong phu" onclick="luuCauHinh('${c.loai}')">LÆ°u</button>
-      <button type="button" class="btn-hanh-dong phu" onclick="thuKetNoi('${c.loai}', this)">Thá»­ káº¿t ná»‘i</button>
-      ${ch.coKey ? `<button type="button" class="btn-hanh-dong phu nguy-hiem" onclick="luuCauHinh('${c.loai}', true)">XoÃ¡ key ${TEN_NCC[ncc]}</button>` : ''}`;
+      <button type="button" class="btn-hanh-dong phu" onclick="luuCauHinh('${c.loai}')">Lưu</button>
+      <button type="button" class="btn-hanh-dong phu" onclick="thuKetNoi('${c.loai}', this)">Thử kết nối</button>
+      ${ch.coKey ? `<button type="button" class="btn-hanh-dong phu nguy-hiem" onclick="luuCauHinh('${c.loai}', true)">Xoá key ${TEN_NCC[ncc]}</button>` : ''}`;
 }
 
 function doiNcc(loai) {
@@ -274,11 +274,11 @@ function doiNcc(loai) {
   document.getElementById('cau-hinh-' + loai).innerHTML = hangCauHinh(c, document.getElementById('ncc-' + loai).value);
 }
 
-// ---- Tá»± Ä‘á»™ng quÃ©t QC (02/10/2026) â€” backend kiá»ƒm tra láº¡i (services/qc/qcAutoService.js#luuCauHinhAuto).
+// ---- Tự động quét QC (02/10/2026) — backend kiểm tra lại (services/qc/qcAutoService.js#luuCauHinhAuto).
 const DIEU_KIEN_AUTO = {
-  QC1: 'Váº½ file = "ÄÃ£ váº½ file" + cÃ³ â‰¥ 1 áº£nh File thÃªu Â· chá» tÃ­nh tá»« lÃºc chuyá»ƒn "ÄÃ£ váº½ file"',
-  QC2: 'ÄÃ£ sáº£n xuáº¥t (hoáº·c bÆ°á»›c sau) + cÃ³ áº¢nh Ä‘Ã£ sáº£n xuáº¥t Â· chá» tÃ­nh tá»« lÃºc chuyá»ƒn "ÄÃ£ sáº£n xuáº¥t"',
-  QC3: 'ÄÃƒ DÃN TEM (hoáº·c DELIVERED) + cÃ³ áº¢nh Ä‘Ã£ dÃ¡n tem Â· chá» tÃ­nh tá»« lÃºc chuyá»ƒn "ÄÃƒ DÃN TEM"',
+  QC1: 'Vẽ file = "Đã vẽ file" + có ≥ 1 ảnh File thêu · chờ tính từ lúc chuyển "Đã vẽ file"',
+  QC2: 'Đã sản xuất (hoặc bước sau) + có Ảnh đã sản xuất · chờ tính từ lúc chuyển "Đã sản xuất"',
+  QC3: 'ĐÃ DÁN TEM (hoặc DELIVERED) + có Ảnh đã dán tem · chờ tính từ lúc chuyển "ĐÃ DÁN TEM"',
 };
 function thongBaoAuto(chu, loi) {
   const el = document.getElementById('thong-bao-auto');
@@ -289,12 +289,12 @@ function thongBaoAuto(chu, loi) {
 let dsAuto = [];
 async function taiAuto() {
   const el = document.getElementById('bang-auto');
-  try { dsAuto = await apiFetch('/qc/auto'); } catch (e) { el.innerHTML = `<tr><td colspan="5">Lá»—i: ${escapeHtml(e.message)}</td></tr>`; return; }
+  try { dsAuto = await apiFetch('/qc/auto'); } catch (e) { el.innerHTML = `<tr><td colspan="5">Lỗi: ${escapeHtml(e.message)}</td></tr>`; return; }
   el.innerHTML = dsAuto.map(a => `<tr>
     <td><strong>${escapeHtml(a.loai)}</strong></td>
-    <td><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="auto-${a.loai}-bat" ${a.bat ? 'checked' : ''}> ${a.bat ? 'Báº¬T' : 'Táº®T'}</label></td>
-    <td><input type="number" min="0" max="720" step="1" id="auto-${a.loai}-gio" value="${a.gio}" aria-label="${a.loai} giá» chá»"></td>
-    <td><input type="number" min="0" max="59" step="1" id="auto-${a.loai}-phut" value="${a.phut}" aria-label="${a.loai} phÃºt chá»"></td>
+    <td><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="auto-${a.loai}-bat" ${a.bat ? 'checked' : ''}> ${a.bat ? 'BẬT' : 'TẮT'}</label></td>
+    <td><input type="number" min="0" max="720" step="1" id="auto-${a.loai}-gio" value="${a.gio}" aria-label="${a.loai} giờ chờ"></td>
+    <td><input type="number" min="0" max="59" step="1" id="auto-${a.loai}-phut" value="${a.phut}" aria-label="${a.loai} phút chờ"></td>
     <td style="color:var(--color-text-muted);font-size:0.85rem">${escapeHtml(DIEU_KIEN_AUTO[a.loai] || '')}</td>
   </tr>`).join('');
 }
@@ -303,27 +303,27 @@ async function luuAuto(nut) {
   for (const a of dsAuto) {
     const gio = document.getElementById(`auto-${a.loai}-gio`).value.trim();
     const phut = document.getElementById(`auto-${a.loai}-phut`).value.trim();
-    if (!/^\d+$/.test(gio) || Number(gio) > 720) return thongBaoAuto(`ChÆ°a lÆ°u: ${a.loai} â€” giá» pháº£i lÃ  sá»‘ nguyÃªn 0â€“720.`, true);
-    if (!/^\d+$/.test(phut) || Number(phut) > 59) return thongBaoAuto(`ChÆ°a lÆ°u: ${a.loai} â€” phÃºt pháº£i lÃ  sá»‘ nguyÃªn 0â€“59.`, true);
+    if (!/^\d+$/.test(gio) || Number(gio) > 720) return thongBaoAuto(`Chưa lưu: ${a.loai} — giờ phải là số nguyên 0–720.`, true);
+    if (!/^\d+$/.test(phut) || Number(phut) > 59) return thongBaoAuto(`Chưa lưu: ${a.loai} — phút phải là số nguyên 0–59.`, true);
     ds.push({ loai: a.loai, bat: document.getElementById(`auto-${a.loai}-bat`).checked, gio: Number(gio), phut: Number(phut) });
   }
   nut.disabled = true;
   try {
     await apiFetch('/qc/auto', { method: 'POST', body: JSON.stringify({ ds }) });
-    thongBaoAuto(`ÄÃ£ lÆ°u â€” Ä‘ang báº­t: ${ds.filter(d => d.bat).map(d => d.loai).join(', ') || '(khÃ´ng QC nÃ o)'}.`);
+    thongBaoAuto(`Đã lưu — đang bật: ${ds.filter(d => d.bat).map(d => d.loai).join(', ') || '(không QC nào)'}.`);
     await taiAuto();
-  } catch (e) { thongBaoAuto('ChÆ°a lÆ°u: ' + e.message, true); }
+  } catch (e) { thongBaoAuto('Chưa lưu: ' + e.message, true); }
   nut.disabled = false;
 }
 
-// ---- NgÆ°á»¡ng káº¿t luáº­n: cÃ¹ng quy táº¯c vá»›i backend (services/qc/qcService.js#kiemTraNguong) â€” backend váº«n kiá»ƒm tra láº¡i khi lÆ°u vÃ  khi cháº¡y QC.
+// ---- Ngưỡng kết luận: cùng quy tắc với backend (services/qc/qcService.js#kiemTraNguong) — backend vẫn kiểm tra lại khi lưu và khi chạy QC.
 const TEN_NGUONG = { pass: 'PASS', fail: 'FAIL', ccl: 'CAN_CHECK_LAI' };
 function kiemTraNguongGiaoDien(n, ten) {
   for (const k of ['pass', 'fail', 'ccl']) {
-    if (!/^\d+(\.\d+)?$/.test(n[k])) return { k, loi: `${ten}: ngÆ°á»¡ng ${TEN_NGUONG[k]} pháº£i lÃ  sá»‘ (0â€“100).` };
-    if (Number(n[k]) > 100) return { k, loi: `${ten}: ngÆ°á»¡ng ${TEN_NGUONG[k]} pháº£i tá»« 0 Ä‘áº¿n 100.` };
+    if (!/^\d+(\.\d+)?$/.test(n[k])) return { k, loi: `${ten}: ngưỡng ${TEN_NGUONG[k]} phải là số (0–100).` };
+    if (Number(n[k]) > 100) return { k, loi: `${ten}: ngưỡng ${TEN_NGUONG[k]} phải từ 0 đến 100.` };
   }
-  if (!(Number(n.fail) < Number(n.pass))) return { k: 'fail', loi: `${ten}: ngÆ°á»¡ng FAIL (${n.fail}) pháº£i NHá»Ž HÆ N ngÆ°á»¡ng PASS (${n.pass}).` };
+  if (!(Number(n.fail) < Number(n.pass))) return { k: 'fail', loi: `${ten}: ngưỡng FAIL (${n.fail}) phải NHỎ HƠN ngưỡng PASS (${n.pass}).` };
   return null;
 }
 function thongBaoNguong(chu, loi) {
@@ -336,16 +336,16 @@ let dsNguong = [];
 async function taiNguong() {
   const el = document.getElementById('bang-nguong');
   let d;
-  try { d = await apiFetch('/qc/nguong'); } catch (e) { el.innerHTML = `<tr><td colspan="5">Lá»—i: ${escapeHtml(e.message)}</td></tr>`; return; }
+  try { d = await apiFetch('/qc/nguong'); } catch (e) { el.innerHTML = `<tr><td colspan="5">Lỗi: ${escapeHtml(e.message)}</td></tr>`; return; }
   dsNguong = d.ds;
   el.innerHTML = d.ds.map(n => `<tr>
-    <td><strong>${escapeHtml(n.ten)}</strong>${n.loi ? `<br><small style="color:var(--color-danger-text)">${escapeHtml(n.loi)} â€” QC nÃ y sáº½ khÃ´ng cháº¡y cho tá»›i khi sá»­a.</small>` : ''}</td>
-    ${['pass', 'fail', 'ccl'].map(k => `<td><input type="number" min="0" max="100" step="any" inputmode="decimal" id="nguong-${n.loai}-${k}" value="${escapeHtml(String(n[k]))}" aria-label="${escapeHtml(n.loai)} ngÆ°á»¡ng ${TEN_NGUONG[k]}"></td>`).join('')}
-    <td><button type="button" class="btn-hanh-dong phu" style="padding:4px 8px;font-size:0.78rem" onclick="moGoiYNguong('${n.loai}')">Gá»£i Ã½ tá»« dá»¯ liá»‡u</button></td>
+    <td><strong>${escapeHtml(n.ten)}</strong>${n.loi ? `<br><small style="color:var(--color-danger-text)">${escapeHtml(n.loi)} — QC này sẽ không chạy cho tới khi sửa.</small>` : ''}</td>
+    ${['pass', 'fail', 'ccl'].map(k => `<td><input type="number" min="0" max="100" step="any" inputmode="decimal" id="nguong-${n.loai}-${k}" value="${escapeHtml(String(n[k]))}" aria-label="${escapeHtml(n.loai)} ngưỡng ${TEN_NGUONG[k]}"></td>`).join('')}
+    <td><button type="button" class="btn-hanh-dong phu" style="padding:4px 8px;font-size:0.78rem" onclick="moGoiYNguong('${n.loai}')">Gợi ý từ dữ liệu</button></td>
   </tr><tr id="goi-y-nguong-${n.loai}" style="display:none"><td colspan="5"></td></tr>`).join('');
-  document.getElementById('nguong-mac-dinh').textContent = `Máº·c Ä‘á»‹nh: PASS ${d.macDinh.pass} Â· FAIL ${d.macDinh.fail} Â· CAN_CHECK_LAI ${d.macDinh.ccl}%`;
+  document.getElementById('nguong-mac-dinh').textContent = `Mặc định: PASS ${d.macDinh.pass} · FAIL ${d.macDinh.fail} · CAN_CHECK_LAI ${d.macDinh.ccl}%`;
 }
-// Gá»£i Ã½ ngÆ°á»¡ng (02/10/2026) â€” CHá»ˆ hiá»ƒn thá»‹; "Äiá»n vÃ o Ã´" chá»‰ Ä‘iá»n Ã´ nháº­p, pháº£i báº¥m "LÆ°u ngÆ°á»¡ng" má»›i Ã¡p dá»¥ng.
+// Gợi ý ngưỡng (02/10/2026) — CHỈ hiển thị; "Điền vào ô" chỉ điền ô nhập, phải bấm "Lưu ngưỡng" mới áp dụng.
 function moGoiYNguong(loai) {
   const hang = document.getElementById('goi-y-nguong-' + loai);
   if (hang.style.display !== 'none') { hang.style.display = 'none'; return; }
@@ -355,41 +355,41 @@ function moGoiYNguong(loai) {
 async function tinhGoiYNguong(loai, coThu) {
   const o = document.querySelector(`#goi-y-nguong-${loai} td`);
   const thu = coThu ? Object.fromEntries(['pass', 'fail', 'ccl'].map(k => [k, document.getElementById(`gyn-${loai}-${k}`).value.trim()])) : null;
-  if (!coThu) o.textContent = 'Äang tÃ­nh...';
+  if (!coThu) o.textContent = 'Đang tính...';
   let d;
   try { d = await apiFetch(`/qc/nguong/goi-y?loai=${loai}${thu ? '&' + new URLSearchParams(thu) : ''}`); } catch (e) {
-    if (coThu) { document.getElementById(`gyn-${loai}-loi`).textContent = 'Lá»—i: ' + e.message; return; }
-    o.textContent = 'Lá»—i: ' + e.message; return;
+    if (coThu) { document.getElementById(`gyn-${loai}-loi`).textContent = 'Lỗi: ' + e.message; return; }
+    o.textContent = 'Lỗi: ' + e.message; return;
   }
   const ht = d.hienTai;
   const chenh = (m, k) => (!ht || m === ht ? '' : m[k] === ht[k] ? '' : ` <small style="color:${(m[k] < ht[k]) ? 'var(--color-success-text)' : 'var(--color-danger-text)'}">(${m[k] > ht[k] ? '+' : ''}${m[k] - ht[k]})</small>`);
-  const dong = (nhan, m, dien) => `<tr><td>${nhan}</td><td>PASS â‰¥ ${m.pass} Â· FAIL â‰¤ ${m.fail} Â· cháº¯c cháº¯n &lt; ${m.ccl}%</td>
+  const dong = (nhan, m, dien) => `<tr><td>${nhan}</td><td>PASS ≥ ${m.pass} · FAIL ≤ ${m.fail} · chắc chắn &lt; ${m.ccl}%</td>
     <td>${m.dung}${chenh(m, 'dung')}</td><td style="color:var(--color-danger-text)">${m.passSai}${chenh(m, 'passSai')}</td><td>${m.failSai}${chenh(m, 'failSai')}</td><td>${m.canCheckLai}${chenh(m, 'canCheckLai')}</td>
-    <td>${dien ? `<button type="button" class="btn-hanh-dong phu" style="padding:3px 8px;font-size:0.75rem" onclick="dienNguong('${loai}', ${m.pass}, ${m.fail}, ${m.ccl})">Äiá»n vÃ o Ã´</button>` : ''}</td></tr>`;
+    <td>${dien ? `<button type="button" class="btn-hanh-dong phu" style="padding:3px 8px;font-size:0.75rem" onclick="dienNguong('${loai}', ${m.pass}, ${m.fail}, ${m.ccl})">Điền vào ô</button>` : ''}</td></tr>`;
   const canhBao = d.soDong < d.toiThieu
-    ? `<p style="color:var(--color-danger-text);margin:4px 0">Má»›i cÃ³ ${d.soDong} láº§n QC Ä‘á»§ dá»¯ liá»‡u (cáº§n Ã­t nháº¥t ${d.toiThieu}) â€” káº¿t quáº£ CHÆ¯A Ä‘Ã¡ng tin, chá»‰ tham kháº£o.</p>` : '';
-  const vao = (k, v) => `<input id="gyn-${loai}-${k}" type="number" min="0" max="100" step="any" style="width:80px" value="${escapeHtml(String(v))}" aria-label="Thá»­ ngÆ°á»¡ng ${TEN_NGUONG[k]}">`;
+    ? `<p style="color:var(--color-danger-text);margin:4px 0">Mới có ${d.soDong} lần QC đủ dữ liệu (cần ít nhất ${d.toiThieu}) — kết quả CHƯA đáng tin, chỉ tham khảo.</p>` : '';
+  const vao = (k, v) => `<input id="gyn-${loai}-${k}" type="number" min="0" max="100" step="any" style="width:80px" value="${escapeHtml(String(v))}" aria-label="Thử ngưỡng ${TEN_NGUONG[k]}">`;
   const nguonThu = thu || (ht ? { pass: ht.pass, fail: ht.fail, ccl: ht.ccl } : { pass: '', fail: '', ccl: '' });
   o.innerHTML = `<div style="padding:var(--space-2) 0">
-    <p style="margin:0 0 4px">Dá»¯ liá»‡u: <strong>${d.soDong}</strong> láº§n QC Ä‘Ã£ Ä‘Ã¡nh giÃ¡ thá»±c táº¿ cá»§a model <strong>${escapeHtml(d.model)}</strong> (thá»±c táº¿ PASS ${d.soThucTePass} Â· FAIL ${d.soThucTeFail}).
-      <small style="color:var(--color-text-muted)">Bá» qua: ${d.boQuaModelKhac} láº§n cá»§a model khÃ¡c (score má»—i model khÃ¡c nhau); ${d.boQuaThieuDuLieu} láº§n QC trÆ°á»›c khi cÃ³ tÃ­nh nÄƒng nÃ y (thiáº¿u dá»¯ liá»‡u tÃ­nh láº¡i).</small></p>
+    <p style="margin:0 0 4px">Dữ liệu: <strong>${d.soDong}</strong> lần QC đã đánh giá thực tế của model <strong>${escapeHtml(d.model)}</strong> (thực tế PASS ${d.soThucTePass} · FAIL ${d.soThucTeFail}).
+      <small style="color:var(--color-text-muted)">Bỏ qua: ${d.boQuaModelKhac} lần của model khác (score mỗi model khác nhau); ${d.boQuaThieuDuLieu} lần QC trước khi có tính năng này (thiếu dữ liệu tính lại).</small></p>
     ${canhBao}
-    ${d.soDong ? `<p style="margin:4px 0;color:var(--color-text-muted)">TÃ­nh láº¡i báº±ng Ä‘Ãºng quy táº¯c káº¿t luáº­n hiá»‡n hÃ nh (luáº­t cá»©ng giá»¯ nguyÃªn) trÃªn káº¿t quáº£ AI Ä‘Ã£ lÆ°u. Sá»‘ trong ngoáº·c: chÃªnh so vá»›i ngÆ°á»¡ng hiá»‡n táº¡i.</p>
-    <div class="qc-cuon-ngang"><table class="qc-bang-log"><thead><tr><th></th><th>Bá»™ ngÆ°á»¡ng</th><th>ÄÃºng</th><th>PASS sai</th><th>FAIL sai</th><th>Cáº¦N CHECK Láº I</th><th></th></tr></thead><tbody>
-      ${ht ? dong('<strong>Hiá»‡n táº¡i</strong>', ht, false) : ''}
-      ${d.thu ? dong('<strong>Báº¡n thá»­</strong>', d.thu, true) : ''}
+    ${d.soDong ? `<p style="margin:4px 0;color:var(--color-text-muted)">Tính lại bằng đúng quy tắc kết luận hiện hành (luật cứng giữ nguyên) trên kết quả AI đã lưu. Số trong ngoặc: chênh so với ngưỡng hiện tại.</p>
+    <div class="qc-cuon-ngang"><table class="qc-bang-log"><thead><tr><th></th><th>Bộ ngưỡng</th><th>Đúng</th><th>PASS sai</th><th>FAIL sai</th><th>CẦN CHECK LẠI</th><th></th></tr></thead><tbody>
+      ${ht ? dong('<strong>Hiện tại</strong>', ht, false) : ''}
+      ${d.thu ? dong('<strong>Bạn thử</strong>', d.thu, true) : ''}
       ${d.goiY.map(g => {
         const trung = ht && g.pass === ht.pass && g.fail === ht.fail && g.ccl === ht.ccl;
-        return dong(`Gá»£i Ã½: ${escapeHtml(g.moTa)}${trung ? '<br><small>= trÃ¹ng ngÆ°á»¡ng hiá»‡n táº¡i (khÃ´ng cÃ³ bá»™ nÃ o tá»‘t hÆ¡n theo hÆ°á»›ng nÃ y)</small>' : ''}`, g, !trung);
+        return dong(`Gợi ý: ${escapeHtml(g.moTa)}${trung ? '<br><small>= trùng ngưỡng hiện tại (không có bộ nào tốt hơn theo hướng này)</small>' : ''}`, g, !trung);
       }).join('')}
     </tbody></table></div>
-    <p style="margin:6px 0 0">Thá»­ ngÆ°á»¡ng khÃ¡c: PASS ${vao('pass', nguonThu.pass)} FAIL ${vao('fail', nguonThu.fail)} Cháº¯c cháº¯n ${vao('ccl', nguonThu.ccl)}
-      <button type="button" class="btn-hanh-dong phu" onclick="tinhGoiYNguong('${loai}', true)">TÃ­nh thá»­</button> <span id="gyn-${loai}-loi" style="color:var(--color-danger-text)"></span></p>` : ''}
+    <p style="margin:6px 0 0">Thử ngưỡng khác: PASS ${vao('pass', nguonThu.pass)} FAIL ${vao('fail', nguonThu.fail)} Chắc chắn ${vao('ccl', nguonThu.ccl)}
+      <button type="button" class="btn-hanh-dong phu" onclick="tinhGoiYNguong('${loai}', true)">Tính thử</button> <span id="gyn-${loai}-loi" style="color:var(--color-danger-text)"></span></p>` : ''}
   </div>`;
 }
 function dienNguong(loai, pass, fail, ccl) {
   Object.entries({ pass, fail, ccl }).forEach(([k, v]) => { document.getElementById(`nguong-${loai}-${k}`).value = v; });
-  thongBaoNguong(`ÄÃ£ Ä‘iá»n ngÆ°á»¡ng gá»£i Ã½ cho ${loai} vÃ o Ã´ â€” CHÆ¯A lÆ°u. Báº¥m "LÆ°u ngÆ°á»¡ng" náº¿u muá»‘n Ã¡p dá»¥ng.`);
+  thongBaoNguong(`Đã điền ngưỡng gợi ý cho ${loai} vào ô — CHƯA lưu. Bấm "Lưu ngưỡng" nếu muốn áp dụng.`);
 }
 
 async function luuNguong(nut) {
@@ -400,7 +400,7 @@ async function luuNguong(nut) {
     const sai = kiemTraNguongGiaoDien(gt, n.ten);
     if (sai) {
       document.getElementById(`nguong-${n.loai}-${sai.k}`).classList.add('sai');
-      thongBaoNguong('ChÆ°a lÆ°u: ' + sai.loi, true);
+      thongBaoNguong('Chưa lưu: ' + sai.loi, true);
       return;
     }
     nguong[n.loai] = gt;
@@ -408,9 +408,9 @@ async function luuNguong(nut) {
   nut.disabled = true;
   try {
     await apiFetch('/qc/nguong', { method: 'POST', body: JSON.stringify({ nguong }) });
-    thongBaoNguong('ÄÃ£ lÆ°u ngÆ°á»¡ng â€” Ã¡p dá»¥ng tá»« lÆ°á»£t QC tiáº¿p theo.');
+    thongBaoNguong('Đã lưu ngưỡng — áp dụng từ lượt QC tiếp theo.');
     await taiNguong();
-  } catch (e) { thongBaoNguong('ChÆ°a lÆ°u: ' + e.message, true); }
+  } catch (e) { thongBaoNguong('Chưa lưu: ' + e.message, true); }
   nut.disabled = false;
 }
 
@@ -429,35 +429,35 @@ async function taiTelegram() {
     document.getElementById('tg-gop-phut').value = t.gopCclPhut;
     document.getElementById('tg-gio-tong-ket').value = t.gioTongKet;
     document.getElementById('tg-bot-token').value = '';
-    document.getElementById('tg-bot-token').placeholder = t.nguonToken === 'app' ? 'Äá»ƒ trá»‘ng = giá»¯ token cÅ©' : '123456789:AAE...';
+    document.getElementById('tg-bot-token').placeholder = t.nguonToken === 'app' ? 'Để trống = giữ token cũ' : '123456789:AAE...';
     document.getElementById('tg-xoa-token').style.display = t.nguonToken === 'app' ? '' : 'none';
-    document.getElementById('tg-token-trang-thai').textContent = t.nguonToken === 'app' ? 'Token Ä‘ang lÆ°u: ' + t.tokenChe
-      : t.nguonToken === 'env' ? 'Äang dÃ¹ng TELEGRAM_BOT_TOKEN trong .env' : 'ChÆ°a cÃ³ Bot Token â€” chÆ°a gá»­i Ä‘Æ°á»£c';
-    el.textContent = !t.nguonToken ? 'ChÆ°a gá»­i Ä‘Æ°á»£c (thiáº¿u Bot Token)' : t.chatId ? 'Äang Báº¬T cáº£nh bÃ¡o' : 'Äang Táº®T (chÆ°a cÃ³ Chat ID)';
-  } catch (e) { el.textContent = 'Lá»—i: ' + e.message; }
+    document.getElementById('tg-token-trang-thai').textContent = t.nguonToken === 'app' ? 'Token đang lưu: ' + t.tokenChe
+      : t.nguonToken === 'env' ? 'Đang dùng TELEGRAM_BOT_TOKEN trong .env' : 'Chưa có Bot Token — chưa gửi được';
+    el.textContent = !t.nguonToken ? 'Chưa gửi được (thiếu Bot Token)' : t.chatId ? 'Đang BẬT cảnh báo' : 'Đang TẮT (chưa có Chat ID)';
+  } catch (e) { el.textContent = 'Lỗi: ' + e.message; }
 }
 
 async function luuTelegram(xoaToken = false) {
-  if (xoaToken && !confirm('XoÃ¡ Bot Token Ä‘Ã£ lÆ°u? (Sáº½ dÃ¹ng TELEGRAM_BOT_TOKEN trong .env náº¿u cÃ³.)')) return;
+  if (xoaToken && !confirm('Xoá Bot Token đã lưu? (Sẽ dùng TELEGRAM_BOT_TOKEN trong .env nếu có.)')) return;
   const chatId = document.getElementById('tg-chat-id').value.trim();
   const botToken = document.getElementById('tg-bot-token').value.trim();
   try {
     await apiFetch('/qc/telegram', { method: 'POST', body: JSON.stringify({ chatId, botToken, xoaToken }) });
-    thongBaoTg(xoaToken ? 'ÄÃ£ xoÃ¡ Bot Token.' : chatId ? 'ÄÃ£ lÆ°u â€” báº¥m "Gá»­i thá»­" Ä‘á»ƒ kiá»ƒm tra.' : 'ÄÃ£ lÆ°u â€” cáº£nh bÃ¡o Ä‘ang Táº®T (chÆ°a cÃ³ Chat ID).');
+    thongBaoTg(xoaToken ? 'Đã xoá Bot Token.' : chatId ? 'Đã lưu — bấm "Gửi thử" để kiểm tra.' : 'Đã lưu — cảnh báo đang TẮT (chưa có Chat ID).');
     await taiTelegram();
-  } catch (e) { thongBaoTg('ChÆ°a lÆ°u: ' + e.message, true); }
+  } catch (e) { thongBaoTg('Chưa lưu: ' + e.message, true); }
 }
 
 async function luuGopTelegram(nut) {
   const gopCclPhut = document.getElementById('tg-gop-phut').value.trim();
   const gioTongKet = document.getElementById('tg-gio-tong-ket').value;
-  if (!/^\d+$/.test(gopCclPhut) || (Number(gopCclPhut) !== 0 && (Number(gopCclPhut) < 15 || Number(gopCclPhut) > 1440))) return thongBaoTg('ChÆ°a lÆ°u: chu ká»³ gá»™p pháº£i lÃ  0 hoáº·c sá»‘ phÃºt nguyÃªn tá»« 15 Ä‘áº¿n 1440.', true);
+  if (!/^\d+$/.test(gopCclPhut) || (Number(gopCclPhut) !== 0 && (Number(gopCclPhut) < 15 || Number(gopCclPhut) > 1440))) return thongBaoTg('Chưa lưu: chu kỳ gộp phải là 0 hoặc số phút nguyên từ 15 đến 1440.', true);
   nut.disabled = true;
   try {
     await apiFetch('/qc/telegram/gop', { method: 'POST', body: JSON.stringify({ gopCclPhut: Number(gopCclPhut), gioTongKet }) });
-    thongBaoTg(`ÄÃ£ lÆ°u â€” Cáº¦N CHECK Láº I: ${Number(gopCclPhut) ? `gá»™p má»—i ${gopCclPhut} phÃºt` : 'gá»­i ngay tá»«ng tin'}; tá»•ng káº¿t ngÃ y: ${gioTongKet || 'táº¯t'}.`);
+    thongBaoTg(`Đã lưu — CẦN CHECK LẠI: ${Number(gopCclPhut) ? `gộp mỗi ${gopCclPhut} phút` : 'gửi ngay từng tin'}; tổng kết ngày: ${gioTongKet || 'tắt'}.`);
     await taiTelegram();
-  } catch (e) { thongBaoTg('ChÆ°a lÆ°u: ' + e.message, true); }
+  } catch (e) { thongBaoTg('Chưa lưu: ' + e.message, true); }
   nut.disabled = false;
 }
 
@@ -465,18 +465,18 @@ async function guiThuTelegram(nut) {
   nut.disabled = true;
   try {
     await apiFetch('/qc/telegram/gui-thu', { method: 'POST' });
-    thongBaoTg('ÄÃ£ gá»­i tin thá»­ â€” kiá»ƒm tra group Telegram. (Gá»­i tá»›i Chat ID ÄÃƒ LÆ¯U.)');
+    thongBaoTg('Đã gửi tin thử — kiểm tra group Telegram. (Gửi tới Chat ID ĐÃ LƯU.)');
   } catch (e) { thongBaoTg(e.message, true); }
   nut.disabled = false;
 }
 
 async function taiCauHinh() {
   const el = document.getElementById('khoi-cau-hinh');
-  try { dsLoai = await apiFetch('/qc/cau-hinh'); } catch (e) { el.textContent = 'Lá»—i: ' + e.message; return; }
+  try { dsLoai = await apiFetch('/qc/cau-hinh'); } catch (e) { el.textContent = 'Lỗi: ' + e.message; return; }
   el.innerHTML = dsLoai.map(c => `<div class="qc-dong-cau-hinh" id="cau-hinh-${c.loai}">${hangCauHinh(c, c.nhaCungCap)}</div>`).join('');
   const oLoai = document.getElementById('qc-loai');
   const dangChon = oLoai.value;
-  oLoai.innerHTML = dsLoai.map(c => `<option value="${c.loai}" ${c.daTrienKhai ? '' : 'disabled'}>${escapeHtml(c.ten)}${c.daTrienKhai ? '' : ' (chÆ°a triá»ƒn khai)'}</option>`).join('');
+  oLoai.innerHTML = dsLoai.map(c => `<option value="${c.loai}" ${c.daTrienKhai ? '' : 'disabled'}>${escapeHtml(c.ten)}${c.daTrienKhai ? '' : ' (chưa triển khai)'}</option>`).join('');
   oLoai.value = dangChon || (dsLoai.find(c => c.daTrienKhai) || {}).loai || '';
   const oLogLoai = document.getElementById('log-loai');
   if (oLogLoai.options.length === 1) oLogLoai.innerHTML += dsLoai.map(c => `<option value="${c.loai}">${escapeHtml(c.ten)}</option>`).join('');
@@ -484,14 +484,14 @@ async function taiCauHinh() {
 
 async function luuCauHinh(loai, xoaKey = false) {
   const nhaCungCap = document.getElementById('ncc-' + loai).value;
-  if (xoaKey && !confirm(`XoÃ¡ API key ${TEN_NCC[nhaCungCap]} cá»§a ${loai}?`)) return;
+  if (xoaKey && !confirm(`Xoá API key ${TEN_NCC[nhaCungCap]} của ${loai}?`)) return;
   const apiKey = document.getElementById('key-' + loai).value.trim();
   const model = document.getElementById('model-' + loai).value.trim();
   try {
     await apiFetch('/qc/cau-hinh', { method: 'POST', body: JSON.stringify({ loai, nhaCungCap, model, apiKey, xoaKey }) });
-    thongBao(xoaKey ? `ÄÃ£ xoÃ¡ API key ${TEN_NCC[nhaCungCap]} cá»§a ${loai}.` : `ÄÃ£ lÆ°u cáº¥u hÃ¬nh ${loai} â€” Ä‘ang dÃ¹ng ${TEN_NCC[nhaCungCap]}.`);
+    thongBao(xoaKey ? `Đã xoá API key ${TEN_NCC[nhaCungCap]} của ${loai}.` : `Đã lưu cấu hình ${loai} — đang dùng ${TEN_NCC[nhaCungCap]}.`);
     await taiCauHinh();
-  } catch (e) { thongBao('ChÆ°a lÆ°u: ' + e.message, true); }
+  } catch (e) { thongBao('Chưa lưu: ' + e.message, true); }
 }
 
 async function thuKetNoi(loai, nut) {
@@ -499,7 +499,7 @@ async function thuKetNoi(loai, nut) {
   nut.disabled = true;
   try {
     await apiFetch('/qc/thu-ket-noi', { method: 'POST', body: JSON.stringify({ loai, nhaCungCap }) });
-    thongBao(`${loai}: káº¿t ná»‘i ${TEN_NCC[nhaCungCap]} thÃ nh cÃ´ng (key + model dÃ¹ng Ä‘Æ°á»£c). LÆ°u Ã½: thá»­ vá»›i cáº¥u hÃ¬nh ÄÃƒ LÆ¯U.`);
+    thongBao(`${loai}: kết nối ${TEN_NCC[nhaCungCap]} thành công (key + model dùng được). Lưu ý: thử với cấu hình ĐÃ LƯU.`);
   } catch (e) { thongBao(`${loai}: ` + e.message, true); }
   nut.disabled = false;
 }
@@ -508,10 +508,10 @@ async function chayQc() {
   const sttKey = document.getElementById('qc-ma-don').value.trim();
   const loai = document.getElementById('qc-loai').value;
   const el = document.getElementById('qc-ket-qua');
-  if (!sttKey) { el.innerHTML = '<p style="color:var(--color-danger-text)">Nháº­p mÃ£ Ä‘Æ¡n trÆ°á»›c.</p>'; return; }
+  if (!sttKey) { el.innerHTML = '<p style="color:var(--color-danger-text)">Nhập mã đơn trước.</p>'; return; }
   const nut = document.getElementById('btn-chay-qc');
   nut.disabled = true;
-  el.innerHTML = `<p>${icon('spinner', { className: 'icon-spin', size: 16 })} Äang QC ${escapeHtml(sttKey)}... (cÃ³ thá»ƒ máº¥t 10-60 giÃ¢y)</p>`;
+  el.innerHTML = `<p>${icon('spinner', { className: 'icon-spin', size: 16 })} Đang QC ${escapeHtml(sttKey)}... (có thể mất 10-60 giây)</p>`;
   try {
     const kq = await apiFetch('/qc/chay', { method: 'POST', body: JSON.stringify({ sttKey, loai }) });
     el.innerHTML = renderKetQua(kq);
@@ -523,28 +523,28 @@ async function chayQc() {
 }
 
 function renderKetQua(kq) {
-  if (kq.loi) return `<p>${nhanKetQua('LOI')} <strong>${escapeHtml(kq.sttKey)}</strong> â€” ${escapeHtml(kq.loi)}</p>`;
+  if (kq.loi) return `<p>${nhanKetQua('LOI')} <strong>${escapeHtml(kq.sttKey)}</strong> — ${escapeHtml(kq.loi)}</p>`;
   const k = kq.ketQua;
   const hangMuc = Object.entries(k.checked_items || {}).map(([ten, v]) => `<li>${escapeHtml(NHAN_HANG_MUC[ten] || ten)}: ${nhanKetQua(v)}</li>`).join('');
   const doc = k.doc_duoc || {};
-  const docDuoc = [['MÃ£ tracking', doc.ma_tracking], ['NgÆ°á»i nháº­n', doc.ten_nguoi_nhan], ['Äá»‹a chá»‰', doc.dia_chi], ['HÃ£ng', doc.hang_van_chuyen], ['MÃ£ Ä‘Æ¡n trÃªn tem', (doc.ma_don_tren_tem || []).join(', ')]]
+  const docDuoc = [['Mã tracking', doc.ma_tracking], ['Người nhận', doc.ten_nguoi_nhan], ['Địa chỉ', doc.dia_chi], ['Hãng', doc.hang_van_chuyen], ['Mã đơn trên tem', (doc.ma_don_tren_tem || []).join(', ')]]
     .filter(([, v]) => v).map(([t, v]) => `<li>${t}: <strong>${escapeHtml(v)}</strong></li>`).join('');
   return `
     <div class="qc-ket-qua">
       <div>
-        <p style="margin-top:0;font-size:1.1rem">${nhanKetQua(k.result)} <strong>${escapeHtml(kq.sttKey)}</strong> Â· ${escapeHtml(kq.loai)} Â· score ${k.score === null || k.score === undefined ? 'â€”' : escapeHtml(k.score)} Â· cháº¯c cháº¯n ${Math.round((k.confidence || 0) * 100)}%${kq.model ? ` Â· ${escapeHtml(kq.model)}` : ' Â· khÃ´ng gá»i AI'}</p>
-        ${k.ly_do_ket_luan ? `<p><strong>Há»‡ thá»‘ng káº¿t luáº­n:</strong> ${escapeHtml(k.ly_do_ket_luan)}</p>` : ''}
-        ${k.nguong ? `<p style="color:var(--color-text-muted)">NgÆ°á»¡ng Ä‘Ã£ dÃ¹ng: PASS â‰¥ ${escapeHtml(k.nguong.pass)} Â· FAIL â‰¤ ${escapeHtml(k.nguong.fail)} Â· cháº¯c cháº¯n â‰¥ ${escapeHtml(k.nguong.ccl)}%${k.ai_de_xuat ? ` Â· AI Ä‘á» xuáº¥t: ${escapeHtml(k.ai_de_xuat)}` : ''}</p>` : ''}
-        <p><strong>LÃ½ do${kq.model ? ' (AI)' : ''}:</strong> ${escapeHtml(k.reason || '')}</p>
-        ${k.evidence && k.evidence.length ? `<p style="margin-bottom:4px"><strong>Báº±ng chá»©ng (quan sÃ¡t):</strong></p><ul style="margin-top:0">${k.evidence.map(e => `<li>${escapeHtml(NHAN_HANG_MUC[e.hang_muc] || e.hang_muc)}${e.anh ? ` [${escapeHtml(e.anh)}]` : ''}: ${escapeHtml(e.quan_sat)}</li>`).join('')}</ul>` : ''}
-        ${hangMuc ? `<p style="margin-bottom:4px"><strong>Tá»«ng háº¡ng má»¥c:</strong></p><ul style="margin-top:0">${hangMuc}</ul>` : ''}
-        ${k.issues && k.issues.length ? `<p style="margin-bottom:4px"><strong>Váº¥n Ä‘á»:</strong></p><ul style="margin-top:0">${k.issues.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</ul>` : ''}
-        ${docDuoc ? `<p style="margin-bottom:4px"><strong>AI Ä‘á»c Ä‘Æ°á»£c trÃªn tem:</strong></p><ul style="margin-top:0">${docDuoc}</ul>` : ''}
-        ${k.design_file || k.mockup_file ? `<p><strong>Design Ä‘Æ°á»£c chá»n:</strong> ${escapeHtml(k.design_file || 'â€”')} Â· <strong>Mockup Ä‘Æ°á»£c chá»n:</strong> ${escapeHtml(k.mockup_file || 'â€”')}</p>` : ''}
-        ${k.vai_tro_anh && k.vai_tro_anh.length ? `<p style="margin-bottom:4px"><strong>AI xÃ¡c Ä‘á»‹nh vai trÃ² áº£nh:</strong></p><ul style="margin-top:0">${k.vai_tro_anh.map(v => `<li>${escapeHtml(v.ten)}: ${escapeHtml(NHAN_VAI_TRO_ANH[v.vai_tro] || v.vai_tro)}${v.ghi_chu ? ' â€” ' + escapeHtml(v.ghi_chu) : ''}</li>`).join('')}</ul>` : ''}
-        ${k.kiem_tra_he_thong && k.kiem_tra_he_thong.length ? `<p style="margin-bottom:4px"><strong>Há»‡ thá»‘ng tá»± kiá»ƒm tra:</strong></p><ul style="margin-top:0">${k.kiem_tra_he_thong.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</ul>` : ''}
+        <p style="margin-top:0;font-size:1.1rem">${nhanKetQua(k.result)} <strong>${escapeHtml(kq.sttKey)}</strong> · ${escapeHtml(kq.loai)} · score ${k.score === null || k.score === undefined ? '—' : escapeHtml(k.score)} · chắc chắn ${Math.round((k.confidence || 0) * 100)}%${kq.model ? ` · ${escapeHtml(kq.model)}` : ' · không gọi AI'}</p>
+        ${k.ly_do_ket_luan ? `<p><strong>Hệ thống kết luận:</strong> ${escapeHtml(k.ly_do_ket_luan)}</p>` : ''}
+        ${k.nguong ? `<p style="color:var(--color-text-muted)">Ngưỡng đã dùng: PASS ≥ ${escapeHtml(k.nguong.pass)} · FAIL ≤ ${escapeHtml(k.nguong.fail)} · chắc chắn ≥ ${escapeHtml(k.nguong.ccl)}%${k.ai_de_xuat ? ` · AI đề xuất: ${escapeHtml(k.ai_de_xuat)}` : ''}</p>` : ''}
+        <p><strong>Lý do${kq.model ? ' (AI)' : ''}:</strong> ${escapeHtml(k.reason || '')}</p>
+        ${k.evidence && k.evidence.length ? `<p style="margin-bottom:4px"><strong>Bằng chứng (quan sát):</strong></p><ul style="margin-top:0">${k.evidence.map(e => `<li>${escapeHtml(NHAN_HANG_MUC[e.hang_muc] || e.hang_muc)}${e.anh ? ` [${escapeHtml(e.anh)}]` : ''}: ${escapeHtml(e.quan_sat)}</li>`).join('')}</ul>` : ''}
+        ${hangMuc ? `<p style="margin-bottom:4px"><strong>Từng hạng mục:</strong></p><ul style="margin-top:0">${hangMuc}</ul>` : ''}
+        ${k.issues && k.issues.length ? `<p style="margin-bottom:4px"><strong>Vấn đề:</strong></p><ul style="margin-top:0">${k.issues.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</ul>` : ''}
+        ${docDuoc ? `<p style="margin-bottom:4px"><strong>AI đọc được trên tem:</strong></p><ul style="margin-top:0">${docDuoc}</ul>` : ''}
+        ${k.design_file || k.mockup_file ? `<p><strong>Design được chọn:</strong> ${escapeHtml(k.design_file || '—')} · <strong>Mockup được chọn:</strong> ${escapeHtml(k.mockup_file || '—')}</p>` : ''}
+        ${k.vai_tro_anh && k.vai_tro_anh.length ? `<p style="margin-bottom:4px"><strong>AI xác định vai trò ảnh:</strong></p><ul style="margin-top:0">${k.vai_tro_anh.map(v => `<li>${escapeHtml(v.ten)}: ${escapeHtml(NHAN_VAI_TRO_ANH[v.vai_tro] || v.vai_tro)}${v.ghi_chu ? ' — ' + escapeHtml(v.ghi_chu) : ''}</li>`).join('')}</ul>` : ''}
+        ${k.kiem_tra_he_thong && k.kiem_tra_he_thong.length ? `<p style="margin-bottom:4px"><strong>Hệ thống tự kiểm tra:</strong></p><ul style="margin-top:0">${k.kiem_tra_he_thong.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</ul>` : ''}
       </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:6px;align-content:start">${(kq.anh || []).map(u => `<a href="${escapeHtml(u)}" target="_blank" rel="noopener"><img src="${escapeHtml(urlAnhHienThiList(u, 400)[0] || u)}" alt="áº¢nh Ä‘Ã£ dÃ¹ng Ä‘á»ƒ QC" loading="lazy"></a>`).join('')}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:6px;align-content:start">${(kq.anh || []).map(u => `<a href="${escapeHtml(u)}" target="_blank" rel="noopener"><img src="${escapeHtml(urlAnhHienThiList(u, 400)[0] || u)}" alt="Ảnh đã dùng để QC" loading="lazy"></a>`).join('')}</div>
     </div>`;
 }
 
@@ -560,56 +560,56 @@ async function taiLog() {
   if (ketQua) qs.set('ketQua', ketQua);
   if (maDon) qs.set('sttKey', maDon);
   let ds;
-  try { ds = await apiFetch('/qc/log?' + qs); } catch (e) { el.textContent = 'Lá»—i: ' + e.message; return; }
-  if (!ds.length) { el.innerHTML = '<p style="color:var(--color-text-muted)">ChÆ°a cÃ³ láº§n QC nÃ o.</p>'; return; }
+  try { ds = await apiFetch('/qc/log?' + qs); } catch (e) { el.textContent = 'Lỗi: ' + e.message; return; }
+  if (!ds.length) { el.innerHTML = '<p style="color:var(--color-text-muted)">Chưa có lần QC nào.</p>'; return; }
   el.innerHTML = `<table class="qc-bang-log">
-    <thead><tr><th>Thá»i gian</th><th>MÃ£ Ä‘Æ¡n</th><th>QC</th><th>Cháº¿ Ä‘á»™</th><th>Káº¿t quáº£</th><th>Score</th><th>Cháº¯c cháº¯n</th><th>LÃ½ do / lá»—i</th><th>NgÆ°á»i cháº¡y</th><th>ÄÃ¡nh giÃ¡ (thá»±c táº¿)</th><th></th></tr></thead>
+    <thead><tr><th>Thời gian</th><th>Mã đơn</th><th>QC</th><th>Chế độ</th><th>Kết quả</th><th>Score</th><th>Chắc chắn</th><th>Lý do / lỗi</th><th>Người chạy</th><th>Đánh giá (thực tế)</th><th></th></tr></thead>
     <tbody>${ds.map(d => `<tr${aiSai(d) ? ' class="qc-ai-sai"' : ''}>
       <td>${escapeHtml(String(d.ThoiGian).replace('T', ' ').slice(0, 19))}</td>
       <td><a href="/order.html?stt=${encodeURIComponent(d.STT_Key)}" target="_blank" rel="noopener" style="font-weight:700">${escapeHtml(d.STT_Key)}</a></td>
       <td>${escapeHtml(d.LoaiQc)}</td>
       <td>${d.CheDo === 'AUTO' ? '<strong>AUTO</strong>' : d.CheDo === 'TEST' ? '<strong style="color:var(--color-text-muted)">TEST</strong>' : 'MANUAL'}${d.PhienBanPrompt && d.PhienBanPrompt !== 'MAC_DINH' && d.PhienBanPrompt !== 'CHAY_THU' ? `<br><small>prompt #${escapeHtml(d.PhienBanPrompt)}</small>` : ''}</td>
-      <td>${nhanKetQua(d.KetQua)}${d.AiDeXuat && d.AiDeXuat !== d.KetQua ? `<br><small>AI Ä‘á» xuáº¥t: ${escapeHtml(d.AiDeXuat)}</small>` : ''}</td>
-      <td>${d.Diem !== undefined && d.Diem !== '' ? escapeHtml(d.Diem) : 'â€”'}</td>
-      <td>${d.DoTinCay ? Math.round(Number(d.DoTinCay) * 100) + '%' : 'â€”'}</td>
+      <td>${nhanKetQua(d.KetQua)}${d.AiDeXuat && d.AiDeXuat !== d.KetQua ? `<br><small>AI đề xuất: ${escapeHtml(d.AiDeXuat)}</small>` : ''}</td>
+      <td>${d.Diem !== undefined && d.Diem !== '' ? escapeHtml(d.Diem) : '—'}</td>
+      <td>${d.DoTinCay ? Math.round(Number(d.DoTinCay) * 100) + '%' : '—'}</td>
       <td class="ly-do">${escapeHtml(d.LoiApi || d.LyDoKetLuan || d.LyDo || '')}${d.LyDoKetLuan && d.LyDo ? `<br><small style="color:var(--color-text-muted)">AI: ${escapeHtml(d.LyDo)}</small>` : ''}</td>
       <td>${escapeHtml(d.NguoiDung)}</td>
       <td>${oDanhGia(d)}</td>
-      <td>${d.ChiTiet ? `<button type="button" class="btn-hanh-dong phu" style="padding:4px 8px;font-size:0.78rem" onclick="xemChiTiet(this, ${d.id})">Chi tiáº¿t</button>` : ''}</td>
+      <td>${d.ChiTiet ? `<button type="button" class="btn-hanh-dong phu" style="padding:4px 8px;font-size:0.78rem" onclick="xemChiTiet(this, ${d.id})">Chi tiết</button>` : ''}</td>
     </tr><tr id="chi-tiet-${d.id}" style="display:none"><td colspan="11"><div class="qc-chi-tiet"></div></td></tr><tr id="giai-thich-${d.id}" style="display:none"><td colspan="11"></td></tr>`).join('')}</tbody></table>`;
   window._dsLog = ds;
 }
 
-// ---- ÄÃ¡nh giÃ¡ QC (02/10/2026): gÃ¡n káº¿t quáº£ THá»°C Táº¾ cho tá»«ng láº§n QC â€” chá»‰ ghi nháº­n, khÃ´ng Ä‘á»•i tráº¡ng thÃ¡i Ä‘Æ¡n.
+// ---- Đánh giá QC (02/10/2026): gán kết quả THỰC TẾ cho từng lần QC — chỉ ghi nhận, không đổi trạng thái đơn.
 const aiSai = d => !!d.DanhGiaThucTe && ['PASS', 'FAIL'].includes(d.KetQua) && d.KetQua !== d.DanhGiaThucTe;
 function oDanhGia(d) {
-  if (d.KetQua === 'LOI') return 'â€”';
+  if (d.KetQua === 'LOI') return '—';
   const nut = (kq, chu) => `<button type="button" class="btn-hanh-dong phu" style="padding:3px 8px;font-size:0.75rem" onclick="danhGia(${d.id}, '${kq}')">${chu}</button>`;
   if (!d.DanhGiaThucTe) return `${nut('PASS', 'PASS')} ${nut('FAIL', 'FAIL')}`;
   const nutGiaiThich = d.KetQua !== d.DanhGiaThucTe
-    ? `<br><button type="button" class="btn-hanh-dong phu" style="padding:3px 8px;font-size:0.75rem;margin-top:4px" onclick="moGiaiThichTuLog(${d.id})">${d.KinhNghiemId ? `Giáº£i thÃ­ch KN#${d.KinhNghiemId}` : 'Giáº£i thÃ­ch lá»—i AI'}</button>` : '';
+    ? `<br><button type="button" class="btn-hanh-dong phu" style="padding:3px 8px;font-size:0.75rem;margin-top:4px" onclick="moGiaiThichTuLog(${d.id})">${d.KinhNghiemId ? `Giải thích KN#${d.KinhNghiemId}` : 'Giải thích lỗi AI'}</button>` : '';
   return `${nhanKetQua(d.DanhGiaThucTe)}${aiSai(d) ? ' <strong style="color:var(--color-danger-text)">AI sai</strong>' : ''}
     ${d.DanhGiaLyDo ? `<br><small>${escapeHtml(d.DanhGiaLyDo)}</small>` : ''}
-    <br><small style="color:var(--color-text-muted)">${escapeHtml(d.DanhGiaNguoi)} Â· ${escapeHtml(String(d.DanhGiaThoiGian).replace('T', ' ').slice(0, 16))}</small>
-    <br>${nut(d.DanhGiaThucTe === 'PASS' ? 'FAIL' : 'PASS', 'Äá»•i thÃ nh ' + (d.DanhGiaThucTe === 'PASS' ? 'FAIL' : 'PASS'))} ${nut('', 'Bá»')}${nutGiaiThich}`;
+    <br><small style="color:var(--color-text-muted)">${escapeHtml(d.DanhGiaNguoi)} · ${escapeHtml(String(d.DanhGiaThoiGian).replace('T', ' ').slice(0, 16))}</small>
+    <br>${nut(d.DanhGiaThucTe === 'PASS' ? 'FAIL' : 'PASS', 'Đổi thành ' + (d.DanhGiaThucTe === 'PASS' ? 'FAIL' : 'PASS'))} ${nut('', 'Bỏ')}${nutGiaiThich}`;
 }
 async function danhGia(id, thucTe) {
   let lyDo = '';
   if (thucTe) {
-    lyDo = prompt(`Káº¿t quáº£ thá»±c táº¿: ${thucTe}. LÃ½ do / ghi chÃº (khÃ´ng báº¯t buá»™c):`, '');
+    lyDo = prompt(`Kết quả thực tế: ${thucTe}. Lý do / ghi chú (không bắt buộc):`, '');
     if (lyDo === null) return;
-  } else if (!confirm('Bá» Ä‘Ã¡nh giÃ¡ láº§n QC nÃ y?')) return;
+  } else if (!confirm('Bỏ đánh giá lần QC này?')) return;
   try {
     await apiFetch(`/qc/log/${id}/danh-gia`, { method: 'POST', body: JSON.stringify({ thucTe, lyDo }) });
-  } catch (e) { alert('ChÆ°a lÆ°u: ' + e.message); return; }
+  } catch (e) { alert('Chưa lưu: ' + e.message); return; }
   await taiLog();
   taiDoChinhXac();
 }
 
-// ---- Kinh nghiá»‡m QC (02/10/2026): giáº£i thÃ­ch cá»§a Superadmin vá» lá»—i AI. Backend kiá»ƒm tra láº¡i má»i trÆ°á»ng (qcService#kiemTraKinhNghiem).
+// ---- Kinh nghiệm QC (02/10/2026): giải thích của Superadmin về lỗi AI. Backend kiểm tra lại mọi trường (qcService#kiemTraKinhNghiem).
 let DM_KN = null;
 async function taiDanhMucKn() {
-  try { DM_KN = await apiFetch('/qc/kinh-nghiem/danh-muc'); } catch (e) { document.getElementById('khoi-kinh-nghiem').textContent = 'Lá»—i: ' + e.message; return; }
+  try { DM_KN = await apiFetch('/qc/kinh-nghiem/danh-muc'); } catch (e) { document.getElementById('khoi-kinh-nghiem').textContent = 'Lỗi: ' + e.message; return; }
   const them = (id, obj) => { document.getElementById(id).insertAdjacentHTML('beforeend', Object.entries(obj).map(([k, v]) => `<option value="${escapeHtml(k)}">${escapeHtml(v)}</option>`).join('')); };
   them('kn-trang-thai', DM_KN.trangThai);
   them('kn-nguyen-nhan', DM_KN.nguyenNhan);
@@ -626,61 +626,61 @@ async function taiKinhNghiem() {
     const v = document.getElementById(id).value.trim();
     if (v) qs.set(k, v);
   }
-  try { dsKn = await apiFetch('/qc/kinh-nghiem?' + qs); } catch (e) { el.textContent = 'Lá»—i: ' + e.message; return; }
-  if (!dsKn.length) { el.innerHTML = '<p style="color:var(--color-text-muted)">ChÆ°a cÃ³ kinh nghiá»‡m nÃ o.</p>'; return; }
+  try { dsKn = await apiFetch('/qc/kinh-nghiem?' + qs); } catch (e) { el.textContent = 'Lỗi: ' + e.message; return; }
+  if (!dsKn.length) { el.innerHTML = '<p style="color:var(--color-text-muted)">Chưa có kinh nghiệm nào.</p>'; return; }
   const nutNho = (chu, onclick) => `<button type="button" class="btn-hanh-dong phu" style="padding:3px 8px;font-size:0.75rem;margin:2px 0" onclick="${onclick}">${chu}</button>`;
   el.innerHTML = `<table class="qc-bang-log">
-    <thead><tr><th>KN</th><th>QC Â· ÄÆ¡n</th><th>AI â†’ ÄÃºng</th><th>Háº¡ng má»¥c Â· NguyÃªn nhÃ¢n</th><th>Kinh nghiá»‡m (gá»­i cho AI)</th><th>Pháº¡m vi</th><th>Tráº¡ng thÃ¡i</th><th>ÄÃ£ dÃ¹ng</th><th></th></tr></thead>
+    <thead><tr><th>KN</th><th>QC · Đơn</th><th>AI → Đúng</th><th>Hạng mục · Nguyên nhân</th><th>Kinh nghiệm (gửi cho AI)</th><th>Phạm vi</th><th>Trạng thái</th><th>Đã dùng</th><th></th></tr></thead>
     <tbody>${dsKn.map(k => `<tr>
-      <td><strong>KN#${k.id}</strong><br><small style="color:var(--color-text-muted)">${escapeHtml(k.NguoiSua || k.NguoiTao)} Â· ${escapeHtml(String(k.ThoiGianSua || k.ThoiGianTao).replace('T', ' ').slice(0, 16))}</small></td>
+      <td><strong>KN#${k.id}</strong><br><small style="color:var(--color-text-muted)">${escapeHtml(k.NguoiSua || k.NguoiTao)} · ${escapeHtml(String(k.ThoiGianSua || k.ThoiGianTao).replace('T', ' ').slice(0, 16))}</small></td>
       <td>${escapeHtml(k.LoaiQc)}<br>${escapeHtml(k.STT_Key)}<br><small>log #${k.QcLogId}</small></td>
-      <td>${nhanKetQua(k.KetQuaAi)} â†’ ${nhanKetQua(k.KetQuaDung)}</td>
-      <td class="ly-do">${escapeHtml(docMang(k.HangMucSai).map(h => NHAN_HANG_MUC[h] || h).join(', ') || 'â€”')}<br><small>${escapeHtml(docMang(k.NguyenNhan).map(n => (DM_KN && DM_KN.nguyenNhan[n]) || n).join(', '))}${k.NguyenNhanKhac ? ': ' + escapeHtml(k.NguyenNhanKhac) : ''}</small></td>
+      <td>${nhanKetQua(k.KetQuaAi)} → ${nhanKetQua(k.KetQuaDung)}</td>
+      <td class="ly-do">${escapeHtml(docMang(k.HangMucSai).map(h => NHAN_HANG_MUC[h] || h).join(', ') || '—')}<br><small>${escapeHtml(docMang(k.NguyenNhan).map(n => (DM_KN && DM_KN.nguyenNhan[n]) || n).join(', '))}${k.NguyenNhanKhac ? ': ' + escapeHtml(k.NguyenNhanKhac) : ''}</small></td>
       <td class="ly-do">${escapeHtml(k.KinhNghiem)}<br><small style="color:var(--color-text-muted)">AI sai: ${escapeHtml(k.AiSaiGi)}</small></td>
       <td>${escapeHtml((DM_KN && DM_KN.phamVi[k.PhamVi]) || k.PhamVi)}${k.GiaTriPhamVi ? `<br><small>${escapeHtml(k.GiaTriPhamVi)}</small>` : ''}</td>
       <td>${nhanTrangThaiKn(k.TrangThai)}</td>
       <td>${k.SoLanDung}</td>
-      <td style="white-space:nowrap">${nutNho('Sá»­a', `moSuaKn(${k.id})`)}<br>
-        ${k.TrangThai !== 'DA_XAC_NHAN' ? nutNho('XÃ¡c nháº­n', `doiTrangThaiKn(${k.id}, 'DA_XAC_NHAN')`) + '<br>' : ''}
-        ${k.TrangThai !== 'KHONG_SU_DUNG' ? nutNho('KhÃ´ng sá»­ dá»¥ng', `doiTrangThaiKn(${k.id}, 'KHONG_SU_DUNG')`) + '<br>' : ''}
-        ${nutNho('Cháº¡y láº¡i Ä‘Æ¡n gá»‘c', `chayLaiDonGoc(this, ${k.id})`)}<br>
-        ${nutNho('Xem log Ä‘Æ¡n', `xemLogDon(${escapeHtml(JSON.stringify(k.STT_Key))})`)}</td>
+      <td style="white-space:nowrap">${nutNho('Sửa', `moSuaKn(${k.id})`)}<br>
+        ${k.TrangThai !== 'DA_XAC_NHAN' ? nutNho('Xác nhận', `doiTrangThaiKn(${k.id}, 'DA_XAC_NHAN')`) + '<br>' : ''}
+        ${k.TrangThai !== 'KHONG_SU_DUNG' ? nutNho('Không sử dụng', `doiTrangThaiKn(${k.id}, 'KHONG_SU_DUNG')`) + '<br>' : ''}
+        ${nutNho('Chạy lại đơn gốc', `chayLaiDonGoc(this, ${k.id})`)}<br>
+        ${nutNho('Xem log đơn', `xemLogDon(${escapeHtml(JSON.stringify(k.STT_Key))})`)}</td>
     </tr><tr id="sua-kn-${k.id}" style="display:none"><td colspan="9"></td></tr>`).join('')}</tbody></table>`;
 }
 
-// Form dÃ¹ng chung cho táº¡o (tá»« dÃ²ng log) vÃ  sá»­a (tá»« danh sÃ¡ch). goc = { LoaiQc, STT_Key, KetQuaAi, DiemAi, LyDoAi, KetQuaDung }, kn = kinh nghiá»‡m hiá»‡n cÃ³ | null.
+// Form dùng chung cho tạo (từ dòng log) và sửa (từ danh sách). goc = { LoaiQc, STT_Key, KetQuaAi, DiemAi, LyDoAi, KetQuaDung }, kn = kinh nghiệm hiện có | null.
 function htmlFormKn(goc, kn, khoa) {
   const daChon = (s, v) => docMang(s).includes(v) ? 'checked' : '';
   const hop = (ten, ds, s) => Object.entries(ds).map(([v, nhan]) => `<label style="display:inline-flex;gap:4px;align-items:center;margin:2px 10px 2px 0"><input type="checkbox" name="${ten}-${khoa}" value="${escapeHtml(v)}" ${daChon(s, v)}> ${escapeHtml(nhan)}</label>`).join('');
   const hangMuc = Object.fromEntries((DM_KN.hangMuc[goc.LoaiQc] || []).map(h => [h, NHAN_HANG_MUC[h] || h]));
   return `<div style="border:1px solid var(--color-border);border-radius:var(--radius-sm);padding:var(--space-3);background:var(--color-surface)">
-    <h4 style="margin:0 0 var(--space-2)">Giáº£i thÃ­ch cá»§a Superadmin vá» lá»—i AI â€” ${escapeHtml(goc.LoaiQc)} Â· Ä‘Æ¡n ${escapeHtml(goc.STT_Key)}${kn ? ` Â· KN#${kn.id} (${nhanTrangThaiKn(kn.TrangThai)})` : ''}</h4>
+    <h4 style="margin:0 0 var(--space-2)">Giải thích của Superadmin về lỗi AI — ${escapeHtml(goc.LoaiQc)} · đơn ${escapeHtml(goc.STT_Key)}${kn ? ` · KN#${kn.id} (${nhanTrangThaiKn(kn.TrangThai)})` : ''}</h4>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--space-2);margin-bottom:var(--space-3)">
-      <div><small style="color:var(--color-text-muted)">Káº¿t quáº£ AI ban Ä‘áº§u</small><br>${nhanKetQua(goc.KetQuaAi)} ${goc.DiemAi !== '' && goc.DiemAi !== undefined ? `score ${escapeHtml(goc.DiemAi)}` : ''}<br><small>${escapeHtml(goc.LyDoAi || '')}</small></div>
-      <div><small style="color:var(--color-text-muted)">2. Káº¿t quáº£ Ä‘Ãºng (Ä‘Ã¡nh giÃ¡ thá»±c táº¿)</small><br>${nhanKetQua(goc.KetQuaDung)}</div>
+      <div><small style="color:var(--color-text-muted)">Kết quả AI ban đầu</small><br>${nhanKetQua(goc.KetQuaAi)} ${goc.DiemAi !== '' && goc.DiemAi !== undefined ? `score ${escapeHtml(goc.DiemAi)}` : ''}<br><small>${escapeHtml(goc.LyDoAi || '')}</small></div>
+      <div><small style="color:var(--color-text-muted)">2. Kết quả đúng (đánh giá thực tế)</small><br>${nhanKetQua(goc.KetQuaDung)}</div>
     </div>
-    <div class="truong"><label>1. AI Ä‘Ã£ Ä‘Ã¡nh giÃ¡ sai Ä‘iá»u gÃ¬? *</label><textarea id="kn-ai-sai-${khoa}" rows="3" maxlength="2000" style="width:100%">${escapeHtml(kn ? kn.AiSaiGi : '')}</textarea></div>
-    <div class="truong"><label>Háº¡ng má»¥c AI Ä‘Ã¡nh giÃ¡ sai</label><div>${hop('kn-hm', hangMuc, kn && kn.HangMucSai)}</div></div>
-    <div class="truong"><label>3. VÃ¬ sao AI Ä‘Ã¡nh giÃ¡ sai? * (chá»n Ã­t nháº¥t 1)</label><div>${hop('kn-nn', DM_KN.nguyenNhan, kn && kn.NguyenNhan)}</div>
-      <input id="kn-nn-khac-${khoa}" maxlength="1000" style="width:100%;margin-top:4px" placeholder="MÃ´ táº£ thÃªm nguyÃªn nhÃ¢n (báº¯t buá»™c náº¿u chá»n NguyÃªn nhÃ¢n khÃ¡c)" value="${escapeHtml(kn ? kn.NguyenNhanKhac : '')}"></div>
-    <div class="truong"><label>4. Kinh nghiá»‡m cáº§n tÃ­ch luá»¹ * â€” <strong>pháº§n DUY NHáº¤T gá»­i cho AI</strong>: ghi cáº£ dáº¥u hiá»‡u nháº­n biáº¿t tÃ¬nh huá»‘ng + cÃ¡ch Ä‘Ã¡nh giÃ¡ Ä‘Ãºng (tá»‘i Ä‘a ${DM_KN.doDaiKinhNghiem} kÃ½ tá»±)</label>
-      <textarea id="kn-kinh-nghiem-${khoa}" rows="3" maxlength="${DM_KN.doDaiKinhNghiem}" style="width:100%" placeholder="vd áº¢nh chá»¥p nghiÃªng lÃ m hÃ¬nh thÃªu trÃ´ng lá»‡ch: so khoáº£ng cÃ¡ch tá»›i Ä‘Æ°á»ng may cá»• Ã¡o trÆ°á»›c khi káº¿t luáº­n sai vá»‹ trÃ­.">${escapeHtml(kn ? kn.KinhNghiem : '')}</textarea></div>
-    <div class="truong"><label for="kn-pham-vi-${khoa}">5. Pháº¡m vi Ã¡p dá»¥ng *</label>
+    <div class="truong"><label>1. AI đã đánh giá sai điều gì? *</label><textarea id="kn-ai-sai-${khoa}" rows="3" maxlength="2000" style="width:100%">${escapeHtml(kn ? kn.AiSaiGi : '')}</textarea></div>
+    <div class="truong"><label>Hạng mục AI đánh giá sai</label><div>${hop('kn-hm', hangMuc, kn && kn.HangMucSai)}</div></div>
+    <div class="truong"><label>3. Vì sao AI đánh giá sai? * (chọn ít nhất 1)</label><div>${hop('kn-nn', DM_KN.nguyenNhan, kn && kn.NguyenNhan)}</div>
+      <input id="kn-nn-khac-${khoa}" maxlength="1000" style="width:100%;margin-top:4px" placeholder="Mô tả thêm nguyên nhân (bắt buộc nếu chọn Nguyên nhân khác)" value="${escapeHtml(kn ? kn.NguyenNhanKhac : '')}"></div>
+    <div class="truong"><label>4. Kinh nghiệm cần tích luỹ * — <strong>phần DUY NHẤT gửi cho AI</strong>: ghi cả dấu hiệu nhận biết tình huống + cách đánh giá đúng (tối đa ${DM_KN.doDaiKinhNghiem} ký tự)</label>
+      <textarea id="kn-kinh-nghiem-${khoa}" rows="3" maxlength="${DM_KN.doDaiKinhNghiem}" style="width:100%" placeholder="vd Ảnh chụp nghiêng làm hình thêu trông lệch: so khoảng cách tới đường may cổ áo trước khi kết luận sai vị trí.">${escapeHtml(kn ? kn.KinhNghiem : '')}</textarea></div>
+    <div class="truong"><label for="kn-pham-vi-${khoa}">5. Phạm vi áp dụng *</label>
       <select id="kn-pham-vi-${khoa}">${Object.entries(DM_KN.phamVi).map(([v, nhan]) => `<option value="${v}" ${kn && kn.PhamVi === v ? 'selected' : ''}>${escapeHtml(nhan)}</option>`).join('')}</select></div>
-    <p style="margin-bottom:0"><button type="button" class="btn-hanh-dong" onclick="luuKn(this, '${khoa}')">${kn ? 'LÆ°u thay Ä‘á»•i (vá» ChÆ°a xÃ¡c nháº­n)' : 'LÆ°u (ChÆ°a xÃ¡c nháº­n)'}</button>
-      ${kn && kn.TrangThai !== 'DA_XAC_NHAN' ? `<button type="button" class="btn-hanh-dong phu" onclick="doiTrangThaiKn(${kn.id}, 'DA_XAC_NHAN')">XÃ¡c nháº­n</button>` : ''}
-      ${kn && kn.TrangThai !== 'KHONG_SU_DUNG' ? `<button type="button" class="btn-hanh-dong phu" onclick="doiTrangThaiKn(${kn.id}, 'KHONG_SU_DUNG')">KhÃ´ng sá»­ dá»¥ng</button>` : ''}
+    <p style="margin-bottom:0"><button type="button" class="btn-hanh-dong" onclick="luuKn(this, '${khoa}')">${kn ? 'Lưu thay đổi (về Chưa xác nhận)' : 'Lưu (Chưa xác nhận)'}</button>
+      ${kn && kn.TrangThai !== 'DA_XAC_NHAN' ? `<button type="button" class="btn-hanh-dong phu" onclick="doiTrangThaiKn(${kn.id}, 'DA_XAC_NHAN')">Xác nhận</button>` : ''}
+      ${kn && kn.TrangThai !== 'KHONG_SU_DUNG' ? `<button type="button" class="btn-hanh-dong phu" onclick="doiTrangThaiKn(${kn.id}, 'KHONG_SU_DUNG')">Không sử dụng</button>` : ''}
       <span id="kn-thong-bao-${khoa}"></span></p>
   </div>`;
 }
-const formKnDangMo = {}; // khoa -> { qcLogId } (táº¡o) | { id } (sá»­a)
+const formKnDangMo = {}; // khoa -> { qcLogId } (tạo) | { id } (sửa)
 async function moGiaiThichTuLog(logId) {
   const hang = document.getElementById('giai-thich-' + logId);
   if (hang.style.display !== 'none') { hang.style.display = 'none'; return; }
   const d = (window._dsLog || []).find(x => x.id === logId);
   if (!d || !DM_KN) return;
   let kn = null;
-  if (d.KinhNghiemId) { try { kn = await apiFetch('/qc/kinh-nghiem/' + d.KinhNghiemId); } catch (e) { alert('Lá»—i: ' + e.message); return; } }
+  if (d.KinhNghiemId) { try { kn = await apiFetch('/qc/kinh-nghiem/' + d.KinhNghiemId); } catch (e) { alert('Lỗi: ' + e.message); return; } }
   const goc = kn || { LoaiQc: d.LoaiQc, STT_Key: d.STT_Key, KetQuaAi: d.KetQua, DiemAi: d.Diem, LyDoAi: d.LyDoKetLuan || d.LyDo, KetQuaDung: d.DanhGiaThucTe };
   const khoa = 'log' + logId;
   formKnDangMo[khoa] = kn ? { id: kn.id } : { qcLogId: logId };
@@ -712,27 +712,27 @@ async function luuKn(nut, khoa) {
     else await apiFetch('/qc/kinh-nghiem', { method: 'POST', body: JSON.stringify({ ...body, qcLogId: muc.qcLogId }) });
   } catch (e) {
     tb.style.color = 'var(--color-danger-text)';
-    tb.textContent = 'ChÆ°a lÆ°u: ' + e.message;
+    tb.textContent = 'Chưa lưu: ' + e.message;
     nut.disabled = false;
     return;
   }
   await Promise.all([taiLog(), taiKinhNghiem()]);
 }
 async function doiTrangThaiKn(id, trangThai) {
-  if (trangThai === 'DA_XAC_NHAN' && !confirm(`XÃ¡c nháº­n KN#${id}? Kinh nghiá»‡m sáº½ Ä‘Æ°á»£c Ä‘Æ°a cho AI á»Ÿ cÃ¡c láº§n QC sau (Ä‘Ãºng QC, Ä‘Ãºng pháº¡m vi).`)) return;
-  try { await apiFetch(`/qc/kinh-nghiem/${id}/trang-thai`, { method: 'POST', body: JSON.stringify({ trangThai }) }); } catch (e) { alert('ChÆ°a lÆ°u: ' + e.message); return; }
+  if (trangThai === 'DA_XAC_NHAN' && !confirm(`Xác nhận KN#${id}? Kinh nghiệm sẽ được đưa cho AI ở các lần QC sau (đúng QC, đúng phạm vi).`)) return;
+  try { await apiFetch(`/qc/kinh-nghiem/${id}/trang-thai`, { method: 'POST', body: JSON.stringify({ trangThai }) }); } catch (e) { alert('Chưa lưu: ' + e.message); return; }
   await Promise.all([taiLog(), taiKinhNghiem()]);
 }
-// Cháº¡y láº¡i QC Ä‘Æ¡n gá»‘c (ghi 1 dÃ²ng log MANUAL má»›i, khÃ´ng sá»­a dÃ²ng cÅ©) rá»“i so vá»›i káº¿t quáº£ Ä‘Ãºng.
+// Chạy lại QC đơn gốc (ghi 1 dòng log MANUAL mới, không sửa dòng cũ) rồi so với kết quả đúng.
 async function chayLaiDonGoc(nut, id) {
   const kn = dsKn.find(k => k.id === id);
-  if (!kn || !confirm(`Cháº¡y láº¡i ${kn.LoaiQc} cho Ä‘Æ¡n ${kn.STT_Key}? (gá»i AI â€” tá»‘n 1 lÆ°á»£t API)`)) return;
+  if (!kn || !confirm(`Chạy lại ${kn.LoaiQc} cho đơn ${kn.STT_Key}? (gọi AI — tốn 1 lượt API)`)) return;
   nut.disabled = true;
   try {
     const kq = await apiFetch('/qc/chay', { method: 'POST', body: JSON.stringify({ sttKey: kn.STT_Key, loai: kn.LoaiQc }) });
     const ra = kq.ketQua ? kq.ketQua.result : 'LOI';
-    alert(`Káº¿t quáº£ má»›i: ${NHAN_KET_QUA[ra] || ra} â€” káº¿t quáº£ Ä‘Ãºng: ${NHAN_KET_QUA[kn.KetQuaDung]}. ${ra === kn.KetQuaDung ? 'KHá»šP.' : 'CHÆ¯A khá»›p.'}\n(LÆ°u Ã½: Ä‘Æ¡n gá»‘c khá»›p chÆ°a chá»©ng minh kinh nghiá»‡m giÃºp Ä‘Æ°á»£c cÃ¡c Ä‘Æ¡n khÃ¡c.)`);
-  } catch (e) { alert('Lá»—i: ' + e.message); }
+    alert(`Kết quả mới: ${NHAN_KET_QUA[ra] || ra} — kết quả đúng: ${NHAN_KET_QUA[kn.KetQuaDung]}. ${ra === kn.KetQuaDung ? 'KHỚP.' : 'CHƯA khớp.'}\n(Lưu ý: đơn gốc khớp chưa chứng minh kinh nghiệm giúp được các đơn khác.)`);
+  } catch (e) { alert('Lỗi: ' + e.message); }
   nut.disabled = false;
   await Promise.all([taiLog(), taiKinhNghiem(), taiDoChinhXac()]);
 }
@@ -744,32 +744,32 @@ function xemLogDon(sttKey) {
   document.getElementById('khoi-log').scrollIntoView({ behavior: 'smooth' });
 }
 
-// ---- ÄÆ¡n hÃ ng vá»«a cáº­p nháº­t tráº¡ng thÃ¡i (02/10/2026) â€” dá»¯ liá»‡u luÃ´n láº¥y tá»« server (routes/qc.js GET /don-vua-cap-nhat).
+// ---- Đơn hàng vừa cập nhật trạng thái (02/10/2026) — dữ liệu luôn lấy từ server (routes/qc.js GET /don-vua-cap-nhat).
 const gioVN = t => { const d = new Date(t); return isNaN(d) ? '' : d.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }); };
-const NHAN_COT_TRANG_THAI = { TRANG_THAI_XUONG: 'Chung', TRANG_THAI_PHOI: 'PhÃ´i', TRANG_THAI_VE_FILE: 'Váº½ file' };
+const NHAN_COT_TRANG_THAI = { TRANG_THAI_XUONG: 'Chung', TRANG_THAI_PHOI: 'Phôi', TRANG_THAI_VE_FILE: 'Vẽ file' };
 async function taiDonVuaCapNhat() {
   const el = document.getElementById('khoi-vua-cap-nhat');
   let kq;
-  try { kq = await apiFetch('/qc/don-vua-cap-nhat'); } catch (e) { el.textContent = 'Lá»—i: ' + e.message; return; }
+  try { kq = await apiFetch('/qc/don-vua-cap-nhat'); } catch (e) { el.textContent = 'Lỗi: ' + e.message; return; }
   document.getElementById('vcn-so').textContent = `(${kq.ds.length})`;
-  if (!kq.ds.length) { el.innerHTML = '<p style="color:var(--color-text-muted)">KhÃ´ng cÃ³ Ä‘Æ¡n nÃ o Ä‘á»•i tráº¡ng thÃ¡i trong 1 giá» qua.</p>'; return; }
+  if (!kq.ds.length) { el.innerHTML = '<p style="color:var(--color-text-muted)">Không có đơn nào đổi trạng thái trong 1 giờ qua.</p>'; return; }
   const bayGio = new Date(kq.bayGio).getTime();
   el.innerHTML = `<table class="qc-bang-log">
-    <thead><tr><th>MÃ£ Ä‘Æ¡n</th><th>Tráº¡ng thÃ¡i chung</th><th>PhÃ´i</th><th>Váº½ file</th><th>Tráº¡ng thÃ¡i trÆ°á»›c Ä‘Ã³</th><th>NgÆ°á»i thá»±c hiá»‡n</th><th>Äá»•i lÃºc</th><th>XÆ°á»Ÿng</th></tr></thead>
+    <thead><tr><th>Mã đơn</th><th>Trạng thái chung</th><th>Phôi</th><th>Vẽ file</th><th>Trạng thái trước đó</th><th>Người thực hiện</th><th>Đổi lúc</th><th>Xưởng</th></tr></thead>
     <tbody>${kq.ds.map(d => `<tr>
       <td><a href="/order.html?stt=${encodeURIComponent(d.sttKey)}" style="font-weight:700">${escapeHtml(d.sttKey)}</a></td>
       ${[['TRANG_THAI_XUONG', d.trangThai], ['TRANG_THAI_PHOI', d.phoi], ['TRANG_THAI_VE_FILE', d.veFile]]
         .map(([cot, v]) => `<td>${d.truoc && cot in d.truoc ? `<strong>${escapeHtml(v)}</strong>` : escapeHtml(v)}</td>`).join('')}
       <td>${d.truoc ? Object.entries(d.truoc).map(([cot, v]) => `<small style="color:var(--color-text-muted)">${NHAN_COT_TRANG_THAI[cot] || cot}:</small> ${escapeHtml(v)}`).join('<br>')
-        : '<span style="color:var(--color-text-muted)">â€”</span>'}</td>
-      <td>${escapeHtml(d.nguoi || 'â€”')}</td>
-      <td>${escapeHtml(gioVN(d.thoiGian))} <small style="color:var(--color-text-muted)">(${Math.max(0, Math.round((bayGio - new Date(d.thoiGian).getTime()) / 60000))} phÃºt trÆ°á»›c)</small></td>
-      <td>${escapeHtml(d.xuong || '(chÆ°a gÃ¡n)')}</td></tr>`).join('')}</tbody></table>`;
+        : '<span style="color:var(--color-text-muted)">—</span>'}</td>
+      <td>${escapeHtml(d.nguoi || '—')}</td>
+      <td>${escapeHtml(gioVN(d.thoiGian))} <small style="color:var(--color-text-muted)">(${Math.max(0, Math.round((bayGio - new Date(d.thoiGian).getTime()) / 60000))} phút trước)</small></td>
+      <td>${escapeHtml(d.xuong || '(chưa gán)')}</td></tr>`).join('')}</tbody></table>`;
 }
 
-// ---- Prompt AI (02/10/2026) â€” backend kiá»ƒm tra láº¡i máº«u (qcService#kiemTraMauPrompt).
+// ---- Prompt AI (02/10/2026) — backend kiểm tra lại mẫu (qcService#kiemTraMauPrompt).
 let duLieuPrompt = null;
-const daSuaPrompt = {}; // loai -> ná»™i dung Ä‘ang sá»­a chÆ°a lÆ°u (giá»¯ khi Ä‘á»•i qua láº¡i giá»¯a cÃ¡c QC)
+const daSuaPrompt = {}; // loai -> nội dung đang sửa chưa lưu (giữ khi đổi qua lại giữa các QC)
 function thongBaoPr(chu, loi) {
   const el = document.getElementById('pr-thong-bao');
   el.style.display = 'block';
@@ -777,7 +777,7 @@ function thongBaoPr(chu, loi) {
   el.textContent = chu;
 }
 async function taiPrompt() {
-  try { duLieuPrompt = await apiFetch('/qc/prompt'); } catch (e) { document.getElementById('pr-lich-su').textContent = 'Lá»—i: ' + e.message; return; }
+  try { duLieuPrompt = await apiFetch('/qc/prompt'); } catch (e) { document.getElementById('pr-lich-su').textContent = 'Lỗi: ' + e.message; return; }
   const sel = document.getElementById('pr-loai');
   const dangChon = sel.value || 'QC1';
   sel.innerHTML = duLieuPrompt.ds.map(d => `<option value="${d.loai}">${escapeHtml(d.ten)}</option>`).join('');
@@ -785,20 +785,20 @@ async function taiPrompt() {
   vePrompt();
 }
 const prHienTai = () => duLieuPrompt.ds.find(d => d.loai === document.getElementById('pr-loai').value);
-const nhanPhienBan = nhan => (nhan === 'MAC_DINH' ? 'Máº·c Ä‘á»‹nh' : '#' + nhan);
+const nhanPhienBan = nhan => (nhan === 'MAC_DINH' ? 'Mặc định' : '#' + nhan);
 function vePrompt() {
   const d = prHienTai();
-  document.getElementById('pr-dang-dung').innerHTML = `Äang dÃ¹ng: <strong>${escapeHtml(nhanPhienBan(d.dangDung))}</strong>`;
-  document.getElementById('pr-cho-giu-cho').innerHTML = 'Chá»— giá»¯ chá»— báº¯t buá»™c: ' + d.choGiuCho.map(k => `<code>{{${k}}}</code> â€” ${escapeHtml(duLieuPrompt.choGiuCho[k])}`).join(' Â· ');
+  document.getElementById('pr-dang-dung').innerHTML = `Đang dùng: <strong>${escapeHtml(nhanPhienBan(d.dangDung))}</strong>`;
+  document.getElementById('pr-cho-giu-cho').innerHTML = 'Chỗ giữ chỗ bắt buộc: ' + d.choGiuCho.map(k => `<code>{{${k}}}</code> — ${escapeHtml(duLieuPrompt.choGiuCho[k])}`).join(' · ');
   document.getElementById('pr-noi-dung').value = daSuaPrompt[d.loai] ?? d.noiDung;
   danhDauSua();
-  document.getElementById('pr-lich-su').innerHTML = `<table class="qc-bang-log"><thead><tr><th>PhiÃªn báº£n</th><th>Thá»i gian</th><th>NgÆ°á»i lÆ°u</th><th>Ghi chÃº</th><th>Äá»™ dÃ i</th><th></th></tr></thead><tbody>
-    <tr><td><strong>Máº·c Ä‘á»‹nh</strong>${d.dangDung === 'MAC_DINH' ? ' âœ“ Ä‘ang dÃ¹ng' : ''}</td><td colspan="3" style="color:var(--color-text-muted)">Prompt gá»‘c trong code</td><td>${d.macDinh.length}</td>
+  document.getElementById('pr-lich-su').innerHTML = `<table class="qc-bang-log"><thead><tr><th>Phiên bản</th><th>Thời gian</th><th>Người lưu</th><th>Ghi chú</th><th>Độ dài</th><th></th></tr></thead><tbody>
+    <tr><td><strong>Mặc định</strong>${d.dangDung === 'MAC_DINH' ? ' ✓ đang dùng' : ''}</td><td colspan="3" style="color:var(--color-text-muted)">Prompt gốc trong code</td><td>${d.macDinh.length}</td>
       <td style="white-space:nowrap"><button type="button" class="btn-hanh-dong phu" style="padding:3px 8px;font-size:0.75rem" onclick="napMacDinhVaoO()">Xem</button>
-      ${d.dangDung === 'MAC_DINH' ? '' : `<button type="button" class="btn-hanh-dong phu" style="padding:3px 8px;font-size:0.75rem" onclick="kichHoatPrompt(0)">DÃ¹ng báº£n nÃ y</button>`}</td></tr>
-    ${d.lichSu.map(p => `<tr><td><strong>#${p.id}</strong>${String(p.id) === d.dangDung ? ' âœ“ Ä‘ang dÃ¹ng' : ''}</td><td>${escapeHtml(String(p.ThoiGian).replace('T', ' ').slice(0, 16))}</td><td>${escapeHtml(p.NguoiTao)}</td><td class="ly-do">${escapeHtml(p.GhiChu || '')}</td><td>${p.DoDai}</td>
+      ${d.dangDung === 'MAC_DINH' ? '' : `<button type="button" class="btn-hanh-dong phu" style="padding:3px 8px;font-size:0.75rem" onclick="kichHoatPrompt(0)">Dùng bản này</button>`}</td></tr>
+    ${d.lichSu.map(p => `<tr><td><strong>#${p.id}</strong>${String(p.id) === d.dangDung ? ' ✓ đang dùng' : ''}</td><td>${escapeHtml(String(p.ThoiGian).replace('T', ' ').slice(0, 16))}</td><td>${escapeHtml(p.NguoiTao)}</td><td class="ly-do">${escapeHtml(p.GhiChu || '')}</td><td>${p.DoDai}</td>
       <td style="white-space:nowrap"><button type="button" class="btn-hanh-dong phu" style="padding:3px 8px;font-size:0.75rem" onclick="xemPhienBan(${p.id})">Xem</button>
-      ${String(p.id) === d.dangDung ? '' : `<button type="button" class="btn-hanh-dong phu" style="padding:3px 8px;font-size:0.75rem" onclick="kichHoatPrompt(${p.id})">DÃ¹ng báº£n nÃ y</button>`}</td></tr>`).join('')}
+      ${String(p.id) === d.dangDung ? '' : `<button type="button" class="btn-hanh-dong phu" style="padding:3px 8px;font-size:0.75rem" onclick="kichHoatPrompt(${p.id})">Dùng bản này</button>`}</td></tr>`).join('')}
   </tbody></table>`;
 }
 function danhDauSua() {
@@ -807,96 +807,96 @@ function danhDauSua() {
   if (v !== d.noiDung) daSuaPrompt[d.loai] = v; else delete daSuaPrompt[d.loai];
   const el = document.getElementById('pr-trang-thai-sua');
   el.style.color = v !== d.noiDung ? 'var(--color-warning-text, #92400e)' : 'var(--color-text-muted)';
-  el.textContent = v !== d.noiDung ? `CÃ³ thay Ä‘á»•i CHÆ¯A lÆ°u (${v.length.toLocaleString('vi-VN')} kÃ½ tá»±) â€” chÆ°a áº£nh hÆ°á»Ÿng QC cho tá»›i khi báº¥m LÆ°u.` : `Äang hiá»ƒn thá»‹ Ä‘Ãºng prompt Ä‘ang dÃ¹ng (${v.length.toLocaleString('vi-VN')} kÃ½ tá»±).`;
+  el.textContent = v !== d.noiDung ? `Có thay đổi CHƯA lưu (${v.length.toLocaleString('vi-VN')} ký tự) — chưa ảnh hưởng QC cho tới khi bấm Lưu.` : `Đang hiển thị đúng prompt đang dùng (${v.length.toLocaleString('vi-VN')} ký tự).`;
 }
 function datOPrompt(noiDung) { document.getElementById('pr-noi-dung').value = noiDung; danhDauSua(); }
-function napMacDinhVaoO() { datOPrompt(prHienTai().macDinh); thongBaoPr('ÄÃ£ náº¡p máº«u Máº¶C Äá»ŠNH vÃ o Ã´ (chÆ°a lÆ°u). Báº¥m "DÃ¹ng báº£n nÃ y" á»Ÿ dÃ²ng Máº·c Ä‘á»‹nh náº¿u chá»‰ muá»‘n quay vá» máº·c Ä‘á»‹nh.'); }
+function napMacDinhVaoO() { datOPrompt(prHienTai().macDinh); thongBaoPr('Đã nạp mẫu MẶC ĐỊNH vào ô (chưa lưu). Bấm "Dùng bản này" ở dòng Mặc định nếu chỉ muốn quay về mặc định.'); }
 function napDangDungVaoO() { datOPrompt(prHienTai().noiDung); }
 async function xemPhienBan(id) {
-  try { datOPrompt((await apiFetch('/qc/prompt/phien-ban/' + id)).NoiDung); thongBaoPr(`ÄÃ£ náº¡p phiÃªn báº£n #${id} vÃ o Ã´ (chÆ°a lÆ°u, chÆ°a dÃ¹ng). Báº¥m "DÃ¹ng báº£n nÃ y" Ä‘á»ƒ dÃ¹ng láº¡i nguyÃªn báº£n, hoáº·c sá»­a rá»“i LÆ°u thÃ nh báº£n má»›i.`); }
-  catch (e) { thongBaoPr('Lá»—i: ' + e.message, true); }
+  try { datOPrompt((await apiFetch('/qc/prompt/phien-ban/' + id)).NoiDung); thongBaoPr(`Đã nạp phiên bản #${id} vào ô (chưa lưu, chưa dùng). Bấm "Dùng bản này" để dùng lại nguyên bản, hoặc sửa rồi Lưu thành bản mới.`); }
+  catch (e) { thongBaoPr('Lỗi: ' + e.message, true); }
 }
-// CÃ¹ng quy táº¯c vá»›i backend â€” bÃ¡o sá»›m trÆ°á»›c khi gá»­i.
+// Cùng quy tắc với backend — báo sớm trước khi gửi.
 function kiemTraPromptGiaoDien(d, v) {
-  if (!v.trim()) return 'Prompt khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.';
+  if (!v.trim()) return 'Prompt không được để trống.';
   const gap = (v.match(/\{\{[A-Z_]+\}\}/g) || []).map(x => x.slice(2, -2));
   const la = gap.filter(k => !d.choGiuCho.includes(k));
-  if (la.length) return `Chá»— giá»¯ chá»— khÃ´ng dÃ¹ng Ä‘Æ°á»£c cho ${d.loai}: ${la.map(k => '{{' + k + '}}').join(', ')}.`;
-  for (const k of d.choGiuCho) { const n = gap.filter(x => x === k).length; if (n !== 1) return `Pháº£i cÃ³ ÄÃšNG 1 láº§n {{${k}}} â€” Ä‘ang cÃ³ ${n} láº§n.`; }
+  if (la.length) return `Chỗ giữ chỗ không dùng được cho ${d.loai}: ${la.map(k => '{{' + k + '}}').join(', ')}.`;
+  for (const k of d.choGiuCho) { const n = gap.filter(x => x === k).length; if (n !== 1) return `Phải có ĐÚNG 1 lần {{${k}}} — đang có ${n} lần.`; }
   return null;
 }
 async function luuPrompt(nut) {
   const d = prHienTai();
   const v = document.getElementById('pr-noi-dung').value;
   const loi = kiemTraPromptGiaoDien(d, v);
-  if (loi) return thongBaoPr('ChÆ°a lÆ°u: ' + loi, true);
-  if (v === d.noiDung && !confirm('Ná»™i dung giá»‘ng há»‡t prompt Ä‘ang dÃ¹ng. Váº«n lÆ°u thÃ nh phiÃªn báº£n má»›i?')) return;
-  if (!confirm(`LÆ°u vÃ  DÃ™NG NGAY prompt nÃ y cho ${d.ten} (cáº£ QC thá»§ cÃ´ng vÃ  tá»± Ä‘á»™ng)?`)) return;
+  if (loi) return thongBaoPr('Chưa lưu: ' + loi, true);
+  if (v === d.noiDung && !confirm('Nội dung giống hệt prompt đang dùng. Vẫn lưu thành phiên bản mới?')) return;
+  if (!confirm(`Lưu và DÙNG NGAY prompt này cho ${d.ten} (cả QC thủ công và tự động)?`)) return;
   nut.disabled = true;
   try {
     const kq = await apiFetch('/qc/prompt', { method: 'POST', body: JSON.stringify({ loai: d.loai, noiDung: v, ghiChu: document.getElementById('pr-ghi-chu').value }) });
     delete daSuaPrompt[d.loai];
     document.getElementById('pr-ghi-chu').value = '';
     await taiPrompt();
-    thongBaoPr(`ÄÃ£ lÆ°u phiÃªn báº£n #${kq.id} vÃ  Ä‘ang dÃ¹ng cho ${d.ten}.`);
-  } catch (e) { thongBaoPr('ChÆ°a lÆ°u: ' + e.message, true); }
+    thongBaoPr(`Đã lưu phiên bản #${kq.id} và đang dùng cho ${d.ten}.`);
+  } catch (e) { thongBaoPr('Chưa lưu: ' + e.message, true); }
   nut.disabled = false;
 }
 async function kichHoatPrompt(phienBan) {
   const d = prHienTai();
-  if (!confirm(`DÃ¹ng ${phienBan ? 'phiÃªn báº£n #' + phienBan : 'prompt Máº¶C Äá»ŠNH'} cho ${d.ten} tá»« láº§n QC tiáº¿p theo?`)) return;
+  if (!confirm(`Dùng ${phienBan ? 'phiên bản #' + phienBan : 'prompt MẶC ĐỊNH'} cho ${d.ten} từ lần QC tiếp theo?`)) return;
   try {
     await apiFetch('/qc/prompt/kich-hoat', { method: 'POST', body: JSON.stringify({ loai: d.loai, phienBan }) });
     delete daSuaPrompt[d.loai];
     await taiPrompt();
-    thongBaoPr(`${d.ten} Ä‘ang dÃ¹ng ${phienBan ? 'phiÃªn báº£n #' + phienBan : 'prompt máº·c Ä‘á»‹nh'}.`);
-  } catch (e) { thongBaoPr('Lá»—i: ' + e.message, true); }
+    thongBaoPr(`${d.ten} đang dùng ${phienBan ? 'phiên bản #' + phienBan : 'prompt mặc định'}.`);
+  } catch (e) { thongBaoPr('Lỗi: ' + e.message, true); }
 }
 async function chayThuPrompt(nut) {
   const d = prHienTai();
   const v = document.getElementById('pr-noi-dung').value;
   const sttKey = document.getElementById('pr-ma-thu').value.trim();
   const el = document.getElementById('pr-ket-qua-thu');
-  if (!sttKey) return thongBaoPr('Nháº­p mÃ£ Ä‘Æ¡n Ä‘á»ƒ cháº¡y thá»­.', true);
+  if (!sttKey) return thongBaoPr('Nhập mã đơn để chạy thử.', true);
   const loi = kiemTraPromptGiaoDien(d, v);
-  if (loi) return thongBaoPr('ChÆ°a cháº¡y: ' + loi, true);
+  if (loi) return thongBaoPr('Chưa chạy: ' + loi, true);
   nut.disabled = true;
-  el.innerHTML = '<p>Äang cháº¡y thá»­ (gá»i AI, cÃ³ thá»ƒ máº¥t 10â€“60 giÃ¢y)...</p>';
+  el.innerHTML = '<p>Đang chạy thử (gọi AI, có thể mất 10–60 giây)...</p>';
   try {
     const kq = await apiFetch('/qc/prompt/chay-thu', { method: 'POST', body: JSON.stringify({ loai: d.loai, sttKey, noiDung: v }) });
     const k = kq.ketQua;
-    el.innerHTML = kq.loi ? `<p style="color:var(--color-danger-text)">Lá»—i API: ${escapeHtml(kq.loi)}</p>` : `<div style="border:1px dashed var(--color-border);border-radius:var(--radius-sm);padding:8px">
-      <strong>Cháº¡y thá»­ ${escapeHtml(d.loai)} Â· ${escapeHtml(sttKey)}</strong> (Log #${kq.id}, cháº¿ Ä‘á»™ TEST â€” khÃ´ng tÃ­nh thá»‘ng kÃª, khÃ´ng gá»­i Telegram)<br>
-      ${nhanKetQua(k.result)} Â· score ${escapeHtml(k.score ?? 'â€”')} Â· cháº¯c cháº¯n ${Math.round((k.confidence || 0) * 100)}%${k.ai_de_xuat ? ` Â· AI Ä‘á» xuáº¥t ${escapeHtml(k.ai_de_xuat)}` : ''}<br>
+    el.innerHTML = kq.loi ? `<p style="color:var(--color-danger-text)">Lỗi API: ${escapeHtml(kq.loi)}</p>` : `<div style="border:1px dashed var(--color-border);border-radius:var(--radius-sm);padding:8px">
+      <strong>Chạy thử ${escapeHtml(d.loai)} · ${escapeHtml(sttKey)}</strong> (Log #${kq.id}, chế độ TEST — không tính thống kê, không gửi Telegram)<br>
+      ${nhanKetQua(k.result)} · score ${escapeHtml(k.score ?? '—')} · chắc chắn ${Math.round((k.confidence || 0) * 100)}%${k.ai_de_xuat ? ` · AI đề xuất ${escapeHtml(k.ai_de_xuat)}` : ''}<br>
       <small>${escapeHtml(k.ly_do_ket_luan || '')}</small><br><small style="color:var(--color-text-muted)">AI: ${escapeHtml(k.reason || '')}</small>
       ${(k.issues || []).length ? `<ul style="margin:4px 0">${k.issues.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</ul>` : ''}</div>`;
     taiLog();
-  } catch (e) { el.innerHTML = `<p style="color:var(--color-danger-text)">ChÆ°a cháº¡y Ä‘Æ°á»£c: ${escapeHtml(e.message)}</p>`; }
+  } catch (e) { el.innerHTML = `<p style="color:var(--color-danger-text)">Chưa chạy được: ${escapeHtml(e.message)}</p>`; }
   nut.disabled = false;
 }
 
-// ---- Chi phÃ­ AI (02/10/2026) â€” backend kiá»ƒm tra láº¡i giÃ¡ (routes/qc.js POST /gia-token).
+// ---- Chi phí AI (02/10/2026) — backend kiểm tra lại giá (routes/qc.js POST /gia-token).
 const soNgan = n => Number(n || 0).toLocaleString('vi-VN');
-const usd = v => (v === null || v === undefined ? 'â€”' : '$' + v.toFixed(v < 1 ? 4 : 2));
+const usd = v => (v === null || v === undefined ? '—' : '$' + v.toFixed(v < 1 ? 4 : 2));
 let dsGia = [];
 async function taiChiPhi() {
   const el = document.getElementById('khoi-chi-phi');
   let kq;
-  try { kq = await apiFetch(`/qc/chi-phi?ngay=${document.getElementById('cp-ngay').value}&gom=${document.getElementById('cp-gom').value}`); } catch (e) { el.textContent = 'Lá»—i: ' + e.message; return; }
+  try { kq = await apiFetch(`/qc/chi-phi?ngay=${document.getElementById('cp-ngay').value}&gom=${document.getElementById('cp-gom').value}`); } catch (e) { el.textContent = 'Lỗi: ' + e.message; return; }
   dsGia = kq.gia;
   document.getElementById('bang-gia-token').innerHTML = dsGia.length ? dsGia.map((g, i) => `<tr><td><strong>${escapeHtml(g.model)}</strong></td>
-    <td><input id="gia-vao-${i}" inputmode="decimal" value="${escapeHtml(g.giaVao)}" aria-label="${escapeHtml(g.model)} giÃ¡ input"></td>
-    <td><input id="gia-ra-${i}" inputmode="decimal" value="${escapeHtml(g.giaRa)}" aria-label="${escapeHtml(g.model)} giÃ¡ output"></td></tr>`).join('')
-    : '<tr><td colspan="3">ChÆ°a cÃ³ model nÃ o.</td></tr>';
-  if (!kq.ds.length) { el.innerHTML = '<p style="color:var(--color-text-muted)">ChÆ°a cÃ³ láº§n gá»i AI nÃ o cÃ³ sá»‘ token trong khoáº£ng nÃ y.</p>'; return; }
+    <td><input id="gia-vao-${i}" inputmode="decimal" value="${escapeHtml(g.giaVao)}" aria-label="${escapeHtml(g.model)} giá input"></td>
+    <td><input id="gia-ra-${i}" inputmode="decimal" value="${escapeHtml(g.giaRa)}" aria-label="${escapeHtml(g.model)} giá output"></td></tr>`).join('')
+    : '<tr><td colspan="3">Chưa có model nào.</td></tr>';
+  if (!kq.ds.length) { el.innerHTML = '<p style="color:var(--color-text-muted)">Chưa có lần gọi AI nào có số token trong khoảng này.</p>'; return; }
   const tong = kq.ds.reduce((t, d) => ({ soLan: t.soLan + d.soLan, tokenVao: t.tokenVao + d.tokenVao, tokenRa: t.tokenRa + d.tokenRa,
     chiPhi: t.chiPhi + (d.chiPhi || 0), thieuGia: t.thieuGia || d.chiPhi === null }), { soLan: 0, tokenVao: 0, tokenRa: 0, chiPhi: 0, thieuGia: false });
   el.innerHTML = `<table class="qc-bang-log">
-    <thead><tr><th>Ká»³</th><th>QC</th><th>Model</th><th>Sá»‘ láº§n gá»i AI</th><th>Token input</th><th>Token output</th><th>Chi phÃ­ Æ°á»›c tÃ­nh</th><th>TB / láº§n</th></tr></thead>
+    <thead><tr><th>Kỳ</th><th>QC</th><th>Model</th><th>Số lần gọi AI</th><th>Token input</th><th>Token output</th><th>Chi phí ước tính</th><th>TB / lần</th></tr></thead>
     <tbody>${kq.ds.map(d => `<tr><td>${escapeHtml(d.Ky)}</td><td>${escapeHtml(d.LoaiQc)}</td><td>${escapeHtml(d.Model)}</td><td>${d.soLan}</td>
-      <td>${soNgan(d.tokenVao)}</td><td>${soNgan(d.tokenRa)}</td><td>${d.chiPhi === null ? '<small>chÆ°a nháº­p giÃ¡</small>' : usd(d.chiPhi)}</td><td>${d.chiPhi === null ? 'â€”' : usd(d.chiPhi / d.soLan)}</td></tr>`).join('')}
-    <tr style="font-weight:700;background:var(--color-bg)"><td colspan="3">Tá»•ng</td><td>${tong.soLan}</td><td>${soNgan(tong.tokenVao)}</td><td>${soNgan(tong.tokenRa)}</td>
-      <td>${usd(tong.chiPhi)}${tong.thieuGia ? '<br><small>(chÆ°a tÃ­nh model chÆ°a nháº­p giÃ¡)</small>' : ''}</td><td></td></tr></tbody></table>`;
+      <td>${soNgan(d.tokenVao)}</td><td>${soNgan(d.tokenRa)}</td><td>${d.chiPhi === null ? '<small>chưa nhập giá</small>' : usd(d.chiPhi)}</td><td>${d.chiPhi === null ? '—' : usd(d.chiPhi / d.soLan)}</td></tr>`).join('')}
+    <tr style="font-weight:700;background:var(--color-bg)"><td colspan="3">Tổng</td><td>${tong.soLan}</td><td>${soNgan(tong.tokenVao)}</td><td>${soNgan(tong.tokenRa)}</td>
+      <td>${usd(tong.chiPhi)}${tong.thieuGia ? '<br><small>(chưa tính model chưa nhập giá)</small>' : ''}</td><td></td></tr></tbody></table>`;
 }
 async function luuGiaToken(nut) {
   const tb = document.getElementById('thong-bao-gia');
@@ -904,19 +904,19 @@ async function luuGiaToken(nut) {
   nut.disabled = true;
   try {
     await apiFetch('/qc/gia-token', { method: 'POST', body: JSON.stringify({ ds }) });
-    tb.style.color = 'var(--color-success-text)'; tb.textContent = 'ÄÃ£ lÆ°u giÃ¡.';
+    tb.style.color = 'var(--color-success-text)'; tb.textContent = 'Đã lưu giá.';
     await taiChiPhi();
-  } catch (e) { tb.style.color = 'var(--color-danger-text)'; tb.textContent = 'ChÆ°a lÆ°u: ' + e.message; }
+  } catch (e) { tb.style.color = 'var(--color-danger-text)'; tb.textContent = 'Chưa lưu: ' + e.message; }
   nut.disabled = false;
 }
 
-const phanTram = (a, b) => (b ? Math.round(a * 100 / b) + '%' : 'â€”');
+const phanTram = (a, b) => (b ? Math.round(a * 100 / b) + '%' : '—');
 async function taiDoChinhXac() {
   const el = document.getElementById('khoi-do-chinh-xac');
   let ds;
-  try { ds = await apiFetch('/qc/do-chinh-xac?ngay=' + document.getElementById('dcx-ngay').value); } catch (e) { el.textContent = 'Lá»—i: ' + e.message; return; }
-  if (!ds.length) { el.innerHTML = '<p style="color:var(--color-text-muted)">ChÆ°a cÃ³ láº§n QC nÃ o Ä‘Æ°á»£c Ä‘Ã¡nh giÃ¡ trong khoáº£ng nÃ y.</p>'; return; }
-  // DÃ²ng tá»•ng má»—i QC + cÃ¡c dÃ²ng tÃ¡ch theo model/cháº¿ Ä‘á»™.
+  try { ds = await apiFetch('/qc/do-chinh-xac?ngay=' + document.getElementById('dcx-ngay').value); } catch (e) { el.textContent = 'Lỗi: ' + e.message; return; }
+  if (!ds.length) { el.innerHTML = '<p style="color:var(--color-text-muted)">Chưa có lần QC nào được đánh giá trong khoảng này.</p>'; return; }
+  // Dòng tổng mỗi QC + các dòng tách theo model/chế độ.
   const tong = {};
   for (const d of ds) {
     const t = tong[d.LoaiQc] ||= { LoaiQc: d.LoaiQc, Model: '', CheDo: '', CoKinhNghiem: '', PhienBanPrompt: '', daDanhGia: 0, dung: 0, passSai: 0, failSai: 0, canCheckLai: 0, tong: true };
@@ -925,12 +925,12 @@ async function taiDoChinhXac() {
   const dong = d => {
     const ketLuan = d.daDanhGia - d.canCheckLai;
     return `<tr${d.tong ? ' style="font-weight:700;background:var(--color-bg)"' : ''}>
-      <td>${escapeHtml(d.tong ? d.LoaiQc : '')}</td><td>${d.tong ? 'Tá»•ng' : escapeHtml(d.Model || 'â€”')}</td><td>${escapeHtml(d.CheDo)}</td><td>${escapeHtml(d.PhienBanPrompt)}</td><td>${escapeHtml(d.CoKinhNghiem)}</td>
+      <td>${escapeHtml(d.tong ? d.LoaiQc : '')}</td><td>${d.tong ? 'Tổng' : escapeHtml(d.Model || '—')}</td><td>${escapeHtml(d.CheDo)}</td><td>${escapeHtml(d.PhienBanPrompt)}</td><td>${escapeHtml(d.CoKinhNghiem)}</td>
       <td>${d.daDanhGia}</td><td>${phanTram(d.dung, ketLuan)}</td>
       <td style="color:var(--color-danger-text)">${d.passSai}</td><td>${d.failSai}</td><td>${d.canCheckLai} (${phanTram(d.canCheckLai, d.daDanhGia)})</td></tr>`;
   };
   el.innerHTML = `<table class="qc-bang-log">
-    <thead><tr><th>QC</th><th>Model</th><th>Cháº¿ Ä‘á»™</th><th>Prompt</th><th>DÃ¹ng kinh nghiá»‡m</th><th>ÄÃ£ Ä‘Ã¡nh giÃ¡</th><th>Tá»‰ lá»‡ Ä‘Ãºng</th><th>PASS sai</th><th>FAIL sai</th><th>Cáº¦N CHECK Láº I</th></tr></thead>
+    <thead><tr><th>QC</th><th>Model</th><th>Chế độ</th><th>Prompt</th><th>Dùng kinh nghiệm</th><th>Đã đánh giá</th><th>Tỉ lệ đúng</th><th>PASS sai</th><th>FAIL sai</th><th>CẦN CHECK LẠI</th></tr></thead>
     <tbody>${Object.values(tong).map(t => dong(t) + ds.filter(d => d.LoaiQc === t.LoaiQc).map(dong).join('')).join('')}</tbody></table>`;
 }
 
@@ -940,13 +940,13 @@ function xemChiTiet(nut, id) {
   if (hang.style.display === 'none' && d) {
     let chiTiet = d.ChiTiet;
     let apDung = null;
-    try { const ct = JSON.parse(d.ChiTiet); apDung = ct.ket_qua && ct.ket_qua.kinh_nghiem_ap_dung; chiTiet = JSON.stringify(ct, null, 2); } catch (e) { /* giá»¯ nguyÃªn chuá»—i */ }
+    try { const ct = JSON.parse(d.ChiTiet); apDung = ct.ket_qua && ct.ket_qua.kinh_nghiem_ap_dung; chiTiet = JSON.stringify(ct, null, 2); } catch (e) { /* giữ nguyên chuỗi */ }
     let kn = [];
-    try { kn = d.KinhNghiemDaDung ? JSON.parse(d.KinhNghiemDaDung) : []; } catch (e) { /* bá» qua */ }
+    try { kn = d.KinhNghiemDaDung ? JSON.parse(d.KinhNghiemDaDung) : []; } catch (e) { /* bỏ qua */ }
     const dongKn = kn.length
-      ? `Kinh nghiá»‡m Ä‘Ã£ cung cáº¥p cho AI (${kn.length}) â€” AI khai Ä‘Ã£ Ã¡p dá»¥ng: ${apDung && apDung.length ? apDung.map(i => 'KN#' + i).join(', ') : '(khÃ´ng)'}\n${kn.map(k => '  ' + k.noiDung).join('\n')}\n`
-      : 'Kinh nghiá»‡m Ä‘Ã£ cung cáº¥p cho AI: (khÃ´ng)\n';
-    hang.querySelector('.qc-chi-tiet').textContent = `Cháº¿ Ä‘á»™: ${d.CheDo || 'MANUAL'} Â· báº¯t Ä‘áº§u ${d.ThoiGian} Â· káº¿t thÃºc ${d.ThoiGianKetThuc || 'â€”'}\n${d.ThongTinAuto ? 'Auto: ' + d.ThongTinAuto + '\n' : ''}Model: ${d.Model || '(khÃ´ng gá»i AI)'}${d.TokenVao !== '' && d.TokenVao !== undefined ? ` Â· token input ${d.TokenVao} / output ${d.TokenRa}` : ''}\nNgÆ°á»¡ng Ä‘Ã£ dÃ¹ng: ${d.NguongDaDung || 'â€”'}\n${dongKn}áº¢nh: ${d.AnhDaDung || 'â€”'}\n\n${chiTiet}`;
+      ? `Kinh nghiệm đã cung cấp cho AI (${kn.length}) — AI khai đã áp dụng: ${apDung && apDung.length ? apDung.map(i => 'KN#' + i).join(', ') : '(không)'}\n${kn.map(k => '  ' + k.noiDung).join('\n')}\n`
+      : 'Kinh nghiệm đã cung cấp cho AI: (không)\n';
+    hang.querySelector('.qc-chi-tiet').textContent = `Chế độ: ${d.CheDo || 'MANUAL'} · bắt đầu ${d.ThoiGian} · kết thúc ${d.ThoiGianKetThuc || '—'}\n${d.ThongTinAuto ? 'Auto: ' + d.ThongTinAuto + '\n' : ''}Model: ${d.Model || '(không gọi AI)'}${d.TokenVao !== '' && d.TokenVao !== undefined ? ` · token input ${d.TokenVao} / output ${d.TokenRa}` : ''}\nNgưỡng đã dùng: ${d.NguongDaDung || '—'}\n${dongKn}Ảnh: ${d.AnhDaDung || '—'}\n\n${chiTiet}`;
     hang.style.display = '';
   } else hang.style.display = 'none';
 }

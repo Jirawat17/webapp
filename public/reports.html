@@ -1,25 +1,25 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BÃ¡o cÃ¡o â€” XÆ°á»Ÿng ThÃªu</title>
+<title>Báo cáo — Xưởng Thêu</title>
 <link rel="stylesheet" href="/css/style.css?v=112">
 <script src="/js/theme.js?v=104"></script>
 </head>
 <body>
 <div id="nav"></div>
 <div class="page">
-  <h2>Thá»‘ng kÃª tá»· lá»‡ lá»—i sáº£n xuáº¥t</h2>
-  <p>Äáº¿m sá»‘ láº§n Ä‘Æ¡n hÃ ng bá»‹ chuyá»ƒn sang <strong>Lá»–I Sáº¢N XUáº¤T Cáº¦N LÃ€M Láº I</strong>, theo loáº¡i sáº£n pháº©m / tuáº§n â€” dá»±a trÃªn lá»‹ch sá»­ thao tÃ¡c, khÃ´ng pháº£i tráº¡ng thÃ¡i hiá»‡n táº¡i cá»§a Ä‘Æ¡n (vÃ¬ Ä‘Æ¡n lá»—i sau khi lÃ m láº¡i sáº½ khÃ´ng cÃ²n á»Ÿ tráº¡ng thÃ¡i nÃ y ná»¯a).</p>
+  <h2>Thống kê tỷ lệ lỗi sản xuất</h2>
+  <p>Đếm số lần đơn hàng bị chuyển sang <strong>LỖI SẢN XUẤT CẦN LÀM LẠI</strong>, theo loại sản phẩm / tuần — dựa trên lịch sử thao tác, không phải trạng thái hiện tại của đơn (vì đơn lỗi sau khi làm lại sẽ không còn ở trạng thái này nữa).</p>
 
   <form id="form-thong-ke-loi" class="bao-cao-form">
     <div class="truong">
-      <label for="loi-tu-ngay">Tá»« ngÃ y</label>
+      <label for="loi-tu-ngay">Từ ngày</label>
       <input type="date" id="loi-tu-ngay">
     </div>
     <div class="truong">
-      <label for="loi-den-ngay">Äáº¿n ngÃ y</label>
+      <label for="loi-den-ngay">Đến ngày</label>
       <input type="date" id="loi-den-ngay">
     </div>
     <div class="nut-xuat">
@@ -31,16 +31,16 @@
 
   <hr style="margin:32px 0; border:none; border-top:1px solid var(--color-border)">
 
-  <h2>Thá»‘ng kÃª Ä‘Æ¡n hoÃ n tráº£ (REFUNDED)</h2>
-  <p>Danh sÃ¡ch cÃ¡c Ä‘Æ¡n Ä‘ang á»Ÿ tráº¡ng thÃ¡i <strong>REFUNDED_HoÃ n Ä‘Æ¡n</strong>, kÃ¨m <strong>Ghi chÃº</strong> Ä‘á»ƒ tá»•ng há»£p nguyÃªn nhÃ¢n. Lá»c Ä‘Æ°á»£c theo khoáº£ng ngÃ y lÃªn Ä‘Æ¡n.</p>
+  <h2>Thống kê đơn hoàn trả (REFUNDED)</h2>
+  <p>Danh sách các đơn đang ở trạng thái <strong>REFUNDED_Hoàn đơn</strong>, kèm <strong>Ghi chú</strong> để tổng hợp nguyên nhân. Lọc được theo khoảng ngày lên đơn.</p>
 
   <form id="form-thong-ke-hoan" class="bao-cao-form">
     <div class="truong">
-      <label for="hoan-tu-ngay">Tá»« ngÃ y</label>
+      <label for="hoan-tu-ngay">Từ ngày</label>
       <input type="date" id="hoan-tu-ngay">
     </div>
     <div class="truong">
-      <label for="hoan-den-ngay">Äáº¿n ngÃ y</label>
+      <label for="hoan-den-ngay">Đến ngày</label>
       <input type="date" id="hoan-den-ngay">
     </div>
     <div class="nut-xuat">
@@ -52,16 +52,16 @@
 
   <hr style="margin:32px 0; border:none; border-top:1px solid var(--color-border)">
 
-  <h2>Thá»‘ng kÃª thá»i gian cháº¡y mÃ¡y</h2>
-  <p>Thá»i lÆ°á»£ng tá»« lÃºc Ä‘Æ¡n chuyá»ƒn sang <strong>Äang cháº¡y mÃ¡y</strong> Ä‘áº¿n lÃºc chuyá»ƒn sang <strong>ÄÃ£ sáº£n xuáº¥t</strong> â€” chá»‰ tÃ­nh nhá»¯ng láº§n Ä‘Ã£ hoÃ n thÃ nh (cÃ³ Ä‘á»§ cáº·p báº¯t Ä‘áº§u/káº¿t thÃºc); Ä‘Æ¡n Ä‘ang cháº¡y dá»Ÿ hoáº·c dá»¯ liá»‡u cÅ© thiáº¿u Ä‘iá»ƒm báº¯t Ä‘áº§u sáº½ khÃ´ng Ä‘Æ°á»£c tÃ­nh vÃ o Ä‘Ã¢y. Lá»c theo ngÃ y <em>báº¯t Ä‘áº§u</em> cháº¡y mÃ¡y.</p>
+  <h2>Thống kê thời gian chạy máy</h2>
+  <p>Thời lượng từ lúc đơn chuyển sang <strong>Đang chạy máy</strong> đến lúc chuyển sang <strong>Đã sản xuất</strong> — chỉ tính những lần đã hoàn thành (có đủ cặp bắt đầu/kết thúc); đơn đang chạy dở hoặc dữ liệu cũ thiếu điểm bắt đầu sẽ không được tính vào đây. Lọc theo ngày <em>bắt đầu</em> chạy máy.</p>
 
   <form id="form-thoi-gian-chay-may" class="bao-cao-form">
     <div class="truong">
-      <label for="chaymay-tu-ngay">Tá»« ngÃ y</label>
+      <label for="chaymay-tu-ngay">Từ ngày</label>
       <input type="date" id="chaymay-tu-ngay">
     </div>
     <div class="truong">
-      <label for="chaymay-den-ngay">Äáº¿n ngÃ y</label>
+      <label for="chaymay-den-ngay">Đến ngày</label>
       <input type="date" id="chaymay-den-ngay">
     </div>
     <div class="nut-xuat">
@@ -74,16 +74,16 @@
   <hr style="margin:32px 0; border:none; border-top:1px solid var(--color-border)">
 
   <div id="khoi-hieu-suat" style="display:none">
-    <h2>Hiá»‡u suáº¥t theo ngÆ°á»i</h2>
-    <p>Chá»‰ tiÃªu cÃ´ng viá»‡c cá»§a tá»«ng ngÆ°á»i sáº£n xuáº¥t / váº½ file / láº¥y phÃ´i trong khoáº£ng thá»i gian Ä‘Ã£ chá»n â€” gá»“m cáº£ tÃ i khoáº£n chÆ°a cÃ³ hoáº¡t Ä‘á»™ng nÃ o (hiá»‡n 0), khÃ´ng bá»‹ thiáº¿u khá»i danh sÃ¡ch. Chá»‰ admin xem Ä‘Æ°á»£c má»¥c nÃ y.</p>
+    <h2>Hiệu suất theo người</h2>
+    <p>Chỉ tiêu công việc của từng người sản xuất / vẽ file / lấy phôi trong khoảng thời gian đã chọn — gồm cả tài khoản chưa có hoạt động nào (hiện 0), không bị thiếu khỏi danh sách. Chỉ admin xem được mục này.</p>
 
     <form id="form-hieu-suat" class="bao-cao-form">
       <div class="truong">
-        <label for="hieusuat-tu-ngay">Tá»« ngÃ y</label>
+        <label for="hieusuat-tu-ngay">Từ ngày</label>
         <input type="date" id="hieusuat-tu-ngay">
       </div>
       <div class="truong">
-        <label for="hieusuat-den-ngay">Äáº¿n ngÃ y</label>
+        <label for="hieusuat-den-ngay">Đến ngày</label>
         <input type="date" id="hieusuat-den-ngay">
       </div>
       <div class="nut-xuat">
@@ -103,7 +103,7 @@
   if (!user) return;
   renderNav(user, 'reports');
 
-  document.getElementById('btn-xem-thong-ke-loi').innerHTML = icon('chart') + ' Xem thá»‘ng kÃª';
+  document.getElementById('btn-xem-thong-ke-loi').innerHTML = icon('chart') + ' Xem thống kê';
   const homNay30 = new Date(); homNay30.setDate(homNay30.getDate() - 30);
   document.getElementById('loi-tu-ngay').value = homNay30.toISOString().slice(0, 10);
   document.getElementById('loi-den-ngay').value = ngayHomNayYYYYMMDD();
@@ -112,15 +112,15 @@
   document.getElementById('loi-den-ngay').addEventListener('change', xemThongKeLoi);
   await xemThongKeLoi();
 
-  // Khá»Ÿi táº¡o khu hoÃ n Ä‘Æ¡n â€” máº·c Ä‘á»‹nh xem táº¥t cáº£ (khÃ´ng giá»›i háº¡n ngÃ y) Ä‘á»ƒ tháº¥y toÃ n bá»™ Ä‘Æ¡n Ä‘ang hoÃ n
-  document.getElementById('btn-xem-thong-ke-hoan').innerHTML = icon('chart') + ' Xem hoÃ n Ä‘Æ¡n';
+  // Khởi tạo khu hoàn đơn — mặc định xem tất cả (không giới hạn ngày) để thấy toàn bộ đơn đang hoàn
+  document.getElementById('btn-xem-thong-ke-hoan').innerHTML = icon('chart') + ' Xem hoàn đơn';
   document.getElementById('btn-xem-thong-ke-hoan').onclick = xemThongKeHoanDon;
   document.getElementById('hoan-tu-ngay').addEventListener('change', xemThongKeHoanDon);
   document.getElementById('hoan-den-ngay').addEventListener('change', xemThongKeHoanDon);
   await xemThongKeHoanDon();
 
-  // Khá»Ÿi táº¡o khu thá»i gian cháº¡y mÃ¡y â€” máº·c Ä‘á»‹nh 30 ngÃ y gáº§n nháº¥t, giá»‘ng khu thá»‘ng kÃª lá»—i
-  document.getElementById('btn-xem-chay-may').innerHTML = icon('chart') + ' Xem thá»‘ng kÃª';
+  // Khởi tạo khu thời gian chạy máy — mặc định 30 ngày gần nhất, giống khu thống kê lỗi
+  document.getElementById('btn-xem-chay-may').innerHTML = icon('chart') + ' Xem thống kê';
   const homNay30b = new Date(); homNay30b.setDate(homNay30b.getDate() - 30);
   document.getElementById('chaymay-tu-ngay').value = homNay30b.toISOString().slice(0, 10);
   document.getElementById('chaymay-den-ngay').value = ngayHomNayYYYYMMDD();
@@ -129,12 +129,12 @@
   document.getElementById('chaymay-den-ngay').addEventListener('change', xemThoiGianChayMay);
   await xemThoiGianChayMay();
 
-  // "Hiá»‡u suáº¥t theo ngÆ°á»i" â€” CHá»ˆ admin (xem docs/superpowers/specs/2026-09-08-hieu-suat-theo-nguoi-design.md).
-  // áº¨n háº³n khá»‘i nÃ y cho vai trÃ² khÃ¡c chá»‰ Ä‘á»ƒ gá»n giao diá»‡n â€” an toÃ n tháº­t sá»± náº±m á»Ÿ cháº·n 403 phÃ­a server
-  // (routes/reports.js), khÃ´ng pháº£i á»Ÿ viá»‡c áº©n UI nÃ y.
+  // "Hiệu suất theo người" — CHỈ admin (xem docs/superpowers/specs/2026-09-08-hieu-suat-theo-nguoi-design.md).
+  // Ẩn hẳn khối này cho vai trò khác chỉ để gọn giao diện — an toàn thật sự nằm ở chặn 403 phía server
+  // (routes/reports.js), không phải ở việc ẩn UI này.
   if (laAdmin(user.vaiTro)) {
     document.getElementById('khoi-hieu-suat').style.display = '';
-    document.getElementById('btn-xem-hieu-suat').innerHTML = icon('chart') + ' Xem hiá»‡u suáº¥t';
+    document.getElementById('btn-xem-hieu-suat').innerHTML = icon('chart') + ' Xem hiệu suất';
     const homNay30c = new Date(); homNay30c.setDate(homNay30c.getDate() - 30);
     document.getElementById('hieusuat-tu-ngay').value = homNay30c.toISOString().slice(0, 10);
     document.getElementById('hieusuat-den-ngay').value = ngayHomNayYYYYMMDD();
@@ -154,7 +154,7 @@ function ngayHomNayYYYYMMDD() {
 
 async function xemThongKeLoi() {
   const khu = document.getElementById('khu-thong-ke-loi');
-  khu.innerHTML = spinnerInline('Äang táº£i thá»‘ng kÃª...');
+  khu.innerHTML = spinnerInline('Đang tải thống kê...');
 
   const qs = new URLSearchParams();
   const tuNgay = document.getElementById('loi-tu-ngay').value;
@@ -171,21 +171,21 @@ async function xemThongKeLoi() {
   }
 
   if (ketQua.tongSoLoi === 0) {
-    khu.innerHTML = `<div class="trang-thai-rong">${icon('check')}<p>KhÃ´ng cÃ³ Ä‘Æ¡n nÃ o bá»‹ lá»—i trong khoáº£ng thá»i gian Ä‘Ã£ chá»n.</p></div>`;
+    khu.innerHTML = `<div class="trang-thai-rong">${icon('check')}<p>Không có đơn nào bị lỗi trong khoảng thời gian đã chọn.</p></div>`;
     return;
   }
 
   khu.innerHTML = `
-    <p><strong>${ketQua.tongSoLoi}</strong> láº§n Ä‘Æ¡n bá»‹ chuyá»ƒn sang lá»—i cáº§n lÃ m láº¡i, trong khoáº£ng thá»i gian Ä‘Ã£ chá»n.</p>
+    <p><strong>${ketQua.tongSoLoi}</strong> lần đơn bị chuyển sang lỗi cần làm lại, trong khoảng thời gian đã chọn.</p>
     <div class="xem-truoc-bang" style="margin-top:16px">
-      <h3>Chi tiáº¿t ${ketQua.chiTiet.length < ketQua.tongSoLoi ? `(má»›i nháº¥t ${ketQua.chiTiet.length}/${ketQua.tongSoLoi})` : ''}</h3>
+      <h3>Chi tiết ${ketQua.chiTiet.length < ketQua.tongSoLoi ? `(mới nhất ${ketQua.chiTiet.length}/${ketQua.tongSoLoi})` : ''}</h3>
       <div class="bang-cuon-ngang">
         <table class="bang-xem-truoc">
-          <thead><tr><th>MÃ£ Ä‘Æ¡n</th><th>KhÃ¡ch hÃ ng</th><th>Loáº¡i</th><th>NgÆ°á»i chuyá»ƒn</th><th>NgÆ°á»i sáº£n xuáº¥t</th><th>Thá»i gian</th></tr></thead>
+          <thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Loại</th><th>Người chuyển</th><th>Người sản xuất</th><th>Thời gian</th></tr></thead>
           <tbody>${ketQua.chiTiet.map(c => `<tr>
             <td><a href="/order.html?stt=${encodeURIComponent(c.sttKey)}">${escapeHtml(c.sttKey)}</a></td><td>${escapeHtml(c.khachHang)}</td><td>${escapeHtml(c.loai)}</td>
             <td>${escapeHtml(c.nguoiDung)}</td>
-            <td style="color:${c.nguoiSanXuat === 'KhÃ´ng xÃ¡c Ä‘á»‹nh do Ä‘Ã£ sá»­a trÃªn GGSheet khÃ´ng qua app' ? 'var(--color-text-faint)' : 'inherit'}">${escapeHtml(c.nguoiSanXuat)}</td>
+            <td style="color:${c.nguoiSanXuat === 'Không xác định do đã sửa trên GGSheet không qua app' ? 'var(--color-text-faint)' : 'inherit'}">${escapeHtml(c.nguoiSanXuat)}</td>
             <td>${escapeHtml(c.thoiGian)}</td>
           </tr>`).join('')}</tbody>
         </table>
@@ -195,7 +195,7 @@ async function xemThongKeLoi() {
 
 async function xemThongKeHoanDon() {
   const khu = document.getElementById('khu-thong-ke-hoan');
-  khu.innerHTML = spinnerInline('Äang táº£i...');
+  khu.innerHTML = spinnerInline('Đang tải...');
 
   const qs = new URLSearchParams();
   const tuNgay = document.getElementById('hoan-tu-ngay').value;
@@ -212,17 +212,17 @@ async function xemThongKeHoanDon() {
   }
 
   if (ketQua.tongSoHoan === 0) {
-    khu.innerHTML = `<div class="trang-thai-rong">${icon('check')}<p>KhÃ´ng cÃ³ Ä‘Æ¡n hoÃ n nÃ o trong khoáº£ng thá»i gian Ä‘Ã£ chá»n.</p></div>`;
+    khu.innerHTML = `<div class="trang-thai-rong">${icon('check')}<p>Không có đơn hoàn nào trong khoảng thời gian đã chọn.</p></div>`;
     return;
   }
 
   khu.innerHTML = `
-    <p><strong>${ketQua.tongSoHoan}</strong> Ä‘Æ¡n Ä‘ang á»Ÿ tráº¡ng thÃ¡i hoÃ n tráº£ trong khoáº£ng thá»i gian Ä‘Ã£ chá»n.</p>
+    <p><strong>${ketQua.tongSoHoan}</strong> đơn đang ở trạng thái hoàn trả trong khoảng thời gian đã chọn.</p>
     <div class="xem-truoc-bang" style="margin-top:16px">
-      <h3>Chi tiáº¿t (kÃ¨m ghi chÃº nguyÃªn nhÃ¢n)</h3>
+      <h3>Chi tiết (kèm ghi chú nguyên nhân)</h3>
       <div class="bang-cuon-ngang">
         <table class="bang-xem-truoc">
-          <thead><tr><th>MÃ£ Ä‘Æ¡n</th><th>KhÃ¡ch hÃ ng</th><th>Loáº¡i</th><th>KÃ­ch thÆ°á»›c</th><th>MÃ u sáº¯c</th><th>NgÃ y lÃªn Ä‘Æ¡n</th><th>NgÆ°á»i sáº£n xuáº¥t</th><th>Ghi chÃº / NguyÃªn nhÃ¢n</th></tr></thead>
+          <thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Loại</th><th>Kích thước</th><th>Màu sắc</th><th>Ngày lên đơn</th><th>Người sản xuất</th><th>Ghi chú / Nguyên nhân</th></tr></thead>
           <tbody>${ketQua.chiTiet.map(c => `<tr>
             <td><a href="/order.html?stt=${encodeURIComponent(c.sttKey)}">${escapeHtml(c.sttKey)}</a></td>
             <td>${escapeHtml(c.khachHang)}</td>
@@ -230,27 +230,27 @@ async function xemThongKeHoanDon() {
             <td>${escapeHtml(c.kichThuoc)}</td>
             <td>${escapeHtml(c.mauSac)}</td>
             <td>${escapeHtml(c.ngayLenDon)}</td>
-            <td style="color:${c.nguoiSanXuat === 'KhÃ´ng xÃ¡c Ä‘á»‹nh do Ä‘Ã£ sá»­a trÃªn GGSheet khÃ´ng qua app' ? 'var(--color-text-faint)' : 'inherit'}">${escapeHtml(c.nguoiSanXuat)}</td>
-            <td style="color:${c.ghiChu === '(KhÃ´ng cÃ³ ghi chÃº)' ? 'var(--color-text-faint)' : 'inherit'}">${escapeHtml(c.ghiChu)}</td>
+            <td style="color:${c.nguoiSanXuat === 'Không xác định do đã sửa trên GGSheet không qua app' ? 'var(--color-text-faint)' : 'inherit'}">${escapeHtml(c.nguoiSanXuat)}</td>
+            <td style="color:${c.ghiChu === '(Không có ghi chú)' ? 'var(--color-text-faint)' : 'inherit'}">${escapeHtml(c.ghiChu)}</td>
           </tr>`).join('')}</tbody>
         </table>
       </div>
     </div>`;
 }
 
-// Báº£ng nhÃ³m nhá» dÃ¹ng chung cho 3 chiá»u thá»‘ng kÃª (ngÆ°á»i váº­n hÃ nh / loáº¡i / tuáº§n) cá»§a khu cháº¡y mÃ¡y â€”
-// má»—i obj cÃ³ dáº¡ng { [nhÃ£n]: { soLan, trungBinh } } (Ä‘Ã£ Ä‘Æ°á»£c server sáº¯p theo soLan giáº£m dáº§n sáºµn).
+// Bảng nhóm nhỏ dùng chung cho 3 chiều thống kê (người vận hành / loại / tuần) của khu chạy máy —
+// mỗi obj có dạng { [nhãn]: { soLan, trungBinh } } (đã được server sắp theo soLan giảm dần sẵn).
 function bangNhomChayMay(tieuDe, nhanCot, obj) {
   const hang = Object.entries(obj);
   if (hang.length === 0) {
-    return `<div class="xem-truoc-bang"><h3>${escapeHtml(tieuDe)}</h3><p style="color:var(--color-text-faint);margin:0">KhÃ´ng cÃ³ dá»¯ liá»‡u.</p></div>`;
+    return `<div class="xem-truoc-bang"><h3>${escapeHtml(tieuDe)}</h3><p style="color:var(--color-text-faint);margin:0">Không có dữ liệu.</p></div>`;
   }
   return `
     <div class="xem-truoc-bang">
       <h3>${escapeHtml(tieuDe)}</h3>
       <div class="bang-cuon-ngang">
         <table class="bang-xem-truoc">
-          <thead><tr><th>${escapeHtml(nhanCot)}</th><th>Sá»‘ láº§n</th><th>Trung bÃ¬nh</th></tr></thead>
+          <thead><tr><th>${escapeHtml(nhanCot)}</th><th>Số lần</th><th>Trung bình</th></tr></thead>
           <tbody>${hang.map(([k, v]) => `<tr><td>${escapeHtml(k)}</td><td>${v.soLan}</td><td>${escapeHtml(v.trungBinh)}</td></tr>`).join('')}</tbody>
         </table>
       </div>
@@ -259,7 +259,7 @@ function bangNhomChayMay(tieuDe, nhanCot, obj) {
 
 async function xemThoiGianChayMay() {
   const khu = document.getElementById('khu-chay-may');
-  khu.innerHTML = spinnerInline('Äang táº£i thá»‘ng kÃª...');
+  khu.innerHTML = spinnerInline('Đang tải thống kê...');
 
   const qs = new URLSearchParams();
   const tuNgay = document.getElementById('chaymay-tu-ngay').value;
@@ -276,22 +276,22 @@ async function xemThoiGianChayMay() {
   }
 
   if (ketQua.tongSoLanChay === 0) {
-    khu.innerHTML = `<div class="trang-thai-rong">${icon('check')}<p>KhÃ´ng cÃ³ láº§n cháº¡y mÃ¡y nÃ o Ä‘Ã£ hoÃ n thÃ nh trong khoáº£ng thá»i gian Ä‘Ã£ chá»n.</p></div>`;
+    khu.innerHTML = `<div class="trang-thai-rong">${icon('check')}<p>Không có lần chạy máy nào đã hoàn thành trong khoảng thời gian đã chọn.</p></div>`;
     return;
   }
 
   khu.innerHTML = `
-    <p><strong>${ketQua.tongSoLanChay}</strong> láº§n cháº¡y mÃ¡y Ä‘Ã£ hoÃ n thÃ nh, trung bÃ¬nh <strong>${escapeHtml(ketQua.trungBinhChung)}</strong>/láº§n, trong khoáº£ng thá»i gian Ä‘Ã£ chá»n.</p>
+    <p><strong>${ketQua.tongSoLanChay}</strong> lần chạy máy đã hoàn thành, trung bình <strong>${escapeHtml(ketQua.trungBinhChung)}</strong>/lần, trong khoảng thời gian đã chọn.</p>
     <div class="luoi-thong-ke-loi">
-      ${bangNhomChayMay('Theo ngÆ°á»i váº­n hÃ nh', 'NgÆ°á»i váº­n hÃ nh', ketQua.theoNguoiVanHanh)}
-      ${bangNhomChayMay('Theo loáº¡i sáº£n pháº©m', 'Loáº¡i', ketQua.theoLoai)}
-      ${bangNhomChayMay('Theo tuáº§n', 'Tuáº§n', ketQua.theoTuan)}
+      ${bangNhomChayMay('Theo người vận hành', 'Người vận hành', ketQua.theoNguoiVanHanh)}
+      ${bangNhomChayMay('Theo loại sản phẩm', 'Loại', ketQua.theoLoai)}
+      ${bangNhomChayMay('Theo tuần', 'Tuần', ketQua.theoTuan)}
     </div>
     <div class="xem-truoc-bang" style="margin-top:16px">
-      <h3>Chi tiáº¿t tá»«ng láº§n cháº¡y (lÃ¢u nháº¥t lÃªn Ä‘áº§u) ${ketQua.chiTiet.length < ketQua.tongSoLanChay ? `â€” hiá»ƒn thá»‹ ${ketQua.chiTiet.length}/${ketQua.tongSoLanChay}` : ''}</h3>
+      <h3>Chi tiết từng lần chạy (lâu nhất lên đầu) ${ketQua.chiTiet.length < ketQua.tongSoLanChay ? `— hiển thị ${ketQua.chiTiet.length}/${ketQua.tongSoLanChay}` : ''}</h3>
       <div class="bang-cuon-ngang">
         <table class="bang-xem-truoc">
-          <thead><tr><th>MÃ£ Ä‘Æ¡n</th><th>KhÃ¡ch hÃ ng</th><th>Loáº¡i</th><th>NgÆ°á»i váº­n hÃ nh</th><th>Báº¯t Ä‘áº§u</th><th>Káº¿t thÃºc</th><th>Thá»i lÆ°á»£ng</th></tr></thead>
+          <thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Loại</th><th>Người vận hành</th><th>Bắt đầu</th><th>Kết thúc</th><th>Thời lượng</th></tr></thead>
           <tbody>${ketQua.chiTiet.map(c => `<tr>
             <td><a href="/order.html?stt=${encodeURIComponent(c.sttKey)}">${escapeHtml(c.sttKey)}</a></td>
             <td>${escapeHtml(c.khachHang)}</td>
@@ -306,12 +306,12 @@ async function xemThoiGianChayMay() {
     </div>`;
 }
 
-// Báº£ng hiá»‡u suáº¥t theo ngÆ°á»i, dÃ¹ng chung cho cáº£ 3 vai trÃ² (má»—i vai trÃ² 1 bá»™ cá»™t khÃ¡c nhau, xem
-// cacCot) â€” khÃ¡c bangNhomChayMay() á»Ÿ chá»— dá»¯ liá»‡u lÃ  Máº¢NG ngÆ°á»i (khÃ´ng pháº£i object gá»™p nhÃ³m), vÃ  sá»‘
-// cá»™t thay Ä‘á»•i theo vai trÃ² (nguoi_lay_phoi cÃ³ 4 cá»™t vÃ¬ Ä‘áº£m nháº­n cáº£ láº¥y phÃ´i láº«n Ä‘Ã³ng gÃ³i).
+// Bảng hiệu suất theo người, dùng chung cho cả 3 vai trò (mỗi vai trò 1 bộ cột khác nhau, xem
+// cacCot) — khác bangNhomChayMay() ở chỗ dữ liệu là MẢNG người (không phải object gộp nhóm), và số
+// cột thay đổi theo vai trò (nguoi_lay_phoi có 4 cột vì đảm nhận cả lấy phôi lẫn đóng gói).
 function bangHieuSuat(tieuDe, list, tenCotDau, cacCot) {
   if (list.length === 0) {
-    return `<div class="xem-truoc-bang"><h3>${escapeHtml(tieuDe)}</h3><p style="color:var(--color-text-faint);margin:0">KhÃ´ng cÃ³ tÃ i khoáº£n nÃ o Ä‘ang hoáº¡t Ä‘á»™ng.</p></div>`;
+    return `<div class="xem-truoc-bang"><h3>${escapeHtml(tieuDe)}</h3><p style="color:var(--color-text-faint);margin:0">Không có tài khoản nào đang hoạt động.</p></div>`;
   }
   return `
     <div class="xem-truoc-bang">
@@ -329,7 +329,7 @@ function bangHieuSuat(tieuDe, list, tenCotDau, cacCot) {
 
 async function xemHieuSuatTheoNguoi() {
   const khu = document.getElementById('khu-hieu-suat');
-  khu.innerHTML = spinnerInline('Äang táº£i thá»‘ng kÃª...');
+  khu.innerHTML = spinnerInline('Đang tải thống kê...');
 
   const qs = new URLSearchParams();
   const tuNgay = document.getElementById('hieusuat-tu-ngay').value;
@@ -347,19 +347,19 @@ async function xemHieuSuatTheoNguoi() {
 
   khu.innerHTML = `
     <div class="luoi-thong-ke-loi">
-      ${bangHieuSuat('Sáº£n xuáº¥t', kq.san_xuat, 'NgÆ°á»i sáº£n xuáº¥t', [
-        { key: 'soDonDaChayMay', nhan: 'ÄÆ¡n Ä‘Ã£ cháº¡y mÃ¡y' },
-        { key: 'tongSlDaChayMay', nhan: 'Tá»•ng SL Ä‘Ã£ cháº¡y mÃ¡y' },
+      ${bangHieuSuat('Sản xuất', kq.san_xuat, 'Người sản xuất', [
+        { key: 'soDonDaChayMay', nhan: 'Đơn đã chạy máy' },
+        { key: 'tongSlDaChayMay', nhan: 'Tổng SL đã chạy máy' },
       ])}
-      ${bangHieuSuat('Váº½ file', kq.ve_file, 'NgÆ°á»i váº½ file', [
-        { key: 'soFileDaVe', nhan: 'File Ä‘Ã£ váº½' },
-        { key: 'tongSlDaVe', nhan: 'Tá»•ng SL Ä‘Ã£ váº½ file' },
+      ${bangHieuSuat('Vẽ file', kq.ve_file, 'Người vẽ file', [
+        { key: 'soFileDaVe', nhan: 'File đã vẽ' },
+        { key: 'tongSlDaVe', nhan: 'Tổng SL đã vẽ file' },
       ])}
-      ${bangHieuSuat('Láº¥y phÃ´i / ÄÃ³ng gÃ³i', kq.nguoi_lay_phoi, 'NgÆ°á»i láº¥y phÃ´i', [
-        { key: 'soDonDaLayPhoi', nhan: 'ÄÆ¡n Ä‘Ã£ láº¥y phÃ´i' },
-        { key: 'tongSlPhoiDaLay', nhan: 'Tá»•ng SL phÃ´i Ä‘Ã£ láº¥y' },
-        { key: 'soDonDaDongGoi', nhan: 'ÄÆ¡n Ä‘Ã£ Ä‘Ã³ng gÃ³i' },
-        { key: 'tongSlDaDongGoi', nhan: 'Tá»•ng SL Ä‘Ã£ Ä‘Ã³ng gÃ³i' },
+      ${bangHieuSuat('Lấy phôi / Đóng gói', kq.nguoi_lay_phoi, 'Người lấy phôi', [
+        { key: 'soDonDaLayPhoi', nhan: 'Đơn đã lấy phôi' },
+        { key: 'tongSlPhoiDaLay', nhan: 'Tổng SL phôi đã lấy' },
+        { key: 'soDonDaDongGoi', nhan: 'Đơn đã đóng gói' },
+        { key: 'tongSlDaDongGoi', nhan: 'Tổng SL đã đóng gói' },
       ])}
     </div>`;
 }

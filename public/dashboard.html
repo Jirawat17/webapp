@@ -1,63 +1,63 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Thá»‘ng kÃª â€” XÆ°á»Ÿng ThÃªu</title>
+<title>Thống kê — Xưởng Thêu</title>
 <link rel="stylesheet" href="/css/style.css?v=112">
 <script src="/js/theme.js?v=104"></script>
 </head>
 <body>
 <div id="nav"></div>
 <div class="page">
-  <!-- TiÃªu Ä‘á» gá»™p CHUNG 1 hÃ ng vá»›i thanh chá»n ká»³ (bá»• sung 09/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” tÄƒng
-       diá»‡n tÃ­ch hiá»ƒn thá»‹, cÃ¹ng tinh tháº§n Ä‘Ã£ gá»™p nav thÃ nh 1 hÃ ng á»Ÿ desktop). -->
+  <!-- Tiêu đề gộp CHUNG 1 hàng với thanh chọn kỳ (bổ sung 09/09/2026, theo yêu cầu người dùng — tăng
+       diện tích hiển thị, cùng tinh thần đã gộp nav thành 1 hàng ở desktop). -->
   <div class="tieu-de-cong-cu">
-    <h2>Thá»‘ng kÃª</h2>
+    <h2>Thống kê</h2>
     <div class="thanh-cong-cu-danh-sach" id="thanh-chon-ky">
-      <button type="button" class="btn-hanh-dong phu dang-mo" data-ky="toan_bo">ToÃ n bá»™</button>
-      <button type="button" class="btn-hanh-dong phu" data-ky="hom_nay">HÃ´m nay</button>
-      <button type="button" class="btn-hanh-dong phu" data-ky="tuan_nay">Tuáº§n nÃ y</button>
-      <button type="button" class="btn-hanh-dong phu" data-ky="thang_nay">ThÃ¡ng nÃ y</button>
-      <button type="button" class="btn-hanh-dong phu" data-ky="tuy_chon">Tuá»³ chá»n...</button>
-      <!-- Lá»c theo khÃ¡ch hÃ ng (bá»• sung 25/09/2026) â€” mÃ£ khÃ¡ch tÃ¡ch tá»« STT_Key, xem routes/dashboard.js. -->
-      <select id="loc-khach-hang" aria-label="Lá»c theo khÃ¡ch hÃ ng"><option value="">Táº¥t cáº£ khÃ¡ch hÃ ng</option></select>
+      <button type="button" class="btn-hanh-dong phu dang-mo" data-ky="toan_bo">Toàn bộ</button>
+      <button type="button" class="btn-hanh-dong phu" data-ky="hom_nay">Hôm nay</button>
+      <button type="button" class="btn-hanh-dong phu" data-ky="tuan_nay">Tuần này</button>
+      <button type="button" class="btn-hanh-dong phu" data-ky="thang_nay">Tháng này</button>
+      <button type="button" class="btn-hanh-dong phu" data-ky="tuy_chon">Tuỳ chọn...</button>
+      <!-- Lọc theo khách hàng (bổ sung 25/09/2026) — mã khách tách từ STT_Key, xem routes/dashboard.js. -->
+      <select id="loc-khach-hang" aria-label="Lọc theo khách hàng"><option value="">Tất cả khách hàng</option></select>
     </div>
   </div>
 
   <div id="panel-khoang-ngay" class="panel-dieu-khien" style="display:none">
     <div class="inline-form">
       <div class="truong">
-        <label for="tk-tu-ngay">Tá»« ngÃ y</label>
+        <label for="tk-tu-ngay">Từ ngày</label>
         <input type="date" id="tk-tu-ngay">
       </div>
       <div class="truong">
-        <label for="tk-den-ngay">Äáº¿n ngÃ y</label>
+        <label for="tk-den-ngay">Đến ngày</label>
         <input type="date" id="tk-den-ngay">
       </div>
-      <button type="button" class="btn-hanh-dong" id="btn-ap-dung-khoang">Ãp dá»¥ng</button>
+      <button type="button" class="btn-hanh-dong" id="btn-ap-dung-khoang">Áp dụng</button>
     </div>
   </div>
 
-  <div id="tong-so" class="tong-so-the">Äang táº£i...</div>
+  <div id="tong-so" class="tong-so-the">Đang tải...</div>
 
-  <!-- Báº£ng theo khÃ¡ch hÃ ng (bá»• sung 15/09/2026, xem
-       docs/superpowers/specs/2026-09-15-thong-ke-khach-hang-va-an-menu-san-xuat-design.md) â€” tÃ¡ch
-       riÃªng full-width thay vÃ¬ náº±m trong .chart-grid (2 cá»™t á»Ÿ desktop). Tá»« 29/09/2026 (theo yÃªu cáº§u ngÆ°á»i dÃ¹ng)
-       chá»‰ cÃ²n Tá»•ng Ä‘Æ¡n + 3 nhÃ³m cá»§a Lá»ŒC Tá»”NG QUÃT (routes/dashboard.js#thongKeTheoNhom), sá»‘ in Ä‘áº­m cho dá»… nhÃ¬n. -->
+  <!-- Bảng theo khách hàng (bổ sung 15/09/2026, xem
+       docs/superpowers/specs/2026-09-15-thong-ke-khach-hang-va-an-menu-san-xuat-design.md) — tách
+       riêng full-width thay vì nằm trong .chart-grid (2 cột ở desktop). Từ 29/09/2026 (theo yêu cầu người dùng)
+       chỉ còn Tổng đơn + 3 nhóm của LỌC TỔNG QUÁT (routes/dashboard.js#thongKeTheoNhom), số in đậm cho dễ nhìn. -->
   <div class="chart-card" style="margin-bottom:var(--space-4)">
-    <h3 style="margin-top:0">Theo khÃ¡ch hÃ ng</h3>
+    <h3 style="margin-top:0">Theo khách hàng</h3>
     <div class="bang-cuon-ngang">
       <table class="bang-xem-truoc" id="bang-theo-khach-hang">
         <thead><tr>
-          <th>KhÃ¡ch hÃ ng</th><th>Tá»•ng Ä‘Æ¡n</th><th>Tá»•ng SP</th><th>ÄÆ¡n Ä‘Ã£ SX</th><th>SP Ä‘Ã£ SX</th><th>ÄÆ¡n chÆ°a SX</th><th>SP chÆ°a SX</th><th>ÄÆ¡n giao/hoÃ n/há»§y</th><th>SP giao/hoÃ n/há»§y</th>
+          <th>Khách hàng</th><th>Tổng đơn</th><th>Tổng SP</th><th>Đơn đã SX</th><th>SP đã SX</th><th>Đơn chưa SX</th><th>SP chưa SX</th><th>Đơn giao/hoàn/hủy</th><th>SP giao/hoàn/hủy</th>
         </tr></thead>
         <tbody id="bang-theo-khach-hang-body"></tbody>
       </table>
     </div>
   </div>
 
-  <!-- Báº£ng + biá»ƒu Ä‘á»“ "theo XÆ°á»Ÿng" ÄÃƒ XOÃ 29/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng. -->
+  <!-- Bảng + biểu đồ "theo Xưởng" ĐÃ XOÁ 29/09/2026, theo yêu cầu người dùng. -->
   <div class="chart-grid">
     <div class="chart-card"><canvas id="chart-khach-hang"></canvas></div>
     <div class="chart-card"><canvas id="chart-sp-khach-hang"></canvas></div>
@@ -77,8 +77,8 @@
 <script>
 let kyHienTai = 'toan_bo';
 const cacBieuDo = {};
-// Ghi rÃµ con sá»‘ ngay trÃªn biá»ƒu Ä‘á»“ (chartjs-plugin-datalabels) â€” trÆ°á»›c Ä‘Ã¢y pháº£i báº¥m/rÃª chuá»™t vÃ o má»›i
-// tháº¥y sá»‘ qua tooltip, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng muá»‘n nhÃ¬n tháº¥y ngay khÃ´ng cáº§n thao tÃ¡c gÃ¬ thÃªm.
+// Ghi rõ con số ngay trên biểu đồ (chartjs-plugin-datalabels) — trước đây phải bấm/rê chuột vào mới
+// thấy số qua tooltip, theo yêu cầu người dùng muốn nhìn thấy ngay không cần thao tác gì thêm.
 Chart.register(ChartDataLabels);
 let dangCheDoToiHienTai = false;
 
@@ -87,8 +87,8 @@ let dangCheDoToiHienTai = false;
   if (!user) return;
   renderNav(user, 'dashboard');
 
-  // Chart.js váº½ báº±ng <canvas>, KHÃ”NG tá»± Ä‘á»c CSS variable cá»§a trang â€” náº¿u khÃ´ng set thá»§ cÃ´ng,
-  // chá»¯ tiÃªu Ä‘á»/chÃº thÃ­ch/lÆ°á»›i sáº½ giá»¯ nguyÃªn mÃ u tá»‘i máº·c Ä‘á»‹nh, khÃ³ Ä‘á»c khi báº­t Cháº¿ Ä‘á»™ tá»‘i.
+  // Chart.js vẽ bằng <canvas>, KHÔNG tự đọc CSS variable của trang — nếu không set thủ công,
+  // chữ tiêu đề/chú thích/lưới sẽ giữ nguyên màu tối mặc định, khó đọc khi bật Chế độ tối.
   dangCheDoToiHienTai = typeof dangCheDoToi === 'function' && dangCheDoToi();
   Chart.defaults.color = dangCheDoToiHienTai ? '#a6a6ad' : '#52525b';
   Chart.defaults.borderColor = dangCheDoToiHienTai ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
@@ -107,8 +107,8 @@ let dangCheDoToiHienTai = false;
   await taiThongKe();
 })();
 
-// Quy Ä‘á»•i 1 trong 4 ká»³ chá»n nhanh (khÃ´ng tÃ­nh "tuy_chon" â€” ká»³ Ä‘Ã³ láº¥y trá»±c tiáº¿p tá»« 2 Ã´ ngÃ y)
-// thÃ nh khoáº£ng {tu, den}. Tuáº§n báº¯t Ä‘áº§u tá»« Thá»© 2 theo quy Æ°á»›c lá»‹ch lÃ m viá»‡c VN, khÃ´ng pháº£i Chá»§ nháº­t.
+// Quy đổi 1 trong 4 kỳ chọn nhanh (không tính "tuy_chon" — kỳ đó lấy trực tiếp từ 2 ô ngày)
+// thành khoảng {tu, den}. Tuần bắt đầu từ Thứ 2 theo quy ước lịch làm việc VN, không phải Chủ nhật.
 function tinhKhoangTheoKy(ky) {
   const homNay = new Date();
   homNay.setHours(0, 0, 0, 0);
@@ -125,7 +125,7 @@ function tinhKhoangTheoKy(ky) {
     const cuoi = new Date(homNay.getFullYear(), homNay.getMonth() + 1, 0);
     return { tu: dau, den: cuoi };
   }
-  return null; // toan_bo â€” khÃ´ng giá»›i háº¡n
+  return null; // toan_bo — không giới hạn
 }
 
 function dinhDangYMD(d) {
@@ -134,7 +134,7 @@ function dinhDangYMD(d) {
 }
 
 async function taiThongKe() {
-  document.getElementById('tong-so').textContent = 'Äang táº£i...';
+  document.getElementById('tong-so').textContent = 'Đang tải...';
 
   const qs = new URLSearchParams();
   if (kyHienTai === 'tuy_chon') {
@@ -156,39 +156,39 @@ async function taiThongKe() {
   try {
     stats = await apiFetch('/dashboard/thong-ke?' + qs.toString());
   } catch (e) {
-    document.getElementById('tong-so').textContent = 'KhÃ´ng táº£i Ä‘Æ°á»£c thá»‘ng kÃª: ' + e.message;
+    document.getElementById('tong-so').textContent = 'Không tải được thống kê: ' + e.message;
     return;
   }
 
-  document.getElementById('tong-so').textContent = `Tá»•ng sá»‘ Ä‘Æ¡n: ${stats.tongSoDon} Â· Tá»•ng sá»‘ sáº£n pháº©m: ${stats.tongSanPham ?? 0}`;
+  document.getElementById('tong-so').textContent = `Tổng số đơn: ${stats.tongSoDon} · Tổng số sản phẩm: ${stats.tongSanPham ?? 0}`;
 
-  // Äá»• láº¡i Ã´ lá»c khÃ¡ch hÃ ng, giá»¯ lá»±a chá»n hiá»‡n táº¡i.
+  // Đổ lại ô lọc khách hàng, giữ lựa chọn hiện tại.
   const dangChon = oKhach.value;
-  oKhach.innerHTML = '<option value="">Táº¥t cáº£ khÃ¡ch hÃ ng</option>' +
+  oKhach.innerHTML = '<option value="">Tất cả khách hàng</option>' +
     stats.danhSachKhachHang.map(k => `<option value="${escapeHtml(k)}" ${k === dangChon ? 'selected' : ''}>${escapeHtml(k)}</option>`).join('');
 
-  // MÃ u Cá» Äá»ŠNH theo khÃ¡ch (theo thá»© tá»± danh sÃ¡ch Ä‘áº§y Ä‘á»§) â€” cÃ¹ng 1 khÃ¡ch luÃ´n cÃ¹ng mÃ u á»Ÿ má»i biá»ƒu Ä‘á»“.
+  // Màu CỐ ĐỊNH theo khách (theo thứ tự danh sách đầy đủ) — cùng 1 khách luôn cùng màu ở mọi biểu đồ.
   mauTheoKhach = Object.fromEntries(stats.danhSachKhachHang.map((k, i) => [k, `hsl(${Math.round(i * 137.5) % 360} 65% 52%)`]));
 
   const tongDonTheoNhom = list => Object.fromEntries(list.map(n => [n.khachHang, n.tongDon]));
   const tongSpTheoNhom = list => Object.fromEntries(list.map(n => [n.khachHang, n.tongSanPham ?? 0]));
-  veBieuDoCot('chart-khach-hang', 'Sá»‘ Ä‘Æ¡n theo khÃ¡ch hÃ ng', tongDonTheoNhom(stats.theoKhachHangChiTiet));
-  veBieuDoCot('chart-sp-khach-hang', 'Sá»‘ sáº£n pháº©m theo khÃ¡ch hÃ ng', tongSpTheoNhom(stats.theoKhachHangChiTiet));
-  // 05/10/2026 (theo yÃªu cáº§u ngÆ°á»i dÃ¹ng): 2 biá»ƒu Ä‘á»“ dÆ°á»›i Ä‘Ã¢y bá» chia theo khÃ¡ch hÃ ng, chá»‰ cÃ²n Tá»”NG táº¥t cáº£ khÃ¡ch (váº«n theo Ã´
-  // lá»c khÃ¡ch/ká»³) â€” tráº¡ng thÃ¡i: cá»™t 1 mÃ u (trá»¥c lÃ  cÃ¡c nhÃ³m riÃªng, khÃ´ng pháº£i thá»i gian); theo tuáº§n: biá»ƒu Ä‘á»“ Ä‘Æ°á»ng.
-  veBieuDoCot('chart-trangthai', 'Theo tráº¡ng thÃ¡i (táº¥t cáº£ khÃ¡ch hÃ ng)', stats.theoTrangThai);
-  veBieuDoChong('chart-loai', 'Theo loáº¡i sáº£n pháº©m (chia theo khÃ¡ch hÃ ng)', stats.chongTheoKhach.loai);
-  veBieuDoDuong('chart-tuan', 'ÄÆ¡n theo tuáº§n â€” ngÃ y lÃªn Ä‘Æ¡n (táº¥t cáº£ khÃ¡ch hÃ ng)', dienTuanTrong(stats.theoTuan), soSanhTuan);
-  veBieuDoDuong('chart-sp-tuan', 'Sáº£n pháº©m theo tuáº§n â€” ngÃ y lÃªn Ä‘Æ¡n (táº¥t cáº£ khÃ¡ch hÃ ng)', dienTuanTrong(stats.spTheoTuan), soSanhTuan);
-  // Theo ngÃ y (07/10/2026): server Ä‘Ã£ xáº¿p theo thá»i gian + Ä‘iá»n 0 ngÃ y trá»‘ng â€” KHÃ”NG sáº¯p láº¡i theo chuá»—i DD/MM/YYYY.
-  veBieuDoDuong('chart-ngay', 'Xu hÆ°á»›ng Ä‘Æ¡n theo ngÃ y â€” ngÃ y lÃªn Ä‘Æ¡n (táº¥t cáº£ khÃ¡ch hÃ ng)', stats.theoNgay);
-  veBieuDoDuong('chart-sp-ngay', 'Sáº£n pháº©m theo ngÃ y â€” ngÃ y lÃªn Ä‘Æ¡n (táº¥t cáº£ khÃ¡ch hÃ ng)', stats.spTheoNgay);
+  veBieuDoCot('chart-khach-hang', 'Số đơn theo khách hàng', tongDonTheoNhom(stats.theoKhachHangChiTiet));
+  veBieuDoCot('chart-sp-khach-hang', 'Số sản phẩm theo khách hàng', tongSpTheoNhom(stats.theoKhachHangChiTiet));
+  // 05/10/2026 (theo yêu cầu người dùng): 2 biểu đồ dưới đây bỏ chia theo khách hàng, chỉ còn TỔNG tất cả khách (vẫn theo ô
+  // lọc khách/kỳ) — trạng thái: cột 1 màu (trục là các nhóm riêng, không phải thời gian); theo tuần: biểu đồ đường.
+  veBieuDoCot('chart-trangthai', 'Theo trạng thái (tất cả khách hàng)', stats.theoTrangThai);
+  veBieuDoChong('chart-loai', 'Theo loại sản phẩm (chia theo khách hàng)', stats.chongTheoKhach.loai);
+  veBieuDoDuong('chart-tuan', 'Đơn theo tuần — ngày lên đơn (tất cả khách hàng)', dienTuanTrong(stats.theoTuan), soSanhTuan);
+  veBieuDoDuong('chart-sp-tuan', 'Sản phẩm theo tuần — ngày lên đơn (tất cả khách hàng)', dienTuanTrong(stats.spTheoTuan), soSanhTuan);
+  // Theo ngày (07/10/2026): server đã xếp theo thời gian + điền 0 ngày trống — KHÔNG sắp lại theo chuỗi DD/MM/YYYY.
+  veBieuDoDuong('chart-ngay', 'Xu hướng đơn theo ngày — ngày lên đơn (tất cả khách hàng)', stats.theoNgay);
+  veBieuDoDuong('chart-sp-ngay', 'Sản phẩm theo ngày — ngày lên đơn (tất cả khách hàng)', stats.spTheoNgay);
   veBangTheoNhom('bang-theo-khach-hang-body', stats.theoKhachHangChiTiet);
 }
 
 let mauTheoKhach = {};
 
-// "2026-W9" trÆ°á»›c "2026-W10" (so chuá»—i thÆ°á»ng xáº¿p sai).
+// "2026-W9" trước "2026-W10" (so chuỗi thường xếp sai).
 function soSanhTuan(a, b) {
   const [na, ta] = a.split('-W').map(Number);
   const [nb, tb] = b.split('-W').map(Number);
@@ -198,10 +198,10 @@ function soSanhTuan(a, b) {
 function veBangTheoNhom(tbodyId, danhSach) {
   const tbody = document.getElementById(tbodyId);
   if (!danhSach || danhSach.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9">KhÃ´ng cÃ³ dá»¯ liá»‡u.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9">Không có dữ liệu.</td></tr>';
     return;
   }
-  // HÃ ng Tá»”NG cuá»‘i báº£ng (17/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng): cá»™ng tá»«ng cá»™t cá»§a cÃ¡c khÃ¡ch hÃ ng Ä‘ang hiá»‡n.
+  // Hàng TỔNG cuối bảng (17/10/2026, theo yêu cầu người dùng): cộng từng cột của các khách hàng đang hiện.
   const COT = ['tongDon', 'tongSanPham', 'daSanXuat', 'spDaSanXuat', 'chuaSanXuat', 'spChuaSanXuat', 'giaoHoanHuy', 'spGiaoHoanHuy'];
   const tong = Object.fromEntries(COT.map(c => [c, danhSach.reduce((s, n) => s + (Number(n[c]) || 0), 0)]));
   tbody.innerHTML = danhSach.map(n => `
@@ -213,7 +213,7 @@ function veBangTheoNhom(tbodyId, danhSach) {
       <td><strong>${n.giaoHoanHuy}</strong></td><td>${n.spGiaoHoanHuy ?? 0}</td>
     </tr>`).join('') + `
     <tr style="background:var(--color-bg);border-top:2px solid var(--color-text-muted);font-weight:800">
-      <td>Tá»”NG</td>${COT.map(c => `<td>${tong[c]}</td>`).join('')}
+      <td>TỔNG</td>${COT.map(c => `<td>${tong[c]}</td>`).join('')}
     </tr>`;
 }
 
@@ -226,21 +226,21 @@ function nhanSoTrenCot() {
   };
 }
 
-// taiThongKe() cÃ³ thá»ƒ gá»i láº¡i nhiá»u láº§n khi Ä‘á»•i ká»³/khÃ¡ch â€” pháº£i huá»· biá»ƒu Ä‘á»“ cÅ© trÃªn cÃ¹ng canvas trÆ°á»›c,
-// náº¿u khÃ´ng Chart.js bÃ¡o lá»—i "Canvas is already in use".
+// taiThongKe() có thể gọi lại nhiều lần khi đổi kỳ/khách — phải huỷ biểu đồ cũ trên cùng canvas trước,
+// nếu không Chart.js báo lỗi "Canvas is already in use".
 function taoBieuDo(canvasId, cauHinh) {
   if (cacBieuDo[canvasId]) cacBieuDo[canvasId].destroy();
   cacBieuDo[canvasId] = new Chart(document.getElementById(canvasId), cauHinh);
 }
 
-// Cá»™t Ä‘Æ¡n â€” 1 mÃ u, sá»‘ ghi trÃªn Ä‘áº§u cá»™t. NgÆ°á»i dÃ¹ng Æ°u tiÃªn biá»ƒu Ä‘á»“ cá»™t hÆ¡n trÃ²n/Ä‘Æ°á»ng (25/09/2026).
+// Cột đơn — 1 màu, số ghi trên đầu cột. Người dùng ưu tiên biểu đồ cột hơn tròn/đường (25/09/2026).
 function veBieuDoCot(canvasId, title, dataObj) {
   taoBieuDo(canvasId, {
     type: 'bar',
     data: { labels: Object.keys(dataObj), datasets: [{ label: title, data: Object.values(dataObj), backgroundColor: '#4338ca' }] },
     options: {
       responsive: true,
-      scales: { y: { grace: '12%' } }, // chá»«a chá»— cho sá»‘ trÃªn Ä‘á»‰nh cá»™t cao nháº¥t
+      scales: { y: { grace: '12%' } }, // chừa chỗ cho số trên đỉnh cột cao nhất
       plugins: {
         title: { display: true, text: title, font: { size: 14 } },
         legend: { display: false },
@@ -250,8 +250,8 @@ function veBieuDoCot(canvasId, title, dataObj) {
   });
 }
 
-// Server chá»‰ tráº£ cÃ¡c tuáº§n CÃ“ Ä‘Æ¡n â€” biá»ƒu Ä‘á»“ Ä‘Æ°á»ng mÃ  thiáº¿u tuáº§n thÃ¬ ná»‘i tháº³ng qua, che máº¥t tuáº§n trá»‘ng. Äiá»n 0 cho má»i tuáº§n
-// náº±m giá»¯a tuáº§n Ä‘áº§u vÃ  tuáº§n cuá»‘i. Sá»‘ tuáº§n cuá»‘i nÄƒm tÃ­nh ÄÃšNG cÃ´ng thá»©c routes/dashboard.js#tuanCuaDon (ngÃ y 31/12).
+// Server chỉ trả các tuần CÓ đơn — biểu đồ đường mà thiếu tuần thì nối thẳng qua, che mất tuần trống. Điền 0 cho mọi tuần
+// nằm giữa tuần đầu và tuần cuối. Số tuần cuối năm tính ĐÚNG công thức routes/dashboard.js#tuanCuaDon (ngày 31/12).
 function soTuanCuoiNam(nam) {
   const dauNam = new Date(nam, 0, 1);
   return Math.ceil(((new Date(nam, 11, 31) - dauNam) / 86400000 + dauNam.getDay() + 1) / 7);
@@ -269,7 +269,7 @@ function dienTuanTrong(theoTuan) {
   return kq;
 }
 
-// ÄÆ°á»ng 1 mÃ u (05/10/2026) â€” dÃ¹ng cho sá»‘ Ä‘Æ¡n theo tuáº§n; ghi sá»‘ táº¡i tá»«ng Ä‘iá»ƒm nhÆ° biá»ƒu Ä‘á»“ cá»™t.
+// Đường 1 màu (05/10/2026) — dùng cho số đơn theo tuần; ghi số tại từng điểm như biểu đồ cột.
 function veBieuDoDuong(canvasId, title, dataObj, soSanhNhan) {
   const labels = Object.keys(dataObj);
   if (soSanhNhan) labels.sort(soSanhNhan);
@@ -282,16 +282,16 @@ function veBieuDoDuong(canvasId, title, dataObj, soSanhNhan) {
       plugins: {
         title: { display: true, text: title, font: { size: 14 } },
         legend: { display: false },
-        // Nhiá»u Ä‘iá»ƒm (biá»ƒu Ä‘á»“ ngÃ y ká»³ dÃ i) thÃ¬ sá»‘ Ä‘Ã¨ lÃªn nhau â€” chá»‰ ghi sá»‘ khi <= 31 Ä‘iá»ƒm, cÃ²n láº¡i rÃª chuá»™t Ä‘á»ƒ xem.
+        // Nhiều điểm (biểu đồ ngày kỳ dài) thì số đè lên nhau — chỉ ghi số khi <= 31 điểm, còn lại rê chuột để xem.
         datalabels: { ...nhanSoTrenCot(), formatter: v => v, display: labels.length <= 31 },
       },
     },
   });
 }
 
-// Cá»™t CHá»’NG theo khÃ¡ch hÃ ng (bá»• sung 25/09/2026) â€” chong = { nhÃ£n: { maKhach: soDon } }. Má»—i khÃ¡ch 1
-// dataset, mÃ u cá»‘ Ä‘á»‹nh (mauTheoKhach). Chá»‰ ghi Tá»”NG trÃªn Ä‘á»‰nh cá»™t (ghi sá»‘ tá»«ng Ä‘oáº¡n quÃ¡ rá»‘i khi nhiá»u
-// khÃ¡ch) â€” rÃª chuá»™t vÃ o cá»™t Ä‘á»ƒ xem sá»‘ cá»§a tá»«ng khÃ¡ch.
+// Cột CHỒNG theo khách hàng (bổ sung 25/09/2026) — chong = { nhãn: { maKhach: soDon } }. Mỗi khách 1
+// dataset, màu cố định (mauTheoKhach). Chỉ ghi TỔNG trên đỉnh cột (ghi số từng đoạn quá rối khi nhiều
+// khách) — rê chuột vào cột để xem số của từng khách.
 function veBieuDoChong(canvasId, title, chong, soSanhNhan) {
   const labels = Object.keys(chong);
   if (soSanhNhan) labels.sort(soSanhNhan);
@@ -305,7 +305,7 @@ function veBieuDoChong(canvasId, title, chong, soSanhNhan) {
     data: { labels, datasets },
     options: {
       responsive: true,
-      scales: { x: { stacked: true }, y: { stacked: true, grace: '12%' } }, // grace: chá»«a chá»— cho sá»‘ trÃªn Ä‘á»‰nh cá»™t cao nháº¥t
+      scales: { x: { stacked: true }, y: { stacked: true, grace: '12%' } }, // grace: chừa chỗ cho số trên đỉnh cột cao nhất
       plugins: {
         title: { display: true, text: title, font: { size: 14 } },
         legend: { display: true, position: 'bottom' },

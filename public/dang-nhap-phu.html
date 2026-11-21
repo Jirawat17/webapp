@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ÄÄƒng nháº­p â€” XÆ°á»Ÿng ThÃªu</title>
+<title>Đăng nhập — Xưởng Thêu</title>
 <link rel="stylesheet" href="/css/style.css?v=112">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -12,30 +12,30 @@
 <body class="trang-dang-nhap">
 <div class="login-wrap">
   <div class="logo-mark" aria-hidden="true" id="logo-mark"></div>
-  <h1>XÆ°á»Ÿng ThÃªu</h1>
+  <h1>Xưởng Thêu</h1>
   <form id="form-dang-nhap" style="margin-top:16px;display:flex;flex-direction:column;align-items:center;gap:12px">
     <div style="width:100%;max-width:260px;text-align:left">
-      <label for="o-ten" style="display:block;font-size:0.8rem;color:var(--color-text-muted);font-weight:700;margin-bottom:4px">TÃªn Ä‘Äƒng nháº­p</label>
+      <label for="o-ten" style="display:block;font-size:0.8rem;color:var(--color-text-muted);font-weight:700;margin-bottom:4px">Tên đăng nhập</label>
       <input id="o-ten" required autocomplete="off" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--color-border);font-family:inherit;font-size:1rem">
     </div>
     <div style="width:100%;max-width:260px;text-align:left">
-      <label for="o-mat-khau" style="display:block;font-size:0.8rem;color:var(--color-text-muted);font-weight:700;margin-bottom:4px">PIN (6 chá»¯ sá»‘)</label>
+      <label for="o-mat-khau" style="display:block;font-size:0.8rem;color:var(--color-text-muted);font-weight:700;margin-bottom:4px">PIN (6 chữ số)</label>
       <input type="password" id="o-mat-khau" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" style="font-size:1.4rem;text-align:center;letter-spacing:0.3em;width:100%;padding:12px;border-radius:8px;border:1px solid var(--color-border)">
     </div>
-    <button type="submit" class="btn-ten">ÄÄƒng nháº­p</button>
+    <button type="submit" class="btn-ten">Đăng nhập</button>
   </form>
   <div id="khu-doi-pin" style="display:none;width:100%;max-width:260px;text-align:left">
-    <p style="font-size:0.9rem;color:var(--color-text-muted);margin:0 0 12px">Báº¡n Ä‘ang dÃ¹ng PIN máº·c Ä‘á»‹nh â€” cáº§n Ä‘áº·t PIN má»›i trÆ°á»›c khi vÃ o á»©ng dá»¥ng.</p>
+    <p style="font-size:0.9rem;color:var(--color-text-muted);margin:0 0 12px">Bạn đang dùng PIN mặc định — cần đặt PIN mới trước khi vào ứng dụng.</p>
     <form id="form-doi-pin" style="display:flex;flex-direction:column;gap:12px">
       <div>
-        <label for="o-pin-moi" style="display:block;font-size:0.8rem;color:var(--color-text-muted);font-weight:700;margin-bottom:4px">PIN má»›i (6 chá»¯ sá»‘, khÃ´ng pháº£i 000000)</label>
+        <label for="o-pin-moi" style="display:block;font-size:0.8rem;color:var(--color-text-muted);font-weight:700;margin-bottom:4px">PIN mới (6 chữ số, không phải 000000)</label>
         <input type="password" id="o-pin-moi" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autocomplete="new-password" style="font-size:1.4rem;text-align:center;letter-spacing:0.3em;width:100%;padding:12px;border-radius:8px;border:1px solid var(--color-border)">
       </div>
       <div>
-        <label for="o-pin-xac-nhan" style="display:block;font-size:0.8rem;color:var(--color-text-muted);font-weight:700;margin-bottom:4px">XÃ¡c nháº­n PIN má»›i</label>
+        <label for="o-pin-xac-nhan" style="display:block;font-size:0.8rem;color:var(--color-text-muted);font-weight:700;margin-bottom:4px">Xác nhận PIN mới</label>
         <input type="password" id="o-pin-xac-nhan" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autocomplete="new-password" style="font-size:1.4rem;text-align:center;letter-spacing:0.3em;width:100%;padding:12px;border-radius:8px;border:1px solid var(--color-border)">
       </div>
-      <button type="submit" class="btn-ten">Äáº·t PIN má»›i</button>
+      <button type="submit" class="btn-ten">Đặt PIN mới</button>
     </form>
   </div>
 </div>
@@ -64,7 +64,7 @@ document.getElementById('form-doi-pin').onsubmit = async (e) => {
   e.preventDefault();
   const pinMoi = document.getElementById('o-pin-moi').value;
   const xacNhan = document.getElementById('o-pin-xac-nhan').value;
-  if (pinMoi !== xacNhan) { await hopThongBao('Hai PIN khÃ´ng khá»›p.'); return; }
+  if (pinMoi !== xacNhan) { await hopThongBao('Hai PIN không khớp.'); return; }
   try {
     await apiFetch('/auth/doi-pin-hn', { method: 'POST', body: JSON.stringify({ pinMoi }) });
     const user = await apiFetch('/auth/hien-tai');

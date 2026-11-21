@@ -1,14 +1,14 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tracking â€” XÆ°á»Ÿng ThÃªu</title>
+<title>Tracking — Xưởng Thêu</title>
 <link rel="stylesheet" href="/css/style.css?v=112">
 <script src="/js/theme.js?v=104"></script>
 <style>
-/* Báº£ng danh sÃ¡ch tracking (28/10/2026): báº£ng chung .bang-xem-truoc khÃ´ng xuá»‘ng dÃ²ng -> lÃ½ do lá»—i / khÃ´ng tá»± mua dÃ i kÃ©o cáº£ trang ra ngang.
-   Cho Ã´ Tráº¡ng thÃ¡i + HÃ nh Ä‘á»™ng xuá»‘ng dÃ²ng trong Ä‘á»™ rá»™ng giá»›i háº¡n; báº£ng váº«n dÃ i hÆ¡n mÃ n hÃ¬nh thÃ¬ chá»‰ báº£ng cuá»™n ngang. */
+/* Bảng danh sách tracking (28/10/2026): bảng chung .bang-xem-truoc không xuống dòng -> lý do lỗi / không tự mua dài kéo cả trang ra ngang.
+   Cho ô Trạng thái + Hành động xuống dòng trong độ rộng giới hạn; bảng vẫn dài hơn màn hình thì chỉ bảng cuộn ngang. */
 #bang-danh-sach { overflow-x: auto; }
 #bang-danh-sach .tk-o-trang-thai { white-space: normal; min-width: 200px; max-width: 340px; }
 #bang-danh-sach .tk-o-hanh-dong { white-space: normal; min-width: 230px; }
@@ -22,8 +22,8 @@
 .tk-trang-thai.thieu-du-lieu { background: color-mix(in srgb, #dc2626 15%, transparent); color: #dc2626; }
 
 
-/* Logs ngáº¯n gá»n (má»—i viá»‡c 1 dÃ²ng) â€” cá»¡ chá»¯ nhá» + font Ä‘Æ¡n cÃ¡ch Ä‘á»ƒ hiá»‡n Ä‘Æ°á»£c nhiá»u dÃ²ng mÃ  Ã­t chiáº¿m
-   diá»‡n tÃ­ch, theo Ä‘Ãºng yÃªu cáº§u ngÆ°á»i dÃ¹ng 09/09/2026. */
+/* Logs ngắn gọn (mỗi việc 1 dòng) — cỡ chữ nhỏ + font đơn cách để hiện được nhiều dòng mà ít chiếm
+   diện tích, theo đúng yêu cầu người dùng 09/09/2026. */
 .tk-logs {
   font-size: 0.72rem; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md);
@@ -33,42 +33,42 @@
 .tk-logs .dong:last-child { border-bottom: none; }
 .tk-logs .luc { color: var(--color-text-muted); margin-right: 6px; }
 
-/* Ã” quÃ©t nhanh "IN LABEL" (bá»• sung 13/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” to, ná»•i báº­t, Ä‘áº·t Äáº¦U trang vÃ¬
-   lÃ  thao tÃ¡c dÃ¹ng thÆ°á»ng xuyÃªn nháº¥t táº¡i tráº¡m Ä‘Ã³ng gÃ³i (mÃ¡y quÃ©t mÃ£ váº¡ch dáº¡ng bÃ n phÃ­m: gÃµ kÃ½ tá»± + Enter
-   tá»± Ä‘á»™ng). Viá»n dÃ¹ng --color-primary cho khÃ¡c háº³n cÃ¡c Ã´ input thÆ°á»ng khÃ¡c trÃªn trang, dá»… nháº­n ra ngay. */
-/* Bá» giá»›i háº¡n max-width cá»‘ Ä‘á»‹nh (bá»• sung 13/09/2026 láº§n 3, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” 1280px váº«n khÃ´ng
-   Ä‘á»§ chá»— hiá»‡n háº¿t placeholder á»Ÿ cá»¡ chá»¯ 5.6rem hiá»‡n táº¡i) â€” dÃ¹ng 100% chiá»u rá»™ng cÃ²n láº¡i cá»§a .page (tá»‘i
-   Ä‘a 1800px, xem style.css), rá»™ng nháº¥t cÃ³ thá»ƒ thay vÃ¬ Ä‘oÃ¡n 1 sá»‘ cá»‘ Ä‘á»‹nh khÃ¡c váº«n cÃ³ thá»ƒ láº¡i khÃ´ng Ä‘á»§. */
+/* Ô quét nhanh "IN LABEL" (bổ sung 13/09/2026, theo yêu cầu người dùng) — to, nổi bật, đặt ĐẦU trang vì
+   là thao tác dùng thường xuyên nhất tại trạm đóng gói (máy quét mã vạch dạng bàn phím: gõ ký tự + Enter
+   tự động). Viền dùng --color-primary cho khác hẳn các ô input thường khác trên trang, dễ nhận ra ngay. */
+/* Bỏ giới hạn max-width cố định (bổ sung 13/09/2026 lần 3, theo yêu cầu người dùng — 1280px vẫn không
+   đủ chỗ hiện hết placeholder ở cỡ chữ 5.6rem hiện tại) — dùng 100% chiều rộng còn lại của .page (tối
+   đa 1800px, xem style.css), rộng nhất có thể thay vì đoán 1 số cố định khác vẫn có thể lại không đủ. */
 .tk-o-quet-nhanh { margin-bottom: var(--space-5); max-width: 100%; }
 .tk-o-quet-nhanh label { display: block; font-weight: 700; margin-bottom: 6px; }
 .tk-o-quet-nhanh input {
-  /* TÄƒng thÃªm 30% (bá»• sung 14/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) so vá»›i láº§n tÄƒng gáº¥p 2 Láº¦N Ná»®A trÆ°á»›c Ä‘Ã³
-     (5.6rem/56px 64px/8px) â€” tá»•ng cá»™ng 7.28rem/73px 83px/10px. color chá»¯ nháº­p Ä‘á»•i tá»« xanh Ä‘áº­m (#1e3a8a)
-     sang Ä‘á» (#dc2626, cÃ¹ng tÃ´ng vá»›i .nhan-so-luong-da-chon/--color-danger-text) â€” theo yÃªu cáº§u ngÆ°á»i
-     dÃ¹ng, dá»… nháº­n ra hÆ¡n xanh Ä‘áº­m. ÄÃ£ Ä‘o láº¡i placeholder báº±ng canvas.measureText() á»Ÿ 1024px â€” váº«n dÆ°
-     ~74px, khÃ´ng cáº§n giáº£m thÃªm cá»¡ chá»¯ placeholder. */
+  /* Tăng thêm 30% (bổ sung 14/09/2026, theo yêu cầu người dùng) so với lần tăng gấp 2 LẦN NỮA trước đó
+     (5.6rem/56px 64px/8px) — tổng cộng 7.28rem/73px 83px/10px. color chữ nhập đổi từ xanh đậm (#1e3a8a)
+     sang đỏ (#dc2626, cùng tông với .nhan-so-luong-da-chon/--color-danger-text) — theo yêu cầu người
+     dùng, dễ nhận ra hơn xanh đậm. Đã đo lại placeholder bằng canvas.measureText() ở 1024px — vẫn dư
+     ~74px, không cần giảm thêm cỡ chữ placeholder. */
   width: 100%; font-size: 7.28rem; padding: 73px 83px; border-radius: var(--radius-md);
   border: 10px solid var(--color-primary); font-family: inherit; color: #dc2626;
 }
 .tk-o-quet-nhanh input:disabled { opacity: 0.6; }
-/* Chá»¯ placeholder (chá»‰ hiá»‡n khi Ã´ cÃ²n trá»‘ng) Ä‘o thá»±c táº¿ KHÃ”NG Ä‘á»§ chá»— hiá»‡n háº¿t á»Ÿ cá»¡ chá»¯ 5.6rem cá»§a Ã´.
-   Placeholder chá»‰ lÃ  gá»£i Ã½ (Ä‘Ã£ cÃ³ <label> phÃ­a trÃªn giáº£i thÃ­ch rÃµ má»¥c Ä‘Ã­ch Ã´), khÃ´ng cáº§n to báº±ng chá»¯
-   THáº¬T gÃµ/quÃ©t vÃ o â€” giáº£m riÃªng cá»¡ chá»¯ placeholder Ä‘á»ƒ LUÃ”N hiá»‡n Ä‘á»§ cÃ¢u, khÃ´ng Ä‘á»¥ng cá»¡ chá»¯ nháº­p tháº­t (váº«n
-   giá»¯ nguyÃªn 5.6rem theo Ä‘Ãºng yÃªu cáº§u trÆ°á»›c Ä‘Ã³). CÃ¢u placeholder dÃ i hÆ¡n háº³n sau khi Ä‘á»•i láº¡i ná»™i dung
-   (13/09/2026 láº§n 2, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” nháº¯c rÃµ cáº£ phÃ­m Space) nÃªn pháº£i giáº£m tiáº¿p xuá»‘ng 1.3rem
-   (Ä‘Ã£ Ä‘o báº±ng canvas.measureText() á»Ÿ 1024px â€” má»©c háº¹p nháº¥t cÃ²n kiá»ƒm â€” váº«n dÆ° ~59px). */
+/* Chữ placeholder (chỉ hiện khi ô còn trống) đo thực tế KHÔNG đủ chỗ hiện hết ở cỡ chữ 5.6rem của ô.
+   Placeholder chỉ là gợi ý (đã có <label> phía trên giải thích rõ mục đích ô), không cần to bằng chữ
+   THẬT gõ/quét vào — giảm riêng cỡ chữ placeholder để LUÔN hiện đủ câu, không đụng cỡ chữ nhập thật (vẫn
+   giữ nguyên 5.6rem theo đúng yêu cầu trước đó). Câu placeholder dài hơn hẳn sau khi đổi lại nội dung
+   (13/09/2026 lần 2, theo yêu cầu người dùng — nhắc rõ cả phím Space) nên phải giảm tiếp xuống 1.3rem
+   (đã đo bằng canvas.measureText() ở 1024px — mức hẹp nhất còn kiểm — vẫn dư ~59px). */
 .tk-o-quet-nhanh input::placeholder { font-size: 1.3rem; }
-/* Banner bÃ¡o káº¿t quáº£ â€” KHÃ”NG dÃ¹ng alert() vÃ¬ sáº½ cháº·n thao tÃ¡c quÃ©t tiáº¿p theo (pháº£i báº¥m OK má»›i quÃ©t Ä‘Æ°á»£c
-   mÃ£ káº¿), ngÆ°á»£c tinh tháº§n "quÃ©t liÃªn tá»¥c khÃ´ng dá»«ng" mÃ  tÃ­nh nÄƒng nÃ y hÆ°á»›ng tá»›i. Tá»± áº©n sau vÃ i giÃ¢y. */
+/* Banner báo kết quả — KHÔNG dùng alert() vì sẽ chặn thao tác quét tiếp theo (phải bấm OK mới quét được
+   mã kế), ngược tinh thần "quét liên tục không dừng" mà tính năng này hướng tới. Tự ẩn sau vài giây. */
 .tk-quet-thong-bao { margin-top: 8px; padding: 10px 14px; border-radius: var(--radius-sm); font-weight: 600; }
 .tk-quet-thong-bao.ok { background: var(--color-success-bg); color: var(--color-success-text); }
 .tk-quet-thong-bao.loi { background: var(--color-danger-bg); color: var(--color-danger-text); }
 
-/* Ã” "Tracking thá»§ cÃ´ng" (bá»• sung 14/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” CÃ™NG khuÃ´n Ã´ quÃ©t IN LABEL á»Ÿ
-   trÃªn (label + input + banner káº¿t quáº£ tá»± áº©n), nhÆ°ng cá»¡ vá»«a pháº£i (khÃ´ng phÃ³ng to 4 láº§n nhÆ° Ã´ IN LABEL â€”
-   Ä‘Ã³ lÃ  thao tÃ¡c láº·p láº¡i liÃªn tá»¥c á»Ÿ tráº¡m Ä‘Ã³ng gÃ³i, cÃ²n Ä‘Ã¢y lÃ  tra cá»©u 1 Ä‘Æ¡n khi cáº§n, khÃ´ng cáº§n tháº¥y tá»«
-   xa). DÃ¹ng chung .tk-quet-thong-bao cho banner káº¿t quáº£ (Ä‘á»•i tÃªn id Ä‘á»ƒ khÃ´ng Ä‘á»¥ng banner Ã´ kia).
-   KhÃ´ng autofocus (khÃ¡c Ã´ IN LABEL) â€” Ã´ IN LABEL váº«n lÃ  thao tÃ¡c dÃ¹ng thÆ°á»ng xuyÃªn nháº¥t trÃªn trang nÃ y. */
+/* Ô "Tracking thủ công" (bổ sung 14/09/2026, theo yêu cầu người dùng) — CÙNG khuôn ô quét IN LABEL ở
+   trên (label + input + banner kết quả tự ẩn), nhưng cỡ vừa phải (không phóng to 4 lần như ô IN LABEL —
+   đó là thao tác lặp lại liên tục ở trạm đóng gói, còn đây là tra cứu 1 đơn khi cần, không cần thấy từ
+   xa). Dùng chung .tk-quet-thong-bao cho banner kết quả (đổi tên id để không đụng banner ô kia).
+   Không autofocus (khác ô IN LABEL) — ô IN LABEL vẫn là thao tác dùng thường xuyên nhất trên trang này. */
 .tk-o-tracking-thu-cong { margin-bottom: var(--space-5); max-width: 640px; }
 .tk-o-tracking-thu-cong label { display: block; font-weight: 700; margin-bottom: 6px; }
 .tk-o-tracking-thu-cong input {
@@ -82,37 +82,37 @@
 <div id="nav"></div>
 <div class="page">
   <h2>Tracking</h2>
-  <!-- Cáº£nh bÃ¡o Ä‘Æ¡n Ä‘Ã£ thá»­ Tá»° Äá»˜NG mua 10 láº§n khÃ´ng Ä‘Æ°á»£c -> chuyá»ƒn mua thá»§ cÃ´ng (30/09/2026) â€” API tá»± cháº·n vai trÃ² khÃ´ng cÃ³
+  <!-- Cảnh báo đơn đã thử TỰ ĐỘNG mua 10 lần không được -> chuyển mua thủ công (30/09/2026) — API tự chặn vai trò không có
        menu Tracking, xem routes/tracking.js GET /canh-bao-thu-cong. -->
   <div id="canh-bao-thu-cong" style="display:none"></div>
-  <!-- Cáº£nh bÃ¡o Ä‘Æ¡n váº­n chuyá»ƒn báº¥t thÆ°á»ng 5 nhÃ³m (21/11/2026) â€” API /tracking/canh-bao-bat-thuong. -->
+  <!-- Cảnh báo đơn vận chuyển bất thường 5 nhóm (21/11/2026) — API /tracking/canh-bao-bat-thuong. -->
   <div id="canh-bao-bat-thuong" style="display:none"></div>
 
   <div class="tk-o-quet-nhanh">
-    <label for="o-quet-in-label">QuÃ©t/nháº­p mÃ£ Ä‘Æ¡n Ä‘á»ƒ in label ngay</label>
-    <input id="o-quet-in-label" autocomplete="off" placeholder="QuÃ©t mÃ£ hoáº·c nháº­p mÃ£ Ä‘Æ¡n rá»“i nháº¥n phÃ­m cÃ¡ch hoáº·c ENTER Ä‘á»ƒ báº¯t Ä‘áº§u in label">
+    <label for="o-quet-in-label">Quét/nhập mã đơn để in label ngay</label>
+    <input id="o-quet-in-label" autocomplete="off" placeholder="Quét mã hoặc nhập mã đơn rồi nhấn phím cách hoặc ENTER để bắt đầu in label">
     <div id="tk-quet-thong-bao" class="tk-quet-thong-bao" style="display:none"></div>
   </div>
 
   <div class="tk-o-tracking-thu-cong">
-    <label for="o-tracking-thu-cong">Tracking thá»§ cÃ´ng â€” nháº­p mÃ£ Ä‘Æ¡n rá»“i nháº¥n Enter Ä‘á»ƒ tra cá»©u &amp; cáº­p nháº­t tráº¡ng thÃ¡i tháº­t ngay</label>
-    <input id="o-tracking-thu-cong" autocomplete="off" placeholder="Nháº­p mÃ£ Ä‘Æ¡n rá»“i nháº¥n Enter...">
+    <label for="o-tracking-thu-cong">Tracking thủ công — nhập mã đơn rồi nhấn Enter để tra cứu &amp; cập nhật trạng thái thật ngay</label>
+    <input id="o-tracking-thu-cong" autocomplete="off" placeholder="Nhập mã đơn rồi nhấn Enter...">
     <div id="tk-tracking-thu-cong-thong-bao" class="tk-quet-thong-bao" style="display:none"></div>
   </div>
 
-  <!-- Gá»™p cÃ´ng táº¯c báº­t/táº¯t + Ã´ giá»/phÃºt + nÃºt LÆ°u vÃ o CHUNG 1 hÃ ng .cong-tac-hang (bá»• sung 09/09/2026
-       láº§n 6, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng "giáº£m sá»‘ dÃ²ng") â€” trÆ°á»›c Ä‘Ã³ lÃ  4 khá»‘i riÃªng (hÃ ng cÃ´ng táº¯c, hÃ ng
-       chá»¯ giáº£i thÃ­ch, hÃ ng 2 label "Sá»‘ giá»"/"Sá»‘ phÃºt", hÃ ng 2 Ã´ input + nÃºt) chá»‰ Ä‘á»ƒ báº­t/táº¯t + chá»‰nh 1
-       con sá»‘. Bá» háº³n Ä‘oáº¡n giáº£i thÃ­ch dÃ i (Ä‘Ã£ nÃ³i á»Ÿ mÃ´ táº£ Ä‘áº§u trang) + 2 label riÃªng "Sá»‘ giá»"/"Sá»‘ phÃºt"
-       (thay báº±ng chá»¯ Ä‘Æ¡n vá»‹ "giá»"/"phÃºt" ngay sau Ã´ nháº­p, Ä‘á»§ rÃµ nghÄ©a mÃ  khÃ´ng cáº§n label riÃªng 1 dÃ²ng).
-       .cong-tac-nhan vá»‘n Ä‘Ã£ lÃ  flex-row (xem style.css) nÃªn nhÃ©t cáº£ cÃ´ng táº¯c vÃ o trong nÃ³ váº«n Ä‘Ãºng
-       layout "nhÃ£n + control cáº¡nh nhau" nhÆ° thiáº¿t káº¿ gá»‘c â€” chá»‰ thÃªm flex-wrap Ä‘á»ƒ khÃ´ng vá»¡ á»Ÿ mÃ n háº¹p.
-       2 Ã´ giá»/phÃºt Cá»˜NG Dá»’N thÃ nh 1 tá»•ng sá»‘ phÃºt duy nháº¥t khi lÆ°u (xem luuCauHinh()) â€” Sheet váº«n chá»‰
-       lÆ°u 1 cá»™t SoPhutCho nhÆ° cÅ©, khÃ´ng Ä‘á»•i schema. -->
-  <!-- Tá»± mua KL / HPW (28/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng): cÃ´ng táº¯c riÃªng tá»«ng hÃ£ng + thá»© tá»± Æ°u tiÃªn chung â€” Ä‘Æ¡n Ä‘áº¿n háº¡n mua á»Ÿ hÃ£ng Ä‘áº§u tiÃªn
-       Ä‘ang báº­t mÃ  Ä‘Æ¡n Ä‘á»§ Ä‘iá»u kiá»‡n; Ä‘Ã£ chá»n hÃ£ng thÃ¬ cÃ¡c láº§n thá»­ sau giá»¯ nguyÃªn hÃ£ng Ä‘Ã³ (services/trackingAutoService.js#chonHangTuMua). -->
+  <!-- Gộp công tắc bật/tắt + ô giờ/phút + nút Lưu vào CHUNG 1 hàng .cong-tac-hang (bổ sung 09/09/2026
+       lần 6, theo yêu cầu người dùng "giảm số dòng") — trước đó là 4 khối riêng (hàng công tắc, hàng
+       chữ giải thích, hàng 2 label "Số giờ"/"Số phút", hàng 2 ô input + nút) chỉ để bật/tắt + chỉnh 1
+       con số. Bỏ hẳn đoạn giải thích dài (đã nói ở mô tả đầu trang) + 2 label riêng "Số giờ"/"Số phút"
+       (thay bằng chữ đơn vị "giờ"/"phút" ngay sau ô nhập, đủ rõ nghĩa mà không cần label riêng 1 dòng).
+       .cong-tac-nhan vốn đã là flex-row (xem style.css) nên nhét cả công tắc vào trong nó vẫn đúng
+       layout "nhãn + control cạnh nhau" như thiết kế gốc — chỉ thêm flex-wrap để không vỡ ở màn hẹp.
+       2 ô giờ/phút CỘNG DỒN thành 1 tổng số phút duy nhất khi lưu (xem luuCauHinh()) — Sheet vẫn chỉ
+       lưu 1 cột SoPhutCho như cũ, không đổi schema. -->
+  <!-- Tự mua KL / HPW (28/10/2026, theo yêu cầu người dùng): công tắc riêng từng hãng + thứ tự ưu tiên chung — đơn đến hạn mua ở hãng đầu tiên
+       đang bật mà đơn đủ điều kiện; đã chọn hãng thì các lần thử sau giữ nguyên hãng đó (services/trackingAutoService.js#chonHangTuMua). -->
   <div class="cong-tac-hang tk-cau-hinh" style="flex-wrap:wrap;row-gap:var(--space-2)">
-    <span class="cong-tac-nhan">Tá»± Ä‘á»™ng mua tracking</span>
+    <span class="cong-tac-nhan">Tự động mua tracking</span>
     <span class="cong-tac-nhan" style="font-weight:600">GKE
       <span class="cong-tac"><input type="checkbox" id="cong-tac-tu-mua-GKE"><span class="cong-tac-slider"></span></span>
     </span>
@@ -122,116 +122,116 @@
     <span class="cong-tac-nhan" style="font-weight:600">HPW
       <span class="cong-tac"><input type="checkbox" id="cong-tac-tu-mua-HPW"><span class="cong-tac-slider"></span></span>
     </span>
-    <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap" title="ÄÆ¡n mua á»Ÿ hÃ£ng Ä‘áº§u tiÃªn (theo thá»© tá»± nÃ y) Ä‘ang báº­t mÃ  Ä‘Æ¡n Ä‘á»§ Ä‘iá»u kiá»‡n: quá»‘c gia, tÃ i khoáº£n theo XÆ°á»Ÿng, GKE cÃ²n tiá»n, KL cÃ³ SKU...">
-      <span style="font-size:0.85rem;color:var(--color-text-muted)">Æ¯u tiÃªn</span>
-      <select id="thu-tu-hang-1" aria-label="Æ¯u tiÃªn 1"></select>
-      <span aria-hidden="true">â†’</span>
-      <select id="thu-tu-hang-2" aria-label="Æ¯u tiÃªn 2"></select>
-      <span aria-hidden="true">â†’</span>
-      <select id="thu-tu-hang-3" aria-label="Æ¯u tiÃªn 3"></select>
+    <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap" title="Đơn mua ở hãng đầu tiên (theo thứ tự này) đang bật mà đơn đủ điều kiện: quốc gia, tài khoản theo Xưởng, GKE còn tiền, KL có SKU...">
+      <span style="font-size:0.85rem;color:var(--color-text-muted)">Ưu tiên</span>
+      <select id="thu-tu-hang-1" aria-label="Ưu tiên 1"></select>
+      <span aria-hidden="true">→</span>
+      <select id="thu-tu-hang-2" aria-label="Ưu tiên 2"></select>
+      <span aria-hidden="true">→</span>
+      <select id="thu-tu-hang-3" aria-label="Ưu tiên 3"></select>
     </span>
-    <span style="flex-basis:100%;height:0" aria-hidden="true"></span><!-- xuá»‘ng dÃ²ng: thá»i gian chá» chung 1 khung vá»›i cÃ´ng táº¯c -->
-    <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap" title="Chá» bao lÃ¢u ká»ƒ tá»« lÃºc Ä‘Æ¡n chuyá»ƒn &quot;ÄÃ£ sáº£n xuáº¥t&quot; thÃ¬ mua (giá» + phÃºt cá»™ng dá»“n)">
-      <span style="font-size:0.85rem;color:var(--color-text-muted)">Chá»</span>
-      <input type="number" id="so-gio-cho" min="0" step="1" style="width:56px" aria-label="Sá»‘ giá»">
-      <span style="font-size:0.85rem">giá»</span>
-      <input type="number" id="so-phut-cho" min="0" step="1" style="width:56px" aria-label="Sá»‘ phÃºt">
-      <span style="font-size:0.85rem">phÃºt</span>
-      <!-- Äiá»u kiá»‡n bá»• sung 30/09/2026 â€” HOáº¶C Ä‘á»§ X giá» ká»ƒ tá»« "ÄÃ£ in mÃ£" (máº·c Ä‘á»‹nh 48), Ä‘iá»u kiá»‡n nÃ o Ä‘áº¿n trÆ°á»›c. -->
-      <span style="font-size:0.85rem;color:var(--color-text-muted)" title="Hoáº·c mua khi Ä‘Æ¡n Ä‘Ã£ chuyá»ƒn &quot;ÄÃ£ in mÃ£&quot; Ä‘á»§ sá»‘ giá» nÃ y (ká»ƒ cáº£ chÆ°a sáº£n xuáº¥t xong) â€” Ä‘iá»u kiá»‡n nÃ o Ä‘áº¿n trÆ°á»›c thÃ¬ mua">hoáº·c sau</span>
-      <input type="number" id="so-gio-sau-in-ma" min="1" step="1" style="width:64px" aria-label="Sá»‘ giá» sau ÄÃ£ in mÃ£">
-      <span style="font-size:0.85rem">giá» tá»« "ÄÃ£ in mÃ£"</span>
-      <button type="button" class="btn-hanh-dong" id="btn-luu-cau-hinh" style="padding:8px 16px">LÆ°u</button>
+    <span style="flex-basis:100%;height:0" aria-hidden="true"></span><!-- xuống dòng: thời gian chờ chung 1 khung với công tắc -->
+    <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap" title="Chờ bao lâu kể từ lúc đơn chuyển &quot;Đã sản xuất&quot; thì mua (giờ + phút cộng dồn)">
+      <span style="font-size:0.85rem;color:var(--color-text-muted)">Chờ</span>
+      <input type="number" id="so-gio-cho" min="0" step="1" style="width:56px" aria-label="Số giờ">
+      <span style="font-size:0.85rem">giờ</span>
+      <input type="number" id="so-phut-cho" min="0" step="1" style="width:56px" aria-label="Số phút">
+      <span style="font-size:0.85rem">phút</span>
+      <!-- Điều kiện bổ sung 30/09/2026 — HOẶC đủ X giờ kể từ "Đã in mã" (mặc định 48), điều kiện nào đến trước. -->
+      <span style="font-size:0.85rem;color:var(--color-text-muted)" title="Hoặc mua khi đơn đã chuyển &quot;Đã in mã&quot; đủ số giờ này (kể cả chưa sản xuất xong) — điều kiện nào đến trước thì mua">hoặc sau</span>
+      <input type="number" id="so-gio-sau-in-ma" min="1" step="1" style="width:64px" aria-label="Số giờ sau Đã in mã">
+      <span style="font-size:0.85rem">giờ từ "Đã in mã"</span>
+      <button type="button" class="btn-hanh-dong" id="btn-luu-cau-hinh" style="padding:8px 16px">Lưu</button>
     </span>
   </div>
   <p id="thong-bao-luu" style="display:none;margin-top:8px"></p>
 
-  <!-- Khoáº£ng cÃ¡ch quÃ©t tráº¡ng thÃ¡i tracking THáº¬T tá»« GKE (bá»• sung 21/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€”
-       trÆ°á»›c Ä‘Ã³ cá»‘ Ä‘á»‹nh 2 tiáº¿ng trong code, giá» cho tá»± chá»‰nh trÃªn giao diá»‡n). CÃ™NG khuÃ´n Ã´ "Chá» ... giá»
-       ... phÃºt" á»Ÿ trÃªn (2 Ã´ cá»™ng dá»“n thÃ nh 1 tá»•ng sá»‘ phÃºt khi lÆ°u â€” xem luuCauHinhQuetTrangThai()) â€”
-       KHÃC tÃ­nh nÄƒng "Tá»± Ä‘á»™ng mua tracking" á»Ÿ trÃªn (khÃ´ng cÃ³ cÃ´ng táº¯c báº­t/táº¯t riÃªng, job nÃ y luÃ´n cháº¡y
-       ná»n, chá»‰ Ä‘á»•i Ä‘Æ°á»£c KHOáº¢NG CÃCH giá»¯a cÃ¡c lÆ°á»£t). -->
+  <!-- Khoảng cách quét trạng thái tracking THẬT từ GKE (bổ sung 21/09/2026, theo yêu cầu người dùng —
+       trước đó cố định 2 tiếng trong code, giờ cho tự chỉnh trên giao diện). CÙNG khuôn ô "Chờ ... giờ
+       ... phút" ở trên (2 ô cộng dồn thành 1 tổng số phút khi lưu — xem luuCauHinhQuetTrangThai()) —
+       KHÁC tính năng "Tự động mua tracking" ở trên (không có công tắc bật/tắt riêng, job này luôn chạy
+       nền, chỉ đổi được KHOẢNG CÁCH giữa các lượt). -->
   <div class="cong-tac-hang tk-cau-hinh" style="flex-wrap:wrap;row-gap:var(--space-2);margin-top:var(--space-2)">
-    <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap" title="Khoáº£ng cÃ¡ch giá»¯a cÃ¡c lÆ°á»£t tá»± Ä‘á»™ng tra cá»©u tráº¡ng thÃ¡i váº­n chuyá»ƒn tháº­t tá»« GKE cho Ä‘Æ¡n Ä‘Ã£ cÃ³ mÃ£ tracking">
-      <span style="font-size:0.85rem;color:var(--color-text-muted)">QuÃ©t tráº¡ng thÃ¡i váº­n chuyá»ƒn má»—i</span>
-      <input type="number" id="so-gio-quet-trang-thai" min="0" step="1" style="width:56px" aria-label="Sá»‘ giá»">
-      <span style="font-size:0.85rem">giá»</span>
-      <input type="number" id="so-phut-quet-trang-thai" min="0" step="1" style="width:56px" aria-label="Sá»‘ phÃºt">
-      <span style="font-size:0.85rem">phÃºt</span>
-      <button type="button" class="btn-hanh-dong" id="btn-luu-cau-hinh-quet-trang-thai" style="padding:8px 16px">LÆ°u</button>
+    <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap" title="Khoảng cách giữa các lượt tự động tra cứu trạng thái vận chuyển thật từ GKE cho đơn đã có mã tracking">
+      <span style="font-size:0.85rem;color:var(--color-text-muted)">Quét trạng thái vận chuyển mỗi</span>
+      <input type="number" id="so-gio-quet-trang-thai" min="0" step="1" style="width:56px" aria-label="Số giờ">
+      <span style="font-size:0.85rem">giờ</span>
+      <input type="number" id="so-phut-quet-trang-thai" min="0" step="1" style="width:56px" aria-label="Số phút">
+      <span style="font-size:0.85rem">phút</span>
+      <button type="button" class="btn-hanh-dong" id="btn-luu-cau-hinh-quet-trang-thai" style="padding:8px 16px">Lưu</button>
     </span>
   </div>
   <p id="thong-bao-luu-quet-trang-thai" style="display:none;margin-top:8px"></p>
-  <!-- Chuyá»ƒn xuá»‘ng Ä‘Ã¢y (bá»• sung 13/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” trÆ°á»›c Ä‘Ã³ náº±m ngay dÆ°á»›i <h2>, Ä‘á»©ng
-       TRÆ¯á»šC cáº£ Ã´ quÃ©t/Cáº¥u hÃ¬nh. Ná»™i dung khÃ´ng Ä‘á»•i, chá»‰ Ä‘á»•i vá»‹ trÃ­. -->
-  <p style="color:var(--color-text-muted);margin:8px 0 0">Tá»± Ä‘á»™ng mua tracking (GKE / KL / HPW theo cÃ´ng táº¯c + thá»© tá»± Æ°u tiÃªn á»Ÿ trÃªn â€” Ä‘Ã£ chá»n hÃ£ng thÃ¬ lá»—i váº«n thá»­ láº¡i Ä‘Ãºng hÃ£ng Ä‘Ã³, 10 láº§n khÃ´ng Ä‘Æ°á»£c thÃ¬ chuyá»ƒn mua thá»§ cÃ´ng; HPW gá»£i Ã½ sá»­a Ä‘á»‹a chá»‰ thÃ¬ chuyá»ƒn mua thá»§ cÃ´ng ngay) khi Ä‘áº¿n 1 trong 2 má»‘c, má»‘c nÃ o Ä‘áº¿n trÆ°á»›c: (1) Ä‘Æ¡n "ÄÃ£ sáº£n xuáº¥t"/"ÄÃƒ DÃN TEM" Ä‘á»§ thá»i gian chá» ká»ƒ tá»« lÃºc chuyá»ƒn "ÄÃ£ sáº£n xuáº¥t"; (2) Ä‘Æ¡n Ä‘Ã£ chuyá»ƒn "ÄÃ£ in mÃ£" Ä‘á»§ sá»‘ giá» Ä‘Ã£ Ä‘áº·t (ká»ƒ cáº£ Ä‘ang cháº¡y mÃ¡y hoáº·c lá»—i sáº£n xuáº¥t; chá»‰ tÃ­nh Ä‘Æ¡n in mÃ£ tá»« khi cÃ³ tÃ­nh nÄƒng nÃ y). GKE / HPW: Ä‘Æ¡n US/UK, KL: Ä‘Æ¡n US; khÃ´ng mua Ä‘Æ¡n huá»·, hoÃ n, Ä‘Ã£ giao hoáº·c bá»‹ Ä‘Æ°a vá» "ChÆ°a in mÃ£".</p>
+  <!-- Chuyển xuống đây (bổ sung 13/09/2026, theo yêu cầu người dùng) — trước đó nằm ngay dưới <h2>, đứng
+       TRƯỚC cả ô quét/Cấu hình. Nội dung không đổi, chỉ đổi vị trí. -->
+  <p style="color:var(--color-text-muted);margin:8px 0 0">Tự động mua tracking (GKE / KL / HPW theo công tắc + thứ tự ưu tiên ở trên — đã chọn hãng thì lỗi vẫn thử lại đúng hãng đó, 10 lần không được thì chuyển mua thủ công; HPW gợi ý sửa địa chỉ thì chuyển mua thủ công ngay) khi đến 1 trong 2 mốc, mốc nào đến trước: (1) đơn "Đã sản xuất"/"ĐÃ DÁN TEM" đủ thời gian chờ kể từ lúc chuyển "Đã sản xuất"; (2) đơn đã chuyển "Đã in mã" đủ số giờ đã đặt (kể cả đang chạy máy hoặc lỗi sản xuất; chỉ tính đơn in mã từ khi có tính năng này). GKE / HPW: đơn US/UK, KL: đơn US; không mua đơn huỷ, hoàn, đã giao hoặc bị đưa về "Chưa in mã".</p>
 
-  <!-- Cáº¥u hÃ¬nh GKE ÄÃƒ CHUYá»‚N sang Settings (bá»• sung 23/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” háº¡n cháº¿
-       ngÆ°á»i khÃ´ng pháº£i superadmin Ä‘á»•i Ä‘Æ°á»£c thÃ´ng tin nÃ y, ká»ƒ cáº£ username/password API GKE tháº­t). Xem
-       public/settings.html + routes/tracking.js (tÃ i khoáº£n GKE theo XÆ°á»Ÿng, /tai-khoan-gke â€” CHá»ˆ superadmin). -->
+  <!-- Cấu hình GKE ĐÃ CHUYỂN sang Settings (bổ sung 23/09/2026, theo yêu cầu người dùng — hạn chế
+       người không phải superadmin đổi được thông tin này, kể cả username/password API GKE thật). Xem
+       public/settings.html + routes/tracking.js (tài khoản GKE theo Xưởng, /tai-khoan-gke — CHỈ superadmin). -->
 
-  <!-- XUáº¤T EXCEL MUA TRACKING THá»¦ CÃ”NG theo máº«u GKE (02/10/2026) â€” chá»‰ táº¡o file Ä‘á»ƒ táº£i lÃªn website GKE; KHÃ”NG Ä‘á»•i tráº¡ng thÃ¡i Ä‘Æ¡n,
-       KHÃ”NG gá»­i gÃ¬ sang GKE. Logic: services/trackingExcelGkeService.js. -->
-  <p style="margin-top:var(--space-5)"><button type="button" class="btn-hanh-dong" id="btn-xuat-excel-gke" onclick="batTatXuatExcelGke()" aria-expanded="false">XUáº¤T EXCEL MUA TRACKING THá»¦ CÃ”NG â–¾</button></p>
+  <!-- XUẤT EXCEL MUA TRACKING THỦ CÔNG theo mẫu GKE (02/10/2026) — chỉ tạo file để tải lên website GKE; KHÔNG đổi trạng thái đơn,
+       KHÔNG gửi gì sang GKE. Logic: services/trackingExcelGkeService.js. -->
+  <p style="margin-top:var(--space-5)"><button type="button" class="btn-hanh-dong" id="btn-xuat-excel-gke" onclick="batTatXuatExcelGke()" aria-expanded="false">XUẤT EXCEL MUA TRACKING THỦ CÔNG ▾</button></p>
   <div id="khoi-xuat-excel-gke" class="panel-dieu-khien" style="display:none">
-    <p style="margin-top:0;color:var(--color-text-muted)">Táº¡o file Excel theo máº«u lÃªn Ä‘Æ¡n cá»§a GKE (sheet "báº£n máº«u") Ä‘á»ƒ tá»± táº£i lÃªn website GKE vÃ  mua tracking thá»§ cÃ´ng. Chá»‰ Ä‘Æ¡n giao <strong>US/UK</strong>, chÆ°a cÃ³ tracking, chÆ°a táº¡o váº­n Ä‘Æ¡n trÃªn GKE. Dá»¯ liá»‡u giá»‘ng há»‡t khi mua qua API (ká»ƒ cáº£ dá»¯ liá»‡u "Sá»­a dá»¯ liá»‡u gá»­i GKE"). Má»—i tÃ i khoáº£n GKE 1 file. <strong>Xuáº¥t file KHÃ”NG cÃ³ nghÄ©a lÃ  Ä‘Ã£ mua tracking</strong> â€” mua xong trÃªn GKE, dÃ¹ng IN LABEL / tra cá»©u tracking nhÆ° bÃ¬nh thÆ°á»ng.</p>
+    <p style="margin-top:0;color:var(--color-text-muted)">Tạo file Excel theo mẫu lên đơn của GKE (sheet "bản mẫu") để tự tải lên website GKE và mua tracking thủ công. Chỉ đơn giao <strong>US/UK</strong>, chưa có tracking, chưa tạo vận đơn trên GKE. Dữ liệu giống hệt khi mua qua API (kể cả dữ liệu "Sửa dữ liệu gửi GKE"). Mỗi tài khoản GKE 1 file. <strong>Xuất file KHÔNG có nghĩa là đã mua tracking</strong> — mua xong trên GKE, dùng IN LABEL / tra cứu tracking như bình thường.</p>
     <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px">
-      <label><input type="radio" name="xeg-cach" value="ds" checked onchange="doiCachChonXeg()"> Chá»n tá»« Ä‘Æ¡n chuyá»ƒn mua thá»§ cÃ´ng</label>
-      <label><input type="radio" name="xeg-cach" value="nhap" onchange="doiCachChonXeg()"> Nháº­p mÃ£ Ä‘Æ¡n</label>
+      <label><input type="radio" name="xeg-cach" value="ds" checked onchange="doiCachChonXeg()"> Chọn từ đơn chuyển mua thủ công</label>
+      <label><input type="radio" name="xeg-cach" value="nhap" onchange="doiCachChonXeg()"> Nhập mã đơn</label>
     </div>
     <div id="xeg-tab-ds">
       <div class="inline-form" style="align-items:flex-end">
-        <div class="truong"><label for="xeg-tim">TÃ¬m mÃ£ Ä‘Æ¡n</label><input id="xeg-tim" autocomplete="off" oninput="veGoiYXeg()"></div>
-        <label style="display:flex;gap:6px;align-items:center;padding-bottom:8px"><input type="checkbox" id="xeg-chon-tat-ca" onchange="chonTatCaXeg(this.checked)"> Chá»n táº¥t cáº£ Ä‘ang hiá»ƒn thá»‹</label>
-        <button type="button" class="btn-hanh-dong phu" onclick="taiGoiYXeg()">Táº£i láº¡i</button>
+        <div class="truong"><label for="xeg-tim">Tìm mã đơn</label><input id="xeg-tim" autocomplete="off" oninput="veGoiYXeg()"></div>
+        <label style="display:flex;gap:6px;align-items:center;padding-bottom:8px"><input type="checkbox" id="xeg-chon-tat-ca" onchange="chonTatCaXeg(this.checked)"> Chọn tất cả đang hiển thị</label>
+        <button type="button" class="btn-hanh-dong phu" onclick="taiGoiYXeg()">Tải lại</button>
       </div>
-      <div id="xeg-goi-y" class="qc-cuon-ngang" style="overflow-x:auto;margin-top:8px">Äang táº£i...</div>
+      <div id="xeg-goi-y" class="qc-cuon-ngang" style="overflow-x:auto;margin-top:8px">Đang tải...</div>
     </div>
     <div id="xeg-tab-nhap" style="display:none">
-      <label for="xeg-ma">MÃ£ Ä‘Æ¡n (má»—i dÃ²ng 1 mÃ£ hoáº·c cÃ¡ch nhau dáº¥u pháº©y)</label>
+      <label for="xeg-ma">Mã đơn (mỗi dòng 1 mã hoặc cách nhau dấu phẩy)</label>
       <textarea id="xeg-ma" rows="5" style="width:100%;box-sizing:border-box;text-transform:uppercase" placeholder="9ABC123&#10;9XYZ456"></textarea>
     </div>
-    <p><button type="button" class="btn-hanh-dong" onclick="kiemTraXeg(this)">Kiá»ƒm tra</button> <span id="xeg-thong-bao"></span></p>
+    <p><button type="button" class="btn-hanh-dong" onclick="kiemTraXeg(this)">Kiểm tra</button> <span id="xeg-thong-bao"></span></p>
     <div id="xeg-ket-qua"></div>
   </div>
 
-  <h3 style="margin-top:var(--space-5)">Danh sÃ¡ch Ä‘Æ¡n tá»± Ä‘á»™ng mua tracking</h3>
-  <p style="color:var(--color-text-muted);margin:-8px 0 12px">ÄÆ¡n Ä‘ang chá» mua + Ä‘Æ¡n Ä‘Ã£ cÃ³ tracking sáº£n xuáº¥t xong trong 7 ngÃ y gáº§n Ä‘Ã¢y.</p>
-  <div id="bang-danh-sach">Äang táº£i...</div>
+  <h3 style="margin-top:var(--space-5)">Danh sách đơn tự động mua tracking</h3>
+  <p style="color:var(--color-text-muted);margin:-8px 0 12px">Đơn đang chờ mua + đơn đã có tracking sản xuất xong trong 7 ngày gần đây.</p>
+  <div id="bang-danh-sach">Đang tải...</div>
 
   <h3 style="margin-top:var(--space-5)">Logs</h3>
-  <p style="color:var(--color-text-muted);margin:-8px 0 12px">Ghi ngáº¯n gá»n má»—i láº§n tá»± Ä‘á»™ng mua tracking (thÃ nh cÃ´ng hoáº·c lá»—i) â€” máº¥t khi khá»Ÿi Ä‘á»™ng láº¡i server.</p>
-  <div id="tk-logs" class="tk-logs">Äang táº£i...</div>
+  <p style="color:var(--color-text-muted);margin:-8px 0 12px">Ghi ngắn gọn mỗi lần tự động mua tracking (thành công hoặc lỗi) — mất khi khởi động lại server.</p>
+  <div id="tk-logs" class="tk-logs">Đang tải...</div>
 </div>
 
-<!-- Popup "ðŸŽ‰ Vá»«a tá»± Ä‘á»™ng mua tracking" Ä‘Ã£ Bá»Ž (02/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” chá»‰ bá» hiá»ƒn thá»‹; dá»¯ liá»‡u, API,
-     quy trÃ¬nh mua vÃ  báº£ng "Danh sÃ¡ch Ä‘Æ¡n tá»± Ä‘á»™ng mua tracking" giá»¯ nguyÃªn. -->
+<!-- Popup "🎉 Vừa tự động mua tracking" đã BỎ (02/10/2026, theo yêu cầu người dùng) — chỉ bỏ hiển thị; dữ liệu, API,
+     quy trình mua và bảng "Danh sách đơn tự động mua tracking" giữ nguyên. -->
 
 <script src="/js/icons.js?v=106"></script>
 <script src="/js/api.js?v=141"></script>
 <script src="/js/suaThongTinGke.js?v=2"></script>
 <script src="/js/suaThongTinKl.js?v=1"></script>
 <script>
-// NhÃ£n + class hiá»ƒn thá»‹ cho tá»«ng tráº¡ng thÃ¡i tráº£ vá» tá»« services/trackingAutoService.js
-// (layDanhSachDonAutoTracking) â€” xem docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md.
+// Nhãn + class hiển thị cho từng trạng thái trả về từ services/trackingAutoService.js
+// (layDanhSachDonAutoTracking) — xem docs/superpowers/specs/2026-09-09-tu-dong-mua-tracking-design.md.
 const NHAN_TRANG_THAI = {
-  DA_MUA: { nhan: 'ÄÃ£ mua', lop: 'da-mua' },
-  DANG_CHO_TEM: { nhan: 'Äang chá» tem GKE', lop: 'dang-cho-tem' },
-  DANG_TAO_DON_KL: { nhan: 'Äang mua KL (chÆ°a rÃµ káº¿t quáº£)', lop: 'dang-cho-tem' }, // 22/10/2026 â€” Ä‘Æ¡n Ä‘ang mua tracking KL
-  // 28/10/2026: khÃ´ng hÃ£ng nÃ o Ä‘ang báº­t tá»± mua Ä‘Æ°á»£c Ä‘Æ¡n nÃ y â€” lÃ½ do tá»«ng hÃ£ng hiá»‡n bÃªn dÆ°á»›i (lyDoKhongTuMua).
-  KHONG_TU_MUA_DUOC: { nhan: 'KhÃ´ng hÃ£ng nÃ o tá»± mua Ä‘Æ°á»£c', lop: 'thieu-du-lieu' },
-  DANG_MUA_HPW: { nhan: 'Äang mua HPW (Ä‘Ã£ táº¡o lÃ´ / chÆ°a rÃµ káº¿t quáº£)', lop: 'dang-cho-tem' }, // 22/10/2026
-  DEN_HAN_CHO_XU_LY: { nhan: 'Äáº¿n háº¡n, chá» xá»­ lÃ½', lop: 'den-han' },
-  DANG_CHO: { nhan: 'Äang chá» Ä‘á»§ giá»', lop: 'dang-cho' },
-  // DonNhieuAo (bá»• sung 26/09/2026): Ä‘Æ¡n con chÆ°a cÃ³ tracking â€” chá» Ä‘Æ¡n ".1" mua rá»“i tá»± gÃ¡n.
-  CHO_DON_MUA_NHOM: { nhan: 'Chá» Ä‘Æ¡n .1 cá»§a nhÃ³m mua', lop: 'dang-cho' },
-  // 12/10/2026: Ä‘Æ¡n ".2" trá»Ÿ lÃªn chÆ°a ghÃ©p Ä‘Æ°á»£c nhÃ³m (OrderID trá»‘ng/khÃ¡c Ä‘Æ¡n ".1") â€” khÃ´ng tá»± mua; sá»­a OrderID cho khá»›p Ä‘Æ¡n ".1".
-  DON_CON_CHUA_GHEP_NHOM: { nhan: 'ÄÆ¡n con nhiá»u Ã¡o chÆ°a ghÃ©p Ä‘Æ°á»£c nhÃ³m â€” khÃ´ng tá»± mua (kiá»ƒm tra OrderID vá»›i Ä‘Æ¡n .1)', lop: 'thieu-du-lieu' },
-  LOI_NHOM: { nhan: 'Lá»—i dá»¯ liá»‡u DonNhieuAo', lop: 'thieu-du-lieu' },
-  // Thiáº¿u tÃ i khoáº£n theo XÆ°á»Ÿng / GKE háº¿t tiá»n / ngoÃ i US-UK: tá»« 28/10/2026 gá»™p vÃ o KHONG_TU_MUA_DUOC (lÃ½ do tá»«ng hÃ£ng hiá»‡n bÃªn dÆ°á»›i).
-  DA_HUY: { nhan: 'ÄÆ¡n Ä‘Ã£ huá»· â€” khÃ´ng mua', lop: 'thieu-du-lieu' },
-  // Tá»± Ä‘á»™ng thá»­ 10 láº§n khÃ´ng Ä‘Æ°á»£c (30/09/2026) â€” job bá» qua, chá»‰ cÃ²n mua tay / "Cho tá»± Ä‘á»™ng thá»­ láº¡i".
-  CHUYEN_THU_CONG: { nhan: 'ÄÃ£ chuyá»ƒn MUA THá»¦ CÃ”NG', lop: 'thieu-du-lieu' },
+  DA_MUA: { nhan: 'Đã mua', lop: 'da-mua' },
+  DANG_CHO_TEM: { nhan: 'Đang chờ tem GKE', lop: 'dang-cho-tem' },
+  DANG_TAO_DON_KL: { nhan: 'Đang mua KL (chưa rõ kết quả)', lop: 'dang-cho-tem' }, // 22/10/2026 — đơn đang mua tracking KL
+  // 28/10/2026: không hãng nào đang bật tự mua được đơn này — lý do từng hãng hiện bên dưới (lyDoKhongTuMua).
+  KHONG_TU_MUA_DUOC: { nhan: 'Không hãng nào tự mua được', lop: 'thieu-du-lieu' },
+  DANG_MUA_HPW: { nhan: 'Đang mua HPW (đã tạo lô / chưa rõ kết quả)', lop: 'dang-cho-tem' }, // 22/10/2026
+  DEN_HAN_CHO_XU_LY: { nhan: 'Đến hạn, chờ xử lý', lop: 'den-han' },
+  DANG_CHO: { nhan: 'Đang chờ đủ giờ', lop: 'dang-cho' },
+  // DonNhieuAo (bổ sung 26/09/2026): đơn con chưa có tracking — chờ đơn ".1" mua rồi tự gán.
+  CHO_DON_MUA_NHOM: { nhan: 'Chờ đơn .1 của nhóm mua', lop: 'dang-cho' },
+  // 12/10/2026: đơn ".2" trở lên chưa ghép được nhóm (OrderID trống/khác đơn ".1") — không tự mua; sửa OrderID cho khớp đơn ".1".
+  DON_CON_CHUA_GHEP_NHOM: { nhan: 'Đơn con nhiều áo chưa ghép được nhóm — không tự mua (kiểm tra OrderID với đơn .1)', lop: 'thieu-du-lieu' },
+  LOI_NHOM: { nhan: 'Lỗi dữ liệu DonNhieuAo', lop: 'thieu-du-lieu' },
+  // Thiếu tài khoản theo Xưởng / GKE hết tiền / ngoài US-UK: từ 28/10/2026 gộp vào KHONG_TU_MUA_DUOC (lý do từng hãng hiện bên dưới).
+  DA_HUY: { nhan: 'Đơn đã huỷ — không mua', lop: 'thieu-du-lieu' },
+  // Tự động thử 10 lần không được (30/09/2026) — job bỏ qua, chỉ còn mua tay / "Cho tự động thử lại".
+  CHUYEN_THU_CONG: { nhan: 'Đã chuyển MUA THỦ CÔNG', lop: 'thieu-du-lieu' },
 };
 
 (async () => {
@@ -244,29 +244,29 @@ const NHAN_TRANG_THAI = {
 
   document.getElementById('btn-luu-cau-hinh').onclick = luuCauHinh;
   document.getElementById('btn-luu-cau-hinh-quet-trang-thai').onclick = luuCauHinhQuetTrangThai;
-  // 4 lÆ°á»£t táº£i ban Ä‘áº§u Äá»˜C Láº¬P nhau (cáº¥u hÃ¬nh mua tracking/quÃ©t tráº¡ng thÃ¡i/danh sÃ¡ch Ä‘Æ¡n/logs) â€”
-  // cháº¡y SONG SONG thay vÃ¬ xáº¿p hÃ ng tuáº§n tá»± (bá»• sung 22/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng cáº£i thiá»‡n tá»‘c
-  // Ä‘á»™ táº£i trang) â€” trÆ°á»›c Ä‘Ã¢y thá»i gian táº£i = Tá»”NG round-trip, giá» = round-trip CHáº¬M NHáº¤T trong sá»‘ Ä‘Ã³.
-  // Cáº¥u hÃ¬nh GKE ÄÃƒ CHUYá»‚N sang settings.html (bá»• sung 23/09/2026) â€” bá»›t 1 lÆ°á»£t táº£i khá»i danh sÃ¡ch nÃ y.
+  // 4 lượt tải ban đầu ĐỘC LẬP nhau (cấu hình mua tracking/quét trạng thái/danh sách đơn/logs) —
+  // chạy SONG SONG thay vì xếp hàng tuần tự (bổ sung 22/09/2026, theo yêu cầu người dùng cải thiện tốc
+  // độ tải trang) — trước đây thời gian tải = TỔNG round-trip, giờ = round-trip CHẬM NHẤT trong số đó.
+  // Cấu hình GKE ĐÃ CHUYỂN sang settings.html (bổ sung 23/09/2026) — bớt 1 lượt tải khỏi danh sách này.
   await Promise.all([taiCauHinh(), taiCauHinhQuetTrangThai(), taiDanhSach(), taiLogs(), taiBangGgSheet(), taiCanhBaoThuCong(), taiCanhBaoBatThuong()]);
-  // CÃ¹ng chu ká»³ vá»›i Báº£ng Ä‘iá»u khiá»ƒn ("hiá»ƒn thá»‹ Ä‘á»™ng" â€” tá»± táº£i láº¡i, khÃ´ng cáº§n báº¥m gÃ¬ thÃªm).
+  // Cùng chu kỳ với Bảng điều khiển ("hiển thị động" — tự tải lại, không cần bấm gì thêm).
   setInterval(taiLogs, 60000);
 })();
 
-// Ã” quÃ©t nhanh "IN LABEL" (bá»• sung 13/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” xem
-// docs/superpowers/specs/2026-09-13-o-quet-in-label-tracking-design.md). GÃµ/quÃ©t mÃ£ Ä‘Æ¡n (STT_Key) +
-// Enter (hoáº·c phÃ­m Space, bá»• sung 13/09/2026 láº§n 2 â€” 1 sá»‘ mÃ¡y quÃ©t mÃ£ váº¡ch gá»­i Space thay vÃ¬ Enter lÃ m
-// kÃ½ tá»± káº¿t thÃºc) -> gá»i tháº³ng API IN LABEL cÃ³ sáºµn (KHÃ”NG tá»± mua tracking náº¿u chÆ°a cÃ³ â€” chá»‰ bÃ¡o lá»—i,
-// trÃ¡nh phÃ¡t sinh chi phÃ­ tháº­t ngoÃ i Ã½ muá»‘n náº¿u quÃ©t nháº§m mÃ£). KHÃ”NG confirm() trÆ°á»›c khi in, KHÃ”NG
-// alert() khi bÃ¡o káº¿t quáº£ â€” cáº£ 2 Ä‘á»u cháº·n thao tÃ¡c quÃ©t tiáº¿p theo, ngÆ°á»£c tinh tháº§n "quÃ©t liÃªn tá»¥c khÃ´ng
-// dá»«ng".
+// Ô quét nhanh "IN LABEL" (bổ sung 13/09/2026, theo yêu cầu người dùng — xem
+// docs/superpowers/specs/2026-09-13-o-quet-in-label-tracking-design.md). Gõ/quét mã đơn (STT_Key) +
+// Enter (hoặc phím Space, bổ sung 13/09/2026 lần 2 — 1 số máy quét mã vạch gửi Space thay vì Enter làm
+// ký tự kết thúc) -> gọi thẳng API IN LABEL có sẵn (KHÔNG tự mua tracking nếu chưa có — chỉ báo lỗi,
+// tránh phát sinh chi phí thật ngoài ý muốn nếu quét nhầm mã). KHÔNG confirm() trước khi in, KHÔNG
+// alert() khi báo kết quả — cả 2 đều chặn thao tác quét tiếp theo, ngược tinh thần "quét liên tục không
+// dừng".
 let dangXuLyQuetInLabel = false;
 let quetThongBaoTimer = null;
 
 document.getElementById('o-quet-in-label').addEventListener('keydown', async (e) => {
   if (e.key !== 'Enter' && e.key !== ' ') return;
-  // Space máº·c Ä‘á»‹nh gÃµ dáº¥u cÃ¡ch vÃ o Ã´ â€” cháº·n láº¡i vÃ¬ Ä‘ang dÃ¹ng lÃ m phÃ­m báº¯t Ä‘áº§u in (giá»‘ng Enter, vá»‘n
-  // khÃ´ng gÃµ kÃ½ tá»± nÃ o vÃ o input 1 dÃ²ng); STT_Key tháº­t khÃ´ng bao giá» chá»©a khoáº£ng tráº¯ng.
+  // Space mặc định gõ dấu cách vào ô — chặn lại vì đang dùng làm phím bắt đầu in (giống Enter, vốn
+  // không gõ ký tự nào vào input 1 dòng); STT_Key thật không bao giờ chứa khoảng trắng.
   e.preventDefault();
   const oQuet = e.target;
   const sttKey = oQuet.value.trim();
@@ -285,23 +285,23 @@ document.getElementById('o-quet-in-label').addEventListener('keydown', async (e)
   }
 
   if (ketQua.loi && ketQua.loi.length > 0) {
-    // ÄÆ¡n chÆ°a cÃ³ tracking (23/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” log 22/10: 26 láº§n báº¥m láº¡i "IN LABEL"): kÃ¨m nÃºt mua ngay cho Ä‘Ãºng Ä‘Æ¡n
-    // nÃ y. Váº«n KHÃ”NG tá»± mua khi quÃ©t â€” pháº£i báº¥m nÃºt + xÃ¡c nháº­n (cÃ¹ng há»™p cá»§a nÃºt "MUA TRACKING vÃ  IN LABEL" trong báº£ng).
+    // Đơn chưa có tracking (23/10/2026, theo yêu cầu người dùng — log 22/10: 26 lần bấm lại "IN LABEL"): kèm nút mua ngay cho đúng đơn
+    // này. Vẫn KHÔNG tự mua khi quét — phải bấm nút + xác nhận (cùng hộp của nút "MUA TRACKING và IN LABEL" trong bảng).
     const { thongDiep, nut } = xuLyLoiQuetInLabel(ketQua.loi[0]);
     hienThongBaoQuet('loi', `${sttKey}: ${thongDiep}`, nut);
     resetOQuetInLabel(oQuet);
     return;
   }
 
-  hienThongBaoQuet('ok', `ÄÃ£ in label cho Ä‘Æ¡n ${sttKey}.`);
+  hienThongBaoQuet('ok', `Đã in label cho đơn ${sttKey}.`);
   if (ketQua.labelBase64) {
     const goiIn = moHopThoaiInPdf(ketQua.labelBase64);
     if (goiIn) goiIn();
   }
-  // XoÃ¡ + focus láº¡i NGAY sau khi Ä‘Ã£ gá»i lá»‡nh in â€” bá»• sung 13/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng: KHÃ”NG chá»
-  // taiDanhSach()/taiLogs() (2 lÆ°á»£t gá»i máº¡ng phÃ­a dÆ°á»›i) xong má»›i cho quÃ©t tiáº¿p, vÃ  khÃ´ng phá»¥ thuá»™c viá»‡c
-  // há»™p thoáº¡i in cá»§a trÃ¬nh duyá»‡t cÃ³ cháº·n luá»“ng script hay khÃ´ng (tuá»³ trÃ¬nh duyá»‡t) â€” Ã´ luÃ´n sáºµn sÃ ng ngay
-  // láº­p tá»©c cho lá»‡nh in káº¿ tiáº¿p, viá»‡c táº£i láº¡i báº£ng/log cháº¡y ná»n phÃ­a sau khÃ´ng áº£nh hÆ°á»Ÿng.
+  // Xoá + focus lại NGAY sau khi đã gọi lệnh in — bổ sung 13/09/2026, theo yêu cầu người dùng: KHÔNG chờ
+  // taiDanhSach()/taiLogs() (2 lượt gọi mạng phía dưới) xong mới cho quét tiếp, và không phụ thuộc việc
+  // hộp thoại in của trình duyệt có chặn luồng script hay không (tuỳ trình duyệt) — ô luôn sẵn sàng ngay
+  // lập tức cho lệnh in kế tiếp, việc tải lại bảng/log chạy nền phía sau không ảnh hưởng.
   resetOQuetInLabel(oQuet);
   await taiDanhSach();
   await taiLogs();
@@ -314,7 +314,7 @@ function resetOQuetInLabel(oQuet) {
   dangXuLyQuetInLabel = false;
 }
 
-// nut (tuá»³ chá»n, 23/10/2026): { nhan, bam(btn) } â€” nÃºt ngay trong thÃ´ng bÃ¡o; cÃ³ nÃºt thÃ¬ giá»¯ thÃ´ng bÃ¡o 15 giÃ¢y thay vÃ¬ 4 giÃ¢y.
+// nut (tuỳ chọn, 23/10/2026): { nhan, bam(btn) } — nút ngay trong thông báo; có nút thì giữ thông báo 15 giây thay vì 4 giây.
 function hienThongBaoQuet(loai, noiDung, nut) {
   clearTimeout(quetThongBaoTimer);
   const el = document.getElementById('tk-quet-thong-bao');
@@ -338,14 +338,14 @@ function hienThongBaoQuet(loai, noiDung, nut) {
   quetThongBaoTimer = setTimeout(() => { el.style.display = 'none'; }, nut ? 15000 : 4000);
 }
 
-// Ã” "Tracking thá»§ cÃ´ng" (bá»• sung 14/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” xem
-// docs/superpowers/specs/2026-09-14-cap-nhat-trang-thai-tracking-design.md) â€” tÆ°Æ¡ng Ä‘Æ°Æ¡ng thá»§ cÃ´ng cá»§a
-// lá»‹ch tá»± Ä‘á»™ng má»—i 4 tiáº¿ng (services/trackingJob.js), cho ÄÃšNG 1 Ä‘Æ¡n. Nháº­p mÃ£ Ä‘Æ¡n + Enter -> gá»i
-// POST /tracking/cap-nhat-trang-thai-thu-cong (tá»± cáº­p nháº­t Sheet), hiá»‡n NGAY tráº¡ng thÃ¡i/thá»i gian/Ä‘á»‹a
-// Ä‘iá»ƒm tra Ä‘Æ°á»£c â€” Ä‘Ãºng yÃªu cáº§u "hiá»ƒn thá»‹ káº¿t quáº£ luÃ´n trong menu Tracking". KhÃ¡c Ã´ IN LABEL á»Ÿ trÃªn:
-// Ä‘Ã¢y lÃ  tra cá»©u CÃ“ CHá»¦ ÄÃCH tá»«ng Ä‘Æ¡n 1 (khÃ´ng pháº£i thao tÃ¡c láº·p liÃªn tá»¥c báº±ng mÃ¡y quÃ©t mÃ£ váº¡ch) nÃªn
-// KHÃ”NG nháº­n thÃªm phÃ­m Space, vÃ  banner káº¿t quáº£ KHÃ”NG tá»± áº©n (ngÆ°á»i dÃ¹ng cáº§n Ä‘á»c ká»¹ ná»™i dung tra Ä‘Æ°á»£c,
-// khÃ´ng pháº£i chá»‰ biáº¿t thÃ nh cÃ´ng/tháº¥t báº¡i nhÆ° Ã´ IN LABEL).
+// Ô "Tracking thủ công" (bổ sung 14/09/2026, theo yêu cầu người dùng — xem
+// docs/superpowers/specs/2026-09-14-cap-nhat-trang-thai-tracking-design.md) — tương đương thủ công của
+// lịch tự động mỗi 4 tiếng (services/trackingJob.js), cho ĐÚNG 1 đơn. Nhập mã đơn + Enter -> gọi
+// POST /tracking/cap-nhat-trang-thai-thu-cong (tự cập nhật Sheet), hiện NGAY trạng thái/thời gian/địa
+// điểm tra được — đúng yêu cầu "hiển thị kết quả luôn trong menu Tracking". Khác ô IN LABEL ở trên:
+// đây là tra cứu CÓ CHỦ ĐÍCH từng đơn 1 (không phải thao tác lặp liên tục bằng máy quét mã vạch) nên
+// KHÔNG nhận thêm phím Space, và banner kết quả KHÔNG tự ẩn (người dùng cần đọc kỹ nội dung tra được,
+// không phải chỉ biết thành công/thất bại như ô IN LABEL).
 let dangXuLyTrackingThuCong = false;
 
 document.getElementById('o-tracking-thu-cong').addEventListener('keydown', async (e) => {
@@ -363,9 +363,9 @@ document.getElementById('o-tracking-thu-cong').addEventListener('keydown', async
       hienThongBaoTrackingThuCong('loi', `${sttKey}: ${ketQua.loi[0].lyDo}`);
     } else {
       const kq = ketQua.thanhCong[0];
-      const chiTietPhu = [kq.thoiGian, kq.diaDiem].filter(Boolean).join(' Â· ');
+      const chiTietPhu = [kq.thoiGian, kq.diaDiem].filter(Boolean).join(' · ');
       hienThongBaoTrackingThuCong('ok', `${kq.sttKey}: ${kq.trangThai}${chiTietPhu ? ' (' + chiTietPhu + ')' : ''}`);
-      await baoLoiSheetSeller(ketQua.loiDaySheetKh, ['ÄÃƒ Cáº¬P NHáº¬T TRáº NG THÃI', 'NHÆ¯NG CHÆ¯A GHI ÄÆ¯á»¢C DELIVERED SANG SHEET SELLER']);
+      await baoLoiSheetSeller(ketQua.loiDaySheetKh, ['ĐÃ CẬP NHẬT TRẠNG THÁI', 'NHƯNG CHƯA GHI ĐƯỢC DELIVERED SANG SHEET SELLER']);
       await taiDanhSach();
     }
   } catch (err) {
@@ -391,12 +391,12 @@ async function taiLogs() {
   try {
     logs = await apiFetch('/tracking/logs');
   } catch (e) {
-    el.innerHTML = `<span style="color:var(--color-primary)">KhÃ´ng táº£i Ä‘Æ°á»£c logs: ${escapeHtml(e.message)}</span>`;
+    el.innerHTML = `<span style="color:var(--color-primary)">Không tải được logs: ${escapeHtml(e.message)}</span>`;
     return;
   }
 
   if (logs.length === 0) {
-    el.innerHTML = '<span style="color:var(--color-text-muted)">ChÆ°a cÃ³ hoáº¡t Ä‘á»™ng nÃ o.</span>';
+    el.innerHTML = '<span style="color:var(--color-text-muted)">Chưa có hoạt động nào.</span>';
     return;
   }
   el.innerHTML = logs.map(l =>
@@ -405,7 +405,7 @@ async function taiLogs() {
 }
 
 let _user = null;
-// "Mua <hÃ£ng> ngay": admin / superadmin; KL thÃªm váº½ file (29/10/2026 â€” routes/tracking.js /kl/mua). HPW váº«n chá»‰ admin (/hpw/mua).
+// "Mua <hãng> ngay": admin / superadmin; KL thêm vẽ file (29/10/2026 — routes/tracking.js /kl/mua). HPW vẫn chỉ admin (/hpw/mua).
 const duocMuaNgay = h => laAdmin(_user.vaiTro) || (h === 'KL' && _user.vaiTro === 've_file');
 const HANG_TU_MUA = ['GKE', 'KL', 'HPW'];
 async function taiCauHinh() {
@@ -415,14 +415,14 @@ async function taiCauHinh() {
     cauHinh.thuTu.forEach((h, i) => {
       document.getElementById('thu-tu-hang-' + (i + 1)).innerHTML = HANG_TU_MUA.map(x => `<option value="${x}"${x === h ? ' selected' : ''}>${x}</option>`).join('');
     });
-    // TÃ¡ch tá»•ng sá»‘ phÃºt lÆ°u á»Ÿ Sheet thÃ nh giá» + phÃºt Ä‘á»ƒ hiá»‡n lÃªn 2 Ã´ riÃªng â€” xem luuCauHinh() bÃªn dÆ°á»›i.
+    // Tách tổng số phút lưu ở Sheet thành giờ + phút để hiện lên 2 ô riêng — xem luuCauHinh() bên dưới.
     document.getElementById('so-gio-cho').value = Math.floor(cauHinh.soPhutCho / 60);
     document.getElementById('so-phut-cho').value = cauHinh.soPhutCho % 60;
     document.getElementById('so-gio-sau-in-ma').value = cauHinh.soGioSauInMa;
   } catch (e) {
     document.getElementById('thong-bao-luu').style.display = 'block';
     document.getElementById('thong-bao-luu').style.color = 'var(--color-primary)';
-    document.getElementById('thong-bao-luu').textContent = 'KhÃ´ng táº£i Ä‘Æ°á»£c cáº¥u hÃ¬nh: ' + e.message;
+    document.getElementById('thong-bao-luu').textContent = 'Không tải được cấu hình: ' + e.message;
   }
 }
 
@@ -431,7 +431,7 @@ async function luuCauHinh() {
   const thuTu = [1, 2, 3].map(i => document.getElementById('thu-tu-hang-' + i).value);
   const soGio = Number(document.getElementById('so-gio-cho').value) || 0;
   const soPhut = Number(document.getElementById('so-phut-cho').value) || 0;
-  const soPhutCho = soGio * 60 + soPhut; // Sheet váº«n chá»‰ lÆ°u 1 tá»•ng sá»‘ phÃºt, khÃ´ng Ä‘á»•i schema
+  const soPhutCho = soGio * 60 + soPhut; // Sheet vẫn chỉ lưu 1 tổng số phút, không đổi schema
   const soGioSauInMa = Number(document.getElementById('so-gio-sau-in-ma').value);
   const thongBao = document.getElementById('thong-bao-luu');
   const nut = document.getElementById('btn-luu-cau-hinh');
@@ -439,89 +439,89 @@ async function luuCauHinh() {
   if (!Number.isFinite(soPhutCho) || soPhutCho <= 0) {
     thongBao.style.display = 'block';
     thongBao.style.color = 'var(--color-primary)';
-    thongBao.textContent = 'Tá»•ng thá»i gian chá» (giá» + phÃºt) pháº£i lá»›n hÆ¡n 0.';
+    thongBao.textContent = 'Tổng thời gian chờ (giờ + phút) phải lớn hơn 0.';
     return;
   }
   if (!Number.isFinite(soGioSauInMa) || soGioSauInMa <= 0) {
     thongBao.style.display = 'block';
     thongBao.style.color = 'var(--color-primary)';
-    thongBao.textContent = 'Sá»‘ giá» sau "ÄÃ£ in mÃ£" pháº£i lá»›n hÆ¡n 0.';
+    thongBao.textContent = 'Số giờ sau "Đã in mã" phải lớn hơn 0.';
     return;
   }
   if (new Set(thuTu).size !== HANG_TU_MUA.length) {
     thongBao.style.display = 'block';
     thongBao.style.color = 'var(--color-primary)';
-    thongBao.textContent = 'Thá»© tá»± Æ°u tiÃªn pháº£i gá»“m Ä‘á»§ GKE, KL, HPW â€” khÃ´ng chá»n trÃ¹ng hÃ£ng.';
+    thongBao.textContent = 'Thứ tự ưu tiên phải gồm đủ GKE, KL, HPW — không chọn trùng hãng.';
     return;
   }
 
   nut.disabled = true;
-  nut.textContent = 'Äang lÆ°u...';
+  nut.textContent = 'Đang lưu...';
   try {
     await apiFetch('/tracking/cau-hinh', { method: 'POST', body: JSON.stringify({ batHang, thuTu, soPhutCho, soGioSauInMa }) });
     thongBao.style.display = 'block';
     thongBao.style.color = '#16a34a';
-    thongBao.textContent = 'ÄÃ£ lÆ°u cáº¥u hÃ¬nh.';
+    thongBao.textContent = 'Đã lưu cấu hình.';
   } catch (e) {
     thongBao.style.display = 'block';
     thongBao.style.color = 'var(--color-primary)';
-    thongBao.textContent = 'Lá»—i khi lÆ°u: ' + e.message;
+    thongBao.textContent = 'Lỗi khi lưu: ' + e.message;
   } finally {
     nut.disabled = false;
-    nut.textContent = 'LÆ°u';
+    nut.textContent = 'Lưu';
   }
 }
 
 async function taiCauHinhQuetTrangThai() {
   try {
     const cauHinh = await apiFetch('/tracking/cau-hinh-quet-trang-thai');
-    // TÃ¡ch tá»•ng sá»‘ phÃºt lÆ°u á»Ÿ DB thÃ nh giá» + phÃºt Ä‘á»ƒ hiá»‡n lÃªn 2 Ã´ riÃªng â€” xem luuCauHinhQuetTrangThai().
+    // Tách tổng số phút lưu ở DB thành giờ + phút để hiện lên 2 ô riêng — xem luuCauHinhQuetTrangThai().
     document.getElementById('so-gio-quet-trang-thai').value = Math.floor(cauHinh.soPhutQuet / 60);
     document.getElementById('so-phut-quet-trang-thai').value = cauHinh.soPhutQuet % 60;
   } catch (e) {
     document.getElementById('thong-bao-luu-quet-trang-thai').style.display = 'block';
     document.getElementById('thong-bao-luu-quet-trang-thai').style.color = 'var(--color-primary)';
-    document.getElementById('thong-bao-luu-quet-trang-thai').textContent = 'KhÃ´ng táº£i Ä‘Æ°á»£c cáº¥u hÃ¬nh: ' + e.message;
+    document.getElementById('thong-bao-luu-quet-trang-thai').textContent = 'Không tải được cấu hình: ' + e.message;
   }
 }
 
 async function luuCauHinhQuetTrangThai() {
   const soGio = Number(document.getElementById('so-gio-quet-trang-thai').value) || 0;
   const soPhut = Number(document.getElementById('so-phut-quet-trang-thai').value) || 0;
-  const soPhutQuet = soGio * 60 + soPhut; // DB váº«n chá»‰ lÆ°u 1 tá»•ng sá»‘ phÃºt, khÃ´ng Ä‘á»•i schema
+  const soPhutQuet = soGio * 60 + soPhut; // DB vẫn chỉ lưu 1 tổng số phút, không đổi schema
   const thongBao = document.getElementById('thong-bao-luu-quet-trang-thai');
   const nut = document.getElementById('btn-luu-cau-hinh-quet-trang-thai');
 
   if (!Number.isFinite(soPhutQuet) || soPhutQuet < 5) {
     thongBao.style.display = 'block';
     thongBao.style.color = 'var(--color-primary)';
-    thongBao.textContent = 'Khoáº£ng cÃ¡ch quÃ©t (giá» + phÃºt) pháº£i tá»« 5 phÃºt trá»Ÿ lÃªn.';
+    thongBao.textContent = 'Khoảng cách quét (giờ + phút) phải từ 5 phút trở lên.';
     return;
   }
 
   nut.disabled = true;
-  nut.textContent = 'Äang lÆ°u...';
+  nut.textContent = 'Đang lưu...';
   try {
     await apiFetch('/tracking/cau-hinh-quet-trang-thai', { method: 'POST', body: JSON.stringify({ soPhutQuet }) });
     thongBao.style.display = 'block';
     thongBao.style.color = '#16a34a';
-    thongBao.textContent = 'ÄÃ£ lÆ°u cáº¥u hÃ¬nh.';
+    thongBao.textContent = 'Đã lưu cấu hình.';
   } catch (e) {
     thongBao.style.display = 'block';
     thongBao.style.color = 'var(--color-primary)';
-    thongBao.textContent = 'Lá»—i khi lÆ°u: ' + e.message;
+    thongBao.textContent = 'Lỗi khi lưu: ' + e.message;
   } finally {
     nut.disabled = false;
-    nut.textContent = 'LÆ°u';
+    nut.textContent = 'Lưu';
   }
 }
 
-// Escape 1 chuá»—i Ä‘á»ƒ nhÃ©t an toÃ n vÃ o literal JS trong thuá»™c tÃ­nh onclick="...('...')" (bá»• sung
-// 22/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” PHáº¢I escape dáº¥u \ TRÆ¯á»šC, rá»“i má»›i escape dáº¥u ' (thá»© tá»± ngÆ°á»£c
-// láº¡i sáº½ tá»± nhÃ¢n Ä‘Ã´i \ vá»«a Ä‘Æ°á»£c escape cá»§a bÆ°á»›c sau). DÃ¹ng .replace(/'/g, "\\'") má»™t mÃ¬nh (nhÆ° trÆ°á»›c
-// Ä‘Ã¢y) chá»‰ escape ' mÃ  bá» sÃ³t \: 1 chuá»—i cÃ³ chá»©a \ sáº½ thoÃ¡t khá»i literal JS, phÃ¡ cÃº phÃ¡p onclick â€” rá»§i
-// ro tháº¥p trong thá»±c táº¿ vÃ¬ hiá»‡n chá»‰ dÃ¹ng cho STT_Key (khÃ´ng pháº£i input tá»± do), nhÆ°ng váº«n nÃªn escape
-// Ä‘Ãºng chuáº©n.
+// Escape 1 chuỗi để nhét an toàn vào literal JS trong thuộc tính onclick="...('...')" (bổ sung
+// 22/09/2026, theo yêu cầu người dùng) — PHẢI escape dấu \ TRƯỚC, rồi mới escape dấu ' (thứ tự ngược
+// lại sẽ tự nhân đôi \ vừa được escape của bước sau). Dùng .replace(/'/g, "\\'") một mình (như trước
+// đây) chỉ escape ' mà bỏ sót \: 1 chuỗi có chứa \ sẽ thoát khỏi literal JS, phá cú pháp onclick — rủi
+// ro thấp trong thực tế vì hiện chỉ dùng cho STT_Key (không phải input tự do), nhưng vẫn nên escape
+// đúng chuẩn.
 function escapeJsChuoi(chuoi) {
   return String(chuoi).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }
@@ -532,33 +532,33 @@ async function taiDanhSach() {
   try {
     ds = await apiFetch('/tracking/danh-sach');
   } catch (e) {
-    el.innerHTML = `<p style="color:var(--color-primary)">KhÃ´ng táº£i Ä‘Æ°á»£c danh sÃ¡ch: ${escapeHtml(e.message)}</p>`;
+    el.innerHTML = `<p style="color:var(--color-primary)">Không tải được danh sách: ${escapeHtml(e.message)}</p>`;
     return;
   }
 
   if (ds.length === 0) {
-    el.innerHTML = '<p style="color:var(--color-text-muted)">ChÆ°a cÃ³ Ä‘Æ¡n nÃ o Ä‘ang chá» mua hoáº·c vá»«a mua trong 7 ngÃ y.</p>';
+    el.innerHTML = '<p style="color:var(--color-text-muted)">Chưa có đơn nào đang chờ mua hoặc vừa mua trong 7 ngày.</p>';
   } else {
     el.innerHTML = `
       <table class="bang-xem-truoc">
-        <thead><tr><th>MÃ£ Ä‘Æ¡n</th><th>Tráº¡ng thÃ¡i</th><th>HÃ£ng tá»± mua</th><th>MÃ£ tracking</th><th>HÃ£ng váº­n chuyá»ƒn</th><th>Sáº£n xuáº¥t xong lÃºc</th><th>Háº¡n tá»± mua</th><th>HÃ nh Ä‘á»™ng</th></tr></thead>
+        <thead><tr><th>Mã đơn</th><th>Trạng thái</th><th>Hãng tự mua</th><th>Mã tracking</th><th>Hãng vận chuyển</th><th>Sản xuất xong lúc</th><th>Hạn tự mua</th><th>Hành động</th></tr></thead>
         <tbody>
           ${ds.map(d => {
             const tt = NHAN_TRANG_THAI[d.trangThai] || { nhan: d.trangThai, lop: 'dang-cho' };
             return `<tr>
               <td><a href="/order.html?stt=${encodeURIComponent(d.sttKey)}">${escapeHtml(d.sttKey)}</a></td>
-              <td class="tk-o-trang-thai"><span class="tk-trang-thai ${tt.lop}">${escapeHtml(tt.nhan)}</span>${d.soLanThu ? `<div style="font-size:0.78rem;color:var(--color-danger-text);margin-top:4px">Tá»± Ä‘á»™ng thá»­ ${d.soLanThu}/10 láº§n â€” ${escapeHtml(d.loiGanNhat)}</div>` : ''}${d.lyDoKhongTuMua ? `<div style="font-size:0.78rem;color:var(--color-text-muted);margin-top:4px">${escapeHtml(d.lyDoKhongTuMua)}</div>` : ''}</td>
-              <td>${d.hangTuMua ? `<strong>${escapeHtml(d.hangTuMua)}</strong>` : 'â€”'}</td>
-              <td>${escapeHtml(d.trackingId || 'â€”')}${d.trackingId ? nutSaoChep(d.trackingId, 'Sao chÃ©p mÃ£ tracking') : ''}${d.nguonSeller ? ' <small style="color:var(--color-text-muted)">(Seller cung cáº¥p)</small>' : ''}</td>
-              <td>${d.donVi ? `<strong>${escapeHtml(d.donVi)}</strong> Â· ` : ''}${escapeHtml(d.hangVanChuyen || 'â€”')}</td>
-              <td>${d.thoiGianSanXuat ? dinhDangNgayGioNganAnToan(d.thoiGianSanXuat) : 'â€”'}</td>
-              <td>${d.hanTuMua ? dinhDangNgayGioNganAnToan(d.hanTuMua) : 'â€”'}</td>
+              <td class="tk-o-trang-thai"><span class="tk-trang-thai ${tt.lop}">${escapeHtml(tt.nhan)}</span>${d.soLanThu ? `<div style="font-size:0.78rem;color:var(--color-danger-text);margin-top:4px">Tự động thử ${d.soLanThu}/10 lần — ${escapeHtml(d.loiGanNhat)}</div>` : ''}${d.lyDoKhongTuMua ? `<div style="font-size:0.78rem;color:var(--color-text-muted);margin-top:4px">${escapeHtml(d.lyDoKhongTuMua)}</div>` : ''}</td>
+              <td>${d.hangTuMua ? `<strong>${escapeHtml(d.hangTuMua)}</strong>` : '—'}</td>
+              <td>${escapeHtml(d.trackingId || '—')}${d.trackingId ? nutSaoChep(d.trackingId, 'Sao chép mã tracking') : ''}${d.nguonSeller ? ' <small style="color:var(--color-text-muted)">(Seller cung cấp)</small>' : ''}</td>
+              <td>${d.donVi ? `<strong>${escapeHtml(d.donVi)}</strong> · ` : ''}${escapeHtml(d.hangVanChuyen || '—')}</td>
+              <td>${d.thoiGianSanXuat ? dinhDangNgayGioNganAnToan(d.thoiGianSanXuat) : '—'}</td>
+              <td>${d.hanTuMua ? dinhDangNgayGioNganAnToan(d.hanTuMua) : '—'}</td>
               <td class="tk-o-hanh-dong"><div>
                 ${d.trangThai === 'DA_MUA' ? '' : `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="muaThuCongTuBang(this, '${escapeJsChuoi(d.sttKey)}', '${d.trangThai}')">Mua GKE</button>`}
                 ${d.trangThai === 'DA_MUA' ? '' : ['KL', 'HPW'].filter(duocMuaNgay).map(h => `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="muaHangKhacTuBang(this, '${escapeJsChuoi(d.sttKey)}', '${d.trangThai}', '${h}')">Mua ${h}</button>`).join('')}
                 ${d.trangThai === 'DA_MUA' ? `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="apDungInLabelTuBang(this, '${escapeJsChuoi(d.sttKey)}')">IN LABEL</button>` : ''}
-                ${d.trangThai === 'DA_MUA' ? '' : `<button type="button" class="btn-hanh-dong" style="padding:6px 10px;font-size:0.82rem" onclick="apDungMuaVaInLabelTuBang(this, '${escapeJsChuoi(d.sttKey)}', '${d.trangThai}')">MUA GKE vÃ  IN LABEL</button>`}
-                ${d.trangThai === 'CHUYEN_THU_CONG' ? `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="choTuDongLaiTuBang(this, '${escapeJsChuoi(d.sttKey)}')">Cho tá»± Ä‘á»™ng thá»­ láº¡i</button>` : ''}
+                ${d.trangThai === 'DA_MUA' ? '' : `<button type="button" class="btn-hanh-dong" style="padding:6px 10px;font-size:0.82rem" onclick="apDungMuaVaInLabelTuBang(this, '${escapeJsChuoi(d.sttKey)}', '${d.trangThai}')">MUA GKE và IN LABEL</button>`}
+                ${d.trangThai === 'CHUYEN_THU_CONG' ? `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="choTuDongLaiTuBang(this, '${escapeJsChuoi(d.sttKey)}')">Cho tự động thử lại</button>` : ''}
               </div></td>
             </tr>`;
           }).join('')}
@@ -566,25 +566,25 @@ async function taiDanhSach() {
       </table>`;
   }
 
-  await taiCanhBaoThuCong(); // mua/Ä‘áº·t láº¡i xong -> cáº£nh bÃ¡o cáº­p nháº­t theo
+  await taiCanhBaoThuCong(); // mua/đặt lại xong -> cảnh báo cập nhật theo
 }
 
-// Cáº£nh bÃ¡o lá»›n: Ä‘Æ¡n Ä‘Ã£ thá»­ Tá»° Äá»˜NG mua 10 láº§n khÃ´ng Ä‘Æ°á»£c, Ä‘Ã£ chuyá»ƒn MUA THá»¦ CÃ”NG (30/09/2026). Lá»—i táº£i/403 -> áº©n.
+// Cảnh báo lớn: đơn đã thử TỰ ĐỘNG mua 10 lần không được, đã chuyển MUA THỦ CÔNG (30/09/2026). Lỗi tải/403 -> ẩn.
 async function taiCanhBaoThuCong() {
   const el = document.getElementById('canh-bao-thu-cong');
   let ds = [];
-  try { ds = await apiFetch('/tracking/canh-bao-thu-cong'); } catch (e) { /* khÃ´ng cÃ³ quyá»n / lá»—i máº¡ng -> khÃ´ng hiá»‡n */ }
+  try { ds = await apiFetch('/tracking/canh-bao-thu-cong'); } catch (e) { /* không có quyền / lỗi mạng -> không hiện */ }
   if (!ds.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
   _dsCanhBaoThuCong = ds;
   veCanhBaoThuCong();
 }
-// ---- Cáº¢NH BÃO Váº¬N CHUYá»‚N Báº¤T THÆ¯á»œNG (21/11/2026) â€” 5 nhÃ³m, API /tracking/canh-bao-bat-thuong.
+// ---- CẢNH BÁO VẬN CHUYỂN BẤT THƯỜNG (21/11/2026) — 5 nhóm, API /tracking/canh-bao-bat-thuong.
 let _dsCanhBaoBatThuong = [];
 let _thuGonCanhBaoBatThuong = false;
 async function taiCanhBaoBatThuong() {
   const el = document.getElementById('canh-bao-bat-thuong');
   let ds = [];
-  try { ds = await apiFetch('/tracking/canh-bao-bat-thuong'); } catch (e) { /* khÃ´ng cÃ³ quyá»n / máº¡ng lá»—i -> khÃ´ng hiá»‡n */ }
+  try { ds = await apiFetch('/tracking/canh-bao-bat-thuong'); } catch (e) { /* không có quyền / mạng lỗi -> không hiện */ }
   if (!ds.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
   _dsCanhBaoBatThuong = ds;
   veCanhBaoBatThuong();
@@ -592,7 +592,7 @@ async function taiCanhBaoBatThuong() {
 function batTatCanhBaoBatThuong() { _thuGonCanhBaoBatThuong = !_thuGonCanhBaoBatThuong; veCanhBaoBatThuong(); }
 const MAU_NHOM_BAT_THUONG = { 1: 'var(--color-warning-bg)', 2: 'var(--color-warning-bg)', 3: 'var(--color-danger-bg)', 4: 'var(--color-warning-bg)', 5: 'var(--color-warning-bg)' };
 const MAU_TEXT_NHOM_BAT_THUONG = { 1: 'var(--color-warning-text,#92400e)', 2: 'var(--color-warning-text,#92400e)', 3: 'var(--color-danger-text)', 4: 'var(--color-warning-text,#92400e)', 5: 'var(--color-warning-text,#92400e)' };
-const TEN_NHOM_BAT_THUONG = { 1: 'NhÃ³m 1 â€” NhÃ£n chÆ°a Ä‘Æ°á»£c nháº­n', 2: 'NhÃ³m 2 â€” Pre-advice cháº·ng cuá»‘i', 3: 'NhÃ³m 3 â€” HoÃ n tráº£ / báº¥t thÆ°á»ng', 4: 'NhÃ³m 4 â€” OFD Ä‘á»©ng yÃªn', 5: 'NhÃ³m 5 â€” Tráº¡ng thÃ¡i treo' };
+const TEN_NHOM_BAT_THUONG = { 1: 'Nhóm 1 — Nhãn chưa được nhận', 2: 'Nhóm 2 — Pre-advice chặng cuối', 3: 'Nhóm 3 — Hoàn trả / bất thường', 4: 'Nhóm 4 — OFD đứng yên', 5: 'Nhóm 5 — Trạng thái treo' };
 function veCanhBaoBatThuong() {
   const ds = _dsCanhBaoBatThuong;
   const el = document.getElementById('canh-bao-bat-thuong');
@@ -600,37 +600,37 @@ function veCanhBaoBatThuong() {
   const mauNen = nhom3 ? 'var(--color-danger-bg)' : 'var(--color-warning-bg)';
   const mauVien = nhom3 ? 'var(--color-danger-text)' : 'var(--color-warning-text,#92400e)';
   const mauText = mauVien;
-  const nut = `<button type="button" onclick="batTatCanhBaoBatThuong()" aria-expanded="${!_thuGonCanhBaoBatThuong}" style="margin-left:auto;background:transparent;border:1px solid currentColor;color:inherit;border-radius:6px;padding:2px 10px;font-weight:700;cursor:pointer;white-space:nowrap">${_thuGonCanhBaoBatThuong ? 'Hiá»‡n â–¾' : 'Thu gá»n â–´'}</button>`;
+  const nut = `<button type="button" onclick="batTatCanhBaoBatThuong()" aria-expanded="${!_thuGonCanhBaoBatThuong}" style="margin-left:auto;background:transparent;border:1px solid currentColor;color:inherit;border-radius:6px;padding:2px 10px;font-weight:700;cursor:pointer;white-space:nowrap">${_thuGonCanhBaoBatThuong ? 'Hiện ▾' : 'Thu gọn ▴'}</button>`;
   el.style.display = '';
   if (_thuGonCanhBaoBatThuong) {
     el.innerHTML = `<div style="background:${mauNen};color:${mauText};border:2px solid ${mauVien};border-radius:8px;padding:4px 10px;margin-bottom:var(--space-4);display:flex;gap:8px;align-items:center;font-weight:700">
-      ${icon('alert', { size: 18 })} ${ds.length} Ä‘Æ¡n váº­n chuyá»ƒn báº¥t thÆ°á»ng cáº§n kiá»ƒm tra ${nut}</div>`;
+      ${icon('alert', { size: 18 })} ${ds.length} đơn vận chuyển bất thường cần kiểm tra ${nut}</div>`;
     return;
   }
   el.innerHTML = `
     <div style="background:${mauNen};color:${mauText};border:3px solid ${mauVien};border-radius:8px;padding:14px 16px;margin-bottom:var(--space-4)">
-      <div style="font-size:1.2rem;font-weight:700;display:flex;gap:8px;align-items:center;flex-wrap:wrap">${icon('alert', { size: 24 })} ${ds.length} ÄÆ N Váº¬N CHUYá»‚N Báº¤T THÆ¯á»œNG Cáº¦N KIá»‚M TRA ${nut}</div>
-      <p style="margin:6px 0 10px">CÃ¡c Ä‘Æ¡n cÃ³ tráº¡ng thÃ¡i tracking Ä‘Ã¡ng nghi ngá» â€” cáº§n liÃªn há»‡ hÃ£ng váº­n chuyá»ƒn hoáº·c xá»­ lÃ½ thá»§ cÃ´ng.</p>
+      <div style="font-size:1.2rem;font-weight:700;display:flex;gap:8px;align-items:center;flex-wrap:wrap">${icon('alert', { size: 24 })} ${ds.length} ĐƠN VẬN CHUYỂN BẤT THƯỜNG CẦN KIỂM TRA ${nut}</div>
+      <p style="margin:6px 0 10px">Các đơn có trạng thái tracking đáng nghi ngờ — cần liên hệ hãng vận chuyển hoặc xử lý thủ công.</p>
       <table style="width:100%;border-collapse:collapse;font-size:0.88rem">
         <thead><tr style="border-bottom:2px solid color-mix(in srgb, ${mauVien} 30%, transparent)">
-          <th style="text-align:left;padding:4px 8px">MÃ£ Ä‘Æ¡n</th>
-          <th style="text-align:left;padding:4px 8px">NhÃ³m</th>
-          <th style="text-align:left;padding:4px 8px">Tráº¡ng thÃ¡i tracking</th>
-          <th style="text-align:right;padding:4px 8px">Äá»©ng yÃªn</th>
+          <th style="text-align:left;padding:4px 8px">Mã đơn</th>
+          <th style="text-align:left;padding:4px 8px">Nhóm</th>
+          <th style="text-align:left;padding:4px 8px">Trạng thái tracking</th>
+          <th style="text-align:right;padding:4px 8px">Đứng yên</th>
         </tr></thead>
         <tbody>
           ${ds.map(d => `<tr style="border-top:1px solid color-mix(in srgb, ${MAU_TEXT_NHOM_BAT_THUONG[d.nhom] || mauVien} 20%, transparent)">
             <td style="padding:4px 8px"><a href="/order.html?stt=${encodeURIComponent(d.sttKey)}" target="_blank" rel="noopener" style="font-weight:700;color:inherit">${escapeHtml(d.sttKey)}</a>${d.quocGia ? ` <small>(${escapeHtml(d.quocGia)})</small>` : ''}</td>
-            <td style="padding:4px 8px"><span style="background:${MAU_NHOM_BAT_THUONG[d.nhom] || mauNen};color:${MAU_TEXT_NHOM_BAT_THUONG[d.nhom] || mauText};border-radius:4px;padding:1px 6px;font-size:0.8rem;white-space:nowrap">${escapeHtml(TEN_NHOM_BAT_THUONG[d.nhom] || `NhÃ³m ${d.nhom}`)}</span></td>
+            <td style="padding:4px 8px"><span style="background:${MAU_NHOM_BAT_THUONG[d.nhom] || mauNen};color:${MAU_TEXT_NHOM_BAT_THUONG[d.nhom] || mauText};border-radius:4px;padding:1px 6px;font-size:0.8rem;white-space:nowrap">${escapeHtml(TEN_NHOM_BAT_THUONG[d.nhom] || `Nhóm ${d.nhom}`)}</span></td>
             <td style="padding:4px 8px;word-break:break-word">${escapeHtml(d.trangThai || '')}</td>
-            <td style="padding:4px 8px;text-align:right;white-space:nowrap">${d.nhom === 3 ? 'â€”' : `${d.soNgay} ngÃ y`}${d.diaDiem ? `<br><small style="color:inherit;opacity:.75">${escapeHtml(d.diaDiem)}</small>` : ''}</td>
+            <td style="padding:4px 8px;text-align:right;white-space:nowrap">${d.nhom === 3 ? '—' : `${d.soNgay} ngày`}${d.diaDiem ? `<br><small style="color:inherit;opacity:.75">${escapeHtml(d.diaDiem)}</small>` : ''}</td>
           </tr>`).join('')}
         </tbody>
       </table>
     </div>`;
 }
 
-// ---- XUáº¤T EXCEL MUA TRACKING THá»¦ CÃ”NG (02/10/2026) â€” server kiá»ƒm tra láº¡i má»i thá»© (ká»ƒ cáº£ lÃºc táº£i file).
+// ---- XUẤT EXCEL MUA TRACKING THỦ CÔNG (02/10/2026) — server kiểm tra lại mọi thứ (kể cả lúc tải file).
 let dsGoiYXeg = [];
 const xegChon = new Set();
 let ketQuaXeg = null;
@@ -640,7 +640,7 @@ function batTatXuatExcelGke() {
   khoi.style.display = mo ? '' : 'none';
   const nut = document.getElementById('btn-xuat-excel-gke');
   nut.setAttribute('aria-expanded', String(mo));
-  nut.textContent = `XUáº¤T EXCEL MUA TRACKING THá»¦ CÃ”NG ${mo ? 'â–´' : 'â–¾'}`;
+  nut.textContent = `XUẤT EXCEL MUA TRACKING THỦ CÔNG ${mo ? '▴' : '▾'}`;
   if (mo) taiGoiYXeg();
 }
 function doiCachChonXeg() {
@@ -650,7 +650,7 @@ function doiCachChonXeg() {
 }
 async function taiGoiYXeg() {
   const el = document.getElementById('xeg-goi-y');
-  try { dsGoiYXeg = await apiFetch('/tracking/xuat-excel-gke/goi-y'); } catch (e) { el.textContent = 'Lá»—i: ' + e.message; return; }
+  try { dsGoiYXeg = await apiFetch('/tracking/xuat-excel-gke/goi-y'); } catch (e) { el.textContent = 'Lỗi: ' + e.message; return; }
   for (const k of [...xegChon]) if (!dsGoiYXeg.some(d => d.sttKey === k)) xegChon.delete(k);
   veGoiYXeg();
 }
@@ -661,17 +661,17 @@ const dsGoiYXegHienThi = () => {
 function veGoiYXeg() {
   const el = document.getElementById('xeg-goi-y');
   const ds = dsGoiYXegHienThi();
-  if (!dsGoiYXeg.length) { el.innerHTML = '<p style="color:var(--color-text-muted)">KhÃ´ng cÃ³ Ä‘Æ¡n nÃ o Ä‘ang chuyá»ƒn mua thá»§ cÃ´ng. DÃ¹ng "Nháº­p mÃ£ Ä‘Æ¡n" Ä‘á»ƒ xuáº¥t Ä‘Æ¡n khÃ¡c.</p>'; return; }
+  if (!dsGoiYXeg.length) { el.innerHTML = '<p style="color:var(--color-text-muted)">Không có đơn nào đang chuyển mua thủ công. Dùng "Nhập mã đơn" để xuất đơn khác.</p>'; return; }
   document.getElementById('xeg-chon-tat-ca').checked = ds.length > 0 && ds.every(d => xegChon.has(d.sttKey));
-  el.innerHTML = `<table class="bang-xem-truoc"><thead><tr><th></th><th>MÃ£ Ä‘Æ¡n</th><th>Quá»‘c gia</th><th>NgÆ°á»i nháº­n</th><th>Äá»‹a chá»‰</th><th>NgÃ y lÃªn Ä‘Æ¡n</th><th>Lá»—i mua tracking gáº§n nháº¥t</th><th>Xuáº¥t Excel?</th></tr></thead><tbody>
+  el.innerHTML = `<table class="bang-xem-truoc"><thead><tr><th></th><th>Mã đơn</th><th>Quốc gia</th><th>Người nhận</th><th>Địa chỉ</th><th>Ngày lên đơn</th><th>Lỗi mua tracking gần nhất</th><th>Xuất Excel?</th></tr></thead><tbody>
     ${ds.map(d => `<tr>
-      <td><input type="checkbox" ${xegChon.has(d.sttKey) ? 'checked' : ''} onchange="chonXeg('${escapeJsChuoi(d.sttKey)}', this.checked)" aria-label="Chá»n ${escapeHtml(d.sttKey)}"></td>
+      <td><input type="checkbox" ${xegChon.has(d.sttKey) ? 'checked' : ''} onchange="chonXeg('${escapeJsChuoi(d.sttKey)}', this.checked)" aria-label="Chọn ${escapeHtml(d.sttKey)}"></td>
       <td><a href="/order.html?stt=${encodeURIComponent(d.sttKey)}" target="_blank" rel="noopener">${escapeHtml(d.sttKey)}</a></td>
-      <td>${escapeHtml(d.quocGia || 'â€”')}</td><td>${escapeHtml(d.ten || 'â€”')}</td>
-      <td style="min-width:200px;word-break:break-word">${escapeHtml(d.diaChi || 'â€”')}</td><td>${escapeHtml(d.ngayLenDon || '')}</td>
-      <td style="min-width:220px;word-break:break-word;color:var(--color-danger-text)">${escapeHtml(d.lyDoLoi || '(khÃ´ng rÃµ)')}<br><small>thá»­ ${d.soLanThu} láº§n${d.thoiGianThu ? `, gáº§n nháº¥t ${dinhDangNgayGioNganAnToan(d.thoiGianThu)}` : ''}</small></td>
-      <td style="min-width:200px">${d.xuatDuoc ? `<strong style="color:var(--color-success-text)">ÄÆ°á»£c</strong>${d.canhBao.length ? `<br><small style="color:var(--color-warning-text,#92400e)">âš  ${d.canhBao.map(escapeHtml).join('<br>âš  ')}</small>` : ''}`
-        : `<strong style="color:var(--color-danger-text)">KhÃ´ng</strong><br><small>${d.lyDoKhongXuat.map(escapeHtml).join('<br>')}</small>`}</td>
+      <td>${escapeHtml(d.quocGia || '—')}</td><td>${escapeHtml(d.ten || '—')}</td>
+      <td style="min-width:200px;word-break:break-word">${escapeHtml(d.diaChi || '—')}</td><td>${escapeHtml(d.ngayLenDon || '')}</td>
+      <td style="min-width:220px;word-break:break-word;color:var(--color-danger-text)">${escapeHtml(d.lyDoLoi || '(không rõ)')}<br><small>thử ${d.soLanThu} lần${d.thoiGianThu ? `, gần nhất ${dinhDangNgayGioNganAnToan(d.thoiGianThu)}` : ''}</small></td>
+      <td style="min-width:200px">${d.xuatDuoc ? `<strong style="color:var(--color-success-text)">Được</strong>${d.canhBao.length ? `<br><small style="color:var(--color-warning-text,#92400e)">⚠ ${d.canhBao.map(escapeHtml).join('<br>⚠ ')}</small>` : ''}`
+        : `<strong style="color:var(--color-danger-text)">Không</strong><br><small>${d.lyDoKhongXuat.map(escapeHtml).join('<br>')}</small>`}</td>
     </tr>`).join('')}</tbody></table>`;
 }
 function chonXeg(ma, co) { if (co) xegChon.add(ma); else xegChon.delete(ma); veGoiYXeg(); }
@@ -682,29 +682,29 @@ async function kiemTraXeg(nut) {
   const tb = document.getElementById('xeg-thong-bao');
   const el = document.getElementById('xeg-ket-qua');
   const ma = cacMaXeg();
-  if (!ma.length) { tb.style.color = 'var(--color-danger-text)'; tb.textContent = 'ChÆ°a chá»n / nháº­p mÃ£ Ä‘Æ¡n nÃ o.'; return; }
-  nut.disabled = true; tb.textContent = 'Äang kiá»ƒm tra...'; tb.style.color = '';
+  if (!ma.length) { tb.style.color = 'var(--color-danger-text)'; tb.textContent = 'Chưa chọn / nhập mã đơn nào.'; return; }
+  nut.disabled = true; tb.textContent = 'Đang kiểm tra...'; tb.style.color = '';
   try { ketQuaXeg = await apiFetch('/tracking/xuat-excel-gke/kiem-tra', { method: 'POST', body: JSON.stringify({ sttKeys: ma }) }); }
-  catch (e) { tb.style.color = 'var(--color-danger-text)'; tb.textContent = 'Lá»—i: ' + e.message; nut.disabled = false; return; }
+  catch (e) { tb.style.color = 'var(--color-danger-text)'; tb.textContent = 'Lỗi: ' + e.message; nut.disabled = false; return; }
   nut.disabled = false; tb.textContent = '';
   const k = ketQuaXeg;
   const theoTk = {};
   k.hopLe.forEach(d => { (theoTk[d.taiKhoan.id] ||= { ten: d.taiKhoan.ten, ds: [] }).ds.push(d); });
   const giaTri = (d, c) => escapeHtml(String(d.duLieu[c] ?? ''));
   el.innerHTML = `<div style="border:1px solid var(--color-border);border-radius:8px;padding:10px;margin-bottom:10px">
-      <strong>Tá»•ng mÃ£ yÃªu cáº§u: ${k.tong}</strong> Â· <span style="color:var(--color-success-text)">Äá»§ Ä‘iá»u kiá»‡n: ${k.hopLe.length}</span>
-      Â· <span style="color:var(--color-danger-text)">KhÃ´ng Ä‘á»§ Ä‘iá»u kiá»‡n: ${k.biLoai.length}</span> Â· KhÃ´ng tÃ¬m tháº¥y: ${k.khongTimThay.length}</div>
+      <strong>Tổng mã yêu cầu: ${k.tong}</strong> · <span style="color:var(--color-success-text)">Đủ điều kiện: ${k.hopLe.length}</span>
+      · <span style="color:var(--color-danger-text)">Không đủ điều kiện: ${k.biLoai.length}</span> · Không tìm thấy: ${k.khongTimThay.length}</div>
     ${Object.entries(theoTk).map(([id, tk]) => `<div style="margin-bottom:14px">
-      <p style="margin:0 0 6px"><strong>TÃ i khoáº£n GKE: ${escapeHtml(tk.ten)}</strong> â€” ${tk.ds.length} Ä‘Æ¡n
-        <button type="button" class="btn-hanh-dong" style="margin-left:8px" onclick="taiExcelXeg(this, '${escapeJsChuoi(id)}')">Táº£i Excel (${tk.ds.length} Ä‘Æ¡n)</button></p>
-      <div style="overflow-x:auto"><table class="bang-xem-truoc"><thead><tr><th>MÃ£ Ä‘Æ¡n</th><th>NgÆ°á»i nháº­n</th><th>SÄT</th><th>Quá»‘c gia</th><th>ZIP</th><th>Bang</th><th>ThÃ nh phá»‘</th><th>Äá»‹a chá»‰ 1 (street)</th><th>Äá»‹a chá»‰ 2 (address)</th><th>CÃ¢n náº·ng</th><th>SL</th><th>Cáº£nh bÃ¡o</th></tr></thead><tbody>
+      <p style="margin:0 0 6px"><strong>Tài khoản GKE: ${escapeHtml(tk.ten)}</strong> — ${tk.ds.length} đơn
+        <button type="button" class="btn-hanh-dong" style="margin-left:8px" onclick="taiExcelXeg(this, '${escapeJsChuoi(id)}')">Tải Excel (${tk.ds.length} đơn)</button></p>
+      <div style="overflow-x:auto"><table class="bang-xem-truoc"><thead><tr><th>Mã đơn</th><th>Người nhận</th><th>SĐT</th><th>Quốc gia</th><th>ZIP</th><th>Bang</th><th>Thành phố</th><th>Địa chỉ 1 (street)</th><th>Địa chỉ 2 (address)</th><th>Cân nặng</th><th>SL</th><th>Cảnh báo</th></tr></thead><tbody>
       ${tk.ds.map(d => `<tr><td>${escapeHtml(d.sttKey)}</td><td>${giaTri(d, 'consignee_info.full_name')}</td><td>${giaTri(d, 'consignee_info.phone')}</td><td>${giaTri(d, 'consignee_info.country')}</td>
         <td>${giaTri(d, 'consignee_info.postcode')}</td><td>${giaTri(d, 'consignee_info.province')}</td><td>${giaTri(d, 'consignee_info.city')}</td>
         <td style="min-width:160px">${giaTri(d, 'consignee_info.street')}</td><td>${giaTri(d, 'consignee_info.address')}</td><td>${giaTri(d, 'parcel_list.weight')}</td><td>${giaTri(d, 'qty')}</td>
         <td style="min-width:220px;color:var(--color-warning-text,#92400e)">${d.canhBao.map(escapeHtml).join('<br>')}</td></tr>`).join('')}</tbody></table></div></div>`).join('')}
-    ${k.biLoai.length ? `<details open><summary><strong style="color:var(--color-danger-text)">${k.biLoai.length} Ä‘Æ¡n khÃ´ng Ä‘á»§ Ä‘iá»u kiá»‡n (khÃ´ng Ä‘Æ°a vÃ o file)</strong></summary>
+    ${k.biLoai.length ? `<details open><summary><strong style="color:var(--color-danger-text)">${k.biLoai.length} đơn không đủ điều kiện (không đưa vào file)</strong></summary>
       <ul>${k.biLoai.map(d => `<li><strong>${escapeHtml(d.sttKey)}</strong>: ${d.lyDo.map(escapeHtml).join(' ')}</li>`).join('')}</ul></details>` : ''}
-    ${k.khongTimThay.length ? `<p><strong>KhÃ´ng tÃ¬m tháº¥y</strong> (khÃ´ng cÃ³ hoáº·c ngoÃ i XÆ°á»Ÿng báº¡n phá»¥ trÃ¡ch): ${k.khongTimThay.map(escapeHtml).join(', ')}</p>` : ''}`;
+    ${k.khongTimThay.length ? `<p><strong>Không tìm thấy</strong> (không có hoặc ngoài Xưởng bạn phụ trách): ${k.khongTimThay.map(escapeHtml).join(', ')}</p>` : ''}`;
 }
 async function taiExcelXeg(nut, taiKhoanId) {
   const tb = document.getElementById('xeg-thong-bao');
@@ -712,27 +712,27 @@ async function taiExcelXeg(nut, taiKhoanId) {
   nut.disabled = true;
   try {
     const res = await fetch('/api/tracking/xuat-excel-gke/tai', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sttKeys: ma, taiKhoanId }) });
-    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'KhÃ´ng táº¡o Ä‘Æ°á»£c file');
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Không tạo được file');
     const ten = (/filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') || '') || [])[1] || 'GKE_Manual_Tracking.xlsx';
     const url = URL.createObjectURL(await res.blob());
     const a = document.createElement('a'); a.href = url; a.download = ten; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 5000);
-    tb.style.color = 'var(--color-success-text)'; tb.textContent = `ÄÃ£ táº¡o ${ten}. Nhá»›: chÆ°a mua tracking â€” táº£i file nÃ y lÃªn website GKE.`;
-  } catch (e) { tb.style.color = 'var(--color-danger-text)'; tb.textContent = 'Lá»—i: ' + e.message; }
+    tb.style.color = 'var(--color-success-text)'; tb.textContent = `Đã tạo ${ten}. Nhớ: chưa mua tracking — tải file này lên website GKE.`;
+  } catch (e) { tb.style.color = 'var(--color-danger-text)'; tb.textContent = 'Lỗi: ' + e.message; }
   nut.disabled = false;
 }
 
-// Thu gá»n (02/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng): LUÃ”N thu gá»n má»—i láº§n má»Ÿ trang, khÃ´ng nhá»›, khÃ´ng tá»± má»Ÿ khi cÃ³ Ä‘Æ¡n má»›i;
-// báº¥m Hiá»‡n/Thu gá»n chá»‰ giá»¯ trong lÆ°á»£t xem hiá»‡n táº¡i (táº£i láº¡i danh sÃ¡ch sau khi mua khÃ´ng Ä‘á»•i lá»±a chá»n).
+// Thu gọn (02/10/2026, theo yêu cầu người dùng): LUÔN thu gọn mỗi lần mở trang, không nhớ, không tự mở khi có đơn mới;
+// bấm Hiện/Thu gọn chỉ giữ trong lượt xem hiện tại (tải lại danh sách sau khi mua không đổi lựa chọn).
 let _dsCanhBaoThuCong = [];
 let _thuGonCanhBao = true;
-let _bangGgSheet = {}; // team -> sheet_url, náº¡p 1 láº§n
+let _bangGgSheet = {}; // team -> sheet_url, nạp 1 lần
 
 async function taiBangGgSheet() {
   try {
     const ds = await apiFetch('/google-sheet-team');
     _bangGgSheet = Object.fromEntries(ds.map(r => [r.team, r.sheet_url]));
-  } catch { /* khÃ´ng báº¯t buá»™c */ }
+  } catch { /* không bắt buộc */ }
 }
 
 function layTeamTuSttKey(sttKey) {
@@ -744,36 +744,36 @@ function htmlLinkGgSheet(sttKey) {
   const team = layTeamTuSttKey(sttKey);
   const url = team && _bangGgSheet[team];
   if (!url || !/^https?:\/\//i.test(url)) return '';
-  return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener" style="font-size:0.8rem;white-space:nowrap" title="Google Sheet Team ${escapeHtml(team)}">ðŸ“‹ Sheet ${escapeHtml(team)}</a>`;
+  return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener" style="font-size:0.8rem;white-space:nowrap" title="Google Sheet Team ${escapeHtml(team)}">📋 Sheet ${escapeHtml(team)}</a>`;
 }
 function batTatCanhBaoThuCong() { _thuGonCanhBao = !_thuGonCanhBao; veCanhBaoThuCong(); }
 function veCanhBaoThuCong() {
   const ds = _dsCanhBaoThuCong;
   const el = document.getElementById('canh-bao-thu-cong');
-  const nut = `<button type="button" onclick="batTatCanhBaoThuCong()" aria-expanded="${!_thuGonCanhBao}" style="margin-left:auto;background:transparent;border:1px solid currentColor;color:inherit;border-radius:6px;padding:2px 10px;font-weight:700;cursor:pointer;white-space:nowrap">${_thuGonCanhBao ? 'Hiá»‡n â–¾' : 'Thu gá»n â–´'}</button>`;
+  const nut = `<button type="button" onclick="batTatCanhBaoThuCong()" aria-expanded="${!_thuGonCanhBao}" style="margin-left:auto;background:transparent;border:1px solid currentColor;color:inherit;border-radius:6px;padding:2px 10px;font-weight:700;cursor:pointer;white-space:nowrap">${_thuGonCanhBao ? 'Hiện ▾' : 'Thu gọn ▴'}</button>`;
   el.style.display = '';
   if (_thuGonCanhBao) {
     el.innerHTML = `<div style="background:var(--color-danger-bg);color:var(--color-danger-text);border:2px solid var(--color-danger-text);border-radius:8px;padding:4px 10px;margin-bottom:var(--space-4);display:flex;gap:8px;align-items:center;font-weight:700">
-      ${icon('alert', { size: 18 })} ${ds.length} Ä‘Æ¡n khÃ´ng thá»ƒ tá»± Ä‘á»™ng mua tracking â€” Ä‘Ã£ chuyá»ƒn sang mua thá»§ cÃ´ng ${nut}</div>`;
+      ${icon('alert', { size: 18 })} ${ds.length} đơn không thể tự động mua tracking — đã chuyển sang mua thủ công ${nut}</div>`;
     return;
   }
   el.innerHTML = `
     <div style="background:var(--color-danger-bg);color:var(--color-danger-text);border:3px solid var(--color-danger-text);border-radius:8px;padding:14px 16px;margin-bottom:var(--space-4)">
-      <div style="font-size:1.2rem;font-weight:700;display:flex;gap:8px;align-items:center;flex-wrap:wrap">${icon('alert', { size: 24 })} ${ds.length} ÄÆ N KHÃ”NG THá»‚ Tá»° Äá»˜NG MUA TRACKING â€” ÄÃƒ CHUYá»‚N SANG MUA THá»¦ CÃ”NG ${nut}</div>
-      <p style="margin:6px 0 10px">Há»‡ thá»‘ng Ä‘Ã£ tá»± Ä‘á»™ng thá»­ 10 láº§n khÃ´ng thÃ nh cÃ´ng vÃ  dá»«ng thá»­. Kiá»ƒm tra nguyÃªn nhÃ¢n, sá»­a thÃ´ng tin Ä‘Æ¡n rá»“i báº¥m "Mua ngay" hoáº·c "Cho tá»± Ä‘á»™ng thá»­ láº¡i".</p>
+      <div style="font-size:1.2rem;font-weight:700;display:flex;gap:8px;align-items:center;flex-wrap:wrap">${icon('alert', { size: 24 })} ${ds.length} ĐƠN KHÔNG THỂ TỰ ĐỘNG MUA TRACKING — ĐÃ CHUYỂN SANG MUA THỦ CÔNG ${nut}</div>
+      <p style="margin:6px 0 10px">Hệ thống đã tự động thử 10 lần không thành công và dừng thử. Kiểm tra nguyên nhân, sửa thông tin đơn rồi bấm "Mua ngay" hoặc "Cho tự động thử lại".</p>
       ${ds.map(d => `
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 0;border-top:1px solid color-mix(in srgb, var(--color-danger-text) 25%, transparent)">
           <a href="/order.html?stt=${encodeURIComponent(d.sttKey)}" style="font-weight:700;color:inherit">${escapeHtml(d.sttKey)}</a>
           ${d.hangTuMua === 'KL' ? htmlLinkGgSheet(d.sttKey) : ''}
-          <span style="flex:1 1 260px;min-width:0;word-break:break-word">${d.hangTuMua ? `<strong>[${escapeHtml(d.hangTuMua)}]</strong> ` : ''}${escapeHtml(d.lyDo || '(khÃ´ng rÃµ nguyÃªn nhÃ¢n)')} <small>(thá»­ ${d.soLanThu} láº§n${d.thoiGianThu ? `, gáº§n nháº¥t ${dinhDangNgayGioNganAnToan(d.thoiGianThu)}` : ''})</small></span>
+          <span style="flex:1 1 260px;min-width:0;word-break:break-word">${d.hangTuMua ? `<strong>[${escapeHtml(d.hangTuMua)}]</strong> ` : ''}${escapeHtml(d.lyDo || '(không rõ nguyên nhân)')} <small>(thử ${d.soLanThu} lần${d.thoiGianThu ? `, gần nhất ${dinhDangNgayGioNganAnToan(d.thoiGianThu)}` : ''})</small></span>
           ${d.hangTuMua === 'KL' || d.hangTuMua === 'HPW'
             ? (duocMuaNgay(d.hangTuMua)
               ? `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="muaHangKhacTuBang(this, '${escapeJsChuoi(d.sttKey)}', 'CHUYEN_THU_CONG', '${d.hangTuMua}')">Mua ${d.hangTuMua} ngay</button>`
               : d.duInLabel
-                ? `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="muaHangKhacVaInLabelTuBang(this, '${escapeJsChuoi(d.sttKey)}', '${d.hangTuMua}')">MUA ${d.hangTuMua} vÃ  IN LABEL</button>`
-                : `<small>ChÆ°a sáº£n xuáº¥t xong â€” admin mua ${escapeHtml(d.hangTuMua)}, hoáº·c mua + in label khi Ä‘Ã£ sáº£n xuáº¥t</small>`)
+                ? `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="muaHangKhacVaInLabelTuBang(this, '${escapeJsChuoi(d.sttKey)}', '${d.hangTuMua}')">MUA ${d.hangTuMua} và IN LABEL</button>`
+                : `<small>Chưa sản xuất xong — admin mua ${escapeHtml(d.hangTuMua)}, hoặc mua + in label khi đã sản xuất</small>`)
             : `<button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="muaThuCongTuBang(this, '${escapeJsChuoi(d.sttKey)}', 'CHUYEN_THU_CONG')">Mua ngay</button>`}
-          <button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="choTuDongLaiTuBang(this, '${escapeJsChuoi(d.sttKey)}')">Cho tá»± Ä‘á»™ng thá»­ láº¡i</button>
+          <button type="button" class="btn-hanh-dong phu" style="padding:6px 10px;font-size:0.82rem" onclick="choTuDongLaiTuBang(this, '${escapeJsChuoi(d.sttKey)}')">Cho tự động thử lại</button>
           ${htmlNutBoQuaCanhBao(d.sttKey)}
           ${htmlSuaThongTinGke(d)}
           ${htmlSuaThongTinKl(d)}
@@ -781,120 +781,120 @@ function veCanhBaoThuCong() {
     </div>`;
 }
 
-// "Cho tá»± Ä‘á»™ng thá»­ láº¡i" â€” Ä‘áº·t láº¡i sá»‘ láº§n thá»­, job tá»± Ä‘á»™ng mua láº¡i Ä‘Æ¡n nÃ y á»Ÿ cÃ¡c lÆ°á»£t sau (tá»‘i Ä‘a 10 láº§n ná»¯a).
+// "Cho tự động thử lại" — đặt lại số lần thử, job tự động mua lại đơn này ở các lượt sau (tối đa 10 lần nữa).
 async function choTuDongLaiTuBang(btn, sttKey) {
-  if (!confirm(`Cho há»‡ thá»‘ng tá»± Ä‘á»™ng thá»­ mua tracking láº¡i cho Ä‘Æ¡n ${sttKey}? (NÃªn sá»­a xong thÃ´ng tin Ä‘Æ¡n trÆ°á»›c â€” tá»‘i Ä‘a 10 láº§n thá»­ ná»¯a.)`)) return;
+  if (!confirm(`Cho hệ thống tự động thử mua tracking lại cho đơn ${sttKey}? (Nên sửa xong thông tin đơn trước — tối đa 10 lần thử nữa.)`)) return;
   btn.disabled = true;
   try {
     const kq = await apiFetch('/tracking/cho-tu-dong-lai', { method: 'POST', body: JSON.stringify({ sttKeys: [sttKey] }) });
-    if (kq.loi.length) alert('KhÃ´ng thá»±c hiá»‡n Ä‘Æ°á»£c: ' + kq.loi[0].lyDo);
-  } catch (e) { alert('Lá»—i: ' + e.message); }
+    if (kq.loi.length) alert('Không thực hiện được: ' + kq.loi[0].lyDo);
+  } catch (e) { alert('Lỗi: ' + e.message); }
   btn.disabled = false;
   await taiDanhSach();
   await taiLogs();
 }
 
-// NÃºt "Mua ngay" â€” mua tracking THá»¦ CÃ”NG cho 1 Ä‘Æ¡n, bá» qua bá»™ Ä‘áº¿m "x phÃºt" (bá»• sung 09/09/2026, theo
-// yÃªu cáº§u ngÆ°á»i dÃ¹ng). DÃ¹ng CHUNG API /tracking/mua-thu-cong vá»›i nÃºt tÆ°Æ¡ng tá»± á»Ÿ order.html.
-// trangThai = mÃ£ tráº¡ng thÃ¡i cá»§a hÃ ng (layDanhSachDonAutoTracking) â€” Ä‘Æ¡n Ä‘Ã£ huá»· bÃ¡o Ä‘á» ngay, khÃ´ng há»i xÃ¡c nháº­n.
+// Nút "Mua ngay" — mua tracking THỦ CÔNG cho 1 đơn, bỏ qua bộ đếm "x phút" (bổ sung 09/09/2026, theo
+// yêu cầu người dùng). Dùng CHUNG API /tracking/mua-thu-cong với nút tương tự ở order.html.
+// trangThai = mã trạng thái của hàng (layDanhSachDonAutoTracking) — đơn đã huỷ báo đỏ ngay, không hỏi xác nhận.
 async function muaThuCongTuBang(btn, sttKey, trangThai) {
   if (trangThai === 'DA_HUY') return hienThongBaoDonDaHuy([sttKey]);
-  if (!confirm(`Mua tracking GKE thá»§ cÃ´ng cho Ä‘Æ¡n ${sttKey} ngay bÃ¢y giá»? ÄÃ¢y lÃ  thao tÃ¡c táº¡o váº­n Ä‘Æ¡n THáº¬T, cÃ³ thá»ƒ phÃ¡t sinh chi phÃ­.`)) return;
+  if (!confirm(`Mua tracking GKE thủ công cho đơn ${sttKey} ngay bây giờ? Đây là thao tác tạo vận đơn THẬT, có thể phát sinh chi phí.`)) return;
 
   const nhanGoc = btn.innerHTML;
   btn.disabled = true;
-  btn.textContent = 'Äang mua...';
+  btn.textContent = 'Đang mua...';
 
   try {
     const ketQua = await apiFetch('/tracking/mua-thu-cong', { method: 'POST', body: JSON.stringify({ sttKeys: [sttKey] }) });
     if (ketQua.loi && ketQua.loi.length > 0) {
       const loiKhac = await tachVaBaoDonDaHuy(ketQua.loi);
-      if (loiKhac.length) alert('KhÃ´ng mua Ä‘Æ°á»£c tracking: ' + loiKhac[0].lyDo);
+      if (loiKhac.length) alert('Không mua được tracking: ' + loiKhac[0].lyDo);
       btn.disabled = false;
       btn.innerHTML = nhanGoc;
       return;
     }
-    // Ghi tracking sang Sheet Seller (21/09/2026; há»™p Ä‘á» tá»« 28/09/2026) â€” tracking THáº¬T
-    // Ä‘Ã£ mua thÃ nh cÃ´ng (Ä‘Ã£ qua nhÃ¡nh loi[] á»Ÿ trÃªn), chá»‰ bÃ¡o riÃªng náº¿u bÆ°á»›c ghi sang Sheet Seller
-    // tháº¥t báº¡i (xem routes/tracking.js).
+    // Ghi tracking sang Sheet Seller (21/09/2026; hộp đỏ từ 28/09/2026) — tracking THẬT
+    // đã mua thành công (đã qua nhánh loi[] ở trên), chỉ báo riêng nếu bước ghi sang Sheet Seller
+    // thất bại (xem routes/tracking.js).
     await baoLoiSheetSeller(ketQua.loiDaySheetKh);
     await taiDanhSach();
     await taiLogs();
   } catch (e) {
-    alert('Lá»—i: ' + e.message);
+    alert('Lỗi: ' + e.message);
     btn.disabled = false;
     btn.innerHTML = nhanGoc;
   }
 }
 
-// "Mua KL" / "Mua HPW" theo hÃ ng (28/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” nÃºt riÃªng tá»«ng hÃ£ng; quyá»n theo duocMuaNgay: KL admin + váº½ file, HPW chá»‰ admin â€” nhÆ° khá»‘i KL / HPW á»Ÿ Chi tiáº¿t Ä‘Æ¡n).
+// "Mua KL" / "Mua HPW" theo hàng (28/10/2026, theo yêu cầu người dùng — nút riêng từng hãng; quyền theo duocMuaNgay: KL admin + vẽ file, HPW chỉ admin — như khối KL / HPW ở Chi tiết đơn).
 async function muaHangKhacTuBang(btn, sttKey, trangThai, ten) {
   if (trangThai === 'DA_HUY') return hienThongBaoDonDaHuy([sttKey]);
-  if (!confirm(`Mua tracking ${ten} cho Ä‘Æ¡n ${sttKey} ngay bÃ¢y giá»? ÄÃ¢y lÃ  thao tÃ¡c táº¡o Ä‘Æ¡n váº­n chuyá»ƒn THáº¬T bÃªn ${ten}, cÃ³ thá»ƒ phÃ¡t sinh phÃ­.`)) return;
+  if (!confirm(`Mua tracking ${ten} cho đơn ${sttKey} ngay bây giờ? Đây là thao tác tạo đơn vận chuyển THẬT bên ${ten}, có thể phát sinh phí.`)) return;
   const nhanGoc = btn.innerHTML;
   btn.disabled = true;
-  btn.textContent = 'Äang mua...';
+  btn.textContent = 'Đang mua...';
   try {
     const kq = await apiFetch(`/tracking/${ten.toLowerCase()}/mua`, { method: 'POST', body: JSON.stringify({ sttKeys: [sttKey] }) });
     if (kq.loi && kq.loi.length) {
       const loiKhac = await tachVaBaoDonDaHuy(kq.loi);
-      if (loiKhac.length) alert(`KhÃ´ng mua Ä‘Æ°á»£c tracking ${ten}: ` + loiKhac[0].lyDo);
+      if (loiKhac.length) alert(`Không mua được tracking ${ten}: ` + loiKhac[0].lyDo);
     } else {
       const t = kq.thanhCong[0] || {};
-      if (t.canhBao) alert(`ÄÃ£ mua tracking ${ten}: ${t.tracking}\n\nLÆ°u Ã½: ${t.canhBao}`);
+      if (t.canhBao) alert(`Đã mua tracking ${ten}: ${t.tracking}\n\nLưu ý: ${t.canhBao}`);
       await baoLoiSheetSeller(kq.loiDaySheetKh);
     }
     await taiDanhSach();
     await taiLogs();
   } catch (e) {
-    alert('Lá»—i: ' + e.message);
+    alert('Lỗi: ' + e.message);
     btn.disabled = false;
     btn.innerHTML = nhanGoc;
   }
 }
 
-// "IN LABEL"/"MUA TRACKING vÃ  IN LABEL" theo hÃ ng (bá»• sung 09/09/2026 láº§n 2, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng)
-// â€” cÃ¹ng khuÃ´n muaThuCongTuBang() á»Ÿ trÃªn, khÃ¡c chá»— má»Ÿ há»™p thoáº¡i in khi thÃ nh cÃ´ng (moHopThoaiInPdf(),
-// Ä‘á»‹nh nghÄ©a trong js/api.js) vÃ  táº£i láº¡i cáº£ danh sÃ¡ch láº«n logs sau Ä‘Ã³.
+// "IN LABEL"/"MUA TRACKING và IN LABEL" theo hàng (bổ sung 09/09/2026 lần 2, theo yêu cầu người dùng)
+// — cùng khuôn muaThuCongTuBang() ở trên, khác chỗ mở hộp thoại in khi thành công (moHopThoaiInPdf(),
+// định nghĩa trong js/api.js) và tải lại cả danh sách lẫn logs sau đó.
 async function apDungInLabelTuBang(btn, sttKey) {
-  if (!confirm(`In label cho Ä‘Æ¡n ${sttKey}?`)) return;
+  if (!confirm(`In label cho đơn ${sttKey}?`)) return;
   await xuLyInLabelTuBang(btn, sttKey, '/tracking/in-label');
 }
 
-// Váº½ file (28/10/2026): "Mua KL/HPW ngay" chá»‰ admin â€” váº½ file Ä‘Æ°á»£c mua KL / HPW qua "Mua + In label" (hangVanChuyenKhacService#duocMuaHangKhac).
+// Vẽ file (28/10/2026): "Mua KL/HPW ngay" chỉ admin — vẽ file được mua KL / HPW qua "Mua + In label" (hangVanChuyenKhacService#duocMuaHangKhac).
 async function muaHangKhacVaInLabelTuBang(btn, sttKey, ten) {
-  if (!confirm(`Mua tracking ${ten} vÃ  in label cho Ä‘Æ¡n ${sttKey}? Táº¡o Ä‘Æ¡n váº­n chuyá»ƒn THáº¬T bÃªn ${ten}, cÃ³ thá»ƒ phÃ¡t sinh phÃ­.`)) return;
+  if (!confirm(`Mua tracking ${ten} và in label cho đơn ${sttKey}? Tạo đơn vận chuyển THẬT bên ${ten}, có thể phát sinh phí.`)) return;
   await xuLyInLabelTuBang(btn, sttKey, `/tracking/${ten.toLowerCase()}/mua-va-in-label`);
 }
 
 async function apDungMuaVaInLabelTuBang(btn, sttKey, trangThai) {
   if (trangThai === 'DA_HUY') return hienThongBaoDonDaHuy([sttKey]);
-  if (!confirm(`Mua tracking GKE (náº¿u chÆ°a cÃ³) vÃ  in label cho Ä‘Æ¡n ${sttKey}? CÃ³ thá»ƒ phÃ¡t sinh phÃ­ tháº­t vá»›i Ä‘Æ¡n chÆ°a cÃ³ tracking.`)) return;
+  if (!confirm(`Mua tracking GKE (nếu chưa có) và in label cho đơn ${sttKey}? Có thể phát sinh phí thật với đơn chưa có tracking.`)) return;
   await xuLyInLabelTuBang(btn, sttKey, '/tracking/mua-va-in-label');
 }
 
-// Lá»—i á»Ÿ Ã´ quÃ©t in label (30/10/2026, ngÆ°á»i dÃ¹ng Æ°u tiÃªn KL) -> { thongDiep, nut | null }: Ä‘Æ¡n chá» tem GKE -> nÃºt láº¥y tem GKE (chiLayTem: khÃ´ng
-// bao giá» táº¡o váº­n Ä‘Æ¡n má»›i); Ä‘Æ¡n chÆ°a cÃ³ tracking -> nÃºt mua KL náº¿u KL mua Ä‘Æ°á»£c (mÃ¡y chá»§ bÃ¡o lyDoKhongMuaKl rá»—ng) vÃ  ngÆ°á»i xem Ä‘Æ°á»£c mua KL;
-// khÃ´ng thÃ¬ chá»‰ bÃ¡o lÃ½ do. Váº«n KHÃ”NG tá»± mua khi quÃ©t â€” pháº£i báº¥m nÃºt (+ xÃ¡c nháº­n phÃ­).
+// Lỗi ở ô quét in label (30/10/2026, người dùng ưu tiên KL) -> { thongDiep, nut | null }: đơn chờ tem GKE -> nút lấy tem GKE (chiLayTem: không
+// bao giờ tạo vận đơn mới); đơn chưa có tracking -> nút mua KL nếu KL mua được (máy chủ báo lyDoKhongMuaKl rỗng) và người xem được mua KL;
+// không thì chỉ báo lý do. Vẫn KHÔNG tự mua khi quét — phải bấm nút (+ xác nhận phí).
 function xuLyLoiQuetInLabel(l0) {
   const nut = l0.maLoi === 'CHO_TEM_GKE'
-    ? { nhan: 'Láº¥y tem GKE vÃ  in', bam: b => xuLyInLabelTuBang(b, l0.sttKey, '/tracking/mua-va-in-label', { chiLayTem: true }) }
+    ? { nhan: 'Lấy tem GKE và in', bam: b => xuLyInLabelTuBang(b, l0.sttKey, '/tracking/mua-va-in-label', { chiLayTem: true }) }
     : l0.maLoi === 'CHUA_CO_TRACKING' && !l0.lyDoKhongMuaKl && duocMuaNgay('KL')
-      ? { nhan: 'Mua KL vÃ  in label KL', bam: b => muaHangKhacVaInLabelTuBang(b, l0.sttKey, 'KL') } : null;
-  return { thongDiep: `${l0.lyDo}${l0.lyDoKhongMuaKl ? ` (KL khÃ´ng mua Ä‘Æ°á»£c: ${l0.lyDoKhongMuaKl})` : ''}`, nut };
+      ? { nhan: 'Mua KL và in label KL', bam: b => muaHangKhacVaInLabelTuBang(b, l0.sttKey, 'KL') } : null;
+  return { thongDiep: `${l0.lyDo}${l0.lyDoKhongMuaKl ? ` (KL không mua được: ${l0.lyDoKhongMuaKl})` : ''}`, nut };
 }
 
-// them: trÆ°á»ng gá»­i thÃªm trong body (vd { chiLayTem: true }).
+// them: trường gửi thêm trong body (vd { chiLayTem: true }).
 async function xuLyInLabelTuBang(btn, sttKey, duongDan, them = {}) {
   const nhanGoc = btn.innerHTML;
   btn.disabled = true;
-  btn.textContent = 'Äang xá»­ lÃ½...';
+  btn.textContent = 'Đang xử lý...';
 
   try {
     const ketQua = await apiFetch(duongDan, { method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], ...them }) });
     if (ketQua.loi && ketQua.loi.length > 0) {
       const loiKhac = await tachVaBaoDonDaHuy(ketQua.loi);
-      if (loiKhac.length) alert('Lá»—i: ' + loiKhac[0].lyDo);
+      if (loiKhac.length) alert('Lỗi: ' + loiKhac[0].lyDo);
       btn.disabled = false;
       btn.innerHTML = nhanGoc;
       return;
@@ -907,14 +907,14 @@ async function xuLyInLabelTuBang(btn, sttKey, duongDan, them = {}) {
     await taiDanhSach();
     await taiLogs();
   } catch (e) {
-    alert('Lá»—i: ' + e.message);
+    alert('Lỗi: ' + e.message);
     btn.disabled = false;
     btn.innerHTML = nhanGoc;
   }
 }
 
-// Copy tsDep tá»« order.html/hoat-dong.html (má»—i trang tá»± chá»©a, dá»± Ã¡n khÃ´ng cÃ³ bÆ°á»›c build Ä‘á»ƒ chia sáº»
-// code giá»¯a cÃ¡c trang tÄ©nh) â€” Ä‘á»•i tÃªn Ä‘á»ƒ khÃ´ng Ä‘á»¥ng biáº¿n cÃ¹ng tÃªn náº¿u sau nÃ y gá»™p script dÃ¹ng chung.
+// Copy tsDep từ order.html/hoat-dong.html (mỗi trang tự chứa, dự án không có bước build để chia sẻ
+// code giữa các trang tĩnh) — đổi tên để không đụng biến cùng tên nếu sau này gộp script dùng chung.
 function dinhDangNgayGioNganAnToan(isoStr) {
   const d = new Date(isoStr);
   if (isNaN(d)) return escapeHtml(String(isoStr));

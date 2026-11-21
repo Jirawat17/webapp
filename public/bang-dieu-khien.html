@@ -1,14 +1,14 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Báº£ng Ä‘iá»u khiá»ƒn â€” XÆ°á»Ÿng ThÃªu</title>
+<title>Bảng điều khiển — Xưởng Thêu</title>
 <link rel="stylesheet" href="/css/style.css?v=112">
 <script src="/js/theme.js?v=104"></script>
 <style>
-/* Giao diá»‡n riÃªng cho trang nÃ y (khÃ´ng Ä‘á»¥ng style.css dÃ¹ng chung toÃ n app) â€” cá»‘ Ã½ LUÃ”N tá»‘i, khÃ´ng
-   theo Cháº¿ Ä‘á»™ SÃ¡ng/Tá»‘i cá»§a trang, vÃ¬ cáº£ phong cÃ¡ch "HUD" nÃ y chá»‰ há»£p ná»n tá»‘i (xem
+/* Giao diện riêng cho trang này (không đụng style.css dùng chung toàn app) — cố ý LUÔN tối, không
+   theo Chế độ Sáng/Tối của trang, vì cả phong cách "HUD" này chỉ hợp nền tối (xem
    docs/superpowers/specs/2026-09-08-bang-dieu-khien-admin-design.md). */
 .bdk-page {
   min-height: 100vh;
@@ -57,7 +57,7 @@
 }
 .bdk-kpi-card::before { top:-1px; left:-1px; border-top:2px solid; border-left:2px solid; border-top-left-radius:6px; }
 .bdk-kpi-card::after { bottom:-1px; right:-1px; border-bottom:2px solid; border-right:2px solid; border-bottom-right-radius:6px; }
-/* Ã” báº¥m Ä‘Æ°á»£c -> danh sÃ¡ch Ä‘Æ¡n (05/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) */
+/* Ô bấm được -> danh sách đơn (05/10/2026, theo yêu cầu người dùng) */
 .bdk-kpi-bam { cursor:pointer; transition: transform .15s ease, box-shadow .15s ease; }
 .bdk-kpi-bam:hover, .bdk-kpi-bam:focus-visible { transform: translateY(-2px); box-shadow: 0 0 26px rgba(126,232,250,0.28); outline: none; }
 .bdk-kpi-bam .bdk-kpi-nhan::after { content: " \203A"; }
@@ -127,124 +127,124 @@
 <div id="nav"></div>
 <div class="bdk-page">
   <div class="bdk-header">
-    <h2>Báº£ng Ä‘iá»u khiá»ƒn</h2>
-    <div class="bdk-cap-nhat">Cáº­p nháº­t lÃºc <span id="bdk-gio-cap-nhat">--:--:--</span> (tá»± lÃ m má»›i má»—i 60 giÃ¢y)</div>
+    <h2>Bảng điều khiển</h2>
+    <div class="bdk-cap-nhat">Cập nhật lúc <span id="bdk-gio-cap-nhat">--:--:--</span> (tự làm mới mỗi 60 giây)</div>
   </div>
 
   <div class="bdk-chon-ky" id="thanh-chon-ky">
-    <button type="button" data-ky="hom_nay">HÃ´m nay</button>
-    <button type="button" data-ky="tuan_nay">Tuáº§n nÃ y</button>
-    <button type="button" data-ky="thang_nay">ThÃ¡ng nÃ y</button>
-    <button type="button" data-ky="toan_bo" class="dang-mo">ToÃ n bá»™</button>
-    <button type="button" data-ky="tuy_chon">Tuá»³ chá»n...</button>
+    <button type="button" data-ky="hom_nay">Hôm nay</button>
+    <button type="button" data-ky="tuan_nay">Tuần này</button>
+    <button type="button" data-ky="thang_nay">Tháng này</button>
+    <button type="button" data-ky="toan_bo" class="dang-mo">Toàn bộ</button>
+    <button type="button" data-ky="tuy_chon">Tuỳ chọn...</button>
   </div>
 
   <div id="panel-khoang-ngay" class="bdk-khoang-ngay" style="display:none">
     <input type="date" id="bdk-tu-ngay">
     <input type="date" id="bdk-den-ngay">
-    <button type="button" id="btn-ap-dung-khoang">Ãp dá»¥ng</button>
+    <button type="button" id="btn-ap-dung-khoang">Áp dụng</button>
   </div>
 
   <div class="bdk-kpi-grid">
     <div class="bdk-kpi-card">
-      <div class="bdk-kpi-nhan">Tá»•ng sá»‘ Ä‘Æ¡n</div>
+      <div class="bdk-kpi-nhan">Tổng số đơn</div>
       <div class="bdk-kpi-so" id="kpi-tong-don">0</div>
     </div>
     <div class="bdk-kpi-card">
-      <div class="bdk-kpi-nhan">Tá»•ng sáº£n pháº©m</div>
+      <div class="bdk-kpi-nhan">Tổng sản phẩm</div>
       <div class="bdk-kpi-so" id="kpi-tong-sp">0</div>
     </div>
     <div class="bdk-kpi-card bdk-kpi-vang">
-      <div class="bdk-kpi-nhan">Cáº£nh bÃ¡o VÃ ng</div>
+      <div class="bdk-kpi-nhan">Cảnh báo Vàng</div>
       <div class="bdk-kpi-so" id="kpi-vang">0</div>
     </div>
-    <div class="bdk-kpi-card bdk-kpi-cam bdk-kpi-bam" role="button" tabindex="0" data-ds="CAM" aria-label="Xem danh sÃ¡ch Ä‘Æ¡n Cáº£nh bÃ¡o Cam">
-      <div class="bdk-kpi-nhan">Cáº£nh bÃ¡o Cam</div>
+    <div class="bdk-kpi-card bdk-kpi-cam bdk-kpi-bam" role="button" tabindex="0" data-ds="CAM" aria-label="Xem danh sách đơn Cảnh báo Cam">
+      <div class="bdk-kpi-nhan">Cảnh báo Cam</div>
       <div class="bdk-kpi-so" id="kpi-cam">0</div>
     </div>
-    <div class="bdk-kpi-card bdk-kpi-do bdk-kpi-bam" role="button" tabindex="0" data-ds="DO" aria-label="Xem danh sÃ¡ch Ä‘Æ¡n Cáº£nh bÃ¡o Äá»">
-      <div class="bdk-kpi-nhan">Cáº£nh bÃ¡o Äá»</div>
+    <div class="bdk-kpi-card bdk-kpi-do bdk-kpi-bam" role="button" tabindex="0" data-ds="DO" aria-label="Xem danh sách đơn Cảnh báo Đỏ">
+      <div class="bdk-kpi-nhan">Cảnh báo Đỏ</div>
       <div class="bdk-kpi-so" id="kpi-do">0</div>
     </div>
-    <div class="bdk-kpi-card bdk-kpi-bam" role="button" tabindex="0" data-ds="LOI" aria-label="Xem danh sÃ¡ch Ä‘Æ¡n lá»—i sáº£n xuáº¥t trong ká»³">
-      <div class="bdk-kpi-nhan">Tá»· lá»‡ lá»—i sáº£n xuáº¥t</div>
+    <div class="bdk-kpi-card bdk-kpi-bam" role="button" tabindex="0" data-ds="LOI" aria-label="Xem danh sách đơn lỗi sản xuất trong kỳ">
+      <div class="bdk-kpi-nhan">Tỷ lệ lỗi sản xuất</div>
       <div class="bdk-kpi-so" id="kpi-ty-le-loi">0%</div>
     </div>
   </div>
 
   <dialog id="bdk-hop-ds" aria-labelledby="bdk-hop-tieu-de">
-    <div class="bdk-hop-dau"><h3 id="bdk-hop-tieu-de"></h3><button type="button" onclick="document.getElementById('bdk-hop-ds').close()">ÄÃ³ng</button></div>
+    <div class="bdk-hop-dau"><h3 id="bdk-hop-tieu-de"></h3><button type="button" onclick="document.getElementById('bdk-hop-ds').close()">Đóng</button></div>
     <div class="bdk-hop-than" id="bdk-hop-than"></div>
   </dialog>
 
   <div class="bdk-card bdk-full">
-    <h3>Äang hoáº¡t Ä‘á»™ng ngay bÃ¢y giá»</h3>
-    <div id="bdk-dang-hoat-dong">Äang táº£i...</div>
+    <h3>Đang hoạt động ngay bây giờ</h3>
+    <div id="bdk-dang-hoat-dong">Đang tải...</div>
   </div>
 
-  <!-- TÃ¡ch riÃªng cháº¡y mÃ¡y/váº½ file thÃ nh 2 tháº» (Ä‘á»•i 09/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” trÆ°á»›c gá»™p
-       chung 1 danh sÃ¡ch "Khá»‘i lÆ°á»£ng Ä‘ang xá»­ lÃ½", khÃ³ theo dÃµi riÃªng tá»«ng nhÃ³m viá»‡c). -->
+  <!-- Tách riêng chạy máy/vẽ file thành 2 thẻ (đổi 09/09/2026, theo yêu cầu người dùng — trước gộp
+       chung 1 danh sách "Khối lượng đang xử lý", khó theo dõi riêng từng nhóm việc). -->
   <div class="bdk-grid-2">
     <div class="bdk-card">
-      <h3>Khá»‘i lÆ°á»£ng Ä‘ang cháº¡y mÃ¡y</h3>
-      <div id="bdk-dang-chay-may">Äang táº£i...</div>
+      <h3>Khối lượng đang chạy máy</h3>
+      <div id="bdk-dang-chay-may">Đang tải...</div>
     </div>
     <div class="bdk-card">
-      <h3>Khá»‘i lÆ°á»£ng váº½ file Ä‘ang xá»­ lÃ½</h3>
-      <div id="bdk-dang-ve-file">Äang táº£i...</div>
+      <h3>Khối lượng vẽ file đang xử lý</h3>
+      <div id="bdk-dang-ve-file">Đang tải...</div>
     </div>
   </div>
 
   <div class="bdk-grid-2">
     <div class="bdk-card">
-      <h3>Sá»‘ Ä‘Æ¡n theo giai Ä‘oáº¡n</h3>
+      <h3>Số đơn theo giai đoạn</h3>
       <canvas id="chart-pipeline"></canvas>
     </div>
     <div class="bdk-card">
-      <h3>Má»©c cáº£nh bÃ¡o trá»… háº¡n</h3>
+      <h3>Mức cảnh báo trễ hạn</h3>
       <canvas id="chart-canh-bao"></canvas>
     </div>
   </div>
 
   <div class="bdk-grid-2">
     <div class="bdk-card">
-      <h3>Khá»‘i lÆ°á»£ng cÃ´ng viá»‡c cáº£ xÆ°á»Ÿng</h3>
+      <h3>Khối lượng công việc cả xưởng</h3>
       <canvas id="chart-khoi-luong"></canvas>
     </div>
     <div class="bdk-card">
-      <h3>Top ngÆ°á»i lÃ m viá»‡c nhiá»u nháº¥t</h3>
-      <div id="bdk-xep-hang">Äang táº£i...</div>
+      <h3>Top người làm việc nhiều nhất</h3>
+      <div id="bdk-xep-hang">Đang tải...</div>
     </div>
   </div>
 
   <div class="bdk-grid-2">
     <div class="bdk-card">
-      <h3>PhÃ¢n bá»‘ theo loáº¡i sáº£n pháº©m</h3>
+      <h3>Phân bố theo loại sản phẩm</h3>
       <canvas id="chart-loai"></canvas>
     </div>
     <div class="bdk-card">
-      <h3>PhÃ¢n bá»‘ theo khÃ¡ch hÃ ng (top 8)</h3>
+      <h3>Phân bố theo khách hàng (top 8)</h3>
       <canvas id="chart-khach-hang"></canvas>
     </div>
   </div>
 
   <div class="bdk-card bdk-full">
-    <h3>Xu hÆ°á»›ng Ä‘Æ¡n theo tuáº§n</h3>
+    <h3>Xu hướng đơn theo tuần</h3>
     <canvas id="chart-tuan"></canvas>
   </div>
 
   <div class="bdk-card bdk-full">
-    <h3>Xu hÆ°á»›ng Ä‘Æ¡n theo ngÃ y</h3>
+    <h3>Xu hướng đơn theo ngày</h3>
     <canvas id="chart-ngay"></canvas>
   </div>
 
   <div class="bdk-card bdk-full">
-    <h3>Xu hÆ°á»›ng sáº£n pháº©m theo tuáº§n</h3>
+    <h3>Xu hướng sản phẩm theo tuần</h3>
     <canvas id="chart-sp-tuan"></canvas>
   </div>
 
   <div class="bdk-card bdk-full">
-    <h3>Xu hÆ°á»›ng sáº£n pháº©m theo ngÃ y</h3>
+    <h3>Xu hướng sản phẩm theo ngày</h3>
     <canvas id="chart-sp-ngay"></canvas>
   </div>
 </div>
@@ -259,13 +259,13 @@ const cacBieuDo = {};
 
 const PALETTE_NEON = ['#7ee8fa', '#ffd76b', '#ff5e5e', '#4ecb71', '#c792ea', '#ff9f43', '#54a0ff', '#ee5a6f'];
 const PALETTE_PIPELINE = ['#4a6fa5','#5b8fd4','#7ee8fa','#54c6a8','#4ecb71','#ffd76b','#ff9f43','#ff5e5e','#c792ea','#8892b0','#5c6b8a'];
-// Äáº¶T TÃŠN KHÃC api.js (khÃ´ng dÃ¹ng láº¡i NHAN_VAI_TRO) â€” api.js Ä‘Ã£ khai bÃ¡o top-level const cÃ¹ng tÃªn,
-// 2 tháº» <script> thÆ°á»ng (khÃ´ng pháº£i module) DÃ™NG CHUNG 1 scope cho let/const/class, khai bÃ¡o trÃ¹ng
-// tÃªn lÃ  SyntaxError lÃºc PARSE (lÃ m há»ng luÃ´n cáº£ khá»‘i script, ká»ƒ cáº£ try/catch bÃªn trong cÅ©ng khÃ´ng
-// ká»‹p cháº¡y) â€” Ä‘Ã¢y chÃ­nh lÃ  lá»—i tháº­t gáº·p khi rebuild 08/09/2026: "Identifier 'NHAN_VAI_TRO' has
-// already been declared". GiÃ¡ trá»‹ á»Ÿ Ä‘Ã¢y Cá» Ã khÃ¡c api.js (mÃ´ táº£ Ä‘Ãºng ngá»¯ cáº£nh Báº£ng Ä‘iá»u khiá»ƒn,
-// vd gá»™p "Láº¥y phÃ´i / ÄÃ³ng gÃ³i") nÃªn khÃ´ng thá»ƒ dÃ¹ng láº¡i tháº³ng biáº¿n cá»§a api.js.
-const NHAN_VAI_TRO_BDK = { san_xuat: 'Sáº£n xuáº¥t', ve_file: 'Váº½ file', nguoi_lay_phoi: 'Láº¥y phÃ´i / ÄÃ³ng gÃ³i', admin: 'Quáº£n trá»‹', superadmin: 'Quáº£n trá»‹ cáº¥p cao' };
+// ĐẶT TÊN KHÁC api.js (không dùng lại NHAN_VAI_TRO) — api.js đã khai báo top-level const cùng tên,
+// 2 thẻ <script> thường (không phải module) DÙNG CHUNG 1 scope cho let/const/class, khai báo trùng
+// tên là SyntaxError lúc PARSE (làm hỏng luôn cả khối script, kể cả try/catch bên trong cũng không
+// kịp chạy) — đây chính là lỗi thật gặp khi rebuild 08/09/2026: "Identifier 'NHAN_VAI_TRO' has
+// already been declared". Giá trị ở đây CỐ Ý khác api.js (mô tả đúng ngữ cảnh Bảng điều khiển,
+// vd gộp "Lấy phôi / Đóng gói") nên không thể dùng lại thẳng biến của api.js.
+const NHAN_VAI_TRO_BDK = { san_xuat: 'Sản xuất', ve_file: 'Vẽ file', nguoi_lay_phoi: 'Lấy phôi / Đóng gói', admin: 'Quản trị', superadmin: 'Quản trị cấp cao' };
 
 (async () => {
   try {
@@ -273,10 +273,10 @@ const NHAN_VAI_TRO_BDK = { san_xuat: 'Sáº£n xuáº¥t', ve_file: 'Váº½ fil
     if (!user) return;
     renderNav(user, 'bang-dieu-khien');
 
-    // Chart.js váº½ báº±ng <canvas>, pháº£i tá»± Ä‘áº·t mÃ u chá»¯/lÆ°á»›i khá»›p ná»n tá»‘i luÃ´n cá»‘ Ä‘á»‹nh cá»§a trang nÃ y
-    // (khÃ´ng Ä‘á»c CSS variable theo Cháº¿ Ä‘á»™ SÃ¡ng/Tá»‘i nhÆ° dashboard.html, vÃ¬ trang nÃ y luÃ´n tá»‘i).
+    // Chart.js vẽ bằng <canvas>, phải tự đặt màu chữ/lưới khớp nền tối luôn cố định của trang này
+    // (không đọc CSS variable theo Chế độ Sáng/Tối như dashboard.html, vì trang này luôn tối).
     if (typeof Chart === 'undefined') {
-      throw new Error('ChÆ°a táº£i Ä‘Æ°á»£c thÆ° viá»‡n Chart.js tá»« CDN (cdn.jsdelivr.net) â€” kiá»ƒm tra máº¡ng/tÆ°á»ng lá»­a cá»§a mÃ¡y chá»§ hoáº·c trÃ¬nh duyá»‡t tá»›i Ä‘á»‹a chá»‰ nÃ y.');
+      throw new Error('Chưa tải được thư viện Chart.js từ CDN (cdn.jsdelivr.net) — kiểm tra mạng/tường lửa của máy chủ hoặc trình duyệt tới địa chỉ này.');
     }
     Chart.defaults.color = '#a8d8f0';
     Chart.defaults.borderColor = 'rgba(126,232,250,0.12)';
@@ -292,23 +292,23 @@ const NHAN_VAI_TRO_BDK = { san_xuat: 'Sáº£n xuáº¥t', ve_file: 'Váº½ fil
     document.getElementById('btn-ap-dung-khoang').onclick = () => taiBangDieuKhien();
 
     await taiBangDieuKhien();
-    // "Hiá»ƒn thá»‹ Ä‘á»™ng" tháº­t sá»± (khÃ´ng chá»‰ hiá»‡u á»©ng thá»‹ giÃ¡c) â€” tá»± táº£i láº¡i dá»¯ liá»‡u má»—i 60 giÃ¢y.
+    // "Hiển thị động" thật sự (không chỉ hiệu ứng thị giác) — tự tải lại dữ liệu mỗi 60 giây.
     setInterval(taiBangDieuKhien, 60000);
   } catch (e) {
-    // Báº¯t lá»—i TOÃ€N TRANG â€” trÆ°á»›c khi sá»­a láº§n nÃ y, báº¥t ká»³ lá»—i nÃ o á»Ÿ ngoÃ i taiBangDieuKhien() (vd
-    // Chart.js chÆ°a táº£i xong, renderNav lá»—i...) sáº½ lÃ m cáº£ trang Ä‘á»©ng im á»Ÿ "Äang táº£i..."/"0" MÃ€
-    // KHÃ”NG cÃ³ báº¥t ká»³ dáº¥u hiá»‡u lá»—i nÃ o hiá»‡n ra â€” ráº¥t khÃ³ biáº¿t nguyÃªn nhÃ¢n tháº­t khi debug tá»« xa qua
-    // Docker/VPS, khÃ´ng cÃ³ sáºµn mÃ n hÃ¬nh Ä‘á»ƒ má»Ÿ DevTools ngay. Hiá»‡n lá»—i tháº­t ngay trÃªn trang.
-    console.error('[BangDieuKhien] Lá»—i khá»Ÿi táº¡o trang:', e);
+    // Bắt lỗi TOÀN TRANG — trước khi sửa lần này, bất kỳ lỗi nào ở ngoài taiBangDieuKhien() (vd
+    // Chart.js chưa tải xong, renderNav lỗi...) sẽ làm cả trang đứng im ở "Đang tải..."/"0" MÀ
+    // KHÔNG có bất kỳ dấu hiệu lỗi nào hiện ra — rất khó biết nguyên nhân thật khi debug từ xa qua
+    // Docker/VPS, không có sẵn màn hình để mở DevTools ngay. Hiện lỗi thật ngay trên trang.
+    console.error('[BangDieuKhien] Lỗi khởi tạo trang:', e);
     const trangDiv = document.querySelector('.bdk-page');
     if (trangDiv) {
-      trangDiv.insertAdjacentHTML('afterbegin', `<div style="background:#3a0d0d;border:1px solid #ff5e5e;color:#ffb3b3;padding:14px 18px;border-radius:8px;margin-bottom:18px;font-size:0.88rem;">Lá»—i khá»Ÿi táº¡o Báº£ng Ä‘iá»u khiá»ƒn: ${escapeHtml(e.message)} â€” má»Ÿ Console trÃ¬nh duyá»‡t (F12) Ä‘á»ƒ xem chi tiáº¿t.</div>`);
+      trangDiv.insertAdjacentHTML('afterbegin', `<div style="background:#3a0d0d;border:1px solid #ff5e5e;color:#ffb3b3;padding:14px 18px;border-radius:8px;margin-bottom:18px;font-size:0.88rem;">Lỗi khởi tạo Bảng điều khiển: ${escapeHtml(e.message)} — mở Console trình duyệt (F12) để xem chi tiết.</div>`);
     }
   }
 })();
 
-// Giá»‘ng há»‡t logic á»Ÿ dashboard.html/reports.html/hoat-dong.html â€” má»—i trang tá»± chá»©a, dá»± Ã¡n khÃ´ng cÃ³
-// bÆ°á»›c build Ä‘á»ƒ chia sáº» code giá»¯a cÃ¡c trang tÄ©nh.
+// Giống hệt logic ở dashboard.html/reports.html/hoat-dong.html — mỗi trang tự chứa, dự án không có
+// bước build để chia sẻ code giữa các trang tĩnh.
 function tinhKhoangTheoKy(ky) {
   const homNay = new Date();
   homNay.setHours(0, 0, 0, 0);
@@ -325,7 +325,7 @@ function tinhKhoangTheoKy(ky) {
     const cuoi = new Date(homNay.getFullYear(), homNay.getMonth() + 1, 0);
     return { tu: dau, den: cuoi };
   }
-  return null; // toan_bo â€” khÃ´ng giá»›i háº¡n
+  return null; // toan_bo — không giới hạn
 }
 
 function dinhDangYMD(d) {
@@ -333,8 +333,8 @@ function dinhDangYMD(d) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-// Sá»‘ cháº¡y tá»« 0 lÃªn target lÃºc táº£i â€” chá»‰ hiá»‡u á»©ng thá»‹ giÃ¡c, KHÃ”NG thay cho viá»‡c dá»¯ liá»‡u pháº£i má»›i tháº­t
-// (xem setInterval tá»± táº£i láº¡i 60s á»Ÿ trÃªn).
+// Số chạy từ 0 lên target lúc tải — chỉ hiệu ứng thị giác, KHÔNG thay cho việc dữ liệu phải mới thật
+// (xem setInterval tự tải lại 60s ở trên).
 function demSo(el, target, thoiGian = 700) {
   const bienDich = Number(target) || 0;
   const tBatDau = performance.now();
@@ -351,8 +351,8 @@ function topN(obj, n) {
   return Object.fromEntries(Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, n));
 }
 
-// Váº½ 1 danh sÃ¡ch xáº¿p háº¡ng (tÃªn -> sá»‘ lÆ°á»£ng) vÃ o 1 tháº» â€” dÃ¹ng chung cho "Khá»‘i lÆ°á»£ng Ä‘ang cháº¡y mÃ¡y"
-// vÃ  "Khá»‘i lÆ°á»£ng váº½ file Ä‘ang xá»­ lÃ½" (tÃ¡ch ra tá»« 1 tháº» gá»™p "Khá»‘i lÆ°á»£ng Ä‘ang xá»­ lÃ½" cÅ©, 09/09/2026).
+// Vẽ 1 danh sách xếp hạng (tên -> số lượng) vào 1 thẻ — dùng chung cho "Khối lượng đang chạy máy"
+// và "Khối lượng vẽ file đang xử lý" (tách ra từ 1 thẻ gộp "Khối lượng đang xử lý" cũ, 09/09/2026).
 function renderXepHangDangXuLy(idThe, demTheoNguoi, thongBaoRong) {
   const ds = [...demTheoNguoi.entries()].sort((a, b) => b[1] - a[1]);
   document.getElementById(idThe).innerHTML = ds.length === 0
@@ -365,60 +365,60 @@ function renderXepHangDangXuLy(idThe, demTheoNguoi, thongBaoRong) {
       </div>`).join('');
 }
 
-// DÃ²ng phá»¥ hiá»ƒn thá»‹ dÆ°á»›i tÃªn trong danh sÃ¡ch "Äang hoáº¡t Ä‘á»™ng ngay bÃ¢y giá»" â€” vá»›i san_xuat/ve_file
-// thÃ¬ kÃ¨m luÃ´n sá»‘ viá»‡c Ä‘ang xá»­ lÃ½ (Ä‘Ãºng Ã½ ngÆ°á»i dÃ¹ng: biáº¿t Ä‘ang online VÃ€ Ä‘ang báº­n bao nhiÃªu viá»‡c).
+// Dòng phụ hiển thị dưới tên trong danh sách "Đang hoạt động ngay bây giờ" — với san_xuat/ve_file
+// thì kèm luôn số việc đang xử lý (đúng ý người dùng: biết đang online VÀ đang bận bao nhiêu việc).
 function moTaVaiTroVaViec(nguoiDangHD, demChayMay, demVeFile) {
   const nhanVaiTro = NHAN_VAI_TRO_BDK[nguoiDangHD.vaiTro] || nguoiDangHD.vaiTro;
   if (nguoiDangHD.vaiTro === 'san_xuat') {
     const so = demChayMay.get(nguoiDangHD.ten) || 0;
-    return so > 0 ? `${nhanVaiTro} Â· Ä‘ang cháº¡y mÃ¡y ${so} Ä‘Æ¡n` : `${nhanVaiTro} Â· chÆ°a nháº­n Ä‘Æ¡n nÃ o`;
+    return so > 0 ? `${nhanVaiTro} · đang chạy máy ${so} đơn` : `${nhanVaiTro} · chưa nhận đơn nào`;
   }
   if (nguoiDangHD.vaiTro === 've_file') {
     const so = demVeFile.get(nguoiDangHD.ten) || 0;
-    return so > 0 ? `${nhanVaiTro} Â· Ä‘ang váº½ ${so} file` : `${nhanVaiTro} Â· chÆ°a nháº­n file nÃ o`;
+    return so > 0 ? `${nhanVaiTro} · đang vẽ ${so} file` : `${nhanVaiTro} · chưa nhận file nào`;
   }
   return nhanVaiTro;
 }
 
-// Báº¥m Ã´ Cáº£nh bÃ¡o Cam/Äá», Tá»· lá»‡ lá»—i sáº£n xuáº¥t -> danh sÃ¡ch Ä‘Æ¡n (05/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng). Cam/Äá»: Ä‘Æ¡n ÄANG á»Ÿ má»©c
-// Ä‘Ã³ (khá»›p sá»‘ trÃªn Ã´ â€” /orders/thong-ke-nhanh?dsCanhBao). Lá»—i: Ä‘Æ¡n bá»‹ chuyá»ƒn sang lá»—i TRONG Ká»² Ä‘ang chá»n (khá»›p con sá»‘ %
-// â€” /reports/thong-ke-loi .theoDon). MÃ£ Ä‘Æ¡n má»Ÿ chi tiáº¿t á»Ÿ TAB Má»šI Ä‘á»ƒ khÃ´ng máº¥t mÃ n BÄK.
-const TIEU_DE_DS = { CAM: 'ÄÆ¡n Cáº£nh bÃ¡o Cam', DO: 'ÄÆ¡n Cáº£nh bÃ¡o Äá»', LOI: 'ÄÆ¡n lá»—i sáº£n xuáº¥t trong ká»³' };
+// Bấm ô Cảnh báo Cam/Đỏ, Tỷ lệ lỗi sản xuất -> danh sách đơn (05/10/2026, theo yêu cầu người dùng). Cam/Đỏ: đơn ĐANG ở mức
+// đó (khớp số trên ô — /orders/thong-ke-nhanh?dsCanhBao). Lỗi: đơn bị chuyển sang lỗi TRONG KỲ đang chọn (khớp con số %
+// — /reports/thong-ke-loi .theoDon). Mã đơn mở chi tiết ở TAB MỚI để không mất màn BĐK.
+const TIEU_DE_DS = { CAM: 'Đơn Cảnh báo Cam', DO: 'Đơn Cảnh báo Đỏ', LOI: 'Đơn lỗi sản xuất trong kỳ' };
 function linkDon(ma) {
   return `<a href="/order.html?stt=${encodeURIComponent(ma)}" target="_blank" rel="noopener">${escapeHtml(ma)}</a>`;
 }
-// luotMoDs: báº¥m Ã´ khÃ¡c khi danh sÃ¡ch trÆ°á»›c chÆ°a vá» -> bá» káº¿t quáº£ cÅ© (khÃ´ng Ä‘á»ƒ danh sÃ¡ch cÅ© Ä‘Ã¨ lÃªn tiÃªu Ä‘á» má»›i).
-// qsDaTai: tham sá»‘ ká»³ cá»§a láº§n táº£i BÄK gáº§n nháº¥t â€” danh sÃ¡ch lá»—i dÃ¹ng ÄÃšNG ká»³ Ä‘Ã£ tÃ­nh ra con sá»‘ % trÃªn Ã´ (khÃ´ng Ä‘á»c Ã´ ngÃ y
-// "Tuá»³ chá»n" Ä‘ang sá»­a dá»Ÿ mÃ  chÆ°a báº¥m "Ãp dá»¥ng").
+// luotMoDs: bấm ô khác khi danh sách trước chưa về -> bỏ kết quả cũ (không để danh sách cũ đè lên tiêu đề mới).
+// qsDaTai: tham số kỳ của lần tải BĐK gần nhất — danh sách lỗi dùng ĐÚNG kỳ đã tính ra con số % trên ô (không đọc ô ngày
+// "Tuỳ chọn" đang sửa dở mà chưa bấm "Áp dụng").
 let luotMoDs = 0;
 let qsDaTai = '';
 async function moDanhSachKpi(loai) {
   const luot = ++luotMoDs;
   const hop = document.getElementById('bdk-hop-ds'), than = document.getElementById('bdk-hop-than');
   document.getElementById('bdk-hop-tieu-de').textContent = TIEU_DE_DS[loai];
-  than.innerHTML = '<p>Äang táº£i...</p>';
+  than.innerHTML = '<p>Đang tải...</p>';
   if (!hop.open) hop.showModal();
   try {
     if (loai === 'LOI') {
       const { theoDon } = await apiFetch('/reports/thong-ke-loi?' + qsDaTai);
       if (luot !== luotMoDs) return;
-      than.innerHTML = theoDon.length === 0 ? '<p>KhÃ´ng cÃ³ Ä‘Æ¡n nÃ o bá»‹ lá»—i sáº£n xuáº¥t trong ká»³ nÃ y.</p>' : `
-        <p>${theoDon.length} Ä‘Æ¡n</p>
-        <table><tr><th>MÃ£ Ä‘Æ¡n</th><th>Sáº£n pháº©m</th><th>KhÃ¡ch hÃ ng</th><th>Tráº¡ng thÃ¡i hiá»‡n táº¡i</th><th>Sá»‘ láº§n lá»—i</th><th>Lá»—i gáº§n nháº¥t</th></tr>
+      than.innerHTML = theoDon.length === 0 ? '<p>Không có đơn nào bị lỗi sản xuất trong kỳ này.</p>' : `
+        <p>${theoDon.length} đơn</p>
+        <table><tr><th>Mã đơn</th><th>Sản phẩm</th><th>Khách hàng</th><th>Trạng thái hiện tại</th><th>Số lần lỗi</th><th>Lỗi gần nhất</th></tr>
         ${theoDon.map(d => `<tr><td>${linkDon(d.sttKey)}</td><td>${escapeHtml(d.tieuDe)}</td><td>${escapeHtml(d.khachHang)}</td>
           <td>${escapeHtml(d.trangThai)}</td><td>${d.soLan}</td><td>${escapeHtml(d.lanCuoi)}</td></tr>`).join('')}</table>`;
     } else {
       const { danhSach } = await apiFetch('/orders/thong-ke-nhanh?dsCanhBao=' + loai);
       if (luot !== luotMoDs) return;
-      than.innerHTML = danhSach.length === 0 ? '<p>Hiá»‡n khÃ´ng cÃ³ Ä‘Æ¡n nÃ o á»Ÿ má»©c cáº£nh bÃ¡o nÃ y.</p>' : `
-        <p>${danhSach.length} Ä‘Æ¡n</p>
-        <table><tr><th>MÃ£ Ä‘Æ¡n</th><th>Sáº£n pháº©m</th><th>KhÃ¡ch hÃ ng</th><th>Tráº¡ng thÃ¡i</th></tr>
+      than.innerHTML = danhSach.length === 0 ? '<p>Hiện không có đơn nào ở mức cảnh báo này.</p>' : `
+        <p>${danhSach.length} đơn</p>
+        <table><tr><th>Mã đơn</th><th>Sản phẩm</th><th>Khách hàng</th><th>Trạng thái</th></tr>
         ${danhSach.map(d => `<tr><td>${linkDon(d.sttKey)}</td><td>${escapeHtml(d.tieuDe)}</td><td>${escapeHtml(d.khachHang)}</td>
           <td>${escapeHtml(d.trangThai)}</td></tr>`).join('')}</table>`;
     }
   } catch (e) {
     if (luot !== luotMoDs) return;
-    than.innerHTML = `<p style="color:#ff5e5e">KhÃ´ng táº£i Ä‘Æ°á»£c danh sÃ¡ch: ${escapeHtml(e.message)}</p>`;
+    than.innerHTML = `<p style="color:#ff5e5e">Không tải được danh sách: ${escapeHtml(e.message)}</p>`;
   }
 }
 document.querySelectorAll('.bdk-kpi-bam').forEach(o => {
@@ -426,7 +426,7 @@ document.querySelectorAll('.bdk-kpi-bam').forEach(o => {
   o.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); moDanhSachKpi(o.dataset.ds); } };
 });
 
-// Tham sá»‘ ká»³ Ä‘ang chá»n (dÃ¹ng chung cho táº£i BÄK vÃ  danh sÃ¡ch lá»—i khi báº¥m Ã´).
+// Tham số kỳ đang chọn (dùng chung cho tải BĐK và danh sách lỗi khi bấm ô).
 function qsKyDangChon() {
   const qs = new URLSearchParams();
   if (kyHienTai === 'tuy_chon') {
@@ -448,11 +448,11 @@ async function taiBangDieuKhien() {
   const qsStr = qsKyDangChon();
   qsDaTai = qsStr;
 
-  // GhÃ©p 3 API Ä‘Ã£ cÃ³ sáºµn (khÃ´ng route má»›i) + /orders/thong-ke-nhanh Ä‘á»ƒ Ä‘áº¿m cáº£nh bÃ¡o hiá»‡n táº¡i (KHÃ”NG
-  // theo ká»³ â€” "Ä‘Æ¡n nÃ o Ä‘ang trá»… háº¡n" lÃ  áº£nh chá»¥p NGAY LÃšC XEM, khÃ´ng pháº£i viá»‡c xáº£y ra trong quÃ¡ khá»©) â€”
-  // xem docs/superpowers/specs/2026-09-08-bang-dieu-khien-admin-design.md. Äá»•i tá»« GET /orders (toÃ n bá»™
-  // Ä‘Æ¡n, Ä‘á»§ má»i trÆ°á»ng) sang route Ä‘áº¿m sáºµn á»Ÿ server (bá»• sung 22/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng cáº£i
-  // thiá»‡n hiá»‡u nÄƒng â€” trang nÃ y tá»± táº£i láº¡i má»—i 60s, gÃ³i tin nhá» hÆ¡n háº³n).
+  // Ghép 3 API đã có sẵn (không route mới) + /orders/thong-ke-nhanh để đếm cảnh báo hiện tại (KHÔNG
+  // theo kỳ — "đơn nào đang trễ hạn" là ảnh chụp NGAY LÚC XEM, không phải việc xảy ra trong quá khứ) —
+  // xem docs/superpowers/specs/2026-09-08-bang-dieu-khien-admin-design.md. Đổi từ GET /orders (toàn bộ
+  // đơn, đủ mọi trường) sang route đếm sẵn ở server (bổ sung 22/09/2026, theo yêu cầu người dùng cải
+  // thiện hiệu năng — trang này tự tải lại mỗi 60s, gói tin nhỏ hơn hẳn).
   let thongKe, thongKeLoi, hieuSuat, thongKeNhanh, dangHoatDong;
   try {
     [thongKe, thongKeLoi, hieuSuat, thongKeNhanh, dangHoatDong] = await Promise.all([
@@ -460,10 +460,10 @@ async function taiBangDieuKhien() {
       apiFetch('/reports/thong-ke-loi?' + qsStr),
       apiFetch('/reports/hieu-suat-theo-nguoi?' + qsStr),
       apiFetch('/orders/thong-ke-nhanh'),
-      apiFetch('/auth/dang-hoat-dong'), // ai Ä‘ang online â€” luÃ´n áº£nh chá»¥p NGAY LÃšC XEM, khÃ´ng theo ká»³ chá»n
+      apiFetch('/auth/dang-hoat-dong'), // ai đang online — luôn ảnh chụp NGAY LÚC XEM, không theo kỳ chọn
     ]);
   } catch (e) {
-    const thongBaoLoi = `<p style="color:#ff5e5e">KhÃ´ng táº£i Ä‘Æ°á»£c dá»¯ liá»‡u: ${escapeHtml(e.message)}</p>`;
+    const thongBaoLoi = `<p style="color:#ff5e5e">Không tải được dữ liệu: ${escapeHtml(e.message)}</p>`;
     document.getElementById('bdk-xep-hang').innerHTML = thongBaoLoi;
     document.getElementById('bdk-dang-hoat-dong').innerHTML = thongBaoLoi;
     document.getElementById('bdk-dang-chay-may').innerHTML = thongBaoLoi;
@@ -476,21 +476,21 @@ async function taiBangDieuKhien() {
   demSo(document.getElementById('kpi-tong-don'), thongKe.tongSoDon);
   demSo(document.getElementById('kpi-tong-sp'), thongKe.tongSanPham ?? 0);
 
-  // Server Ä‘Ã£ Ä‘áº¿m sáºµn (routes/orders.js GET /thong-ke-nhanh) â€” chá»‰ cáº§n Ä‘á»c láº¡i, khÃ´ng tá»± Ä‘áº¿m tá»« danh
-  // sÃ¡ch Ä‘Æ¡n Ä‘áº§y Ä‘á»§ ná»¯a (bá»• sung 22/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng cáº£i thiá»‡n hiá»‡u nÄƒng).
+  // Server đã đếm sẵn (routes/orders.js GET /thong-ke-nhanh) — chỉ cần đọc lại, không tự đếm từ danh
+  // sách đơn đầy đủ nữa (bổ sung 22/09/2026, theo yêu cầu người dùng cải thiện hiệu năng).
   const demCanhBao = thongKeNhanh.demCanhBao;
   demSo(document.getElementById('kpi-vang'), demCanhBao.VANG);
   demSo(document.getElementById('kpi-cam'), demCanhBao.CAM);
   demSo(document.getElementById('kpi-do'), demCanhBao.DO);
 
-  // Khá»‘i lÆ°á»£ng ÄANG xá»­ lÃ½ ngay lÃºc nÃ y (khÃ´ng pháº£i Ä‘Ã£ xong trong ká»³) â€” server tráº£ sáºµn dáº¡ng object
-  // {ten: soLuong}, chuyá»ƒn thÃ nh Map Ä‘á»ƒ giá»¯ nguyÃªn cÃ¡c hÃ m renderXepHangDangXuLy()/moTaVaiTroVaViec()
-  // bÃªn dÆ°á»›i (vá»‘n dÃ¹ng .entries()/.get()) khÃ´ng pháº£i sá»­a gÃ¬ thÃªm.
+  // Khối lượng ĐANG xử lý ngay lúc này (không phải đã xong trong kỳ) — server trả sẵn dạng object
+  // {ten: soLuong}, chuyển thành Map để giữ nguyên các hàm renderXepHangDangXuLy()/moTaVaiTroVaViec()
+  // bên dưới (vốn dùng .entries()/.get()) không phải sửa gì thêm.
   const demChayMay = new Map(Object.entries(thongKeNhanh.dangChayMay));
   const demVeFile = new Map(Object.entries(thongKeNhanh.dangVeFile));
 
   document.getElementById('bdk-dang-hoat-dong').innerHTML = dangHoatDong.length === 0
-    ? '<p style="color:#8fb8d9">KhÃ´ng cÃ³ ai hoáº¡t Ä‘á»™ng trong 5 phÃºt gáº§n Ä‘Ã¢y.</p>'
+    ? '<p style="color:#8fb8d9">Không có ai hoạt động trong 5 phút gần đây.</p>'
     : dangHoatDong.map(nd => `
       <div class="bdk-xep-hang-item">
         <span class="bdk-dot-xanh"></span>
@@ -498,22 +498,22 @@ async function taiBangDieuKhien() {
         <div class="bdk-lan-cuoi">${new Date(nd.lanCuoi).toLocaleTimeString('vi-VN')}</div>
       </div>`).join('');
 
-  // TÃ¡ch riÃªng 2 danh sÃ¡ch (Ä‘á»•i 09/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” má»—i tháº» chá»‰ 1 loáº¡i viá»‡c nÃªn
-  // khÃ´ng cáº§n dÃ²ng phá»¥ ghi láº¡i tÃªn viá»‡c ná»¯a (khÃ¡c báº£n gá»™p chung trÆ°á»›c Ä‘Ã³).
-  renderXepHangDangXuLy('bdk-dang-chay-may', demChayMay, 'Hiá»‡n khÃ´ng cÃ³ Ä‘Æ¡n nÃ o Ä‘ang cháº¡y mÃ¡y.');
-  renderXepHangDangXuLy('bdk-dang-ve-file', demVeFile, 'Hiá»‡n khÃ´ng cÃ³ file nÃ o Ä‘ang váº½.');
+  // Tách riêng 2 danh sách (đổi 09/09/2026, theo yêu cầu người dùng) — mỗi thẻ chỉ 1 loại việc nên
+  // không cần dòng phụ ghi lại tên việc nữa (khác bản gộp chung trước đó).
+  renderXepHangDangXuLy('bdk-dang-chay-may', demChayMay, 'Hiện không có đơn nào đang chạy máy.');
+  renderXepHangDangXuLy('bdk-dang-ve-file', demVeFile, 'Hiện không có file nào đang vẽ.');
 
   const tyLeLoi = thongKe.tongSoDon > 0 ? (thongKeLoi.tongSoLoi / thongKe.tongSoDon * 100) : 0;
   document.getElementById('kpi-ty-le-loi').textContent = tyLeLoi.toFixed(1) + '%';
 
   veBieuDoNgang('chart-pipeline', thongKe.theoTrangThai, PALETTE_PIPELINE);
-  veBieuDoTron('chart-canh-bao', { 'VÃ ng': demCanhBao.VANG, 'Cam': demCanhBao.CAM, 'Äá»': demCanhBao.DO }, ['#ffd76b', '#ff9f43', '#ff5e5e']);
+  veBieuDoTron('chart-canh-bao', { 'Vàng': demCanhBao.VANG, 'Cam': demCanhBao.CAM, 'Đỏ': demCanhBao.DO }, ['#ffd76b', '#ff9f43', '#ff5e5e']);
 
   const tongChayMay = hieuSuat.san_xuat.reduce((t, x) => t + x.soDonDaChayMay, 0);
   const tongVeFile = hieuSuat.ve_file.reduce((t, x) => t + x.soFileDaVe, 0);
   const tongLayPhoi = hieuSuat.nguoi_lay_phoi.reduce((t, x) => t + x.soDonDaLayPhoi, 0);
   const tongDongGoi = hieuSuat.nguoi_lay_phoi.reduce((t, x) => t + x.soDonDaDongGoi, 0);
-  veBieuDoCot('chart-khoi-luong', { 'Cháº¡y mÃ¡y': tongChayMay, 'Váº½ file': tongVeFile, 'Láº¥y phÃ´i': tongLayPhoi, 'ÄÃ³ng gÃ³i': tongDongGoi });
+  veBieuDoCot('chart-khoi-luong', { 'Chạy máy': tongChayMay, 'Vẽ file': tongVeFile, 'Lấy phôi': tongLayPhoi, 'Đóng gói': tongDongGoi });
 
   const xepHang = [
     ...hieuSuat.san_xuat.map(x => ({ ten: x.ten, vaiTro: 'san_xuat', so: x.soDonDaChayMay })),
@@ -522,7 +522,7 @@ async function taiBangDieuKhien() {
   ].sort((a, b) => b.so - a.so).slice(0, 8);
 
   document.getElementById('bdk-xep-hang').innerHTML = xepHang.length === 0
-    ? '<p style="color:#8fb8d9">ChÆ°a cÃ³ hoáº¡t Ä‘á»™ng nÃ o trong khoáº£ng thá»i gian nÃ y.</p>'
+    ? '<p style="color:#8fb8d9">Chưa có hoạt động nào trong khoảng thời gian này.</p>'
     : xepHang.map((x, i) => `
       <div class="bdk-xep-hang-item">
         <div class="bdk-hang-so ${i === 0 ? 'top1' : ''}">${i + 1}</div>
@@ -531,12 +531,12 @@ async function taiBangDieuKhien() {
       </div>`).join('');
 
   veBieuDoTron('chart-loai', thongKe.theoLoaiSanPham, PALETTE_NEON);
-  // theoKhachHang (Ä‘áº¿m Ä‘Æ¡n giáº£n) Ä‘Ã£ bá»‹ Ä‘á»•i thÃ nh theoKhachHangChiTiet (máº£ng chi tiáº¿t hÆ¡n) tá»«
+  // theoKhachHang (đếm đơn giản) đã bị đổi thành theoKhachHangChiTiet (mảng chi tiết hơn) từ
   // 15/09/2026 (xem docs/superpowers/specs/2026-09-15-thong-ke-khach-hang-va-an-menu-san-xuat-design.md)
-  // â€” chá»— nÃ y quÃªn cáº­p nháº­t theo, khiáº¿n topN() nháº­n undefined rá»“i vá»¡ ngay á»Ÿ Object.entries() (bá»• sung
-  // 18/09/2026, sá»­a lá»—i "Cannot convert undefined or null to object" ngÆ°á»i dÃ¹ng bÃ¡o). Tá»± dá»±ng láº¡i Ä‘Ãºng
-  // dáº¡ng {tÃªn khÃ¡ch -> tá»•ng Ä‘Æ¡n} tá»« máº£ng chi tiáº¿t, khÃ´ng Ä‘á»•i response phÃ­a server (theoKhachHangChiTiet
-  // cÃ²n dÃ¹ng cho báº£ng thá»‘ng kÃª theo khÃ¡ch hÃ ng khÃ¡c trÃªn cÃ¹ng trang).
+  // — chỗ này quên cập nhật theo, khiến topN() nhận undefined rồi vỡ ngay ở Object.entries() (bổ sung
+  // 18/09/2026, sửa lỗi "Cannot convert undefined or null to object" người dùng báo). Tự dựng lại đúng
+  // dạng {tên khách -> tổng đơn} từ mảng chi tiết, không đổi response phía server (theoKhachHangChiTiet
+  // còn dùng cho bảng thống kê theo khách hàng khác trên cùng trang).
   const demTheoKhachHang = Object.fromEntries((thongKe.theoKhachHangChiTiet || []).map(k => [k.khachHang, k.tongDon]));
   veBieuDoCot('chart-khach-hang', topN(demTheoKhachHang, 8));
   veBieuDoDuong('chart-tuan', thongKe.theoTuan);

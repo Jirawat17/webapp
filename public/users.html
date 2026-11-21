@@ -1,13 +1,13 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NhÃ¢n viÃªn â€” XÆ°á»Ÿng ThÃªu</title>
+<title>Nhân viên — Xưởng Thêu</title>
 <link rel="stylesheet" href="/css/style.css?v=112">
 <script src="/js/theme.js?v=104"></script>
 <style>
-/* Ã” tick XÆ°á»Ÿng â€” 1 nhÃ¢n viÃªn thuá»™c Ä‘Æ°á»£c nhiá»u XÆ°á»Ÿng (27/09/2026). Bá» padding/min-height cá»§a .inline-form input. */
+/* Ô tick Xưởng — 1 nhân viên thuộc được nhiều Xưởng (27/09/2026). Bỏ padding/min-height của .inline-form input. */
 .nv-xuong { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
 .nv-xuong label { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font-size: 0.9rem; font-weight: 400; color: inherit; }
 .nv-xuong input[type="checkbox"] { width: 18px; height: 18px; min-height: 0; padding: 0; margin: 0; }
@@ -18,33 +18,33 @@
 <body>
 <div id="nav"></div>
 <div class="page">
-  <h2>Quáº£n lÃ½ nhÃ¢n viÃªn</h2>
+  <h2>Quản lý nhân viên</h2>
   <form id="form-them" class="inline-form">
     <div class="truong">
-      <label for="ten-moi">TÃªn nhÃ¢n viÃªn</label>
+      <label for="ten-moi">Tên nhân viên</label>
       <input id="ten-moi" required>
     </div>
     <div class="truong">
-      <label for="vaitro-moi">Vai trÃ²</label>
+      <label for="vaitro-moi">Vai trò</label>
       <select id="vaitro-moi">
         <option value="admin">Admin</option>
         <option value="superadmin">Superadmin</option>
-        <option value="nguoi_lay_phoi">NgÆ°á»i láº¥y phÃ´i</option>
-        <option value="ve_file">Váº½ file</option>
-        <option value="san_xuat">Sáº£n xuáº¥t</option>
+        <option value="nguoi_lay_phoi">Người lấy phôi</option>
+        <option value="ve_file">Vẽ file</option>
+        <option value="san_xuat">Sản xuất</option>
       </select>
     </div>
     <div class="truong">
-      <label>XÆ°á»Ÿng (chá»n Ä‘Æ°á»£c nhiá»u)</label>
-      <!-- Danh sÃ¡ch XÆ°á»Ÿng Ä‘á»• Äá»˜NG (bá»• sung 24/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” quáº£n lÃ½ qua Settings)
-           â€” xem init IIFE bÃªn dÆ°á»›i. Ã” tick: 1 nhÃ¢n viÃªn thuá»™c Ä‘Æ°á»£c nhiá»u XÆ°á»Ÿng (27/09/2026). -->
+      <label>Xưởng (chọn được nhiều)</label>
+      <!-- Danh sách Xưởng đổ ĐỘNG (bổ sung 24/09/2026, theo yêu cầu người dùng — quản lý qua Settings)
+           — xem init IIFE bên dưới. Ô tick: 1 nhân viên thuộc được nhiều Xưởng (27/09/2026). -->
       <div id="xuong-moi" class="nv-xuong"></div>
     </div>
     <div class="truong" id="truong-matkhau">
-      <label for="matkhau-moi">Máº­t kháº©u (1-4 sá»‘; bá» qua náº¿u xÆ°á»Ÿng HN)</label>
+      <label for="matkhau-moi">Mật khẩu (1-4 số; bỏ qua nếu xưởng HN)</label>
       <input id="matkhau-moi" inputmode="numeric" pattern="[0-9]{1,4}" maxlength="4">
     </div>
-    <button type="submit" class="btn-hanh-dong">ThÃªm nhÃ¢n viÃªn</button>
+    <button type="submit" class="btn-hanh-dong">Thêm nhân viên</button>
   </form>
   <table id="bang-nv" class="info-table"></table>
 </div>
@@ -56,10 +56,10 @@
   const user = await requireLoginOrRedirect();
   if (!user) return;
   renderNav(user, 'users');
-  // CHá»ˆ superadmin (bá»• sung 18/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” thu háº¹p tá»« admin+superadmin, KHÃC
-  // má»i trang khÃ¡c trong app váº«n coi admin/superadmin ngang quyá»n qua laAdmin()).
+  // CHỈ superadmin (bổ sung 18/09/2026, theo yêu cầu người dùng — thu hẹp từ admin+superadmin, KHÁC
+  // mọi trang khác trong app vẫn coi admin/superadmin ngang quyền qua laAdmin()).
   if (user.vaiTro !== 'superadmin') {
-    document.querySelector('.page').innerHTML = '<p>Báº¡n khÃ´ng cÃ³ quyá»n truy cáº­p trang nÃ y.</p>';
+    document.querySelector('.page').innerHTML = '<p>Bạn không có quyền truy cập trang này.</p>';
     return;
   }
   danhSachXuong = await apiFetch('/orders/danh-sach-xuong');
@@ -67,15 +67,15 @@
   await taiDanhSach();
 })();
 
-// Danh sÃ¡ch XÆ°á»Ÿng (bá»• sung 24/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” KHÃ”NG cÃ²n hardcode á»Ÿ Ä‘Ã¢y ná»¯a, táº£i
-// Ä‘á»™ng tá»« GET /orders/danh-sach-xuong lÃºc vÃ o trang (xem init IIFE á»Ÿ trÃªn) â€” quáº£n lÃ½ qua Settings.
-// GÃ¡n TRÆ¯á»šC taiDanhSach() á»Ÿ trÃªn vÃ¬ hÃ m Ä‘Ã³ (Ä‘á»‹nh nghÄ©a dÆ°á»›i) cáº§n dÃ¹ng ngay Ä‘á»ƒ Ä‘á»• Ã´ chá»n tá»«ng dÃ²ng.
+// Danh sách Xưởng (bổ sung 24/09/2026, theo yêu cầu người dùng) — KHÔNG còn hardcode ở đây nữa, tải
+// động từ GET /orders/danh-sach-xuong lúc vào trang (xem init IIFE ở trên) — quản lý qua Settings.
+// Gán TRƯỚC taiDanhSach() ở trên vì hàm đó (định nghĩa dưới) cần dùng ngay để đổ ô chọn từng dòng.
 let danhSachXuong = [];
 
-// Ã” tick cÃ¡c XÆ°á»Ÿng (Ä‘Ã¡nh dáº¥u sáºµn `daChon`); onDoi = Ä‘oáº¡n JS gá»i khi tick/bá» tick (rá»—ng á»Ÿ form thÃªm má»›i).
+// Ô tick các Xưởng (đánh dấu sẵn `daChon`); onDoi = đoạn JS gọi khi tick/bỏ tick (rỗng ở form thêm mới).
 function oTickXuong(daChon, onDoi = '') {
   return danhSachXuong.map(x => `<label><input type="checkbox" value="${escapeHtml(x)}" ${daChon.includes(x) ? 'checked' : ''} ${onDoi ? `onchange="${onDoi}"` : ''}> ${escapeHtml(x)}</label>`).join('')
-    || '<span class="nv-chua-gan">ChÆ°a cÃ³ XÆ°á»Ÿng nÃ o (táº¡o á»Ÿ Settings)</span>';
+    || '<span class="nv-chua-gan">Chưa có Xưởng nào (tạo ở Settings)</span>';
 }
 const xuongDangTick = khoi => [...khoi.querySelectorAll('input[type="checkbox"]:checked')].map(o => o.value);
 const tachXuong = s => String(s || '').split(',').map(x => x.trim()).filter(Boolean);
@@ -88,7 +88,7 @@ document.getElementById('form-them').onsubmit = async (e) => {
   const xuong = xuongDangTick(document.getElementById('xuong-moi'));
   const matKhau = document.getElementById('matkhau-moi').value.trim();
   const isHN = xuong.includes('HN');
-  if (!isHN && !/^\d{1,4}$/.test(matKhau)) { alert('Máº­t kháº©u pháº£i lÃ  1-4 chá»¯ sá»‘.'); return; }
+  if (!isHN && !/^\d{1,4}$/.test(matKhau)) { alert('Mật khẩu phải là 1-4 chữ số.'); return; }
   try {
     await apiFetch('/users', { method: 'POST', body: JSON.stringify({ ten, vaiTro, xuong, matKhau }) });
     e.target.reset();
@@ -97,19 +97,19 @@ document.getElementById('form-them').onsubmit = async (e) => {
   } catch (err) { alert(err.message); }
 };
 
-// DÃ¹ng data-* + this.dataset (KHÃ”NG ná»™i suy chuá»—i tháº³ng vÃ o onclick="...('...')", bá»• sung 20/09/2026,
-// phÃ¡t hiá»‡n qua rÃ  soÃ¡t báº£o máº­t â€” xem cÃ¹ng khuÃ´n public/don-hang-loat.html) â€” Ten lÃ  tÃªn nhÃ¢n viÃªn tá»±
-// do, encodeURIComponent() khÃ´ng escape dáº¥u ' nÃªn KHÃ”NG Ä‘á»§ an toÃ n khi ná»™i suy vÃ o JS string bÃªn trong
-// thuá»™c tÃ­nh onclick (tÃªn chá»©a dáº¥u nhÃ¡y Ä‘Æ¡n phÃ¡ cÃº phÃ¡p, tÃªn cá»‘ Ã½ chÃ¨n mÃ£ lÃ  XSS tháº­t). dataset láº¥y
-// Ä‘Ãºng chuá»—i gá»‘c Ä‘Ã£ escapeHtml() lÃºc ghi, khÃ´ng Ä‘i qua bÆ°á»›c "biÃªn dá»‹ch láº¡i thÃ nh mÃ£ JS" nÃ o ná»¯a.
+// Dùng data-* + this.dataset (KHÔNG nội suy chuỗi thẳng vào onclick="...('...')", bổ sung 20/09/2026,
+// phát hiện qua rà soát bảo mật — xem cùng khuôn public/don-hang-loat.html) — Ten là tên nhân viên tự
+// do, encodeURIComponent() không escape dấu ' nên KHÔNG đủ an toàn khi nội suy vào JS string bên trong
+// thuộc tính onclick (tên chứa dấu nháy đơn phá cú pháp, tên cố ý chèn mã là XSS thật). dataset lấy
+// đúng chuỗi gốc đã escapeHtml() lúc ghi, không đi qua bước "biên dịch lại thành mã JS" nào nữa.
 async function taiDanhSach() {
   const list = await apiFetch('/users');
   document.getElementById('bang-nv').innerHTML = `
-    <tr><th>TÃªn</th><th>Vai trÃ²</th><th>XÆ°á»Ÿng</th><th>Tráº¡ng thÃ¡i</th><th>Máº­t kháº©u</th><th>ÄÄƒng nháº­p</th><th></th><th></th><th></th><th></th><th></th></tr>
+    <tr><th>Tên</th><th>Vai trò</th><th>Xưởng</th><th>Trạng thái</th><th>Mật khẩu</th><th>Đăng nhập</th><th></th><th></th><th></th><th></th><th></th></tr>
     ${list.map(u => `
       <tr>
         <td>${escapeHtml(u.Ten)}
-          <button class="btn-hanh-dong phu" data-ten="${escapeHtml(u.Ten)}" onclick="doiTen(this.dataset.ten)">Äá»•i tÃªn</button>
+          <button class="btn-hanh-dong phu" data-ten="${escapeHtml(u.Ten)}" onclick="doiTen(this.dataset.ten)">Đổi tên</button>
         </td>
         <td>
           <select data-ten="${escapeHtml(u.Ten)}" onchange="doiVaiTro(this.dataset.ten, this.value)">
@@ -119,27 +119,27 @@ async function taiDanhSach() {
         <td>
           <div class="nv-xuong" data-ten="${escapeHtml(u.Ten)}">
             ${oTickXuong(tachXuong(u.Xuong), "doiXuong(this.closest('.nv-xuong'))")}
-            ${tachXuong(u.Xuong).length ? '' : '<span class="nv-chua-gan">(chÆ°a gÃ¡n)</span>'}
-            ${tachXuong(u.Xuong).filter(x => !danhSachXuong.includes(x)).map(x => `<span class="nv-xuong-la" title="KhÃ´ng cÃ²n trong danh sÃ¡ch XÆ°á»Ÿng â€” nhÃ¢n viÃªn khÃ´ng tháº¥y Ä‘Æ¡n nÃ o cá»§a giÃ¡ trá»‹ nÃ y. Tick láº¡i XÆ°á»Ÿng Ä‘Ãºng Ä‘á»ƒ thay.">${escapeHtml(x)} (khÃ´ng tá»“n táº¡i)</span>`).join('')}
+            ${tachXuong(u.Xuong).length ? '' : '<span class="nv-chua-gan">(chưa gán)</span>'}
+            ${tachXuong(u.Xuong).filter(x => !danhSachXuong.includes(x)).map(x => `<span class="nv-xuong-la" title="Không còn trong danh sách Xưởng — nhân viên không thấy đơn nào của giá trị này. Tick lại Xưởng đúng để thay.">${escapeHtml(x)} (không tồn tại)</span>`).join('')}
           </div>
         </td>
-        <td>${String(u.KichHoat).toUpperCase() === 'TRUE' ? 'Äang hoáº¡t Ä‘á»™ng' : 'ÄÃ£ khoÃ¡'}</td>
-        <td>${laHN(u) ? (u.MatKhau && u.MatKhau !== '000000' ? escapeHtml(u.MatKhau) : '<span style="color:var(--color-text-muted)">000000 (máº·c Ä‘á»‹nh)</span>') : (u.MatKhau ? escapeHtml(u.MatKhau) : '(chÆ°a Ä‘áº·t)')}</td>
-        <td>${String(u.HienThiDangNhap).toUpperCase() === 'FALSE' ? 'ÄÃ£ áº©n' : 'Hiá»‡n cÃ´ng khai'}</td>
-        <td><button class="btn-hanh-dong phu" data-ten="${escapeHtml(u.Ten)}" data-xuong="${escapeHtml(u.Xuong)}" onclick="datMatKhau(this.dataset.ten,this.dataset.xuong)">${laHN(u) ? 'Äáº·t PIN HN' : 'Äáº·t máº­t kháº©u'}</button></td>
-        <td><button class="btn-hanh-dong phu" data-ten="${escapeHtml(u.Ten)}" data-xuong="${escapeHtml(u.Xuong)}" onclick="xoaMatKhau(this.dataset.ten,this.dataset.xuong)">${laHN(u) ? 'Reset PIN' : 'XoÃ¡ máº­t kháº©u'}</button></td>
+        <td>${String(u.KichHoat).toUpperCase() === 'TRUE' ? 'Đang hoạt động' : 'Đã khoá'}</td>
+        <td>${laHN(u) ? (u.MatKhau && u.MatKhau !== '000000' ? escapeHtml(u.MatKhau) : '<span style="color:var(--color-text-muted)">000000 (mặc định)</span>') : (u.MatKhau ? escapeHtml(u.MatKhau) : '(chưa đặt)')}</td>
+        <td>${String(u.HienThiDangNhap).toUpperCase() === 'FALSE' ? 'Đã ẩn' : 'Hiện công khai'}</td>
+        <td><button class="btn-hanh-dong phu" data-ten="${escapeHtml(u.Ten)}" data-xuong="${escapeHtml(u.Xuong)}" onclick="datMatKhau(this.dataset.ten,this.dataset.xuong)">${laHN(u) ? 'Đặt PIN HN' : 'Đặt mật khẩu'}</button></td>
+        <td><button class="btn-hanh-dong phu" data-ten="${escapeHtml(u.Ten)}" data-xuong="${escapeHtml(u.Xuong)}" onclick="xoaMatKhau(this.dataset.ten,this.dataset.xuong)">${laHN(u) ? 'Reset PIN' : 'Xoá mật khẩu'}</button></td>
         <td><button class="btn-hanh-dong phu" data-ten="${escapeHtml(u.Ten)}" data-kich-hoat="${escapeHtml(u.KichHoat)}" onclick="doiKichHoat(this.dataset.ten, this.dataset.kichHoat)">
-          ${String(u.KichHoat).toUpperCase() === 'TRUE' ? 'KhoÃ¡' : 'Má»Ÿ láº¡i'}
+          ${String(u.KichHoat).toUpperCase() === 'TRUE' ? 'Khoá' : 'Mở lại'}
         </button></td>
         <td><button class="btn-hanh-dong phu" data-ten="${escapeHtml(u.Ten)}" data-hien-thi="${escapeHtml(u.HienThiDangNhap)}" onclick="doiHienThi(this.dataset.ten, this.dataset.hienThi)">
-          ${String(u.HienThiDangNhap).toUpperCase() === 'FALSE' ? 'Hiá»‡n láº¡i' : 'áº¨n khá»i Ä‘Äƒng nháº­p'}
+          ${String(u.HienThiDangNhap).toUpperCase() === 'FALSE' ? 'Hiện lại' : 'Ẩn khỏi đăng nhập'}
         </button></td>
       </tr>`).join('')}`;
 }
 
-// ten Ä‘áº¿n tá»« this.dataset.ten (xem taiDanhSach() á»Ÿ trÃªn) â€” chuá»—i Gá»C chÆ°a encode, tá»± encodeURIComponent
-// á»Ÿ ÄÃ‚Y khi ghÃ©p vÃ o URL (Ä‘Ã¢y má»›i lÃ  Ä‘Ãºng má»¥c Ä‘Ã­ch cá»§a hÃ m nÃ y â€” mÃ£ hoÃ¡ cho URL, khÃ´ng pháº£i cho JS).
-// khoi = Ã´ chá»©a cÃ¡c Ã´ tick XÆ°á»Ÿng cá»§a 1 nhÃ¢n viÃªn (data-ten) â€” gá»­i TOÃ€N Bá»˜ XÆ°á»Ÿng Ä‘ang tick.
+// ten đến từ this.dataset.ten (xem taiDanhSach() ở trên) — chuỗi GỐC chưa encode, tự encodeURIComponent
+// ở ĐÂY khi ghép vào URL (đây mới là đúng mục đích của hàm này — mã hoá cho URL, không phải cho JS).
+// khoi = ô chứa các ô tick Xưởng của 1 nhân viên (data-ten) — gửi TOÀN BỘ Xưởng đang tick.
 async function doiXuong(khoi) {
   const ten = khoi.dataset.ten;
   try {
@@ -156,7 +156,7 @@ async function doiVaiTro(ten, vaiTroMoi) {
 }
 
 async function doiTen(tenCu) {
-  const moi = prompt(`Nháº­p tÃªn má»›i cho "${tenCu}":`, tenCu);
+  const moi = prompt(`Nhập tên mới cho "${tenCu}":`, tenCu);
   if (moi === null) return;
   const tenMoi = moi.trim();
   if (!tenMoi || tenMoi === tenCu) return;
@@ -166,17 +166,17 @@ async function doiTen(tenCu) {
   } catch (err) { alert(err.message); }
 }
 
-// HN: reset vá» 000000 (báº¯t Ä‘á»•i láº§n Ä‘Äƒng nháº­p tá»›i); non-HN: xoÃ¡ hoÃ n toÃ n (Ä‘Äƒng nháº­p khÃ´ng cáº§n PIN).
+// HN: reset về 000000 (bắt đổi lần đăng nhập tới); non-HN: xoá hoàn toàn (đăng nhập không cần PIN).
 async function xoaMatKhau(ten, xuong) {
   const hn = tachXuong(xuong).includes('HN');
   if (hn) {
-    if (!confirm(`Reset PIN cá»§a "${ten}" vá» 000000? NgÆ°á»i dÃ¹ng sáº½ pháº£i Ä‘áº·t PIN má»›i láº§n Ä‘Äƒng nháº­p tá»›i.`)) return;
+    if (!confirm(`Reset PIN của "${ten}" về 000000? Người dùng sẽ phải đặt PIN mới lần đăng nhập tới.`)) return;
     try {
       await apiFetch('/users/' + encodeURIComponent(ten), { method: 'PUT', body: JSON.stringify({ MatKhau: '000000' }) });
       await taiDanhSach();
     } catch (err) { alert(err.message); }
   } else {
-    if (!confirm(`XoÃ¡ máº­t kháº©u cá»§a "${ten}"? Sau khi xoÃ¡, tÃ i khoáº£n nÃ y Ä‘Äƒng nháº­p KHÃ”NG cáº§n máº­t kháº©u.`)) return;
+    if (!confirm(`Xoá mật khẩu của "${ten}"? Sau khi xoá, tài khoản này đăng nhập KHÔNG cần mật khẩu.`)) return;
     try {
       await apiFetch('/users/' + encodeURIComponent(ten), { method: 'PUT', body: JSON.stringify({ MatKhau: '' }) });
       await taiDanhSach();
@@ -190,9 +190,9 @@ async function doiKichHoat(ten, kichHoatHienTai) {
   await taiDanhSach();
 }
 
-// áº¨n/hiá»‡n khá»i danh sÃ¡ch nÃºt báº¥m cÃ´ng khai á»Ÿ mÃ n hÃ¬nh Ä‘Äƒng nháº­p (bá»• sung 13/09/2026 â€” xem
-// docs/superpowers/specs/2026-09-13-an-tai-khoan-dang-nhap-design.md). KHÃ”NG áº£nh hÆ°á»Ÿng kháº£ nÄƒng Ä‘Äƒng
-// nháº­p â€” tÃ i khoáº£n bá»‹ áº©n váº«n vÃ o Ä‘Æ°á»£c bÃ¬nh thÆ°á»ng qua trang Ä‘Äƒng nháº­p riÃªng (gÃµ tay tÃªn).
+// Ẩn/hiện khỏi danh sách nút bấm công khai ở màn hình đăng nhập (bổ sung 13/09/2026 — xem
+// docs/superpowers/specs/2026-09-13-an-tai-khoan-dang-nhap-design.md). KHÔNG ảnh hưởng khả năng đăng
+// nhập — tài khoản bị ẩn vẫn vào được bình thường qua trang đăng nhập riêng (gõ tay tên).
 async function doiHienThi(ten, hienThiHienTai) {
   const moi = String(hienThiHienTai).toUpperCase() === 'FALSE' ? 'TRUE' : 'FALSE';
   try {
@@ -201,13 +201,13 @@ async function doiHienThi(ten, hienThiHienTai) {
   } catch (err) { alert(err.message); }
 }
 
-// Äáº·t/Ä‘áº·t láº¡i máº­t kháº©u â€” dÃ¹ng prompt() thay vÃ¬ má»Ÿ form riÃªng, Ä‘á»§ dÃ¹ng cho thao tÃ¡c admin Ã­t khi lÃ m.
+// Đặt/đặt lại mật khẩu — dùng prompt() thay vì mở form riêng, đủ dùng cho thao tác admin ít khi làm.
 async function datMatKhau(ten, xuong) {
   const hn = tachXuong(xuong).includes('HN');
-  const moi = prompt(`Nháº­p ${hn ? 'PIN HN má»›i (Ä‘Ãºng 6 chá»¯ sá»‘)' : 'máº­t kháº©u má»›i (1-4 chá»¯ sá»‘)'} cho "${ten}":`);
-  if (moi === null) return; // báº¥m Huá»·
+  const moi = prompt(`Nhập ${hn ? 'PIN HN mới (đúng 6 chữ số)' : 'mật khẩu mới (1-4 chữ số)'} cho "${ten}":`);
+  if (moi === null) return; // bấm Huỷ
   const ptrn = hn ? /^\d{6}$/ : /^\d{1,4}$/;
-  if (!ptrn.test(moi.trim())) { alert(hn ? 'PIN HN pháº£i lÃ  Ä‘Ãºng 6 chá»¯ sá»‘.' : 'Máº­t kháº©u pháº£i lÃ  1-4 chá»¯ sá»‘.'); return; }
+  if (!ptrn.test(moi.trim())) { alert(hn ? 'PIN HN phải là đúng 6 chữ số.' : 'Mật khẩu phải là 1-4 chữ số.'); return; }
   try {
     await apiFetch('/users/' + encodeURIComponent(ten), { method: 'PUT', body: JSON.stringify({ MatKhau: moi.trim() }) });
     await taiDanhSach();

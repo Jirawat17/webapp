@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chi phÃ­ â€” XÆ°á»Ÿng ThÃªu</title>
+<title>Chi phí — Xưởng Thêu</title>
 <link rel="stylesheet" href="/css/style.css?v=112">
 <script src="/js/theme.js?v=104"></script>
 </head>
@@ -11,53 +11,53 @@
 <div id="nav"></div>
 <div class="page">
   <div class="tieu-de-cong-cu">
-    <h2>Chi phÃ­</h2>
+    <h2>Chi phí</h2>
     <div class="inline-form" style="align-items:center;gap:var(--space-3)">
       <input type="month" id="inp-thang" style="font-size:1rem;padding:6px 10px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface);color:var(--color-text)">
     </div>
   </div>
 
-  <div id="tong-chi-phi" class="tong-so-the" style="margin-bottom:var(--space-4)">Äang táº£i...</div>
+  <div id="tong-chi-phi" class="tong-so-the" style="margin-bottom:var(--space-4)">Đang tải...</div>
 
-  <!-- Form thÃªm/sá»­a -->
+  <!-- Form thêm/sửa -->
   <div class="chart-card" style="margin-bottom:var(--space-4)">
-    <h3 id="form-tieu-de" style="margin-top:0">ThÃªm khoáº£n chi</h3>
+    <h3 id="form-tieu-de" style="margin-top:0">Thêm khoản chi</h3>
     <form id="form-chi-phi" class="inline-form" style="flex-wrap:wrap;gap:var(--space-3)">
       <div class="truong" style="flex:2;min-width:160px">
-        <label for="inp-ten">TÃªn khoáº£n chi</label>
-        <input type="text" id="inp-ten" placeholder="VD: ThuÃª nhÃ  thÃ¡ng 11" maxlength="200" required>
+        <label for="inp-ten">Tên khoản chi</label>
+        <input type="text" id="inp-ten" placeholder="VD: Thuê nhà tháng 11" maxlength="200" required>
       </div>
       <div class="truong" style="flex:1;min-width:120px">
-        <label for="inp-loai">Loáº¡i</label>
+        <label for="inp-loai">Loại</label>
         <select id="inp-loai">
-          <option>ThuÃª nhÃ </option>
-          <option>LÆ°Æ¡ng nhÃ¢n viÃªn</option>
-          <option>Äiá»‡n nÆ°á»›c</option>
-          <option>KhÃ¡c</option>
+          <option>Thuê nhà</option>
+          <option>Lương nhân viên</option>
+          <option>Điện nước</option>
+          <option>Khác</option>
         </select>
       </div>
       <div class="truong" style="flex:1;min-width:120px">
-        <label for="inp-so-tien">Sá»‘ tiá»n ($)</label>
+        <label for="inp-so-tien">Số tiền ($)</label>
         <input type="number" id="inp-so-tien" min="0.01" step="0.01" placeholder="0.00" required>
       </div>
       <div class="truong" style="flex:2;min-width:160px">
-        <label for="inp-ghi-chu">Ghi chÃº</label>
-        <input type="text" id="inp-ghi-chu" placeholder="Tuá»³ chá»n" maxlength="500">
+        <label for="inp-ghi-chu">Ghi chú</label>
+        <input type="text" id="inp-ghi-chu" placeholder="Tuỳ chọn" maxlength="500">
       </div>
       <div class="truong" style="flex:0 0 auto;align-self:flex-end">
-        <button type="submit" class="btn-hanh-dong" id="btn-luu">ThÃªm</button>
-        <button type="button" class="btn-hanh-dong phu" id="btn-huy" style="display:none">Huá»·</button>
+        <button type="submit" class="btn-hanh-dong" id="btn-luu">Thêm</button>
+        <button type="button" class="btn-hanh-dong phu" id="btn-huy" style="display:none">Huỷ</button>
       </div>
     </form>
     <div id="thong-bao-form" style="margin-top:var(--space-2);font-size:0.9rem;color:var(--color-danger)"></div>
   </div>
 
-  <!-- Báº£ng -->
+  <!-- Bảng -->
   <div class="chart-card">
     <div class="bang-cuon-ngang">
       <table class="bang-xem-truoc" id="bang-chi-phi">
         <thead><tr>
-          <th>TÃªn khoáº£n</th><th>Loáº¡i</th><th>Sá»‘ tiá»n</th><th>Ghi chÃº</th><th></th>
+          <th>Tên khoản</th><th>Loại</th><th>Số tiền</th><th>Ghi chú</th><th></th>
         </tr></thead>
         <tbody id="bang-chi-phi-body"></tbody>
       </table>
@@ -76,7 +76,7 @@ let dangSuaId = null;
   if (!user) return;
   renderNav(user, 'chi-phi');
   if (user.vaiTro !== 'superadmin') {
-    document.querySelector('.page').innerHTML = '<p>Báº¡n khÃ´ng cÃ³ quyá»n truy cáº­p trang nÃ y.</p>';
+    document.querySelector('.page').innerHTML = '<p>Bạn không có quyền truy cập trang này.</p>';
     return;
   }
 
@@ -96,24 +96,24 @@ let dangSuaId = null;
 })();
 
 async function taiDuLieu() {
-  document.getElementById('tong-chi-phi').textContent = 'Äang táº£i...';
+  document.getElementById('tong-chi-phi').textContent = 'Đang tải...';
   let data;
   try {
     data = await apiFetch('/chi-phi?thang=' + thangHienTai);
   } catch (e) {
-    document.getElementById('tong-chi-phi').textContent = 'KhÃ´ng táº£i Ä‘Æ°á»£c: ' + e.message;
+    document.getElementById('tong-chi-phi').textContent = 'Không tải được: ' + e.message;
     return;
   }
   const thangHienThi = thangHienTai.split('-').reverse().join('/');
   document.getElementById('tong-chi-phi').textContent =
-    `Tá»•ng chi phÃ­ thÃ¡ng ${thangHienThi}: ${dinhDangTien(data.tong)} Â· ${data.ds.length} khoáº£n`;
+    `Tổng chi phí tháng ${thangHienThi}: ${dinhDangTien(data.tong)} · ${data.ds.length} khoản`;
   veoBang(data.ds);
 }
 
 function veoBang(ds) {
   const tbody = document.getElementById('bang-chi-phi-body');
   if (!ds.length) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--color-text-muted)">ChÆ°a cÃ³ khoáº£n chi nÃ o.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--color-text-muted)">Chưa có khoản chi nào.</td></tr>';
     return;
   }
   tbody.innerHTML = ds.map(x => `
@@ -123,8 +123,8 @@ function veoBang(ds) {
       <td><strong>${dinhDangTien(x.so_tien)}</strong></td>
       <td style="color:var(--color-text-muted)">${escapeHtml(x.ghi_chu)}</td>
       <td style="white-space:nowrap">
-        <button class="btn-hanh-dong phu nho" onclick="batDauSua(${x.id})">Sá»­a</button>
-        <button class="btn-hanh-dong nguy-hiem nho" onclick="xoaChiPhi(${x.id}, '${escapeAttr(x.ten)}')">XoÃ¡</button>
+        <button class="btn-hanh-dong phu nho" onclick="batDauSua(${x.id})">Sửa</button>
+        <button class="btn-hanh-dong nguy-hiem nho" onclick="xoaChiPhi(${x.id}, '${escapeAttr(x.ten)}')">Xoá</button>
       </td>
     </tr>
   `).join('');
@@ -154,7 +154,7 @@ async function luuChiPhi() {
 
 function batDauSua(id) {
   const cells = [...document.querySelectorAll('#bang-chi-phi-body tr')];
-  // TÃ¬m láº¡i tá»« API thay vÃ¬ Ä‘á»c DOM â€” dÃ¹ng data Ä‘Ã£ load
+  // Tìm lại từ API thay vì đọc DOM — dùng data đã load
   apiFetch('/chi-phi?thang=' + thangHienTai).then(data => {
     const x = data.ds.find(r => r.id === id);
     if (!x) return;
@@ -163,34 +163,34 @@ function batDauSua(id) {
     document.getElementById('inp-loai').value = x.loai;
     document.getElementById('inp-so-tien').value = x.so_tien;
     document.getElementById('inp-ghi-chu').value = x.ghi_chu;
-    document.getElementById('form-tieu-de').textContent = 'Sá»­a khoáº£n chi';
-    document.getElementById('btn-luu').textContent = 'LÆ°u';
+    document.getElementById('form-tieu-de').textContent = 'Sửa khoản chi';
+    document.getElementById('btn-luu').textContent = 'Lưu';
     document.getElementById('btn-huy').style.display = '';
     document.getElementById('inp-ten').focus();
   });
 }
 
 async function xoaChiPhi(id, ten) {
-  if (!confirm(`XoÃ¡ khoáº£n "${ten}"?`)) return;
+  if (!confirm(`Xoá khoản "${ten}"?`)) return;
   try {
     await apiFetch(`/chi-phi/${id}`, { method: 'DELETE' });
     await taiDuLieu();
   } catch (e) {
-    alert('Lá»—i: ' + e.message);
+    alert('Lỗi: ' + e.message);
   }
 }
 
 function datLaiForm() {
   dangSuaId = null;
   document.getElementById('form-chi-phi').reset();
-  document.getElementById('form-tieu-de').textContent = 'ThÃªm khoáº£n chi';
-  document.getElementById('btn-luu').textContent = 'ThÃªm';
+  document.getElementById('form-tieu-de').textContent = 'Thêm khoản chi';
+  document.getElementById('btn-luu').textContent = 'Thêm';
   document.getElementById('btn-huy').style.display = 'none';
   document.getElementById('thong-bao-form').textContent = '';
 }
 
 const dinhDangTien = n => '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-function slugLoai(l) { return { 'ThuÃª nhÃ ': 'thue', 'LÆ°Æ¡ng nhÃ¢n viÃªn': 'luong', 'Äiá»‡n nÆ°á»›c': 'dien', 'KhÃ¡c': 'khac' }[l] || 'khac'; }
+function slugLoai(l) { return { 'Thuê nhà': 'thue', 'Lương nhân viên': 'luong', 'Điện nước': 'dien', 'Khác': 'khac' }[l] || 'khac'; }
 function escapeAttr(s) { return String(s).replace(/'/g, '&#39;').replace(/"/g, '&quot;'); }
 </script>
 

@@ -1,77 +1,77 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ÄÆ¡n hÃ ng â€” XÆ°á»Ÿng ThÃªu</title>
+<title>Đơn hàng — Xưởng Thêu</title>
 <link rel="stylesheet" href="/css/style.css?v=112">
 <script src="/js/theme.js?v=104"></script>
 </head>
 <body>
 <div id="nav"></div>
 <div class="page">
-  <!-- TiÃªu Ä‘á» gá»™p CHUNG 1 hÃ ng vá»›i thanh Lá»c/Sáº¯p xáº¿p (bá»• sung 09/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€”
-       tÄƒng diá»‡n tÃ­ch hiá»ƒn thá»‹, cÃ¹ng tinh tháº§n Ä‘Ã£ gá»™p nav thÃ nh 1 hÃ ng á»Ÿ desktop). Bá»c trong
-       .tieu-de-cong-cu (style.css) â€” tá»± xuá»‘ng dÃ²ng (flex-wrap) náº¿u mÃ n hÃ¬nh háº¹p khÃ´ng Ä‘á»§ chá»—. -->
+  <!-- Tiêu đề gộp CHUNG 1 hàng với thanh Lọc/Sắp xếp (bổ sung 09/09/2026, theo yêu cầu người dùng —
+       tăng diện tích hiển thị, cùng tinh thần đã gộp nav thành 1 hàng ở desktop). Bọc trong
+       .tieu-de-cong-cu (style.css) — tự xuống dòng (flex-wrap) nếu màn hình hẹp không đủ chỗ. -->
   <div class="tieu-de-cong-cu">
-    <h2>Danh sÃ¡ch Ä‘Æ¡n hÃ ng</h2>
+    <h2>Danh sách đơn hàng</h2>
     <div class="thanh-cong-cu-danh-sach">
-      <!-- TÃ¬m nhanh theo mÃ£ Ä‘Æ¡n (02/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” CHá»ˆ STT_Key, khá»›p má»™t pháº§n (tham sá»‘ maDon, KHÃC Ã´
-           "TÃ¬m theo Ä‘Æ¡n / mÃ£ KH" trong panel Lá»c). Enter/nÃºt TÃ¬m: Ä‘Æ°a Má»ŒI bá»™ lá»c khÃ¡c vá» "Táº¥t cáº£" rá»“i tÃ¬m; xoÃ¡ trá»‘ng Ã´: táº£i láº¡i
-           Ä‘áº§y Ä‘á»§ (má»i bá»™ lá»c "Táº¥t cáº£"); Ä‘á»•i bá»™ lá»c khÃ¡c: tá»± xoÃ¡ Ã´ nÃ y (khÃ´ng dÃ¹ng chung vá»›i bá»™ lá»c). Xem timNhanhMaDon(). -->
+      <!-- Tìm nhanh theo mã đơn (02/10/2026, theo yêu cầu người dùng) — CHỈ STT_Key, khớp một phần (tham số maDon, KHÁC ô
+           "Tìm theo đơn / mã KH" trong panel Lọc). Enter/nút Tìm: đưa MỌI bộ lọc khác về "Tất cả" rồi tìm; xoá trống ô: tải lại
+           đầy đủ (mọi bộ lọc "Tất cả"); đổi bộ lọc khác: tự xoá ô này (không dùng chung với bộ lọc). Xem timNhanhMaDon(). -->
       <span style="display:inline-flex;gap:4px;flex:0 1 240px;min-width:170px">
-        <input type="search" id="tim-nhanh-ma-don" placeholder="Nháº­p mÃ£ Ä‘Æ¡n..." aria-label="TÃ¬m nhanh theo mÃ£ Ä‘Æ¡n" autocomplete="off" style="flex:1;min-width:0">
-        <button type="button" class="btn-hanh-dong phu" onclick="timNhanhMaDon()" style="flex:0 0 auto">TÃ¬m</button>
+        <input type="search" id="tim-nhanh-ma-don" placeholder="Nhập mã đơn..." aria-label="Tìm nhanh theo mã đơn" autocomplete="off" style="flex:1;min-width:0">
+        <button type="button" class="btn-hanh-dong phu" onclick="timNhanhMaDon()" style="flex:0 0 auto">Tìm</button>
       </span>
       <button type="button" class="btn-hanh-dong phu" id="btn-mo-loc" onclick="batTatPanel('panel-loc')"></button>
       <button type="button" class="btn-hanh-dong phu" id="btn-mo-sap-xep" onclick="batTatPanel('panel-sap-xep')"></button>
-      <!-- "IN DANH SÃCH PHÃ”I Cá»¦A ÄÆ N ÄANG CHá»ŒN" hiá»‡n Láº I 23/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” Ä‘Ã£ táº¡m
-           áº©n cÃ¹ng nÃºt IN ÄÆ N tá»« 07/09/2026 (IN ÄÆ N hiá»‡n láº¡i 29/09/2026). NhÃ£n rÃºt gá»n "IN DANH SÃCH PHÃ”I" 29/09/2026. -->
+      <!-- "IN DANH SÁCH PHÔI CỦA ĐƠN ĐANG CHỌN" hiện LẠI 23/09/2026, theo yêu cầu người dùng — đã tạm
+           ẩn cùng nút IN ĐƠN từ 07/09/2026 (IN ĐƠN hiện lại 29/09/2026). Nhãn rút gọn "IN DANH SÁCH PHÔI" 29/09/2026. -->
       <button type="button" class="btn-hanh-dong phu" id="btn-in-phoi-ao" onclick="inPhoiDangChon(this)"></button>
-      <!-- IN ÄÆ N Tá»ª FILE PHÃ”I (29/09/2026) â€” chá»n file DSPhoiAoTongHop.pdf -> in DonCanIn cÃ¡c Ä‘Æ¡n trong file (inDonTuFilePhoi). -->
+      <!-- IN ĐƠN TỪ FILE PHÔI (29/09/2026) — chọn file DSPhoiAoTongHop.pdf -> in DonCanIn các đơn trong file (inDonTuFilePhoi). -->
       <button type="button" class="btn-hanh-dong phu" id="btn-in-don-tu-file-phoi" onclick="document.getElementById('file-phoi-ao').click()"></button>
       <input type="file" id="file-phoi-ao" accept="application/pdf,.pdf" hidden onchange="inDonTuFilePhoi(this)">
-      <!-- IN ÄÆ N (hiá»‡n láº¡i 29/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” DonCanIn cÃ¡c Ä‘Æ¡n Ä‘ang tick, má»i vai trÃ² nhÆ° IN DANH SÃCH PHÃ”I. -->
+      <!-- IN ĐƠN (hiện lại 29/09/2026, theo yêu cầu người dùng) — DonCanIn các đơn đang tick, mọi vai trò như IN DANH SÁCH PHÔI. -->
       <button type="button" class="btn-hanh-dong phu" id="btn-in-don-dang-chon" onclick="inDonDangChon(this)"></button>
       <button type="button" class="btn-hanh-dong phu" id="btn-in-ma-phoi-don" onclick="inMaPhoiDonDangChon(this)"></button>
-      <!-- btn-quet-hang-loat: hiá»‡n láº¡i 13/09/2026 theo yÃªu cáº§u ngÆ°á»i dÃ¹ng (Ä‘á»ƒ thá»­ Ä‘Ã¡nh giÃ¡ Ä‘á»™ chÃ­nh
-           xÃ¡c gá»™p nhÃ³m) â€” style="display:none" gá»‘c bá» Ä‘i, chuyá»ƒn sang áº©n/hiá»‡n theo vai trÃ² báº±ng JS
-           (cÃ¹ng khuÃ´n máº«u btn-in-hai-quan/btn-rasoat-hang-loat) vÃ¬ Ä‘Ã¢y lÃ  hÃ nh Ä‘á»™ng ghi vÃ o Sheet. -->
+      <!-- btn-quet-hang-loat: hiện lại 13/09/2026 theo yêu cầu người dùng (để thử đánh giá độ chính
+           xác gộp nhóm) — style="display:none" gốc bỏ đi, chuyển sang ẩn/hiện theo vai trò bằng JS
+           (cùng khuôn mẫu btn-in-hai-quan/btn-rasoat-hang-loat) vì đây là hành động ghi vào Sheet. -->
       <button type="button" class="btn-hanh-dong phu" id="btn-quet-hang-loat" onclick="quetDonHangLoat(this)" style="display:none"></button>
-      <!-- btn-quet-lai-hang-loat (bá»• sung 13/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” tÃ­nh Láº I hash cho
-           Ä‘Æ¡n Ä‘ang chá»n dÃ¹ Ä‘Ã£ cÃ³ hash tá»« trÆ°á»›c (khÃ¡c nÃºt quÃ©t thÆ°á»ng á»Ÿ trÃªn, chá»‰ tÃ­nh Ä‘Æ¡n cÃ²n thiáº¿u
-           hash) â€” cáº§n khi vá»«a Ä‘á»•i ngÆ°á»¡ng vÃ  muá»‘n xem láº¡i nhÃ³m vá»›i ngÆ°á»¡ng má»›i trÃªn Ä‘Ãºng cÃ¡c Ä‘Æ¡n nÃ y. -->
+      <!-- btn-quet-lai-hang-loat (bổ sung 13/09/2026, theo yêu cầu người dùng) — tính LẠI hash cho
+           đơn đang chọn dù đã có hash từ trước (khác nút quét thường ở trên, chỉ tính đơn còn thiếu
+           hash) — cần khi vừa đổi ngưỡng và muốn xem lại nhóm với ngưỡng mới trên đúng các đơn này. -->
       <button type="button" class="btn-hanh-dong phu" id="btn-quet-lai-hang-loat" onclick="quetDonHangLoat(this, { buocLai: true })" style="display:none"></button>
-      <!-- btn-them-hang-loat (bá»• sung 13/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” thÃªm tháº³ng cÃ¡c Ä‘Æ¡n Ä‘ang
-           tick vÃ o 1 ÄÆ¡n hÃ ng loáº¡t cÃ³ sáºµn/má»›i, thay vÃ¬ pháº£i gÃµ tay tá»«ng mÃ£ á»Ÿ public/don-hang-loat.html. -->
+      <!-- btn-them-hang-loat (bổ sung 13/09/2026, theo yêu cầu người dùng) — thêm thẳng các đơn đang
+           tick vào 1 Đơn hàng loạt có sẵn/mới, thay vì phải gõ tay từng mã ở public/don-hang-loat.html. -->
       <button type="button" class="btn-hanh-dong phu" id="btn-them-hang-loat" onclick="themVaoDonHangLoat()" style="display:none"></button>
       <button type="button" class="btn-hanh-dong phu" id="btn-in-hai-quan" onclick="inHaiQuanDangChon(this)" style="display:none"></button>
-      <!-- THUÃŠ TEAM KHÃC (bá»• sung 28/09/2026) â€” PDF bÃ n giao Ä‘Æ¡n Ä‘ang chá»n cho team thÃªu ngoÃ i; admin/superadmin/ve_file, hiá»‡n qua JS. -->
-      <button type="button" class="btn-hanh-dong btn-thue-team-khac" id="btn-thue-team-khac" onclick="xuatThueTeamKhac(this)" style="display:none">THUÃŠ TEAM KHÃC</button>
-      <!-- CHUYá»‚N TRáº NG THÃI THá»¦ CÃ”NG SUPERADMIN (bá»• sung 25/09/2026) â€” CHá»ˆ superadmin, hiá»‡n qua JS. -->
-      <button type="button" class="btn-hanh-dong phu nguy-hiem" id="btn-mo-superadmin" onclick="batTatPanelSuperadmin()" style="display:none">CHUYá»‚N TRáº NG THÃI THá»¦ CÃ”NG SUPERADMIN</button>
+      <!-- THUÊ TEAM KHÁC (bổ sung 28/09/2026) — PDF bàn giao đơn đang chọn cho team thêu ngoài; admin/superadmin/ve_file, hiện qua JS. -->
+      <button type="button" class="btn-hanh-dong btn-thue-team-khac" id="btn-thue-team-khac" onclick="xuatThueTeamKhac(this)" style="display:none">THUÊ TEAM KHÁC</button>
+      <!-- CHUYỂN TRẠNG THÁI THỦ CÔNG SUPERADMIN (bổ sung 25/09/2026) — CHỈ superadmin, hiện qua JS. -->
+      <button type="button" class="btn-hanh-dong phu nguy-hiem" id="btn-mo-superadmin" onclick="batTatPanelSuperadmin()" style="display:none">CHUYỂN TRẠNG THÁI THỦ CÔNG SUPERADMIN</button>
     </div>
   </div>
 
-  <!-- Cáº£nh bÃ¡o Ä‘Æ¡n Ä‘Ã£ thá»­ Tá»° Äá»˜NG mua tracking 10 láº§n khÃ´ng Ä‘Æ°á»£c -> chuyá»ƒn mua thá»§ cÃ´ng (30/09/2026) â€” chá»‰ vai trÃ² cÃ³ menu
-       Tracking; API tá»± cháº·n vai trÃ² khÃ¡c (routes/tracking.js GET /canh-bao-thu-cong). -->
+  <!-- Cảnh báo đơn đã thử TỰ ĐỘNG mua tracking 10 lần không được -> chuyển mua thủ công (30/09/2026) — chỉ vai trò có menu
+       Tracking; API tự chặn vai trò khác (routes/tracking.js GET /canh-bao-thu-cong). -->
   <div id="canh-bao-thu-cong" style="display:none"></div>
 
   <div id="panel-superadmin" class="panel-dieu-khien" style="display:none">
     <div style="background:var(--color-danger-bg);color:var(--color-danger-text);border:3px solid var(--color-danger-text);border-radius:8px;padding:16px;margin-bottom:12px;font-size:1.15rem;font-weight:700;line-height:1.5">
-      âš  Cáº¢NH BÃO â€” CHá»¨C NÄ‚NG NGUY HIá»‚M CHá»ˆ DÃ€NH CHO SUPERADMIN<br>
-      <span style="font-size:1rem;font-weight:600">Chuyá»ƒn THáº²NG cÃ¡c Ä‘Æ¡n nháº­p bÃªn dÆ°á»›i sang tráº¡ng thÃ¡i Ä‘Ã£ chá»n, Bá»Ž QUA Má»ŒI RÃ€NG BUá»˜C: tráº¡ng thÃ¡i trÆ°á»›c Ä‘Ã³, yÃªu cáº§u quÃ©t mÃ£/chá»¥p áº£nh, yÃªu cáº§u cÃ³ Tracking. Chuyá»ƒn tá»›i "ÄÃƒ Sáº´N SÃ€NG CHáº Y MÃY" trá»Ÿ Ä‘i sáº½ tá»± Ä‘áº·t PhÃ´i = "ÄÃ£ láº¥y phÃ´i" (TRá»ª KHO PHÃ”I) vÃ  Váº½ file = "ÄÃ£ váº½ file"; chuyá»ƒn vá» "ChÆ°a in mÃ£" sáº½ tá»± Ä‘áº·t PhÃ´i/Váº½ file vá» "ChÆ°a...". Kiá»ƒm tra ká»¹ trÆ°á»›c khi báº¥m.</span>
+      ⚠ CẢNH BÁO — CHỨC NĂNG NGUY HIỂM CHỈ DÀNH CHO SUPERADMIN<br>
+      <span style="font-size:1rem;font-weight:600">Chuyển THẲNG các đơn nhập bên dưới sang trạng thái đã chọn, BỎ QUA MỌI RÀNG BUỘC: trạng thái trước đó, yêu cầu quét mã/chụp ảnh, yêu cầu có Tracking. Chuyển tới "ĐÃ SẴN SÀNG CHẠY MÁY" trở đi sẽ tự đặt Phôi = "Đã lấy phôi" (TRỪ KHO PHÔI) và Vẽ file = "Đã vẽ file"; chuyển về "Chưa in mã" sẽ tự đặt Phôi/Vẽ file về "Chưa...". Kiểm tra kỹ trước khi bấm.</span>
     </div>
     <div class="inline-form" style="align-items:flex-end">
       <div class="truong" style="flex:1;min-width:260px">
-        <label for="sa-danh-sach-don">Danh sÃ¡ch mÃ£ Ä‘Æ¡n (cÃ¡ch nhau dáº¥u ,)</label>
+        <label for="sa-danh-sach-don">Danh sách mã đơn (cách nhau dấu ,)</label>
         <textarea id="sa-danh-sach-don" rows="3" style="text-transform:uppercase" oninput="this.value = this.value.toUpperCase()"></textarea>
       </div>
       <div class="truong">
-        <label for="sa-trang-thai">Chuyá»ƒn Ä‘áº¿n tráº¡ng thÃ¡i</label>
+        <label for="sa-trang-thai">Chuyển đến trạng thái</label>
         <select id="sa-trang-thai"></select>
       </div>
-      <button type="button" class="btn-hanh-dong" style="background:var(--color-danger-text);border-color:var(--color-danger-text)" onclick="apDungChuyenSuperadmin(this)">Thá»±c hiá»‡n</button>
+      <button type="button" class="btn-hanh-dong" style="background:var(--color-danger-text);border-color:var(--color-danger-text)" onclick="apDungChuyenSuperadmin(this)">Thực hiện</button>
     </div>
     <div id="sa-ket-qua" style="margin-top:8px"></div>
   </div>
@@ -79,181 +79,181 @@
   <div id="panel-loc" class="panel-dieu-khien" style="display:none">
     <div class="inline-form">
       <div class="truong">
-        <label for="loc-trang-thai">Tráº¡ng thÃ¡i</label>
-        <select id="loc-trang-thai"><option value="">Táº¥t cáº£ tráº¡ng thÃ¡i</option></select>
+        <label for="loc-trang-thai">Trạng thái</label>
+        <select id="loc-trang-thai"><option value="">Tất cả trạng thái</option></select>
       </div>
       <div class="truong">
-        <label for="loc-phoi">PhÃ´i</label>
+        <label for="loc-phoi">Phôi</label>
         <select id="loc-phoi">
-          <option value="">Táº¥t cáº£ (phÃ´i)</option>
-          <option value="ChÆ°a láº¥y phÃ´i">ChÆ°a láº¥y phÃ´i</option>
-          <option value="ÄÃ£ láº¥y phÃ´i">ÄÃ£ láº¥y phÃ´i</option>
+          <option value="">Tất cả (phôi)</option>
+          <option value="Chưa lấy phôi">Chưa lấy phôi</option>
+          <option value="Đã lấy phôi">Đã lấy phôi</option>
         </select>
       </div>
       <div class="truong">
-        <label for="loc-ve-file">Váº½ file</label>
+        <label for="loc-ve-file">Vẽ file</label>
         <select id="loc-ve-file">
-          <option value="">Táº¥t cáº£ (váº½ file)</option>
-          <option value="ChÆ°a váº½ file">ChÆ°a váº½ file</option>
-          <option value="Äang váº½ file">Äang váº½ file</option>
-          <option value="ÄÃ£ váº½ file">ÄÃ£ váº½ file</option>
+          <option value="">Tất cả (vẽ file)</option>
+          <option value="Chưa vẽ file">Chưa vẽ file</option>
+          <option value="Đang vẽ file">Đang vẽ file</option>
+          <option value="Đã vẽ file">Đã vẽ file</option>
         </select>
       </div>
-      <!-- TÃ¡ch 2 Ã´ tÃ¬m (29/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng): loc-kh CHá»ˆ mÃ£ Ä‘Æ¡n/mÃ£ KH (tham sá»‘ kh), loc-ma-tracking CHá»ˆ
-           mÃ£ Tracking (tham sá»‘ maTracking â€” TRACKING_ID2 Sheet Seller + TRACKING_ID app mua). Nháº­p cáº£ 2 = pháº£i khá»›p cáº£ 2. -->
+      <!-- Tách 2 ô tìm (29/09/2026, theo yêu cầu người dùng): loc-kh CHỈ mã đơn/mã KH (tham số kh), loc-ma-tracking CHỈ
+           mã Tracking (tham số maTracking — TRACKING_ID2 Sheet Seller + TRACKING_ID app mua). Nhập cả 2 = phải khớp cả 2. -->
       <div class="truong truong-rong">
-        <label for="loc-kh">TÃ¬m theo Ä‘Æ¡n / mÃ£ KH</label>
-        <input id="loc-kh" placeholder="STT_Key hoáº·c mÃ£ khÃ¡ch hÃ ng">
+        <label for="loc-kh">Tìm theo đơn / mã KH</label>
+        <input id="loc-kh" placeholder="STT_Key hoặc mã khách hàng">
       </div>
       <div class="truong truong-ngay">
-        <label for="loc-tu-ngay">Tá»« ngÃ y</label>
+        <label for="loc-tu-ngay">Từ ngày</label>
         <input type="date" id="loc-tu-ngay">
       </div>
       <div class="truong truong-ngay">
-        <label for="loc-den-ngay">Äáº¿n ngÃ y</label>
+        <label for="loc-den-ngay">Đến ngày</label>
         <input type="date" id="loc-den-ngay">
       </div>
-      <!-- Lá»c theo XÆ°á»Ÿng (bá»• sung 13/09/2026; tá»« 29/09/2026 hiá»‡n cho cáº£ admin nhÆ°ng CHá»ˆ cÃ¡c XÆ°á»Ÿng admin Ä‘Ã³ phá»¥
-           trÃ¡ch) â€” style="display:none" máº·c Ä‘á»‹nh, JS hiá»‡n láº¡i cho admin/superadmin â€” xem IIFE Ä‘Äƒng nháº­p bÃªn dÆ°á»›i. ÄÆ¡n Æ°u tiÃªn váº«n CHá»ˆ admin (khÃ´ng Ä‘á»•i, xem khá»‘i riÃªng bÃªn dÆ°á»›i):
-           vai trÃ² khÃ¡c Ä‘Ã£ bá»‹ giá»›i háº¡n CHá»ˆ tháº¥y Ä‘Ãºng 1 XÆ°á»Ÿng cá»§a mÃ¬nh (server-side,
-           orderService.js#locTheoXuong) nÃªn lá»c theo XÆ°á»Ÿng khÃ´ng cÃ³ Ã½ nghÄ©a vá»›i há». -->
+      <!-- Lọc theo Xưởng (bổ sung 13/09/2026; từ 29/09/2026 hiện cho cả admin nhưng CHỈ các Xưởng admin đó phụ
+           trách) — style="display:none" mặc định, JS hiện lại cho admin/superadmin — xem IIFE đăng nhập bên dưới. Đơn ưu tiên vẫn CHỈ admin (không đổi, xem khối riêng bên dưới):
+           vai trò khác đã bị giới hạn CHỈ thấy đúng 1 Xưởng của mình (server-side,
+           orderService.js#locTheoXuong) nên lọc theo Xưởng không có ý nghĩa với họ. -->
       <div class="truong" id="truong-loc-xuong" style="display:none">
-        <label for="loc-xuong">XÆ°á»Ÿng</label>
-        <!-- Danh sÃ¡ch XÆ°á»Ÿng giá» Ä‘á»• Äá»˜NG (bá»• sung 24/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” quáº£n lÃ½ qua
-             Settings) â€” xem init IIFE bÃªn dÆ°á»›i, Ä‘á»• ngay sau "Táº¥t cáº£ XÆ°á»Ÿng"/trÆ°á»›c "(chÆ°a gÃ¡n)". -->
+        <label for="loc-xuong">Xưởng</label>
+        <!-- Danh sách Xưởng giờ đổ ĐỘNG (bổ sung 24/09/2026, theo yêu cầu người dùng — quản lý qua
+             Settings) — xem init IIFE bên dưới, đổ ngay sau "Tất cả Xưởng"/trước "(chưa gán)". -->
         <select id="loc-xuong">
-          <option value="">Táº¥t cáº£ XÆ°á»Ÿng</option>
-          <option value="__CHUA_GAN__">(chÆ°a gÃ¡n)</option>
+          <option value="">Tất cả Xưởng</option>
+          <option value="__CHUA_GAN__">(chưa gán)</option>
         </select>
       </div>
-      <!-- NhÃ³m hÃ ng (29/09/2026) â€” phÃ¢n nhÃ³m theo LOAI + danh sÃ¡ch keyword, xem services/nhomHangService.js. -->
+      <!-- Nhóm hàng (29/09/2026) — phân nhóm theo LOAI + danh sách keyword, xem services/nhomHangService.js. -->
       <div class="truong">
-        <label for="loc-nhom-hang">NhÃ³m hÃ ng</label>
+        <label for="loc-nhom-hang">Nhóm hàng</label>
         <select id="loc-nhom-hang">
-          <option value="">Táº¥t cáº£</option>
-          <option value="1">NHÃ“M 1 - QUáº¦N ÃO</option>
-          <option value="2">NHÃ“M 2 - KHÃ”NG PHáº¢I QUáº¦N ÃO</option>
-          <option value="CHUA">CHÆ¯A PHÃ‚N LOáº I</option>
+          <option value="">Tất cả</option>
+          <option value="1">NHÓM 1 - QUẦN ÁO</option>
+          <option value="2">NHÓM 2 - KHÔNG PHẢI QUẦN ÁO</option>
+          <option value="CHUA">CHƯA PHÂN LOẠI</option>
         </select>
       </div>
-      <!-- Bá» checkbox "Chá»‰ Ä‘Æ¡n hÃ ng loáº¡t" (nhÃ³m Tá»° Äá»˜NG Ä‘á» xuáº¥t, cá»™t NHOM_HANG_LOAT) â€” 13/09/2026,
-           theo yÃªu cáº§u ngÆ°á»i dÃ¹ng, dá»n bá»›t panel Lá»c (giá» Ä‘Ã£ cÃ³ Ã´ tÃ¬m theo tÃªn ÄÆ¡n hÃ ng loáº¡t CHÃNH
-           THá»¨C ngay dÆ°á»›i Ä‘Ã¢y, há»¯u Ã­ch hÆ¡n). Backend GET /orders váº«n cÃ²n nháº­n hangLoat=1 náº¿u cáº§n dÃ¹ng
-           láº¡i sau nÃ y â€” chá»‰ bá» lá»‘i vÃ o á»Ÿ giao diá»‡n.
-           TÃ¬m theo TÃŠN ÄÆ¡n hÃ ng loáº¡t ÄÃƒ XÃC NHáº¬N (mÃ£ DHLXX, xem public/don-hang-loat.html) â€” Ä‘á»•i tá»«
-           dropdown chá»n Ä‘Ãºng 1 mÃ£ sang Ã´ gÃµ tÃ¬m + datalist gá»£i Ã½ (13/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng
-           â€” tÃªn sáº¯p dÃ i hÆ¡n theo máº«u DHLXX_<mÃ£ Ä‘Æ¡n Ä‘áº§u>_<mÃ´ táº£>, dropdown khÃ³ nhÃ¬n khi nhiá»u nhÃ³m).
-           Khá»›p CHUá»–I CON trong tÃªn, khÃ´ng cáº§n gÃµ Ä‘Ãºng nguyÃªn tÃªn. CHá»ˆ admin/ve_file, cÃ¹ng pháº¡m vi vá»›i
-           toÃ n bá»™ tÃ­nh nÄƒng "ÄÆ¡n hÃ ng loáº¡t" â€” áº©n máº·c Ä‘á»‹nh, hiá»‡n + Ä‘á»• datalist báº±ng JS bÃªn dÆ°á»›i.
-           Äá»•i láº¡i thÃ nh Ã´ CHá»ŒN nhÆ° Tráº¡ng thÃ¡i (28/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” datalist chá»‰ gá»£i Ã½
-           tÃªn chá»©a chá»¯ Ä‘ang cÃ³ trong Ã´, pháº£i xoÃ¡ Ä‘i má»›i tháº¥y nhÃ³m khÃ¡c. NhÃ³m má»›i nháº¥t lÃªn Ä‘áº§u; chá»n nhÃ³m
-           nÃ o hiá»‡n ÄÃšNG nhÃ³m Ä‘Ã³ (khá»›p nguyÃªn tÃªn, xem donHangLoatService.js#layDanhSachSttKeyTheoTenNhom). -->
+      <!-- Bỏ checkbox "Chỉ đơn hàng loạt" (nhóm TỰ ĐỘNG đề xuất, cột NHOM_HANG_LOAT) — 13/09/2026,
+           theo yêu cầu người dùng, dọn bớt panel Lọc (giờ đã có ô tìm theo tên Đơn hàng loạt CHÍNH
+           THỨC ngay dưới đây, hữu ích hơn). Backend GET /orders vẫn còn nhận hangLoat=1 nếu cần dùng
+           lại sau này — chỉ bỏ lối vào ở giao diện.
+           Tìm theo TÊN Đơn hàng loạt ĐÃ XÁC NHẬN (mã DHLXX, xem public/don-hang-loat.html) — đổi từ
+           dropdown chọn đúng 1 mã sang ô gõ tìm + datalist gợi ý (13/09/2026, theo yêu cầu người dùng
+           — tên sắp dài hơn theo mẫu DHLXX_<mã đơn đầu>_<mô tả>, dropdown khó nhìn khi nhiều nhóm).
+           Khớp CHUỖI CON trong tên, không cần gõ đúng nguyên tên. CHỈ admin/ve_file, cùng phạm vi với
+           toàn bộ tính năng "Đơn hàng loạt" — ẩn mặc định, hiện + đổ datalist bằng JS bên dưới.
+           Đổi lại thành ô CHỌN như Trạng thái (28/09/2026, theo yêu cầu người dùng) — datalist chỉ gợi ý
+           tên chứa chữ đang có trong ô, phải xoá đi mới thấy nhóm khác. Nhóm mới nhất lên đầu; chọn nhóm
+           nào hiện ĐÚNG nhóm đó (khớp nguyên tên, xem donHangLoatService.js#layDanhSachSttKeyTheoTenNhom). -->
       <div class="truong" id="truong-loc-don-hang-loat" style="display:none">
-        <label for="loc-don-hang-loat">ÄÆ¡n hÃ ng loáº¡t</label>
-        <select id="loc-don-hang-loat"><option value="">Táº¥t cáº£ Ä‘Æ¡n hÃ ng loáº¡t</option></select>
+        <label for="loc-don-hang-loat">Đơn hàng loạt</label>
+        <select id="loc-don-hang-loat"><option value="">Tất cả đơn hàng loạt</option></select>
       </div>
-      <button type="button" class="btn-hanh-dong phu" id="btn-loc-nang-cao" onclick="batTatLocNangCao()" aria-expanded="false" style="flex:0 0 auto;white-space:nowrap">NÃ¢ng cao â–¾</button>
-      <button type="button" class="btn-hanh-dong phu" id="btn-xoa-loc" onclick="xoaTatCaLoc()">XoÃ¡ bá»™ lá»c</button>
+      <button type="button" class="btn-hanh-dong phu" id="btn-loc-nang-cao" onclick="batTatLocNangCao()" aria-expanded="false" style="flex:0 0 auto;white-space:nowrap">Nâng cao ▾</button>
+      <button type="button" class="btn-hanh-dong phu" id="btn-xoa-loc" onclick="xoaTatCaLoc()">Xoá bộ lọc</button>
     </div>
-    <!-- Lá»c "NÃ¢ng cao" (29/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” 12 Ã´ Ã­t dÃ¹ng gá»™p sau nÃºt "NÃ¢ng cao", áº©n máº·c Ä‘á»‹nh (thÃªm Lá»c tá»•ng quÃ¡t/MÃ£ Tracking/ÄÃ£ mua Tracking/DonNhieuAo 29/09/2026);
-         nÃºt tá»± hiá»‡n sá»‘ Ã´ nÃ¢ng cao Ä‘ang cÃ³ giÃ¡ trá»‹ (capNhatNhanNutLoc) Ä‘á»ƒ khÃ´ng quÃªn lá»c Ä‘ang Ã¡p dá»¥ng khi khá»‘i Ä‘Ã³ng. -->
+    <!-- Lọc "Nâng cao" (29/09/2026, theo yêu cầu người dùng) — 12 ô ít dùng gộp sau nút "Nâng cao", ẩn mặc định (thêm Lọc tổng quát/Mã Tracking/Đã mua Tracking/DonNhieuAo 29/09/2026);
+         nút tự hiện số ô nâng cao đang có giá trị (capNhatNhanNutLoc) để không quên lọc đang áp dụng khi khối đóng. -->
     <div class="inline-form" id="khoi-loc-nang-cao" style="display:none">
-      <!-- Lá»c tá»•ng quÃ¡t (29/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” 3 nhÃ³m tráº¡ng thÃ¡i, lá»c á»Ÿ server (routes/orders.js#NHOM_LOC_TONG_QUAT). -->
+      <!-- Lọc tổng quát (29/09/2026, theo yêu cầu người dùng) — 3 nhóm trạng thái, lọc ở server (routes/orders.js#NHOM_LOC_TONG_QUAT). -->
       <div class="truong">
-        <label for="loc-tong-quat">Lá»c tá»•ng quÃ¡t</label>
+        <label for="loc-tong-quat">Lọc tổng quát</label>
         <select id="loc-tong-quat">
-          <option value="">Táº¥t cáº£</option>
-          <option value="DA_SAN_XUAT">ÄÆ¡n Ä‘Ã£ sáº£n xuáº¥t</option>
-          <option value="CHUA_SAN_XUAT">ÄÆ¡n chÆ°a sáº£n xuáº¥t</option>
-          <option value="GIAO_HOAN_HUY">ÄÆ¡n Ä‘Ã£ giao/hoÃ n/há»§y</option>
+          <option value="">Tất cả</option>
+          <option value="DA_SAN_XUAT">Đơn đã sản xuất</option>
+          <option value="CHUA_SAN_XUAT">Đơn chưa sản xuất</option>
+          <option value="GIAO_HOAN_HUY">Đơn đã giao/hoàn/hủy</option>
         </select>
       </div>
       <div class="truong truong-rong">
-        <label for="loc-ma-tracking">TÃ¬m theo MÃ£ Tracking</label>
-        <input id="loc-ma-tracking" placeholder="MÃ£ Tracking">
+        <label for="loc-ma-tracking">Tìm theo Mã Tracking</label>
+        <input id="loc-ma-tracking" placeholder="Mã Tracking">
       </div>
-      <!-- ÄÃ£ mua Tracking (29/09/2026) â€” cá»™t DA_MUA_TRACKING, quy táº¯c YES/NO á»Ÿ services/orderService.js#tinhDaMuaTracking. -->
+      <!-- Đã mua Tracking (29/09/2026) — cột DA_MUA_TRACKING, quy tắc YES/NO ở services/orderService.js#tinhDaMuaTracking. -->
       <div class="truong">
-        <label for="loc-da-mua-tracking">ÄÃ£ mua Tracking</label>
+        <label for="loc-da-mua-tracking">Đã mua Tracking</label>
         <select id="loc-da-mua-tracking">
-          <option value="">Táº¥t cáº£</option>
-          <option value="YES">YES â€“ ÄÃ£ mua Tracking</option>
-          <option value="NO">NO â€“ ChÆ°a mua Tracking</option>
+          <option value="">Tất cả</option>
+          <option value="YES">YES – Đã mua Tracking</option>
+          <option value="NO">NO – Chưa mua Tracking</option>
         </select>
       </div>
-      <!-- DonNhieuAo (bá»• sung 26/09/2026) â€” nhiá»u Ä‘Æ¡n cÃ¹ng OrderID dÃ¹ng chung 1 tracking, xem
+      <!-- DonNhieuAo (bổ sung 26/09/2026) — nhiều đơn cùng OrderID dùng chung 1 tracking, xem
            services/donNhieuAoService.js. -->
       <div class="truong">
         <label for="loc-don-nhieu-ao">DonNhieuAo</label>
         <select id="loc-don-nhieu-ao">
-          <option value="">Táº¥t cáº£ Ä‘Æ¡n</option>
-          <option value="1">Chá»‰ DonNhieuAo</option>
-          <option value="0">ÄÆ¡n láº»</option>
+          <option value="">Tất cả đơn</option>
+          <option value="1">Chỉ DonNhieuAo</option>
+          <option value="0">Đơn lẻ</option>
         </select>
       </div>
       <div class="truong">
-        <label for="loc-loai">Loáº¡i</label>
-        <select id="loc-loai"><option value="">Táº¥t cáº£ loáº¡i</option></select>
+        <label for="loc-loai">Loại</label>
+        <select id="loc-loai"><option value="">Tất cả loại</option></select>
       </div>
       <div class="truong">
-        <label for="loc-kich-thuoc">KÃ­ch thÆ°á»›c</label>
-        <select id="loc-kich-thuoc"><option value="">Táº¥t cáº£ kÃ­ch thÆ°á»›c</option></select>
+        <label for="loc-kich-thuoc">Kích thước</label>
+        <select id="loc-kich-thuoc"><option value="">Tất cả kích thước</option></select>
       </div>
       <div class="truong">
-        <label for="loc-mau-sac">MÃ u sáº¯c</label>
-        <select id="loc-mau-sac"><option value="">Táº¥t cáº£ mÃ u sáº¯c</option></select>
+        <label for="loc-mau-sac">Màu sắc</label>
+        <select id="loc-mau-sac"><option value="">Tất cả màu sắc</option></select>
       </div>
       <div class="truong">
-        <label for="loc-hang-van-chuyen">HÃ£ng váº­n chuyá»ƒn</label>
-        <select id="loc-hang-van-chuyen"><option value="">Táº¥t cáº£ hÃ£ng váº­n chuyá»ƒn</option></select>
+        <label for="loc-hang-van-chuyen">Hãng vận chuyển</label>
+        <select id="loc-hang-van-chuyen"><option value="">Tất cả hãng vận chuyển</option></select>
       </div>
-      <!-- Lá»c theo QUOC_GIA_TRACKING/TINH_TRANG (bá»• sung 18/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” 2 cá»™t
-           RAW (Ä‘á»c tá»« Sheet, xem services/orderService.js), cÃ¹ng khuÃ´n vá»›i Loáº¡i/MÃ u sáº¯c/HÃ£ng váº­n
-           chuyá»ƒn á»Ÿ trÃªn: Ä‘á»• Ä‘á»™ng theo giÃ¡ trá»‹ THáº¬T Ä‘ang cÃ³ trong dá»¯ liá»‡u, khÃ´ng hardcode. -->
+      <!-- Lọc theo QUOC_GIA_TRACKING/TINH_TRANG (bổ sung 18/09/2026, theo yêu cầu người dùng) — 2 cột
+           RAW (đọc từ Sheet, xem services/orderService.js), cùng khuôn với Loại/Màu sắc/Hãng vận
+           chuyển ở trên: đổ động theo giá trị THẬT đang có trong dữ liệu, không hardcode. -->
       <div class="truong">
-        <label for="loc-quoc-gia-tracking">Quá»‘c gia Tracking</label>
-        <select id="loc-quoc-gia-tracking"><option value="">Táº¥t cáº£ quá»‘c gia</option></select>
+        <label for="loc-quoc-gia-tracking">Quốc gia Tracking</label>
+        <select id="loc-quoc-gia-tracking"><option value="">Tất cả quốc gia</option></select>
       </div>
       <div class="truong">
-        <label for="loc-tinh-trang">TÃ¬nh tráº¡ng</label>
-        <select id="loc-tinh-trang"><option value="">Táº¥t cáº£ tÃ¬nh tráº¡ng</option></select>
+        <label for="loc-tinh-trang">Tình trạng</label>
+        <select id="loc-tinh-trang"><option value="">Tất cả tình trạng</option></select>
       </div>
-      <!-- ÄÆ¡n Æ°u tiÃªn: CHá»ˆ admin (JS hiá»‡n láº¡i, xem IIFE Ä‘Äƒng nháº­p). -->
+      <!-- Đơn ưu tiên: CHỈ admin (JS hiện lại, xem IIFE đăng nhập). -->
       <div class="truong" id="truong-loc-uu-tien" style="display:none">
-        <label for="loc-uu-tien">ÄÆ¡n Æ°u tiÃªn</label>
+        <label for="loc-uu-tien">Đơn ưu tiên</label>
         <select id="loc-uu-tien">
-          <option value="">Táº¥t cáº£ Ä‘Æ¡n</option>
-          <option value="1">ÄÆ¡n Æ°u tiÃªn</option>
-          <option value="0">ÄÆ¡n thÆ°á»ng</option>
+          <option value="">Tất cả đơn</option>
+          <option value="1">Đơn ưu tiên</option>
+          <option value="0">Đơn thường</option>
         </select>
       </div>
-      <!-- Sá»‘ mÅ©i chá»‰ (07/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” CHá»ˆ admin/superadmin/ve_file (áº©n vá»›i vai trÃ² khÃ¡c; server cÅ©ng bá» qua).
-           GiÃ¡ trá»‹ "a-b" = khoáº£ng (tÃ­nh cáº£ 2 Ä‘áº§u), "> 50.000" = "50001-". "Tuá»³ chá»n khoáº£ng" hiá»‡n 2 Ã´ Tá»«/Äáº¿n. -->
+      <!-- Số mũi chỉ (07/10/2026, theo yêu cầu người dùng) — CHỈ admin/superadmin/ve_file (ẩn với vai trò khác; server cũng bỏ qua).
+           Giá trị "a-b" = khoảng (tính cả 2 đầu), "> 50.000" = "50001-". "Tuỳ chọn khoảng" hiện 2 ô Từ/Đến. -->
       <div class="truong" id="truong-loc-so-mui" style="display:none">
-        <label for="loc-so-mui">Sá»‘ mÅ©i chá»‰</label>
+        <label for="loc-so-mui">Số mũi chỉ</label>
         <select id="loc-so-mui">
-          <option value="">Táº¥t cáº£</option>
-          <option value="CHUA">ChÆ°a nháº­p sá»‘ mÅ©i</option>
-          <option value="CO">CÃ³ sá»‘ mÅ©i</option>
-          <option value="KHONG_DOC">CÃ³ ná»™i dung nhÆ°ng khÃ´ng pháº£i sá»‘</option>
-          <option value="0-10000">â‰¤ 10.000</option>
-          <option value="10001-30000">10.001 â€“ 30.000</option>
-          <option value="30001-50000">30.001 â€“ 50.000</option>
+          <option value="">Tất cả</option>
+          <option value="CHUA">Chưa nhập số mũi</option>
+          <option value="CO">Có số mũi</option>
+          <option value="KHONG_DOC">Có nội dung nhưng không phải số</option>
+          <option value="0-10000">≤ 10.000</option>
+          <option value="10001-30000">10.001 – 30.000</option>
+          <option value="30001-50000">30.001 – 50.000</option>
           <option value="50001-">&gt; 50.000</option>
-          <option value="TUY_CHON">Tuá»³ chá»n khoáº£ngâ€¦</option>
+          <option value="TUY_CHON">Tuỳ chọn khoảng…</option>
         </select>
         <div id="khoang-so-mui" style="display:none;gap:6px;margin-top:6px">
-          <input type="number" id="loc-so-mui-tu" min="0" step="1" placeholder="Tá»«" aria-label="Sá»‘ mÅ©i tá»«" style="width:50%">
-          <input type="number" id="loc-so-mui-den" min="0" step="1" placeholder="Äáº¿n" aria-label="Sá»‘ mÅ©i Ä‘áº¿n" style="width:50%">
+          <input type="number" id="loc-so-mui-tu" min="0" step="1" placeholder="Từ" aria-label="Số mũi từ" style="width:50%">
+          <input type="number" id="loc-so-mui-den" min="0" step="1" placeholder="Đến" aria-label="Số mũi đến" style="width:50%">
         </div>
       </div>
       <div class="truong">
-        <label for="loc-canh-bao">Má»©c cáº£nh bÃ¡o</label>
+        <label for="loc-canh-bao">Mức cảnh báo</label>
         <select id="loc-canh-bao">
-          <option value="">Táº¥t cáº£ má»©c cáº£nh bÃ¡o</option>
-          <option value="VANG">VÃ ng</option>
+          <option value="">Tất cả mức cảnh báo</option>
+          <option value="VANG">Vàng</option>
           <option value="CAM">Cam</option>
-          <option value="DO">Äá»</option>
+          <option value="DO">Đỏ</option>
         </select>
       </div>
     </div>
@@ -262,13 +262,13 @@
   <div id="panel-sap-xep" class="panel-dieu-khien" style="display:none">
     <div class="inline-form">
       <div class="truong">
-        <label for="sap-xep">Sáº¯p xáº¿p theo</label>
+        <label for="sap-xep">Sắp xếp theo</label>
         <select id="sap-xep">
-          <option value="ngay_cu_nhat">NgÃ y lÃªn Ä‘Æ¡n â€” cÅ© nháº¥t trÆ°á»›c (máº·c Ä‘á»‹nh)</option>
-          <option value="">NgÃ y lÃªn Ä‘Æ¡n â€” má»›i nháº¥t trÆ°á»›c</option>
-          <option value="canh_bao">Má»©c cáº£nh bÃ¡o â€” kháº©n cáº¥p nháº¥t trÆ°á»›c</option>
-          <option value="so_luong">Sá»‘ lÆ°á»£ng â€” nhiá»u nháº¥t trÆ°á»›c</option>
-          <option value="khach_hang">TÃªn khÃ¡ch hÃ ng â€” A Ä‘áº¿n Z</option>
+          <option value="ngay_cu_nhat">Ngày lên đơn — cũ nhất trước (mặc định)</option>
+          <option value="">Ngày lên đơn — mới nhất trước</option>
+          <option value="canh_bao">Mức cảnh báo — khẩn cấp nhất trước</option>
+          <option value="so_luong">Số lượng — nhiều nhất trước</option>
+          <option value="khach_hang">Tên khách hàng — A đến Z</option>
         </select>
       </div>
     </div>
@@ -276,53 +276,53 @@
 
   <label class="chon-tat-ca-hang">
     <input type="checkbox" id="chon-tat-ca" onchange="chonTatCa(this.checked)">
-    Chá»n táº¥t cáº£ Ä‘Æ¡n Ä‘ang hiá»ƒn thá»‹
+    Chọn tất cả đơn đang hiển thị
   </label>
 
-  <!-- "Äang lá»c" (07/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng): liá»‡t kÃª Má»ŒI bá»™ lá»c Ä‘ang báº­t, báº¥m Ã— bá» riÃªng bá»™ lá»c Ä‘Ã³ (vedongDangLoc). -->
+  <!-- "Đang lọc" (07/10/2026, theo yêu cầu người dùng): liệt kê MỌI bộ lọc đang bật, bấm × bỏ riêng bộ lọc đó (vedongDangLoc). -->
   <div id="dong-dang-loc" class="badge-row" style="display:none;margin:0 0 10px;align-items:center"></div>
   <div id="danh-sach-don" class="order-list"></div>
 </div>
 
 <div id="thanh-hanh-dong" class="thanh-hanh-dong-hang-loat" style="display:none">
-  <span class="nhan-so-luong-da-chon">ÄÃ£ chá»n <strong id="so-luong-da-chon">0</strong> Ä‘Æ¡n</span>
+  <span class="nhan-so-luong-da-chon">Đã chọn <strong id="so-luong-da-chon">0</strong> đơn</span>
   <select id="trang-thai-dich">
-    <option value="">Chuyá»ƒn Ä‘áº¿n tráº¡ng thÃ¡i...</option>
+    <option value="">Chuyển đến trạng thái...</option>
   </select>
-  <button id="nut-ap-dung" class="btn-hanh-dong" onclick="apDungChuyenTrangThai()">Ãp dá»¥ng</button>
+  <button id="nut-ap-dung" class="btn-hanh-dong" onclick="apDungChuyenTrangThai()">Áp dụng</button>
   <span class="thanh-hanh-dong-cach"></span>
-  <button id="btn-xac-nhan" class="btn-hanh-dong phu nhanh-phoi-ve-file trang-thai-tich-cuc" onclick="apDungNhanh('TRANG_THAI_XUONG', 'ÄÃ£ in mÃ£', this)"></button>
-  <button id="btn-da-lay-phoi" class="btn-hanh-dong phu nhanh-phoi-ve-file trang-thai-tich-cuc" onclick="apDungNhanh('TRANG_THAI_PHOI', 'ÄÃ£ láº¥y phÃ´i', this)"></button>
-  <button id="btn-chua-lay-phoi" class="btn-hanh-dong phu nhanh-phoi-ve-file trang-thai-tieu-cuc" onclick="apDungNhanh('TRANG_THAI_PHOI', 'ChÆ°a láº¥y phÃ´i', this)"></button>
-  <button id="btn-da-ve-file" class="btn-hanh-dong phu nhanh-phoi-ve-file trang-thai-tich-cuc" onclick="apDungNhanh('TRANG_THAI_VE_FILE', 'ÄÃ£ váº½ file', this)"></button>
-  <!-- "Äang váº½ file" (bá»• sung 24/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” giÃ¡ trá»‹ nÃ y Ä‘Ã£ cÃ³ sáºµn trong pipeline
-       (TRANG_THAI_VE_FILE_VALUES, data/pipelineTinhTrang.js) vÃ  Ä‘Ã£ dÃ¹ng á»Ÿ bá»™ lá»c/trang chi tiáº¿t Ä‘Æ¡n, chá»‰
-       thiáº¿u nÃºt báº¥m nhanh hÃ ng loáº¡t á»Ÿ Ä‘Ã¢y. TÃ¡i dÃ¹ng NGUYÃŠN route/hÃ m apDungNhanh() cÃ³ sáºµn â€” server tá»±
-       stamp NGUOI_VE_FILE qua hook Ä‘Ã£ cÃ³ trong orderService.update(), khÃ´ng cáº§n sá»­a gÃ¬ á»Ÿ server. KhÃ´ng
-       gáº¯n trang-thai-tich-cuc/tieu-cuc (chá»‰ cÃ³ 2 sáº¯c thÃ¡i xanh/vÃ ng cho "xong"/"chÆ°a lÃ m") vÃ¬ Ä‘Ã¢y lÃ 
-       tráº¡ng thÃ¡i TRUNG GIAN (Ä‘ang lÃ m dá»Ÿ), khÃ´ng khá»›p nghÄ©a vá»›i cáº£ 2. -->
-  <button id="btn-dang-ve-file" class="btn-hanh-dong phu nhanh-phoi-ve-file" onclick="apDungNhanh('TRANG_THAI_VE_FILE', 'Äang váº½ file', this)"></button>
-  <button id="btn-chua-ve-file" class="btn-hanh-dong phu nhanh-phoi-ve-file trang-thai-tieu-cuc" onclick="apDungNhanh('TRANG_THAI_VE_FILE', 'ChÆ°a váº½ file', this)"></button>
+  <button id="btn-xac-nhan" class="btn-hanh-dong phu nhanh-phoi-ve-file trang-thai-tich-cuc" onclick="apDungNhanh('TRANG_THAI_XUONG', 'Đã in mã', this)"></button>
+  <button id="btn-da-lay-phoi" class="btn-hanh-dong phu nhanh-phoi-ve-file trang-thai-tich-cuc" onclick="apDungNhanh('TRANG_THAI_PHOI', 'Đã lấy phôi', this)"></button>
+  <button id="btn-chua-lay-phoi" class="btn-hanh-dong phu nhanh-phoi-ve-file trang-thai-tieu-cuc" onclick="apDungNhanh('TRANG_THAI_PHOI', 'Chưa lấy phôi', this)"></button>
+  <button id="btn-da-ve-file" class="btn-hanh-dong phu nhanh-phoi-ve-file trang-thai-tich-cuc" onclick="apDungNhanh('TRANG_THAI_VE_FILE', 'Đã vẽ file', this)"></button>
+  <!-- "Đang vẽ file" (bổ sung 24/09/2026, theo yêu cầu người dùng) — giá trị này đã có sẵn trong pipeline
+       (TRANG_THAI_VE_FILE_VALUES, data/pipelineTinhTrang.js) và đã dùng ở bộ lọc/trang chi tiết đơn, chỉ
+       thiếu nút bấm nhanh hàng loạt ở đây. Tái dùng NGUYÊN route/hàm apDungNhanh() có sẵn — server tự
+       stamp NGUOI_VE_FILE qua hook đã có trong orderService.update(), không cần sửa gì ở server. Không
+       gắn trang-thai-tich-cuc/tieu-cuc (chỉ có 2 sắc thái xanh/vàng cho "xong"/"chưa làm") vì đây là
+       trạng thái TRUNG GIAN (đang làm dở), không khớp nghĩa với cả 2. -->
+  <button id="btn-dang-ve-file" class="btn-hanh-dong phu nhanh-phoi-ve-file" onclick="apDungNhanh('TRANG_THAI_VE_FILE', 'Đang vẽ file', this)"></button>
+  <button id="btn-chua-ve-file" class="btn-hanh-dong phu nhanh-phoi-ve-file trang-thai-tieu-cuc" onclick="apDungNhanh('TRANG_THAI_VE_FILE', 'Chưa vẽ file', this)"></button>
   <span id="khoi-chi-dinh-nguoi-chay-may" style="display:none">
     <span class="thanh-hanh-dong-cach"></span>
     <select id="nguoi-chay-may-dich">
-      <option value="">Chá»‰ Ä‘á»‹nh ngÆ°á»i cháº¡y mÃ¡y...</option>
+      <option value="">Chỉ định người chạy máy...</option>
     </select>
-    <button id="nut-ap-dung-chi-dinh" class="btn-hanh-dong" onclick="apDungChiDinhNguoiChayMay()">Ãp dá»¥ng</button>
+    <button id="nut-ap-dung-chi-dinh" class="btn-hanh-dong" onclick="apDungChiDinhNguoiChayMay()">Áp dụng</button>
   </span>
   <span id="khoi-chi-dinh-nguoi-ve-file" style="display:none">
     <span class="thanh-hanh-dong-cach"></span>
     <select id="nguoi-ve-file-dich">
-      <option value="">Chá»‰ Ä‘á»‹nh ngÆ°á»i váº½ file...</option>
+      <option value="">Chỉ định người vẽ file...</option>
     </select>
-    <button id="nut-ap-dung-chi-dinh-ve-file" class="btn-hanh-dong" onclick="apDungChiDinhNguoiVeFile()">Ãp dá»¥ng</button>
+    <button id="nut-ap-dung-chi-dinh-ve-file" class="btn-hanh-dong" onclick="apDungChiDinhNguoiVeFile()">Áp dụng</button>
   </span>
   <span id="khoi-gan-xuong" style="display:none">
     <span class="thanh-hanh-dong-cach"></span>
     <select id="xuong-dich">
-      <option value="">GÃ¡n XÆ°á»Ÿng...</option>
+      <option value="">Gán Xưởng...</option>
     </select>
-    <button id="nut-ap-dung-gan-xuong" class="btn-hanh-dong" onclick="apDungGanXuong()">Ãp dá»¥ng</button>
+    <button id="nut-ap-dung-gan-xuong" class="btn-hanh-dong" onclick="apDungGanXuong()">Áp dụng</button>
   </span>
   <span id="khoi-uu-tien" style="display:none">
     <span class="thanh-hanh-dong-cach"></span>
@@ -339,70 +339,70 @@
   </span>
   <span id="khoi-mua-va-in-label" style="display:none">
     <span class="thanh-hanh-dong-cach"></span>
-    <button id="nut-mua-va-in-label" class="btn-hanh-dong" onclick="apDungMuaVaInLabel()">MUA TRACKING vÃ  IN LABEL</button>
+    <button id="nut-mua-va-in-label" class="btn-hanh-dong" onclick="apDungMuaVaInLabel()">MUA TRACKING và IN LABEL</button>
   </span>
-  <!-- KL hÃ ng loáº¡t (29/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng): admin / superadmin / váº½ file. -->
+  <!-- KL hàng loạt (29/10/2026, theo yêu cầu người dùng): admin / superadmin / vẽ file. -->
   <span id="khoi-kl-hang-loat" style="display:none">
     <span class="thanh-hanh-dong-cach"></span>
     <button id="nut-mua-tracking-kl" class="btn-hanh-dong" onclick="apDungMuaTrackingKl()">Mua Tracking KL</button>
-    <button id="nut-mua-kl-va-in-label" class="btn-hanh-dong" onclick="apDungMuaKlVaInLabel()">MUA KL vÃ  IN LABEL KL</button>
+    <button id="nut-mua-kl-va-in-label" class="btn-hanh-dong" onclick="apDungMuaKlVaInLabel()">MUA KL và IN LABEL KL</button>
   </span>
   <span id="khoi-xoa-du-lieu-don" style="display:none">
     <span class="thanh-hanh-dong-cach"></span>
-    <button id="nut-xoa-du-lieu-don" class="btn-hanh-dong phu nguy-hiem" onclick="apDungXoaDuLieuDon(this)">XoÃ¡ dá»¯ liá»‡u Ä‘Æ¡n</button>
+    <button id="nut-xoa-du-lieu-don" class="btn-hanh-dong phu nguy-hiem" onclick="apDungXoaDuLieuDon(this)">Xoá dữ liệu đơn</button>
   </span>
-  <button class="btn-hanh-dong phu" onclick="boChonTatCaDon()">Bá» chá»n</button>
+  <button class="btn-hanh-dong phu" onclick="boChonTatCaDon()">Bỏ chọn</button>
 </div>
 
 <script src="/js/icons.js?v=106"></script>
 <script src="/js/api.js?v=141"></script>
 <script src="/js/suaThongTinGke.js?v=2"></script>
 <script>
-// Sá»‘ ngÃ y bá» khá»i nhÃ£n (bá»• sung 23/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” ngÆ°á»¡ng giá» chá»‰nh Ä‘Æ°á»£c á»Ÿ
-// settings.html (superadmin), 3/5/7 khÃ´ng cÃ²n luÃ´n Ä‘Ãºng nÃªn khÃ´ng hard-code vÃ o nhÃ£n hiá»ƒn thá»‹ ná»¯a.
-const NHAN_CANH_BAO = { VANG: 'VÃ ng', CAM: 'Cam', DO: 'Äá»' };
+// Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
+// settings.html (superadmin), 3/5/7 không còn luôn đúng nên không hard-code vào nhãn hiển thị nữa.
+const NHAN_CANH_BAO = { VANG: 'Vàng', CAM: 'Cam', DO: 'Đỏ' };
 
-// Danh sÃ¡ch Äáº¦Y Äá»¦ 10 giÃ¡ trá»‹ TRANG_THAI_XUONG â€” dÃ¹ng riÃªng cho Ã´ "Chuyá»ƒn Ä‘áº¿n tráº¡ng thÃ¡i" (chá»n tá»± do,
-// khÃ´ng kiá»ƒm tra tráº¡ng thÃ¡i hiá»‡n táº¡i). PHáº¢I khá»›p vá»›i DANH_SACH_TRANG_THAI_BAO_CAO trong
-// data/pipelineTinhTrang.js â€” sá»­a 1 chá»— thÃ¬ nhá»› sá»­a chá»— kia.
-// Cáº­p nháº­t 24/08/2026 (theo Prompt_Ver_24.docx) â€” thay hoÃ n toÃ n há»‡ tráº¡ng thÃ¡i B1.1-B5.2 cÅ© báº±ng
-// tÃªn gá»i thuáº§n Viá»‡t, vÃ  tÃ¡ch phÃ´i/váº½ file ra 2 cá»™t riÃªng (khÃ´ng cÃ²n náº±m trong danh sÃ¡ch nÃ y).
-const NHAN_NGUOI_VAN_HANH_KHONG_RO = 'ÄÆ N Sá»¬A TRONG GGSHEET, KHÃ”NG RÃ• TÃ€I KHOáº¢N Sáº¢N XUáº¤T NÃ€O ÄANG CHáº Y';
+// Danh sách ĐẦY ĐỦ 10 giá trị TRANG_THAI_XUONG — dùng riêng cho ô "Chuyển đến trạng thái" (chọn tự do,
+// không kiểm tra trạng thái hiện tại). PHẢI khớp với DANH_SACH_TRANG_THAI_BAO_CAO trong
+// data/pipelineTinhTrang.js — sửa 1 chỗ thì nhớ sửa chỗ kia.
+// Cập nhật 24/08/2026 (theo Prompt_Ver_24.docx) — thay hoàn toàn hệ trạng thái B1.1-B5.2 cũ bằng
+// tên gọi thuần Việt, và tách phôi/vẽ file ra 2 cột riêng (không còn nằm trong danh sách này).
+const NHAN_NGUOI_VAN_HANH_KHONG_RO = 'ĐƠN SỬA TRONG GGSHEET, KHÔNG RÕ TÀI KHOẢN SẢN XUẤT NÀO ĐANG CHẠY';
 
 const DANH_SACH_TRANG_THAI_DAY_DU = [
-  'ChÆ°a in mÃ£', 'ÄÃ£ in mÃ£',
-  'ÄÃƒ Sáº´N SÃ€NG CHáº Y MÃY',
-  'Äang cháº¡y mÃ¡y',
-  'ÄÃ£ sáº£n xuáº¥t', 'Lá»–I Sáº¢N XUáº¤T Cáº¦N LÃ€M Láº I',
-  'ÄÃƒ DÃN TEM',
-  'DELIVERED_ÄÃ£ giao Ä‘áº¿n khÃ¡ch', 'CANCELLED_ÄÃ£ há»§y', 'REFUNDED_HoÃ n Ä‘Æ¡n',
+  'Chưa in mã', 'Đã in mã',
+  'ĐÃ SẴN SÀNG CHẠY MÁY',
+  'Đang chạy máy',
+  'Đã sản xuất', 'LỖI SẢN XUẤT CẦN LÀM LẠI',
+  'ĐÃ DÁN TEM',
+  'DELIVERED_Đã giao đến khách', 'CANCELLED_Đã hủy', 'REFUNDED_Hoàn đơn',
 ];
 
-// Danh sÃ¡ch XÆ°á»Ÿng (bá»• sung 24/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” KHÃ”NG cÃ²n hardcode á»Ÿ Ä‘Ã¢y ná»¯a, táº£i
-// Ä‘á»™ng tá»« GET /orders/danh-sach-xuong lÃºc vÃ o trang (xem init IIFE bÃªn dÆ°á»›i) â€” quáº£n lÃ½ qua Settings.
+// Danh sách Xưởng (bổ sung 24/09/2026, theo yêu cầu người dùng) — KHÔNG còn hardcode ở đây nữa, tải
+// động từ GET /orders/danh-sach-xuong lúc vào trang (xem init IIFE bên dưới) — quản lý qua Settings.
 let danhSachXuong = [];
 
 let danhSachHienTai = [];
 let donDaChonSet = new Set();
-// MÃ u ná»n tháº» theo XÆ°á»Ÿng (bá»• sung 23/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” táº£i 1 láº§n lÃºc vÃ o trang, xem
+// Màu nền thẻ theo Xưởng (bổ sung 23/09/2026, theo yêu cầu người dùng) — tải 1 lần lúc vào trang, xem
 // public/js/api.js#taiMauTheoXuong/lopVaStyleXuong.
 let mauTheoXuong = {};
-// Giá»›i háº¡n sá»‘ THáºº render/táº£i áº£nh cÃ¹ng lÃºc (bá»• sung 21/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng cáº£i thiá»‡n tá»‘c Ä‘á»™
-// Danh sÃ¡ch Ä‘Æ¡n hÃ ng trÃªn Ä‘iá»‡n thoáº¡i) â€” CHá»ˆ áº£nh hÆ°á»Ÿng pháº§n HIá»‚N THá»Š (DOM + áº£nh), KHÃ”NG Ä‘á»¥ng
-// danhSachHienTai/donDaChonSet (váº«n giá»¯ NGUYÃŠN toÃ n bá»™ danh sÃ¡ch khá»›p lá»c) â€” "Chá»n táº¥t cáº£"/bulk action
-// váº«n Ã¡p dá»¥ng cho Má»ŒI Ä‘Æ¡n khá»›p lá»c nhÆ° cÅ©, ká»ƒ cáº£ Ä‘Æ¡n chÆ°a render ra mÃ n hÃ¬nh (xem chonTatCa()).
+// Giới hạn số THẺ render/tải ảnh cùng lúc (bổ sung 21/09/2026, theo yêu cầu người dùng cải thiện tốc độ
+// Danh sách đơn hàng trên điện thoại) — CHỈ ảnh hưởng phần HIỂN THỊ (DOM + ảnh), KHÔNG đụng
+// danhSachHienTai/donDaChonSet (vẫn giữ NGUYÊN toàn bộ danh sách khớp lọc) — "Chọn tất cả"/bulk action
+// vẫn áp dụng cho MỌI đơn khớp lọc như cũ, kể cả đơn chưa render ra màn hình (xem chonTatCa()).
 const SO_DON_MOI_LUOT = 60;
 let soDonDangHienThi = SO_DON_MOI_LUOT;
-let user; // promote lÃªn module-level (bá»• sung 13/09/2026) â€” renderDanhSachDon() cáº§n biáº¿t vaiTro Ä‘á»ƒ
-          // quyáº¿t Ä‘á»‹nh cÃ³ hiá»‡n badge XÆ°á»Ÿng hay khÃ´ng (admin/superadmin â€” admin hiá»‡n láº¡i 29/09/2026)
+let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSachDon() cần biết vaiTro để
+          // quyết định có hiện badge Xưởng hay không (admin/superadmin — admin hiện lại 29/09/2026)
 
 (async () => {
   user = await requireLoginOrRedirect();
   if (!user) return;
   renderNav(user, 'orders');
-  taiCanhBaoThuCong(); // cháº¡y ná»n, khÃ´ng cháº·n táº£i danh sÃ¡ch
+  taiCanhBaoThuCong(); // chạy nền, không chặn tải danh sách
   mauTheoXuong = await taiMauTheoXuong();
-  // Táº£i sá»›m, dÃ¹ng chung cho cÃ¡c Ã´ liÃªn quan XÆ°á»Ÿng bÃªn dÆ°á»›i (admin: chá»‰ cÃ¡c XÆ°á»Ÿng mÃ¬nh phá»¥ trÃ¡ch; superadmin: táº¥t cáº£).
+  // Tải sớm, dùng chung cho các ô liên quan Xưởng bên dưới (admin: chỉ các Xưởng mình phụ trách; superadmin: tất cả).
   try { danhSachXuong = await apiFetch('/orders/danh-sach-xuong'); } catch (e) { danhSachXuong = []; }
 
   document.getElementById('loc-trang-thai').onchange = () => { boChonTatCaDon(); taiDon(); };
@@ -422,7 +422,7 @@ let user; // promote lÃªn module-level (bá»• sung 13/09/2026) â€” ren
   document.getElementById('loc-hang-van-chuyen').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-quoc-gia-tracking').onchange = () => { boChonTatCaDon(); taiDon(); };
   document.getElementById('loc-tinh-trang').onchange = () => { boChonTatCaDon(); taiDon(); };
-  // Sá»‘ mÅ©i chá»‰ (07/10/2026): chá»‰ 3 vai trÃ²; "Tuá»³ chá»n khoáº£ng" chá» nháº­p Tá»«/Äáº¿n (Ä‘á»•i Ã´ -> táº£i láº¡i).
+  // Số mũi chỉ (07/10/2026): chỉ 3 vai trò; "Tuỳ chọn khoảng" chờ nhập Từ/Đến (đổi ô -> tải lại).
   if (VAI_TRO_SO_MUI.includes(user.vaiTro)) document.getElementById('truong-loc-so-mui').style.display = '';
   document.getElementById('loc-so-mui').onchange = () => {
     hienKhoangSoMui();
@@ -439,164 +439,164 @@ let user; // promote lÃªn module-level (bá»• sung 13/09/2026) â€” ren
     boChonTatCaDon(); taiDon();
   };
   document.getElementById('loc-den-ngay').onchange = () => { boChonTatCaDon(); taiDon(); };
-  // Sáº¯p xáº¿p chá»‰ Ä‘á»•i THá»¨ Tá»°, khÃ´ng Ä‘á»•i danh sÃ¡ch Ä‘ang chá»n (khÃ¡c lá»c â€” lá»c cÃ³ thá»ƒ lÃ m máº¥t Ä‘Æ¡n khá»i
-  // danh sÃ¡ch hiá»ƒn thá»‹) nÃªn KHÃ”NG cáº§n bá» chá»n khi Ä‘á»•i kiá»ƒu sáº¯p xáº¿p.
+  // Sắp xếp chỉ đổi THỨ TỰ, không đổi danh sách đang chọn (khác lọc — lọc có thể làm mất đơn khỏi
+  // danh sách hiển thị) nên KHÔNG cần bỏ chọn khi đổi kiểu sắp xếp.
   document.getElementById('sap-xep').onchange = () => { taiDon(); };
-  // TÃ¬m nhanh mÃ£ Ä‘Æ¡n (02/10/2026)
+  // Tìm nhanh mã đơn (02/10/2026)
   const oTimNhanh = document.getElementById('tim-nhanh-ma-don');
   oTimNhanh.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); timNhanhMaDon(); } });
-  // XoÃ¡ trá»‘ng Ã´: CHá»ˆ reset khi Ä‘ang cÃ³ káº¿t quáº£ tÃ¬m nhanh (gÃµ rá»“i xoÃ¡ mÃ  chÆ°a báº¥m TÃ¬m/Enter thÃ¬ khÃ´ng Ä‘á»¥ng bá»™ lá»c).
+  // Xoá trống ô: CHỈ reset khi đang có kết quả tìm nhanh (gõ rồi xoá mà chưa bấm Tìm/Enter thì không đụng bộ lọc).
   oTimNhanh.addEventListener('input', () => { if (!oTimNhanh.value.trim() && maDonDangTim) timNhanhMaDon(); });
-  // Äá»•i báº¥t ká»³ bá»™ lá»c nÃ o trong panel Lá»c -> xoÃ¡ Ã´ tÃ¬m nhanh TRÆ¯á»šC (pha capture cháº¡y trÆ°á»›c onchange/oninput cá»§a Ã´ lá»c).
+  // Đổi bất kỳ bộ lọc nào trong panel Lọc -> xoá ô tìm nhanh TRƯỚC (pha capture chạy trước onchange/oninput của ô lọc).
   const xoaTimNhanhKhiLoc = e => { if (CAC_O_LOC.includes(e.target.id)) { oTimNhanh.value = ''; maDonDangTim = ''; } };
   document.getElementById('panel-loc').addEventListener('change', xoaTimNhanhKhiLoc, true);
   document.getElementById('panel-loc').addEventListener('input', xoaTimNhanhKhiLoc, true);
 
-  document.getElementById('btn-mo-loc').innerHTML = icon('filter', { size: 16 }) + ' Lá»c';
-  document.getElementById('btn-mo-sap-xep').innerHTML = icon('sort', { size: 16 }) + ' Sáº¯p xáº¿p';
+  document.getElementById('btn-mo-loc').innerHTML = icon('filter', { size: 16 }) + ' Lọc';
+  document.getElementById('btn-mo-sap-xep').innerHTML = icon('sort', { size: 16 }) + ' Sắp xếp';
 
-  document.getElementById('btn-in-phoi-ao').innerHTML = icon('printer') + ' IN DANH SÃCH PHÃ”I';
-  document.getElementById('btn-in-don-dang-chon').innerHTML = icon('printer') + ' IN ÄÆ N';
-  document.getElementById('btn-in-don-tu-file-phoi').innerHTML = icon('printer') + ' IN ÄÆ N Tá»ª FILE PHÃ”I (PDF)';
+  document.getElementById('btn-in-phoi-ao').innerHTML = icon('printer') + ' IN DANH SÁCH PHÔI';
+  document.getElementById('btn-in-don-dang-chon').innerHTML = icon('printer') + ' IN ĐƠN';
+  document.getElementById('btn-in-don-tu-file-phoi').innerHTML = icon('printer') + ' IN ĐƠN TỪ FILE PHÔI (PDF)';
 
-  // NÃºt gá»™p 3 viá»‡c (Ä‘á»•i tráº¡ng thÃ¡i "ÄÃ£ in mÃ£" + in 2 file PDF) â€” chá»‰ dÃ nh cho admin/ve_file theo
-  // Ä‘Ãºng pháº¡m vi ngÆ°á»i dÃ¹ng Ä‘Ã£ xÃ¡c nháº­n, áº©n háº³n vá»›i cÃ¡c vai trÃ² khÃ¡c (san_xuat, nguoi_lay_phoi) thay
-  // vÃ¬ chá»‰ dá»±a vÃ o viá»‡c backend cháº·n Ä‘á»•i tráº¡ng thÃ¡i (xem spec 2026-09-05).
+  // Nút gộp 3 việc (đổi trạng thái "Đã in mã" + in 2 file PDF) — chỉ dành cho admin/ve_file theo
+  // đúng phạm vi người dùng đã xác nhận, ẩn hẳn với các vai trò khác (san_xuat, nguoi_lay_phoi) thay
+  // vì chỉ dựa vào việc backend chặn đổi trạng thái (xem spec 2026-09-05).
   const btnInMaPhoiDon = document.getElementById('btn-in-ma-phoi-don');
   if (laAdmin(user.vaiTro) || user.vaiTro === 've_file') {
-    btnInMaPhoiDon.innerHTML = icon('printer') + ' IN DANH SÃCH PHÃ”I + IN ÄÆ N';
+    btnInMaPhoiDon.innerHTML = icon('printer') + ' IN DANH SÁCH PHÔI + IN ĐƠN';
   } else {
     btnInMaPhoiDon.style.display = 'none';
   }
 
-  // "QuÃ©t tÃ¬m DHL" (nhÃ£n rÃºt gá»n 13/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” tÄƒng diá»‡n tÃ­ch hiá»ƒn thá»‹ toolbar;
-  // trÆ°á»›c Ä‘Ã³ "QUÃ‰T TÃŒM ÄÆ N HÃ€NG LOáº T") â€” hiá»‡n láº¡i 13/09/2026, chá»‰ admin/ve_file (ghi HASH_ANH_MAU/
-  // NHOM_HANG_LOAT vÃ o Sheet) â€” khá»›p Ä‘Ãºng cháº·n quyá»n tÆ°Æ¡ng á»©ng á»Ÿ backend POST /quet-hang-loat/bat-dau
-  // (thÃªm cÃ¹ng lÃºc, trÆ°á»›c Ä‘Ã³ route nÃ y chÆ°a cháº·n theo vai trÃ²).
+  // "Quét tìm DHL" (nhãn rút gọn 13/09/2026, theo yêu cầu người dùng — tăng diện tích hiển thị toolbar;
+  // trước đó "QUÉT TÌM ĐƠN HÀNG LOẠT") — hiện lại 13/09/2026, chỉ admin/ve_file (ghi HASH_ANH_MAU/
+  // NHOM_HANG_LOAT vào Sheet) — khớp đúng chặn quyền tương ứng ở backend POST /quet-hang-loat/bat-dau
+  // (thêm cùng lúc, trước đó route này chưa chặn theo vai trò).
   const btnQuetHangLoat = document.getElementById('btn-quet-hang-loat');
   if (laAdmin(user.vaiTro) || user.vaiTro === 've_file') {
     btnQuetHangLoat.style.display = '';
-    btnQuetHangLoat.innerHTML = icon('scan') + ' QuÃ©t tÃ¬m DHL';
+    btnQuetHangLoat.innerHTML = icon('scan') + ' Quét tìm DHL';
   }
 
-  // "QuÃ©t láº¡i DHL" (nhÃ£n rÃºt gá»n 13/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng; trÆ°á»›c Ä‘Ã³ "QUÃ‰T Láº I ÄÆ N ÄANG CHá»ŒN").
+  // "Quét lại DHL" (nhãn rút gọn 13/09/2026, theo yêu cầu người dùng; trước đó "QUÉT LẠI ĐƠN ĐANG CHỌN").
   const btnQuetLaiHangLoat = document.getElementById('btn-quet-lai-hang-loat');
   if (laAdmin(user.vaiTro) || user.vaiTro === 've_file') {
     btnQuetLaiHangLoat.style.display = '';
-    btnQuetLaiHangLoat.innerHTML = icon('scan') + ' QuÃ©t láº¡i DHL';
+    btnQuetLaiHangLoat.innerHTML = icon('scan') + ' Quét lại DHL';
   }
 
-  // "ThÃªm vÃ o DHL" (nhÃ£n rÃºt gá»n 13/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng; trÆ°á»›c Ä‘Ã³ "THÃŠM VÃ€O ÄÆ N HÃ€NG
-  // LOáº T") â€” cÃ¹ng pháº¡m vi quyá»n vá»›i nÃºt quÃ©t á»Ÿ trÃªn (khá»›p backend POST /don-hang-loat/:ma/them-don,
+  // "Thêm vào DHL" (nhãn rút gọn 13/09/2026, theo yêu cầu người dùng; trước đó "THÊM VÀO ĐƠN HÀNG
+  // LOẠT") — cùng phạm vi quyền với nút quét ở trên (khớp backend POST /don-hang-loat/:ma/them-don,
   // /don-hang-loat).
   const btnThemHangLoat = document.getElementById('btn-them-hang-loat');
   if (laAdmin(user.vaiTro) || user.vaiTro === 've_file') {
     btnThemHangLoat.style.display = '';
-    btnThemHangLoat.innerHTML = icon('package') + ' ThÃªm vÃ o DHL';
+    btnThemHangLoat.innerHTML = icon('package') + ' Thêm vào DHL';
   }
 
-  // TÃ¬m theo tÃªn ÄÆ¡n hÃ ng loáº¡t ÄÃƒ XÃC NHáº¬N (bá»• sung 13/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” chá»‰ admin/
-  // ve_file, Ä‘Ãºng pháº¡m vi trang public/don-hang-loat.html. Äá»• datalist gá»£i Ã½ tÃªn ngay khi táº£i trang
-  // (sá»‘ nhÃ³m luÃ´n nhá», gá»i 1 láº§n khÃ´ng Ä‘Ã¡ng ká»ƒ â€” khÃ¡c GET /orders vá»‘n CHá»ˆ Ä‘á»c tab DonHangLoat khi cÃ³
-  // lá»c, xem routes/orders.js) â€” lá»—i táº£i (vd chÆ°a táº¡o tab) chá»‰ áº©n Ã´ lá»c, khÃ´ng cháº·n cáº£ trang.
+  // Tìm theo tên Đơn hàng loạt ĐÃ XÁC NHẬN (bổ sung 13/09/2026, theo yêu cầu người dùng) — chỉ admin/
+  // ve_file, đúng phạm vi trang public/don-hang-loat.html. Đổ datalist gợi ý tên ngay khi tải trang
+  // (số nhóm luôn nhỏ, gọi 1 lần không đáng kể — khác GET /orders vốn CHỈ đọc tab DonHangLoat khi có
+  // lọc, xem routes/orders.js) — lỗi tải (vd chưa tạo tab) chỉ ẩn ô lọc, không chặn cả trang.
   if (laAdmin(user.vaiTro) || user.vaiTro === 've_file') {
     apiFetch('/don-hang-loat').then(({ nhoms }) => {
       if (nhoms.length === 0) return;
-      // MÃ£ DHLXX tÄƒng dáº§n, khÃ´ng tÃ¡i dÃ¹ng (donHangLoatDbService.js) â†’ sá»‘ lá»›n hÆ¡n = nhÃ³m má»›i hÆ¡n.
+      // Mã DHLXX tăng dần, không tái dùng (donHangLoatDbService.js) → số lớn hơn = nhóm mới hơn.
       const soCuaMa = n => Number(String(n.maDonHangLoat).replace(/\D/g, '')) || 0;
       const cacTen = [...new Set([...nhoms].sort((a, b) => soCuaMa(b) - soCuaMa(a)).map(n => n.tenNhom).filter(Boolean))];
       const sel = document.getElementById('loc-don-hang-loat');
-      const dangChon = sel.value; // giá»¯ giÃ¡ trá»‹ vá»«a khÃ´i phá»¥c (G1) â€” danh sÃ¡ch vá» sau lÆ°á»£t táº£i Ä‘áº§u
-      sel.innerHTML = '<option value="">Táº¥t cáº£ Ä‘Æ¡n hÃ ng loáº¡t</option>' +
+      const dangChon = sel.value; // giữ giá trị vừa khôi phục (G1) — danh sách về sau lượt tải đầu
+      sel.innerHTML = '<option value="">Tất cả đơn hàng loạt</option>' +
         cacTen.map(ten => `<option value="${escapeHtml(ten)}">${escapeHtml(ten)}</option>`).join('');
       sel.value = dangChon;
       document.getElementById('truong-loc-don-hang-loat').style.display = 'flex';
-    }).catch(() => {}); // im láº·ng bá» qua â€” khÃ´ng cÃ³ ÄÆ¡n hÃ ng loáº¡t nÃ o cÅ©ng lÃ  tráº¡ng thÃ¡i bÃ¬nh thÆ°á»ng
+    }).catch(() => {}); // im lặng bỏ qua — không có Đơn hàng loạt nào cũng là trạng thái bình thường
   }
 
-  // "IN KÃŠ KHAI Háº¢I QUAN ÄÆ N ÄANG CHá»ŒN" (bá»• sung 08/09/2026) â€” chá»‰ admin/ve_file, cÃ¹ng pháº¡m vi vá»›i
-  // nÃºt gá»™p phÃ­a trÃªn.
+  // "IN KÊ KHAI HẢI QUAN ĐƠN ĐANG CHỌN" (bổ sung 08/09/2026) — chỉ admin/ve_file, cùng phạm vi với
+  // nút gộp phía trên.
   const btnInHaiQuan = document.getElementById('btn-in-hai-quan');
   if (laAdmin(user.vaiTro) || user.vaiTro === 've_file') {
     btnInHaiQuan.style.display = '';
-    btnInHaiQuan.innerHTML = icon('printer') + ' IN KÃŠ KHAI Háº¢I QUAN ÄÆ N ÄANG CHá»ŒN';
+    btnInHaiQuan.innerHTML = icon('printer') + ' IN KÊ KHAI HẢI QUAN ĐƠN ĐANG CHỌN';
     document.getElementById('btn-thue-team-khac').style.display = '';
   }
 
-  // NÃºt "ÄÃ£..." (positive) dÃ¹ng icon check, nÃºt "ChÆ°a..." (negative, Ä‘Æ°a tráº¡ng thÃ¡i quay láº¡i) dÃ¹ng
-  // icon undo â€” phÃ¢n biá»‡t trá»±c quan, khÃ´ng chá»‰ dá»±a vÃ o mÃ u (xem thÃªm .trang-thai-tich-cuc/.trang-thai-tieu-cuc trong style.css)
-  document.getElementById('btn-xac-nhan').innerHTML = icon('check', { size: 16 }) + ' ÄÃ£ in mÃ£';
-  document.getElementById('btn-da-lay-phoi').innerHTML = icon('check', { size: 16 }) + ' ÄÃ£ láº¥y phÃ´i';
-  document.getElementById('btn-chua-lay-phoi').innerHTML = icon('undo', { size: 16 }) + ' ChÆ°a láº¥y phÃ´i';
-  document.getElementById('btn-da-ve-file').innerHTML = icon('check', { size: 16 }) + ' ÄÃ£ váº½ file';
-  document.getElementById('btn-dang-ve-file').innerHTML = icon('navActivity', { size: 16 }) + ' Äang váº½ file';
-  document.getElementById('btn-chua-ve-file').innerHTML = icon('undo', { size: 16 }) + ' ChÆ°a váº½ file';
+  // Nút "Đã..." (positive) dùng icon check, nút "Chưa..." (negative, đưa trạng thái quay lại) dùng
+  // icon undo — phân biệt trực quan, không chỉ dựa vào màu (xem thêm .trang-thai-tich-cuc/.trang-thai-tieu-cuc trong style.css)
+  document.getElementById('btn-xac-nhan').innerHTML = icon('check', { size: 16 }) + ' Đã in mã';
+  document.getElementById('btn-da-lay-phoi').innerHTML = icon('check', { size: 16 }) + ' Đã lấy phôi';
+  document.getElementById('btn-chua-lay-phoi').innerHTML = icon('undo', { size: 16 }) + ' Chưa lấy phôi';
+  document.getElementById('btn-da-ve-file').innerHTML = icon('check', { size: 16 }) + ' Đã vẽ file';
+  document.getElementById('btn-dang-ve-file').innerHTML = icon('navActivity', { size: 16 }) + ' Đang vẽ file';
+  document.getElementById('btn-chua-ve-file').innerHTML = icon('undo', { size: 16 }) + ' Chưa vẽ file';
 
-  document.getElementById('trang-thai-dich').innerHTML = '<option value="">Chuyá»ƒn Ä‘áº¿n tráº¡ng thÃ¡i...</option>' +
+  document.getElementById('trang-thai-dich').innerHTML = '<option value="">Chuyển đến trạng thái...</option>' +
     DANH_SACH_TRANG_THAI_DAY_DU.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
 
-  // "Chá»‰ Ä‘á»‹nh ngÆ°á»i cháº¡y mÃ¡y" â€” CHá»ˆ admin (xem docs/superpowers/specs/2026-09-07-nguoi-chay-may-design.md).
-  // Äá»• danh sÃ¡ch san_xuat Ä‘ang hoáº¡t Ä‘á»™ng tá»« /users (route nÃ y vá»‘n Ä‘Ã£ chá»‰ má»Ÿ cho admin â€” requireRole
-  // trong routes/users.js â€” nÃªn khÃ´ng lá»™ danh sÃ¡ch nhÃ¢n viÃªn cho vai trÃ² khÃ¡c qua Ä‘Æ°á»ng nÃ y).
+  // "Chỉ định người chạy máy" — CHỈ admin (xem docs/superpowers/specs/2026-09-07-nguoi-chay-may-design.md).
+  // Đổ danh sách san_xuat đang hoạt động từ /users (route này vốn đã chỉ mở cho admin — requireRole
+  // trong routes/users.js — nên không lộ danh sách nhân viên cho vai trò khác qua đường này).
   if (laAdmin(user.vaiTro)) {
-    // Lá»c theo Æ¯u tiÃªn (bá»• sung 13/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” CHá»ˆ admin cáº§n, xem chÃº
-    // thÃ­ch táº¡i <div id="truong-loc-uu-tien"> phÃ­a trÃªn. display:flex khá»›p Ä‘Ãºng display máº·c Ä‘á»‹nh cá»§a
+    // Lọc theo Ưu tiên (bổ sung 13/09/2026, theo yêu cầu người dùng) — CHỈ admin cần, xem chú
+    // thích tại <div id="truong-loc-uu-tien"> phía trên. display:flex khớp đúng display mặc định của
     // .truong (xem .inline-form .truong trong style.css).
     document.getElementById('truong-loc-uu-tien').style.display = 'flex';
 
-    // display:contents (khÃ´ng pháº£i '') â€” khá»‘i bá»c nÃ y chá»‰ Ä‘á»ƒ gom nhÃ³m cho dá»… áº©n/hiá»‡n báº±ng JS, KHÃ”NG
-    // Ä‘Æ°á»£c tÃ­nh lÃ  1 pháº§n tá»­ flex riÃªng cá»§a .thanh-hanh-dong-hang-loat, náº¿u khÃ´ng .thanh-hanh-dong-cach
-    // (align-self:stretch) vÃ  <select> (flex:1) bÃªn trong sáº½ máº¥t tÃ¡c dá»¥ng vÃ¬ khÃ´ng cÃ²n lÃ  con trá»±c
-    // tiáº¿p cá»§a flex container ná»¯a.
+    // display:contents (không phải '') — khối bọc này chỉ để gom nhóm cho dễ ẩn/hiện bằng JS, KHÔNG
+    // được tính là 1 phần tử flex riêng của .thanh-hanh-dong-hang-loat, nếu không .thanh-hanh-dong-cach
+    // (align-self:stretch) và <select> (flex:1) bên trong sẽ mất tác dụng vì không còn là con trực
+    // tiếp của flex container nữa.
     document.getElementById('khoi-chi-dinh-nguoi-chay-may').style.display = 'contents';
     document.getElementById('khoi-chi-dinh-nguoi-ve-file').style.display = 'contents';
     try {
       const dsNhanVien = await apiFetch('/users/tom-tat');
       const dsSanXuat = dsNhanVien.filter(u => u.VaiTro === 'san_xuat' && String(u.KichHoat).toUpperCase() === 'TRUE');
-      document.getElementById('nguoi-chay-may-dich').innerHTML = '<option value="">Chá»‰ Ä‘á»‹nh ngÆ°á»i cháº¡y mÃ¡y...</option>' +
+      document.getElementById('nguoi-chay-may-dich').innerHTML = '<option value="">Chỉ định người chạy máy...</option>' +
         dsSanXuat.map(u => `<option value="${escapeHtml(u.Ten)}">${escapeHtml(u.Ten)}</option>`).join('');
-      // "Chá»‰ Ä‘á»‹nh ngÆ°á»i váº½ file" â€” tÃ¡i dÃ¹ng luÃ´n dsNhanVien vá»«a táº£i á»Ÿ trÃªn, khÃ´ng gá»i thÃªm /users
-      // (Ä‘á»• Ä‘á»™ng, cÃ¹ng khuÃ´n "Chá»‰ Ä‘á»‹nh ngÆ°á»i cháº¡y mÃ¡y" â€” xem POST /orders/chi-dinh-nguoi-ve-file,
-      // route Ä‘Ã£ cÃ³ sáºµn tá»« trÆ°á»›c, dÃ¹ng chung cho "ÄÆ¡n cá»§a tÃ´i (Váº½ file)").
+      // "Chỉ định người vẽ file" — tái dùng luôn dsNhanVien vừa tải ở trên, không gọi thêm /users
+      // (đổ động, cùng khuôn "Chỉ định người chạy máy" — xem POST /orders/chi-dinh-nguoi-ve-file,
+      // route đã có sẵn từ trước, dùng chung cho "Đơn của tôi (Vẽ file)").
       const dsVeFile = dsNhanVien.filter(u => u.VaiTro === 've_file' && String(u.KichHoat).toUpperCase() === 'TRUE');
-      document.getElementById('nguoi-ve-file-dich').innerHTML = '<option value="">Chá»‰ Ä‘á»‹nh ngÆ°á»i váº½ file...</option>' +
+      document.getElementById('nguoi-ve-file-dich').innerHTML = '<option value="">Chỉ định người vẽ file...</option>' +
         dsVeFile.map(u => `<option value="${escapeHtml(u.Ten)}">${escapeHtml(u.Ten)}</option>`).join('');
-    } catch (e) { /* khÃ´ng táº£i Ä‘Æ°á»£c danh sÃ¡ch nhÃ¢n viÃªn â€” Ã´ chá»n giá»¯ nguyÃªn rá»—ng, khÃ´ng cháº·n táº£i trang */ }
+    } catch (e) { /* không tải được danh sách nhân viên — ô chọn giữ nguyên rỗng, không chặn tải trang */ }
   }
 
-  // Lá»c theo XÆ°á»Ÿng cho admin (29/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” danhSachXuong server Ä‘Ã£ chá»‰ tráº£ cÃ¡c XÆ°á»Ÿng
-  // admin nÃ y phá»¥ trÃ¡ch (routes/orders.js GET /danh-sach-xuong). KhÃ´ng cÃ³ "(chÆ°a gÃ¡n)": admin khÃ´ng tháº¥y Ä‘Æ¡n chÆ°a gÃ¡n.
+  // Lọc theo Xưởng cho admin (29/09/2026, theo yêu cầu người dùng) — danhSachXuong server đã chỉ trả các Xưởng
+  // admin này phụ trách (routes/orders.js GET /danh-sach-xuong). Không có "(chưa gán)": admin không thấy đơn chưa gán.
   if (user.vaiTro === 'admin') {
     document.getElementById('truong-loc-xuong').style.display = 'flex';
-    document.getElementById('loc-xuong').innerHTML = '<option value="">Táº¥t cáº£ XÆ°á»Ÿng cá»§a tÃ´i</option>' +
+    document.getElementById('loc-xuong').innerHTML = '<option value="">Tất cả Xưởng của tôi</option>' +
       danhSachXuong.map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
-    // GÃ¡n XÆ°á»Ÿng cho admin (29/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” CHá»ˆ chuyá»ƒn giá»¯a cÃ¡c XÆ°á»Ÿng mÃ¬nh phá»¥ trÃ¡ch, KHÃ”NG gá»¡ gÃ¡n
-    // (server kiá»ƒm tra láº¡i, routes/orders.js POST /gan-xuong). Phá»¥ trÃ¡ch < 2 XÆ°á»Ÿng thÃ¬ khÃ´ng cÃ³ chá»— chuyá»ƒn -> áº©n.
+    // Gán Xưởng cho admin (29/09/2026, theo yêu cầu người dùng) — CHỈ chuyển giữa các Xưởng mình phụ trách, KHÔNG gỡ gán
+    // (server kiểm tra lại, routes/orders.js POST /gan-xuong). Phụ trách < 2 Xưởng thì không có chỗ chuyển -> ẩn.
     if (danhSachXuong.length >= 2) {
       document.getElementById('khoi-gan-xuong').style.display = 'contents';
-      document.getElementById('xuong-dich').innerHTML = '<option value="">GÃ¡n XÆ°á»Ÿng...</option>' +
+      document.getElementById('xuong-dich').innerHTML = '<option value="">Gán Xưởng...</option>' +
         danhSachXuong.map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
     }
   }
 
-  // Lá»c theo XÆ°á»Ÿng (má»i XÆ°á»Ÿng + "(chÆ°a gÃ¡n)") + "GÃ¡n XÆ°á»Ÿng" má»i XÆ°á»Ÿng/gá»¡ gÃ¡n â€” superadmin (admin: chá»‰ giá»¯a cÃ¡c XÆ°á»Ÿng
-  // cá»§a mÃ¬nh, xem khá»‘i admin á»Ÿ trÃªn; routes/orders.js POST /gan-xuong).
+  // Lọc theo Xưởng (mọi Xưởng + "(chưa gán)") + "Gán Xưởng" mọi Xưởng/gỡ gán — superadmin (admin: chỉ giữa các Xưởng
+  // của mình, xem khối admin ở trên; routes/orders.js POST /gan-xuong).
   if (laSuperAdmin(user.vaiTro)) {
     document.getElementById('truong-loc-xuong').style.display = 'flex';
     document.getElementById('khoi-gan-xuong').style.display = 'contents';
-    // Äá»• Äá»˜NG danh sÃ¡ch XÆ°á»Ÿng (bá»• sung 24/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” chÃ¨n ngay sau "Táº¥t cáº£
-    // XÆ°á»Ÿng", TRÆ¯á»šC "(chÆ°a gÃ¡n)" (option cá»‘ Ä‘á»‹nh cuá»‘i cÃ¹ng, Ä‘áº¡i diá»‡n XUONG THáº¬T Sá»° rá»—ng â€” KHÃ”NG náº±m
-    // trong danh sÃ¡ch XÆ°á»Ÿng quáº£n lÃ½ Ä‘Æ°á»£c, xem chÃº thÃ­ch á»Ÿ khai bÃ¡o danhSachXuong phÃ­a trÃªn).
-    document.getElementById('loc-xuong').innerHTML = '<option value="">Táº¥t cáº£ XÆ°á»Ÿng</option>' +
+    // Đổ ĐỘNG danh sách Xưởng (bổ sung 24/09/2026, theo yêu cầu người dùng) — chèn ngay sau "Tất cả
+    // Xưởng", TRƯỚC "(chưa gán)" (option cố định cuối cùng, đại diện XUONG THẬT SỰ rỗng — KHÔNG nằm
+    // trong danh sách Xưởng quản lý được, xem chú thích ở khai báo danhSachXuong phía trên).
+    document.getElementById('loc-xuong').innerHTML = '<option value="">Tất cả Xưởng</option>' +
       danhSachXuong.map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('') +
-      '<option value="__CHUA_GAN__">(chÆ°a gÃ¡n)</option>';
-    document.getElementById('xuong-dich').innerHTML = '<option value="">GÃ¡n XÆ°á»Ÿng...</option>' +
+      '<option value="__CHUA_GAN__">(chưa gán)</option>';
+    document.getElementById('xuong-dich').innerHTML = '<option value="">Gán Xưởng...</option>' +
       danhSachXuong.map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('') +
-      '<option value="__GO_GAN__">(Gá»¡ gÃ¡n XÆ°á»Ÿng)</option>';
+      '<option value="__GO_GAN__">(Gỡ gán Xưởng)</option>';
   }
 
-  // "XoÃ¡ dá»¯ liá»‡u Ä‘Æ¡n hÃ ng" (bá»• sung 20/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” CHá»ˆ superadmin, cÃ¹ng khá»‘i
-  // háº¹p nháº¥t trong trang (nhÆ° "GÃ¡n XÆ°á»Ÿng" á»Ÿ trÃªn) vÃ¬ lÃ  thao tÃ¡c phÃ¡ huá»· vÄ©nh viá»…n khÃ´ng thá»ƒ hoÃ n tÃ¡c.
+  // "Xoá dữ liệu đơn hàng" (bổ sung 20/09/2026, theo yêu cầu người dùng) — CHỈ superadmin, cùng khối
+  // hẹp nhất trong trang (như "Gán Xưởng" ở trên) vì là thao tác phá huỷ vĩnh viễn không thể hoàn tác.
   if (laSuperAdmin(user.vaiTro)) {
     document.getElementById('khoi-xoa-du-lieu-don').style.display = 'contents';
     document.getElementById('btn-mo-superadmin').style.display = '';
@@ -604,31 +604,31 @@ let user; // promote lÃªn module-level (bá»• sung 13/09/2026) â€” ren
       .map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
   }
 
-  // "ÄÆ¡n Æ°u tiÃªn" (bá»• sung 13/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” Rá»˜NG HÆ N khá»‘i "GÃ¡n XÆ°á»Ÿng" á»Ÿ trÃªn
-  // (admin-only): á»Ÿ Ä‘Ã¢y Cáº¢ admin LáºªN ve_file Ä‘á»u Ä‘Æ°á»£c Ä‘Ã¡nh dáº¥u (xem routes/orders.js POST
-  // /danh-dau-uu-tien). 2 nÃºt riÃªng (khÃ´ng pháº£i 1 <select>+Ãp dá»¥ng) vÃ¬ chá»‰ cÃ³ Ä‘Ãºng 2 lá»±a chá»n (báº­t/táº¯t),
-  // cÃ¹ng khuÃ´n 2 nÃºt "ÄÃ£ láº¥y phÃ´i"/"ChÆ°a láº¥y phÃ´i" á»Ÿ trÃªn.
+  // "Đơn ưu tiên" (bổ sung 13/09/2026, theo yêu cầu người dùng) — RỘNG HƠN khối "Gán Xưởng" ở trên
+  // (admin-only): ở đây CẢ admin LẪN ve_file đều được đánh dấu (xem routes/orders.js POST
+  // /danh-dau-uu-tien). 2 nút riêng (không phải 1 <select>+Áp dụng) vì chỉ có đúng 2 lựa chọn (bật/tắt),
+  // cùng khuôn 2 nút "Đã lấy phôi"/"Chưa lấy phôi" ở trên.
   if (laAdmin(user.vaiTro) || user.vaiTro === 've_file') {
     document.getElementById('khoi-uu-tien').style.display = 'contents';
-    document.getElementById('btn-danh-dau-uu-tien').innerHTML = icon('star', { size: 16 }) + ' ÄÃ¡nh dáº¥u Æ¯u tiÃªn';
-    document.getElementById('btn-bo-uu-tien').innerHTML = icon('undo', { size: 16 }) + ' Bá» Æ¯u tiÃªn';
+    document.getElementById('btn-danh-dau-uu-tien').innerHTML = icon('star', { size: 16 }) + ' Đánh dấu Ưu tiên';
+    document.getElementById('btn-bo-uu-tien').innerHTML = icon('undo', { size: 16 }) + ' Bỏ Ưu tiên';
   }
 
-  // "IN LABEL" (bá»• sung 09/09/2026 láº§n 2, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” má»i vai trÃ² TRá»ª nguoi_lay_phoi (server routes/tracking.js#/in-label cháº·n láº¡i
-  // y há»‡t náº¿u lá»¡ gá»i trá»±c tiáº¿p API â€” nguoi_lay_phoi thá»±c ra khÃ´ng cÃ³ menu vÃ o Ä‘Æ°á»£c trang nÃ y nÃªn chá»‰ lÃ  phÃ²ng há»).
-  // áº¨N 2 nÃºt mua GKE "Mua tracking" + "MUA TRACKING vÃ  IN LABEL" vá»›i Má»ŒI vai trÃ² (30/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” Ä‘ang Æ°u tiÃªn dÃ¹ng KL).
-  // Chá»‰ áº©n nÃºt: mÃ¡y chá»§ (/mua-thu-cong, /mua-va-in-label), trang Tracking, Chi tiáº¿t Ä‘Æ¡n vÃ  job tá»± mua GKE giá»¯ nguyÃªn. Hiá»‡n láº¡i: thÃªm láº¡i dÃ²ng
-  // display cho khoi-mua-tracking-thu-cong (má»i vai trÃ² trá»« nguoi_lay_phoi) vÃ  khoi-mua-va-in-label (chá»‰ admin).
+  // "IN LABEL" (bổ sung 09/09/2026 lần 2, theo yêu cầu người dùng) — mọi vai trò TRỪ nguoi_lay_phoi (server routes/tracking.js#/in-label chặn lại
+  // y hệt nếu lỡ gọi trực tiếp API — nguoi_lay_phoi thực ra không có menu vào được trang này nên chỉ là phòng hờ).
+  // ẨN 2 nút mua GKE "Mua tracking" + "MUA TRACKING và IN LABEL" với MỌI vai trò (30/10/2026, theo yêu cầu người dùng — đang ưu tiên dùng KL).
+  // Chỉ ẩn nút: máy chủ (/mua-thu-cong, /mua-va-in-label), trang Tracking, Chi tiết đơn và job tự mua GKE giữ nguyên. Hiện lại: thêm lại dòng
+  // display cho khoi-mua-tracking-thu-cong (mọi vai trò trừ nguoi_lay_phoi) và khoi-mua-va-in-label (chỉ admin).
   if (user.vaiTro !== 'nguoi_lay_phoi') {
     document.getElementById('khoi-in-label').style.display = 'contents';
   }
-  // KL hÃ ng loáº¡t (29/10/2026): cÃ¹ng quyá»n mua KL á»Ÿ mÃ¡y chá»§ (hangVanChuyenKhacService#duocMuaHangKhac).
+  // KL hàng loạt (29/10/2026): cùng quyền mua KL ở máy chủ (hangVanChuyenKhacService#duocMuaHangKhac).
   if (duocMuaKl()) {
     document.getElementById('khoi-kl-hang-loat').style.display = 'contents';
   }
 
-  // G1 (10/10/2026): khÃ´i phá»¥c bá»™ lá»c/sáº¯p xáº¿p/tÃ¬m nhanh TRÆ¯á»šC lÆ°á»£t táº£i Ä‘áº§u, sá»‘ tháº» + vá»‹ trÃ­ cuá»™n SAU khi váº½.
-  // Ã” tÃ¬m nhanh: lÆ°u mÃ£ ÄÃƒ tÃ¬m (maDonDangTim), khÃ´ng lÆ°u chá»¯ gÃµ dá»Ÿ chÆ°a báº¥m Enter â€” listener nÃ y Ä‘Äƒng kÃ½ TRÆ¯á»šC nÃªn cháº¡y trÆ°á»›c lÃºc lÆ°u.
+  // G1 (10/10/2026): khôi phục bộ lọc/sắp xếp/tìm nhanh TRƯỚC lượt tải đầu, số thẻ + vị trí cuộn SAU khi vẽ.
+  // Ô tìm nhanh: lưu mã ĐÃ tìm (maDonDangTim), không lưu chữ gõ dở chưa bấm Enter — listener này đăng ký TRƯỚC nên chạy trước lúc lưu.
   addEventListener('pagehide', () => { document.getElementById('tim-nhanh-ma-don').value = maDonDangTim; });
   const nho = nhoDanhSach('orders', {
     cacO: ['tim-nhanh-ma-don', ...CAC_O_LOC, 'sap-xep'],
@@ -650,8 +650,8 @@ function ngayHomNayYYYYMMDD() {
   return `${d.getFullYear()}-${mm}-${dd}`;
 }
 
-// ÄÃ³ng/má»Ÿ 1 trong 2 panel "Lá»c"/"Sáº¯p xáº¿p" â€” luÃ´n Ä‘Ã³ng panel cÃ²n láº¡i (Ä‘á»§ chá»— trÃªn mÃ n hÃ¬nh, trÃ¡nh
-// rá»‘i khi cáº£ 2 cÃ¹ng má»Ÿ), báº¥m láº¡i Ä‘Ãºng nÃºt Ä‘ang má»Ÿ thÃ¬ Ä‘Ã³ng luÃ´n (toggle).
+// Đóng/mở 1 trong 2 panel "Lọc"/"Sắp xếp" — luôn đóng panel còn lại (đủ chỗ trên màn hình, tránh
+// rối khi cả 2 cùng mở), bấm lại đúng nút đang mở thì đóng luôn (toggle).
 function batTatPanel(idPanelMuonMo) {
   const dangMo = document.getElementById(idPanelMuonMo).style.display !== 'none';
   document.getElementById('panel-loc').style.display = 'none';
@@ -664,10 +664,10 @@ function batTatPanel(idPanelMuonMo) {
   }
 }
 
-// CHUYá»‚N TRáº NG THÃI THá»¦ CÃ”NG SUPERADMIN (bá»• sung 25/09/2026) â€” xem routes/orders.js
-// POST /chuyen-trang-thai-superadmin. Server tá»± tÃ¡ch/viáº¿t hoa/bá» trÃ¹ng mÃ£ Ä‘Æ¡n; á»Ÿ Ä‘Ã¢y tÃ¡ch láº¡i chá»‰ Ä‘á»ƒ
-// Ä‘áº¿m sá»‘ Ä‘Æ¡n trong há»™p xÃ¡c nháº­n.
-const TACH_MA_DON = /\s*,\s*(?!\d+(?:[\s,]|$))|\s+/; // trÃ¹ng routes/orders.js
+// CHUYỂN TRẠNG THÁI THỦ CÔNG SUPERADMIN (bổ sung 25/09/2026) — xem routes/orders.js
+// POST /chuyen-trang-thai-superadmin. Server tự tách/viết hoa/bỏ trùng mã đơn; ở đây tách lại chỉ để
+// đếm số đơn trong hộp xác nhận.
+const TACH_MA_DON = /\s*,\s*(?!\d+(?:[\s,]|$))|\s+/; // trùng routes/orders.js
 function batTatPanelSuperadmin() {
   const el = document.getElementById('panel-superadmin');
   el.style.display = el.style.display === 'none' ? 'block' : 'none';
@@ -677,8 +677,8 @@ async function apDungChuyenSuperadmin(btn) {
   const danhSachDon = document.getElementById('sa-danh-sach-don').value.toUpperCase();
   const trangThaiMoi = document.getElementById('sa-trang-thai').value;
   const soDon = new Set(danhSachDon.split(TACH_MA_DON).filter(Boolean)).size;
-  if (!soDon) { alert('HÃ£y nháº­p Ã­t nháº¥t 1 mÃ£ Ä‘Æ¡n'); return; }
-  if (!confirm(`SUPERADMIN: chuyá»ƒn ${soDon} Ä‘Æ¡n sang "${trangThaiMoi}", Bá»Ž QUA Má»ŒI RÃ€NG BUá»˜C?`)) return;
+  if (!soDon) { alert('Hãy nhập ít nhất 1 mã đơn'); return; }
+  if (!confirm(`SUPERADMIN: chuyển ${soDon} đơn sang "${trangThaiMoi}", BỎ QUA MỌI RÀNG BUỘC?`)) return;
 
   btn.disabled = true;
   const kq = document.getElementById('sa-ket-qua');
@@ -686,15 +686,15 @@ async function apDungChuyenSuperadmin(btn) {
     const { thanhCong, loi } = await apiFetch('/orders/chuyen-trang-thai-superadmin', {
       method: 'POST', body: JSON.stringify({ danhSachDon, trangThaiMoi }),
     });
-    kq.innerHTML = `<p style="margin:0">ThÃ nh cÃ´ng: ${thanhCong.length} Ä‘Æ¡n${thanhCong.length ? ' â€” ' + escapeHtml(thanhCong.join(', ')) : ''}</p>` +
-      (loi.length ? `<p style="margin:4px 0 0;color:var(--color-danger-text)">Lá»—i ${loi.length} Ä‘Æ¡n:<br>${loi.map(l => escapeHtml(l.sttKey + ': ' + l.lyDo)).join('<br>')}</p>` : '');
+    kq.innerHTML = `<p style="margin:0">Thành công: ${thanhCong.length} đơn${thanhCong.length ? ' — ' + escapeHtml(thanhCong.join(', ')) : ''}</p>` +
+      (loi.length ? `<p style="margin:4px 0 0;color:var(--color-danger-text)">Lỗi ${loi.length} đơn:<br>${loi.map(l => escapeHtml(l.sttKey + ': ' + l.lyDo)).join('<br>')}</p>` : '');
     if (thanhCong.length) await taiDon();
   } catch (e) { alert(e.message); }
   finally { btn.disabled = false; }
 }
 
-// Cáº£nh bÃ¡o lá»›n: Ä‘Æ¡n Ä‘Ã£ thá»­ Tá»° Äá»˜NG mua tracking 10 láº§n khÃ´ng Ä‘Æ°á»£c, Ä‘Ã£ chuyá»ƒn MUA THá»¦ CÃ”NG (30/09/2026). CHá»ˆ vai trÃ² cÃ³ menu
-// Tracking (public/js/api.js#renderNav) má»›i gá»i API; server cÅ©ng cháº·n. Xá»­ lÃ½ (mua tay / cho thá»­ láº¡i) á»Ÿ trang Tracking.
+// Cảnh báo lớn: đơn đã thử TỰ ĐỘNG mua tracking 10 lần không được, đã chuyển MUA THỦ CÔNG (30/09/2026). CHỈ vai trò có menu
+// Tracking (public/js/api.js#renderNav) mới gọi API; server cũng chặn. Xử lý (mua tay / cho thử lại) ở trang Tracking.
 async function taiCanhBaoThuCong() {
   if (!['admin', 'superadmin', 've_file'].includes(user.vaiTro)) return;
   let ds = [];
@@ -702,7 +702,7 @@ async function taiCanhBaoThuCong() {
   const el = document.getElementById('canh-bao-thu-cong');
   if (!ds.length) { el.style.display = 'none'; return; }
   _dsCanhBaoThuCong = ds;
-  // Thu gá»n (02/10/2026): nhá»› trÃªn mÃ¡y; cÃ³ Ä‘Æ¡n Má»šI bá»‹ chuyá»ƒn thá»§ cÃ´ng (chÆ°a cÃ³ lÃºc thu gá»n) -> tá»± má»Ÿ láº¡i Ä‘á»ƒ khÃ´ng bá» sÃ³t.
+  // Thu gọn (02/10/2026): nhớ trên máy; có đơn MỚI bị chuyển thủ công (chưa có lúc thu gọn) -> tự mở lại để không bỏ sót.
   const nho = docThuGonCanhBao();
   if (nho.thuGon && ds.some(d => !nho.cacDon.includes(d.sttKey))) ghiThuGonCanhBao(false, []);
   veCanhBaoThuCong();
@@ -714,7 +714,7 @@ function docThuGonCanhBao() {
   catch (e) { return { thuGon: false, cacDon: [] }; }
 }
 function ghiThuGonCanhBao(thuGon, cacDon) {
-  try { localStorage.setItem(KHOA_THU_GON_CANH_BAO, JSON.stringify({ thuGon, cacDon })); } catch (e) { /* bá» qua */ }
+  try { localStorage.setItem(KHOA_THU_GON_CANH_BAO, JSON.stringify({ thuGon, cacDon })); } catch (e) { /* bỏ qua */ }
 }
 function batTatCanhBaoThuCong() {
   const thuGon = !docThuGonCanhBao().thuGon;
@@ -725,32 +725,32 @@ function veCanhBaoThuCong() {
   const ds = _dsCanhBaoThuCong;
   const el = document.getElementById('canh-bao-thu-cong');
   const thuGon = docThuGonCanhBao().thuGon;
-  const nut = `<button type="button" onclick="batTatCanhBaoThuCong()" aria-expanded="${!thuGon}" style="margin-left:auto;background:transparent;border:1px solid currentColor;color:inherit;border-radius:6px;padding:2px 10px;font-weight:700;cursor:pointer;white-space:nowrap">${thuGon ? 'Hiá»‡n â–¾' : 'Thu gá»n â–´'}</button>`;
+  const nut = `<button type="button" onclick="batTatCanhBaoThuCong()" aria-expanded="${!thuGon}" style="margin-left:auto;background:transparent;border:1px solid currentColor;color:inherit;border-radius:6px;padding:2px 10px;font-weight:700;cursor:pointer;white-space:nowrap">${thuGon ? 'Hiện ▾' : 'Thu gọn ▴'}</button>`;
   el.style.display = '';
   if (thuGon) {
     el.innerHTML = `<div style="background:var(--color-danger-bg);color:var(--color-danger-text);border:2px solid var(--color-danger-text);border-radius:8px;padding:4px 10px;margin-bottom:8px;display:flex;gap:8px;align-items:center;font-weight:700">
-      ${icon('alert', { size: 18 })} ${ds.length} Ä‘Æ¡n khÃ´ng thá»ƒ tá»± Ä‘á»™ng mua tracking ${nut}</div>`;
+      ${icon('alert', { size: 18 })} ${ds.length} đơn không thể tự động mua tracking ${nut}</div>`;
     return;
   }
   const gio = t => { const d = new Date(t); return isNaN(d) ? '' : d.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); };
   el.innerHTML = `
     <div style="background:var(--color-danger-bg);color:var(--color-danger-text);border:3px solid var(--color-danger-text);border-radius:8px;padding:14px 16px;margin-bottom:12px">
-      <div style="font-size:1.2rem;font-weight:700;display:flex;gap:8px;align-items:center;flex-wrap:wrap">${icon('alert', { size: 24 })} ${ds.length} ÄÆ N KHÃ”NG THá»‚ Tá»° Äá»˜NG MUA TRACKING â€” ÄÃƒ CHUYá»‚N SANG MUA THá»¦ CÃ”NG ${nut}</div>
-      <p style="margin:6px 0 8px">Há»‡ thá»‘ng Ä‘Ã£ tá»± Ä‘á»™ng thá»­ 10 láº§n khÃ´ng thÃ nh cÃ´ng vÃ  dá»«ng thá»­. Kiá»ƒm tra nguyÃªn nhÃ¢n, sá»­a thÃ´ng tin Ä‘Æ¡n rá»“i mua tay á»Ÿ trang <a href="/tracking.html" style="color:inherit;font-weight:700">Tracking</a>.</p>
+      <div style="font-size:1.2rem;font-weight:700;display:flex;gap:8px;align-items:center;flex-wrap:wrap">${icon('alert', { size: 24 })} ${ds.length} ĐƠN KHÔNG THỂ TỰ ĐỘNG MUA TRACKING — ĐÃ CHUYỂN SANG MUA THỦ CÔNG ${nut}</div>
+      <p style="margin:6px 0 8px">Hệ thống đã tự động thử 10 lần không thành công và dừng thử. Kiểm tra nguyên nhân, sửa thông tin đơn rồi mua tay ở trang <a href="/tracking.html" style="color:inherit;font-weight:700">Tracking</a>.</p>
       <ul style="margin:0;padding-left:20px">${ds.map(d => `
-        <li style="word-break:break-word"><a href="/order.html?stt=${encodeURIComponent(d.sttKey)}" style="font-weight:700;color:inherit">${escapeHtml(d.sttKey)}</a> â€” ${escapeHtml(d.lyDo || '(khÃ´ng rÃµ nguyÃªn nhÃ¢n)')} <small>(thá»­ ${d.soLanThu} láº§n${d.thoiGianThu ? `, gáº§n nháº¥t ${gio(d.thoiGianThu)}` : ''})</small> ${htmlNutBoQuaCanhBao(d.sttKey)}${htmlSuaThongTinGke(d)}</li>`).join('')}
+        <li style="word-break:break-word"><a href="/order.html?stt=${encodeURIComponent(d.sttKey)}" style="font-weight:700;color:inherit">${escapeHtml(d.sttKey)}</a> — ${escapeHtml(d.lyDo || '(không rõ nguyên nhân)')} <small>(thử ${d.soLanThu} lần${d.thoiGianThu ? `, gần nhất ${gio(d.thoiGianThu)}` : ''})</small> ${htmlNutBoQuaCanhBao(d.sttKey)}${htmlSuaThongTinGke(d)}</li>`).join('')}
       </ul>
     </div>`;
 }
 
-// Sá»‘ mÅ©i chá»‰ (07/10/2026): 2 Ã´ Tá»«/Äáº¿n lÃ  PHáº¦N PHá»¤ cá»§a Ã´ "loc-so-mui" (chá»‰ dÃ¹ng khi chá»n "Tuá»³ chá»n khoáº£ng") â€” xoÃ¡ cÃ¹ng má»i Ã´ lá»c
-// nhÆ°ng khÃ´ng Ä‘áº¿m riÃªng vÃ o "Lá»c (N)".
+// Số mũi chỉ (07/10/2026): 2 ô Từ/Đến là PHẦN PHỤ của ô "loc-so-mui" (chỉ dùng khi chọn "Tuỳ chọn khoảng") — xoá cùng mọi ô lọc
+// nhưng không đếm riêng vào "Lọc (N)".
 const VAI_TRO_SO_MUI = ['admin', 'superadmin', 've_file'];
 const O_PHU_SO_MUI = ['loc-so-mui-tu', 'loc-so-mui-den'];
 function hienKhoangSoMui() {
   document.getElementById('khoang-so-mui').style.display = document.getElementById('loc-so-mui').value === 'TUY_CHON' ? 'flex' : 'none';
 }
-// -> { soMui } | { soMuiTu, soMuiDen } | {} theo Ã´ Ä‘ang chá»n.
+// -> { soMui } | { soMuiTu, soMuiDen } | {} theo ô đang chọn.
 function thamSoSoMui() {
   const v = document.getElementById('loc-so-mui').value;
   if (!v) return {};
@@ -765,8 +765,8 @@ function thamSoSoMui() {
 }
 const CAC_O_LOC = ['loc-so-mui', ...O_PHU_SO_MUI, 'loc-tong-quat', 'loc-trang-thai', 'loc-phoi', 'loc-ve-file', 'loc-canh-bao', 'loc-xuong', 'loc-uu-tien', 'loc-don-nhieu-ao', 'loc-da-mua-tracking', 'loc-nhom-hang', 'loc-don-hang-loat', 'loc-loai', 'loc-kich-thuoc', 'loc-hang-van-chuyen', 'loc-mau-sac', 'loc-quoc-gia-tracking', 'loc-tinh-trang', 'loc-kh', 'loc-ma-tracking', 'loc-tu-ngay', 'loc-den-ngay'];
 
-// TÃ¬m nhanh theo mÃ£ Ä‘Æ¡n: má»i bá»™ lá»c khÃ¡c vá» "Táº¥t cáº£" (sáº¯p xáº¿p giá»¯ nguyÃªn) rá»“i táº£i láº¡i; Ã´ trá»‘ng = danh sÃ¡ch Ä‘áº§y Ä‘á»§.
-// maDonDangTim = mÃ£ ÄÃƒ tÃ¬m (báº¥m TÃ¬m/Enter) â€” taiDon() lá»c theo biáº¿n nÃ y, khÃ´ng theo chá»¯ Ä‘ang gÃµ dá»Ÿ trong Ã´.
+// Tìm nhanh theo mã đơn: mọi bộ lọc khác về "Tất cả" (sắp xếp giữ nguyên) rồi tải lại; ô trống = danh sách đầy đủ.
+// maDonDangTim = mã ĐÃ tìm (bấm Tìm/Enter) — taiDon() lọc theo biến này, không theo chữ đang gõ dở trong ô.
 let maDonDangTim = '';
 function timNhanhMaDon() {
   maDonDangTim = document.getElementById('tim-nhanh-ma-don').value.trim();
@@ -783,12 +783,12 @@ function xoaTatCaLoc() {
   taiDon();
 }
 
-// DÃ²ng "Äang lá»c" (07/10/2026) â€” má»—i Ã´ lá»c Ä‘ang cÃ³ giÃ¡ trá»‹ thÃ nh 1 nhÃ£n "TÃªn Ã´: giÃ¡ trá»‹ Ã—" (tÃªn láº¥y tá»« <label>, giÃ¡ trá»‹ láº¥y chá»¯ cá»§a
-// lá»±a chá»n Ä‘ang chá»n), cÃ¹ng mÃ£ Ä‘ang tÃ¬m nhanh. Ã— bá» RIÃŠNG Ã´ Ä‘Ã³ (cÃ¡c Ã´ khÃ¡c giá»¯ nguyÃªn) rá»“i táº£i láº¡i.
+// Dòng "Đang lọc" (07/10/2026) — mỗi ô lọc đang có giá trị thành 1 nhãn "Tên ô: giá trị ×" (tên lấy từ <label>, giá trị lấy chữ của
+// lựa chọn đang chọn), cùng mã đang tìm nhanh. × bỏ RIÊNG ô đó (các ô khác giữ nguyên) rồi tải lại.
 function veDongDangLoc() {
   const el = document.getElementById('dong-dang-loc');
   const nhan = [];
-  if (maDonDangTim) nhan.push({ id: 'TIM_NHANH', chu: `MÃ£ Ä‘Æ¡n: ${maDonDangTim}` });
+  if (maDonDangTim) nhan.push({ id: 'TIM_NHANH', chu: `Mã đơn: ${maDonDangTim}` });
   for (const id of CAC_O_LOC) {
     if (O_PHU_SO_MUI.includes(id)) continue;
     const o = document.getElementById(id);
@@ -797,15 +797,15 @@ function veDongDangLoc() {
     let giaTri = o.tagName === 'SELECT' ? o.options[o.selectedIndex].text : o.value;
     if (id === 'loc-so-mui' && o.value === 'TUY_CHON') {
       const t = thamSoSoMui(), f = v => Number(v).toLocaleString('vi-VN');
-      giaTri = t.soMuiTu && t.soMuiDen ? `${f(t.soMuiTu)} â€“ ${f(t.soMuiDen)}` : t.soMuiTu ? `â‰¥ ${f(t.soMuiTu)}` : t.soMuiDen ? `â‰¤ ${f(t.soMuiDen)}` : 'chÆ°a nháº­p khoáº£ng';
+      giaTri = t.soMuiTu && t.soMuiDen ? `${f(t.soMuiTu)} – ${f(t.soMuiDen)}` : t.soMuiTu ? `≥ ${f(t.soMuiTu)}` : t.soMuiDen ? `≤ ${f(t.soMuiDen)}` : 'chưa nhập khoảng';
     }
     nhan.push({ id, chu: `${ten.trim()}: ${giaTri}` });
   }
   el.style.display = nhan.length ? 'flex' : 'none';
-  el.innerHTML = nhan.length ? '<span class="meta" style="font-weight:600">Äang lá»c:</span>' + nhan.map(n =>
+  el.innerHTML = nhan.length ? '<span class="meta" style="font-weight:600">Đang lọc:</span>' + nhan.map(n =>
     `<span class="badge trang-thai-info" style="gap:4px">${escapeHtml(n.chu)}
-      <button type="button" onclick="boMotLoc('${n.id}')" aria-label="Bá» lá»c ${escapeHtml(n.chu)}" title="Bá» lá»c nÃ y"
-        style="border:0;background:none;cursor:pointer;font-weight:800;padding:0 2px;color:inherit">Ã—</button></span>`).join('') : '';
+      <button type="button" onclick="boMotLoc('${n.id}')" aria-label="Bỏ lọc ${escapeHtml(n.chu)}" title="Bỏ lọc này"
+        style="border:0;background:none;cursor:pointer;font-weight:800;padding:0 2px;color:inherit">×</button></span>`).join('') : '';
 }
 function boMotLoc(id) {
   if (id === 'TIM_NHANH') { document.getElementById('tim-nhanh-ma-don').value = ''; maDonDangTim = ''; }
@@ -820,7 +820,7 @@ function boMotLoc(id) {
 function capNhatNhanNutLoc() {
   const coGiaTri = id => document.getElementById(id).value;
   const soLuong = CAC_O_LOC.filter(id => !O_PHU_SO_MUI.includes(id)).filter(coGiaTri).length;
-  document.getElementById('btn-mo-loc').innerHTML = icon('filter', { size: 16 }) + ' Lá»c' + (soLuong ? ` (${soLuong})` : '');
+  document.getElementById('btn-mo-loc').innerHTML = icon('filter', { size: 16 }) + ' Lọc' + (soLuong ? ` (${soLuong})` : '');
   capNhatNutNangCao();
   hienKhoangSoMui();
   veDongDangLoc();
@@ -829,10 +829,10 @@ function capNhatNhanNutLoc() {
 function capNhatNutNangCao() {
   const soNangCao = CAC_O_LOC_NANG_CAO.filter(id => document.getElementById(id).value).length;
   const dangMo = document.getElementById('khoi-loc-nang-cao').style.display !== 'none';
-  document.getElementById('btn-loc-nang-cao').textContent = `NÃ¢ng cao${soNangCao ? ` (${soNangCao})` : ''} ${dangMo ? 'â–´' : 'â–¾'}`;
+  document.getElementById('btn-loc-nang-cao').textContent = `Nâng cao${soNangCao ? ` (${soNangCao})` : ''} ${dangMo ? '▴' : '▾'}`;
 }
 
-// Khá»‘i lá»c "NÃ¢ng cao" (29/09/2026) â€” báº¥m Ä‘á»ƒ hiá»‡n/áº©n 12 Ã´ lá»c Ã­t dÃ¹ng.
+// Khối lọc "Nâng cao" (29/09/2026) — bấm để hiện/ẩn 12 ô lọc ít dùng.
 const CAC_O_LOC_NANG_CAO = ['loc-so-mui', 'loc-tong-quat', 'loc-ma-tracking', 'loc-da-mua-tracking', 'loc-don-nhieu-ao', 'loc-loai', 'loc-kich-thuoc', 'loc-mau-sac', 'loc-hang-van-chuyen', 'loc-quoc-gia-tracking', 'loc-tinh-trang', 'loc-uu-tien', 'loc-canh-bao'];
 function batTatLocNangCao() {
   const khoi = document.getElementById('khoi-loc-nang-cao');
@@ -842,9 +842,9 @@ function batTatLocNangCao() {
   capNhatNutNangCao();
 }
 
-// Äá»• danh sÃ¡ch lá»±a chá»n cho 1 Ã´ <select> theo Ä‘Ãºng GIÃ TRá»Š THáº¬T Ä‘ang cÃ³ trong dá»¯ liá»‡u (khÃ´ng hardcode)
-// â€” dÃ¹ng chung cho tráº¡ng thÃ¡i/loáº¡i/kÃ­ch thÆ°á»›c/mÃ u sáº¯c/hÃ£ng váº­n chuyá»ƒn. Giá»¯ láº¡i lá»±a chá»n Ä‘ang chá»n
-// (náº¿u cÃ²n há»£p lá»‡) khi Ä‘á»• láº¡i danh sÃ¡ch.
+// Đổ danh sách lựa chọn cho 1 ô <select> theo đúng GIÁ TRỊ THẬT đang có trong dữ liệu (không hardcode)
+// — dùng chung cho trạng thái/loại/kích thước/màu sắc/hãng vận chuyển. Giữ lại lựa chọn đang chọn
+// (nếu còn hợp lệ) khi đổ lại danh sách.
 function domLaiOChon(id, nhanTatCa, giaTriList) {
   const sel = document.getElementById(id);
   const dangChon = sel.value;
@@ -854,16 +854,16 @@ function domLaiOChon(id, nhanTatCa, giaTriList) {
   sel.value = dangChon;
 }
 
-// CHá»ˆ Ä‘á»• láº¡i cÃ¡c Ã´ lá»c Ä‘á»™ng khi KHÃ”NG cÃ³ bá»™ lá»c nÃ o Ä‘ang Ã¡p dá»¥ng â€” náº¿u Ä‘Ã£ lá»c rá»“i mÃ  váº«n Ä‘á»• láº¡i theo
-// Ä‘Ãºng danh sÃ¡ch Ä‘Ã£ bá»‹ thu háº¹p thÃ¬ cÃ¡c lá»±a chá»n khÃ¡c sáº½ biáº¿n máº¥t khá»i Ã´, khÃ´ng báº¥m láº¡i Ä‘Æ°á»£c ná»¯a.
+// CHỈ đổ lại các ô lọc động khi KHÔNG có bộ lọc nào đang áp dụng — nếu đã lọc rồi mà vẫn đổ lại theo
+// đúng danh sách đã bị thu hẹp thì các lựa chọn khác sẽ biến mất khỏi ô, không bấm lại được nữa.
 function capNhatCacBoLocDong(list) {
-  domLaiOChon('loc-trang-thai', 'Táº¥t cáº£ tráº¡ng thÃ¡i', list.map(o => o.TRANG_THAI_XUONG));
-  domLaiOChon('loc-loai', 'Táº¥t cáº£ loáº¡i', list.map(o => o.LOAI));
-  domLaiOChon('loc-kich-thuoc', 'Táº¥t cáº£ kÃ­ch thÆ°á»›c', list.map(o => o.KICH_THUOC));
-  domLaiOChon('loc-mau-sac', 'Táº¥t cáº£ mÃ u sáº¯c', list.map(o => o.MAU_SAC));
-  domLaiOChon('loc-hang-van-chuyen', 'Táº¥t cáº£ hÃ£ng váº­n chuyá»ƒn', list.map(o => o.HANG_VAN_CHUYEN));
-  domLaiOChon('loc-quoc-gia-tracking', 'Táº¥t cáº£ quá»‘c gia', list.map(o => o.QUOC_GIA_TRACKING));
-  domLaiOChon('loc-tinh-trang', 'Táº¥t cáº£ tÃ¬nh tráº¡ng', list.map(o => o.TINH_TRANG));
+  domLaiOChon('loc-trang-thai', 'Tất cả trạng thái', list.map(o => o.TRANG_THAI_XUONG));
+  domLaiOChon('loc-loai', 'Tất cả loại', list.map(o => o.LOAI));
+  domLaiOChon('loc-kich-thuoc', 'Tất cả kích thước', list.map(o => o.KICH_THUOC));
+  domLaiOChon('loc-mau-sac', 'Tất cả màu sắc', list.map(o => o.MAU_SAC));
+  domLaiOChon('loc-hang-van-chuyen', 'Tất cả hãng vận chuyển', list.map(o => o.HANG_VAN_CHUYEN));
+  domLaiOChon('loc-quoc-gia-tracking', 'Tất cả quốc gia', list.map(o => o.QUOC_GIA_TRACKING));
+  domLaiOChon('loc-tinh-trang', 'Tất cả tình trạng', list.map(o => o.TINH_TRANG));
 }
 
 async function taiDon() {
@@ -923,20 +923,20 @@ async function taiDon() {
   try {
     list = await apiFetch('/orders?' + qs.toString());
   } catch (e) {
-    el.innerHTML = `<p>KhÃ´ng táº£i Ä‘Æ°á»£c danh sÃ¡ch: ${escapeHtml(e.message)}</p>`;
+    el.innerHTML = `<p>Không tải được danh sách: ${escapeHtml(e.message)}</p>`;
     return;
   }
 
   danhSachHienTai = list;
-  soDonDangHienThi = SO_DON_MOI_LUOT; // lá»c/táº£i láº¡i danh sÃ¡ch -> luÃ´n báº¯t Ä‘áº§u láº¡i tá»« lÆ°á»£t Ä‘áº§u
+  soDonDangHienThi = SO_DON_MOI_LUOT; // lọc/tải lại danh sách -> luôn bắt đầu lại từ lượt đầu
 
-  // Dá»n donDaChonSet theo danh sÃ¡ch Má»šI (bá»• sung 22/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” 1 Ä‘Æ¡n Ä‘ang
-  // Ä‘Æ°á»£c tick chá»n cÃ³ thá»ƒ biáº¿n máº¥t khá»i danh sÃ¡ch hiá»ƒn thá»‹ sau khi táº£i láº¡i (Ä‘á»•i bá»™ lá»c, hoáº·c chÃ­nh Ä‘Æ¡n
-  // Ä‘Ã³ vá»«a Ä‘á»•i tráº¡ng thÃ¡i/Æ°u tiÃªn khiáº¿n khÃ´ng cÃ²n khá»›p bá»™ lá»c hiá»‡n táº¡i â€” vd toggleUuTienNhanh() gá»i
-  // taiDon() ngay sau khi báº­t/táº¯t Æ°u tiÃªn nhanh). Náº¿u khÃ´ng dá»n, STT_Key Ä‘Ã³ váº«n náº±m trong donDaChonSet
-  // dÃ¹ ngÆ°á»i dÃ¹ng khÃ´ng cÃ²n tháº¥y/chá»n nÃ³ ná»¯a, vÃ  cÃ³ thá»ƒ lá»t vÃ o 1 thao tÃ¡c hÃ ng loáº¡t Káº¾ TIáº¾P ngoÃ i Ã½
-  // muá»‘n. Äáº·t á»ž ÄÃ‚Y (nÆ¡i DUY NHáº¤T gÃ¡n láº¡i danhSachHienTai) Ä‘á»ƒ Ã¡p dá»¥ng cho Má»ŒI luá»“ng táº£i láº¡i, khÃ´ng chá»‰
-  // riÃªng nÃºt Æ°u tiÃªn nhanh.
+  // Dọn donDaChonSet theo danh sách MỚI (bổ sung 22/09/2026, theo yêu cầu người dùng) — 1 đơn đang
+  // được tick chọn có thể biến mất khỏi danh sách hiển thị sau khi tải lại (đổi bộ lọc, hoặc chính đơn
+  // đó vừa đổi trạng thái/ưu tiên khiến không còn khớp bộ lọc hiện tại — vd toggleUuTienNhanh() gọi
+  // taiDon() ngay sau khi bật/tắt ưu tiên nhanh). Nếu không dọn, STT_Key đó vẫn nằm trong donDaChonSet
+  // dù người dùng không còn thấy/chọn nó nữa, và có thể lọt vào 1 thao tác hàng loạt KẾ TIẾP ngoài ý
+  // muốn. Đặt Ở ĐÂY (nơi DUY NHẤT gán lại danhSachHienTai) để áp dụng cho MỌI luồng tải lại, không chỉ
+  // riêng nút ưu tiên nhanh.
   const sttKeyHienTai = new Set(list.map(o => o.STT_Key));
   donDaChonSet.forEach(stt => { if (!sttKeyHienTai.has(stt)) donDaChonSet.delete(stt); });
 
@@ -950,39 +950,39 @@ async function taiDon() {
 function renderDanhSachDon() {
   const el = document.getElementById('danh-sach-don');
 
-  // NgÃ y rÃºt gá»n D/M (khÃ´ng nÄƒm) â€” chá»‰ dÃ¹ng riÃªng cho tháº» Ä‘Æ¡n á»Ÿ Danh sÃ¡ch Ä‘Æ¡n hÃ ng, khÃ´ng Ä‘á»¥ng Ä‘áº¿n
-  // dinhDangNgay() dÃ¹ng chung (cÃ³ nÄƒm) á»Ÿ cÃ¡c trang khÃ¡c.
+  // Ngày rút gọn D/M (không năm) — chỉ dùng riêng cho thẻ đơn ở Danh sách đơn hàng, không đụng đến
+  // dinhDangNgay() dùng chung (có năm) ở các trang khác.
   function dinhDangNgayNgan(giaTri) {
     const d = parseNgay(giaTri);
     return d ? `${d.getDate()}/${d.getMonth() + 1}` : '';
   }
 
-  if (danhSachHienTai.length === 0) { el.innerHTML = `<div class="trang-thai-rong">${icon('package')}<p>KhÃ´ng cÃ³ Ä‘Æ¡n nÃ o khá»›p bá»™ lá»c.</p></div>`; capNhatThanhHanhDong(); return; }
+  if (danhSachHienTai.length === 0) { el.innerHTML = `<div class="trang-thai-rong">${icon('package')}<p>Không có đơn nào khớp bộ lọc.</p></div>`; capNhatThanhHanhDong(); return; }
 
-  // CHá»ˆ render soDonDangHienThi tháº» Ä‘áº§u â€” danhSachHienTai váº«n giá»¯ NGUYÃŠN Ä‘áº§y Ä‘á»§ cho "Chá»n táº¥t cáº£"/bulk
-  // action (xem khai bÃ¡o soDonDangHienThi á»Ÿ trÃªn).
+  // CHỈ render soDonDangHienThi thẻ đầu — danhSachHienTai vẫn giữ NGUYÊN đầy đủ cho "Chọn tất cả"/bulk
+  // action (xem khai báo soDonDangHienThi ở trên).
   const dsDeRender = danhSachHienTai.slice(0, soDonDangHienThi);
   const conLai = danhSachHienTai.length - dsDeRender.length;
 
   el.innerHTML = dsDeRender.map(o => {
     const daChon = donDaChonSet.has(o.STT_Key);
-    // TÃ´ mÃ u ná»n tháº» theo XÆ°á»Ÿng (bá»• sung 21/09/2026, Äá»”I 23/09/2026 sang mÃ u superadmin tá»± chá»n â€” xem
-    // style.css .order-card.co-mau-xuong + public/js/api.js#lopVaStyleXuong) â€” o.XUONG rá»—ng/undefined
-    // (admin bá»‹ áº©n giÃ¡ trá»‹ nÃ y, hoáº·c XÆ°á»Ÿng chÆ°a Ä‘Æ°á»£c gÃ¡n mÃ u) thÃ¬ khÃ´ng thÃªm class/style gÃ¬.
+    // Tô màu nền thẻ theo Xưởng (bổ sung 21/09/2026, ĐỔI 23/09/2026 sang màu superadmin tự chọn — xem
+    // style.css .order-card.co-mau-xuong + public/js/api.js#lopVaStyleXuong) — o.XUONG rỗng/undefined
+    // (admin bị ẩn giá trị này, hoặc Xưởng chưa được gán màu) thì không thêm class/style gì.
     const xuongCard = lopVaStyleXuong(o.XUONG, mauTheoXuong);
     return `
     <div class="order-card ${o.DonHold ? 'vong-hold' : ''} ${o.TinhTrangDacBiet ? 'the-canh-bao-vang' : ''} ${daChon ? 'da-chon' : ''} ${xuongCard.lop}" style="${xuongCard.style}" data-stt="${escapeHtml(o.STT_Key)}"
          onclick="toggleChonDon('${escapeHtml(o.STT_Key)}', !donDaChonSet.has('${escapeHtml(o.STT_Key)}'))">
       <div class="cot-chon-the">
-        <button type="button" class="btn-xem-the" title="Xem chi tiáº¿t Ä‘Æ¡n"
-                aria-label="Xem chi tiáº¿t Ä‘Æ¡n ${escapeHtml(o.STT_Key)}"
+        <button type="button" class="btn-xem-the" title="Xem chi tiết đơn"
+                aria-label="Xem chi tiết đơn ${escapeHtml(o.STT_Key)}"
                 onclick="event.stopPropagation(); moChiTietDon('${encodeURIComponent(o.STT_Key)}')">
           ${icon('arrowRight', { size: 16 })}
         </button>
         ${(laAdmin(user.vaiTro) || user.vaiTro === 've_file') ? `
           <button type="button" class="btn-uu-tien-nhanh ${o.DonUuTien ? 'bat' : ''}"
-                  title="${o.DonUuTien ? 'Bá» Æ°u tiÃªn' : 'ÄÃ¡nh dáº¥u Æ°u tiÃªn'}"
-                  aria-label="${o.DonUuTien ? 'Bá» Æ°u tiÃªn' : 'ÄÃ¡nh dáº¥u Æ°u tiÃªn'}"
+                  title="${o.DonUuTien ? 'Bỏ ưu tiên' : 'Đánh dấu ưu tiên'}"
+                  aria-label="${o.DonUuTien ? 'Bỏ ưu tiên' : 'Đánh dấu ưu tiên'}"
                   onclick="event.stopPropagation(); toggleUuTienNhanh('${escapeHtml(o.STT_Key)}', ${o.DonUuTien ? 'true' : 'false'}, this)">
             ${icon('star', { size: 16 })}
           </button>` : ''}
@@ -992,19 +992,19 @@ function renderDanhSachDon() {
         : ''}
       <div class="thong-tin">
         ${htmlTieuDeThe(o)}
-        <div style="font-size:1.8rem;font-weight:700;line-height:1.1;margin:2px 0;color:var(--color-text)" title="Sá»‘ lÆ°á»£ng Ã¡o">SL: ${escapeHtml(o.SO_LUONG || 'â€”')}</div>
-        ${o.SoMuiChi != null ? `<div class="meta" title="Sá»‘ mÅ©i chá»‰" style="font-size:0.85rem;${o.SoMuiChi > 50000 ? 'font-weight:800;color:var(--color-text)' : ''}">MÅ©i: ${o.SoMuiChi.toLocaleString('en-US')}</div>` : ''}
-        <div class="meta">${escapeHtml(o.TenKhachHang || '')} Â· LÃªn Ä‘Æ¡n: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgayNgan(o.NGAY_LEN_DON) : 'â€”')}</div>
+        <div style="font-size:1.8rem;font-weight:700;line-height:1.1;margin:2px 0;color:var(--color-text)" title="Số lượng áo">SL: ${escapeHtml(o.SO_LUONG || '—')}</div>
+        ${o.SoMuiChi != null ? `<div class="meta" title="Số mũi chỉ" style="font-size:0.85rem;${o.SoMuiChi > 50000 ? 'font-weight:800;color:var(--color-text)' : ''}">Mũi: ${o.SoMuiChi.toLocaleString('en-US')}</div>` : ''}
+        <div class="meta">${escapeHtml(o.TenKhachHang || '')} · Lên đơn: ${escapeHtml(o.NGAY_LEN_DON ? dinhDangNgayNgan(o.NGAY_LEN_DON) : '—')}</div>
         <div class="badge-row">
           ${nhanHold(o)}
-          ${o.QuocGiaNgoai ? `<span class="badge trang-thai-danger" style="font-weight:800" title="Quá»‘c gia: ${escapeHtml(o.QuocGiaNgoai.ten || '(trá»‘ng)')}">${o.QuocGiaNgoai.loai === 'OTHERS'
-            ? `OTHERS Â· ${escapeHtml(o.QuocGiaNgoai.ten)}` : `ChÆ°a rÃµ nÆ°á»›c${o.QuocGiaNgoai.ten ? ` Â· ${escapeHtml(o.QuocGiaNgoai.ten)}` : ''}`}</span>` : ''}
-          ${o.DonUuTien ? `<span class="badge trang-thai-danger">${icon('star', {size:14})} Æ¯u tiÃªn</span>` : ''}
+          ${o.QuocGiaNgoai ? `<span class="badge trang-thai-danger" style="font-weight:800" title="Quốc gia: ${escapeHtml(o.QuocGiaNgoai.ten || '(trống)')}">${o.QuocGiaNgoai.loai === 'OTHERS'
+            ? `OTHERS · ${escapeHtml(o.QuocGiaNgoai.ten)}` : `Chưa rõ nước${o.QuocGiaNgoai.ten ? ` · ${escapeHtml(o.QuocGiaNgoai.ten)}` : ''}`}</span>` : ''}
+          ${o.DonUuTien ? `<span class="badge trang-thai-danger">${icon('star', {size:14})} Ưu tiên</span>` : ''}
           ${nhanNhomNhieuAo(o.NhomNhieuAo)}
           <span class="badge ${lopTrangThai(o.TRANG_THAI_XUONG)}">${escapeHtml(o.TRANG_THAI_XUONG || '')}</span>
-          ${o.TRANG_THAI_XUONG === 'Äang cháº¡y mÃ¡y' ? `
-            <span class="badge trang-thai-info">${icon('users', {size:14})} Äang váº­n hÃ nh: <strong>${escapeHtml(o.NguoiVanHanh || NHAN_NGUOI_VAN_HANH_KHONG_RO)}</strong></span>` : ''}
-          ${['ChÆ°a in mÃ£', 'ÄÃ£ in mÃ£'].includes(o.TRANG_THAI_XUONG) ? `
+          ${o.TRANG_THAI_XUONG === 'Đang chạy máy' ? `
+            <span class="badge trang-thai-info">${icon('users', {size:14})} Đang vận hành: <strong>${escapeHtml(o.NguoiVanHanh || NHAN_NGUOI_VAN_HANH_KHONG_RO)}</strong></span>` : ''}
+          ${['Chưa in mã', 'Đã in mã'].includes(o.TRANG_THAI_XUONG) ? `
             <span class="badge ${lopTrangThai(o.TRANG_THAI_PHOI)}">${escapeHtml(o.TRANG_THAI_PHOI || '')}</span>
             <span class="badge ${lopTrangThai(o.TRANG_THAI_VE_FILE)}">${escapeHtml(o.TRANG_THAI_VE_FILE || '')}</span>` : ''}
           ${o.CanhBao ? `
@@ -1012,16 +1012,16 @@ function renderDanhSachDon() {
               ${icon('alert')} ${NHAN_CANH_BAO[o.CanhBao] || o.CanhBao}
             </span>` : ''}
           ${o.TRACKING_ID && o.TRANG_THAI_TRACKING ? `
-            <span class="badge trang-thai-info" title="Cáº­p nháº­t lÃºc ${escapeHtml(o.THOI_GIAN_CAP_NHAT_TRACKING || '')}">${icon('package', {size:14})} ${escapeHtml(o.TRANG_THAI_TRACKING)}</span>` : ''}
+            <span class="badge trang-thai-info" title="Cập nhật lúc ${escapeHtml(o.THOI_GIAN_CAP_NHAT_TRACKING || '')}">${icon('package', {size:14})} ${escapeHtml(o.TRANG_THAI_TRACKING)}</span>` : ''}
           ${laAdmin(user.vaiTro) ? `
-            <span class="badge trang-thai-info">${icon('package', {size:14})} XÆ°á»Ÿng: <strong>${escapeHtml(o.XUONG || '(chÆ°a gÃ¡n)')}</strong></span>` : ''}
+            <span class="badge trang-thai-info">${icon('package', {size:14})} Xưởng: <strong>${escapeHtml(o.XUONG || '(chưa gán)')}</strong></span>` : ''}
         </div>
         ${o.NhomNhieuAo && !o.NhomNhieuAo.donMua ? `
-          <div class="meta" style="color:var(--color-danger-text)">ÄÃ£ mua Tracking: <strong>${escapeHtml(o.DA_MUA_TRACKING)}</strong> â€” ${escapeHtml(o.LyDoDaMuaTracking)}</div>` : ''}
+          <div class="meta" style="color:var(--color-danger-text)">Đã mua Tracking: <strong>${escapeHtml(o.DA_MUA_TRACKING)}</strong> — ${escapeHtml(o.LyDoDaMuaTracking)}</div>` : ''}
       </div>
     </div>`;
   }).join('') + (conLai > 0
-    ? `<button type="button" class="btn-hanh-dong phu" style="grid-column:1/-1" onclick="taiThemDon()">Xem thÃªm (cÃ²n ${conLai} Ä‘Æ¡n)</button>`
+    ? `<button type="button" class="btn-hanh-dong phu" style="grid-column:1/-1" onclick="taiThemDon()">Xem thêm (còn ${conLai} đơn)</button>`
     : '');
 
   capNhatCheckboxChonTatCa();
@@ -1071,14 +1071,14 @@ function boChonTatCaDon() {
 
 async function apDungNhanh(cot, trangThaiMoi, nut) {
   const soLuong = donDaChonSet.size;
-  if (!confirm(`ÄÃ¡nh dáº¥u ${soLuong} Ä‘Æ¡n Ä‘Ã£ chá»n thÃ nh "${trangThaiMoi}"?`)) return;
+  if (!confirm(`Đánh dấu ${soLuong} đơn đã chọn thành "${trangThaiMoi}"?`)) return;
 
   const nhanGoc = nut.innerHTML;
   document.querySelectorAll('.nhanh-phoi-ve-file, #nut-ap-dung').forEach(b => b.disabled = true);
-  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Äang xá»­ lÃ½...';
+  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Đang xử lý...';
 
-  // Gá»i tuáº§n tá»± tá»«ng mÃ£ 1 (thay vÃ¬ gá»­i cáº£ danh sÃ¡ch trong 1 request) Ä‘á»ƒ hiá»‡n Ä‘Æ°á»£c tiáº¿n Ä‘á»™ tháº­t â€”
-  // xem chayHangLoatCoTienDo()/taoThanhTienDo() trong api.js. API váº«n y há»‡t, chá»‰ Ä‘á»•i cÃ¡ch gá»i.
+  // Gọi tuần tự từng mã 1 (thay vì gửi cả danh sách trong 1 request) để hiện được tiến độ thật —
+  // xem chayHangLoatCoTienDo()/taoThanhTienDo() trong api.js. API vẫn y hệt, chỉ đổi cách gọi.
   let daHuy = false;
   const danhSach = Array.from(donDaChonSet);
   const thanhTienDo = taoThanhTienDo(nut, { onHuy: () => { daHuy = true; } });
@@ -1093,18 +1093,18 @@ async function apDungNhanh(cot, trangThaiMoi, nut) {
   );
   thanhTienDo.xoa();
 
-  let thongBao = `ÄÃ£ Ä‘Ã¡nh dáº¥u ${ketQua.thanhCong.length}/${soLuong} Ä‘Æ¡n thÃ nh "${trangThaiMoi}".`;
-  if (ketQua.daHuy) thongBao += `\n\nÄÃ£ Há»¦Y giá»¯a chá»«ng â€” cÃ¡c Ä‘Æ¡n cÃ²n láº¡i váº«n Ä‘ang Ä‘Æ°á»£c chá»n, báº¥m láº¡i náº¿u muá»‘n tiáº¿p tá»¥c.`;
+  let thongBao = `Đã đánh dấu ${ketQua.thanhCong.length}/${soLuong} đơn thành "${trangThaiMoi}".`;
+  if (ketQua.daHuy) thongBao += `\n\nĐã HỦY giữa chừng — các đơn còn lại vẫn đang được chọn, bấm lại nếu muốn tiếp tục.`;
   if (ketQua.loi.length > 0) {
-    thongBao += `\n\nKhÃ´ng Ä‘Ã¡nh dáº¥u Ä‘Æ°á»£c ${ketQua.loi.length} Ä‘Æ¡n:\n` +
+    thongBao += `\n\nKhông đánh dấu được ${ketQua.loi.length} đơn:\n` +
       ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
   }
   alert(thongBao);
 
   document.querySelectorAll('.nhanh-phoi-ve-file, #nut-ap-dung').forEach(b => b.disabled = false);
   nut.innerHTML = nhanGoc;
-  // Há»§y giá»¯a chá»«ng: chá»‰ bá» chá»n Ä‘Ãºng cÃ¡c Ä‘Æ¡n ÄÃƒ xá»­ lÃ½ xong, GIá»® Láº I cÃ¡c Ä‘Æ¡n cÃ²n láº¡i (chÆ°a ká»‹p xá»­ lÃ½)
-  // Ä‘ang Ä‘Æ°á»£c chá»n Ä‘á»ƒ báº¥m láº¡i lÃ  tiáº¿p tá»¥c ngay. KhÃ´ng há»§y (cháº¡y háº¿t danh sÃ¡ch): bá» chá»n toÃ n bá»™ nhÆ° cÅ©.
+  // Hủy giữa chừng: chỉ bỏ chọn đúng các đơn ĐÃ xử lý xong, GIỮ LẠI các đơn còn lại (chưa kịp xử lý)
+  // đang được chọn để bấm lại là tiếp tục ngay. Không hủy (chạy hết danh sách): bỏ chọn toàn bộ như cũ.
   if (ketQua.daHuy) ketQua.thanhCong.forEach(sttKey => donDaChonSet.delete(sttKey));
   else donDaChonSet.clear();
   await taiDon();
@@ -1112,14 +1112,14 @@ async function apDungNhanh(cot, trangThaiMoi, nut) {
 
 async function apDungChuyenTrangThai() {
   const trangThaiMoi = document.getElementById('trang-thai-dich').value;
-  if (!trangThaiMoi) { alert('HÃ£y chá»n tráº¡ng thÃ¡i muá»‘n chuyá»ƒn tá»›i'); return; }
+  if (!trangThaiMoi) { alert('Hãy chọn trạng thái muốn chuyển tới'); return; }
 
   const soLuong = donDaChonSet.size;
-  if (!confirm(`Chuyá»ƒn ${soLuong} Ä‘Æ¡n Ä‘Ã£ chá»n sang tráº¡ng thÃ¡i "${trangThaiMoi}"?\n\nThao tÃ¡c nÃ y ghi tháº³ng, khÃ´ng kiá»ƒm tra tráº¡ng thÃ¡i hiá»‡n táº¡i cá»§a tá»«ng Ä‘Æ¡n.`)) return;
+  if (!confirm(`Chuyển ${soLuong} đơn đã chọn sang trạng thái "${trangThaiMoi}"?\n\nThao tác này ghi thẳng, không kiểm tra trạng thái hiện tại của từng đơn.`)) return;
 
   const nutApDung = document.getElementById('nut-ap-dung');
   nutApDung.disabled = true;
-  nutApDung.textContent = 'Äang xá»­ lÃ½...';
+  nutApDung.textContent = 'Đang xử lý...';
 
   let daHuy = false;
   const danhSach = Array.from(donDaChonSet);
@@ -1135,35 +1135,35 @@ async function apDungChuyenTrangThai() {
   );
   thanhTienDo.xoa();
 
-  let thongBao = `ÄÃ£ chuyá»ƒn ${ketQua.thanhCong.length}/${soLuong} Ä‘Æ¡n sang "${trangThaiMoi}".`;
-  if (ketQua.daHuy) thongBao += `\n\nÄÃ£ Há»¦Y giá»¯a chá»«ng â€” cÃ¡c Ä‘Æ¡n cÃ²n láº¡i váº«n Ä‘ang Ä‘Æ°á»£c chá»n, báº¥m láº¡i náº¿u muá»‘n tiáº¿p tá»¥c.`;
+  let thongBao = `Đã chuyển ${ketQua.thanhCong.length}/${soLuong} đơn sang "${trangThaiMoi}".`;
+  if (ketQua.daHuy) thongBao += `\n\nĐã HỦY giữa chừng — các đơn còn lại vẫn đang được chọn, bấm lại nếu muốn tiếp tục.`;
   if (ketQua.loi.length > 0) {
-    thongBao += `\n\nKhÃ´ng chuyá»ƒn Ä‘Æ°á»£c ${ketQua.loi.length} Ä‘Æ¡n:\n` +
+    thongBao += `\n\nKhông chuyển được ${ketQua.loi.length} đơn:\n` +
       ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
   }
   alert(thongBao);
 
   nutApDung.disabled = false;
-  nutApDung.textContent = 'Ãp dá»¥ng';
+  nutApDung.textContent = 'Áp dụng';
   if (ketQua.daHuy) ketQua.thanhCong.forEach(sttKey => donDaChonSet.delete(sttKey));
   else donDaChonSet.clear();
   await taiDon();
 }
 
-// Admin CHá»ˆ Äá»ŠNH 1 ngÆ°á»i sáº£n xuáº¥t cháº¡y mÃ¡y cho toÃ n bá»™ Ä‘Æ¡n Ä‘ang chá»n â€” chuyá»ƒn tháº³ng sang "Äang cháº¡y
-// mÃ¡y" (khÃ´ng cáº§n Ä‘Æ¡n Ä‘ang á»Ÿ "ÄÃƒ Sáº´N SÃ€NG CHáº Y MÃY" trÆ°á»›c Ä‘Ã³, giá»‘ng triáº¿t lÃ½ "chá»n tá»± do" cá»§a
-// apDungChuyenTrangThai() á»Ÿ trÃªn). Ghi NGUOI_CHAY_MAY = ngÆ°á»i Ä‘Æ°á»£c chá»n + GHI_CHU_CHAY_MAY = "Admin
-// chá»‰ Ä‘á»‹nh" (xem routes/orders.js POST /chi-dinh-nguoi-chay-may).
+// Admin CHỈ ĐỊNH 1 người sản xuất chạy máy cho toàn bộ đơn đang chọn — chuyển thẳng sang "Đang chạy
+// máy" (không cần đơn đang ở "ĐÃ SẴN SÀNG CHẠY MÁY" trước đó, giống triết lý "chọn tự do" của
+// apDungChuyenTrangThai() ở trên). Ghi NGUOI_CHAY_MAY = người được chọn + GHI_CHU_CHAY_MAY = "Admin
+// chỉ định" (xem routes/orders.js POST /chi-dinh-nguoi-chay-may).
 async function apDungChiDinhNguoiChayMay() {
   const nguoiSanXuat = document.getElementById('nguoi-chay-may-dich').value;
-  if (!nguoiSanXuat) { alert('HÃ£y chá»n ngÆ°á»i sáº£n xuáº¥t muá»‘n chá»‰ Ä‘á»‹nh'); return; }
+  if (!nguoiSanXuat) { alert('Hãy chọn người sản xuất muốn chỉ định'); return; }
 
   const soLuong = donDaChonSet.size;
-  if (!confirm(`Chá»‰ Ä‘á»‹nh "${nguoiSanXuat}" cháº¡y mÃ¡y cho ${soLuong} Ä‘Æ¡n Ä‘Ã£ chá»n (chuyá»ƒn sang "Äang cháº¡y mÃ¡y")?`)) return;
+  if (!confirm(`Chỉ định "${nguoiSanXuat}" chạy máy cho ${soLuong} đơn đã chọn (chuyển sang "Đang chạy máy")?`)) return;
 
   const nutApDung = document.getElementById('nut-ap-dung-chi-dinh');
   nutApDung.disabled = true;
-  nutApDung.textContent = 'Äang xá»­ lÃ½...';
+  nutApDung.textContent = 'Đang xử lý...';
 
   let daHuy = false;
   const danhSach = Array.from(donDaChonSet);
@@ -1179,38 +1179,38 @@ async function apDungChiDinhNguoiChayMay() {
   );
   thanhTienDo.xoa();
 
-  let thongBao = `ÄÃ£ chá»‰ Ä‘á»‹nh "${nguoiSanXuat}" cháº¡y mÃ¡y cho ${ketQua.thanhCong.length}/${soLuong} Ä‘Æ¡n.`;
-  if (ketQua.daHuy) thongBao += `\n\nÄÃ£ Há»¦Y giá»¯a chá»«ng â€” cÃ¡c Ä‘Æ¡n cÃ²n láº¡i váº«n Ä‘ang Ä‘Æ°á»£c chá»n, báº¥m láº¡i náº¿u muá»‘n tiáº¿p tá»¥c.`;
+  let thongBao = `Đã chỉ định "${nguoiSanXuat}" chạy máy cho ${ketQua.thanhCong.length}/${soLuong} đơn.`;
+  if (ketQua.daHuy) thongBao += `\n\nĐã HỦY giữa chừng — các đơn còn lại vẫn đang được chọn, bấm lại nếu muốn tiếp tục.`;
   if (ketQua.loi.length > 0) {
-    thongBao += `\n\nKhÃ´ng chá»‰ Ä‘á»‹nh Ä‘Æ°á»£c ${ketQua.loi.length} Ä‘Æ¡n:\n` +
+    thongBao += `\n\nKhông chỉ định được ${ketQua.loi.length} đơn:\n` +
       ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
   }
   alert(thongBao);
 
   nutApDung.disabled = false;
-  nutApDung.textContent = 'Ãp dá»¥ng';
+  nutApDung.textContent = 'Áp dụng';
   if (ketQua.daHuy) ketQua.thanhCong.forEach(sttKey => donDaChonSet.delete(sttKey));
   else donDaChonSet.clear();
   await taiDon();
 }
 
-// GÃN XÆ¯á»žNG (HN/BN...) cho toÃ n bá»™ Ä‘Æ¡n Ä‘ang chá»n â€” bá»• sung 13/09/2026, CHá»ˆ superadmin tá»« 18/09/2026; admin dÃ¹ng láº¡i
-// tá»« 29/09/2026 nhÆ°ng CHá»ˆ giá»¯a cÃ¡c XÆ°á»Ÿng mÃ¬nh phá»¥ trÃ¡ch, khÃ´ng gá»¡ gÃ¡n (theo yÃªu cáº§u ngÆ°á»i dÃ¹ng, phÃ¢n loáº¡i Ä‘Æ¡n theo xÆ°á»Ÿng váº­t lÃ½, má»—i xÆ°á»Ÿng
-// chá»‰ thÃ nh viÃªn cÃ¹ng XÆ°á»Ÿng má»›i xem/thao tÃ¡c Ä‘Æ°á»£c â€” xem services/orderService.js#locTheoXuong/
-// coQuyenTheoXuong, routes/orders.js POST /gan-xuong). "(Gá»¡ gÃ¡n XÆ°á»Ÿng)" gá»­i chuá»—i rá»—ng â€” Ä‘Æ°a Ä‘Æ¡n vá»
-// "chÆ°a cÃ³ xÆ°á»Ÿng" (áº©n vá»›i ngÆ°á»i thÆ°á»ng, theo Ä‘Ãºng lá»±a chá»n cá»§a ngÆ°á»i dÃ¹ng).
+// GÁN XƯỞNG (HN/BN...) cho toàn bộ đơn đang chọn — bổ sung 13/09/2026, CHỈ superadmin từ 18/09/2026; admin dùng lại
+// từ 29/09/2026 nhưng CHỈ giữa các Xưởng mình phụ trách, không gỡ gán (theo yêu cầu người dùng, phân loại đơn theo xưởng vật lý, mỗi xưởng
+// chỉ thành viên cùng Xưởng mới xem/thao tác được — xem services/orderService.js#locTheoXuong/
+// coQuyenTheoXuong, routes/orders.js POST /gan-xuong). "(Gỡ gán Xưởng)" gửi chuỗi rỗng — đưa đơn về
+// "chưa có xưởng" (ẩn với người thường, theo đúng lựa chọn của người dùng).
 async function apDungGanXuong() {
   const luaChon = document.getElementById('xuong-dich').value;
-  if (!luaChon) { alert('HÃ£y chá»n XÆ°á»Ÿng muá»‘n gÃ¡n (hoáº·c "Gá»¡ gÃ¡n XÆ°á»Ÿng")'); return; }
+  if (!luaChon) { alert('Hãy chọn Xưởng muốn gán (hoặc "Gỡ gán Xưởng")'); return; }
   const xuong = luaChon === '__GO_GAN__' ? '' : luaChon;
 
   const soLuong = donDaChonSet.size;
-  const moTaXuong = xuong || '(gá»¡ gÃ¡n, Ä‘Æ°a vá» chÆ°a cÃ³ xÆ°á»Ÿng)';
-  if (!confirm(`GÃ¡n XÆ°á»Ÿng "${moTaXuong}" cho ${soLuong} Ä‘Æ¡n Ä‘Ã£ chá»n?`)) return;
+  const moTaXuong = xuong || '(gỡ gán, đưa về chưa có xưởng)';
+  if (!confirm(`Gán Xưởng "${moTaXuong}" cho ${soLuong} đơn đã chọn?`)) return;
 
   const nutApDung = document.getElementById('nut-ap-dung-gan-xuong');
   nutApDung.disabled = true;
-  nutApDung.textContent = 'Äang xá»­ lÃ½...';
+  nutApDung.textContent = 'Đang xử lý...';
 
   let daHuy = false;
   const danhSach = Array.from(donDaChonSet);
@@ -1226,30 +1226,30 @@ async function apDungGanXuong() {
   );
   thanhTienDo.xoa();
 
-  let thongBao = `ÄÃ£ gÃ¡n XÆ°á»Ÿng "${moTaXuong}" cho ${ketQua.thanhCong.length}/${soLuong} Ä‘Æ¡n.`;
-  if (ketQua.daHuy) thongBao += `\n\nÄÃ£ Há»¦Y giá»¯a chá»«ng â€” cÃ¡c Ä‘Æ¡n cÃ²n láº¡i váº«n Ä‘ang Ä‘Æ°á»£c chá»n, báº¥m láº¡i náº¿u muá»‘n tiáº¿p tá»¥c.`;
+  let thongBao = `Đã gán Xưởng "${moTaXuong}" cho ${ketQua.thanhCong.length}/${soLuong} đơn.`;
+  if (ketQua.daHuy) thongBao += `\n\nĐã HỦY giữa chừng — các đơn còn lại vẫn đang được chọn, bấm lại nếu muốn tiếp tục.`;
   if (ketQua.loi.length > 0) {
-    thongBao += `\n\nKhÃ´ng gÃ¡n Ä‘Æ°á»£c ${ketQua.loi.length} Ä‘Æ¡n:\n` +
+    thongBao += `\n\nKhông gán được ${ketQua.loi.length} đơn:\n` +
       ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
   }
   alert(thongBao);
 
   nutApDung.disabled = false;
-  nutApDung.textContent = 'Ãp dá»¥ng';
+  nutApDung.textContent = 'Áp dụng';
   if (ketQua.daHuy) ketQua.thanhCong.forEach(sttKey => donDaChonSet.delete(sttKey));
   else donDaChonSet.clear();
   await taiDon();
 }
 
-// Admin/ve_file ÄÃNH Dáº¤U hoáº·c Bá»Ž "ÄÆ¡n Æ°u tiÃªn" cho toÃ n bá»™ Ä‘Æ¡n Ä‘ang chá»n (khá»‘i chá»n hÃ ng loáº¡t) â€” bá»•
-// sung 13/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng, cÃ¹ng khuÃ´n apDungGanXuong() á»Ÿ trÃªn (xem routes/orders.js
-// POST /danh-dau-uu-tien). DÃ¹ng CHUNG hÃ m nÃ y cho cáº£ nÃºt "ÄÃ¡nh dáº¥u Æ¯u tiÃªn" (uuTien=true) vÃ  "Bá» Æ¯u
-// tiÃªn" (uuTien=false).
+// Admin/ve_file ĐÁNH DẤU hoặc BỎ "Đơn ưu tiên" cho toàn bộ đơn đang chọn (khối chọn hàng loạt) — bổ
+// sung 13/09/2026, theo yêu cầu người dùng, cùng khuôn apDungGanXuong() ở trên (xem routes/orders.js
+// POST /danh-dau-uu-tien). Dùng CHUNG hàm này cho cả nút "Đánh dấu Ưu tiên" (uuTien=true) và "Bỏ Ưu
+// tiên" (uuTien=false).
 async function apDungDanhDauUuTien(uuTien, nut) {
   const soLuong = donDaChonSet.size;
-  if (soLuong === 0) { alert('HÃ£y chá»n Ã­t nháº¥t 1 Ä‘Æ¡n.'); return; }
-  const hanhDong = uuTien ? 'ÄÃ¡nh dáº¥u Æ¯U TIÃŠN' : 'Bá» Ä‘Ã¡nh dáº¥u Æ°u tiÃªn';
-  if (!confirm(`${hanhDong} cho ${soLuong} Ä‘Æ¡n Ä‘Ã£ chá»n?`)) return;
+  if (soLuong === 0) { alert('Hãy chọn ít nhất 1 đơn.'); return; }
+  const hanhDong = uuTien ? 'Đánh dấu ƯU TIÊN' : 'Bỏ đánh dấu ưu tiên';
+  if (!confirm(`${hanhDong} cho ${soLuong} đơn đã chọn?`)) return;
 
   document.querySelectorAll('.nhanh-phoi-ve-file, #nut-ap-dung').forEach(b => b.disabled = true);
   const nhanGoc = nut.innerHTML;
@@ -1268,10 +1268,10 @@ async function apDungDanhDauUuTien(uuTien, nut) {
   );
   thanhTienDo.xoa();
 
-  let thongBao = `${hanhDong}: ${ketQua.thanhCong.length}/${soLuong} Ä‘Æ¡n thÃ nh cÃ´ng.`;
-  if (ketQua.daHuy) thongBao += `\n\nÄÃ£ Há»¦Y giá»¯a chá»«ng â€” cÃ¡c Ä‘Æ¡n cÃ²n láº¡i váº«n Ä‘ang Ä‘Æ°á»£c chá»n, báº¥m láº¡i náº¿u muá»‘n tiáº¿p tá»¥c.`;
+  let thongBao = `${hanhDong}: ${ketQua.thanhCong.length}/${soLuong} đơn thành công.`;
+  if (ketQua.daHuy) thongBao += `\n\nĐã HỦY giữa chừng — các đơn còn lại vẫn đang được chọn, bấm lại nếu muốn tiếp tục.`;
   if (ketQua.loi.length > 0) {
-    thongBao += `\n\nKhÃ´ng xá»­ lÃ½ Ä‘Æ°á»£c ${ketQua.loi.length} Ä‘Æ¡n:\n` +
+    thongBao += `\n\nKhông xử lý được ${ketQua.loi.length} đơn:\n` +
       ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
   }
   alert(thongBao);
@@ -1283,36 +1283,36 @@ async function apDungDanhDauUuTien(uuTien, nut) {
   await taiDon();
 }
 
-// "XoÃ¡ dá»¯ liá»‡u Ä‘Æ¡n hÃ ng" (bá»• sung 20/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” CHá»ˆ superadmin, PHÃ HUá»¶ VÄ¨NH
-// VIá»„N khÃ´ng thá»ƒ hoÃ n tÃ¡c nÃªn xÃ¡c nháº­n Máº NH hÆ¡n háº³n má»i hÃ nh Ä‘á»™ng hÃ ng loáº¡t khÃ¡c trong trang: pháº£i gÃµ
-// láº¡i ÄÃšNG sá»‘ lÆ°á»£ng Ä‘Æ¡n Ä‘ang chá»n (khÃ´ng pháº£i confirm() thÆ°á»ng, dá»… báº¥m nháº§m khi chá»n nhiá»u Ä‘Æ¡n cÃ¹ng lÃºc).
-// Xem routes/orders.js POST /xoa-du-lieu-hang-loat + services/xoaDuLieuDonService.js Ä‘á»ƒ biáº¿t chÃ­nh xÃ¡c
-// nhá»¯ng gÃ¬ bá»‹ xoÃ¡ (KHÃ”NG xoÃ¡ Ä‘Æ°á»£c dÃ²ng "gá»‘c" trÃªn Sheets â€” chá»‰ áº©n vÄ©nh viá»…n khá»i app).
-// ThÃªm bÆ°á»›c nháº­p Máº¬T KHáº¨U xÃ¡c nháº­n (bá»• sung 24/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” Äá»¨NG SAU bÆ°á»›c gÃµ sá»‘
-// lÆ°á»£ng á»Ÿ trÃªn (khÃ´ng thay tháº¿), kiá»ƒm tra tháº­t á»Ÿ SERVER (routes/orders.js) chá»© khÃ´ng so sÃ¡nh á»Ÿ Ä‘Ã¢y â€”
-// trÃ¡nh lá»™ máº­t kháº©u trong mÃ£ nguá»“n client, vÃ  khÃ´ng thá»ƒ lÃ¡ch qua báº±ng cÃ¡ch gá»i tháº³ng API.
+// "Xoá dữ liệu đơn hàng" (bổ sung 20/09/2026, theo yêu cầu người dùng) — CHỈ superadmin, PHÁ HUỶ VĨNH
+// VIỄN không thể hoàn tác nên xác nhận MẠNH hơn hẳn mọi hành động hàng loạt khác trong trang: phải gõ
+// lại ĐÚNG số lượng đơn đang chọn (không phải confirm() thường, dễ bấm nhầm khi chọn nhiều đơn cùng lúc).
+// Xem routes/orders.js POST /xoa-du-lieu-hang-loat + services/xoaDuLieuDonService.js để biết chính xác
+// những gì bị xoá (KHÔNG xoá được dòng "gốc" trên Sheets — chỉ ẩn vĩnh viễn khỏi app).
+// Thêm bước nhập MẬT KHẨU xác nhận (bổ sung 24/09/2026, theo yêu cầu người dùng) — ĐỨNG SAU bước gõ số
+// lượng ở trên (không thay thế), kiểm tra thật ở SERVER (routes/orders.js) chứ không so sánh ở đây —
+// tránh lộ mật khẩu trong mã nguồn client, và không thể lách qua bằng cách gọi thẳng API.
 async function apDungXoaDuLieuDon(nut) {
   const soLuong = donDaChonSet.size;
-  if (soLuong === 0) { alert('HÃ£y chá»n Ã­t nháº¥t 1 Ä‘Æ¡n.'); return; }
+  if (soLuong === 0) { alert('Hãy chọn ít nhất 1 đơn.'); return; }
 
   const goNhap = prompt(
-    `XOÃ VÄ¨NH VIá»„N dá»¯ liá»‡u (tráº¡ng thÃ¡i, lá»‹ch sá»­, tracking, áº£nh Ä‘Ã£ táº£i lÃªn, tÆ° cÃ¡ch nhÃ³m ÄÆ¡n hÃ ng loáº¡t...) ` +
-    `cá»§a ${soLuong} Ä‘Æ¡n Ä‘Ã£ chá»n.\n\nKHÃ”NG THá»‚ HOÃ€N TÃC. GÃµ Ä‘Ãºng sá»‘ "${soLuong}" Ä‘á»ƒ xÃ¡c nháº­n:`
+    `XOÁ VĨNH VIỄN dữ liệu (trạng thái, lịch sử, tracking, ảnh đã tải lên, tư cách nhóm Đơn hàng loạt...) ` +
+    `của ${soLuong} đơn đã chọn.\n\nKHÔNG THỂ HOÀN TÁC. Gõ đúng số "${soLuong}" để xác nhận:`
   );
   if (goNhap === null) return;
-  if (goNhap.trim() !== String(soLuong)) { alert('Sá»‘ nháº­p khÃ´ng khá»›p â€” Ä‘Ã£ huá»·, KHÃ”NG xoÃ¡ gÃ¬ cáº£.'); return; }
+  if (goNhap.trim() !== String(soLuong)) { alert('Số nhập không khớp — đã huỷ, KHÔNG xoá gì cả.'); return; }
 
-  const matKhau = prompt('Nháº­p máº­t kháº©u xÃ¡c nháº­n Ä‘á»ƒ xoÃ¡ dá»¯ liá»‡u Ä‘Æ¡n:');
+  const matKhau = prompt('Nhập mật khẩu xác nhận để xoá dữ liệu đơn:');
   if (matKhau === null) return;
 
-  // Tá»± khoÃ¡ nÃºt NÃ€Y (bá»• sung 20/09/2026, phÃ¡t hiá»‡n qua rÃ  soÃ¡t báº£o máº­t â€” trÆ°á»›c Ä‘Ã¢y nÃºt nÃ y khÃ´ng náº±m
-  // trong danh sÃ¡ch chá»n á»Ÿ dÆ°á»›i nÃªn KHÃ”NG tá»± khoÃ¡, báº¥m 2 láº§n trong lÃºc Ä‘ang cháº¡y má»Ÿ 2 lÃ´ xoÃ¡ chá»“ng
-  // nhau cho thao tÃ¡c khÃ´ng thá»ƒ hoÃ n tÃ¡c) + hiá»‡n icon xoay + nhÃ£n "Äang xoÃ¡..." nhÆ° má»i nÃºt hÃ ng loáº¡t
-  // khÃ¡c trong trang (xem apDungNhanh() á»Ÿ trÃªn).
+  // Tự khoá nút NÀY (bổ sung 20/09/2026, phát hiện qua rà soát bảo mật — trước đây nút này không nằm
+  // trong danh sách chọn ở dưới nên KHÔNG tự khoá, bấm 2 lần trong lúc đang chạy mở 2 lô xoá chồng
+  // nhau cho thao tác không thể hoàn tác) + hiện icon xoay + nhãn "Đang xoá..." như mọi nút hàng loạt
+  // khác trong trang (xem apDungNhanh() ở trên).
   document.querySelectorAll('.nhanh-phoi-ve-file, #nut-ap-dung').forEach(b => b.disabled = true);
   nut.disabled = true;
   const nhanGoc = nut.innerHTML;
-  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Äang xoÃ¡...';
+  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Đang xoá...';
 
   let daHuy = false;
   const danhSach = Array.from(donDaChonSet);
@@ -1328,10 +1328,10 @@ async function apDungXoaDuLieuDon(nut) {
   );
   thanhTienDo.xoa();
 
-  let thongBao = `ÄÃ£ xoÃ¡ dá»¯ liá»‡u ${ketQua.thanhCong.length}/${soLuong} Ä‘Æ¡n.`;
-  if (ketQua.daHuy) thongBao += `\n\nÄÃ£ Há»¦Y giá»¯a chá»«ng â€” cÃ¡c Ä‘Æ¡n cÃ²n láº¡i váº«n Ä‘ang Ä‘Æ°á»£c chá»n, báº¥m láº¡i náº¿u muá»‘n tiáº¿p tá»¥c.`;
+  let thongBao = `Đã xoá dữ liệu ${ketQua.thanhCong.length}/${soLuong} đơn.`;
+  if (ketQua.daHuy) thongBao += `\n\nĐã HỦY giữa chừng — các đơn còn lại vẫn đang được chọn, bấm lại nếu muốn tiếp tục.`;
   if (ketQua.loi.length > 0) {
-    thongBao += `\n\nKhÃ´ng xoÃ¡ Ä‘Æ°á»£c ${ketQua.loi.length} Ä‘Æ¡n:\n` +
+    thongBao += `\n\nKhông xoá được ${ketQua.loi.length} đơn:\n` +
       ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
   }
   alert(thongBao);
@@ -1344,38 +1344,38 @@ async function apDungXoaDuLieuDon(nut) {
   await taiDon();
 }
 
-// Báº­t/táº¯t NHANH "ÄÆ¡n Æ°u tiÃªn" cho ÄÃšNG 1 Ä‘Æ¡n â€” nÃºt ngÃ´i sao trÃªn tá»«ng tháº» (renderDanhSachDon()), khÃ´ng
-// cáº§n chá»n (tick) Ä‘Æ¡n trÆ°á»›c nhÆ° khá»‘i hÃ ng loáº¡t á»Ÿ trÃªn. Gá»i CHUNG route POST /orders/danh-dau-uu-tien
-// (chá»‰ khÃ¡c: sttKeys cÃ³ Ä‘Ãºng 1 pháº§n tá»­), khÃ´ng confirm() â€” báº¥m lÃ  lÃ m ngay, Ä‘Ãºng tinh tháº§n "nÃºt nhanh".
+// Bật/tắt NHANH "Đơn ưu tiên" cho ĐÚNG 1 đơn — nút ngôi sao trên từng thẻ (renderDanhSachDon()), không
+// cần chọn (tick) đơn trước như khối hàng loạt ở trên. Gọi CHUNG route POST /orders/danh-dau-uu-tien
+// (chỉ khác: sttKeys có đúng 1 phần tử), không confirm() — bấm là làm ngay, đúng tinh thần "nút nhanh".
 async function toggleUuTienNhanh(sttKey, dangUuTien, nut) {
   nut.disabled = true;
   try {
     const ketQua = await apiFetch('/orders/danh-dau-uu-tien', {
       method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], uuTien: !dangUuTien }),
     });
-    if (ketQua.loi && ketQua.loi.length > 0) { alert('Lá»—i: ' + ketQua.loi[0].lyDo); nut.disabled = false; return; }
+    if (ketQua.loi && ketQua.loi.length > 0) { alert('Lỗi: ' + ketQua.loi[0].lyDo); nut.disabled = false; return; }
   } catch (e) {
-    alert('Lá»—i: ' + e.message);
+    alert('Lỗi: ' + e.message);
     nut.disabled = false;
     return;
   }
   await taiDon();
 }
 
-// Admin CHá»ˆ Äá»ŠNH 1 ngÆ°á»i váº½ file cho toÃ n bá»™ Ä‘Æ¡n Ä‘ang chá»n â€” chuyá»ƒn tháº³ng sang "Äang váº½ file" (khÃ´ng
-// cáº§n Ä‘Æ¡n Ä‘ang á»Ÿ tráº¡ng thÃ¡i nÃ o trÆ°á»›c Ä‘Ã³, cÃ¹ng triáº¿t lÃ½ "chá»n tá»± do" nhÆ° apDungChiDinhNguoiChayMay()
-// á»Ÿ trÃªn). Ghi NGUOI_VE_FILE = ngÆ°á»i Ä‘Æ°á»£c chá»n + GHI_CHU_VE_FILE = "Admin chá»‰ Ä‘á»‹nh" (xem
-// routes/orders.js POST /chi-dinh-nguoi-ve-file, route Ä‘Ã£ cÃ³ sáºµn tá»« trÆ°á»›c).
+// Admin CHỈ ĐỊNH 1 người vẽ file cho toàn bộ đơn đang chọn — chuyển thẳng sang "Đang vẽ file" (không
+// cần đơn đang ở trạng thái nào trước đó, cùng triết lý "chọn tự do" như apDungChiDinhNguoiChayMay()
+// ở trên). Ghi NGUOI_VE_FILE = người được chọn + GHI_CHU_VE_FILE = "Admin chỉ định" (xem
+// routes/orders.js POST /chi-dinh-nguoi-ve-file, route đã có sẵn từ trước).
 async function apDungChiDinhNguoiVeFile() {
   const nguoiVeFile = document.getElementById('nguoi-ve-file-dich').value;
-  if (!nguoiVeFile) { alert('HÃ£y chá»n ngÆ°á»i váº½ file muá»‘n chá»‰ Ä‘á»‹nh'); return; }
+  if (!nguoiVeFile) { alert('Hãy chọn người vẽ file muốn chỉ định'); return; }
 
   const soLuong = donDaChonSet.size;
-  if (!confirm(`Chá»‰ Ä‘á»‹nh "${nguoiVeFile}" váº½ file cho ${soLuong} Ä‘Æ¡n Ä‘Ã£ chá»n (chuyá»ƒn sang "Äang váº½ file")?`)) return;
+  if (!confirm(`Chỉ định "${nguoiVeFile}" vẽ file cho ${soLuong} đơn đã chọn (chuyển sang "Đang vẽ file")?`)) return;
 
   const nutApDungVeFile = document.getElementById('nut-ap-dung-chi-dinh-ve-file');
   nutApDungVeFile.disabled = true;
-  nutApDungVeFile.textContent = 'Äang xá»­ lÃ½...';
+  nutApDungVeFile.textContent = 'Đang xử lý...';
 
   let daHuyVeFile = false;
   const danhSachVeFile = Array.from(donDaChonSet);
@@ -1391,34 +1391,34 @@ async function apDungChiDinhNguoiVeFile() {
   );
   thanhTienDoVeFile.xoa();
 
-  let thongBaoVeFile = `ÄÃ£ chá»‰ Ä‘á»‹nh "${nguoiVeFile}" váº½ file cho ${ketQuaVeFile.thanhCong.length}/${soLuong} Ä‘Æ¡n.`;
-  if (ketQuaVeFile.daHuy) thongBaoVeFile += `\n\nÄÃ£ Há»¦Y giá»¯a chá»«ng â€” cÃ¡c Ä‘Æ¡n cÃ²n láº¡i váº«n Ä‘ang Ä‘Æ°á»£c chá»n, báº¥m láº¡i náº¿u muá»‘n tiáº¿p tá»¥c.`;
+  let thongBaoVeFile = `Đã chỉ định "${nguoiVeFile}" vẽ file cho ${ketQuaVeFile.thanhCong.length}/${soLuong} đơn.`;
+  if (ketQuaVeFile.daHuy) thongBaoVeFile += `\n\nĐã HỦY giữa chừng — các đơn còn lại vẫn đang được chọn, bấm lại nếu muốn tiếp tục.`;
   if (ketQuaVeFile.loi.length > 0) {
-    thongBaoVeFile += `\n\nKhÃ´ng chá»‰ Ä‘á»‹nh Ä‘Æ°á»£c ${ketQuaVeFile.loi.length} Ä‘Æ¡n:\n` +
+    thongBaoVeFile += `\n\nKhông chỉ định được ${ketQuaVeFile.loi.length} đơn:\n` +
       ketQuaVeFile.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
   }
   alert(thongBaoVeFile);
 
   nutApDungVeFile.disabled = false;
-  nutApDungVeFile.textContent = 'Ãp dá»¥ng';
+  nutApDungVeFile.textContent = 'Áp dụng';
   if (ketQuaVeFile.daHuy) ketQuaVeFile.thanhCong.forEach(sttKey => donDaChonSet.delete(sttKey));
   else donDaChonSet.clear();
   await taiDon();
 }
 
-// Admin MUA TRACKING GKE THá»¦ CÃ”NG cho toÃ n bá»™ Ä‘Æ¡n Ä‘ang chá»n â€” bá»• sung 09/09/2026, theo yÃªu cáº§u ngÆ°á»i
-// dÃ¹ng. KhÃ´ng cÃ³ Ã´ chá»n giÃ¡ trá»‹ Ä‘Ã­ch nhÆ° 2 nÃºt "Chá»‰ Ä‘á»‹nh" á»Ÿ trÃªn (khÃ´ng cÃ³ gÃ¬ Ä‘á»ƒ chá»n, chá»‰ lÃ  1 hÃ nh
-// Ä‘á»™ng), cÃ²n láº¡i CÃ™NG khuÃ´n: confirm cáº£nh bÃ¡o chi phÃ­ tháº­t, cháº¡y tuáº§n tá»± qua chayHangLoatCoTienDo() Ä‘á»ƒ
-// cÃ³ thanh tiáº¿n Ä‘á»™ + cho phÃ©p Há»§y giá»¯a chá»«ng (má»—i lÆ°á»£t gá»i GKE cÃ³ thá»ƒ máº¥t vÃ i giÃ¢y, hÃ ng loáº¡t nhiá»u
-// Ä‘Æ¡n cá»™ng dá»“n cÃ³ thá»ƒ khÃ¡ lÃ¢u). Gá»i CHUNG route POST /tracking/mua-thu-cong vá»›i nÃºt Ä‘Æ¡n láº» á»Ÿ
-// tracking.html/order.html (route nháº­n `sttKeys` dáº¡ng máº£ng, á»Ÿ Ä‘Ã¢y chá»‰ khÃ¡c lÃ  gá»i láº·p má»—i láº§n 1 pháº§n
-// tá»­ Ä‘á»ƒ láº¥y Ä‘Æ°á»£c tiáº¿n Ä‘á»™ tá»«ng Ä‘Æ¡n má»™t â€” xem routes/tracking.js).
-// apDungMuaTrackingThuCong / apDungMuaVaInLabel: nÃºt GKE ÄANG áº¨N (30/10/2026 â€” xem khá»‘i hiá»ƒn thá»‹ nÃºt á»Ÿ Ä‘áº§u trang). Giá»¯ láº¡i Ä‘á»ƒ hiá»‡n láº¡i khi cáº§n;
-// sá»­a muaTrackingHangLoat / xuLyInLabel thÃ¬ giá»¯ 2 hÃ m nÃ y cÃ²n cháº¡y Ä‘Æ°á»£c.
+// Admin MUA TRACKING GKE THỦ CÔNG cho toàn bộ đơn đang chọn — bổ sung 09/09/2026, theo yêu cầu người
+// dùng. Không có ô chọn giá trị đích như 2 nút "Chỉ định" ở trên (không có gì để chọn, chỉ là 1 hành
+// động), còn lại CÙNG khuôn: confirm cảnh báo chi phí thật, chạy tuần tự qua chayHangLoatCoTienDo() để
+// có thanh tiến độ + cho phép Hủy giữa chừng (mỗi lượt gọi GKE có thể mất vài giây, hàng loạt nhiều
+// đơn cộng dồn có thể khá lâu). Gọi CHUNG route POST /tracking/mua-thu-cong với nút đơn lẻ ở
+// tracking.html/order.html (route nhận `sttKeys` dạng mảng, ở đây chỉ khác là gọi lặp mỗi lần 1 phần
+// tử để lấy được tiến độ từng đơn một — xem routes/tracking.js).
+// apDungMuaTrackingThuCong / apDungMuaVaInLabel: nút GKE ĐANG ẨN (30/10/2026 — xem khối hiển thị nút ở đầu trang). Giữ lại để hiện lại khi cần;
+// sửa muaTrackingHangLoat / xuLyInLabel thì giữ 2 hàm này còn chạy được.
 async function apDungMuaTrackingThuCong() {
   await muaTrackingHangLoat('/tracking/mua-thu-cong', 'nut-mua-tracking-thu-cong', 'GKE');
 }
-// "Mua Tracking KL" hÃ ng loáº¡t (29/10/2026) â€” cÃ¹ng khuÃ´n mua GKE á»Ÿ trÃªn, route /tracking/kl/mua (Ä‘Æ¡n Ä‘Ã£ cÃ³ tracking: bÃ¡o bá» qua).
+// "Mua Tracking KL" hàng loạt (29/10/2026) — cùng khuôn mua GKE ở trên, route /tracking/kl/mua (đơn đã có tracking: báo bỏ qua).
 async function apDungMuaTrackingKl() {
   await muaTrackingHangLoat('/tracking/kl/mua', 'nut-mua-tracking-kl', 'KL');
 }
@@ -1426,13 +1426,13 @@ async function apDungMuaTrackingKl() {
 async function muaTrackingHangLoat(duongDan, idNut, ten) {
   const soLuong = donDaChonSet.size;
   if (!soLuong) return;
-  if (!confirm(`Mua tracking ${ten} thá»§ cÃ´ng cho ${soLuong} Ä‘Æ¡n Ä‘Ã£ chá»n? ÄÃ¢y lÃ  thao tÃ¡c táº¡o váº­n Ä‘Æ¡n THáº¬T, cÃ³ thá»ƒ phÃ¡t sinh chi phÃ­ â€” Ä‘Æ¡n Ä‘Ã£ cÃ³ tracking tháº­t rá»“i sáº½ tá»± bá» qua.`
-    + '\n\nDÃ¹ng dá»¯ liá»‡u Sheet cáº­p nháº­t trong khoáº£ng 30 giÃ¢y gáº§n nháº¥t: vá»«a sá»­a Ä‘á»‹a chá»‰ trÃªn Sheet thÃ¬ chá» 30 giÃ¢y rá»“i má»›i báº¥m.')) return;
+  if (!confirm(`Mua tracking ${ten} thủ công cho ${soLuong} đơn đã chọn? Đây là thao tác tạo vận đơn THẬT, có thể phát sinh chi phí — đơn đã có tracking thật rồi sẽ tự bỏ qua.`
+    + '\n\nDùng dữ liệu Sheet cập nhật trong khoảng 30 giây gần nhất: vừa sửa địa chỉ trên Sheet thì chờ 30 giây rồi mới bấm.')) return;
 
   const nutApDung = document.getElementById(idNut);
   const nhanGoc = nutApDung.innerHTML;
   nutApDung.disabled = true;
-  nutApDung.textContent = 'Äang xá»­ lÃ½...';
+  nutApDung.textContent = 'Đang xử lý...';
 
   let daHuy = false;
   const danhSach = Array.from(donDaChonSet);
@@ -1442,33 +1442,33 @@ async function muaTrackingHangLoat(duongDan, idNut, ten) {
   const ketQua = await chayHangLoatCoTienDo(
     danhSach,
     sttKey => apiFetch(duongDan, {
-      method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], hangLoat: true }), // hangLoat: mÃ¡y chá»§ Ä‘á»c Sheet báº£n â‰¤ 30 giÃ¢y (/mua-thu-cong, /kl/mua)
+      method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], hangLoat: true }), // hangLoat: máy chủ đọc Sheet bản ≤ 30 giây (/mua-thu-cong, /kl/mua)
     }),
     { onTienDo: (hienTai, tong) => thanhTienDo.capNhat(hienTai, tong), kiemTraHuy: () => daHuy }
   );
   thanhTienDo.xoa();
 
-  const loiKhac = await tachVaBaoDonDaHuy(ketQua.loi); // Ä‘Æ¡n Ä‘Ã£ huá»·: há»™p Ä‘á» riÃªng trÆ°á»›c
-  // GKE tráº£ mÃ£ Ä‘Æ¡n (chuá»—i), KL tráº£ { sttKey, tracking, canhBao... }.
+  const loiKhac = await tachVaBaoDonDaHuy(ketQua.loi); // đơn đã huỷ: hộp đỏ riêng trước
+  // GKE trả mã đơn (chuỗi), KL trả { sttKey, tracking, canhBao... }.
   const daMua = ketQua.thanhCong.map(t => (typeof t === 'string' ? t : t.sttKey));
-  let thongBao = `ÄÃ£ mua tracking ${ten} cho ${daMua.length}/${soLuong} Ä‘Æ¡n.`;
+  let thongBao = `Đã mua tracking ${ten} cho ${daMua.length}/${soLuong} đơn.`;
   const canhBao = ketQua.thanhCong.filter(t => t && t.canhBao);
-  if (canhBao.length) thongBao += `\n\nLÆ°u Ã½ (${canhBao.length}):\n` + canhBao.map(t => `- ${t.sttKey}: ${t.canhBao}`).join('\n');
-  if (ketQua.loi.length > loiKhac.length) thongBao += `\n\nBá» qua ${ketQua.loi.length - loiKhac.length} Ä‘Æ¡n ÄÃƒ Há»¦Y (khÃ´ng mua tracking).`;
-  if (ketQua.daHuy) thongBao += `\n\nÄÃ£ Há»¦Y giá»¯a chá»«ng â€” cÃ¡c Ä‘Æ¡n cÃ²n láº¡i váº«n Ä‘ang Ä‘Æ°á»£c chá»n, báº¥m láº¡i náº¿u muá»‘n tiáº¿p tá»¥c.`;
-  // ÄÆ¡n Ä‘Ã£ cÃ³ tracking / dÃ¹ng chung tracking nhÃ³m (boQua â€” routes/tracking.js): KHÃ”NG pháº£i lá»—i, liá»‡t kÃª gá»n riÃªng Ä‘á»ƒ lá»—i tháº­t dá»… tháº¥y.
+  if (canhBao.length) thongBao += `\n\nLưu ý (${canhBao.length}):\n` + canhBao.map(t => `- ${t.sttKey}: ${t.canhBao}`).join('\n');
+  if (ketQua.loi.length > loiKhac.length) thongBao += `\n\nBỏ qua ${ketQua.loi.length - loiKhac.length} đơn ĐÃ HỦY (không mua tracking).`;
+  if (ketQua.daHuy) thongBao += `\n\nĐã HỦY giữa chừng — các đơn còn lại vẫn đang được chọn, bấm lại nếu muốn tiếp tục.`;
+  // Đơn đã có tracking / dùng chung tracking nhóm (boQua — routes/tracking.js): KHÔNG phải lỗi, liệt kê gọn riêng để lỗi thật dễ thấy.
   const boQua = loiKhac.filter(l => l.boQua);
   const loiThat = loiKhac.filter(l => !l.boQua);
   if (loiThat.length > 0) {
-    thongBao += `\n\nKhÃ´ng mua Ä‘Æ°á»£c ${loiThat.length} Ä‘Æ¡n:\n` +
+    thongBao += `\n\nKhông mua được ${loiThat.length} đơn:\n` +
       loiThat.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
   }
-  if (boQua.length > 0) thongBao += `\n\nBá» qua ${boQua.length} Ä‘Æ¡n Ä‘Ã£ cÃ³ tracking / dÃ¹ng chung tracking nhÃ³m: ${boQua.map(l => l.sttKey).join(', ')}`;
-  // Ghi tracking sang Sheet Seller (21/09/2026; há»™p Ä‘á» tá»« 28/09/2026) â€” TÃCH RIÃŠNG khá»i
-  // "KhÃ´ng mua Ä‘Æ°á»£c" á»Ÿ trÃªn vÃ¬ tracking THáº¬T Ä‘Ã£ mua thÃ nh cÃ´ng, chá»‰ bÆ°á»›c ghi sang Sheet Seller
-  // tháº¥t báº¡i (thiáº¿u quyá»n sá»­a Sheet, sai cáº¥u hÃ¬nh...).
+  if (boQua.length > 0) thongBao += `\n\nBỏ qua ${boQua.length} đơn đã có tracking / dùng chung tracking nhóm: ${boQua.map(l => l.sttKey).join(', ')}`;
+  // Ghi tracking sang Sheet Seller (21/09/2026; hộp đỏ từ 28/09/2026) — TÁCH RIÊNG khỏi
+  // "Không mua được" ở trên vì tracking THẬT đã mua thành công, chỉ bước ghi sang Sheet Seller
+  // thất bại (thiếu quyền sửa Sheet, sai cấu hình...).
   if (ketQua.loiDaySheetKh.length > 0) {
-    thongBao += `\n\nÄÃ£ mua tracking nhÆ°ng CHÆ¯A ghi Ä‘Æ°á»£c sang Sheet Seller cho ${ketQua.loiDaySheetKh.length} Ä‘Æ¡n (xem há»™p Ä‘á»).`;
+    thongBao += `\n\nĐã mua tracking nhưng CHƯA ghi được sang Sheet Seller cho ${ketQua.loiDaySheetKh.length} đơn (xem hộp đỏ).`;
   }
   alert(thongBao);
   await baoLoiSheetSeller(ketQua.loiDaySheetKh);
@@ -1480,42 +1480,42 @@ async function muaTrackingHangLoat(duongDan, idNut, ten) {
   await taiDon();
 }
 
-// "IN LABEL"/"MUA TRACKING vÃ  IN LABEL" (bá»• sung 09/09/2026 láº§n 2, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” KHÃC
-// apDungMuaTrackingThuCong() á»Ÿ trÃªn: gá»­i Cáº¢ Máº¢NG sttKeys trong 1 lÆ°á»£t gá»i API duy nháº¥t (khÃ´ng láº·p
-// tá»«ng Ä‘Æ¡n á»Ÿ client) vÃ¬ server cáº§n GHÃ‰P táº¥t cáº£ tem láº¥y Ä‘Æ°á»£c thÃ nh 1 file PDF trÆ°á»›c khi tráº£ vá» (xem
-// routes/tracking.js#xuLyInLabelHangLoat) â€” khÃ´ng cÃ³ thanh tiáº¿n Ä‘á»™ tá»«ng Ä‘Æ¡n má»™t nhÆ° nÃºt "Mua tracking"
-// (chá»‰ 1 vÃ²ng xoay chung), Ä‘Æ¡n nÃ o lá»—i váº«n rÆ¡i vÃ o loi[] riÃªng, khÃ´ng cháº·n cáº£ lÆ°á»£t.
+// "IN LABEL"/"MUA TRACKING và IN LABEL" (bổ sung 09/09/2026 lần 2, theo yêu cầu người dùng) — KHÁC
+// apDungMuaTrackingThuCong() ở trên: gửi CẢ MẢNG sttKeys trong 1 lượt gọi API duy nhất (không lặp
+// từng đơn ở client) vì server cần GHÉP tất cả tem lấy được thành 1 file PDF trước khi trả về (xem
+// routes/tracking.js#xuLyInLabelHangLoat) — không có thanh tiến độ từng đơn một như nút "Mua tracking"
+// (chỉ 1 vòng xoay chung), đơn nào lỗi vẫn rơi vào loi[] riêng, không chặn cả lượt.
 async function apDungInLabel() {
   const danhSach = Array.from(donDaChonSet);
   if (danhSach.length === 0) return;
-  if (!confirm(`In label cho ${danhSach.length} Ä‘Æ¡n Ä‘Ã£ chá»n?\n\nChá»‰ Ä‘Æ¡n ÄÃƒ cÃ³ mÃ£ tracking vÃ  Ä‘ang "ÄÃ£ sáº£n xuáº¥t"/"ÄÃƒ DÃN TEM" má»›i in Ä‘Æ°á»£c â€” Ä‘Æ¡n khÃ¡c sáº½ bÃ¡o lá»—i riÃªng, khÃ´ng cháº·n cáº£ lÆ°á»£t.`)) return;
+  if (!confirm(`In label cho ${danhSach.length} đơn đã chọn?\n\nChỉ đơn ĐÃ có mã tracking và đang "Đã sản xuất"/"ĐÃ DÁN TEM" mới in được — đơn khác sẽ báo lỗi riêng, không chặn cả lượt.`)) return;
   await xuLyInLabel('/tracking/in-label', danhSach, 'nut-in-label', 'IN LABEL');
 }
 
 async function apDungMuaVaInLabel() {
   const danhSach = Array.from(donDaChonSet);
   if (danhSach.length === 0) return;
-  if (!confirm(`Mua tracking (náº¿u chÆ°a cÃ³) vÃ  in label cho ${danhSach.length} Ä‘Æ¡n Ä‘Ã£ chá»n?\n\nCÃ³ thá»ƒ phÃ¡t sinh phÃ­ tháº­t vá»›i Ä‘Æ¡n chÆ°a cÃ³ tracking. Chá»‰ Ä‘Æ¡n Ä‘ang "ÄÃ£ sáº£n xuáº¥t"/"ÄÃƒ DÃN TEM" má»›i thá»±c hiá»‡n Ä‘Æ°á»£c â€” Ä‘Æ¡n khÃ¡c sáº½ bÃ¡o lá»—i riÃªng, khÃ´ng cháº·n cáº£ lÆ°á»£t.`)) return;
-  await xuLyInLabel('/tracking/mua-va-in-label', danhSach, 'nut-mua-va-in-label', 'MUA TRACKING vÃ  IN LABEL');
+  if (!confirm(`Mua tracking (nếu chưa có) và in label cho ${danhSach.length} đơn đã chọn?\n\nCó thể phát sinh phí thật với đơn chưa có tracking. Chỉ đơn đang "Đã sản xuất"/"ĐÃ DÁN TEM" mới thực hiện được — đơn khác sẽ báo lỗi riêng, không chặn cả lượt.`)) return;
+  await xuLyInLabel('/tracking/mua-va-in-label', danhSach, 'nut-mua-va-in-label', 'MUA TRACKING và IN LABEL');
 }
 
-// "MUA KL vÃ  IN LABEL KL" (29/10/2026): Ä‘Æ¡n chÆ°a cÃ³ tracking -> mua KL rá»“i in; Ä‘Ã£ cÃ³ tracking KL -> chá»‰ in; tracking hÃ£ng khÃ¡c -> lá»—i riÃªng
-// Ä‘Æ¡n Ä‘Ã³ (hangVanChuyenKhacService#muaVaInLabelHangKhac). CÃ¹ng khuÃ´n nÃºt GKE: 1 lÆ°á»£t gá»i, ghÃ©p 1 file PDF.
+// "MUA KL và IN LABEL KL" (29/10/2026): đơn chưa có tracking -> mua KL rồi in; đã có tracking KL -> chỉ in; tracking hãng khác -> lỗi riêng
+// đơn đó (hangVanChuyenKhacService#muaVaInLabelHangKhac). Cùng khuôn nút GKE: 1 lượt gọi, ghép 1 file PDF.
 async function apDungMuaKlVaInLabel() {
   const danhSach = Array.from(donDaChonSet);
   if (danhSach.length === 0) return;
-  if (!confirm(`Mua tracking KL (náº¿u chÆ°a cÃ³) vÃ  in label KL cho ${danhSach.length} Ä‘Æ¡n Ä‘Ã£ chá»n?\n\nCÃ³ thá»ƒ phÃ¡t sinh phÃ­ tháº­t bÃªn KL vá»›i Ä‘Æ¡n chÆ°a cÃ³ tracking. Chá»‰ Ä‘Æ¡n Ä‘ang "ÄÃ£ sáº£n xuáº¥t"/"ÄÃƒ DÃN TEM" má»›i thá»±c hiá»‡n Ä‘Æ°á»£c â€” Ä‘Æ¡n khÃ¡c sáº½ bÃ¡o lá»—i riÃªng, khÃ´ng cháº·n cáº£ lÆ°á»£t.\n\nDÃ¹ng dá»¯ liá»‡u Sheet cáº­p nháº­t trong khoáº£ng 30 giÃ¢y gáº§n nháº¥t: vá»«a sá»­a Ä‘á»‹a chá»‰ trÃªn Sheet thÃ¬ chá» 30 giÃ¢y rá»“i má»›i báº¥m.`)) return;
-  await xuLyInLabel('/tracking/kl/mua-va-in-label', danhSach, 'nut-mua-kl-va-in-label', 'MUA KL vÃ  IN LABEL KL', { hangLoat: true });
+  if (!confirm(`Mua tracking KL (nếu chưa có) và in label KL cho ${danhSach.length} đơn đã chọn?\n\nCó thể phát sinh phí thật bên KL với đơn chưa có tracking. Chỉ đơn đang "Đã sản xuất"/"ĐÃ DÁN TEM" mới thực hiện được — đơn khác sẽ báo lỗi riêng, không chặn cả lượt.\n\nDùng dữ liệu Sheet cập nhật trong khoảng 30 giây gần nhất: vừa sửa địa chỉ trên Sheet thì chờ 30 giây rồi mới bấm.`)) return;
+  await xuLyInLabel('/tracking/kl/mua-va-in-label', danhSach, 'nut-mua-kl-va-in-label', 'MUA KL và IN LABEL KL', { hangLoat: true });
 }
 
-// Quyá»n mua KL (admin / superadmin / váº½ file) â€” cÃ¹ng mÃ¡y chá»§ (hangVanChuyenKhacService#duocMuaHangKhac). 1 chá»— cho má»i nÃºt / cÃ¢u há»i KL á»Ÿ trang nÃ y.
+// Quyền mua KL (admin / superadmin / vẽ file) — cùng máy chủ (hangVanChuyenKhacService#duocMuaHangKhac). 1 chỗ cho mọi nút / câu hỏi KL ở trang này.
 const duocMuaKl = () => laAdmin(user.vaiTro) || user.vaiTro === 've_file';
 
-// them: trÆ°á»ng gá»­i thÃªm trong body (vd { chiLayTem: true } cho "Láº¥y tem GKE").
+// them: trường gửi thêm trong body (vd { chiLayTem: true } cho "Lấy tem GKE").
 async function xuLyInLabel(duongDan, danhSach, idNut, nhanGoc, them = {}) {
   const nut = document.getElementById(idNut);
   nut.disabled = true;
-  nut.textContent = 'Äang xá»­ lÃ½...';
+  nut.textContent = 'Đang xử lý...';
   let chuaCoTracking = [], khongMuaKl = [], choTemGke = [];
   try {
     const ketQua = await apiFetch(duongDan, { method: 'POST', body: JSON.stringify({ sttKeys: danhSach, ...them }) });
@@ -1523,21 +1523,21 @@ async function xuLyInLabel(duongDan, danhSach, idNut, nhanGoc, them = {}) {
       const goiIn = moHopThoaiInPdf(ketQua.labelBase64);
       if (goiIn) goiIn();
     }
-    const loiKhac = await tachVaBaoDonDaHuy(ketQua.loi); // Ä‘Æ¡n Ä‘Ã£ huá»·: há»™p Ä‘á» riÃªng trÆ°á»›c
-    let thongBao = `ThÃ nh cÃ´ng: ${ketQua.thanhCong.length}/${danhSach.length}`;
-    if (ketQua.loi.length > loiKhac.length) thongBao += `\n\nBá» qua ${ketQua.loi.length - loiKhac.length} Ä‘Æ¡n ÄÃƒ Há»¦Y (khÃ´ng mua tracking).`;
+    const loiKhac = await tachVaBaoDonDaHuy(ketQua.loi); // đơn đã huỷ: hộp đỏ riêng trước
+    let thongBao = `Thành công: ${ketQua.thanhCong.length}/${danhSach.length}`;
+    if (ketQua.loi.length > loiKhac.length) thongBao += `\n\nBỏ qua ${ketQua.loi.length - loiKhac.length} đơn ĐÃ HỦY (không mua tracking).`;
     if (loiKhac.length > 0) {
-      thongBao += `\n\nLá»—i (${loiKhac.length}):\n` + loiKhac.map(l => `- ${l.sttKey}: ${l.lyDo}${l.lyDoKhongMuaKl ? ` (KL khÃ´ng mua Ä‘Æ°á»£c: ${l.lyDoKhongMuaKl})` : ''}`).join('\n');
+      thongBao += `\n\nLỗi (${loiKhac.length}):\n` + loiKhac.map(l => `- ${l.sttKey}: ${l.lyDo}${l.lyDoKhongMuaKl ? ` (KL không mua được: ${l.lyDoKhongMuaKl})` : ''}`).join('\n');
     }
-    if ((ketQua.loiDaySheetKh || []).length) thongBao += `\n\nÄÃ£ mua tracking nhÆ°ng CHÆ¯A ghi Ä‘Æ°á»£c sang Sheet Seller cho ${ketQua.loiDaySheetKh.length} Ä‘Æ¡n (xem há»™p Ä‘á»).`;
+    if ((ketQua.loiDaySheetKh || []).length) thongBao += `\n\nĐã mua tracking nhưng CHƯA ghi được sang Sheet Seller cho ${ketQua.loiDaySheetKh.length} đơn (xem hộp đỏ).`;
     alert(thongBao);
     await baoLoiSheetSeller(ketQua.loiDaySheetKh);
     if (ketQua.thanhCong.length > 0) await taiDon();
     if (duongDan === '/tracking/in-label') {
-      // ÄÆ¡n Ä‘Ã£ táº¡o váº­n Ä‘Æ¡n GKE, Ä‘ang chá» tem (30/10/2026): má»i láº¥y tem GKE â€” khÃ´ng tá»‘n phÃ­, má»i vai trÃ² tháº¥y nÃºt IN LABEL.
+      // Đơn đã tạo vận đơn GKE, đang chờ tem (30/10/2026): mời lấy tem GKE — không tốn phí, mọi vai trò thấy nút IN LABEL.
       choTemGke = loiKhac.filter(l => l.maLoi === 'CHO_TEM_GKE').map(l => l.sttKey);
-      // Tá»« 30/10/2026 há»i mua KL (khÃ´ng cÃ²n GKE) â€” vai trÃ² tháº¥y nÃºt "MUA KL vÃ  IN LABEL KL" (admin / superadmin / váº½ file); CHá»ˆ má»i Ä‘Æ¡n KL mua
-      // Ä‘Æ°á»£c (mÃ¡y chá»§ bÃ¡o lyDoKhongMuaKl rá»—ng), Ä‘Æ¡n khÃ¡c liá»‡t kÃª kÃ¨m lÃ½ do.
+      // Từ 30/10/2026 hỏi mua KL (không còn GKE) — vai trò thấy nút "MUA KL và IN LABEL KL" (admin / superadmin / vẽ file); CHỈ mời đơn KL mua
+      // được (máy chủ báo lyDoKhongMuaKl rỗng), đơn khác liệt kê kèm lý do.
       if (duocMuaKl()) {
         const ds = loiKhac.filter(l => l.maLoi === 'CHUA_CO_TRACKING');
         chuaCoTracking = ds.filter(l => !l.lyDoKhongMuaKl).map(l => l.sttKey);
@@ -1545,22 +1545,22 @@ async function xuLyInLabel(duongDan, danhSach, idNut, nhanGoc, them = {}) {
       }
     }
   } catch (e) {
-    alert('Lá»—i: ' + e.message);
+    alert('Lỗi: ' + e.message);
   } finally {
     nut.disabled = false;
     nut.innerHTML = nhanGoc;
   }
-  // IN LABEL gáº·p Ä‘Æ¡n chÆ°a cÃ³ tracking (23/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” log 22/10: 26 láº§n báº¥m láº¡i "IN LABEL"): há»i mua luÃ´n
-  // Ä‘Ãºng cÃ¡c Ä‘Æ¡n Ä‘Ã³ (há»™p nÃ y thay cho bÆ°á»›c xÃ¡c nháº­n cá»§a nÃºt "MUA TRACKING vÃ  IN LABEL", cÃ¹ng lá»i nháº¯c phÃ¡t sinh phÃ­).
-  if (choTemGke.length && confirm(`${choTemGke.length} Ä‘Æ¡n Ä‘Ã£ táº¡o váº­n Ä‘Æ¡n GKE nhÆ°ng Ä‘ang chá» tem:\n${choTemGke.join(', ')}\n\nLáº¥y tem GKE vÃ  in ngay? KhÃ´ng táº¡o váº­n Ä‘Æ¡n má»›i, khÃ´ng tá»‘n phÃ­ thÃªm.`)) {
-    // chiLayTem: mÃ¡y chá»§ chá»‰ láº¥y tem; Ä‘Æ¡n khÃ´ng cÃ²n chá» tem thÃ¬ bÃ¡o lá»—i, KHÃ”NG táº¡o váº­n Ä‘Æ¡n má»›i (trackingAutoService#muaTrackingChoDon).
+  // IN LABEL gặp đơn chưa có tracking (23/10/2026, theo yêu cầu người dùng — log 22/10: 26 lần bấm lại "IN LABEL"): hỏi mua luôn
+  // đúng các đơn đó (hộp này thay cho bước xác nhận của nút "MUA TRACKING và IN LABEL", cùng lời nhắc phát sinh phí).
+  if (choTemGke.length && confirm(`${choTemGke.length} đơn đã tạo vận đơn GKE nhưng đang chờ tem:\n${choTemGke.join(', ')}\n\nLấy tem GKE và in ngay? Không tạo vận đơn mới, không tốn phí thêm.`)) {
+    // chiLayTem: máy chủ chỉ lấy tem; đơn không còn chờ tem thì báo lỗi, KHÔNG tạo vận đơn mới (trackingAutoService#muaTrackingChoDon).
     await xuLyInLabel('/tracking/mua-va-in-label', choTemGke, idNut, nhanGoc, { chiLayTem: true });
   }
   const ghiChuKhongMuaKl = khongMuaKl.length
-    ? `\n\nKHÃ”NG mua KL Ä‘Æ°á»£c ${khongMuaKl.length} Ä‘Æ¡n (bá» ra):\n` + khongMuaKl.map(l => `- ${l.sttKey}: ${l.lyDoKhongMuaKl}`).join('\n') : '';
-  if (chuaCoTracking.length && confirm(`${chuaCoTracking.length} Ä‘Æ¡n chÆ°a cÃ³ mÃ£ tracking nÃªn chÆ°a in label Ä‘Æ°á»£c:\n${chuaCoTracking.join(', ')}\n\nMua tracking KL vÃ  in label KL cho ${chuaCoTracking.length === 1 ? 'Ä‘Æ¡n' : 'cÃ¡c Ä‘Æ¡n'} nÃ y ngay? CÃ³ thá»ƒ phÃ¡t sinh phÃ­ tháº­t bÃªn KL. DÃ¹ng dá»¯ liá»‡u Sheet cáº­p nháº­t trong khoáº£ng 30 giÃ¢y gáº§n nháº¥t.${ghiChuKhongMuaKl}`)) {
-    // 30/10/2026: mua KL thay GKE (nÃºt GKE Ä‘Ã£ áº©n).
-    await xuLyInLabel('/tracking/kl/mua-va-in-label', chuaCoTracking, 'nut-mua-kl-va-in-label', 'MUA KL vÃ  IN LABEL KL', { hangLoat: true });
+    ? `\n\nKHÔNG mua KL được ${khongMuaKl.length} đơn (bỏ ra):\n` + khongMuaKl.map(l => `- ${l.sttKey}: ${l.lyDoKhongMuaKl}`).join('\n') : '';
+  if (chuaCoTracking.length && confirm(`${chuaCoTracking.length} đơn chưa có mã tracking nên chưa in label được:\n${chuaCoTracking.join(', ')}\n\nMua tracking KL và in label KL cho ${chuaCoTracking.length === 1 ? 'đơn' : 'các đơn'} này ngay? Có thể phát sinh phí thật bên KL. Dùng dữ liệu Sheet cập nhật trong khoảng 30 giây gần nhất.${ghiChuKhongMuaKl}`)) {
+    // 30/10/2026: mua KL thay GKE (nút GKE đã ẩn).
+    await xuLyInLabel('/tracking/kl/mua-va-in-label', chuaCoTracking, 'nut-mua-kl-va-in-label', 'MUA KL và IN LABEL KL', { hangLoat: true });
   }
 }
 
@@ -1573,28 +1573,28 @@ function taiFileTuBlob(blob, contentDisposition, tenMacDinh) {
   document.body.appendChild(a);
   a.click();
   a.remove();
-  // KHÃ”NG revoke object URL ngay â€” Safari trÃªn iPad/iPhone khÃ´ng táº£i file qua a.download nhÆ° trÃ¬nh
-  // duyá»‡t khÃ¡c mÃ  tá»± Má»ž TAB Má»šI trá» tháº³ng tá»›i blob: URL nÃ y (xá»­ lÃ½ báº¥t Ä‘á»“ng bá»™); revoke ngay khiáº¿n tab
-  // má»›i má»Ÿ lÃªn gáº·p lá»—i "Safari khÃ´ng thá»ƒ má»Ÿ trang â€” Lá»—i WebKitBlobResource 1" vÃ¬ blob Ä‘Ã£ bá»‹ huá»· trÆ°á»›c
-  // khi Safari ká»‹p Ä‘á»c (lá»—i tháº­t ngÆ°á»i dÃ¹ng gáº·p trÃªn iPad khi báº¥m IN ÄÆ N ÄANG CHá»ŒN/IN DANH SÃCH PHÃ”I
-  // Cá»¦A ÄÆ N ÄANG CHá»ŒN). Trá»… 1 giÃ¢y Ä‘á»§ Ä‘á»ƒ Safari Ä‘á»c xong ná»™i dung trÆ°á»›c khi dá»n bá»™ nhá»›.
+  // KHÔNG revoke object URL ngay — Safari trên iPad/iPhone không tải file qua a.download như trình
+  // duyệt khác mà tự MỞ TAB MỚI trỏ thẳng tới blob: URL này (xử lý bất đồng bộ); revoke ngay khiến tab
+  // mới mở lên gặp lỗi "Safari không thể mở trang — Lỗi WebKitBlobResource 1" vì blob đã bị huỷ trước
+  // khi Safari kịp đọc (lỗi thật người dùng gặp trên iPad khi bấm IN ĐƠN ĐANG CHỌN/IN DANH SÁCH PHÔI
+  // CỦA ĐƠN ĐANG CHỌN). Trễ 1 giây đủ để Safari đọc xong nội dung trước khi dọn bộ nhớ.
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-// NÃºt "IN DANH SÃCH PHÃ”I Cá»¦A ÄÆ N ÄANG CHá»ŒN" â€” in ÄÃšNG cÃ¡c Ä‘Æ¡n Ä‘ang tick chá»n (donDaChonSet), bá» qua
-// má»i Ã´ lá»c Ä‘ang hiá»ƒn thá»‹ trÃªn trang. KhÃ´ng cáº§n cháº¡y ná»n + tiáº¿n Ä‘á»™ nhÆ° "IN ÄÆ N ÄANG CHá»ŒN" (máº«u
-// 'phoi_ao_gop' lÃ  báº£ng dá»¯ liá»‡u thuáº§n, khÃ´ng táº£i áº£nh tá»«ng Ä‘Æ¡n nÃªn luÃ´n Ä‘á»§ nhanh) â€” gá»i tháº³ng /pdf.
-// `tuyChon.sttKeys` (tuá»³ chá»n) â€” in Ä‘Ãºng danh sÃ¡ch nÃ y thay vÃ¬ Ä‘á»c donDaChonSet hiá»‡n táº¡i, dÃ¹ng khi cáº§n
-// in 1 danh sÃ¡ch Ä‘Ã£ CHá»¤P Láº I tá»« trÆ°á»›c (xem inMaPhoiDonDangChon()), khÃ´ng phá»¥ thuá»™c donDaChonSet cÃ³ bá»‹
-// Ä‘á»•i sau Ä‘Ã³ hay khÃ´ng. `tuyChon.baoLoiBangAlert` (máº·c Ä‘á»‹nh true) â€” false thÃ¬ khÃ´ng tá»± alert() khi
-// lá»—i, chá»‰ tráº£ {ok:false, loi} Ä‘á»ƒ bÃªn gá»i tá»± gá»™p vÃ o 1 alert tá»•ng káº¿t khÃ¡c.
-// Äá»c TOÃ€N Bá»˜ bá»™ lá»c ÄANG HIá»‚N THá»Š trÃªn trang (má»Ÿ rá»™ng 24/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” báº£n trÆ°á»›c
-// chá»‰ Ä‘á»c Tá»« ngÃ y/Äáº¿n ngÃ y, cÃ¡c nÃºt "IN ... ÄANG CHá»ŒN" chá»‰ gá»­i sttKeys nÃªn dÃ²ng thÃ´ng tin lá»c trong file
-// in bá» sÃ³t/hiá»‡n sai má»i bá»™ lá»c khÃ¡c Ä‘ang dÃ¹ng, vd Tráº¡ng thÃ¡i/KÃ­ch thÆ°á»›c). Gá»­i kÃ¨m CÃC GIÃ TRá»Š NÃ€Y CHá»ˆ Ä‘á»ƒ
-// hiá»ƒn thá»‹ Ä‘Ãºng trong file in (dongThongTinLoc á»Ÿ routes/reports.js) â€” KHÃ”NG áº£nh hÆ°á»Ÿng Ä‘Æ¡n nÃ o Ä‘Æ°á»£c Ä‘Æ°a
-// vÃ o danh sÃ¡ch in (locDon() váº«n Æ°u tiÃªn tuyá»‡t Ä‘á»‘i sttKeys, bá» qua má»i bá»™ lá»c khÃ¡c khi cÃ³ sttKeys). Chá»‰
-// Ä‘Æ°a vÃ o káº¿t quáº£ cÃ¡c Ã´ ÄANG CÃ“ GIÃ TRá»Š â€” khá»›p Ä‘Ãºng cÃ¡ch Ä‘á»c/tÃªn tham sá»‘ cá»§a routes/reports.js (lÆ°u Ã½
-// 'loc-kh' á»Ÿ trang nÃ y lÃ  Ã´ tÃ¬m tá»« khoÃ¡, tÆ°Æ¡ng á»©ng tham sá»‘ 'tuKhoa' bÃªn reports.js, khÃ´ng pháº£i 'khachHang').
+// Nút "IN DANH SÁCH PHÔI CỦA ĐƠN ĐANG CHỌN" — in ĐÚNG các đơn đang tick chọn (donDaChonSet), bỏ qua
+// mọi ô lọc đang hiển thị trên trang. Không cần chạy nền + tiến độ như "IN ĐƠN ĐANG CHỌN" (mẫu
+// 'phoi_ao_gop' là bảng dữ liệu thuần, không tải ảnh từng đơn nên luôn đủ nhanh) — gọi thẳng /pdf.
+// `tuyChon.sttKeys` (tuỳ chọn) — in đúng danh sách này thay vì đọc donDaChonSet hiện tại, dùng khi cần
+// in 1 danh sách đã CHỤP LẠI từ trước (xem inMaPhoiDonDangChon()), không phụ thuộc donDaChonSet có bị
+// đổi sau đó hay không. `tuyChon.baoLoiBangAlert` (mặc định true) — false thì không tự alert() khi
+// lỗi, chỉ trả {ok:false, loi} để bên gọi tự gộp vào 1 alert tổng kết khác.
+// Đọc TOÀN BỘ bộ lọc ĐANG HIỂN THỊ trên trang (mở rộng 24/09/2026, theo yêu cầu người dùng — bản trước
+// chỉ đọc Từ ngày/Đến ngày, các nút "IN ... ĐANG CHỌN" chỉ gửi sttKeys nên dòng thông tin lọc trong file
+// in bỏ sót/hiện sai mọi bộ lọc khác đang dùng, vd Trạng thái/Kích thước). Gửi kèm CÁC GIÁ TRỊ NÀY CHỈ để
+// hiển thị đúng trong file in (dongThongTinLoc ở routes/reports.js) — KHÔNG ảnh hưởng đơn nào được đưa
+// vào danh sách in (locDon() vẫn ưu tiên tuyệt đối sttKeys, bỏ qua mọi bộ lọc khác khi có sttKeys). Chỉ
+// đưa vào kết quả các ô ĐANG CÓ GIÁ TRỊ — khớp đúng cách đọc/tên tham số của routes/reports.js (lưu ý
+// 'loc-kh' ở trang này là ô tìm từ khoá, tương ứng tham số 'tuKhoa' bên reports.js, không phải 'khachHang').
 function layBoLocDangDung() {
   const doc = (id) => document.getElementById(id).value;
   const cacTruong = {
@@ -1615,13 +1615,13 @@ async function inPhoiDangChon(nut, tuyChon = {}) {
   const danhSach = tuyChon.sttKeys || Array.from(donDaChonSet);
   const baoLoiBangAlert = tuyChon.baoLoiBangAlert !== false;
   if (danhSach.length === 0) {
-    if (baoLoiBangAlert) alert('HÃ£y chá»n Ã­t nháº¥t 1 Ä‘Æ¡n muá»‘n in.');
-    return { ok: false, loi: 'HÃ£y chá»n Ã­t nháº¥t 1 Ä‘Æ¡n muá»‘n in.' };
+    if (baoLoiBangAlert) alert('Hãy chọn ít nhất 1 đơn muốn in.');
+    return { ok: false, loi: 'Hãy chọn ít nhất 1 đơn muốn in.' };
   }
 
   const nhanGoc = nut.innerHTML;
   nut.disabled = true;
-  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 18 }) + ' Äang táº¡o file...';
+  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 18 }) + ' Đang tạo file...';
 
   const qs = new URLSearchParams();
   qs.set('mau', 'phoi_ao_gop');
@@ -1632,13 +1632,13 @@ async function inPhoiDangChon(nut, tuyChon = {}) {
     const res = await fetch('/api/reports/pdf?' + qs.toString(), { credentials: 'include' });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      throw new Error(data.error || 'KhÃ´ng xuáº¥t Ä‘Æ°á»£c file');
+      throw new Error(data.error || 'Không xuất được file');
     }
     const blob = await res.blob();
     taiFileTuBlob(blob, res.headers.get('Content-Disposition'), 'bao-cao.pdf');
     return { ok: true };
   } catch (e) {
-    if (baoLoiBangAlert) alert('Lá»—i: ' + e.message);
+    if (baoLoiBangAlert) alert('Lỗi: ' + e.message);
     return { ok: false, loi: e.message };
   } finally {
     nut.disabled = false;
@@ -1646,15 +1646,15 @@ async function inPhoiDangChon(nut, tuyChon = {}) {
   }
 }
 
-// "IN KÃŠ KHAI Háº¢I QUAN ÄÆ N ÄANG CHá»ŒN" (bá»• sung 08/09/2026) â€” báº£ng Excel thuáº§n (MÃ£ Ä‘Æ¡n/Loáº¡i/Sá»‘ lÆ°á»£ng/
-// MÃ£ tracking/Quá»‘c gia, máº«u 'hai_quan' â€” xem routes/reports.js xayDungBaoCaoDangBang), khÃ´ng táº£i áº£nh
-// tá»«ng Ä‘Æ¡n nÃªn luÃ´n Ä‘á»§ nhanh â€” gá»i tháº³ng /excel, khÃ´ng cáº§n cháº¡y ná»n + tiáº¿n Ä‘á»™ nhÆ° "IN ÄÆ N ÄANG CHá»ŒN".
+// "IN KÊ KHAI HẢI QUAN ĐƠN ĐANG CHỌN" (bổ sung 08/09/2026) — bảng Excel thuần (Mã đơn/Loại/Số lượng/
+// Mã tracking/Quốc gia, mẫu 'hai_quan' — xem routes/reports.js xayDungBaoCaoDangBang), không tải ảnh
+// từng đơn nên luôn đủ nhanh — gọi thẳng /excel, không cần chạy nền + tiến độ như "IN ĐƠN ĐANG CHỌN".
 async function inHaiQuanDangChon(nut) {
-  if (donDaChonSet.size === 0) { alert('HÃ£y chá»n Ã­t nháº¥t 1 Ä‘Æ¡n muá»‘n in.'); return; }
+  if (donDaChonSet.size === 0) { alert('Hãy chọn ít nhất 1 đơn muốn in.'); return; }
 
   const nhanGoc = nut.innerHTML;
   nut.disabled = true;
-  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 18 }) + ' Äang táº¡o file...';
+  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 18 }) + ' Đang tạo file...';
 
   const qs = new URLSearchParams();
   qs.set('mau', 'hai_quan');
@@ -1665,31 +1665,31 @@ async function inHaiQuanDangChon(nut) {
     const res = await fetch('/api/reports/excel?' + qs.toString(), { credentials: 'include' });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      throw new Error(data.error || 'KhÃ´ng xuáº¥t Ä‘Æ°á»£c file');
+      throw new Error(data.error || 'Không xuất được file');
     }
     const blob = await res.blob();
     taiFileTuBlob(blob, res.headers.get('Content-Disposition'), 'ke-khai-hai-quan.xlsx');
   } catch (e) {
-    alert('Lá»—i: ' + e.message);
+    alert('Lỗi: ' + e.message);
   } finally {
     nut.disabled = false;
     nut.innerHTML = nhanGoc;
   }
 }
 
-// IN ÄÆ N ÄANG CHá»ŒN cÃ³ thá»ƒ in NHIá»€U Ä‘Æ¡n cÃ¹ng lÃºc, pháº£i táº£i áº£nh tá»«ng Ä‘Æ¡n má»™t nÃªn cháº­m â€” khÃ¡c vá»›i luá»“ng
-// quÃ©t QR/Ä‘á»•i tráº¡ng thÃ¡i hÃ ng loáº¡t (chayHangLoatCoTienDo trong api.js, tÃ¡ch Ä‘Æ°á»£c thÃ nh nhiá»u lá»‡nh gá»i
-// Ä‘á»™c láº­p), táº¡o file PDF lÃ  1 tiáº¿n trÃ¬nh liÃªn tá»¥c trÃªn server nÃªn dÃ¹ng CHáº Y Ná»€N + Há»ŽI TIáº¾N Äá»˜ Äá»ŠNH Ká»²:
-// server táº¡o 1 "cÃ´ng viá»‡c" (job), tráº£ vá» jobId ngay, xá»­ lÃ½ tháº­t á»Ÿ ná»n; client há»i láº¡i tiáº¿n Ä‘á»™ má»—i
-// 700ms tá»›i khi xong rá»“i má»›i táº£i file vá» (xem routes/reports.js router.post('/don-can-in/bat-dau')).
-// `than` â€” ná»™i dung body gá»­i lÃªn: { sttKeys } cá»§a cÃ¡c Ä‘Æ¡n Ä‘ang tick chá»n (xem inDonDangChon()).
-// CÃ³ nÃºt "Dá»ªNG" (onHuy) â€” báº¥m vÃ o sáº½ bÃ¡o server Ä‘áº·t cá» há»§y tháº­t (route '/don-can-in/huy/:jobId'),
-// server dá»«ng xá»­ lÃ½ cÃ¡c Ä‘Æ¡n CÃ’N Láº I ngay (Ä‘Æ¡n Ä‘ang xá»­ lÃ½ dá»Ÿ váº«n hoÃ n táº¥t bÃ¬nh thÆ°á»ng), khÃ´ng chá»‰ Ä‘Æ¡n
-// thuáº§n áº©n thanh tiáº¿n Ä‘á»™ á»Ÿ trÃ¬nh duyá»‡t â€” xem routes/reports.js router.post('/don-can-in/bat-dau').
-// `tuyChon.baoLoiBangAlert` (máº·c Ä‘á»‹nh true) â€” false thÃ¬ KHÃ”NG tá»± alert() khi lá»—i, chá»‰ tráº£ vá»
-// {ok:false, loi} Ä‘á»ƒ bÃªn gá»i (vd inMaPhoiDonDangChon()) tá»± gá»™p vÃ o 1 alert tá»•ng káº¿t khÃ¡c. LuÃ´n tráº£ vá»
-// {ok:true} hoáº·c {ok:false, loi} á»Ÿ má»i nhÃ¡nh, ká»ƒ cáº£ khi baoLoiBangAlert=true, Ä‘á»ƒ bÃªn gá»i luÃ´n biáº¿t
-// káº¿t quáº£ mÃ  khÃ´ng pháº£i Ä‘oÃ¡n qua side-effect cá»§a alert().
+// IN ĐƠN ĐANG CHỌN có thể in NHIỀU đơn cùng lúc, phải tải ảnh từng đơn một nên chậm — khác với luồng
+// quét QR/đổi trạng thái hàng loạt (chayHangLoatCoTienDo trong api.js, tách được thành nhiều lệnh gọi
+// độc lập), tạo file PDF là 1 tiến trình liên tục trên server nên dùng CHẠY NỀN + HỎI TIẾN ĐỘ ĐỊNH KỲ:
+// server tạo 1 "công việc" (job), trả về jobId ngay, xử lý thật ở nền; client hỏi lại tiến độ mỗi
+// 700ms tới khi xong rồi mới tải file về (xem routes/reports.js router.post('/don-can-in/bat-dau')).
+// `than` — nội dung body gửi lên: { sttKeys } của các đơn đang tick chọn (xem inDonDangChon()).
+// Có nút "DỪNG" (onHuy) — bấm vào sẽ báo server đặt cờ hủy thật (route '/don-can-in/huy/:jobId'),
+// server dừng xử lý các đơn CÒN LẠI ngay (đơn đang xử lý dở vẫn hoàn tất bình thường), không chỉ đơn
+// thuần ẩn thanh tiến độ ở trình duyệt — xem routes/reports.js router.post('/don-can-in/bat-dau').
+// `tuyChon.baoLoiBangAlert` (mặc định true) — false thì KHÔNG tự alert() khi lỗi, chỉ trả về
+// {ok:false, loi} để bên gọi (vd inMaPhoiDonDangChon()) tự gộp vào 1 alert tổng kết khác. Luôn trả về
+// {ok:true} hoặc {ok:false, loi} ở mọi nhánh, kể cả khi baoLoiBangAlert=true, để bên gọi luôn biết
+// kết quả mà không phải đoán qua side-effect của alert().
 async function inDonHangLoatCoTienDo(nut, nhanGoc, than, tuyChon = {}) {
   const baoLoiBangAlert = tuyChon.baoLoiBangAlert !== false;
   let ketQuaBatDau;
@@ -1698,16 +1698,16 @@ async function inDonHangLoatCoTienDo(nut, nhanGoc, than, tuyChon = {}) {
       method: 'POST', body: JSON.stringify({ ...than, dinhDang: 'pdf' }),
     });
   } catch (e) {
-    if (baoLoiBangAlert) alert('Lá»—i: ' + e.message);
+    if (baoLoiBangAlert) alert('Lỗi: ' + e.message);
     nut.disabled = false; nut.innerHTML = nhanGoc;
     return { ok: false, loi: e.message };
   }
 
   const { jobId, tongSo } = ketQuaBatDau;
   if (tongSo === 0) {
-    if (baoLoiBangAlert) alert('KhÃ´ng cÃ³ Ä‘Æ¡n nÃ o Ä‘á»ƒ in.');
+    if (baoLoiBangAlert) alert('Không có đơn nào để in.');
     nut.disabled = false; nut.innerHTML = nhanGoc;
-    return { ok: false, loi: 'KhÃ´ng cÃ³ Ä‘Æ¡n nÃ o Ä‘á»ƒ in.' };
+    return { ok: false, loi: 'Không có đơn nào để in.' };
   }
 
   const thanhTienDo = taoThanhTienDo(nut, {
@@ -1721,11 +1721,11 @@ async function inDonHangLoatCoTienDo(nut, nhanGoc, than, tuyChon = {}) {
       await new Promise(r => setTimeout(r, 700));
       tienDo = await apiFetch(`/reports/don-can-in/tien-do/${jobId}`);
       thanhTienDo.capNhat(tienDo.daXong, tienDo.tongSo);
-      if (tienDo.trangThai === 'loi') throw new Error(tienDo.loi || 'Táº¡o file tháº¥t báº¡i');
+      if (tienDo.trangThai === 'loi') throw new Error(tienDo.loi || 'Tạo file thất bại');
     } while (tienDo.trangThai !== 'xong' && tienDo.trangThai !== 'huy');
 
     if (tienDo.trangThai === 'huy') {
-      const thongBaoHuy = `ÄÃ£ dá»«ng. ÄÃ£ táº¡o xong ${tienDo.daXong}/${tienDo.tongSo} Ä‘Æ¡n trÆ°á»›c khi dá»«ng (khÃ´ng táº£i vá» Ä‘Æ°á»£c ná»¯a, hÃ£y in láº¡i náº¿u cáº§n).`;
+      const thongBaoHuy = `Đã dừng. Đã tạo xong ${tienDo.daXong}/${tienDo.tongSo} đơn trước khi dừng (không tải về được nữa, hãy in lại nếu cần).`;
       if (baoLoiBangAlert) alert(thongBaoHuy);
       return { ok: false, loi: thongBaoHuy };
     }
@@ -1733,13 +1733,13 @@ async function inDonHangLoatCoTienDo(nut, nhanGoc, than, tuyChon = {}) {
     const res = await fetch(`/api/reports/don-can-in/tai-ve/${jobId}`, { credentials: 'include' });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      throw new Error(data.error || 'KhÃ´ng táº£i Ä‘Æ°á»£c file');
+      throw new Error(data.error || 'Không tải được file');
     }
     const blob = await res.blob();
     taiFileTuBlob(blob, res.headers.get('Content-Disposition'), 'don-can-in.pdf');
     return { ok: true };
   } catch (e) {
-    if (baoLoiBangAlert) alert('Lá»—i: ' + e.message);
+    if (baoLoiBangAlert) alert('Lỗi: ' + e.message);
     return { ok: false, loi: e.message };
   } finally {
     thanhTienDo.xoa();
@@ -1748,11 +1748,11 @@ async function inDonHangLoatCoTienDo(nut, nhanGoc, than, tuyChon = {}) {
   }
 }
 
-// "THUÃŠ TEAM KHÃC" (bá»• sung 28/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” 1 file PDF cho Má»ŒI Ä‘Æ¡n Ä‘ang chá»n, theo thá»© tá»±
-// Ä‘ang hiá»ƒn thá»‹ (routes/reports.js POST /thue-team-khac/bat-dau). Cháº¡y ná»n + tiáº¿n Ä‘á»™ + nÃºt Dá»«ng dÃ¹ng chung 3 route
-// /reports/don-can-in/... vá»›i IN ÄÆ N. CÃ³ áº£nh thiáº¿u -> há»™p Ä‘á» liá»‡t kÃª mÃ£ Ä‘Æ¡n + áº£nh + lÃ½ do TRÆ¯á»šC khi táº£i file.
+// "THUÊ TEAM KHÁC" (bổ sung 28/09/2026, theo yêu cầu người dùng) — 1 file PDF cho MỌI đơn đang chọn, theo thứ tự
+// đang hiển thị (routes/reports.js POST /thue-team-khac/bat-dau). Chạy nền + tiến độ + nút Dừng dùng chung 3 route
+// /reports/don-can-in/... với IN ĐƠN. Có ảnh thiếu -> hộp đỏ liệt kê mã đơn + ảnh + lý do TRƯỚC khi tải file.
 async function xuatThueTeamKhac(nut) {
-  if (donDaChonSet.size === 0) { alert('HÃ£y chá»n Ã­t nháº¥t 1 Ä‘Æ¡n hÃ ng Ä‘á»ƒ xuáº¥t PDF THUÃŠ TEAM KHÃC.'); return; }
+  if (donDaChonSet.size === 0) { alert('Hãy chọn ít nhất 1 đơn hàng để xuất PDF THUÊ TEAM KHÁC.'); return; }
   const theoThuTuHienThi = danhSachHienTai.map(o => o.STT_Key).filter(k => donDaChonSet.has(k));
   const sttKeys = [...theoThuTuHienThi, ...[...donDaChonSet].filter(k => !theoThuTuHienThi.includes(k))];
   const nhanGoc = nut.innerHTML;
@@ -1761,7 +1761,7 @@ async function xuatThueTeamKhac(nut) {
   try {
     ({ jobId } = await apiFetch('/reports/thue-team-khac/bat-dau', { method: 'POST', body: JSON.stringify({ sttKeys }) }));
   } catch (e) {
-    alert('Lá»—i: ' + e.message);
+    alert('Lỗi: ' + e.message);
     nut.disabled = false;
     return;
   }
@@ -1775,22 +1775,22 @@ async function xuatThueTeamKhac(nut) {
       await new Promise(r => setTimeout(r, 1000));
       tienDo = await apiFetch(`/reports/don-can-in/tien-do/${jobId}`);
       thanhTienDo.capNhat(tienDo.daXong, tienDo.tongSo);
-      if (tienDo.trangThai === 'loi') throw new Error(tienDo.loi || 'Táº¡o file tháº¥t báº¡i');
+      if (tienDo.trangThai === 'loi') throw new Error(tienDo.loi || 'Tạo file thất bại');
     } while (tienDo.trangThai !== 'xong' && tienDo.trangThai !== 'huy');
-    if (tienDo.trangThai === 'huy') { alert('ÄÃ£ dá»«ng â€” chÆ°a táº¡o file PDF.'); return; }
+    if (tienDo.trangThai === 'huy') { alert('Đã dừng — chưa tạo file PDF.'); return; }
 
     if (tienDo.loiAnh.length) {
       await hienHopDo({
-        tieuDe: [`PDF THIáº¾U ${tienDo.loiAnh.length} áº¢NH`, 'TÃ€I LIá»†U CHÆ¯A Äáº¦Y Äá»¦'],
-        moTa: 'File váº«n Ä‘Æ°á»£c táº£i vá» (áº£nh thiáº¿u Ä‘Ã¡nh dáº¥u Äá»Ž ngay trong PDF vÃ  á»Ÿ trang Ä‘áº§u). Sá»­a link trong Sheet Seller rá»“i xuáº¥t láº¡i náº¿u cáº§n Ä‘á»§ áº£nh:',
-        danhSach: tienDo.loiAnh.map(l => `${l.sttKey} â€” ${l.nhan}: ${l.loi}${l.link ? ` (${l.link})` : ''}`),
+        tieuDe: [`PDF THIẾU ${tienDo.loiAnh.length} ẢNH`, 'TÀI LIỆU CHƯA ĐẦY ĐỦ'],
+        moTa: 'File vẫn được tải về (ảnh thiếu đánh dấu ĐỎ ngay trong PDF và ở trang đầu). Sửa link trong Sheet Seller rồi xuất lại nếu cần đủ ảnh:',
+        danhSach: tienDo.loiAnh.map(l => `${l.sttKey} — ${l.nhan}: ${l.loi}${l.link ? ` (${l.link})` : ''}`),
       });
     }
     const res = await fetch(`/api/reports/don-can-in/tai-ve/${jobId}`, { credentials: 'include' });
-    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'KhÃ´ng táº£i Ä‘Æ°á»£c file');
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Không tải được file');
     taiFileTuBlob(await res.blob(), res.headers.get('Content-Disposition'), 'THUE_TEAM_KHAC.pdf');
   } catch (e) {
-    alert('Lá»—i: ' + e.message);
+    alert('Lỗi: ' + e.message);
   } finally {
     thanhTienDo.xoa();
     nut.disabled = false;
@@ -1798,33 +1798,33 @@ async function xuatThueTeamKhac(nut) {
   }
 }
 
-// NÃºt "QUÃ‰T TÃŒM ÄÆ N HÃ€NG LOáº T" â€” CHá»ˆ quÃ©t trong pháº¡m vi Ä‘Æ¡n Ä‘ang tick chá»n (donDaChonSet), tÃ­nh hash
-// cho áº£nh máº«u rá»“i gá»™p nhÃ³m â€” khÃ´ng Ä‘á»¥ng Ä‘Æ¡n ngoÃ i lá»±a chá»n (xem
-// docs/superpowers/specs/2026-09-06-quet-hang-loat-theo-lua-chon-design.md). Cháº¡y ná»n + há»i tiáº¿n Ä‘á»™
-// + cÃ³ nÃºt Dá»«ng, cÃ¹ng khuÃ´n máº«u vá»›i inDonHangLoatCoTienDo() á»Ÿ trÃªn â€” chá»‰ khÃ¡c domain (áº£nh/hash thay vÃ¬ PDF).
-// `buocLai: true` (nÃºt "QUÃ‰T Láº I ÄÆ N ÄANG CHá»ŒN", bá»• sung 13/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” tÃ­nh
-// Láº I hash cho Má»ŒI Ä‘Æ¡n Ä‘ang chá»n dÃ¹ Ä‘Ã£ cÃ³ hash tá»« trÆ°á»›c (khÃ´ng chá»‰ Ä‘Æ¡n cÃ²n thiáº¿u), dÃ¹ng khi vá»«a Ä‘á»•i
-// ngÆ°á»¡ng vÃ  muá»‘n xem láº¡i nhÃ³m vá»›i ngÆ°á»¡ng má»›i trÃªn Ä‘Ãºng cÃ¡c Ä‘Æ¡n nÃ y â€” dÃ¹ng CHUNG háº³n hÃ m nÃ y (chá»‰ khÃ¡c
-// lá»i nháº¯c + tham sá»‘ gá»­i lÃªn) thay vÃ¬ tÃ¡ch riÃªng, vÃ¬ toÃ n bá»™ pháº§n cÃ²n láº¡i (job ná»n/tiáº¿n Ä‘á»™/nÃºt Dá»«ng)
-// giá»‘ng há»‡t nhau.
+// Nút "QUÉT TÌM ĐƠN HÀNG LOẠT" — CHỈ quét trong phạm vi đơn đang tick chọn (donDaChonSet), tính hash
+// cho ảnh mẫu rồi gộp nhóm — không đụng đơn ngoài lựa chọn (xem
+// docs/superpowers/specs/2026-09-06-quet-hang-loat-theo-lua-chon-design.md). Chạy nền + hỏi tiến độ
+// + có nút Dừng, cùng khuôn mẫu với inDonHangLoatCoTienDo() ở trên — chỉ khác domain (ảnh/hash thay vì PDF).
+// `buocLai: true` (nút "QUÉT LẠI ĐƠN ĐANG CHỌN", bổ sung 13/09/2026, theo yêu cầu người dùng) — tính
+// LẠI hash cho MỌI đơn đang chọn dù đã có hash từ trước (không chỉ đơn còn thiếu), dùng khi vừa đổi
+// ngưỡng và muốn xem lại nhóm với ngưỡng mới trên đúng các đơn này — dùng CHUNG hẳn hàm này (chỉ khác
+// lời nhắc + tham số gửi lên) thay vì tách riêng, vì toàn bộ phần còn lại (job nền/tiến độ/nút Dừng)
+// giống hệt nhau.
 async function quetDonHangLoat(nut, { buocLai = false } = {}) {
-  if (donDaChonSet.size === 0) { alert('HÃ£y chá»n Ã­t nháº¥t 1 Ä‘Æ¡n muá»‘n quÃ©t.'); return; }
+  if (donDaChonSet.size === 0) { alert('Hãy chọn ít nhất 1 đơn muốn quét.'); return; }
 
   const danhSach = Array.from(donDaChonSet);
   const loiNhac = buocLai
-    ? `QuÃ©t Láº I ${danhSach.length} Ä‘Æ¡n Ä‘ang chá»n (tÃ­nh láº¡i hash dÃ¹ Ä‘Ã£ cÃ³ tá»« trÆ°á»›c) rá»“i gá»™p nhÃ³m láº¡i theo ngÆ°á»¡ng hiá»‡n táº¡i? CÃ³ thá»ƒ máº¥t vÃ i phÃºt.`
-    : `QuÃ©t ${danhSach.length} Ä‘Æ¡n Ä‘ang chá»n Ä‘á»ƒ tÃ¬m vÃ  gá»™p nhÃ³m "ÄÆ¡n hÃ ng loáº¡t"? CÃ³ thá»ƒ máº¥t vÃ i phÃºt náº¿u nhiá»u Ä‘Æ¡n chÆ°a tá»«ng Ä‘Æ°á»£c quÃ©t.`;
+    ? `Quét LẠI ${danhSach.length} đơn đang chọn (tính lại hash dù đã có từ trước) rồi gộp nhóm lại theo ngưỡng hiện tại? Có thể mất vài phút.`
+    : `Quét ${danhSach.length} đơn đang chọn để tìm và gộp nhóm "Đơn hàng loạt"? Có thể mất vài phút nếu nhiều đơn chưa từng được quét.`;
   if (!confirm(loiNhac)) return;
 
   const nhanGoc = nut.innerHTML;
   nut.disabled = true;
-  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 18 }) + ' Äang báº¯t Ä‘áº§u...';
+  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 18 }) + ' Đang bắt đầu...';
 
   let ketQuaBatDau;
   try {
     ketQuaBatDau = await apiFetch('/orders/quet-hang-loat/bat-dau', { method: 'POST', body: JSON.stringify({ sttKeys: danhSach, buocLai }) });
   } catch (e) {
-    alert('Lá»—i: ' + e.message);
+    alert('Lỗi: ' + e.message);
     nut.disabled = false; nut.innerHTML = nhanGoc;
     return;
   }
@@ -1841,23 +1841,23 @@ async function quetDonHangLoat(nut, { buocLai = false } = {}) {
       await new Promise(r => setTimeout(r, 700));
       tienDo = await apiFetch(`/orders/quet-hang-loat/tien-do/${jobId}`);
       thanhTienDo.capNhat(tienDo.daXong, tienDo.tongSo);
-      if (tienDo.trangThai === 'loi') throw new Error(tienDo.loi || 'QuÃ©t tháº¥t báº¡i');
+      if (tienDo.trangThai === 'loi') throw new Error(tienDo.loi || 'Quét thất bại');
     } while (tienDo.trangThai !== 'xong' && tienDo.trangThai !== 'huy');
 
     const kq = tienDo.ketQua;
-    const tienToDaDung = tienDo.trangThai === 'huy' ? 'ÄÃ£ dá»«ng giá»¯a chá»«ng. ' : '';
+    const tienToDaDung = tienDo.trangThai === 'huy' ? 'Đã dừng giữa chừng. ' : '';
     let thongBao =
-      `${tienToDaDung}ÄÃ£ quÃ©t ${kq.soDaQuet}/${tongSo} Ä‘Æ¡n, tÃ­nh Ä‘Æ°á»£c hash cho ${kq.soTinhDuocHash} Ä‘Æ¡n.\n` +
-      `TÃ¬m tháº¥y ${kq.soNhomTimThay} nhÃ³m hÃ ng loáº¡t (tá»•ng cá»™ng ${kq.soDonTrongNhom} Ä‘Æ¡n thuá»™c 1 nhÃ³m nÃ o Ä‘Ã³).`;
-    // donLoiHash (bá»• sung 13/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” nÃªu rÃµ Tá»ªNG Ä‘Æ¡n khÃ´ng tÃ­nh Ä‘Æ°á»£c hash
-    // + lÃ½ do, thay vÃ¬ chá»‰ Ä‘áº¿m sá»‘ lÆ°á»£ng chÃªnh lá»‡ch nhÆ° trÆ°á»›c.
+      `${tienToDaDung}Đã quét ${kq.soDaQuet}/${tongSo} đơn, tính được hash cho ${kq.soTinhDuocHash} đơn.\n` +
+      `Tìm thấy ${kq.soNhomTimThay} nhóm hàng loạt (tổng cộng ${kq.soDonTrongNhom} đơn thuộc 1 nhóm nào đó).`;
+    // donLoiHash (bổ sung 13/09/2026, theo yêu cầu người dùng) — nêu rõ TỪNG đơn không tính được hash
+    // + lý do, thay vì chỉ đếm số lượng chênh lệch như trước.
     if (kq.donLoiHash && kq.donLoiHash.length > 0) {
-      thongBao += `\n\nKhÃ´ng tÃ­nh Ä‘Æ°á»£c hash cho ${kq.donLoiHash.length} Ä‘Æ¡n:\n` +
+      thongBao += `\n\nKhông tính được hash cho ${kq.donLoiHash.length} đơn:\n` +
         kq.donLoiHash.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
     }
     alert(thongBao);
   } catch (e) {
-    alert('Lá»—i: ' + e.message);
+    alert('Lỗi: ' + e.message);
   } finally {
     thanhTienDo.xoa();
     nut.disabled = false;
@@ -1867,53 +1867,53 @@ async function quetDonHangLoat(nut, { buocLai = false } = {}) {
   await taiDon();
 }
 
-// NÃºt "THÃŠM VÃ€O ÄÆ N HÃ€NG LOáº T" (bá»• sung 13/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” thÃªm tháº³ng cÃ¡c Ä‘Æ¡n
-// Ä‘ang tick vÃ o 1 ÄÆ¡n hÃ ng loáº¡t cÃ³ sáºµn hoáº·c táº¡o má»›i, khÃ´ng cáº§n qua trang public/don-hang-loat.html gÃµ
-// tay tá»«ng mÃ£. CHá»ˆ 1 lÆ°á»£t gá»i API (POST .../them-don nháº­n cáº£ máº£ng sttKeys, xem
-// services/donHangLoatService.js) dÃ¹ chá»n bao nhiÃªu Ä‘Æ¡n â€” khÃ´ng cáº§n thanh tiáº¿n Ä‘á»™.
+// Nút "THÊM VÀO ĐƠN HÀNG LOẠT" (bổ sung 13/09/2026, theo yêu cầu người dùng) — thêm thẳng các đơn
+// đang tick vào 1 Đơn hàng loạt có sẵn hoặc tạo mới, không cần qua trang public/don-hang-loat.html gõ
+// tay từng mã. CHỈ 1 lượt gọi API (POST .../them-don nhận cả mảng sttKeys, xem
+// services/donHangLoatService.js) dù chọn bao nhiêu đơn — không cần thanh tiến độ.
 async function themVaoDonHangLoat() {
-  if (donDaChonSet.size === 0) { alert('HÃ£y chá»n Ã­t nháº¥t 1 Ä‘Æ¡n muá»‘n thÃªm.'); return; }
+  if (donDaChonSet.size === 0) { alert('Hãy chọn ít nhất 1 đơn muốn thêm.'); return; }
   const sttKeys = Array.from(donDaChonSet);
 
   let data;
   try {
     data = await apiFetch('/don-hang-loat');
   } catch (e) {
-    alert('Lá»—i: ' + e.message);
+    alert('Lỗi: ' + e.message);
     return;
   }
 
-  const danhSachHienCo = data.nhoms.map(n => `${n.maDonHangLoat} â€” ${n.tenNhom} (${n.donHang.length} Ä‘Æ¡n)`).join('\n');
+  const danhSachHienCo = data.nhoms.map(n => `${n.maDonHangLoat} — ${n.tenNhom} (${n.donHang.length} đơn)`).join('\n');
   const goiY = data.nhoms.length > 0
-    ? `\n\nCÃ¡c lÃ´ hiá»‡n cÃ³:\n${danhSachHienCo}\n\nGÃµ Ä‘Ãºng mÃ£ lÃ´ Ä‘á»ƒ thÃªm vÃ o lÃ´ cÃ³ sáºµn, hoáº·c Ä‘á»ƒ TRá»NG rá»“i OK Ä‘á»ƒ táº¡o lÃ´ Má»šI:`
-    : '\n\nChÆ°a cÃ³ lÃ´ nÃ o â€” Ä‘á»ƒ TRá»NG rá»“i OK Ä‘á»ƒ táº¡o lÃ´ Má»šI:';
-  const nhap = prompt(`ThÃªm ${sttKeys.length} Ä‘Æ¡n Ä‘ang chá»n vÃ o ÄÆ¡n hÃ ng loáº¡t nÃ o?${goiY}`);
+    ? `\n\nCác lô hiện có:\n${danhSachHienCo}\n\nGõ đúng mã lô để thêm vào lô có sẵn, hoặc để TRỐNG rồi OK để tạo lô MỚI:`
+    : '\n\nChưa có lô nào — để TRỐNG rồi OK để tạo lô MỚI:';
+  const nhap = prompt(`Thêm ${sttKeys.length} đơn đang chọn vào Đơn hàng loạt nào?${goiY}`);
   if (nhap === null) return;
 
   try {
     if (nhap.trim() === '') {
-      const tenNhom = prompt('TÃªn cho ÄÆ¡n hÃ ng loáº¡t má»›i:');
+      const tenNhom = prompt('Tên cho Đơn hàng loạt mới:');
       if (tenNhom === null) return;
-      if (!tenNhom.trim()) { alert('Cáº§n Ä‘áº·t tÃªn cho ÄÆ¡n hÃ ng loáº¡t.'); return; }
+      if (!tenNhom.trim()) { alert('Cần đặt tên cho Đơn hàng loạt.'); return; }
       const kq = await apiFetch('/don-hang-loat', { method: 'POST', body: JSON.stringify({ sttKeys, tenNhom }) });
-      alert(`ÄÃ£ táº¡o ${kq.maDonHangLoat} â€” "${tenNhom}" (${sttKeys.length} Ä‘Æ¡n).`);
+      alert(`Đã tạo ${kq.maDonHangLoat} — "${tenNhom}" (${sttKeys.length} đơn).`);
     } else {
       const maDonHangLoat = nhap.trim();
       if (!data.nhoms.some(n => n.maDonHangLoat === maDonHangLoat)) {
-        alert(`KhÃ´ng tÃ¬m tháº¥y lÃ´ "${maDonHangLoat}" â€” kiá»ƒm tra láº¡i Ä‘Ãºng mÃ£.`);
+        alert(`Không tìm thấy lô "${maDonHangLoat}" — kiểm tra lại đúng mã.`);
         return;
       }
       const ketQua = await apiFetch(`/don-hang-loat/${encodeURIComponent(maDonHangLoat)}/them-don`, {
         method: 'POST', body: JSON.stringify({ sttKeys }),
       });
-      let thongBao = `ÄÃ£ thÃªm ${ketQua.thanhCong.length}/${sttKeys.length} Ä‘Æ¡n vÃ o ${maDonHangLoat}.`;
+      let thongBao = `Đã thêm ${ketQua.thanhCong.length}/${sttKeys.length} đơn vào ${maDonHangLoat}.`;
       if (ketQua.loi.length > 0) {
-        thongBao += `\n\nKhÃ´ng thÃªm Ä‘Æ°á»£c ${ketQua.loi.length} Ä‘Æ¡n:\n` + ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
+        thongBao += `\n\nKhông thêm được ${ketQua.loi.length} đơn:\n` + ketQua.loi.map(l => `- ${l.sttKey}: ${l.lyDo}`).join('\n');
       }
       alert(thongBao);
     }
   } catch (e) {
-    alert('Lá»—i: ' + e.message);
+    alert('Lỗi: ' + e.message);
     return;
   }
 
@@ -1921,54 +1921,54 @@ async function themVaoDonHangLoat() {
   await taiDon();
 }
 
-// NÃºt "IN ÄÆ N" (trÆ°á»›c 29/09/2026: "IN ÄÆ N ÄANG CHá»ŒN") â€” in ÄÃšNG cÃ¡c Ä‘Æ¡n Ä‘ang tick chá»n (donDaChonSet), bá» qua má»i Ã´ lá»c Ä‘ang hiá»ƒn
-// thá»‹ trÃªn trang.
+// Nút "IN ĐƠN" (trước 29/09/2026: "IN ĐƠN ĐANG CHỌN") — in ĐÚNG các đơn đang tick chọn (donDaChonSet), bỏ qua mọi ô lọc đang hiển
+// thị trên trang.
 async function inDonDangChon(nut) {
-  if (donDaChonSet.size === 0) { alert('HÃ£y chá»n Ã­t nháº¥t 1 Ä‘Æ¡n muá»‘n in.'); return; }
+  if (donDaChonSet.size === 0) { alert('Hãy chọn ít nhất 1 đơn muốn in.'); return; }
 
   const danhSach = Array.from(donDaChonSet);
   const nhanGoc = nut.innerHTML;
   nut.disabled = true;
-  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 18 }) + ' Äang táº¡o file...';
+  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 18 }) + ' Đang tạo file...';
 
   const kq = await inDonHangLoatCoTienDo(nut, nhanGoc, { sttKeys: danhSach, ...layBoLocDangDung() });
   if (kq.ok) await chuyenDaInMaSauKhiIn(danhSach);
 }
 
-// In ÄÆ N xong (file Ä‘Ã£ táº£i vá» THÃ€NH CÃ”NG) -> chuyá»ƒn "ChÆ°a in mÃ£" sang "ÄÃ£ in mÃ£" (07/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” dÃ¹ng
-// cho IN ÄÆ N vÃ  IN ÄÆ N Tá»ª FILE PHÃ”I. CHá»ˆ Ä‘Æ¡n ÄANG "ChÆ°a in mÃ£" (server Ä‘á»c tráº¡ng thÃ¡i má»›i nháº¥t, chiKhiDangLa); Ä‘Æ¡n Ä‘Ã£ á»Ÿ bÆ°á»›c sau
-// giá»¯ nguyÃªn â€” in láº¡i Ä‘Æ¡n Ä‘ang sáº£n xuáº¥t khÃ´ng bá»‹ kÃ©o lÃ¹i. In lá»—i / báº¥m Dá»«ng -> nÆ¡i gá»i khÃ´ng gá»i hÃ m nÃ y, khÃ´ng Ä‘á»•i gÃ¬.
+// In ĐƠN xong (file đã tải về THÀNH CÔNG) -> chuyển "Chưa in mã" sang "Đã in mã" (07/10/2026, theo yêu cầu người dùng) — dùng
+// cho IN ĐƠN và IN ĐƠN TỪ FILE PHÔI. CHỈ đơn ĐANG "Chưa in mã" (server đọc trạng thái mới nhất, chiKhiDangLa); đơn đã ở bước sau
+// giữ nguyên — in lại đơn đang sản xuất không bị kéo lùi. In lỗi / bấm Dừng -> nơi gọi không gọi hàm này, không đổi gì.
 async function chuyenDaInMaSauKhiIn(sttKeys) {
   let kq;
   try {
     kq = await apiFetch('/orders/chuyen-trang-thai-hang-loat', {
-      method: 'POST', body: JSON.stringify({ sttKeys, cot: 'TRANG_THAI_XUONG', trangThaiMoi: 'ÄÃ£ in mÃ£', chiKhiDangLa: 'ChÆ°a in mÃ£' }),
+      method: 'POST', body: JSON.stringify({ sttKeys, cot: 'TRANG_THAI_XUONG', trangThaiMoi: 'Đã in mã', chiKhiDangLa: 'Chưa in mã' }),
     });
   } catch (e) {
-    alert(`ÄÃ£ in xong nhÆ°ng CHÆ¯A chuyá»ƒn Ä‘Æ°á»£c tráº¡ng thÃ¡i "ÄÃ£ in mÃ£": ${e.message}`);
+    alert(`Đã in xong nhưng CHƯA chuyển được trạng thái "Đã in mã": ${e.message}`);
     return;
   }
-  let tb = `ÄÃ£ in xong ${sttKeys.length} Ä‘Æ¡n.\n\n` +
-    `Chuyá»ƒn "ChÆ°a in mÃ£" â†’ "ÄÃ£ in mÃ£": ${kq.thanhCong.length} Ä‘Æ¡n.`;
-  if (kq.boQua.length) tb += `\nGiá»¯ nguyÃªn tráº¡ng thÃ¡i (khÃ´ng á»Ÿ "ChÆ°a in mÃ£"): ${kq.boQua.length} Ä‘Æ¡n.`;
-  if (kq.loi.length) tb += `\n\nâœ˜ KhÃ´ng chuyá»ƒn Ä‘Æ°á»£c (${kq.loi.length} Ä‘Æ¡n):\n` + kq.loi.map(l => `  - ${l.sttKey}: ${l.lyDo}`).join('\n');
+  let tb = `Đã in xong ${sttKeys.length} đơn.\n\n` +
+    `Chuyển "Chưa in mã" → "Đã in mã": ${kq.thanhCong.length} đơn.`;
+  if (kq.boQua.length) tb += `\nGiữ nguyên trạng thái (không ở "Chưa in mã"): ${kq.boQua.length} đơn.`;
+  if (kq.loi.length) tb += `\n\n✘ Không chuyển được (${kq.loi.length} đơn):\n` + kq.loi.map(l => `  - ${l.sttKey}: ${l.lyDo}`).join('\n');
   alert(tb);
   await taiDon();
 }
 
-// "IN ÄÆ N Tá»ª FILE PHÃ”I" (29/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” chá»n file DSPhoiAoTongHop.pdf, server Ä‘á»c cÃ¡c mÃ£ Ä‘Æ¡n
-// trong file (routes/reports.js POST /don-can-in/doc-file-phoi) rá»“i in DonCanIn Ä‘Ãºng cÃ¡c Ä‘Æ¡n Ä‘Ã³, ÄÃšNG thá»© tá»± trong
-// file â€” dÃ¹ng láº¡i inDonHangLoatCoTienDo() cá»§a IN ÄÆ N ÄANG CHá»ŒN. MÃ£ khÃ´ng tÃ¬m tháº¥y/ngoÃ i XÆ°á»Ÿng: há»™p Ä‘á» liá»‡t kÃª trÆ°á»›c,
-// váº«n in cÃ¡c Ä‘Æ¡n cÃ²n láº¡i. KhÃ´ng Ä‘á»•i tráº¡ng thÃ¡i Ä‘Æ¡n nÃ o.
+// "IN ĐƠN TỪ FILE PHÔI" (29/09/2026, theo yêu cầu người dùng) — chọn file DSPhoiAoTongHop.pdf, server đọc các mã đơn
+// trong file (routes/reports.js POST /don-can-in/doc-file-phoi) rồi in DonCanIn đúng các đơn đó, ĐÚNG thứ tự trong
+// file — dùng lại inDonHangLoatCoTienDo() của IN ĐƠN ĐANG CHỌN. Mã không tìm thấy/ngoài Xưởng: hộp đỏ liệt kê trước,
+// vẫn in các đơn còn lại. Không đổi trạng thái đơn nào.
 async function inDonTuFilePhoi(input) {
   const file = input.files[0];
-  input.value = ''; // chá»n láº¡i Ä‘Ãºng file Ä‘Ã³ láº§n sau váº«n cháº¡y
+  input.value = ''; // chọn lại đúng file đó lần sau vẫn chạy
   if (!file) return;
   const nut = document.getElementById('btn-in-don-tu-file-phoi');
   const nhanGoc = nut.innerHTML;
   const xong = () => { nut.disabled = false; nut.innerHTML = nhanGoc; };
   nut.disabled = true;
-  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 18 }) + ' Äang Ä‘á»c file...';
+  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 18 }) + ' Đang đọc file...';
 
   let kq;
   try {
@@ -1976,87 +1976,87 @@ async function inDonTuFilePhoi(input) {
     duLieu.append('file', file);
     const res = await fetch('/api/reports/don-can-in/doc-file-phoi', { method: 'POST', body: duLieu, credentials: 'include' });
     kq = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(kq.error || 'KhÃ´ng Ä‘á»c Ä‘Æ°á»£c file');
+    if (!res.ok) throw new Error(kq.error || 'Không đọc được file');
   } catch (e) {
-    alert('Lá»—i: ' + e.message);
+    alert('Lỗi: ' + e.message);
     return xong();
   }
 
   if (kq.khongThay.length) {
     await hienHopDo({
-      tieuDe: ['CÃ“ MÃƒ ÄÆ N KHÃ”NG TÃŒM THáº¤Y'],
-      moTa: `File "${file.name}" cÃ³ ${kq.sttKeys.length + kq.khongThay.length} mÃ£ Ä‘Æ¡n. ${kq.khongThay.length} mÃ£ dÆ°á»›i Ä‘Ã¢y khÃ´ng cÃ³ trong há»‡ thá»‘ng (hoáº·c khÃ´ng thuá»™c XÆ°á»Ÿng cá»§a báº¡n) nÃªn bá»‹ Bá»Ž QUA â€” ` +
-        (kq.sttKeys.length ? `chá»‰ in ${kq.sttKeys.length} Ä‘Æ¡n cÃ²n láº¡i:` : 'khÃ´ng cÃ²n Ä‘Æ¡n nÃ o Ä‘á»ƒ in:'),
+      tieuDe: ['CÓ MÃ ĐƠN KHÔNG TÌM THẤY'],
+      moTa: `File "${file.name}" có ${kq.sttKeys.length + kq.khongThay.length} mã đơn. ${kq.khongThay.length} mã dưới đây không có trong hệ thống (hoặc không thuộc Xưởng của bạn) nên bị BỎ QUA — ` +
+        (kq.sttKeys.length ? `chỉ in ${kq.sttKeys.length} đơn còn lại:` : 'không còn đơn nào để in:'),
       ma: kq.khongThay,
     });
   }
   if (!kq.sttKeys.length) return xong();
-  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 18 }) + ' Äang táº¡o file...';
+  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 18 }) + ' Đang tạo file...';
   const kqIn = await inDonHangLoatCoTienDo(nut, nhanGoc, { sttKeys: kq.sttKeys, giuThuTu: true });
   if (kqIn.ok) await chuyenDaInMaSauKhiIn(kq.sttKeys);
 }
 
-// NÃºt gá»™p "IN DANH SÃCH PHÃ”I + IN ÄÆ N" (nhÃ£n rÃºt gá»n 29/09/2026, chá»©c nÄƒng giá»¯ nguyÃªn) â€” lÃ m 1 láº§n cáº£ 3 viá»‡c:
-// (1) Ä‘á»•i TRANG_THAI_XUONG cÃ¡c Ä‘Æ¡n Ä‘Ã£ chá»n sang "ÄÃ£ in mÃ£", (2) in PDF tháº» Ä‘Æ¡n, (3) in PDF danh sÃ¡ch
-// phÃ´i gá»™p. Chá»¥p láº¡i `danhSach` NGAY khi báº¥m â€” cáº£ 3 bÆ°á»›c dÃ¹ng chung danh sÃ¡ch nÃ y, khÃ´ng phá»¥ thuá»™c
-// donDaChonSet cÃ³ bá»‹ Ä‘á»•i giá»¯a chá»«ng hay khÃ´ng (xem spec 2026-09-05). 3 bÆ°á»›c Äá»˜C Láº¬P: lá»—i (hoáº·c lá»—i 1
-// pháº§n) á»Ÿ bÆ°á»›c nÃ o chá»‰ Ä‘Æ°á»£c ghi nháº­n trong alert tá»•ng káº¿t cuá»‘i cÃ¹ng, khÃ´ng cháº·n bÆ°á»›c sau.
+// Nút gộp "IN DANH SÁCH PHÔI + IN ĐƠN" (nhãn rút gọn 29/09/2026, chức năng giữ nguyên) — làm 1 lần cả 3 việc:
+// (1) đổi TRANG_THAI_XUONG các đơn đã chọn sang "Đã in mã", (2) in PDF thẻ đơn, (3) in PDF danh sách
+// phôi gộp. Chụp lại `danhSach` NGAY khi bấm — cả 3 bước dùng chung danh sách này, không phụ thuộc
+// donDaChonSet có bị đổi giữa chừng hay không (xem spec 2026-09-05). 3 bước ĐỘC LẬP: lỗi (hoặc lỗi 1
+// phần) ở bước nào chỉ được ghi nhận trong alert tổng kết cuối cùng, không chặn bước sau.
 async function inMaPhoiDonDangChon(nut) {
-  if (donDaChonSet.size === 0) { alert('HÃ£y chá»n Ã­t nháº¥t 1 Ä‘Æ¡n muá»‘n in.'); return; }
+  if (donDaChonSet.size === 0) { alert('Hãy chọn ít nhất 1 đơn muốn in.'); return; }
 
   const danhSach = Array.from(donDaChonSet);
-  if (!confirm(`In file PDF Ä‘Æ¡n vÃ  file PDF danh sÃ¡ch phÃ´i cho ${danhSach.length} Ä‘Æ¡n Ä‘Ã£ chá»n, Ä‘á»“ng thá»i chuyá»ƒn cÃ¡c Ä‘Æ¡n Ä‘ang "ChÆ°a in mÃ£" sang "ÄÃ£ in mÃ£" (Ä‘Æ¡n Ä‘Ã£ á»Ÿ bÆ°á»›c sau giá»¯ nguyÃªn tráº¡ng thÃ¡i). Tiáº¿p tá»¥c?`)) return;
+  if (!confirm(`In file PDF đơn và file PDF danh sách phôi cho ${danhSach.length} đơn đã chọn, đồng thời chuyển các đơn đang "Chưa in mã" sang "Đã in mã" (đơn đã ở bước sau giữ nguyên trạng thái). Tiếp tục?`)) return;
 
   const nhanGoc = nut.innerHTML;
   nut.disabled = true;
   document.querySelectorAll('.nhanh-phoi-ve-file, #nut-ap-dung').forEach(b => b.disabled = true);
 
-  // BÆ°á»›c 1 â€” Ä‘á»•i tráº¡ng thÃ¡i sang "ÄÃ£ in mÃ£", tuáº§n tá»± tá»«ng Ä‘Æ¡n Ä‘á»ƒ hiá»‡n Ä‘Æ°á»£c tiáº¿n Ä‘á»™ tháº­t (cÃ¹ng cÆ¡ cháº¿
-  // nÃºt "ÄÃ£ in mÃ£" á»Ÿ thanh hÃ nh Ä‘á»™ng hÃ ng loáº¡t Ä‘ang dÃ¹ng â€” xem apDungNhanh()).
-  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Äang Ä‘á»•i tráº¡ng thÃ¡i...';
+  // Bước 1 — đổi trạng thái sang "Đã in mã", tuần tự từng đơn để hiện được tiến độ thật (cùng cơ chế
+  // nút "Đã in mã" ở thanh hành động hàng loạt đang dùng — xem apDungNhanh()).
+  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Đang đổi trạng thái...';
   let daHuyDoiTrangThai = false;
   const thanhTienDoTrangThai = taoThanhTienDo(nut, { onHuy: () => { daHuyDoiTrangThai = true; } });
   thanhTienDoTrangThai.capNhat(0, danhSach.length);
-  // CHá»ˆ Ä‘Æ¡n ÄANG "ChÆ°a in mÃ£" (07/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” trÆ°á»›c Ä‘Ã¢y Ä‘á»•i Má»ŒI Ä‘Æ¡n Ä‘Ã£ chá»n, kÃ©o lÃ¹i cáº£ Ä‘Æ¡n Ä‘ang sáº£n
-  // xuáº¥t vá» "ÄÃ£ in mÃ£"): server Ä‘á»c tráº¡ng thÃ¡i má»›i nháº¥t, Ä‘Æ¡n khÃ¡c tráº£ vá» boQua vÃ  giá»¯ nguyÃªn.
+  // CHỈ đơn ĐANG "Chưa in mã" (07/10/2026, theo yêu cầu người dùng — trước đây đổi MỌI đơn đã chọn, kéo lùi cả đơn đang sản
+  // xuất về "Đã in mã"): server đọc trạng thái mới nhất, đơn khác trả về boQua và giữ nguyên.
   const giuNguyen = [];
   const ketQuaTrangThai = await chayHangLoatCoTienDo(
     danhSach,
     sttKey => apiFetch('/orders/chuyen-trang-thai-hang-loat', {
-      method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], cot: 'TRANG_THAI_XUONG', trangThaiMoi: 'ÄÃ£ in mÃ£', chiKhiDangLa: 'ChÆ°a in mÃ£' }),
+      method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], cot: 'TRANG_THAI_XUONG', trangThaiMoi: 'Đã in mã', chiKhiDangLa: 'Chưa in mã' }),
     }).then(kq => { giuNguyen.push(...(kq.boQua || [])); return kq; }),
     { onTienDo: (hienTai, tong) => thanhTienDoTrangThai.capNhat(hienTai, tong), kiemTraHuy: () => daHuyDoiTrangThai }
   );
   thanhTienDoTrangThai.xoa();
 
-  // BÆ°á»›c 2 â€” in PDF Ä‘Æ¡n cho TOÃ€N Bá»˜ Ä‘Æ¡n Ä‘Ã£ chá»n ban Ä‘áº§u (khÃ´ng phá»¥ thuá»™c káº¿t quáº£ bÆ°á»›c 1 â€” Ä‘Ã£ xÃ¡c nháº­n
-  // vá»›i ngÆ°á»i dÃ¹ng: luÃ´n in cho toÃ n bá»™ Ä‘Æ¡n Ä‘Ã£ chá»n dÃ¹ bÆ°á»›c Ä‘á»•i tráº¡ng thÃ¡i cÃ³ lá»—i 1 pháº§n hay khÃ´ng).
+  // Bước 2 — in PDF đơn cho TOÀN BỘ đơn đã chọn ban đầu (không phụ thuộc kết quả bước 1 — đã xác nhận
+  // với người dùng: luôn in cho toàn bộ đơn đã chọn dù bước đổi trạng thái có lỗi 1 phần hay không).
   nut.disabled = true;
-  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Äang táº¡o file Ä‘Æ¡n...';
+  nut.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Đang tạo file đơn...';
   const ketQuaInDon = await inDonHangLoatCoTienDo(nut, nhanGoc, { sttKeys: danhSach, ...layBoLocDangDung() }, { baoLoiBangAlert: false });
 
-  // BÆ°á»›c 3 â€” in PDF phÃ´i cho TOÃ€N Bá»˜ Ä‘Æ¡n Ä‘Ã£ chá»n ban Ä‘áº§u (khÃ´ng phá»¥ thuá»™c káº¿t quáº£ bÆ°á»›c 1/2).
+  // Bước 3 — in PDF phôi cho TOÀN BỘ đơn đã chọn ban đầu (không phụ thuộc kết quả bước 1/2).
   const ketQuaInPhoi = await inPhoiDangChon(nut, { sttKeys: danhSach, baoLoiBangAlert: false });
 
-  // Alert tá»•ng káº¿t â€” ghi rÃµ Ä‘Æ¡n nÃ o OK/chÆ°a OK á»Ÿ bÆ°á»›c Ä‘á»•i tráº¡ng thÃ¡i (bÆ°á»›c duy nháº¥t xá»­ lÃ½ Tá»ªNG Ä‘Æ¡n
-  // riÃªng nÃªn cÃ³ Ä‘Æ°á»£c danh sÃ¡ch nÃ y); 2 bÆ°á»›c in PDF xá»­ lÃ½ theo cáº£ lÃ´/báº£ng tá»•ng há»£p nÃªn chá»‰ bÃ¡o Ä‘Æ°á»£c
-  // thÃ nh cÃ´ng/lá»—i cá»§a Cáº¢ FILE, khÃ´ng tÃ¡ch Ä‘Æ°á»£c theo tá»«ng Ä‘Æ¡n (xem spec 2026-09-05, má»¥c 4).
-  let thongBao = `Káº¾T QUáº¢:\n\n1) Äá»•i "ChÆ°a in mÃ£" â†’ "ÄÃ£ in mÃ£" â€” ${ketQuaTrangThai.thanhCong.length} Ä‘Æ¡n OK`;
+  // Alert tổng kết — ghi rõ đơn nào OK/chưa OK ở bước đổi trạng thái (bước duy nhất xử lý TỪNG đơn
+  // riêng nên có được danh sách này); 2 bước in PDF xử lý theo cả lô/bảng tổng hợp nên chỉ báo được
+  // thành công/lỗi của CẢ FILE, không tách được theo từng đơn (xem spec 2026-09-05, mục 4).
+  let thongBao = `KẾT QUẢ:\n\n1) Đổi "Chưa in mã" → "Đã in mã" — ${ketQuaTrangThai.thanhCong.length} đơn OK`;
   if (ketQuaTrangThai.thanhCong.length > 0) {
-    thongBao += `:\n   âœ” OK: ${ketQuaTrangThai.thanhCong.join(', ')}`;
+    thongBao += `:\n   ✔ OK: ${ketQuaTrangThai.thanhCong.join(', ')}`;
   }
   if (giuNguyen.length > 0) {
-    thongBao += `\n   â€¢ Giá»¯ nguyÃªn tráº¡ng thÃ¡i (khÃ´ng á»Ÿ "ChÆ°a in mÃ£") ${giuNguyen.length} Ä‘Æ¡n: ${giuNguyen.map(g => g.sttKey).join(', ')}`;
+    thongBao += `\n   • Giữ nguyên trạng thái (không ở "Chưa in mã") ${giuNguyen.length} đơn: ${giuNguyen.map(g => g.sttKey).join(', ')}`;
   }
   if (ketQuaTrangThai.loi.length > 0) {
-    thongBao += `\n   âœ˜ ChÆ°a OK (${ketQuaTrangThai.loi.length} Ä‘Æ¡n):\n` +
+    thongBao += `\n   ✘ Chưa OK (${ketQuaTrangThai.loi.length} đơn):\n` +
       ketQuaTrangThai.loi.map(l => `     - ${l.sttKey}: ${l.lyDo}`).join('\n');
   }
   if (ketQuaTrangThai.daHuy) {
-    thongBao += `\n   (ÄÃ£ Há»¦Y giá»¯a chá»«ng bÆ°á»›c Ä‘á»•i tráº¡ng thÃ¡i â€” cÃ¡c Ä‘Æ¡n cÃ²n láº¡i chÆ°a Ä‘Æ°á»£c xá»­ lÃ½.)`;
+    thongBao += `\n   (Đã HỦY giữa chừng bước đổi trạng thái — các đơn còn lại chưa được xử lý.)`;
   }
-  thongBao += `\n\n2) File PDF Ä‘Æ¡n (IN ÄÆ N):\n   ${ketQuaInDon.ok ? 'âœ” ÄÃ£ táº¡o vÃ  táº£i vá» thÃ nh cÃ´ng' : 'âœ˜ Lá»—i: ' + ketQuaInDon.loi}`;
-  thongBao += `\n\n3) File PDF phÃ´i (IN DANH SÃCH PHÃ”I):\n   ${ketQuaInPhoi.ok ? 'âœ” ÄÃ£ táº¡o vÃ  táº£i vá» thÃ nh cÃ´ng' : 'âœ˜ Lá»—i: ' + ketQuaInPhoi.loi}`;
+  thongBao += `\n\n2) File PDF đơn (IN ĐƠN):\n   ${ketQuaInDon.ok ? '✔ Đã tạo và tải về thành công' : '✘ Lỗi: ' + ketQuaInDon.loi}`;
+  thongBao += `\n\n3) File PDF phôi (IN DANH SÁCH PHÔI):\n   ${ketQuaInPhoi.ok ? '✔ Đã tạo và tải về thành công' : '✘ Lỗi: ' + ketQuaInPhoi.loi}`;
   alert(thongBao);
 
   document.querySelectorAll('.nhanh-phoi-ve-file, #nut-ap-dung').forEach(b => b.disabled = false);

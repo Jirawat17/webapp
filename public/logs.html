@@ -1,14 +1,14 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Logs â€” XÆ°á»Ÿng ThÃªu</title>
+<title>Logs — Xưởng Thêu</title>
 <link rel="stylesheet" href="/css/style.css?v=112">
 <script src="/js/theme.js?v=104"></script>
 <style>
-/* Font Ä‘Æ¡n cÃ¡ch + cá»¡ nhá» Ä‘á»ƒ hiá»‡n nhiá»u dÃ²ng â€” cÃ¹ng tinh tháº§n .tk-logs á»Ÿ tracking.html, khai riÃªng á»Ÿ Ä‘Ã¢y
-   vÃ¬ chá»‰ trang nÃ y dÃ¹ng (khÃ´ng Ä‘Ã¡ng thÃªm vÃ o style.css dÃ¹ng chung). */
+/* Font đơn cách + cỡ nhỏ để hiện nhiều dòng — cùng tinh thần .tk-logs ở tracking.html, khai riêng ở đây
+   vì chỉ trang này dùng (không đáng thêm vào style.css dùng chung). */
 #khoi-log {
   font-size: 0.78rem; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md);
@@ -21,73 +21,73 @@
 <div id="nav"></div>
 <div class="page">
   <h2>Logs</h2>
-  <!-- Y20 (11/10/2026): 2 tab â€” log server (nhÆ° cÅ©) vÃ  bÃ¡o lá»—i tá»« nhÃ¢n viÃªn. Sá»©c khoáº» (24/10/2026): tab Ä‘áº§u, má»Ÿ trang lÃ  tháº¥y. -->
+  <!-- Y20 (11/10/2026): 2 tab — log server (như cũ) và báo lỗi từ nhân viên. Sức khoẻ (24/10/2026): tab đầu, mở trang là thấy. -->
   <div style="display:flex;gap:8px;margin-bottom:var(--space-3);flex-wrap:wrap">
-    <button type="button" class="btn-hanh-dong" id="nut-tab-suc-khoe" onclick="chonTabLogs('suc-khoe')">Sá»©c khoáº»</button>
+    <button type="button" class="btn-hanh-dong" id="nut-tab-suc-khoe" onclick="chonTabLogs('suc-khoe')">Sức khoẻ</button>
     <button type="button" class="btn-hanh-dong phu" id="nut-tab-log" onclick="chonTabLogs('log')">Log server</button>
-    <button type="button" class="btn-hanh-dong phu" id="nut-tab-bao-loi" onclick="chonTabLogs('bao-loi')">BÃ¡o lá»—i tá»« nhÃ¢n viÃªn</button>
+    <button type="button" class="btn-hanh-dong phu" id="nut-tab-bao-loi" onclick="chonTabLogs('bao-loi')">Báo lỗi từ nhân viên</button>
     <button type="button" class="btn-hanh-dong phu" id="nut-tab-upload-anh" onclick="chonTabLogs('upload-anh')">Logs_UploadAnh</button>
   </div>
   <div id="tab-suc-khoe">
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <button type="button" class="btn-hanh-dong" onclick="taiSucKhoe()">LÃ m má»›i</button>
+      <button type="button" class="btn-hanh-dong" onclick="taiSucKhoe()">Làm mới</button>
       <span id="sk-luc" style="color:var(--color-text-muted);font-size:0.85rem"></span>
     </div>
     <div id="sk-ds" style="display:grid;gap:var(--space-3);margin-top:var(--space-3);grid-template-columns:repeat(auto-fit,minmax(320px,1fr))"></div>
   </div>
-  <!-- Logs_UploadAnh (12/10/2026): má»i thao tÃ¡c á»Ÿ menu QuÃ©t QR + thiáº¿t bá»‹/phiÃªn báº£n app (routes/nhatKyQuet.js), giá»¯ 90 ngÃ y. -->
+  <!-- Logs_UploadAnh (12/10/2026): mọi thao tác ở menu Quét QR + thiết bị/phiên bản app (routes/nhatKyQuet.js), giữ 90 ngày. -->
   <div id="tab-upload-anh" style="display:none">
-    <p style="margin-top:0;color:var(--color-text-muted)">Má»i thao tÃ¡c á»Ÿ menu QuÃ©t QR: má»Ÿ camera, quÃ©t QR, chá»¥p + táº£i áº£nh, xÃ¡c nháº­n hÃ ng loáº¡t, quÃ©t láº¡i, thoÃ¡t khi áº£nh chÆ°a táº£i xong.
-      LÆ°á»£t chá»¥p <b>cháº­m</b> = tá»« lÃºc cÃ³ áº£nh tá»›i lÃºc táº£i xong quÃ¡ 8 giÃ¢y (tÃ´ vÃ ng); <b>lá»—i ká»¹ thuáº­t</b> tÃ´ Ä‘á»; <b>sai Ä‘Æ¡n</b> (mÃ¡y cháº¡y Ä‘Ãºng, Ä‘Æ¡n khÃ´ng há»£p lá»‡) tÃ´ xÃ¡m. Giá»¯ 90 ngÃ y.</p>
+    <p style="margin-top:0;color:var(--color-text-muted)">Mọi thao tác ở menu Quét QR: mở camera, quét QR, chụp + tải ảnh, xác nhận hàng loạt, quét lại, thoát khi ảnh chưa tải xong.
+      Lượt chụp <b>chậm</b> = từ lúc có ảnh tới lúc tải xong quá 8 giây (tô vàng); <b>lỗi kỹ thuật</b> tô đỏ; <b>sai đơn</b> (máy chạy đúng, đơn không hợp lệ) tô xám. Giữ 90 ngày.</p>
     <div class="bao-cao-form">
-      <div class="truong"><label for="ua-tu">Tá»« ngÃ y</label><input type="date" id="ua-tu"></div>
-      <div class="truong"><label for="ua-den">Äáº¿n ngÃ y</label><input type="date" id="ua-den"></div>
-      <div class="truong"><label for="ua-nguoi">NgÆ°á»i dÃ¹ng</label><input id="ua-nguoi" placeholder="TÃªn Ä‘Ãºng nhÆ° Ä‘Äƒng nháº­p"></div>
-      <div class="truong"><label for="ua-su-kien">Sá»± kiá»‡n</label>
-        <select id="ua-su-kien"><option value="">Táº¥t cáº£</option><option value="CHUP_ANH">Chá»¥p + táº£i áº£nh</option><option value="QUET_QR">QuÃ©t QR</option>
-          <option value="MO_CAMERA">Má»Ÿ camera</option><option value="XAC_NHAN_HANG_LOAT">XÃ¡c nháº­n hÃ ng loáº¡t</option><option value="QUET_LAI">QuÃ©t láº¡i (bá» ngang)</option>
-          <option value="THOAT_GIUA_CHUNG">ThoÃ¡t khi áº£nh chÆ°a táº£i xong</option><option value="XONG_DON">Xong Ä‘Æ¡n (áº£nh Ä‘Ã£ sáº£n xuáº¥t)</option></select></div>
-      <div class="truong"><label for="ua-nhom-kq">Káº¿t quáº£</label>
-        <select id="ua-nhom-kq"><option value="">Táº¥t cáº£</option><option value="KY_THUAT">Lá»—i ká»¹ thuáº­t (máº¡ng/mÃ¡y chá»§/camera, thoÃ¡t khi chÆ°a táº£i xong)</option>
-          <option value="NGHIEP_VU">Sai Ä‘Æ¡n (sai tráº¡ng thÃ¡i / khÃ´ng tÃ¬m tháº¥y / trÃ¹ng)</option><option value="BO_NGANG">QuÃ©t láº¡i (bá» ngang)</option></select></div>
-      <label style="align-self:end"><input type="checkbox" id="ua-chi-cham"> Chá»‰ lÆ°á»£t chá»¥p cháº­m</label>
-      <button type="button" class="btn-hanh-dong" onclick="taiLogsUploadAnh()">LÃ m má»›i</button>
-      <button type="button" class="btn-hanh-dong phu nut-xuat-file" onclick="xuatCsvUploadAnh()">Xuáº¥t CSV</button>
-      <button type="button" class="btn-hanh-dong phu nut-xuat-file" onclick="xuatCsvDoMang('do-mang-may-chu')">Táº£i DoMangMayChu</button>
-      <button type="button" class="btn-hanh-dong phu nut-xuat-file" onclick="xuatCsvDoMang('do-toc-do')">Táº£i DoTocDo</button>
+      <div class="truong"><label for="ua-tu">Từ ngày</label><input type="date" id="ua-tu"></div>
+      <div class="truong"><label for="ua-den">Đến ngày</label><input type="date" id="ua-den"></div>
+      <div class="truong"><label for="ua-nguoi">Người dùng</label><input id="ua-nguoi" placeholder="Tên đúng như đăng nhập"></div>
+      <div class="truong"><label for="ua-su-kien">Sự kiện</label>
+        <select id="ua-su-kien"><option value="">Tất cả</option><option value="CHUP_ANH">Chụp + tải ảnh</option><option value="QUET_QR">Quét QR</option>
+          <option value="MO_CAMERA">Mở camera</option><option value="XAC_NHAN_HANG_LOAT">Xác nhận hàng loạt</option><option value="QUET_LAI">Quét lại (bỏ ngang)</option>
+          <option value="THOAT_GIUA_CHUNG">Thoát khi ảnh chưa tải xong</option><option value="XONG_DON">Xong đơn (ảnh đã sản xuất)</option></select></div>
+      <div class="truong"><label for="ua-nhom-kq">Kết quả</label>
+        <select id="ua-nhom-kq"><option value="">Tất cả</option><option value="KY_THUAT">Lỗi kỹ thuật (mạng/máy chủ/camera, thoát khi chưa tải xong)</option>
+          <option value="NGHIEP_VU">Sai đơn (sai trạng thái / không tìm thấy / trùng)</option><option value="BO_NGANG">Quét lại (bỏ ngang)</option></select></div>
+      <label style="align-self:end"><input type="checkbox" id="ua-chi-cham"> Chỉ lượt chụp chậm</label>
+      <button type="button" class="btn-hanh-dong" onclick="taiLogsUploadAnh()">Làm mới</button>
+      <button type="button" class="btn-hanh-dong phu nut-xuat-file" onclick="xuatCsvUploadAnh()">Xuất CSV</button>
+      <button type="button" class="btn-hanh-dong phu nut-xuat-file" onclick="xuatCsvDoMang('do-mang-may-chu')">Tải DoMangMayChu</button>
+      <button type="button" class="btn-hanh-dong phu nut-xuat-file" onclick="xuatCsvDoMang('do-toc-do')">Tải DoTocDo</button>
     </div>
-    <p style="margin:4px 0 0;font-size:0.82rem;color:var(--color-text-muted)">"Táº£i DoMangMayChu" / "Táº£i DoTocDo": sá»‘ Ä‘o máº¡ng cá»§a mÃ¡y chá»§ vÃ  tá»‘c Ä‘á»™ Ä‘Æ°á»ng truyá»n, theo Tá»« ngÃ y / Äáº¿n ngÃ y á»Ÿ trÃªn (bá» qua cÃ¡c bá»™ lá»c khÃ¡c), tá»‘i Ä‘a 31 ngÃ y â€” cÃ¹ng cá»™t vá»›i file gá»­i Telegram háº±ng ngÃ y.</p>
-    <h3 style="margin-bottom:4px">Tá»•ng há»£p
+    <p style="margin:4px 0 0;font-size:0.82rem;color:var(--color-text-muted)">"Tải DoMangMayChu" / "Tải DoTocDo": số đo mạng của máy chủ và tốc độ đường truyền, theo Từ ngày / Đến ngày ở trên (bỏ qua các bộ lọc khác), tối đa 31 ngày — cùng cột với file gửi Telegram hằng ngày.</p>
+    <h3 style="margin-bottom:4px">Tổng hợp
       <select id="ua-nhom" onchange="taiTongHopUploadAnh()" style="font-size:0.9rem;margin-left:8px">
-        <option value="thiet-bi">theo há»‡ Ä‘iá»u hÃ nh + trÃ¬nh duyá»‡t</option><option value="nguoi">theo ngÆ°á»i dÃ¹ng</option>
-        <option value="quet-sai">quÃ©t sai theo ngÆ°á»i Ã— cháº¿ Ä‘á»™</option></select></h3>
-    <p id="ua-ghi-chu-tong-hop" style="margin:0 0 6px;font-size:0.82rem;color:var(--color-text-muted)">Thá»i gian trung bÃ¬nh (giÃ¢y) cá»§a cÃ¡c lÆ°á»£t chá»¥p THÃ€NH CÃ”NG. "Tá»•ng chá»¥p" = tá»« lÃºc cÃ³ áº£nh tá»›i lÃºc táº£i xong; "10% cháº­m nháº¥t" = má»‘c mÃ  10% sá»‘ lÆ°á»£t cháº­m hÆ¡n.</p>
+        <option value="thiet-bi">theo hệ điều hành + trình duyệt</option><option value="nguoi">theo người dùng</option>
+        <option value="quet-sai">quét sai theo người × chế độ</option></select></h3>
+    <p id="ua-ghi-chu-tong-hop" style="margin:0 0 6px;font-size:0.82rem;color:var(--color-text-muted)">Thời gian trung bình (giây) của các lượt chụp THÀNH CÔNG. "Tổng chụp" = từ lúc có ảnh tới lúc tải xong; "10% chậm nhất" = mốc mà 10% số lượt chậm hơn.</p>
     <div style="overflow-x:auto"><table class="info-table" id="ua-tong-hop" style="font-size:0.85rem"></table></div>
-    <h3 style="margin-bottom:4px">Chi tiáº¿t <span id="ua-dem" style="font-size:0.85rem;font-weight:400;color:var(--color-text-muted)"></span></h3>
+    <h3 style="margin-bottom:4px">Chi tiết <span id="ua-dem" style="font-size:0.85rem;font-weight:400;color:var(--color-text-muted)"></span></h3>
     <div style="overflow-x:auto"><table class="info-table" id="ua-chi-tiet" style="font-size:0.8rem"></table></div>
   </div>
   <div id="tab-bao-loi" style="display:none">
     <div class="bao-cao-form">
-      <div class="truong"><label for="loc-bao-loi">Tráº¡ng thÃ¡i</label>
-        <select id="loc-bao-loi" onchange="taiBaoLoiNhanVien()"><option value="">Táº¥t cáº£</option><option value="MOI">Má»›i</option><option value="DANG_XU_LY">Äang xá»­ lÃ½</option><option value="DA_XONG">ÄÃ£ xong</option></select></div>
-      <button type="button" class="btn-hanh-dong" onclick="taiBaoLoiNhanVien()">LÃ m má»›i</button>
+      <div class="truong"><label for="loc-bao-loi">Trạng thái</label>
+        <select id="loc-bao-loi" onchange="taiBaoLoiNhanVien()"><option value="">Tất cả</option><option value="MOI">Mới</option><option value="DANG_XU_LY">Đang xử lý</option><option value="DA_XONG">Đã xong</option></select></div>
+      <button type="button" class="btn-hanh-dong" onclick="taiBaoLoiNhanVien()">Làm mới</button>
     </div>
     <div id="ds-bao-loi" style="display:grid;gap:var(--space-3);margin-top:var(--space-3)"></div>
   </div>
   <div id="tab-log" style="display:none">
-  <p>Log console cá»§a server (console.log/warn/error) â€” chá»‰ giá»¯ tá»‘i Ä‘a ~5MB gáº§n nháº¥t, tá»± xoay vÃ²ng.</p>
+  <p>Log console của server (console.log/warn/error) — chỉ giữ tối đa ~5MB gần nhất, tự xoay vòng.</p>
   <div class="bao-cao-form">
     <div class="truong">
-      <label for="loc-log">Lá»c theo tá»« khoÃ¡</label>
-      <input id="loc-log" placeholder="VÃ­ dá»¥: [CanhBao], ERROR...">
+      <label for="loc-log">Lọc theo từ khoá</label>
+      <input id="loc-log" placeholder="Ví dụ: [CanhBao], ERROR...">
     </div>
     <div class="truong">
-      <label for="so-dong-log">Sá»‘ dÃ²ng gáº§n nháº¥t</label>
+      <label for="so-dong-log">Số dòng gần nhất</label>
       <input type="number" id="so-dong-log" value="500" min="50" max="5000" step="50">
     </div>
-    <button type="button" class="btn-hanh-dong" id="btn-lam-moi-log">LÃ m má»›i</button>
+    <button type="button" class="btn-hanh-dong" id="btn-lam-moi-log">Làm mới</button>
   </div>
-  <pre id="khoi-log">Äang táº£i...</pre>
+  <pre id="khoi-log">Đang tải...</pre>
   </div>
 </div>
 
@@ -100,10 +100,10 @@ let toanBoDong = [];
   const user = await requireLoginOrRedirect();
   if (!user) return;
   renderNav(user, 'logs');
-  // CHá»ˆ superadmin (bá»• sung 23/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” cÃ¹ng má»©c nháº¡y cáº£m vá»›i
-  // Settings/NhÃ¢n viÃªn, log cÃ³ thá»ƒ chá»©a thÃ´ng tin khÃ´ng nÃªn lá»™ ra ngoÃ i).
+  // CHỈ superadmin (bổ sung 23/09/2026, theo yêu cầu người dùng — cùng mức nhạy cảm với
+  // Settings/Nhân viên, log có thể chứa thông tin không nên lộ ra ngoài).
   if (user.vaiTro !== 'superadmin') {
-    document.querySelector('.page').innerHTML = '<p>Báº¡n khÃ´ng cÃ³ quyá»n truy cáº­p trang nÃ y.</p>';
+    document.querySelector('.page').innerHTML = '<p>Bạn không có quyền truy cập trang này.</p>';
     return;
   }
   document.getElementById('btn-lam-moi-log').onclick = taiLog;
@@ -111,7 +111,7 @@ let toanBoDong = [];
   await taiSucKhoe();
 })();
 
-let daTaiLog = false; // log server chá»‰ táº£i khi má»Ÿ tab láº§n Ä‘áº§u (trÆ°á»›c 24/10 lÃ  tab máº·c Ä‘á»‹nh)
+let daTaiLog = false; // log server chỉ tải khi mở tab lần đầu (trước 24/10 là tab mặc định)
 function chonTabLogs(tab) {
   for (const t of ['suc-khoe', 'log', 'bao-loi', 'upload-anh']) {
     document.getElementById('tab-' + t).style.display = tab === t ? '' : 'none';
@@ -122,7 +122,7 @@ function chonTabLogs(tab) {
   if (tab === 'bao-loi') taiBaoLoiNhanVien();
   if (tab === 'upload-anh') {
     const o = document.getElementById('ua-tu');
-    if (!o.value) { // máº·c Ä‘á»‹nh 7 ngÃ y gáº§n nháº¥t (ngÃ y Viá»‡t Nam)
+    if (!o.value) { // mặc định 7 ngày gần nhất (ngày Việt Nam)
       const vn = d => new Date(d.getTime() + 7 * 3600000).toISOString().slice(0, 10);
       o.value = vn(new Date(Date.now() - 6 * 86400000)); document.getElementById('ua-den').value = vn(new Date());
     }
@@ -130,15 +130,15 @@ function chonTabLogs(tab) {
   }
 }
 
-// ---------- Sá»©c khoáº» há»‡ thá»‘ng (24/10/2026) â€” routes/logs.js GET /logs/suc-khoe ----------
-const MAU_SUC_KHOE = { tot: ['#16a34a', 'á»”n'], 'chu-y': ['#d97706', 'Cáº§n chÃº Ã½'], loi: ['#dc2626', 'CÃ³ lá»—i'], 'thong-tin': ['var(--color-border)', ''] };
+// ---------- Sức khoẻ hệ thống (24/10/2026) — routes/logs.js GET /logs/suc-khoe ----------
+const MAU_SUC_KHOE = { tot: ['#16a34a', 'Ổn'], 'chu-y': ['#d97706', 'Cần chú ý'], loi: ['#dc2626', 'Có lỗi'], 'thong-tin': ['var(--color-border)', ''] };
 async function taiSucKhoe() {
   const ds = document.getElementById('sk-ds'), luc = document.getElementById('sk-luc');
-  luc.textContent = 'Äang táº£iâ€¦'; // vÃ i giÃ¢y â€” chá» Ä‘á»c toÃ n bá»™ Ä‘Æ¡n hÃ ng (má»¥c Tracking)
+  luc.textContent = 'Đang tải…'; // vài giây — chờ đọc toàn bộ đơn hàng (mục Tracking)
   ds.style.opacity = '0.5';
   try {
     const kq = await apiFetch('/logs/suc-khoe');
-    document.getElementById('sk-luc').textContent = 'Cáº­p nháº­t lÃºc ' + kq.luc;
+    document.getElementById('sk-luc').textContent = 'Cập nhật lúc ' + kq.luc;
     ds.innerHTML = kq.muc.map(m => {
       const [mau, nhan] = MAU_SUC_KHOE[m.muc] || MAU_SUC_KHOE['thong-tin'];
       return `<div style="border:1px solid var(--color-border);border-left:5px solid ${mau};border-radius:var(--radius-md);padding:var(--space-3);background:var(--color-surface)">
@@ -146,15 +146,15 @@ async function taiSucKhoe() {
         ${m.dong.map(d => `<div style="font-size:0.85rem;margin-top:4px;word-break:break-word">${escapeHtml(d)}</div>`).join('')}
       </div>`;
     }).join('');
-  } catch (e) { luc.textContent = ''; ds.innerHTML = `<p style="color:var(--color-danger-text)">KhÃ´ng táº£i Ä‘Æ°á»£c: ${escapeHtml(e.message)}</p>`; }
+  } catch (e) { luc.textContent = ''; ds.innerHTML = `<p style="color:var(--color-danger-text)">Không tải được: ${escapeHtml(e.message)}</p>`; }
   finally { ds.style.opacity = ''; }
 }
 
 // ---------- Logs_UploadAnh ----------
-const NHAN_SU_KIEN_UA = { MO_CAMERA: 'Má»Ÿ camera', QUET_QR: 'QuÃ©t QR', CHUP_ANH: 'Chá»¥p + táº£i áº£nh', XAC_NHAN_HANG_LOAT: 'XÃ¡c nháº­n hÃ ng loáº¡t', QUET_LAI: 'QuÃ©t láº¡i', THOAT_GIUA_CHUNG: 'ThoÃ¡t giá»¯a chá»«ng', XONG_DON: 'Xong Ä‘Æ¡n' };
-const NHAN_CHE_DO_UA = { batch: 'QuÃ©t ká»‹ch báº£n', lookup: 'Tra cá»©u', photo_san_xuat: 'áº¢nh Ä‘Ã£ sáº£n xuáº¥t', photo_da_dan_tem: 'áº¢nh ÄÃƒ DÃN TEM' };
+const NHAN_SU_KIEN_UA = { MO_CAMERA: 'Mở camera', QUET_QR: 'Quét QR', CHUP_ANH: 'Chụp + tải ảnh', XAC_NHAN_HANG_LOAT: 'Xác nhận hàng loạt', QUET_LAI: 'Quét lại', THOAT_GIUA_CHUNG: 'Thoát giữa chừng', XONG_DON: 'Xong đơn' };
+const NHAN_CHE_DO_UA = { batch: 'Quét kịch bản', lookup: 'Tra cứu', photo_san_xuat: 'Ảnh đã sản xuất', photo_da_dan_tem: 'Ảnh ĐÃ DÁN TEM' };
 let dsUploadAnh = [];
-const giayUA = ms => (ms == null || ms === '' ? 'â€”' : (ms / 1000).toFixed(1).replace('.', ','));
+const giayUA = ms => (ms == null || ms === '' ? '—' : (ms / 1000).toFixed(1).replace('.', ','));
 function locUploadAnh() {
   const v = id => document.getElementById(id);
   return new URLSearchParams({ tu: v('ua-tu').value, den: v('ua-den').value, nguoi: v('ua-nguoi').value.trim(), suKien: v('ua-su-kien').value,
@@ -163,134 +163,134 @@ function locUploadAnh() {
 async function taiLogsUploadAnh() {
   taiTongHopUploadAnh();
   const bang = document.getElementById('ua-chi-tiet');
-  bang.innerHTML = '<tr><td>Äang táº£i...</td></tr>';
+  bang.innerHTML = '<tr><td>Đang tải...</td></tr>';
   try { dsUploadAnh = (await apiFetch('/nhat-ky-quet?gioiHan=1000&' + locUploadAnh())).ds; }
-  catch (e) { bang.innerHTML = `<tr><td>Lá»—i: ${escapeHtml(e.message)}</td></tr>`; return; }
-  document.getElementById('ua-dem').textContent = `(${dsUploadAnh.length}${dsUploadAnh.length >= 1000 ? '+ â€” chá»‰ hiá»‡n 1000 dÃ²ng má»›i nháº¥t' : ''} dÃ²ng)`;
-  if (!dsUploadAnh.length) { bang.innerHTML = '<tr><td>KhÃ´ng cÃ³ dÃ²ng nÃ o.</td></tr>'; return; }
-  bang.innerHTML = `<tr><th>Giá»</th><th>NgÆ°á»i</th><th>Sá»± kiá»‡n</th><th>Cháº¿ Ä‘á»™</th><th>MÃ£ Ä‘Æ¡n</th><th>Káº¿t quáº£</th><th>Tá»•ng (s)</th><th>Chi tiáº¿t</th><th>Thiáº¿t bá»‹</th></tr>`
+  catch (e) { bang.innerHTML = `<tr><td>Lỗi: ${escapeHtml(e.message)}</td></tr>`; return; }
+  document.getElementById('ua-dem').textContent = `(${dsUploadAnh.length}${dsUploadAnh.length >= 1000 ? '+ — chỉ hiện 1000 dòng mới nhất' : ''} dòng)`;
+  if (!dsUploadAnh.length) { bang.innerHTML = '<tr><td>Không có dòng nào.</td></tr>'; return; }
+  bang.innerHTML = `<tr><th>Giờ</th><th>Người</th><th>Sự kiện</th><th>Chế độ</th><th>Mã đơn</th><th>Kết quả</th><th>Tổng (s)</th><th>Chi tiết</th><th>Thiết bị</th></tr>`
     + dsUploadAnh.map(r => {
-      // nhom_kq do mÃ¡y chá»§ tÃ­nh (nhatKyDbService.js#SQL_NHOM_KQ â€” nÆ¡i duy nháº¥t Ä‘á»‹nh nghÄ©a nhÃ³m káº¿t quáº£)
+      // nhom_kq do máy chủ tính (nhatKyDbService.js#SQL_NHOM_KQ — nơi duy nhất định nghĩa nhóm kết quả)
       const nen = r.nhom_kq === 'KY_THUAT' ? 'background:rgba(220,38,38,0.12)' : r.cham ? 'background:rgba(245,158,11,0.18)'
         : r.nhom_kq ? 'background:rgba(120,120,120,0.10)' : '';
       return `<tr style="${nen}"><td style="white-space:nowrap">${escapeHtml(String(r.luc).slice(5, 19).replace('T', ' '))}</td><td>${escapeHtml(r.nguoi)}</td>
         <td>${escapeHtml(NHAN_SU_KIEN_UA[r.su_kien] || r.su_kien)}</td><td>${escapeHtml(NHAN_CHE_DO_UA[r.che_do] || r.che_do)}</td><td>${escapeHtml(r.stt_key)}</td>
         <td>${escapeHtml(r.ket_qua)}${r.loi ? `<div style="color:var(--color-danger-text)">${escapeHtml(r.loi)}</div>` : ''}</td>
         <td style="text-align:right">${giayUA(r.tong_ms)}</td><td>${escapeHtml(moTaChiTietUA(r))}</td>
-        <td>${escapeHtml([r.he_dieu_hanh, r.trinh_duyet, r.may].filter(Boolean).join(' Â· '))}${r.phien_ban_app ? ` <span style="color:var(--color-text-muted)">(app v${escapeHtml(r.phien_ban_app)})</span>` : ''}</td></tr>`;
+        <td>${escapeHtml([r.he_dieu_hanh, r.trinh_duyet, r.may].filter(Boolean).join(' · '))}${r.phien_ban_app ? ` <span style="color:var(--color-text-muted)">(app v${escapeHtml(r.phien_ban_app)})</span>` : ''}</td></tr>`;
     }).join('');
 }
 function moTaChiTietUA(r) {
-  let c = {}; try { c = JSON.parse(r.chi_tiet || '{}'); } catch (e) { /* bá» */ }
+  let c = {}; try { c = JSON.parse(r.chi_tiet || '{}'); } catch (e) { /* bỏ */ }
   const p = [];
-  if (c.nguon === 'NHAP_TAY') p.push('gÃµ tay');
-  if (c.msTimMa != null) p.push(`tÃ¬m mÃ£ ${giayUA(c.msTimMa)}s`);
-  if (c.msKiemTra != null) p.push(`kiá»ƒm tra ${giayUA(c.msKiemTra)}s`);
+  if (c.nguon === 'NHAP_TAY') p.push('gõ tay');
+  if (c.msTimMa != null) p.push(`tìm mã ${giayUA(c.msTimMa)}s`);
+  if (c.msKiemTra != null) p.push(`kiểm tra ${giayUA(c.msKiemTra)}s`);
   if (c.msCamera != null) p.push(`camera ${giayUA(c.msCamera)}s`);
-  if (c.msNen != null) p.push(`nÃ©n ${giayUA(c.msNen)}s${c.msGiaiMa != null ? ` (giáº£i mÃ£ ${giayUA(c.msGiaiMa)}, váº½ ${giayUA(c.msVe)}, xuáº¥t ${giayUA(c.msXuat)})` : ''}`
-    + ` ${c.kbGoc}â†’${c.kbSauNen}KB${c.rongGoc ? ` ${c.rongGoc}x${c.caoGoc}â†’${c.rong}x${c.cao}` : ''}${c.loaiFile ? ' ' + c.loaiFile : ''}${c.khongNen ? ` [khÃ´ng nÃ©n: ${c.khongNen}]` : ''}`);
-  if (c.dauFile) p.push(`Ä‘áº§u file ${c.dauFile.startsWith('ffd8ff') ? 'JPEG' : laAnhHeif(c.dauFile) ? 'HEIF/AVIF' : 'láº¡'} (${c.dauFile})`);
-  if (c.huongExif != null) p.push(`EXIF ${c.huongExif}${c.tuXoayExif ? ', app tá»± xoay' : ''}${c.doXoay ? ` (dÃ²: ${c.doXoay})` : ''}`);
-  if (c.msGui != null) p.push(`gá»­i ${giayUA(c.msGui)}s${c.kbMoiGiay ? ` (${c.kbMoiGiay}KB/s)` : ''}`);
-  if (c.soLanGui > 1) p.push(`gá»­i ${c.soLanGui} láº§n${c.msTongGui != null ? ` (tá»•ng ${giayUA(c.msTongGui)}s)` : ''}`);
-  if (c.msGuiVaCho != null) p.push(`gá»­i+chá» mÃ¡y chá»§ ${giayUA(c.msGuiVaCho)}s`);
-  if (c.msMayChu != null) p.push(`mÃ¡y chá»§ ${giayUA(c.msMayChu)}s`);
-  if (c.mang && c.mang.loai) p.push(`máº¡ng ${c.mang.loai}${c.mang.mbps != null ? ' ~' + c.mang.mbps + 'Mbps' : ''}`);
-  if (c.soLanThu > 1) p.push(`thá»­ ${c.soLanThu} láº§n`);
+  if (c.msNen != null) p.push(`nén ${giayUA(c.msNen)}s${c.msGiaiMa != null ? ` (giải mã ${giayUA(c.msGiaiMa)}, vẽ ${giayUA(c.msVe)}, xuất ${giayUA(c.msXuat)})` : ''}`
+    + ` ${c.kbGoc}→${c.kbSauNen}KB${c.rongGoc ? ` ${c.rongGoc}x${c.caoGoc}→${c.rong}x${c.cao}` : ''}${c.loaiFile ? ' ' + c.loaiFile : ''}${c.khongNen ? ` [không nén: ${c.khongNen}]` : ''}`);
+  if (c.dauFile) p.push(`đầu file ${c.dauFile.startsWith('ffd8ff') ? 'JPEG' : laAnhHeif(c.dauFile) ? 'HEIF/AVIF' : 'lạ'} (${c.dauFile})`);
+  if (c.huongExif != null) p.push(`EXIF ${c.huongExif}${c.tuXoayExif ? ', app tự xoay' : ''}${c.doXoay ? ` (dò: ${c.doXoay})` : ''}`);
+  if (c.msGui != null) p.push(`gửi ${giayUA(c.msGui)}s${c.kbMoiGiay ? ` (${c.kbMoiGiay}KB/s)` : ''}`);
+  if (c.soLanGui > 1) p.push(`gửi ${c.soLanGui} lần${c.msTongGui != null ? ` (tổng ${giayUA(c.msTongGui)}s)` : ''}`);
+  if (c.msGuiVaCho != null) p.push(`gửi+chờ máy chủ ${giayUA(c.msGuiVaCho)}s`);
+  if (c.msMayChu != null) p.push(`máy chủ ${giayUA(c.msMayChu)}s`);
+  if (c.mang && c.mang.loai) p.push(`mạng ${c.mang.loai}${c.mang.mbps != null ? ' ~' + c.mang.mbps + 'Mbps' : ''}`);
+  if (c.soLanThu > 1) p.push(`thử ${c.soLanThu} lần`);
   if (c.soLanLapBiChan) {
     const gio = ms => new Date(ms).toLocaleTimeString('vi-VN', { hour12: false });
-    p.push(`quÃ©t láº·p láº¡i ${c.soLanLapBiChan} láº§n${c.lapTu ? ` (${gio(c.lapTu)}â€“${gio(c.lapDen)})` : ''}, khÃ´ng há»i láº¡i mÃ¡y chá»§`);
+    p.push(`quét lặp lại ${c.soLanLapBiChan} lần${c.lapTu ? ` (${gio(c.lapTu)}–${gio(c.lapDen)})` : ''}, không hỏi lại máy chủ`);
   }
-  if (c.manDo) p.push(`hiá»‡n mÃ n Ä‘á» (sai láº§n ${c.manDo})`); // 22/10/2026 â€” scan.html#hienManDoSaiTrangThai
-  if (c.loiDung) p.push(`lá»—i táº¯t camera cÅ©: ${c.loiDung}`);
-  if (c.cach) p.push(({ nut: 'báº¥m Xong', 'quet-don-sau': 'tá»± Xong khi quÃ©t Ä‘Æ¡n khÃ¡c', 'khoi-phuc': 'khÃ´i phá»¥c sau khi trang táº£i láº¡i' })[c.cach] || c.cach);
-  if (c.cach && c.soAnh != null) p.push(`${c.soAnh} áº£nh`);
-  if (c.khoiPhuc) p.push('(Ä‘Æ¡n khÃ´i phá»¥c sau khi trang táº£i láº¡i)');
-  if (c.nguoiKhacDaXong) p.push('ngÆ°á»i khÃ¡c Ä‘Ã£ Xong trÆ°á»›c');
-  if (c.daXongLanTruoc) p.push('Ä‘Ã£ Xong tá»« láº§n gá»­i trÆ°á»›c');
-  if (c.trangThaiMayQuet != null) p.push(`mÃ¡y quÃ©t: ${({ 1: 'chÆ°a cháº¡y', 2: 'Ä‘ang quÃ©t', 3: 'táº¡m dá»«ng' })[c.trangThaiMayQuet] || c.trangThaiMayQuet}`);
-  if (c.soDon != null) p.push(`${c.thanhCong}/${c.soDon} Ä‘Æ¡n OK`);
-  if (c.giaiDoan) p.push(`Ä‘ang ${c.giaiDoan === 'gui' ? 'gá»­i' : 'nÃ©n'} thÃ¬ thoÃ¡t`);
-  // MÃ¡y chá»§ Ä‘Ã£ rÃºt gá»n dÃ²ng quÃ¡ dÃ i (routes/nhatKyQuet.js#chiTietGon) â€” bÃ¡o rÃµ Ä‘á»ƒ khÃ´ng hiá»ƒu nháº§m lÃ  "khÃ´ng Ä‘o Ä‘Æ°á»£c"
-  if (c.catBot) p.push(`[bá»‹ rÃºt gá»n${Array.isArray(c.catBot) && c.catBot.length ? ': ' + c.catBot.join(', ') : ''}]`);
-  return p.join(' Â· ');
+  if (c.manDo) p.push(`hiện màn đỏ (sai lần ${c.manDo})`); // 22/10/2026 — scan.html#hienManDoSaiTrangThai
+  if (c.loiDung) p.push(`lỗi tắt camera cũ: ${c.loiDung}`);
+  if (c.cach) p.push(({ nut: 'bấm Xong', 'quet-don-sau': 'tự Xong khi quét đơn khác', 'khoi-phuc': 'khôi phục sau khi trang tải lại' })[c.cach] || c.cach);
+  if (c.cach && c.soAnh != null) p.push(`${c.soAnh} ảnh`);
+  if (c.khoiPhuc) p.push('(đơn khôi phục sau khi trang tải lại)');
+  if (c.nguoiKhacDaXong) p.push('người khác đã Xong trước');
+  if (c.daXongLanTruoc) p.push('đã Xong từ lần gửi trước');
+  if (c.trangThaiMayQuet != null) p.push(`máy quét: ${({ 1: 'chưa chạy', 2: 'đang quét', 3: 'tạm dừng' })[c.trangThaiMayQuet] || c.trangThaiMayQuet}`);
+  if (c.soDon != null) p.push(`${c.thanhCong}/${c.soDon} đơn OK`);
+  if (c.giaiDoan) p.push(`đang ${c.giaiDoan === 'gui' ? 'gửi' : 'nén'} thì thoát`);
+  // Máy chủ đã rút gọn dòng quá dài (routes/nhatKyQuet.js#chiTietGon) — báo rõ để không hiểu nhầm là "không đo được"
+  if (c.catBot) p.push(`[bị rút gọn${Array.isArray(c.catBot) && c.catBot.length ? ': ' + c.catBot.join(', ') : ''}]`);
+  return p.join(' · ');
 }
-// QuÃ©t sai theo ngÆ°á»i Ã— cháº¿ Ä‘á»™ (26/10/2026) â€” routes/nhatKyQuet.js#tongHopQuetSai. Chá»‰ theo Tá»« ngÃ y / Äáº¿n ngÃ y / NgÆ°á»i dÃ¹ng.
+// Quét sai theo người × chế độ (26/10/2026) — routes/nhatKyQuet.js#tongHopQuetSai. Chỉ theo Từ ngày / Đến ngày / Người dùng.
 const GHI_CHU_TONG_HOP = {
-  'quet-sai': 'LÆ°á»£t quÃ©t QR trong khoáº£ng ngÃ y (theo NgÆ°á»i dÃ¹ng náº¿u cÃ³ nháº­p; bá» qua cÃ¡c bá»™ lá»c khÃ¡c). "Sai tráº¡ng thÃ¡i" = mÃ¡y chá»§ tá»« chá»‘i vÃ¬ Ä‘Æ¡n khÃ´ng á»Ÿ Ä‘Ãºng bÆ°á»›c cá»§a cháº¿ Ä‘á»™ Ä‘ang chá»n â€” tÃ´ Ä‘á» khi tá»« 15% trá»Ÿ lÃªn. "Lá»—i khÃ¡c" = khÃ´ng tÃ¬m tháº¥y Ä‘Æ¡n / Ä‘Æ¡n chÆ°a cÃ³ tracking (khÃ´ng pháº£i quÃ©t nháº§m cháº¿ Ä‘á»™). "Äá»c láº·p" = sá»‘ láº§n camera Ä‘á»c láº¡i Ä‘Ãºng mÃ£ vá»«a lá»—i (bá»‹ cháº·n, khÃ´ng tÃ­nh lÃ  lÆ°á»£t quÃ©t) â€” cao nghÄ©a lÃ  Ä‘á»ƒ camera trÃªn mÃ£ mÃ  khÃ´ng nhÃ¬n mÃ n hÃ¬nh.',
-  macDinh: 'Thá»i gian trung bÃ¬nh (giÃ¢y) cá»§a cÃ¡c lÆ°á»£t chá»¥p THÃ€NH CÃ”NG. "Tá»•ng chá»¥p" = tá»« lÃºc cÃ³ áº£nh tá»›i lÃºc táº£i xong; "10% cháº­m nháº¥t" = má»‘c mÃ  10% sá»‘ lÆ°á»£t cháº­m hÆ¡n.',
+  'quet-sai': 'Lượt quét QR trong khoảng ngày (theo Người dùng nếu có nhập; bỏ qua các bộ lọc khác). "Sai trạng thái" = máy chủ từ chối vì đơn không ở đúng bước của chế độ đang chọn — tô đỏ khi từ 15% trở lên. "Lỗi khác" = không tìm thấy đơn / đơn chưa có tracking (không phải quét nhầm chế độ). "Đọc lặp" = số lần camera đọc lại đúng mã vừa lỗi (bị chặn, không tính là lượt quét) — cao nghĩa là để camera trên mã mà không nhìn màn hình.',
+  macDinh: 'Thời gian trung bình (giây) của các lượt chụp THÀNH CÔNG. "Tổng chụp" = từ lúc có ảnh tới lúc tải xong; "10% chậm nhất" = mốc mà 10% số lượt chậm hơn.',
 };
 async function taiQuetSaiUploadAnh(bang) {
   let ds;
   try { ds = await apiFetch('/nhat-ky-quet/tong-hop?nhom=quet-sai&' + locUploadAnh()); }
-  catch (e) { bang.innerHTML = `<tr><td>Lá»—i: ${escapeHtml(e.message)}</td></tr>`; return; }
-  if (!ds.length) { bang.innerHTML = '<tr><td>KhÃ´ng cÃ³ lÆ°á»£t quÃ©t QR nÃ o trong khoáº£ng nÃ y.</td></tr>'; return; }
-  bang.innerHTML = '<tr><th>NgÆ°á»i dÃ¹ng</th><th>Cháº¿ Ä‘á»™</th><th>LÆ°á»£t quÃ©t</th><th>Sai tráº¡ng thÃ¡i</th><th>ÄÆ¡n Ä‘ang á»Ÿ (khi quÃ©t sai)</th><th>Lá»—i khÃ¡c</th><th>MÃ n Ä‘á»</th><th>Äá»c láº·p</th></tr>'
-    + ds.map(g => `<tr><td><b>${escapeHtml(g.nguoi)}</b></td><td>${escapeHtml(NHAN_CHE_DO_UA[g.cheDo] || g.cheDo || 'â€”')}</td><td>${g.soQuet}</td>
+  catch (e) { bang.innerHTML = `<tr><td>Lỗi: ${escapeHtml(e.message)}</td></tr>`; return; }
+  if (!ds.length) { bang.innerHTML = '<tr><td>Không có lượt quét QR nào trong khoảng này.</td></tr>'; return; }
+  bang.innerHTML = '<tr><th>Người dùng</th><th>Chế độ</th><th>Lượt quét</th><th>Sai trạng thái</th><th>Đơn đang ở (khi quét sai)</th><th>Lỗi khác</th><th>Màn đỏ</th><th>Đọc lặp</th></tr>'
+    + ds.map(g => `<tr><td><b>${escapeHtml(g.nguoi)}</b></td><td>${escapeHtml(NHAN_CHE_DO_UA[g.cheDo] || g.cheDo || '—')}</td><td>${g.soQuet}</td>
       <td style="${g.tyLeSai >= 15 ? 'color:var(--color-danger-text);font-weight:700' : ''}">${g.soSai} (${String(g.tyLeSai).replace('.', ',')}%)</td>
-      <td style="font-size:0.8rem">${g.trangThaiDon.map(t => `${escapeHtml(t.ten)} Ã—${t.so}`).join(' Â· ')}</td>
-      <td style="font-size:0.8rem">${[g.soKhongThay ? `khÃ´ng tháº¥y Ä‘Æ¡n Ã—${g.soKhongThay}` : '', g.soThieuTracking ? `chÆ°a cÃ³ tracking Ã—${g.soThieuTracking}` : ''].filter(Boolean).join(' Â· ')}</td>
+      <td style="font-size:0.8rem">${g.trangThaiDon.map(t => `${escapeHtml(t.ten)} ×${t.so}`).join(' · ')}</td>
+      <td style="font-size:0.8rem">${[g.soKhongThay ? `không thấy đơn ×${g.soKhongThay}` : '', g.soThieuTracking ? `chưa có tracking ×${g.soThieuTracking}` : ''].filter(Boolean).join(' · ')}</td>
       <td>${g.soManDo || ''}</td><td>${g.soLap || ''}</td></tr>`).join('');
 }
 async function taiTongHopUploadAnh() {
   const bang = document.getElementById('ua-tong-hop');
   const kieu = document.getElementById('ua-nhom').value;
   document.getElementById('ua-ghi-chu-tong-hop').textContent = GHI_CHU_TONG_HOP[kieu] || GHI_CHU_TONG_HOP.macDinh;
-  bang.innerHTML = '<tr><td>Äang táº£iâ€¦</td></tr>'; // Ä‘á»•i kiá»ƒu xem: khÃ´ng Ä‘á»ƒ báº£ng cÅ© dÆ°á»›i tiÃªu Ä‘á» má»›i
+  bang.innerHTML = '<tr><td>Đang tải…</td></tr>'; // đổi kiểu xem: không để bảng cũ dưới tiêu đề mới
   if (kieu === 'quet-sai') return taiQuetSaiUploadAnh(bang);
   const theoNguoi = kieu === 'nguoi';
   let ds;
   try { ds = await apiFetch(`/nhat-ky-quet/tong-hop?nhom=${theoNguoi ? 'nguoi' : 'thiet-bi'}&` + locUploadAnh()); }
-  catch (e) { bang.innerHTML = `<tr><td>Lá»—i: ${escapeHtml(e.message)}</td></tr>`; return; }
-  if (!ds.length) { bang.innerHTML = '<tr><td>ChÆ°a cÃ³ dá»¯ liá»‡u trong khoáº£ng nÃ y.</td></tr>'; return; }
-  bang.innerHTML = `<tr><th>${theoNguoi ? 'NgÆ°á»i dÃ¹ng' : 'Há»‡ Ä‘iá»u hÃ nh Â· TrÃ¬nh duyá»‡t'}</th><th>LÆ°á»£t</th><th>Lá»—i ká»¹ thuáº­t</th><th>Sai Ä‘Æ¡n</th><th>QuÃ©t láº¡i</th><th>LÆ°á»£t chá»¥p OK</th><th>Tá»•ng chá»¥p TB</th><th>10% cháº­m nháº¥t</th>
-      <th>NÃ©n TB</th><th>Gá»­i TB</th><th>MÃ¡y chá»§ TB</th><th>Kiá»ƒm tra QR TB</th><th>TÃ¬m mÃ£ TB</th><th>Má»Ÿ camera TB</th><th>${theoNguoi ? 'MÃ¡y' : 'NgÆ°á»i / mÃ¡y'}</th></tr>`
+  catch (e) { bang.innerHTML = `<tr><td>Lỗi: ${escapeHtml(e.message)}</td></tr>`; return; }
+  if (!ds.length) { bang.innerHTML = '<tr><td>Chưa có dữ liệu trong khoảng này.</td></tr>'; return; }
+  bang.innerHTML = `<tr><th>${theoNguoi ? 'Người dùng' : 'Hệ điều hành · Trình duyệt'}</th><th>Lượt</th><th>Lỗi kỹ thuật</th><th>Sai đơn</th><th>Quét lại</th><th>Lượt chụp OK</th><th>Tổng chụp TB</th><th>10% chậm nhất</th>
+      <th>Nén TB</th><th>Gửi TB</th><th>Máy chủ TB</th><th>Kiểm tra QR TB</th><th>Tìm mã TB</th><th>Mở camera TB</th><th>${theoNguoi ? 'Máy' : 'Người / máy'}</th></tr>`
     + ds.map(g => `<tr><td><b>${escapeHtml(g.nhom)}</b></td><td>${g.soLuot}</td>
       <td style="${g.soLoiKyThuat ? 'color:var(--color-danger-text);font-weight:700' : ''}">${g.soLoiKyThuat} (${Math.round(g.soLoiKyThuat * 100 / g.soLuot)}%)</td>
       <td>${g.soNghiepVu}</td><td>${g.soBoNgang}</td><td>${g.soChup}</td>
       <td style="${g.tbChup > 8000 ? 'color:var(--color-danger-text);font-weight:700' : ''}">${giayUA(g.tbChup)}</td><td>${giayUA(g.p90Chup)}</td>
       <td>${giayUA(g.tbNen)}</td><td>${giayUA(g.tbGui)}</td><td>${giayUA(g.tbMayChu)}</td><td>${giayUA(g.tbKiemTra)}</td><td>${giayUA(g.tbTimMa)}</td><td>${giayUA(g.tbMoCamera)}</td>
-      <td style="font-size:0.78rem">${theoNguoi ? '' : g.soNguoi + ' ngÆ°á»i'}${g.dsMay.length ? (theoNguoi ? '' : ' Â· ') + escapeHtml(g.dsMay.join(', ')) : ''}</td></tr>`).join('');
+      <td style="font-size:0.78rem">${theoNguoi ? '' : g.soNguoi + ' người'}${g.dsMay.length ? (theoNguoi ? '' : ' · ') + escapeHtml(g.dsMay.join(', ')) : ''}</td></tr>`).join('');
 }
-// LÆ°u Blob thÃ nh file táº£i vá» â€” dÃ¹ng chung cho má»i nÃºt xuáº¥t cá»§a tab nÃ y.
+// Lưu Blob thành file tải về — dùng chung cho mọi nút xuất của tab này.
 function luuFile(blob, tenFile) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = tenFile;
   a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 5000); // khÃ´ng thu há»“i ngay: Safari iPad má»Ÿ blob á»Ÿ tab má»›i, cáº§n URL cÃ²n sá»‘ng
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000); // không thu hồi ngay: Safari iPad mở blob ở tab mới, cần URL còn sống
 }
-// KhoÃ¡ Má»ŒI nÃºt xuáº¥t file trong lÃºc 1 lÆ°á»£t Ä‘ang cháº¡y (khÃ´ng cháº¡y 2 lÆ°á»£t táº£i lá»›n cÃ¹ng lÃºc).
+// Khoá MỌI nút xuất file trong lúc 1 lượt đang chạy (không chạy 2 lượt tải lớn cùng lúc).
 async function khoaNutXuat(viec) {
   const ds = [...document.querySelectorAll('.nut-xuat-file')];
   if (ds.some(n => n.disabled)) return;
   ds.forEach(n => { n.disabled = true; });
   try { await viec(); } finally { ds.forEach(n => { n.disabled = false; }); }
 }
-// DoMangMayChu / DoTocDo (23/10/2026): mÃ¡y chá»§ tráº£ tháº³ng file CSV (routes/logs.js GET /logs/csv) â€” gá»i fetch trá»±c tiáº¿p vÃ¬ apiFetch chá»‰ Ä‘á»c
-// JSON; lá»—i mÃ¡y chá»§ váº«n lÃ  JSON { error }.
+// DoMangMayChu / DoTocDo (23/10/2026): máy chủ trả thẳng file CSV (routes/logs.js GET /logs/csv) — gọi fetch trực tiếp vì apiFetch chỉ đọc
+// JSON; lỗi máy chủ vẫn là JSON { error }.
 function xuatCsvDoMang(loai) {
   const tu = document.getElementById('ua-tu').value, den = document.getElementById('ua-den').value;
-  if (!tu || !den) { alert('Chá»n Tá»« ngÃ y / Äáº¿n ngÃ y trÆ°á»›c.'); return; }
+  if (!tu || !den) { alert('Chọn Từ ngày / Đến ngày trước.'); return; }
   return khoaNutXuat(async () => {
     try {
       const res = await fetch(`${API}/logs/csv?${new URLSearchParams({ loai, tu, den })}`, { credentials: 'include' });
-      if (!res.ok) { alert('Lá»—i: ' + ((await res.json().catch(() => ({}))).error || `MÃ¡y chá»§ tráº£ ${res.status}`)); return; }
-      if (res.headers.get('X-So-Dong') === '0') { alert('KhÃ´ng cÃ³ sá»‘ Ä‘o nÃ o trong khoáº£ng ngÃ y nÃ y.'); return; }
+      if (!res.ok) { alert('Lỗi: ' + ((await res.json().catch(() => ({}))).error || `Máy chủ trả ${res.status}`)); return; }
+      if (res.headers.get('X-So-Dong') === '0') { alert('Không có số đo nào trong khoảng ngày này.'); return; }
       const ten = (/filename="?([^";]+)"?/.exec(res.headers.get('Content-Disposition') || '') || [])[1] || `${loai}_${tu}_${den}.csv`;
       luuFile(await res.blob(), ten);
-    } catch (e) { alert('Lá»—i: ' + e.message); }
+    } catch (e) { alert('Lỗi: ' + e.message); }
   });
 }
 
-// CSV cÃ³ BOM (Excel Ä‘á»c Ä‘Ãºng tiáº¿ng Viá»‡t); Ã´ báº¯t Ä‘áº§u báº±ng = + - @ thÃªm ' Ä‘á»ƒ Excel khÃ´ng hiá»ƒu lÃ  cÃ´ng thá»©c.
+// CSV có BOM (Excel đọc đúng tiếng Việt); ô bắt đầu bằng = + - @ thêm ' để Excel không hiểu là công thức.
 function xuatCsvUploadAnh() { return khoaNutXuat(xuatCsvUploadAnhThat); }
 async function xuatCsvUploadAnhThat() {
-  // Táº£i láº¡i theo bá»™ lá»c hiá»‡n táº¡i, tá»‘i Ä‘a 20000 dÃ²ng (báº£ng trÃªn trang chá»‰ hiá»‡n 1000 dÃ²ng má»›i nháº¥t).
+  // Tải lại theo bộ lọc hiện tại, tối đa 20000 dòng (bảng trên trang chỉ hiện 1000 dòng mới nhất).
   let ds;
-  try { ds = (await apiFetch('/nhat-ky-quet?gioiHan=20000&' + locUploadAnh())).ds; } catch (e) { alert('Lá»—i: ' + e.message); return; }
-  if (!ds.length) { alert('KhÃ´ng cÃ³ dÃ²ng nÃ o trong bá»™ lá»c nÃ y.'); return; }
-  if (ds.length >= 20000 && !confirm('Khoáº£ng nÃ y cÃ³ hÆ¡n 20000 dÃ²ng â€” file CSV chá»‰ chá»©a 20000 dÃ²ng Má»šI NHáº¤T. Thu háº¹p khoáº£ng ngÃ y Ä‘á»ƒ láº¥y Ä‘á»§. Váº«n xuáº¥t?')) return;
+  try { ds = (await apiFetch('/nhat-ky-quet?gioiHan=20000&' + locUploadAnh())).ds; } catch (e) { alert('Lỗi: ' + e.message); return; }
+  if (!ds.length) { alert('Không có dòng nào trong bộ lọc này.'); return; }
+  if (ds.length >= 20000 && !confirm('Khoảng này có hơn 20000 dòng — file CSV chỉ chứa 20000 dòng MỚI NHẤT. Thu hẹp khoảng ngày để lấy đủ. Vẫn xuất?')) return;
   const o = v => `"${String(v ?? '').replace(/^[=+\-@\t\r]/, "'$&").replace(/"/g, '""')}"`;
   const cot = ['luc', 'nguoi', 'vai_tro', 'xuong', 'su_kien', 'che_do', 'stt_key', 'ket_qua', 'nhom_kq', 'loi', 'tong_ms', 'cham', 'he_dieu_hanh', 'trinh_duyet', 'may', 'phien_ban_app', 'chi_tiet', 'thong_tin'];
   const csv = '\ufeff' + [cot.join(','), ...ds.map(r => cot.map(k => o(r[k])).join(','))].join('\r\n');
@@ -302,20 +302,20 @@ async function taiBaoLoiNhanVien() {
   el.innerHTML = skeletonList(3);
   let ds;
   try { ds = await apiFetch('/bao-loi?trangThai=' + encodeURIComponent(document.getElementById('loc-bao-loi').value)); }
-  catch (e) { el.innerHTML = `<p>Lá»—i: ${escapeHtml(e.message)}</p>`; return; }
-  if (!ds.length) { el.innerHTML = '<p style="color:var(--color-text-muted)">ChÆ°a cÃ³ bÃ¡o lá»—i nÃ o.</p>'; return; }
+  catch (e) { el.innerHTML = `<p>Lỗi: ${escapeHtml(e.message)}</p>`; return; }
+  if (!ds.length) { el.innerHTML = '<p style="color:var(--color-text-muted)">Chưa có báo lỗi nào.</p>'; return; }
   el.innerHTML = ds.map(b => `
     <div class="ta-the" style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--space-3)">
-      <div><b>#${b.id}</b> Â· ${escapeHtml(String(b.luc).slice(0, 16).replace('T', ' '))} Â· <b>${escapeHtml(b.nguoi)}</b> (${escapeHtml(NHAN_VAI_TRO[b.vaiTro] || b.vaiTro)})
-        Â· <a href="${escapeHtml(urlAnToan(b.trang))}" target="_blank" rel="noopener">${escapeHtml(b.trang || '?')}</a></div>
+      <div><b>#${b.id}</b> · ${escapeHtml(String(b.luc).slice(0, 16).replace('T', ' '))} · <b>${escapeHtml(b.nguoi)}</b> (${escapeHtml(NHAN_VAI_TRO[b.vaiTro] || b.vaiTro)})
+        · <a href="${escapeHtml(urlAnToan(b.trang))}" target="_blank" rel="noopener">${escapeHtml(b.trang || '?')}</a></div>
       <div style="white-space:pre-wrap;margin:6px 0">${escapeHtml(b.moTa)}</div>
-      ${b.coAnh ? `<a href="/api/bao-loi/${b.id}/anh" target="_blank" rel="noopener"><img src="/api/bao-loi/${b.id}/anh" alt="áº¢nh bÃ¡o lá»—i" loading="lazy" style="max-width:320px;max-height:220px;border-radius:6px;display:block"></a>` : ''}
-      <details style="margin:6px 0"><summary>ThÃ´ng tin ká»¹ thuáº­t (${(b.thongTin.loiJs || []).length} lá»—i JS, ${(b.thongTin.loiApi || []).length} lá»—i API)</summary>
+      ${b.coAnh ? `<a href="/api/bao-loi/${b.id}/anh" target="_blank" rel="noopener"><img src="/api/bao-loi/${b.id}/anh" alt="Ảnh báo lỗi" loading="lazy" style="max-width:320px;max-height:220px;border-radius:6px;display:block"></a>` : ''}
+      <details style="margin:6px 0"><summary>Thông tin kỹ thuật (${(b.thongTin.loiJs || []).length} lỗi JS, ${(b.thongTin.loiApi || []).length} lỗi API)</summary>
         <pre style="white-space:pre-wrap;word-break:break-word;font-size:0.78rem">${escapeHtml(JSON.stringify(b.thongTin, null, 2))}</pre></details>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <select id="tt-bao-loi-${b.id}">${['MOI', 'DANG_XU_LY', 'DA_XONG'].map(t => `<option value="${t}" ${t === b.trangThai ? 'selected' : ''}>${NHAN_TRANG_THAI_BAO_LOI[t]}</option>`).join('')}</select>
-        <input id="gc-bao-loi-${b.id}" value="${escapeHtml(b.ghiChu || '')}" placeholder="Ghi chÃº xá»­ lÃ½ (nhÃ¢n viÃªn tháº¥y Ä‘Æ°á»£c)" style="flex:1;min-width:200px">
-        <button type="button" class="btn-hanh-dong" onclick="luuBaoLoi(${b.id}, this)">LÆ°u</button>
+        <input id="gc-bao-loi-${b.id}" value="${escapeHtml(b.ghiChu || '')}" placeholder="Ghi chú xử lý (nhân viên thấy được)" style="flex:1;min-width:200px">
+        <button type="button" class="btn-hanh-dong" onclick="luuBaoLoi(${b.id}, this)">Lưu</button>
       </div>
     </div>`).join('');
 }
@@ -323,26 +323,26 @@ async function luuBaoLoi(id, nut) {
   nut.disabled = true;
   try {
     await apiFetch('/bao-loi/' + id, { method: 'POST', body: JSON.stringify({ trangThai: document.getElementById('tt-bao-loi-' + id).value, ghiChu: document.getElementById('gc-bao-loi-' + id).value }) });
-    nut.textContent = 'ÄÃ£ lÆ°u';
-    setTimeout(() => { nut.textContent = 'LÆ°u'; }, 1500);
-  } catch (e) { alert('Lá»—i: ' + e.message); }
+    nut.textContent = 'Đã lưu';
+    setTimeout(() => { nut.textContent = 'Lưu'; }, 1500);
+  } catch (e) { alert('Lỗi: ' + e.message); }
   nut.disabled = false;
 }
 async function taiLog() {
   const khoi = document.getElementById('khoi-log');
-  khoi.textContent = 'Äang táº£i...';
+  khoi.textContent = 'Đang tải...';
   try {
     const soDong = document.getElementById('so-dong-log').value;
     const ketQua = await apiFetch('/logs?soDong=' + encodeURIComponent(soDong));
     toanBoDong = (ketQua.text || '').split('\n').map(gioVietNam);
     renderLog();
   } catch (e) {
-    khoi.textContent = 'Lá»—i: ' + e.message;
+    khoi.textContent = 'Lỗi: ' + e.message;
   }
 }
 
-// File log ghi giá» UTC ("[2026-10-11T16:00:02.075Z]", services/logCapture.js) â€” CHá»ˆ Ä‘á»•i lÃºc hiá»ƒn thá»‹ sang giá» Viá»‡t Nam
-// "[11/10/2026 23:00:02]" (11/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng), dÃ²ng cÅ© láº«n má»›i; file giá»¯ nguyÃªn. VN khÃ´ng Ä‘á»•i giá» mÃ¹a hÃ¨ -> +7 cá»‘ Ä‘á»‹nh.
+// File log ghi giờ UTC ("[2026-10-11T16:00:02.075Z]", services/logCapture.js) — CHỈ đổi lúc hiển thị sang giờ Việt Nam
+// "[11/10/2026 23:00:02]" (11/10/2026, theo yêu cầu người dùng), dòng cũ lẫn mới; file giữ nguyên. VN không đổi giờ mùa hè -> +7 cố định.
 function gioVietNam(dong) {
   return dong.replace(/^\[(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z)\]/, (goc, iso) => {
     const t = new Date(Date.parse(iso) + 7 * 3600 * 1000);
@@ -352,13 +352,13 @@ function gioVietNam(dong) {
   });
 }
 
-// textContent (KHÃ”NG innerHTML) â€” log cÃ³ thá»ƒ chá»©a báº¥t ká»³ kÃ½ tá»± nÃ o (ká»ƒ cáº£ trÃ´ng giá»‘ng tháº» HTML náº¿u 1
-// lá»—i nÃ o Ä‘Ã³ in ra chuá»—i láº¡) â€” textContent luÃ´n hiá»‡n Ä‘Ãºng dáº¡ng chá»¯ thÃ´, khÃ´ng cÃ³ rá»§i ro XSS.
+// textContent (KHÔNG innerHTML) — log có thể chứa bất kỳ ký tự nào (kể cả trông giống thẻ HTML nếu 1
+// lỗi nào đó in ra chuỗi lạ) — textContent luôn hiện đúng dạng chữ thô, không có rủi ro XSS.
 function renderLog() {
   const tuKhoa = document.getElementById('loc-log').value.trim().toLowerCase();
   const khoi = document.getElementById('khoi-log');
   const dong = tuKhoa ? toanBoDong.filter(d => d.toLowerCase().includes(tuKhoa)) : toanBoDong;
-  khoi.textContent = dong.length ? dong.join('\n') : '(KhÃ´ng cÃ³ dÃ²ng nÃ o khá»›p.)';
+  khoi.textContent = dong.length ? dong.join('\n') : '(Không có dòng nào khớp.)';
   khoi.scrollTop = khoi.scrollHeight;
 }
 </script>

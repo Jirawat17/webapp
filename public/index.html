@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ÄÄƒng nháº­p â€” XÆ°á»Ÿng ThÃªu</title>
+<title>Đăng nhập — Xưởng Thêu</title>
 <link rel="stylesheet" href="/css/style.css?v=112">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -12,71 +12,71 @@
 <body class="trang-dang-nhap">
 <div class="login-wrap">
   <div class="logo-mark" aria-hidden="true" id="logo-mark"></div>
-  <h1>XÆ°á»Ÿng ThÃªu <span id="phien-ban-app" style="font-size:0.4em;font-weight:400;color:var(--color-text-muted);vertical-align:middle"></span></h1>
-  <p>ChÃ o má»«ng Ä‘áº¿n vá»›i Giao diá»‡n quáº£n lÃ½ xÆ°á»Ÿng thÃªu</p>
-  <div id="danh-sach-ten" class="ten-list">Äang táº£i danh sÃ¡ch nhÃ¢n viÃªn...</div>
+  <h1>Xưởng Thêu <span id="phien-ban-app" style="font-size:0.4em;font-weight:400;color:var(--color-text-muted);vertical-align:middle"></span></h1>
+  <p>Chào mừng đến với Giao diện quản lý xưởng thêu</p>
+  <div id="danh-sach-ten" class="ten-list">Đang tải danh sách nhân viên...</div>
   <div id="khoi-nhap-mat-khau" style="display:none;margin-top:16px">
-    <p>Nháº­p máº­t kháº©u cho <strong id="ten-dang-chon"></strong>:</p>
+    <p>Nhập mật khẩu cho <strong id="ten-dang-chon"></strong>:</p>
     <input type="password" id="o-mat-khau" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" style="font-size:1.4rem;text-align:center;letter-spacing:0.3em;width:100%;max-width:200px;padding:12px;border-radius:8px;border:1px solid var(--color-border)">
     <div style="display:flex;gap:8px;margin-top:12px;justify-content:center">
-      <button type="button" id="btn-dang-nhap-mat-khau" class="btn-ten">ÄÄƒng nháº­p</button>
-      <button type="button" id="btn-quay-lai-ten" class="btn-ten">Quay láº¡i</button>
+      <button type="button" id="btn-dang-nhap-mat-khau" class="btn-ten">Đăng nhập</button>
+      <button type="button" id="btn-quay-lai-ten" class="btn-ten">Quay lại</button>
     </div>
   </div>
 
   <details class="quy-trinh">
     <summary>
       <span data-icon="navChart" data-icon-size="18"></span>
-      Xem quy trÃ¬nh xá»­ lÃ½ Ä‘Æ¡n hÃ ng
+      Xem quy trình xử lý đơn hàng
       <span class="qt-chevron" data-icon="chevronDown" data-icon-size="16"></span>
     </summary>
     <ol class="qt-list">
       <li class="qt-buoc">
         <div class="qt-so">1</div>
         <div class="qt-noi-dung">
-          <span class="badge trang-thai-warning">ChÆ°a in mÃ£</span>
-          <div class="qt-mo-ta"><span data-icon="chat" data-icon-size="14"></span> Váº½ file trao Ä‘á»•i, chá»‘t Ä‘Æ¡n vá»›i khÃ¡ch</div>
+          <span class="badge trang-thai-warning">Chưa in mã</span>
+          <div class="qt-mo-ta"><span data-icon="chat" data-icon-size="14"></span> Vẽ file trao đổi, chốt đơn với khách</div>
         </div>
       </li>
       <li class="qt-buoc">
         <div class="qt-so">2</div>
         <div class="qt-noi-dung">
-          <span class="badge trang-thai-info">ÄÃ£ in mÃ£</span>
+          <span class="badge trang-thai-info">Đã in mã</span>
         </div>
       </li>
       <li class="qt-buoc">
         <div class="qt-so">3</div>
         <div class="qt-noi-dung qt-song-song">
-          <div class="qt-mo-ta"><span data-icon="file" data-icon-size="14"></span> Váº½ file cáº­p nháº­t &rarr; <span class="badge trang-thai-success">ÄÃ£ váº½ file</span></div>
-          <div class="qt-mo-ta"><span data-icon="navScan" data-icon-size="14"></span> Láº¥y phÃ´i quÃ©t QR Code &rarr; <span class="badge trang-thai-success">ÄÃ£ láº¥y phÃ´i</span></div>
+          <div class="qt-mo-ta"><span data-icon="file" data-icon-size="14"></span> Vẽ file cập nhật &rarr; <span class="badge trang-thai-success">Đã vẽ file</span></div>
+          <div class="qt-mo-ta"><span data-icon="navScan" data-icon-size="14"></span> Lấy phôi quét QR Code &rarr; <span class="badge trang-thai-success">Đã lấy phôi</span></div>
         </div>
       </li>
       <li class="qt-buoc">
         <div class="qt-so">4</div>
         <div class="qt-noi-dung">
-          <span class="badge trang-thai-info">ÄÃƒ Sáº´N SÃ€NG CHáº Y MÃY</span>
-          <div class="qt-mo-ta">Há»‡ thá»‘ng tá»± chuyá»ƒn khi Ä‘á»§ cáº£ 2 Ä‘iá»u kiá»‡n á»Ÿ bÆ°á»›c 3</div>
+          <span class="badge trang-thai-info">ĐÃ SẴN SÀNG CHẠY MÁY</span>
+          <div class="qt-mo-ta">Hệ thống tự chuyển khi đủ cả 2 điều kiện ở bước 3</div>
         </div>
       </li>
       <li class="qt-buoc">
         <div class="qt-so">5</div>
         <div class="qt-noi-dung">
-          <span class="badge trang-thai-info">Äang cháº¡y mÃ¡y</span>
-          <div class="qt-mo-ta"><span data-icon="navScan" data-icon-size="14"></span> Sáº£n xuáº¥t quÃ©t QR Code</div>
+          <span class="badge trang-thai-info">Đang chạy máy</span>
+          <div class="qt-mo-ta"><span data-icon="navScan" data-icon-size="14"></span> Sản xuất quét QR Code</div>
         </div>
       </li>
       <li class="qt-buoc">
         <div class="qt-so">6</div>
         <div class="qt-noi-dung">
-          <span class="badge trang-thai-success">ÄÃ£ sáº£n xuáº¥t</span>
-          <div class="qt-mo-ta"><span data-icon="camera" data-icon-size="14"></span> Láº¥y phÃ´i chá»¥p áº£nh xÃ¡c nháº­n</div>
+          <span class="badge trang-thai-success">Đã sản xuất</span>
+          <div class="qt-mo-ta"><span data-icon="camera" data-icon-size="14"></span> Lấy phôi chụp ảnh xác nhận</div>
         </div>
       </li>
       <li class="qt-buoc">
         <div class="qt-so">7</div>
         <div class="qt-noi-dung">
-          <span class="badge trang-thai-success">ÄÃƒ DÃN TEM</span>
-          <div class="qt-mo-ta"><span data-icon="navScan" data-icon-size="14"></span> QuÃ©t mÃ£ QR Tracking, táº¡o váº­n Ä‘Æ¡n tháº­t + in tem</div>
+          <span class="badge trang-thai-success">ĐÃ DÁN TEM</span>
+          <div class="qt-mo-ta"><span data-icon="navScan" data-icon-size="14"></span> Quét mã QR Tracking, tạo vận đơn thật + in tem</div>
         </div>
       </li>
     </ol>
@@ -85,9 +85,9 @@
 <script src="/js/icons.js?v=106"></script>
 <script src="/js/api.js?v=141"></script>
 <script>
-// PhiÃªn báº£n app (16/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” trÆ°á»›c Ä‘Ã¢y ghi cá»©ng "PhiÃªn báº£n 68"): sá»‘ v= cá»§a /js/api.js trang nÃ y Ä‘ang náº¡p,
-// cÃ¹ng Ä‘á»‹nh nghÄ©a phiÃªn báº£n á»Ÿ services/phienBanService.js (log / bÃ¡o cÃ¡o Telegram) â€” tÄƒng v= khi deploy lÃ  sá»‘ á»Ÿ Ä‘Ã¢y tá»± Ä‘á»•i.
-(m => { if (m) document.getElementById('phien-ban-app').textContent = 'PhiÃªn báº£n ' + m[1]; })(
+// Phiên bản app (16/10/2026, theo yêu cầu người dùng — trước đây ghi cứng "Phiên bản 68"): số v= của /js/api.js trang này đang nạp,
+// cùng định nghĩa phiên bản ở services/phienBanService.js (log / báo cáo Telegram) — tăng v= khi deploy là số ở đây tự đổi.
+(m => { if (m) document.getElementById('phien-ban-app').textContent = 'Phiên bản ' + m[1]; })(
   ((document.querySelector('script[src*="/js/api.js"]') || {}).src || '').match(/[?&]v=(\d+)/));
 document.getElementById('logo-mark').innerHTML = '<img src="/images/logo.png" alt="" width="88" height="88" style="display:block;margin:0 auto;border-radius:22%;box-shadow:0 8px 24px rgba(200,24,24,.28)">';
 document.querySelectorAll('[data-icon]').forEach(el => {
@@ -100,18 +100,18 @@ async function taiDanhSach() {
   try {
     list = await apiFetch('/auth/danh-sach');
   } catch (e) {
-    el.textContent = 'KhÃ´ng táº£i Ä‘Æ°á»£c danh sÃ¡ch: ' + e.message;
+    el.textContent = 'Không tải được danh sách: ' + e.message;
     return;
   }
   el.innerHTML = '';
-  if (list.length === 0) { el.textContent = 'ChÆ°a cÃ³ nhÃ¢n viÃªn nÃ o. LiÃªn há»‡ Admin Ä‘á»ƒ thÃªm.'; return; }
+  if (list.length === 0) { el.textContent = 'Chưa có nhân viên nào. Liên hệ Admin để thêm.'; return; }
   list.forEach(u => {
     const btn = document.createElement('button');
     btn.className = 'btn-ten';
     btn.textContent = u.ten;
-    btn.setAttribute('aria-label', 'ÄÄƒng nháº­p vá»›i tÃªn ' + u.ten);
-    // TÃ i khoáº£n CHÆ¯A cÃ³ máº­t kháº©u (coMatKhau=false, tÃ i khoáº£n cÅ©) â€” Ä‘Äƒng nháº­p ngay nhÆ° trÆ°á»›c, khÃ´ng
-    // cáº§n hiá»‡n Ã´ nháº­p PIN. TÃ i khoáº£n ÄÃƒ cÃ³ máº­t kháº©u â€” hiá»‡n Ã´ nháº­p PIN trÆ°á»›c khi Ä‘Äƒng nháº­p.
+    btn.setAttribute('aria-label', 'Đăng nhập với tên ' + u.ten);
+    // Tài khoản CHƯA có mật khẩu (coMatKhau=false, tài khoản cũ) — đăng nhập ngay như trước, không
+    // cần hiện ô nhập PIN. Tài khoản ĐÃ có mật khẩu — hiện ô nhập PIN trước khi đăng nhập.
     btn.onclick = () => u.coMatKhau ? hienONhapMatKhau(u.ten) : dangNhap(u.ten);
     el.appendChild(btn);
   });
@@ -136,10 +136,10 @@ document.getElementById('btn-quay-lai-ten').onclick = () => {
 async function dangNhap(ten, matKhau) {
   try {
     const user = await apiFetch('/auth/dang-nhap', { method: 'POST', body: JSON.stringify({ ten, matKhau }) });
-    // DÃ¹ng chung trangChuTheoVaiTro() (js/api.js) vá»›i renderNav() â€” trÆ°á»›c Ä‘Ã¢y tá»± láº·p láº¡i logic riÃªng á»Ÿ
-    // Ä‘Ã¢y (chá»‰ san_xuat -> /my-orders.html, cÃ²n láº¡i ká»ƒ cáº£ nguoi_lay_phoi Ä‘á»u vá» /orders.html) nÃªn bá»‹
-    // lá»‡ch: nguoi_lay_phoi khÃ´ng cÃ³ má»¥c "ÄÆ¡n hÃ ng" trong menu (renderNav) nhÆ°ng váº«n bá»‹ Ä‘Æ°a tháº³ng tá»›i Ä‘Ã³
-    // sau khi Ä‘Äƒng nháº­p (sá»­a 12/09/2026, xem
+    // Dùng chung trangChuTheoVaiTro() (js/api.js) với renderNav() — trước đây tự lặp lại logic riêng ở
+    // đây (chỉ san_xuat -> /my-orders.html, còn lại kể cả nguoi_lay_phoi đều về /orders.html) nên bị
+    // lệch: nguoi_lay_phoi không có mục "Đơn hàng" trong menu (renderNav) nhưng vẫn bị đưa thẳng tới đó
+    // sau khi đăng nhập (sửa 12/09/2026, xem
     // docs/superpowers/specs/2026-09-12-chan-nguoi-lay-phoi-xem-don-hang-design.md).
     window.location.href = trangChuTheoVaiTro(user.vaiTro);
   } catch (e) { await hopThongBao(e.message); }

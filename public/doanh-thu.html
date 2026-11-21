@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Doanh thu â€” XÆ°á»Ÿng ThÃªu</title>
+<title>Doanh thu — Xưởng Thêu</title>
 <link rel="stylesheet" href="/css/style.css?v=112">
 <script src="/js/theme.js?v=104"></script>
 </head>
@@ -13,51 +13,51 @@
   <div class="tieu-de-cong-cu">
     <h2>Doanh thu</h2>
     <div class="thanh-cong-cu-danh-sach" id="thanh-chon-ky">
-      <button type="button" class="btn-hanh-dong phu dang-mo" data-ky="toan_bo">ToÃ n bá»™</button>
-      <button type="button" class="btn-hanh-dong phu" data-ky="hom_nay">HÃ´m nay</button>
-      <button type="button" class="btn-hanh-dong phu" data-ky="tuan_nay">Tuáº§n nÃ y</button>
-      <button type="button" class="btn-hanh-dong phu" data-ky="thang_nay">ThÃ¡ng nÃ y</button>
-      <button type="button" class="btn-hanh-dong phu" data-ky="chon_thang">ThÃ¡ng...</button>
-      <button type="button" class="btn-hanh-dong phu" data-ky="tuy_chon">Tuá»³ chá»n...</button>
+      <button type="button" class="btn-hanh-dong phu dang-mo" data-ky="toan_bo">Toàn bộ</button>
+      <button type="button" class="btn-hanh-dong phu" data-ky="hom_nay">Hôm nay</button>
+      <button type="button" class="btn-hanh-dong phu" data-ky="tuan_nay">Tuần này</button>
+      <button type="button" class="btn-hanh-dong phu" data-ky="thang_nay">Tháng này</button>
+      <button type="button" class="btn-hanh-dong phu" data-ky="chon_thang">Tháng...</button>
+      <button type="button" class="btn-hanh-dong phu" data-ky="tuy_chon">Tuỳ chọn...</button>
     </div>
   </div>
 
   <div id="panel-chon-thang" class="panel-dieu-khien" style="display:none">
     <div class="inline-form">
       <div class="truong">
-        <label for="dt-thang">ThÃ¡ng</label>
+        <label for="dt-thang">Tháng</label>
         <input type="month" id="dt-thang">
       </div>
-      <button type="button" class="btn-hanh-dong" id="btn-ap-dung-thang">Ãp dá»¥ng</button>
+      <button type="button" class="btn-hanh-dong" id="btn-ap-dung-thang">Áp dụng</button>
     </div>
   </div>
 
   <div id="panel-khoang-ngay" class="panel-dieu-khien" style="display:none">
     <div class="inline-form">
       <div class="truong">
-        <label for="dt-tu-ngay">Tá»« ngÃ y</label>
+        <label for="dt-tu-ngay">Từ ngày</label>
         <input type="date" id="dt-tu-ngay">
       </div>
       <div class="truong">
-        <label for="dt-den-ngay">Äáº¿n ngÃ y</label>
+        <label for="dt-den-ngay">Đến ngày</label>
         <input type="date" id="dt-den-ngay">
       </div>
-      <button type="button" class="btn-hanh-dong" id="btn-ap-dung-khoang">Ãp dá»¥ng</button>
+      <button type="button" class="btn-hanh-dong" id="btn-ap-dung-khoang">Áp dụng</button>
     </div>
   </div>
 
-  <div id="tong-so" class="tong-so-the">Äang táº£i...</div>
+  <div id="tong-so" class="tong-so-the">Đang tải...</div>
 
   <div class="chart-card" style="margin-bottom:var(--space-4)">
     <canvas id="chart-dt-xuong"></canvas>
   </div>
 
   <div class="chart-card">
-    <h3 style="margin-top:0">Theo xÆ°á»Ÿng</h3>
+    <h3 style="margin-top:0">Theo xưởng</h3>
     <div class="bang-cuon-ngang">
       <table class="bang-xem-truoc" id="bang-doanh-thu">
         <thead><tr>
-          <th>XÆ°á»Ÿng</th><th>Sá»‘ Ä‘Æ¡n</th><th>Sá»‘ SP</th><th>Doanh thu</th>
+          <th>Xưởng</th><th>Số đơn</th><th>Số SP</th><th>Doanh thu</th>
         </tr></thead>
         <tbody id="bang-doanh-thu-body"></tbody>
       </table>
@@ -69,7 +69,7 @@
     <div class="bang-cuon-ngang">
       <table class="bang-xem-truoc" id="bang-team">
         <thead><tr>
-          <th>Team</th><th>Sá»‘ Ä‘Æ¡n</th><th>Sá»‘ SP</th><th>Doanh thu</th>
+          <th>Team</th><th>Số đơn</th><th>Số SP</th><th>Doanh thu</th>
         </tr></thead>
         <tbody id="bang-team-body"></tbody>
       </table>
@@ -94,7 +94,7 @@ const dinhDangTien = n => '$' + n.toLocaleString('en-US', { minimumFractionDigit
   if (!user) return;
   renderNav(user, 'doanh-thu');
   if (user.vaiTro !== 'superadmin') {
-    document.querySelector('.page').innerHTML = '<p>Báº¡n khÃ´ng cÃ³ quyá»n truy cáº­p trang nÃ y.</p>';
+    document.querySelector('.page').innerHTML = '<p>Bạn không có quyền truy cập trang này.</p>';
     return;
   }
 
@@ -141,7 +141,7 @@ function dinhDangYMD(d) {
 }
 
 async function taiDoanhThu() {
-  document.getElementById('tong-so').textContent = 'Äang táº£i...';
+  document.getElementById('tong-so').textContent = 'Đang tải...';
 
   const qs = new URLSearchParams();
   if (kyHienTai === 'tuy_chon') {
@@ -167,14 +167,14 @@ async function taiDoanhThu() {
   try {
     data = await apiFetch('/doanh-thu?' + qs.toString());
   } catch (e) {
-    document.getElementById('tong-so').textContent = 'KhÃ´ng táº£i Ä‘Æ°á»£c: ' + e.message;
+    document.getElementById('tong-so').textContent = 'Không tải được: ' + e.message;
     return;
   }
 
   document.getElementById('tong-so').textContent =
-    `Tá»•ng doanh thu: ${dinhDangTien(data.tongDoanhThu)} Â· ${data.tongDon} Ä‘Æ¡n Â· ${data.tongSanPham ?? 0} sáº£n pháº©m`;
+    `Tổng doanh thu: ${dinhDangTien(data.tongDoanhThu)} · ${data.tongDon} đơn · ${data.tongSanPham ?? 0} sản phẩm`;
 
-  veBieuDoCotDT('chart-dt-xuong', 'Doanh thu theo xÆ°á»Ÿng', data.theoXuong);
+  veBieuDoCotDT('chart-dt-xuong', 'Doanh thu theo xưởng', data.theoXuong);
   veBang(data.theoXuong);
   veBangTeam(data.theoTeam || []);
 }
@@ -201,7 +201,7 @@ function veBieuDoCotDT(canvasId, title, danhSach) {
         title: { display: true, text: title },
         datalabels: {
           anchor: 'end', align: 'end', font: { size: 11 },
-          // Nhiá»u xÆ°á»Ÿng thÃ¬ label chá»“ng nhau â€” áº©n khi > 8 cá»™t, rÃª chuá»™t Ä‘á»ƒ xem tooltip.
+          // Nhiều xưởng thì label chồng nhau — ẩn khi > 8 cột, rê chuột để xem tooltip.
           display: danhSach.length <= 8,
           formatter: v => v === 0 ? '' : dinhDangTien(v),
         },
@@ -216,7 +216,7 @@ function veBieuDoCotDT(canvasId, title, danhSach) {
 
 function veBang(danhSach) {
   const tbody = document.getElementById('bang-doanh-thu-body');
-  if (!danhSach.length) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--color-text-muted)">KhÃ´ng cÃ³ dá»¯ liá»‡u</td></tr>'; return; }
+  if (!danhSach.length) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--color-text-muted)">Không có dữ liệu</td></tr>'; return; }
   tbody.innerHTML = danhSach.map(x => `
     <tr>
       <td>${escapeHtml(x.xuong)}</td>
@@ -229,7 +229,7 @@ function veBang(danhSach) {
 
 function veBangTeam(danhSach) {
   const tbody = document.getElementById('bang-team-body');
-  if (!danhSach.length) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--color-text-muted)">KhÃ´ng cÃ³ dá»¯ liá»‡u</td></tr>'; return; }
+  if (!danhSach.length) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--color-text-muted)">Không có dữ liệu</td></tr>'; return; }
   tbody.innerHTML = danhSach.map(x => `
     <tr>
       <td>${escapeHtml(x.team)}</td>
