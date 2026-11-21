@@ -837,6 +837,7 @@ function renderNav(user, active) {
     links = [
       { href: '/orders.html', label: 'Đơn hàng', icon: 'navOrders', key: 'orders' },
       { href: '/my-orders-ve-file.html', label: 'Vẽ file', icon: 'navMyOrders', key: 'my-orders-ve-file' },
+      { href: '/my-orders.html', label: 'Chạy máy', icon: 'navMyOrders', key: 'my-orders' },
       { href: '/scan.html', label: 'Quét QR', icon: 'navScan', key: 'scan' },
       { href: '/tracking.html', label: 'Tracking', icon: 'navTracking', key: 'tracking' },
       // "Tìm ảnh" (03/10/2026, giai đoạn 2) — tìm thiết kế cũ + tải PNG/EMB lên thư viện.

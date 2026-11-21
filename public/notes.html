@@ -1,13 +1,13 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Notes — Xưởng Thêu</title>
+<title>Notes â€” XÆ°á»Ÿng ThÃªu</title>
 <link rel="stylesheet" href="/css/style.css?v=112">
 <script src="/js/theme.js?v=104"></script>
 <style>
-/* Notes (02/10/2026) — style riêng trang này. */
+/* Notes (02/10/2026) â€” style riÃªng trang nÃ y. */
 .nt-khoi { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-4); margin-bottom: var(--space-4); }
 .nt-cong-cu { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: flex-end; }
 .nt-cong-cu .truong { flex: 1 1 200px; min-width: 0; }
@@ -32,13 +32,13 @@
 <div id="nav"></div>
 <div class="page">
   <h2>Notes</h2>
-  <p style="color:var(--color-text-muted);margin-top:0">Ghi chép kinh nghiệm xử lý vấn đề (chỉ superadmin). Nội dung là văn bản thường — giữ xuống dòng, link tự bấm được. Ảnh: chọn file hoặc dán (Ctrl+V) vào ô nội dung.</p>
+  <p style="color:var(--color-text-muted);margin-top:0">Ghi chÃ©p kinh nghiá»‡m xá»­ lÃ½ váº¥n Ä‘á» (chá»‰ superadmin). Ná»™i dung lÃ  vÄƒn báº£n thÆ°á»ng â€” giá»¯ xuá»‘ng dÃ²ng, link tá»± báº¥m Ä‘Æ°á»£c. áº¢nh: chá»n file hoáº·c dÃ¡n (Ctrl+V) vÃ o Ã´ ná»™i dung.</p>
 
   <div class="nt-khoi">
     <div class="nt-cong-cu">
-      <div class="truong"><label for="nt-tim">Tìm</label><input type="search" id="nt-tim" placeholder="Từ khoá trong tiêu đề, nội dung, thẻ..." autocomplete="off"></div>
-      <div class="truong" style="flex:0 1 200px"><label for="nt-loc-the">Thẻ</label><select id="nt-loc-the"><option value="">Tất cả thẻ</option></select></div>
-      <button type="button" class="btn-hanh-dong" onclick="moForm()">+ Thêm note</button>
+      <div class="truong"><label for="nt-tim">TÃ¬m</label><input type="search" id="nt-tim" placeholder="Tá»« khoÃ¡ trong tiÃªu Ä‘á», ná»™i dung, tháº»..." autocomplete="off"></div>
+      <div class="truong" style="flex:0 1 200px"><label for="nt-loc-the">Tháº»</label><select id="nt-loc-the"><option value="">Táº¥t cáº£ tháº»</option></select></div>
+      <button type="button" class="btn-hanh-dong" onclick="moForm()">+ ThÃªm note</button>
       <button type="button" class="btn-hanh-dong phu" onclick="document.getElementById('nt-file-import').click()">Import .txt / .md</button>
       <input type="file" id="nt-file-import" accept=".txt,.md,text/plain,text/markdown" multiple hidden onchange="importFile(this)">
     </div>
@@ -46,30 +46,30 @@
   </div>
 
   <div id="nt-form" class="nt-khoi nt-form" style="display:none">
-    <h3 id="nt-form-tieu-de" style="margin-top:0">Thêm note</h3>
-    <div class="truong"><label for="nt-tieu-de">Tiêu đề *</label><input type="text" id="nt-tieu-de" maxlength="200"></div>
-    <div class="truong"><label for="nt-noi-dung">Nội dung</label><textarea id="nt-noi-dung" maxlength="50000" placeholder="Vấn đề gặp phải, nguyên nhân, cách xử lý... (dán ảnh bằng Ctrl+V)"></textarea></div>
-    <div class="truong"><label for="nt-the">Thẻ (cách nhau dấu phẩy, tối đa 10)</label><input type="text" id="nt-the" list="nt-goi-y-the" placeholder="vd GKE, ZIP, QC3"><datalist id="nt-goi-y-the"></datalist></div>
-    <div class="truong"><label for="nt-chon-anh">Ảnh đính kèm</label>
+    <h3 id="nt-form-tieu-de" style="margin-top:0">ThÃªm note</h3>
+    <div class="truong"><label for="nt-tieu-de">TiÃªu Ä‘á» *</label><input type="text" id="nt-tieu-de" maxlength="200"></div>
+    <div class="truong"><label for="nt-noi-dung">Ná»™i dung</label><textarea id="nt-noi-dung" maxlength="50000" placeholder="Váº¥n Ä‘á» gáº·p pháº£i, nguyÃªn nhÃ¢n, cÃ¡ch xá»­ lÃ½... (dÃ¡n áº£nh báº±ng Ctrl+V)"></textarea></div>
+    <div class="truong"><label for="nt-the">Tháº» (cÃ¡ch nhau dáº¥u pháº©y, tá»‘i Ä‘a 10)</label><input type="text" id="nt-the" list="nt-goi-y-the" placeholder="vd GKE, ZIP, QC3"><datalist id="nt-goi-y-the"></datalist></div>
+    <div class="truong"><label for="nt-chon-anh">áº¢nh Ä‘Ã­nh kÃ¨m</label>
       <input type="file" id="nt-chon-anh" accept="image/jpeg,image/png,image/webp,image/gif" multiple onchange="themAnhCho([...this.files]); this.value = ''">
       <div id="nt-anh-form" class="nt-anh"></div></div>
-    <p style="margin-bottom:0"><button type="button" class="btn-hanh-dong" id="nt-nut-luu" onclick="luuNote(this)">Lưu</button>
-      <button type="button" class="btn-hanh-dong phu" onclick="dongForm()">Huỷ</button> <span id="nt-loi-form" style="color:var(--color-danger-text)"></span></p>
+    <p style="margin-bottom:0"><button type="button" class="btn-hanh-dong" id="nt-nut-luu" onclick="luuNote(this)">LÆ°u</button>
+      <button type="button" class="btn-hanh-dong phu" onclick="dongForm()">Huá»·</button> <span id="nt-loi-form" style="color:var(--color-danger-text)"></span></p>
   </div>
 
-  <div id="nt-danh-sach">Đang tải...</div>
+  <div id="nt-danh-sach">Äang táº£i...</div>
 </div>
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=140"></script>
+<script src="/js/api.js?v=141"></script>
 <script>
 const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 let dsNote = [];
-let dangSua = null;     // note đang sửa (null = thêm mới)
-let anhCho = [];        // [{ file, url }] ảnh mới chọn/dán, tải lên khi bấm Lưu
-let anhBo = [];         // key ảnh cũ bấm xoá trong form, xoá khi bấm Lưu
+let dangSua = null;     // note Ä‘ang sá»­a (null = thÃªm má»›i)
+let anhCho = [];        // [{ file, url }] áº£nh má»›i chá»n/dÃ¡n, táº£i lÃªn khi báº¥m LÆ°u
+let anhBo = [];         // key áº£nh cÅ© báº¥m xoÃ¡ trong form, xoÃ¡ khi báº¥m LÆ°u
 const urlAnh = key => '/api/notes/anh/' + key.split('/').map(encodeURIComponent).join('/');
-// Văn bản thường -> HTML: escape trước, rồi biến http(s)://... thành link.
+// VÄƒn báº£n thÆ°á»ng -> HTML: escape trÆ°á»›c, rá»“i biáº¿n http(s)://... thÃ nh link.
 const vanBanCoLink = s => escapeHtml(s).replace(/https?:\/\/[^\s<]+/g, u => `<a href="${u}" target="_blank" rel="noopener noreferrer">${u}</a>`);
 const gio = t => { const d = new Date(t); return isNaN(d) ? '' : d.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); };
 
@@ -78,7 +78,7 @@ const gio = t => { const d = new Date(t); return isNaN(d) ? '' : d.toLocaleStrin
   if (!user) return;
   renderNav(user, 'notes');
   if (user.vaiTro !== 'superadmin') {
-    document.querySelector('.page').innerHTML = '<p>Bạn không có quyền truy cập trang này.</p>';
+    document.querySelector('.page').innerHTML = '<p>Báº¡n khÃ´ng cÃ³ quyá»n truy cáº­p trang nÃ y.</p>';
     return;
   }
   document.getElementById('nt-tim').oninput = debounce(taiNotes, 300);
@@ -102,7 +102,7 @@ async function taiThe() {
   try { ds = await apiFetch('/notes/the'); } catch (e) { return; }
   const sel = document.getElementById('nt-loc-the');
   const dangChon = sel.value;
-  sel.innerHTML = '<option value="">Tất cả thẻ</option>' + ds.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+  sel.innerHTML = '<option value="">Táº¥t cáº£ tháº»</option>' + ds.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
   sel.value = ds.includes(dangChon) ? dangChon : '';
   document.getElementById('nt-goi-y-the').innerHTML = ds.map(t => `<option value="${escapeHtml(t)}">`).join('');
 }
@@ -114,23 +114,23 @@ async function taiNotes() {
   const the = document.getElementById('nt-loc-the').value;
   if (tuKhoa) qs.set('tuKhoa', tuKhoa);
   if (the) qs.set('the', the);
-  try { dsNote = await apiFetch('/notes?' + qs); } catch (e) { el.textContent = 'Lỗi: ' + e.message; return; }
-  if (!dsNote.length) { el.innerHTML = `<p style="color:var(--color-text-muted)">${tuKhoa || the ? 'Không có note nào khớp.' : 'Chưa có note nào — bấm "+ Thêm note".'}</p>`; return; }
+  try { dsNote = await apiFetch('/notes?' + qs); } catch (e) { el.textContent = 'Lá»—i: ' + e.message; return; }
+  if (!dsNote.length) { el.innerHTML = `<p style="color:var(--color-text-muted)">${tuKhoa || the ? 'KhÃ´ng cÃ³ note nÃ o khá»›p.' : 'ChÆ°a cÃ³ note nÃ o â€” báº¥m "+ ThÃªm note".'}</p>`; return; }
   el.innerHTML = dsNote.map(n => `<div class="nt-khoi">
     <div class="nt-dong-dau"><h3>${escapeHtml(n.TieuDe)}</h3>
-      <button type="button" class="btn-hanh-dong phu" style="padding:4px 10px;font-size:0.8rem" onclick="moForm(${n.id})">Sửa</button>
-      <button type="button" class="btn-hanh-dong phu nguy-hiem" style="padding:4px 10px;font-size:0.8rem" onclick="xoaNote(${n.id})">Xoá</button></div>
+      <button type="button" class="btn-hanh-dong phu" style="padding:4px 10px;font-size:0.8rem" onclick="moForm(${n.id})">Sá»­a</button>
+      <button type="button" class="btn-hanh-dong phu nguy-hiem" style="padding:4px 10px;font-size:0.8rem" onclick="xoaNote(${n.id})">XoÃ¡</button></div>
     <div>${n.The.map(t => `<span class="nt-the" onclick="locThe(this.dataset.the)" data-the="${escapeHtml(t)}">${escapeHtml(t)}</span>`).join('')}</div>
     ${n.NoiDung ? `<div class="nt-noi-dung${n.NoiDung.split('\n').length > 6 || n.NoiDung.length > 600 ? ' thu-gon' : ''}" id="nt-nd-${n.id}">${vanBanCoLink(n.NoiDung)}</div>
-      ${n.NoiDung.split('\n').length > 6 || n.NoiDung.length > 600 ? `<button type="button" class="btn-hanh-dong phu" style="padding:2px 8px;font-size:0.78rem" onclick="moRong(this, ${n.id})">Xem thêm ▾</button>` : ''}` : ''}
-    ${n.Anh.length ? `<div class="nt-anh">${n.Anh.map(k => `<a href="${urlAnh(k)}" target="_blank" rel="noopener"><img src="${urlAnh(k)}" alt="Ảnh đính kèm" loading="lazy"></a>`).join('')}</div>` : ''}
-    <div class="nt-meta" style="margin-top:var(--space-2)">Tạo: ${escapeHtml(n.NguoiTao)} · ${gio(n.ThoiGianTao)}${n.ThoiGianSua ? ` — Sửa: ${escapeHtml(n.NguoiSua)} · ${gio(n.ThoiGianSua)}` : ''}</div>
+      ${n.NoiDung.split('\n').length > 6 || n.NoiDung.length > 600 ? `<button type="button" class="btn-hanh-dong phu" style="padding:2px 8px;font-size:0.78rem" onclick="moRong(this, ${n.id})">Xem thÃªm â–¾</button>` : ''}` : ''}
+    ${n.Anh.length ? `<div class="nt-anh">${n.Anh.map(k => `<a href="${urlAnh(k)}" target="_blank" rel="noopener"><img src="${urlAnh(k)}" alt="áº¢nh Ä‘Ã­nh kÃ¨m" loading="lazy"></a>`).join('')}</div>` : ''}
+    <div class="nt-meta" style="margin-top:var(--space-2)">Táº¡o: ${escapeHtml(n.NguoiTao)} Â· ${gio(n.ThoiGianTao)}${n.ThoiGianSua ? ` â€” Sá»­a: ${escapeHtml(n.NguoiSua)} Â· ${gio(n.ThoiGianSua)}` : ''}</div>
   </div>`).join('');
 }
 function moRong(nut, id) {
   const el = document.getElementById('nt-nd-' + id);
   const thuGon = el.classList.toggle('thu-gon');
-  nut.textContent = thuGon ? 'Xem thêm ▾' : 'Thu gọn ▴';
+  nut.textContent = thuGon ? 'Xem thÃªm â–¾' : 'Thu gá»n â–´';
 }
 function locThe(the) {
   document.getElementById('nt-loc-the').value = the;
@@ -141,7 +141,7 @@ function moForm(id) {
   dangSua = id ? dsNote.find(n => n.id === id) : null;
   anhCho.forEach(a => URL.revokeObjectURL(a.url));
   anhCho = []; anhBo = [];
-  document.getElementById('nt-form-tieu-de').textContent = dangSua ? 'Sửa note' : 'Thêm note';
+  document.getElementById('nt-form-tieu-de').textContent = dangSua ? 'Sá»­a note' : 'ThÃªm note';
   document.getElementById('nt-tieu-de').value = dangSua ? dangSua.TieuDe : '';
   document.getElementById('nt-noi-dung').value = dangSua ? dangSua.NoiDung : '';
   document.getElementById('nt-the').value = dangSua ? dangSua.The.join(', ') : '';
@@ -159,7 +159,7 @@ function dongForm() {
 }
 function themAnhCho(files) {
   for (const file of files) {
-    if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) { document.getElementById('nt-loi-form').textContent = `Bỏ qua "${file.name}": chỉ nhận ảnh JPEG/PNG/WEBP/GIF.`; continue; }
+    if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) { document.getElementById('nt-loi-form').textContent = `Bá» qua "${file.name}": chá»‰ nháº­n áº£nh JPEG/PNG/WEBP/GIF.`; continue; }
     anhCho.push({ file, url: URL.createObjectURL(file) });
   }
   veAnhForm();
@@ -167,18 +167,18 @@ function themAnhCho(files) {
 function veAnhForm() {
   const cu = dangSua ? dangSua.Anh.filter(k => !anhBo.includes(k)) : [];
   document.getElementById('nt-anh-form').innerHTML =
-    cu.map(k => `<div class="o-anh"><img src="${urlAnh(k)}" alt="Ảnh đính kèm"><button type="button" class="xoa-anh" title="Bỏ ảnh này" onclick="boAnhCu(${escapeHtml(JSON.stringify(k))})">×</button></div>`).join('') +
-    anhCho.map((a, i) => `<div class="o-anh"><img src="${a.url}" alt="Ảnh mới (chưa lưu)" style="outline:2px dashed var(--color-primary)"><button type="button" class="xoa-anh" title="Bỏ ảnh này" onclick="boAnhCho(${i})">×</button></div>`).join('');
+    cu.map(k => `<div class="o-anh"><img src="${urlAnh(k)}" alt="áº¢nh Ä‘Ã­nh kÃ¨m"><button type="button" class="xoa-anh" title="Bá» áº£nh nÃ y" onclick="boAnhCu(${escapeHtml(JSON.stringify(k))})">Ã—</button></div>`).join('') +
+    anhCho.map((a, i) => `<div class="o-anh"><img src="${a.url}" alt="áº¢nh má»›i (chÆ°a lÆ°u)" style="outline:2px dashed var(--color-primary)"><button type="button" class="xoa-anh" title="Bá» áº£nh nÃ y" onclick="boAnhCho(${i})">Ã—</button></div>`).join('');
 }
 function boAnhCu(key) { anhBo.push(key); veAnhForm(); }
 function boAnhCho(i) { URL.revokeObjectURL(anhCho[i].url); anhCho.splice(i, 1); veAnhForm(); }
 
-// Lưu: tạo/sửa note -> xoá ảnh đã bỏ -> nén + tải từng ảnh mới. Ảnh lỗi không làm mất note đã lưu (báo lại để thử lần sau).
+// LÆ°u: táº¡o/sá»­a note -> xoÃ¡ áº£nh Ä‘Ã£ bá» -> nÃ©n + táº£i tá»«ng áº£nh má»›i. áº¢nh lá»—i khÃ´ng lÃ m máº¥t note Ä‘Ã£ lÆ°u (bÃ¡o láº¡i Ä‘á»ƒ thá»­ láº§n sau).
 async function luuNote(nut) {
   const loiEl = document.getElementById('nt-loi-form');
   loiEl.textContent = '';
   const body = { tieuDe: document.getElementById('nt-tieu-de').value, noiDung: document.getElementById('nt-noi-dung').value, the: document.getElementById('nt-the').value };
-  if (!body.tieuDe.trim()) { loiEl.textContent = 'Chưa nhập tiêu đề.'; return; }
+  if (!body.tieuDe.trim()) { loiEl.textContent = 'ChÆ°a nháº­p tiÃªu Ä‘á».'; return; }
   nut.disabled = true;
   const loiAnh = [];
   try {
@@ -186,48 +186,48 @@ async function luuNote(nut) {
     if (id) await apiFetch('/notes/' + id, { method: 'PUT', body: JSON.stringify(body) });
     else id = (await apiFetch('/notes', { method: 'POST', body: JSON.stringify(body) })).id;
     for (const key of anhBo) {
-      try { await apiFetch(`/notes/${id}/anh`, { method: 'DELETE', body: JSON.stringify({ key }) }); } catch (e) { loiAnh.push('xoá ảnh: ' + e.message); }
+      try { await apiFetch(`/notes/${id}/anh`, { method: 'DELETE', body: JSON.stringify({ key }) }); } catch (e) { loiAnh.push('xoÃ¡ áº£nh: ' + e.message); }
     }
     for (let i = 0; i < anhCho.length; i++) {
-      nut.textContent = `Đang tải ảnh ${i + 1}/${anhCho.length}...`;
+      nut.textContent = `Äang táº£i áº£nh ${i + 1}/${anhCho.length}...`;
       const fd = new FormData();
       const file = anhCho[i].file.type === 'image/gif' ? anhCho[i].file : await nenAnhTruocKhiTaiLen(anhCho[i].file);
       fd.append('anh', file, file.name || 'anh.jpg');
-      try { await apiFetch(`/notes/${id}/anh`, { method: 'POST', body: fd, headers: {} }); } catch (e) { loiAnh.push(`ảnh ${i + 1}: ${e.message}`); }
+      try { await apiFetch(`/notes/${id}/anh`, { method: 'POST', body: fd, headers: {} }); } catch (e) { loiAnh.push(`áº£nh ${i + 1}: ${e.message}`); }
     }
   } catch (e) {
-    loiEl.textContent = 'Chưa lưu: ' + e.message;
-    nut.disabled = false; nut.textContent = 'Lưu';
+    loiEl.textContent = 'ChÆ°a lÆ°u: ' + e.message;
+    nut.disabled = false; nut.textContent = 'LÆ°u';
     return;
   }
-  nut.disabled = false; nut.textContent = 'Lưu';
+  nut.disabled = false; nut.textContent = 'LÆ°u';
   dongForm();
   await Promise.all([taiNotes(), taiThe()]);
-  thongBao(loiAnh.length ? `Đã lưu note, nhưng có ảnh lỗi (${loiAnh.join('; ')}) — mở Sửa để thêm lại.` : 'Đã lưu note.', !!loiAnh.length);
+  thongBao(loiAnh.length ? `ÄÃ£ lÆ°u note, nhÆ°ng cÃ³ áº£nh lá»—i (${loiAnh.join('; ')}) â€” má»Ÿ Sá»­a Ä‘á»ƒ thÃªm láº¡i.` : 'ÄÃ£ lÆ°u note.', !!loiAnh.length);
 }
 
 async function xoaNote(id) {
   const n = dsNote.find(x => x.id === id);
-  if (!n || !confirm(`Xoá note "${n.TieuDe}"${n.Anh.length ? ` và ${n.Anh.length} ảnh đính kèm` : ''}? Không khôi phục được.`)) return;
-  try { await apiFetch('/notes/' + id, { method: 'DELETE' }); } catch (e) { thongBao('Chưa xoá: ' + e.message, true); return; }
+  if (!n || !confirm(`XoÃ¡ note "${n.TieuDe}"${n.Anh.length ? ` vÃ  ${n.Anh.length} áº£nh Ä‘Ã­nh kÃ¨m` : ''}? KhÃ´ng khÃ´i phá»¥c Ä‘Æ°á»£c.`)) return;
+  try { await apiFetch('/notes/' + id, { method: 'DELETE' }); } catch (e) { thongBao('ChÆ°a xoÃ¡: ' + e.message, true); return; }
   if (dangSua && dangSua.id === id) dongForm();
   await Promise.all([taiNotes(), taiThe()]);
-  thongBao('Đã xoá note.');
+  thongBao('ÄÃ£ xoÃ¡ note.');
 }
 
 async function importFile(input) {
   const files = [...input.files];
   input.value = '';
   if (!files.length) return;
-  const the = prompt(`Import ${files.length} file — mỗi file thành 1 note (tiêu đề = tên file).\nThẻ gắn cho các note này (cách nhau dấu phẩy, có thể để trống):`, '');
+  const the = prompt(`Import ${files.length} file â€” má»—i file thÃ nh 1 note (tiÃªu Ä‘á» = tÃªn file).\nTháº» gáº¯n cho cÃ¡c note nÃ y (cÃ¡ch nhau dáº¥u pháº©y, cÃ³ thá»ƒ Ä‘á»ƒ trá»‘ng):`, '');
   if (the === null) return;
   const fd = new FormData();
   files.forEach(f => fd.append('files', f, f.name));
   fd.append('the', the);
   let kq;
-  try { kq = await apiFetch('/notes/import', { method: 'POST', body: fd, headers: {} }); } catch (e) { thongBao('Import lỗi: ' + e.message, true); return; }
+  try { kq = await apiFetch('/notes/import', { method: 'POST', body: fd, headers: {} }); } catch (e) { thongBao('Import lá»—i: ' + e.message, true); return; }
   await Promise.all([taiNotes(), taiThe()]);
-  thongBao(`Đã nhập ${kq.daNhap.length} note.${kq.boQua.length ? ` Bỏ qua ${kq.boQua.length} file: ${kq.boQua.map(b => `${b.ten} (${b.lyDo})`).join('; ')}.` : ''}`, !kq.daNhap.length);
+  thongBao(`ÄÃ£ nháº­p ${kq.daNhap.length} note.${kq.boQua.length ? ` Bá» qua ${kq.boQua.length} file: ${kq.boQua.map(b => `${b.ten} (${b.lyDo})`).join('; ')}.` : ''}`, !kq.daNhap.length);
 }
 </script>
 </body>

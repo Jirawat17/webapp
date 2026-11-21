@@ -13,13 +13,10 @@ function chuanHoaXuong(giaTri) {
 }
 const { requireRole, requireExactRole } = require('../middleware/auth');
 
-// Mật khẩu PIN 1-4 chữ số (xem docs/superpowers/specs/2026-09-07-mat-khau-dang-nhap-design.md) —
-// lưu trực tiếp KHÔNG mã hoá (đã xác nhận đánh đổi với người dùng: admin xem/nhắc lại được PIN cho
-// nhân viên quên, đổi lại ai mở được Sheet cũng biết hết PIN mọi tài khoản — giữ đúng đánh đổi này sau
-// khi chuyển sang SQLite, xem docs/superpowers/specs/2026-09-18-tai-khoan-sqlite-design.md).
-function matKhauHopLe(mk) {
-  return /^\d{1,4}$/.test(String(mk));
-}
+// Mật khẩu: non-HN = 1-4 chữ số; HN = đúng 6 chữ số (21/11/2026, bắt buộc đặt PIN lần đầu).
+// Lưu trực tiếp KHÔNG mã hoá — đã xác nhận đánh đổi với người dùng.
+function matKhauHopLe(mk) { return /^\d{1,4}$/.test(String(mk)); }
+function pinHnHopLe(mk) { return /^\d{6}$/.test(String(mk)); }
 
 // Danh sách RÚT GỌN (Ten/VaiTro/KichHoat — KHÔNG có MatKhau/Xuong) — dùng cho các trang KHÁC cần
 // liệt kê nhân viên để đổ vào ô chọn (chỉ định người chạy máy/vẽ file, xem hoạt động của người khác...
@@ -50,18 +47,16 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
   const { ten, vaiTro, xuong, matKhau } = req.body;
   if (!ten || !vaiTro) return res.status(400).json({ error: 'Thiếu tên hoặc vai trò' });
-  // Tài khoản MỚI bắt buộc phải có mật khẩu ngay từ đầu — chỉ tài khoản CŨ (tạo trước khi có tính
-  // năng này) mới được tạm thời chưa có (xem routes/auth.js).
-  if (!matKhauHopLe(matKhau)) return res.status(400).json({ error: 'Mật khẩu phải là 1-4 chữ số' });
-  // Xưởng (bổ sung 13/09/2026, theo yêu cầu người dùng — phân loại đơn/nhân viên theo xưởng vật lý
-  // HN/BN) — không bắt buộc phải chọn ngay lúc tạo tài khoản (admin có thể gán sau), nhưng
-  // nếu CÓ chọn thì phải đúng 1 trong danh sách hợp lệ, tránh gõ nhầm khiến nhân viên đó không thấy
-  // đơn nào (xem services/orderService.js#locTheoXuong — thiếu/sai Xuong coi như không có quyền xem).
   const xuongDaChuan = chuanHoaXuong(xuong);
   if (xuongDaChuan.loi) return res.status(400).json({ error: xuongDaChuan.loi });
+  // HN: mặc định PIN '000000', bắt đổi lần đầu đăng nhập — không cần gửi matKhau từ form.
+  // non-HN: bắt buộc 1-4 chữ số như trước.
+  const laHN = taiKhoanService.tachXuong(xuongDaChuan.xuong).includes('HN');
+  const matKhauLuu = laHN ? '000000' : String(matKhau || '');
+  if (!laHN && !matKhauHopLe(matKhauLuu)) return res.status(400).json({ error: 'Mật khẩu phải là 1-4 chữ số' });
   if (taiKhoanService.layTheoTen(ten)) return res.status(400).json({ error: 'Tên này đã tồn tại' });
 
-  taiKhoanService.themMoi({ Ten: ten, VaiTro: vaiTro, Xuong: xuongDaChuan.xuong, KichHoat: 'TRUE', MatKhau: String(matKhau) });
+  taiKhoanService.themMoi({ Ten: ten, VaiTro: vaiTro, Xuong: xuongDaChuan.xuong, KichHoat: 'TRUE', MatKhau: matKhauLuu });
   res.json({ ok: true });
 });
 
@@ -72,8 +67,13 @@ router.put('/:ten', async (req, res) => {
   const user = taiKhoanService.layTheoTen(req.params.ten);
   if (!user) return res.status(404).json({ error: 'Không tìm thấy nhân viên' });
 
-  if (req.body.MatKhau !== undefined && req.body.MatKhau !== '' && !matKhauHopLe(req.body.MatKhau)) {
-    return res.status(400).json({ error: 'Mật khẩu phải là 1-4 chữ số (hoặc rỗng để xoá mật khẩu)' });
+  if (req.body.MatKhau !== undefined && req.body.MatKhau !== '') {
+    const xuongKiemTra = req.body.Xuong !== undefined ? req.body.Xuong : user.Xuong;
+    const laHNKiemTra = taiKhoanService.tachXuong(xuongKiemTra).includes('HN');
+    const hopLe = laHNKiemTra ? pinHnHopLe(req.body.MatKhau) : matKhauHopLe(req.body.MatKhau);
+    if (!hopLe) {
+      return res.status(400).json({ error: laHNKiemTra ? 'PIN HN phải là đúng 6 chữ số' : 'Mật khẩu phải là 1-4 chữ số (hoặc rỗng để xoá mật khẩu)' });
+    }
   }
   if (req.body.Xuong !== undefined) {
     const xuongDaChuan = chuanHoaXuong(req.body.Xuong);

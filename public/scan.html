@@ -1,19 +1,19 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quét QR — Xưởng Thêu</title>
+<title>QuÃ©t QR â€” XÆ°á»Ÿng ThÃªu</title>
 <link rel="stylesheet" href="/css/style.css?v=112">
 <script src="/js/theme.js?v=104"></script>
 <style>
-/* Tự ẩn header khi cuộn xuống, hiện lại khi cuộn lên — chỉ áp dụng riêng cho trang Quét QR
-   (chỉ định nghĩa trong <style> của trang này, không đụng style.css dùng chung) để tăng vùng
-   thao tác trên điện thoại khi đang quét/chụp liên tục. */
+/* Tá»± áº©n header khi cuá»™n xuá»‘ng, hiá»‡n láº¡i khi cuá»™n lÃªn â€” chá»‰ Ã¡p dá»¥ng riÃªng cho trang QuÃ©t QR
+   (chá»‰ Ä‘á»‹nh nghÄ©a trong <style> cá»§a trang nÃ y, khÃ´ng Ä‘á»¥ng style.css dÃ¹ng chung) Ä‘á»ƒ tÄƒng vÃ¹ng
+   thao tÃ¡c trÃªn Ä‘iá»‡n thoáº¡i khi Ä‘ang quÃ©t/chá»¥p liÃªn tá»¥c. */
 .app-header { transition: transform 0.25s ease; }
 .app-header.an-khi-cuon { transform: translateY(-100%); }
-/* Ô nhập mã của kịch bản "Cho nhập mã tay" (05/10/2026, theo yêu cầu người dùng) — cùng cỡ/kiểu ô "Nhập mã đơn" ở
-   public/order.html: gấp 3 cỡ ô mặc định, chữ xanh dương đậm cố định, chữ gợi ý xám thường, nút cao bằng ô. */
+/* Ã” nháº­p mÃ£ cá»§a ká»‹ch báº£n "Cho nháº­p mÃ£ tay" (05/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” cÃ¹ng cá»¡/kiá»ƒu Ã´ "Nháº­p mÃ£ Ä‘Æ¡n" á»Ÿ
+   public/order.html: gáº¥p 3 cá»¡ Ã´ máº·c Ä‘á»‹nh, chá»¯ xanh dÆ°Æ¡ng Ä‘áº­m cá»‘ Ä‘á»‹nh, chá»¯ gá»£i Ã½ xÃ¡m thÆ°á»ng, nÃºt cao báº±ng Ã´. */
 #o-nhap-ma-kich-ban { width: 480px; max-width: calc(100vw - 2 * var(--space-4)); height: 63px; font-size: 40px; font-weight: 700; color: #1d4ed8; }
 #o-nhap-ma-kich-ban::placeholder { color: #757575; font-weight: 400; opacity: 1; }
 #o-nhap-ma-kich-ban + button { height: 63px; }
@@ -22,7 +22,7 @@
 <body>
 <div id="nav"></div>
 <div class="page">
-  <h2>Quét mã QR</h2>
+  <h2>QuÃ©t mÃ£ QR</h2>
   <div class="scan-mode">
     <button id="mode-batch" class="active"></button>
     <button id="mode-photo-san-xuat"></button>
@@ -34,8 +34,8 @@
 
   <div id="camera-wrap" style="display:none">
     <form id="form-nhap-ma-kich-ban" onsubmit="nhapMaKichBan(event)" style="display:none;gap:4px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
-      <input type="search" id="o-nhap-ma-kich-ban" placeholder="Nhập mã đơn..." aria-label="Nhập mã đơn để quét" autocomplete="off" enterkeyhint="go">
-      <button type="submit" class="btn-hanh-dong phu">Quét</button>
+      <input type="search" id="o-nhap-ma-kich-ban" placeholder="Nháº­p mÃ£ Ä‘Æ¡n..." aria-label="Nháº­p mÃ£ Ä‘Æ¡n Ä‘á»ƒ quÃ©t" autocomplete="off" enterkeyhint="go">
+      <button type="submit" class="btn-hanh-dong phu">QuÃ©t</button>
     </form>
     <div class="khu-vuc-camera">
       <div class="camera-vien">
@@ -49,7 +49,7 @@
 
     <p id="mo-ta-quet-chup-anh" style="display:none;text-align:center;font-weight:600"></p>
 
-    <!-- Đơn đã chụp ảnh đã sản xuất 1 nhưng CHƯA xong lượt (14/10/2026) — chụp ảnh 2 / Xong; quét đơn tiếp theo cũng tự Xong. -->
+    <!-- ÄÆ¡n Ä‘Ã£ chá»¥p áº£nh Ä‘Ã£ sáº£n xuáº¥t 1 nhÆ°ng CHÆ¯A xong lÆ°á»£t (14/10/2026) â€” chá»¥p áº£nh 2 / Xong; quÃ©t Ä‘Æ¡n tiáº¿p theo cÅ©ng tá»± Xong. -->
     <div id="don-cho-xong" class="khoi-ket-qua-vua-quet ok" style="display:none"></div>
     <input type="file" accept="image/*" capture="environment" id="input-chup-anh-2" style="display:none">
 
@@ -57,15 +57,15 @@
 
     <button id="btn-dung-quet" class="btn-dung-quet chi-che-do-kich-ban" style="display:none"></button>
 
-    <!-- Chuyển "dem-nhom" (3 ô đếm Sẵn sàng/Sai trạng thái/Không tìm thấy) xuống SAU nút "Dừng quét"
-         (bổ sung 09/09/2026, theo yêu cầu người dùng) — trước đó nằm NGAY ĐẦU trang, đẩy vùng camera/
-         kết quả vừa quét (thông tin đơn đang cần xem NHẤT lúc đang quét) xuống thấp hơn. Chỉ đổi VỊ
-         TRÍ trong HTML, KHÔNG đổi id/class — renderDemNhom() vẫn document.getElementById('dem-nhom')
-         như cũ, không cần sửa JS. -->
+    <!-- Chuyá»ƒn "dem-nhom" (3 Ã´ Ä‘áº¿m Sáºµn sÃ ng/Sai tráº¡ng thÃ¡i/KhÃ´ng tÃ¬m tháº¥y) xuá»‘ng SAU nÃºt "Dá»«ng quÃ©t"
+         (bá»• sung 09/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” trÆ°á»›c Ä‘Ã³ náº±m NGAY Äáº¦U trang, Ä‘áº©y vÃ¹ng camera/
+         káº¿t quáº£ vá»«a quÃ©t (thÃ´ng tin Ä‘Æ¡n Ä‘ang cáº§n xem NHáº¤T lÃºc Ä‘ang quÃ©t) xuá»‘ng tháº¥p hÆ¡n. Chá»‰ Ä‘á»•i Vá»Š
+         TRÃ trong HTML, KHÃ”NG Ä‘á»•i id/class â€” renderDemNhom() váº«n document.getElementById('dem-nhom')
+         nhÆ° cÅ©, khÃ´ng cáº§n sá»­a JS. -->
     <div id="dem-nhom" class="dem-nhom chi-che-do-kich-ban" style="display:none"></div>
 
     <div class="chi-che-do-kich-ban" style="display:none">
-      <h3 style="margin-top:20px">Danh sách đang quét</h3>
+      <h3 style="margin-top:20px">Danh sÃ¡ch Ä‘ang quÃ©t</h3>
       <div id="ds-dang-quet" class="ds-dang-quet"></div>
     </div>
   </div>
@@ -75,11 +75,11 @@
     <div id="thong-tin-don-cho-chup" class="khoi-ket-qua-vua-quet ok"></div>
     <input type="file" accept="image/*" capture="environment" id="input-chup-anh" style="display:none">
     <button id="btn-chup-anh" class="btn-dung-quet san-sang"></button>
-    <button type="button" id="btn-quet-lai-chup-anh" class="btn-hanh-dong phu">Quét lại</button>
+    <button type="button" id="btn-quet-lai-chup-anh" class="btn-hanh-dong phu">QuÃ©t láº¡i</button>
     <div id="toast-chup-anh" class="toast-vua-quet"></div>
     <div id="dem-nhom-anh" class="dem-nhom"></div>
     <div id="toc-do-anh-gan-nhat" style="display:none;margin-top:10px;font-size:13px;color:var(--color-text-muted)"></div>
-    <h3 style="margin-top:20px">Danh sách đã chụp</h3>
+    <h3 style="margin-top:20px">Danh sÃ¡ch Ä‘Ã£ chá»¥p</h3>
     <div id="ds-da-chup" class="ds-dang-quet"></div>
   </div>
 
@@ -88,12 +88,12 @@
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=140"></script>
+<script src="/js/api.js?v=141"></script>
 <script>
 let user;
-// Mặc định mở vào "Quét kịch bản" (batch) khi vào trang — theo yêu cầu người dùng 05/09/2026, vì đây
-// là chế độ dùng thường xuyên nhất, "Tra cứu" (lookup) ít dùng hơn hẳn (đã đẩy xuống nút cuối cùng
-// trong thanh chọn chế độ — xem .scan-mode trong HTML phía trên).
+// Máº·c Ä‘á»‹nh má»Ÿ vÃ o "QuÃ©t ká»‹ch báº£n" (batch) khi vÃ o trang â€” theo yÃªu cáº§u ngÆ°á»i dÃ¹ng 05/09/2026, vÃ¬ Ä‘Ã¢y
+// lÃ  cháº¿ Ä‘á»™ dÃ¹ng thÆ°á»ng xuyÃªn nháº¥t, "Tra cá»©u" (lookup) Ã­t dÃ¹ng hÆ¡n háº³n (Ä‘Ã£ Ä‘áº©y xuá»‘ng nÃºt cuá»‘i cÃ¹ng
+// trong thanh chá»n cháº¿ Ä‘á»™ â€” xem .scan-mode trong HTML phÃ­a trÃªn).
 let mode = 'batch';
 let scanner = null;
 let cameraDangChayCho = null;
@@ -108,69 +108,69 @@ let dangQuetKichBan = true;
 let audioCtx = null;
 
 let toastAnhTimer = null;
-// Đơn ĐÃ XÁC ĐỊNH (qua quét QR sống) cho tab "Chụp ảnh đã sản xuất" — null =
-// đang ở trạng thái "Đang quét" (hiện camera sống), có giá trị = đang ở trạng thái "Sẵn sàng chụp"
-// (xem docs/superpowers/specs/2026-09-07-tach-quet-chup-anh-design.md). Trước đây đọc QR TỪ ẢNH VỪA
-// CHỤP bằng html5-qrcode.scanFile() — tỉ lệ đọc thất bại cao (giải mã ảnh tĩnh 1 lần thử, khác hẳn
-// quét sống nhiều khung hình/giây) — giờ quét sống TRƯỚC để xác định đơn, ảnh chụp sau không cần đọc
-// được mã QR trong đó nữa.
+// ÄÆ¡n ÄÃƒ XÃC Äá»ŠNH (qua quÃ©t QR sá»‘ng) cho tab "Chá»¥p áº£nh Ä‘Ã£ sáº£n xuáº¥t" â€” null =
+// Ä‘ang á»Ÿ tráº¡ng thÃ¡i "Äang quÃ©t" (hiá»‡n camera sá»‘ng), cÃ³ giÃ¡ trá»‹ = Ä‘ang á»Ÿ tráº¡ng thÃ¡i "Sáºµn sÃ ng chá»¥p"
+// (xem docs/superpowers/specs/2026-09-07-tach-quet-chup-anh-design.md). TrÆ°á»›c Ä‘Ã¢y Ä‘á»c QR Tá»ª áº¢NH Vá»ªA
+// CHá»¤P báº±ng html5-qrcode.scanFile() â€” tá»‰ lá»‡ Ä‘á»c tháº¥t báº¡i cao (giáº£i mÃ£ áº£nh tÄ©nh 1 láº§n thá»­, khÃ¡c háº³n
+// quÃ©t sá»‘ng nhiá»u khung hÃ¬nh/giÃ¢y) â€” giá» quÃ©t sá»‘ng TRÆ¯á»šC Ä‘á»ƒ xÃ¡c Ä‘á»‹nh Ä‘Æ¡n, áº£nh chá»¥p sau khÃ´ng cáº§n Ä‘á»c
+// Ä‘Æ°á»£c mÃ£ QR trong Ä‘Ã³ ná»¯a.
 let donDaXacDinhChoAnh = null;
 
-// Mốc "chụp ảnh kèm chuyển giai đoạn" — xem CAU_HINH_ANH bên dưới. Giữ DANH SÁCH ĐÃ CHỤP riêng
-// (dsDaChupTheoMoc) để không mất lịch sử phiên làm việc khi đổi qua lại các mode khác rồi quay lại.
-// (Mốc "photo_dong_goi"/"Chụp ảnh đóng gói" ĐÃ XOÁ 09/09/2026 lần 3 cùng lúc xoá trạng thái "Đã đóng
-// gói" khỏi hệ thống, theo yêu cầu người dùng — xem data/pipelineTinhTrang.js.)
-// "photo_da_dan_tem"/"Chụp ảnh ĐÃ DÁN TEM" (bổ sung 09/09/2026 lần 4, theo yêu cầu người dùng) — THAY
-// THẾ hẳn chế độ "Quét mã QR Tracking" cũ (gọi GKE thật tạo vận đơn — đã xoá) bằng xác nhận thuần ảnh,
-// CÙNG khuôn "Chụp ảnh đã sản xuất": quét QR xác định đơn đang "Đã sản xuất" → chụp ảnh → tự chuyển
-// TRANG_THAI_XUONG sang "ĐÃ DÁN TEM". KHÔNG gọi GKE, KHÔNG tạo mã tracking thật — cơ chế GKE (Mua
-// Tracking, IN LABEL, trang Tracking) vẫn giữ nguyên, tách biệt hoàn toàn khỏi việc đổi trạng thái này
-// (đã xác nhận rõ với người dùng, chấp nhận đơn "ĐÃ DÁN TEM" qua đường này sẽ không có mã tracking
-// thật trừ khi dùng thêm 1 trong các cơ chế GKE kể trên).
+// Má»‘c "chá»¥p áº£nh kÃ¨m chuyá»ƒn giai Ä‘oáº¡n" â€” xem CAU_HINH_ANH bÃªn dÆ°á»›i. Giá»¯ DANH SÃCH ÄÃƒ CHá»¤P riÃªng
+// (dsDaChupTheoMoc) Ä‘á»ƒ khÃ´ng máº¥t lá»‹ch sá»­ phiÃªn lÃ m viá»‡c khi Ä‘á»•i qua láº¡i cÃ¡c mode khÃ¡c rá»“i quay láº¡i.
+// (Má»‘c "photo_dong_goi"/"Chá»¥p áº£nh Ä‘Ã³ng gÃ³i" ÄÃƒ XOÃ 09/09/2026 láº§n 3 cÃ¹ng lÃºc xoÃ¡ tráº¡ng thÃ¡i "ÄÃ£ Ä‘Ã³ng
+// gÃ³i" khá»i há»‡ thá»‘ng, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” xem data/pipelineTinhTrang.js.)
+// "photo_da_dan_tem"/"Chá»¥p áº£nh ÄÃƒ DÃN TEM" (bá»• sung 09/09/2026 láº§n 4, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” THAY
+// THáº¾ háº³n cháº¿ Ä‘á»™ "QuÃ©t mÃ£ QR Tracking" cÅ© (gá»i GKE tháº­t táº¡o váº­n Ä‘Æ¡n â€” Ä‘Ã£ xoÃ¡) báº±ng xÃ¡c nháº­n thuáº§n áº£nh,
+// CÃ™NG khuÃ´n "Chá»¥p áº£nh Ä‘Ã£ sáº£n xuáº¥t": quÃ©t QR xÃ¡c Ä‘á»‹nh Ä‘Æ¡n Ä‘ang "ÄÃ£ sáº£n xuáº¥t" â†’ chá»¥p áº£nh â†’ tá»± chuyá»ƒn
+// TRANG_THAI_XUONG sang "ÄÃƒ DÃN TEM". KHÃ”NG gá»i GKE, KHÃ”NG táº¡o mÃ£ tracking tháº­t â€” cÆ¡ cháº¿ GKE (Mua
+// Tracking, IN LABEL, trang Tracking) váº«n giá»¯ nguyÃªn, tÃ¡ch biá»‡t hoÃ n toÃ n khá»i viá»‡c Ä‘á»•i tráº¡ng thÃ¡i nÃ y
+// (Ä‘Ã£ xÃ¡c nháº­n rÃµ vá»›i ngÆ°á»i dÃ¹ng, cháº¥p nháº­n Ä‘Æ¡n "ÄÃƒ DÃN TEM" qua Ä‘Æ°á»ng nÃ y sáº½ khÃ´ng cÃ³ mÃ£ tracking
+// tháº­t trá»« khi dÃ¹ng thÃªm 1 trong cÃ¡c cÆ¡ cháº¿ GKE ká»ƒ trÃªn).
 const CAU_HINH_ANH = {
   photo_san_xuat: {
     moc: 'da_san_xuat',
-    nhanTab: 'Chụp ảnh đã sản xuất',
-    moTa: 'Đơn phải đang ở "Đang chạy máy". Tối đa 2 ảnh mỗi đơn — đơn chuyển "Đã sản xuất" khi chụp xong ảnh 2, bấm Xong, hoặc quét sang đơn tiếp theo.',
-    yeuCau: 'Đang chạy máy', chuyenSang: 'Đã sản xuất',
-    // Tối đa 2 ảnh/đơn, chuyển trạng thái khi XONG CẢ LƯỢT (14/10/2026, theo yêu cầu người dùng) — xem donChoXong bên dưới.
+    nhanTab: 'Chá»¥p áº£nh Ä‘Ã£ sáº£n xuáº¥t',
+    moTa: 'ÄÆ¡n pháº£i Ä‘ang á»Ÿ "Äang cháº¡y mÃ¡y". Tá»‘i Ä‘a 2 áº£nh má»—i Ä‘Æ¡n â€” Ä‘Æ¡n chuyá»ƒn "ÄÃ£ sáº£n xuáº¥t" khi chá»¥p xong áº£nh 2, báº¥m Xong, hoáº·c quÃ©t sang Ä‘Æ¡n tiáº¿p theo.',
+    yeuCau: 'Äang cháº¡y mÃ¡y', chuyenSang: 'ÄÃ£ sáº£n xuáº¥t',
+    // Tá»‘i Ä‘a 2 áº£nh/Ä‘Æ¡n, chuyá»ƒn tráº¡ng thÃ¡i khi XONG Cáº¢ LÆ¯á»¢T (14/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” xem donChoXong bÃªn dÆ°á»›i.
     haiAnh: true,
   },
   photo_da_dan_tem: {
     moc: 'da_dan_tem',
-    nhanTab: 'Chụp ảnh ĐÃ DÁN TEM',
-    // Bổ sung 09/09/2026 lần 5: nhắc thêm điều kiện tracking ngay trong mô tả (routes/photos.js đã
-    // chặn thật ở /kiem-tra và /upload — đây chỉ là chữ hiển thị giúp người quét hiểu lý do sớm hơn).
-    moTa: 'Đơn phải đang ở "Đã sản xuất" và đã có thông tin Tracking (mua tracking trước ở menu Đơn hàng/Tracking).',
-    yeuCau: 'Đã sản xuất', chuyenSang: 'ĐÃ DÁN TEM',
+    nhanTab: 'Chá»¥p áº£nh ÄÃƒ DÃN TEM',
+    // Bá»• sung 09/09/2026 láº§n 5: nháº¯c thÃªm Ä‘iá»u kiá»‡n tracking ngay trong mÃ´ táº£ (routes/photos.js Ä‘Ã£
+    // cháº·n tháº­t á»Ÿ /kiem-tra vÃ  /upload â€” Ä‘Ã¢y chá»‰ lÃ  chá»¯ hiá»ƒn thá»‹ giÃºp ngÆ°á»i quÃ©t hiá»ƒu lÃ½ do sá»›m hÆ¡n).
+    moTa: 'ÄÆ¡n pháº£i Ä‘ang á»Ÿ "ÄÃ£ sáº£n xuáº¥t" vÃ  Ä‘Ã£ cÃ³ thÃ´ng tin Tracking (mua tracking trÆ°á»›c á»Ÿ menu ÄÆ¡n hÃ ng/Tracking).',
+    yeuCau: 'ÄÃ£ sáº£n xuáº¥t', chuyenSang: 'ÄÃƒ DÃN TEM',
   },
 };
 let dsDaChupTheoMoc = { photo_san_xuat: [], photo_da_dan_tem: [] };
-// STT_Key đang có 1 lượt upload ngầm CHƯA XONG (bổ sung 22/09/2026, theo yêu cầu người dùng — chụp
-// liên tục nhiều đơn, ảnh tải ngầm phía sau, không chặn nhịp quét→chụp) — chỉ để chặn chụp TRÙNG cho
-// ĐÚNG 1 đơn đang chờ ảnh trước tải xong, không khoá gì giữa các đơn khác nhau.
-const dsUploadDangCho = new Set(); // khoá: sttKey (ảnh 1 / ảnh duy nhất), sttKey+'#2' (ảnh 2), sttKey+'#xong' (đang gửi "Xong")
-// Đơn "Chụp ảnh đã sản xuất" đã chụp ảnh 1 nhưng CHƯA xong lượt (14/10/2026, theo yêu cầu người dùng): { sttKey, tieuDe, tenKhachHang,
-// soAnh, huaAnh1: Promise<bool> ảnh 1 đã lưu, dong: dòng "Danh sách đã chụp" }. Xong lượt khi: chụp xong ảnh 2 / bấm "Xong đơn này" /
-// quét được đơn KHÁC (kiểm tra OK). Thoát trang thì đơn vẫn "Đang chạy máy"; quét lại đơn đó -> máy chủ báo đã có ảnh -> chụp tiếp.
+// STT_Key Ä‘ang cÃ³ 1 lÆ°á»£t upload ngáº§m CHÆ¯A XONG (bá»• sung 22/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” chá»¥p
+// liÃªn tá»¥c nhiá»u Ä‘Æ¡n, áº£nh táº£i ngáº§m phÃ­a sau, khÃ´ng cháº·n nhá»‹p quÃ©tâ†’chá»¥p) â€” chá»‰ Ä‘á»ƒ cháº·n chá»¥p TRÃ™NG cho
+// ÄÃšNG 1 Ä‘Æ¡n Ä‘ang chá» áº£nh trÆ°á»›c táº£i xong, khÃ´ng khoÃ¡ gÃ¬ giá»¯a cÃ¡c Ä‘Æ¡n khÃ¡c nhau.
+const dsUploadDangCho = new Set(); // khoÃ¡: sttKey (áº£nh 1 / áº£nh duy nháº¥t), sttKey+'#2' (áº£nh 2), sttKey+'#xong' (Ä‘ang gá»­i "Xong")
+// ÄÆ¡n "Chá»¥p áº£nh Ä‘Ã£ sáº£n xuáº¥t" Ä‘Ã£ chá»¥p áº£nh 1 nhÆ°ng CHÆ¯A xong lÆ°á»£t (14/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng): { sttKey, tieuDe, tenKhachHang,
+// soAnh, huaAnh1: Promise<bool> áº£nh 1 Ä‘Ã£ lÆ°u, dong: dÃ²ng "Danh sÃ¡ch Ä‘Ã£ chá»¥p" }. Xong lÆ°á»£t khi: chá»¥p xong áº£nh 2 / báº¥m "Xong Ä‘Æ¡n nÃ y" /
+// quÃ©t Ä‘Æ°á»£c Ä‘Æ¡n KHÃC (kiá»ƒm tra OK). ThoÃ¡t trang thÃ¬ Ä‘Æ¡n váº«n "Äang cháº¡y mÃ¡y"; quÃ©t láº¡i Ä‘Æ¡n Ä‘Ã³ -> mÃ¡y chá»§ bÃ¡o Ä‘Ã£ cÃ³ áº£nh -> chá»¥p tiáº¿p.
 let donChoXong = null;
-// Giờ nghỉ theo Xưởng (23/10/2026): còn ảnh đang gửi / đơn chờ Xong -> màn "đã đóng" cho gửi nốt trong 10 phút (api.js#hienManDongTruyCap).
+// Giá» nghá»‰ theo XÆ°á»Ÿng (23/10/2026): cÃ²n áº£nh Ä‘ang gá»­i / Ä‘Æ¡n chá» Xong -> mÃ n "Ä‘Ã£ Ä‘Ã³ng" cho gá»­i ná»‘t trong 10 phÃºt (api.js#hienManDongTruyCap).
 window.coViecGuiNot = () => dsUploadDangCho.size > 0 || !!donChoXong;
-// LƯU donChoXong trên máy (15/10/2026, Logs 14/10: Tu tra cứu -> mở Chi tiết đơn -> quay lại, trang Quét QR tải lại, "đơn chờ Xong" chỉ
-// nằm trong bộ nhớ trang nên MẤT, quét đơn kế không còn gì để tự Xong -> 7 đơn kẹt "Đang chạy máy" 2–3 giờ). Mọi lần đổi donChoXong đi qua
-// datDonChoXong(); mở lại trang thì khoiPhucDonChoXong() hỏi lại máy chủ rồi dựng lại khung chờ. Chỉ lưu dữ liệu thuần (không lưu Promise).
-// Khoá RIÊNG từng tài khoản (máy dùng chung — vd 1 iPhone cho Nhân và Phượng): người sau mở trang không đụng tới đơn chờ của người trước.
+// LÆ¯U donChoXong trÃªn mÃ¡y (15/10/2026, Logs 14/10: Tu tra cá»©u -> má»Ÿ Chi tiáº¿t Ä‘Æ¡n -> quay láº¡i, trang QuÃ©t QR táº£i láº¡i, "Ä‘Æ¡n chá» Xong" chá»‰
+// náº±m trong bá»™ nhá»› trang nÃªn Máº¤T, quÃ©t Ä‘Æ¡n káº¿ khÃ´ng cÃ²n gÃ¬ Ä‘á»ƒ tá»± Xong -> 7 Ä‘Æ¡n káº¹t "Äang cháº¡y mÃ¡y" 2â€“3 giá»). Má»i láº§n Ä‘á»•i donChoXong Ä‘i qua
+// datDonChoXong(); má»Ÿ láº¡i trang thÃ¬ khoiPhucDonChoXong() há»i láº¡i mÃ¡y chá»§ rá»“i dá»±ng láº¡i khung chá». Chá»‰ lÆ°u dá»¯ liá»‡u thuáº§n (khÃ´ng lÆ°u Promise).
+// KhoÃ¡ RIÃŠNG tá»«ng tÃ i khoáº£n (mÃ¡y dÃ¹ng chung â€” vd 1 iPhone cho NhÃ¢n vÃ  PhÆ°á»£ng): ngÆ°á»i sau má»Ÿ trang khÃ´ng Ä‘á»¥ng tá»›i Ä‘Æ¡n chá» cá»§a ngÆ°á»i trÆ°á»›c.
 const khoaDonChoXong = () => 'scan-don-cho-xong:' + user.ten;
-const GIU_DON_CHO_XONG_MS = 24 * 3600 * 1000; // quá 1 ngày thì bỏ (đơn đó quét lại vẫn thấy "đã có ảnh" từ máy chủ)
+const GIU_DON_CHO_XONG_MS = 24 * 3600 * 1000; // quÃ¡ 1 ngÃ y thÃ¬ bá» (Ä‘Æ¡n Ä‘Ã³ quÃ©t láº¡i váº«n tháº¥y "Ä‘Ã£ cÃ³ áº£nh" tá»« mÃ¡y chá»§)
 function datDonChoXong(d) {
   donChoXong = d;
   try {
     if (d) localStorage.setItem(khoaDonChoXong(), JSON.stringify({ sttKey: d.sttKey, tieuDe: d.tieuDe || '', tenKhachHang: d.tenKhachHang || '', luc: Date.now() }));
     else localStorage.removeItem(khoaDonChoXong());
-  } catch (e) { /* trình duyệt chặn lưu — vẫn chạy như cũ, chỉ không khôi phục được */ }
+  } catch (e) { /* trÃ¬nh duyá»‡t cháº·n lÆ°u â€” váº«n cháº¡y nhÆ° cÅ©, chá»‰ khÃ´ng khÃ´i phá»¥c Ä‘Æ°á»£c */ }
 }
-// -> true nếu đã khôi phục (trang chuyển thẳng sang "Chụp ảnh đã sản xuất"). Máy chủ là nguồn đúng: chỉ khôi phục khi đơn VẪN "Đang chạy
-// máy" và có ảnh của lượt này (ảnh 1 có thể chưa tải xong lúc trang bị đóng). Lỗi mạng: giữ nguyên bản lưu, lần mở trang sau thử lại.
+// -> true náº¿u Ä‘Ã£ khÃ´i phá»¥c (trang chuyá»ƒn tháº³ng sang "Chá»¥p áº£nh Ä‘Ã£ sáº£n xuáº¥t"). MÃ¡y chá»§ lÃ  nguá»“n Ä‘Ãºng: chá»‰ khÃ´i phá»¥c khi Ä‘Æ¡n VáºªN "Äang cháº¡y
+// mÃ¡y" vÃ  cÃ³ áº£nh cá»§a lÆ°á»£t nÃ y (áº£nh 1 cÃ³ thá»ƒ chÆ°a táº£i xong lÃºc trang bá»‹ Ä‘Ã³ng). Lá»—i máº¡ng: giá»¯ nguyÃªn báº£n lÆ°u, láº§n má»Ÿ trang sau thá»­ láº¡i.
 async function khoiPhucDonChoXong() {
   let luu = null;
   try { luu = JSON.parse(localStorage.getItem(khoaDonChoXong()) || 'null'); } catch (e) { return false; }
@@ -185,40 +185,40 @@ async function khoiPhucDonChoXong() {
   try {
     kq = await apiFetch('/photos/kiem-tra', { method: 'POST', body: JSON.stringify({ sttKey: luu.sttKey, moc: CAU_HINH_ANH.photo_san_xuat.moc }) });
   } catch (err) {
-    if (!err.status || err.status >= 500) return false; // mạng / máy chủ lỗi — để lần sau
-    return boQua(err.message); // đơn đã sang trạng thái khác (vd người khác đã Xong) / không còn — không còn gì để Xong
+    if (!err.status || err.status >= 500) return false; // máº¡ng / mÃ¡y chá»§ lá»—i â€” Ä‘á»ƒ láº§n sau
+    return boQua(err.message); // Ä‘Æ¡n Ä‘Ã£ sang tráº¡ng thÃ¡i khÃ¡c (vd ngÆ°á»i khÃ¡c Ä‘Ã£ Xong) / khÃ´ng cÃ²n â€” khÃ´ng cÃ²n gÃ¬ Ä‘á»ƒ Xong
   }
-  if (!(kq.soAnhLuotNay >= 1)) return boQua('Ảnh 1 chưa lưu được (trang bị đóng khi đang tải) — quét lại mã đơn để chụp lại');
-  const dong = { trangThai: 'cho-xong', sttKey: luu.sttKey, ghiChu: `Đã có ${kq.soAnhLuotNay} ảnh — chưa Xong (khôi phục sau khi trang tải lại)` };
+  if (!(kq.soAnhLuotNay >= 1)) return boQua('áº¢nh 1 chÆ°a lÆ°u Ä‘Æ°á»£c (trang bá»‹ Ä‘Ã³ng khi Ä‘ang táº£i) â€” quÃ©t láº¡i mÃ£ Ä‘Æ¡n Ä‘á»ƒ chá»¥p láº¡i');
+  const dong = { trangThai: 'cho-xong', sttKey: luu.sttKey, ghiChu: `ÄÃ£ cÃ³ ${kq.soAnhLuotNay} áº£nh â€” chÆ°a Xong (khÃ´i phá»¥c sau khi trang táº£i láº¡i)` };
   dsDaChupTheoMoc.photo_san_xuat.unshift(dong);
   datDonChoXong({ sttKey: luu.sttKey, tieuDe: kq.tieuDe || luu.tieuDe, tenKhachHang: kq.tenKhachHang || luu.tenKhachHang, soAnh: kq.soAnhLuotNay,
     huaAnh1: Promise.resolve(true), dong, khoiPhuc: true });
-  hienThiToast('OK', `${luu.sttKey}: đơn đang chờ — chụp ảnh 2, bấm Xong hoặc quét đơn tiếp theo`);
+  hienThiToast('OK', `${luu.sttKey}: Ä‘Æ¡n Ä‘ang chá» â€” chá»¥p áº£nh 2, báº¥m Xong hoáº·c quÃ©t Ä‘Æ¡n tiáº¿p theo`);
   return true;
 }
 
 // ============================================================
-// Logs_UploadAnh (12/10/2026, theo yêu cầu người dùng): ghi MỌI thao tác ở trang này (mở camera, quét QR, chụp + tải ảnh, xác nhận
-// hàng loạt, quét lại, thoát khi ảnh chưa tải xong) kèm thiết bị + phiên bản app -> routes/nhatKyQuet.js, xem ở Logs > Logs_UploadAnh.
-// Gom lô 3 giây rồi gửi 1 lần; lỗi gửi log thì bỏ qua im lặng (log KHÔNG được làm phiền/chậm người dùng). Không gửi nội dung ảnh.
+// Logs_UploadAnh (12/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng): ghi Má»ŒI thao tÃ¡c á»Ÿ trang nÃ y (má»Ÿ camera, quÃ©t QR, chá»¥p + táº£i áº£nh, xÃ¡c nháº­n
+// hÃ ng loáº¡t, quÃ©t láº¡i, thoÃ¡t khi áº£nh chÆ°a táº£i xong) kÃ¨m thiáº¿t bá»‹ + phiÃªn báº£n app -> routes/nhatKyQuet.js, xem á»Ÿ Logs > Logs_UploadAnh.
+// Gom lÃ´ 3 giÃ¢y rá»“i gá»­i 1 láº§n; lá»—i gá»­i log thÃ¬ bá» qua im láº·ng (log KHÃ”NG Ä‘Æ°á»£c lÃ m phiá»n/cháº­m ngÆ°á»i dÃ¹ng). KhÃ´ng gá»­i ná»™i dung áº£nh.
 // ============================================================
 const PHIEN_BAN_APP = ((document.querySelector('script[src*="/js/api.js"]') || {}).src || '').match(/[?&]v=(\d+)/)?.[1] || '';
-let thietBiLog = null; // gán khi layThietBiLog() xong (Promise thietBiLogSan bên dưới)
+let thietBiLog = null; // gÃ¡n khi layThietBiLog() xong (Promise thietBiLogSan bÃªn dÆ°á»›i)
 const hangDoiLog = [];
 let henGuiLog = null;
-let tSanSangQuet = performance.now(); // mốc camera sẵn sàng / vừa nhả khoá quét — đo "thời gian tìm mã" (gồm cả lúc người dùng đưa máy vào mã)
-let cameraDaMo = false; // camera đang chạy thật (mở thành công) — không thì "thời gian tìm mã" vô nghĩa, ghi trống
+let tSanSangQuet = performance.now(); // má»‘c camera sáºµn sÃ ng / vá»«a nháº£ khoÃ¡ quÃ©t â€” Ä‘o "thá»i gian tÃ¬m mÃ£" (gá»“m cáº£ lÃºc ngÆ°á»i dÃ¹ng Ä‘Æ°a mÃ¡y vÃ o mÃ£)
+let cameraDaMo = false; // camera Ä‘ang cháº¡y tháº­t (má»Ÿ thÃ nh cÃ´ng) â€” khÃ´ng thÃ¬ "thá»i gian tÃ¬m mÃ£" vÃ´ nghÄ©a, ghi trá»‘ng
 const msTimMaHienTai = () => (cameraDaMo ? Math.round(performance.now() - tSanSangQuet) : null);
-const luotDangTai = new Map(); // sttKey -> bản ghi CHUP_ANH đang tải — đóng trang giữa chừng thì ghi THOAT_GIUA_CHUNG
+const luotDangTai = new Map(); // sttKey -> báº£n ghi CHUP_ANH Ä‘ang táº£i â€” Ä‘Ã³ng trang giá»¯a chá»«ng thÃ¬ ghi THOAT_GIUA_CHUNG
 
-// layThietBiLog() (hệ điều hành / trình duyệt / đời máy) nằm ở /js/api.js từ 16/10/2026 — dùng chung với log đo mạng mọi trang.
-// Lấy thông tin thiết bị NGAY khi tải trang; mọi lô log CHỜ promise này (tối đa 2 giây) — máy cũ trả Client Hints chậm, không chờ
-// thì vài sự kiện đầu (mở camera, mã đầu tiên) rơi vào nhóm "? · ?" đúng lúc cần đo máy chậm.
+// layThietBiLog() (há»‡ Ä‘iá»u hÃ nh / trÃ¬nh duyá»‡t / Ä‘á»i mÃ¡y) náº±m á»Ÿ /js/api.js tá»« 16/10/2026 â€” dÃ¹ng chung vá»›i log Ä‘o máº¡ng má»i trang.
+// Láº¥y thÃ´ng tin thiáº¿t bá»‹ NGAY khi táº£i trang; má»i lÃ´ log CHá»œ promise nÃ y (tá»‘i Ä‘a 2 giÃ¢y) â€” mÃ¡y cÅ© tráº£ Client Hints cháº­m, khÃ´ng chá»
+// thÃ¬ vÃ i sá»± kiá»‡n Ä‘áº§u (má»Ÿ camera, mÃ£ Ä‘áº§u tiÃªn) rÆ¡i vÃ o nhÃ³m "? Â· ?" Ä‘Ãºng lÃºc cáº§n Ä‘o mÃ¡y cháº­m.
 const thietBiLogSan = layThietBiLog().then(tb => (thietBiLog = tb)).catch(() => (thietBiLog = {}));
-// Lỗi do máy chủ đánh dấu nghiepVu (đơn không hợp lệ: sai trạng thái, không tìm thấy, chưa có tracking...) -> nhóm "Sai đơn".
-// Mọi lỗi khác (mất mạng, hết phiên 401, file không phải ảnh, máy chủ 5xx...) -> lỗi kỹ thuật ('LOI').
+// Lá»—i do mÃ¡y chá»§ Ä‘Ã¡nh dáº¥u nghiepVu (Ä‘Æ¡n khÃ´ng há»£p lá»‡: sai tráº¡ng thÃ¡i, khÃ´ng tÃ¬m tháº¥y, chÆ°a cÃ³ tracking...) -> nhÃ³m "Sai Ä‘Æ¡n".
+// Má»i lá»—i khÃ¡c (máº¥t máº¡ng, háº¿t phiÃªn 401, file khÃ´ng pháº£i áº£nh, mÃ¡y chá»§ 5xx...) -> lá»—i ká»¹ thuáº­t ('LOI').
 const ketQuaLoi = (err, nhanNghiepVu) => (err && err.nghiepVu ? nhanNghiepVu : 'LOI');
-// Dùng chung api.js#thongTinMangTrinhDuyet (loai / mbps / rtt / kieu) — trình duyệt không báo gì thì null như trước.
+// DÃ¹ng chung api.js#thongTinMangTrinhDuyet (loai / mbps / rtt / kieu) â€” trÃ¬nh duyá»‡t khÃ´ng bÃ¡o gÃ¬ thÃ¬ null nhÆ° trÆ°á»›c.
 const mangHienTai = () => (navigator.connection ? thongTinMangTrinhDuyet() : null);
 function ghiLogQuet(suKien) {
   hangDoiLog.push({ ...suKien, cheDo: suKien.cheDo || mode, _t: Date.now() });
@@ -227,41 +227,41 @@ function ghiLogQuet(suKien) {
 }
 async function guiLogQuet(beacon = false, hoiPhienBan = false) {
   if (!beacon && !thietBiLog) await Promise.race([thietBiLogSan, new Promise(r => setTimeout(r, 2000))]);
-  if (!hangDoiLog.length && !hoiPhienBan) return; // vd pagehide đã gửi hết bằng sendBeacon trong lúc chờ thông tin thiết bị
+  if (!hangDoiLog.length && !hoiPhienBan) return; // vd pagehide Ä‘Ã£ gá»­i háº¿t báº±ng sendBeacon trong lÃºc chá» thÃ´ng tin thiáº¿t bá»‹
   const goi = hangDoiLog.splice(0, 30);
   const body = JSON.stringify({ phienBanApp: PHIEN_BAN_APP, thietBi: thietBiLog || {}, suKien: goi.map(({ _t, ...s }) => ({ ...s, cachMs: Date.now() - _t })) });
-  if (beacon) { try { navigator.sendBeacon('/api/nhat-ky-quet', new Blob([body], { type: 'application/json' })); } catch (e) { /* bỏ */ } return; }
+  if (beacon) { try { navigator.sendBeacon('/api/nhat-ky-quet', new Blob([body], { type: 'application/json' })); } catch (e) { /* bá» */ } return; }
   try {
     const r = await fetch('/api/nhat-ky-quet', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, credentials: 'include', keepalive: true });
     if (r.ok) nhacBanMoi((await r.json()).phienBanMoiNhat);
-  } catch (e) { /* mất mạng: bỏ lô này */ }
+  } catch (e) { /* máº¥t máº¡ng: bá» lÃ´ nÃ y */ }
   if (hangDoiLog.length) setTimeout(guiLogQuet, 500);
 }
-// Tab Quét QR mở suốt ca nhiều ngày không tải lại -> chạy bản cũ. Máy chủ báo số mới nhất mỗi lần gửi log -> hiện thanh nhắc.
+// Tab QuÃ©t QR má»Ÿ suá»‘t ca nhiá»u ngÃ y khÃ´ng táº£i láº¡i -> cháº¡y báº£n cÅ©. MÃ¡y chá»§ bÃ¡o sá»‘ má»›i nháº¥t má»—i láº§n gá»­i log -> hiá»‡n thanh nháº¯c.
 function nhacBanMoi(moiNhat) {
   if (!moiNhat || !PHIEN_BAN_APP || moiNhat === PHIEN_BAN_APP || document.getElementById('thanh-ban-moi')) return;
   const el = document.createElement('button');
   el.id = 'thanh-ban-moi';
   el.type = 'button';
   el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:2000;padding:10px;border:0;background:#f59e0b;color:#111;font-weight:700;font-size:15px;cursor:pointer';
-  el.textContent = '⟳ Có bản mới của app — bấm để tải lại trang';
+  el.textContent = 'âŸ³ CÃ³ báº£n má»›i cá»§a app â€” báº¥m Ä‘á»ƒ táº£i láº¡i trang';
   el.onclick = async () => {
-    if (dsUploadDangCho.size && !await hopXacNhan(`Còn ${dsUploadDangCho.size} ảnh đang tải lên — tải lại trang bây giờ sẽ làm hỏng các ảnh đó. Vẫn tải lại?`)) return;
-    daDongYRoiTrang = true; // đã hỏi ở trên — không hỏi lần 2 ở beforeunload
+    if (dsUploadDangCho.size && !await hopXacNhan(`CÃ²n ${dsUploadDangCho.size} áº£nh Ä‘ang táº£i lÃªn â€” táº£i láº¡i trang bÃ¢y giá» sáº½ lÃ m há»ng cÃ¡c áº£nh Ä‘Ã³. Váº«n táº£i láº¡i?`)) return;
+    daDongYRoiTrang = true; // Ä‘Ã£ há»i á»Ÿ trÃªn â€” khÃ´ng há»i láº§n 2 á»Ÿ beforeunload
     location.reload();
   };
   document.body.appendChild(el);
-  capNhatHienThiMang(); // dải cảnh báo mạng (nếu đang hiện) xếp lại xuống dưới thanh này
+  capNhatHienThiMang(); // dáº£i cáº£nh bÃ¡o máº¡ng (náº¿u Ä‘ang hiá»‡n) xáº¿p láº¡i xuá»‘ng dÆ°á»›i thanh nÃ y
 }
-// Đóng tab / chuyển trang khi ảnh còn đang tải -> ghi lại (người dùng thoát giữa chừng), gửi bằng sendBeacon (vẫn đi khi trang đóng).
-// Trang chỉ TẠM CẤT (bfcache, e.persisted) vẫn ghi THOAT — trình duyệt có thể xoá hẳn trang cất mà không quay lại (hay gặp trên iOS),
-// khi đó không còn cơ hội ghi gì. Nếu người dùng quay lại và ảnh vẫn tải xong, dòng CHUP_ANH mang sauThoat để máy chủ xoá dòng THOAT
-// tương ứng (routes/nhatKyQuet.js) — không đếm 1 ảnh 2 lần.
-// Hỏi lại trước khi rời trang khi còn ảnh đang tải / đang chờ gửi lại (14/10/2026 — Logs_UploadAnh 13/10: 10V25 bị đóng trang giữa lúc
-// gửi, ảnh mất). Trình duyệt tự hiện hộp hỏi mặc định; Safari iOS có thể bỏ qua — khi đó vẫn ghi THOAT như dưới.
+// ÄÃ³ng tab / chuyá»ƒn trang khi áº£nh cÃ²n Ä‘ang táº£i -> ghi láº¡i (ngÆ°á»i dÃ¹ng thoÃ¡t giá»¯a chá»«ng), gá»­i báº±ng sendBeacon (váº«n Ä‘i khi trang Ä‘Ã³ng).
+// Trang chá»‰ Táº M Cáº¤T (bfcache, e.persisted) váº«n ghi THOAT â€” trÃ¬nh duyá»‡t cÃ³ thá»ƒ xoÃ¡ háº³n trang cáº¥t mÃ  khÃ´ng quay láº¡i (hay gáº·p trÃªn iOS),
+// khi Ä‘Ã³ khÃ´ng cÃ²n cÆ¡ há»™i ghi gÃ¬. Náº¿u ngÆ°á»i dÃ¹ng quay láº¡i vÃ  áº£nh váº«n táº£i xong, dÃ²ng CHUP_ANH mang sauThoat Ä‘á»ƒ mÃ¡y chá»§ xoÃ¡ dÃ²ng THOAT
+// tÆ°Æ¡ng á»©ng (routes/nhatKyQuet.js) â€” khÃ´ng Ä‘áº¿m 1 áº£nh 2 láº§n.
+// Há»i láº¡i trÆ°á»›c khi rá»i trang khi cÃ²n áº£nh Ä‘ang táº£i / Ä‘ang chá» gá»­i láº¡i (14/10/2026 â€” Logs_UploadAnh 13/10: 10V25 bá»‹ Ä‘Ã³ng trang giá»¯a lÃºc
+// gá»­i, áº£nh máº¥t). TrÃ¬nh duyá»‡t tá»± hiá»‡n há»™p há»i máº·c Ä‘á»‹nh; Safari iOS cÃ³ thá»ƒ bá» qua â€” khi Ä‘Ã³ váº«n ghi THOAT nhÆ° dÆ°á»›i.
 let daDongYRoiTrang = false;
-// Thanh cảnh báo ảnh HEIC (14/10/2026) — cố định ĐÁY màn hình (ngay trên thanh tab, không đè thanh "Có bản mới" ở đầu trang) tới khi bấm
-// Đóng (alert sẽ chặn nhịp quét/chụp liên tục); 1 lần mỗi lần mở trang.
+// Thanh cáº£nh bÃ¡o áº£nh HEIC (14/10/2026) â€” cá»‘ Ä‘á»‹nh ÄÃY mÃ n hÃ¬nh (ngay trÃªn thanh tab, khÃ´ng Ä‘Ã¨ thanh "CÃ³ báº£n má»›i" á»Ÿ Ä‘áº§u trang) tá»›i khi báº¥m
+// ÄÃ³ng (alert sáº½ cháº·n nhá»‹p quÃ©t/chá»¥p liÃªn tá»¥c); 1 láº§n má»—i láº§n má»Ÿ trang.
 let daBaoAnhHeif = false;
 function baoAnhHeif() {
   if (daBaoAnhHeif) return;
@@ -272,11 +272,11 @@ function baoAnhHeif() {
   el.textContent = CANH_BAO_ANH_HEIF;
   const dong = document.createElement('button');
   dong.type = 'button';
-  dong.textContent = 'Đã hiểu — đóng';
+  dong.textContent = 'ÄÃ£ hiá»ƒu â€” Ä‘Ã³ng';
   dong.style.cssText = 'display:block;margin-top:8px;padding:6px 14px;border:0;border-radius:6px;background:#fff;color:#b91c1c;font-weight:700';
   dong.onclick = () => el.remove();
   el.appendChild(dong);
-  // Ngay trên thanh tab dưới cùng (điện thoại) — đo chiều cao THẬT (nhãn tab xuống 2 dòng thì cao hơn); máy tính thanh tab ở trên -> đáy.
+  // Ngay trÃªn thanh tab dÆ°á»›i cÃ¹ng (Ä‘iá»‡n thoáº¡i) â€” Ä‘o chiá»u cao THáº¬T (nhÃ£n tab xuá»‘ng 2 dÃ²ng thÃ¬ cao hÆ¡n); mÃ¡y tÃ­nh thanh tab á»Ÿ trÃªn -> Ä‘Ã¡y.
   const tab = document.querySelector('.tab-links');
   const r = tab && getComputedStyle(tab).position === 'fixed' ? tab.getBoundingClientRect() : null;
   if (r && r.top > innerHeight / 2) el.style.bottom = Math.round(innerHeight - r.top) + 'px';
@@ -284,7 +284,7 @@ function baoAnhHeif() {
   if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
 }
 window.addEventListener('beforeunload', e => {
-  if (!dsUploadDangCho.size || daDongYRoiTrang) return; // đơn chờ Xong đã lưu trên máy (datDonChoXong) — không cần hỏi vì nó
+  if (!dsUploadDangCho.size || daDongYRoiTrang) return; // Ä‘Æ¡n chá» Xong Ä‘Ã£ lÆ°u trÃªn mÃ¡y (datDonChoXong) â€” khÃ´ng cáº§n há»i vÃ¬ nÃ³
   e.preventDefault();
   e.returnValue = '';
 });
@@ -301,30 +301,30 @@ window.addEventListener('pagehide', e => {
   while (hangDoiLog.length) guiLogQuet(true);
 });
 
-document.getElementById('mode-lookup').innerHTML = icon('scan') + ' Quét mã QR xem thông tin 1 đơn';
-document.getElementById('mode-batch').innerHTML = icon('check') + ' Quét kịch bản';
+document.getElementById('mode-lookup').innerHTML = icon('scan') + ' QuÃ©t mÃ£ QR xem thÃ´ng tin 1 Ä‘Æ¡n';
+document.getElementById('mode-batch').innerHTML = icon('check') + ' QuÃ©t ká»‹ch báº£n';
 document.getElementById('mode-photo-san-xuat').innerHTML = icon('camera', { size: 18 }) + ' ' + CAU_HINH_ANH.photo_san_xuat.nhanTab;
 document.getElementById('mode-photo-da-dan-tem').innerHTML = icon('camera', { size: 18 }) + ' ' + CAU_HINH_ANH.photo_da_dan_tem.nhanTab;
-document.getElementById('btn-dung-quet').innerHTML = icon('stop', { size: 40 }) + ' Dừng quét → Xem lại';
-document.getElementById('btn-chup-anh').innerHTML = icon('camera', { size: 40 }) + ' Chụp ảnh';
+document.getElementById('btn-dung-quet').innerHTML = icon('stop', { size: 40 }) + ' Dá»«ng quÃ©t â†’ Xem láº¡i';
+document.getElementById('btn-chup-anh').innerHTML = icon('camera', { size: 40 }) + ' Chá»¥p áº£nh';
 capNhatNutFlash();
 
-// Khôi phục thanh 4 nút bấm làm cách DUY NHẤT để chọn chế độ (bổ sung 23/09/2026, theo yêu cầu người
-// dùng — 3 chế độ "Chụp ảnh đã sản xuất"/"Chụp ảnh ĐÃ DÁN TEM"/"Tra cứu" phải thấy NGAY khi vào trang,
-// không còn giấu trong dropdown như trước — xem .scan-mode trong style.css, đổi từ display:none sang
-// lưới 2x2). "Tra cứu" vẫn xếp CUỐI cùng trong DOM (ít dùng nhất, theo yêu cầu người dùng 05/09/2026).
+// KhÃ´i phá»¥c thanh 4 nÃºt báº¥m lÃ m cÃ¡ch DUY NHáº¤T Ä‘á»ƒ chá»n cháº¿ Ä‘á»™ (bá»• sung 23/09/2026, theo yÃªu cáº§u ngÆ°á»i
+// dÃ¹ng â€” 3 cháº¿ Ä‘á»™ "Chá»¥p áº£nh Ä‘Ã£ sáº£n xuáº¥t"/"Chá»¥p áº£nh ÄÃƒ DÃN TEM"/"Tra cá»©u" pháº£i tháº¥y NGAY khi vÃ o trang,
+// khÃ´ng cÃ²n giáº¥u trong dropdown nhÆ° trÆ°á»›c â€” xem .scan-mode trong style.css, Ä‘á»•i tá»« display:none sang
+// lÆ°á»›i 2x2). "Tra cá»©u" váº«n xáº¿p CUá»I cÃ¹ng trong DOM (Ã­t dÃ¹ng nháº¥t, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng 05/09/2026).
 
-// Đổi mode LUÔN đi qua đây (không gán thẳng biến `mode`) — reset donDaXacDinhChoAnh mỗi lần đổi mode
-// để không lỡ giữ "đơn đã xác định" cũ từ trước sang 1 phiên chụp ảnh mới đối tượng vật lý đã khác
-// (rủi ro gán nhầm ảnh cho sai đơn nếu người dùng rời màn hình rồi quay lại sau 1 lúc).
+// Äá»•i mode LUÃ”N Ä‘i qua Ä‘Ã¢y (khÃ´ng gÃ¡n tháº³ng biáº¿n `mode`) â€” reset donDaXacDinhChoAnh má»—i láº§n Ä‘á»•i mode
+// Ä‘á»ƒ khÃ´ng lá»¡ giá»¯ "Ä‘Æ¡n Ä‘Ã£ xÃ¡c Ä‘á»‹nh" cÅ© tá»« trÆ°á»›c sang 1 phiÃªn chá»¥p áº£nh má»›i Ä‘á»‘i tÆ°á»£ng váº­t lÃ½ Ä‘Ã£ khÃ¡c
+// (rá»§i ro gÃ¡n nháº§m áº£nh cho sai Ä‘Æ¡n náº¿u ngÆ°á»i dÃ¹ng rá»i mÃ n hÃ¬nh rá»“i quay láº¡i sau 1 lÃºc).
 function doiMode(moiMode) {
   mode = moiMode;
   donDaXacDinhChoAnh = null;
   capNhatManHinh();
 }
 
-// Tự ẩn header khi cuộn xuống, hiện lại khi cuộn lên (chỉ trang này — xem <style> ở đầu file).
-// Không đụng tới thanh tab điều hướng dưới cùng, vẫn cố định như trước.
+// Tá»± áº©n header khi cuá»™n xuá»‘ng, hiá»‡n láº¡i khi cuá»™n lÃªn (chá»‰ trang nÃ y â€” xem <style> á»Ÿ Ä‘áº§u file).
+// KhÃ´ng Ä‘á»¥ng tá»›i thanh tab Ä‘iá»u hÆ°á»›ng dÆ°á»›i cÃ¹ng, váº«n cá»‘ Ä‘á»‹nh nhÆ° trÆ°á»›c.
 (function () {
   let yLanTruoc = window.scrollY;
   let dangCho = false;
@@ -345,16 +345,16 @@ function doiMode(moiMode) {
   user = await requireLoginOrRedirect();
   if (!user) return;
   renderNav(user, 'scan');
-  guiLogQuet(false, true); // lô rỗng: chỉ để hỏi phiên bản mới nhất
+  guiLogQuet(false, true); // lÃ´ rá»—ng: chá»‰ Ä‘á»ƒ há»i phiÃªn báº£n má»›i nháº¥t
   await taiKichBan();
   await taiCauHinhNenAnh();
-  if (await khoiPhucDonChoXong()) mode = 'photo_san_xuat'; // đang chụp dở đơn nào thì mở lại đúng chế độ đó
+  if (await khoiPhucDonChoXong()) mode = 'photo_san_xuat'; // Ä‘ang chá»¥p dá»Ÿ Ä‘Æ¡n nÃ o thÃ¬ má»Ÿ láº¡i Ä‘Ãºng cháº¿ Ä‘á»™ Ä‘Ã³
   capNhatManHinh();
 })();
 
-// Cấu hình nén ảnh do superadmin đặt ở settings.html (bổ sung 23/09/2026, theo yêu cầu người dùng) —
-// tải 1 lần lúc vào trang, dùng cho MỌI lượt chụp ở taiAnhLenNgam() bên dưới. Rỗng (chưa cấu hình) →
-// giữ nguyên object rỗng, nenAnhTruocKhiTaiLen() tự áp mặc định 80%/1600px như trước (xem api.js).
+// Cáº¥u hÃ¬nh nÃ©n áº£nh do superadmin Ä‘áº·t á»Ÿ settings.html (bá»• sung 23/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€”
+// táº£i 1 láº§n lÃºc vÃ o trang, dÃ¹ng cho Má»ŒI lÆ°á»£t chá»¥p á»Ÿ taiAnhLenNgam() bÃªn dÆ°á»›i. Rá»—ng (chÆ°a cáº¥u hÃ¬nh) â†’
+// giá»¯ nguyÃªn object rá»—ng, nenAnhTruocKhiTaiLen() tá»± Ã¡p máº·c Ä‘á»‹nh 80%/1600px nhÆ° trÆ°á»›c (xem api.js).
 let cauHinhNenAnh = {};
 async function taiCauHinhNenAnh() {
   try {
@@ -395,9 +395,9 @@ async function capNhatManHinh() {
   document.getElementById('don-cho-xong').style.display = 'none';
   document.getElementById('form-nhap-ma-kich-ban').style.display = 'none';
   document.querySelector('#camera-wrap .camera-vien').style.display = '';
-  // Khung camera "Quét kịch bản" TỪNG rộng hơn, thấp hơn mặc định (.che-do-rong) — ĐÃ BỎ 09/09/2026,
-  // theo yêu cầu người dùng: khung ngoài camera giờ chỉ to hơn khung quét QR ~10% ở MỌI chế độ, không
-  // còn ngoại lệ nào (xem #qr-reader trong style.css).
+  // Khung camera "QuÃ©t ká»‹ch báº£n" Tá»ªNG rá»™ng hÆ¡n, tháº¥p hÆ¡n máº·c Ä‘á»‹nh (.che-do-rong) â€” ÄÃƒ Bá»Ž 09/09/2026,
+  // theo yÃªu cáº§u ngÆ°á»i dÃ¹ng: khung ngoÃ i camera giá» chá»‰ to hÆ¡n khung quÃ©t QR ~10% á»Ÿ Má»ŒI cháº¿ Ä‘á»™, khÃ´ng
+  // cÃ²n ngoáº¡i lá»‡ nÃ o (xem #qr-reader trong style.css).
 
   let cameraCanChay = null;
 
@@ -409,18 +409,18 @@ async function capNhatManHinh() {
   } else if (mode === 'photo_san_xuat' || mode === 'photo_da_dan_tem') {
     const cauHinh = CAU_HINH_ANH[mode];
     if (!donDaXacDinhChoAnh) {
-      // [Đang quét] — quét QR sống để xác định đơn trước, CHƯA cho chụp ảnh (xem
+      // [Äang quÃ©t] â€” quÃ©t QR sá»‘ng Ä‘á»ƒ xÃ¡c Ä‘á»‹nh Ä‘Æ¡n trÆ°á»›c, CHÆ¯A cho chá»¥p áº£nh (xem
       // docs/superpowers/specs/2026-09-07-tach-quet-chup-anh-design.md).
       document.getElementById('camera-wrap').style.display = 'block';
       document.getElementById('ket-qua-tra-cuu').style.display = 'none';
       setBatchOnlyVisible(false);
       const moTa = document.getElementById('mo-ta-quet-chup-anh');
       moTa.style.display = 'block';
-      moTa.textContent = `Quét mã QR để xác định đơn cần "${cauHinh.nhanTab}". ${cauHinh.moTa}`;
+      moTa.textContent = `QuÃ©t mÃ£ QR Ä‘á»ƒ xÃ¡c Ä‘á»‹nh Ä‘Æ¡n cáº§n "${cauHinh.nhanTab}". ${cauHinh.moTa}`;
       if (cauHinh.haiAnh) renderDonChoXong();
       cameraCanChay = 'photo_scan';
     } else {
-      // [Sẵn sàng chụp] — đơn đã xác định, không cần camera sống nữa (dùng camera máy qua input file).
+      // [Sáºµn sÃ ng chá»¥p] â€” Ä‘Æ¡n Ä‘Ã£ xÃ¡c Ä‘á»‹nh, khÃ´ng cáº§n camera sá»‘ng ná»¯a (dÃ¹ng camera mÃ¡y qua input file).
       document.getElementById('photo-wrap').style.display = 'block';
       document.getElementById('photo-mo-ta').textContent = cauHinh.moTa;
       renderThongTinDonChoAnh();
@@ -437,7 +437,7 @@ async function capNhatManHinh() {
     renderDemNhom();
     renderDsDangQuet();
     renderKetQuaVuaQuet();
-    // Kịch bản "Cho nhập mã tay" (05/10/2026): ô nhập mã THAY camera — không bật camera, con trỏ sẵn trong ô.
+    // Ká»‹ch báº£n "Cho nháº­p mÃ£ tay" (05/10/2026): Ã´ nháº­p mÃ£ THAY camera â€” khÃ´ng báº­t camera, con trá» sáºµn trong Ã´.
     if (kichBanDangChon.nhapMaTay) {
       document.getElementById('form-nhap-ma-kich-ban').style.display = 'flex';
       document.querySelector('#camera-wrap .camera-vien').style.display = 'none';
@@ -460,16 +460,16 @@ function setBatchOnlyVisible(hien) {
 function renderChonKichBan() {
   const el = document.getElementById('chon-kich-ban-wrap');
   if (kichBanDaTai.length === 0) {
-    el.innerHTML = '<p>Chưa có kịch bản nào trong tab CauHinhKichBan.</p>';
+    el.innerHTML = '<p>ChÆ°a cÃ³ ká»‹ch báº£n nÃ o trong tab CauHinhKichBan.</p>';
     return;
   }
   el.innerHTML = `
-    <h3>Chọn kịch bản để bắt đầu quét</h3>
+    <h3>Chá»n ká»‹ch báº£n Ä‘á»ƒ báº¯t Ä‘áº§u quÃ©t</h3>
     <div class="kich-ban-picker">
       ${kichBanDaTai.map(k => `
         <button class="kich-ban-btn" data-id="${k.id}">
           ${escapeHtml(k.label)}
-          ${k.requireStatus ? `<span class="phu-de">Yêu cầu đang ở: ${escapeHtml(k.requireStatus)}</span>` : ''}
+          ${k.requireStatus ? `<span class="phu-de">YÃªu cáº§u Ä‘ang á»Ÿ: ${escapeHtml(k.requireStatus)}</span>` : ''}
         </button>`).join('')}
     </div>`;
   el.querySelectorAll('.kich-ban-btn').forEach(btn => { btn.onclick = () => chonKichBan(btn.dataset.id); });
@@ -479,14 +479,14 @@ function chonKichBan(id) {
   kichBanDangChon = kichBanDaTai.find(k => k.id === id) || null;
   dsQuet = [];
   dangQuetKichBan = true;
-  // Khởi tạo/mở khoá AudioContext ngay trong cú bấm này (thao tác người dùng thật) — nhiều trình duyệt
-  // chặn phát âm thanh tự động nếu chưa có tương tác, nên "mồi" trước để tiếng bíp sau này phát được ngay.
+  // Khá»Ÿi táº¡o/má»Ÿ khoÃ¡ AudioContext ngay trong cÃº báº¥m nÃ y (thao tÃ¡c ngÆ°á»i dÃ¹ng tháº­t) â€” nhiá»u trÃ¬nh duyá»‡t
+  // cháº·n phÃ¡t Ã¢m thanh tá»± Ä‘á»™ng náº¿u chÆ°a cÃ³ tÆ°Æ¡ng tÃ¡c, nÃªn "má»“i" trÆ°á»›c Ä‘á»ƒ tiáº¿ng bÃ­p sau nÃ y phÃ¡t Ä‘Æ°á»£c ngay.
   try { layAudioCtx().resume(); } catch (e) {}
   capNhatManHinh();
 }
 
 // ============================================================
-// ÂM THANH — 3 tiếng bíp khác nhau rõ rệt cho 3 kết quả quét, tự tạo bằng Web Audio API (không cần file âm thanh)
+// Ã‚M THANH â€” 3 tiáº¿ng bÃ­p khÃ¡c nhau rÃµ rá»‡t cho 3 káº¿t quáº£ quÃ©t, tá»± táº¡o báº±ng Web Audio API (khÃ´ng cáº§n file Ã¢m thanh)
 // ============================================================
 function layAudioCtx() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -506,57 +506,57 @@ function phatBeep(tanSo, thoiLuongMs, doTreMs, loaiSong) {
     const batDau = ctx.currentTime + (doTreMs || 0) / 1000;
     osc.start(batDau);
     osc.stop(batDau + thoiLuongMs / 1000);
-  } catch (e) { /* trình duyệt chặn âm thanh — bỏ qua lặng lẽ, không ảnh hưởng luồng quét */ }
+  } catch (e) { /* trÃ¬nh duyá»‡t cháº·n Ã¢m thanh â€” bá» qua láº·ng láº½, khÃ´ng áº£nh hÆ°á»Ÿng luá»“ng quÃ©t */ }
 }
 
-// 3 kết quả phải nghe RÕ RÀNG KHÁC NHAU, đặc biệt "Sẵn sàng" phải khác hẳn 2 trường hợp lỗi để
-// không nhầm khi quét nhanh liên tục: OK dùng sóng sine êm (như chuông); 2 trường hợp lỗi dùng
-// sóng square (âm sắc "còi báo động", khác hẳn về chất âm chứ không chỉ khác cao độ) + có rung.
+// 3 káº¿t quáº£ pháº£i nghe RÃ• RÃ€NG KHÃC NHAU, Ä‘áº·c biá»‡t "Sáºµn sÃ ng" pháº£i khÃ¡c háº³n 2 trÆ°á»ng há»£p lá»—i Ä‘á»ƒ
+// khÃ´ng nháº§m khi quÃ©t nhanh liÃªn tá»¥c: OK dÃ¹ng sÃ³ng sine Ãªm (nhÆ° chuÃ´ng); 2 trÆ°á»ng há»£p lá»—i dÃ¹ng
+// sÃ³ng square (Ã¢m sáº¯c "cÃ²i bÃ¡o Ä‘á»™ng", khÃ¡c háº³n vá» cháº¥t Ã¢m chá»© khÃ´ng chá»‰ khÃ¡c cao Ä‘á»™) + cÃ³ rung.
 function phatAmThanhKetQua(nhom) {
   if (nhom === 'DA_NHAN') {
-    // Tab Tracking (bổ sung 02/09/2026): quét xong 1 mã phải chờ GKE tới ~1 phút mới có kết quả
-    // cuối — nếu chỉ phát âm OK/lỗi ở cuối thì người quét không biết máy đã "nhận" được mã ngay lúc
-    // quét hay chưa, dễ tưởng máy treo mà quét lại. 2 tiếng "tít tít" NGẮN, CÙNG 1 cao độ, sát nhau
-    // (mô phỏng tiếng bíp máy quét mã vạch quen thuộc, dễ nhận ra ngay) — cao độ cao hơn hẳn và
-    // không tăng dần như OK (OK: 2 nốt tăng dần 880→1175, dài hơn, cách xa hơn) nên không lẫn dù
-    // cùng là 2 tiếng; không mang nghĩa thành công/thất bại nên không rung.
+    // Tab Tracking (bá»• sung 02/09/2026): quÃ©t xong 1 mÃ£ pháº£i chá» GKE tá»›i ~1 phÃºt má»›i cÃ³ káº¿t quáº£
+    // cuá»‘i â€” náº¿u chá»‰ phÃ¡t Ã¢m OK/lá»—i á»Ÿ cuá»‘i thÃ¬ ngÆ°á»i quÃ©t khÃ´ng biáº¿t mÃ¡y Ä‘Ã£ "nháº­n" Ä‘Æ°á»£c mÃ£ ngay lÃºc
+    // quÃ©t hay chÆ°a, dá»… tÆ°á»Ÿng mÃ¡y treo mÃ  quÃ©t láº¡i. 2 tiáº¿ng "tÃ­t tÃ­t" NGáº®N, CÃ™NG 1 cao Ä‘á»™, sÃ¡t nhau
+    // (mÃ´ phá»ng tiáº¿ng bÃ­p mÃ¡y quÃ©t mÃ£ váº¡ch quen thuá»™c, dá»… nháº­n ra ngay) â€” cao Ä‘á»™ cao hÆ¡n háº³n vÃ 
+    // khÃ´ng tÄƒng dáº§n nhÆ° OK (OK: 2 ná»‘t tÄƒng dáº§n 880â†’1175, dÃ i hÆ¡n, cÃ¡ch xa hÆ¡n) nÃªn khÃ´ng láº«n dÃ¹
+    // cÃ¹ng lÃ  2 tiáº¿ng; khÃ´ng mang nghÄ©a thÃ nh cÃ´ng/tháº¥t báº¡i nÃªn khÃ´ng rung.
     phatBeep(1500, 50, 0, 'sine');
     phatBeep(1500, 50, 70, 'sine');
   } else if (nhom === 'OK') {
-    // 2 nốt sine tăng dần, êm nhẹ — không rung, để phân biệt tuyệt đối với 2 trường hợp lỗi bên dưới
+    // 2 ná»‘t sine tÄƒng dáº§n, Ãªm nháº¹ â€” khÃ´ng rung, Ä‘á»ƒ phÃ¢n biá»‡t tuyá»‡t Ä‘á»‘i vá»›i 2 trÆ°á»ng há»£p lá»—i bÃªn dÆ°á»›i
     phatBeep(880, 120, 0, 'sine');
     phatBeep(1175, 150, 100, 'sine');
   } else if (nhom === 'SAI_TRANG_THAI') {
-    // Sóng vuông (âm sắc "còi"), 2 tiếng đều nhau mức trung — khác hẳn chất âm của OK
+    // SÃ³ng vuÃ´ng (Ã¢m sáº¯c "cÃ²i"), 2 tiáº¿ng Ä‘á»u nhau má»©c trung â€” khÃ¡c háº³n cháº¥t Ã¢m cá»§a OK
     phatBeep(520, 130, 0, 'square');
     phatBeep(520, 130, 190, 'square');
-    if (navigator.vibrate) navigator.vibrate([120, 90, 120]); // rung 2 nhịp ngắn
+    if (navigator.vibrate) navigator.vibrate([120, 90, 120]); // rung 2 nhá»‹p ngáº¯n
   } else if (nhom === 'CANH_BAO_NHOM') {
-    // F1 (11/10/2026): đơn nhiều áo chưa đủ — 3 tiếng sine 660Hz ngắn đều nhau (khác hẳn 4 âm trên), phát SAU tiếng OK.
+    // F1 (11/10/2026): Ä‘Æ¡n nhiá»u Ã¡o chÆ°a Ä‘á»§ â€” 3 tiáº¿ng sine 660Hz ngáº¯n Ä‘á»u nhau (khÃ¡c háº³n 4 Ã¢m trÃªn), phÃ¡t SAU tiáº¿ng OK.
     phatBeep(660, 90, 0, 'sine');
     phatBeep(660, 90, 150, 'sine');
     phatBeep(660, 90, 300, 'sine');
     if (navigator.vibrate) navigator.vibrate([80, 60, 80, 60, 80]);
   } else if (nhom === 'KHONG_TIM_THAY') {
-    // Sóng vuông, trầm hơn, dài hơn, 3 tiếng dồn dập — nặng nhất trong 3 kết quả, không thể nhầm với OK
+    // SÃ³ng vuÃ´ng, tráº§m hÆ¡n, dÃ i hÆ¡n, 3 tiáº¿ng dá»“n dáº­p â€” náº·ng nháº¥t trong 3 káº¿t quáº£, khÃ´ng thá»ƒ nháº§m vá»›i OK
     phatBeep(220, 160, 0, 'square');
     phatBeep(220, 160, 220, 'square');
     phatBeep(180, 260, 440, 'square');
-    if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]); // rung 3 nhịp dài hơn, khác kiểu với Sai trạng thái
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]); // rung 3 nhá»‹p dÃ i hÆ¡n, khÃ¡c kiá»ƒu vá»›i Sai tráº¡ng thÃ¡i
   }
 }
 
-// Bật/tắt camera XẾP HÀNG (14/10/2026, theo Logs_UploadAnh 13/10: bấm đổi chế độ khi camera đang mở dở -> html5-qrcode báo "Cannot
-// transition to a new state, already under transition" / "Cannot clear while scan is ongoing", camera CŨ không tắt được và vẫn gọi hàm
-// quét của chế độ chụp ảnh khi đã sang "Tra cứu" -> lỗi "cauHinh.moc" liên tục). Chỉ 1 lượt bật/tắt chạy tại 1 thời điểm; bấm dồn dập
-// trong lúc đang chạy thì chỉ nhớ chế độ MUỐN cuối cùng, xong lượt hiện tại mới chuyển thẳng tới đó (bỏ qua các chế độ trung gian).
-// Giới hạn: lượt đang chờ hộp xin quyền camera (getUserMedia) không huỷ được — đổi chế độ sẽ có hiệu lực ngay khi người dùng trả lời.
+// Báº­t/táº¯t camera Xáº¾P HÃ€NG (14/10/2026, theo Logs_UploadAnh 13/10: báº¥m Ä‘á»•i cháº¿ Ä‘á»™ khi camera Ä‘ang má»Ÿ dá»Ÿ -> html5-qrcode bÃ¡o "Cannot
+// transition to a new state, already under transition" / "Cannot clear while scan is ongoing", camera CÅ¨ khÃ´ng táº¯t Ä‘Æ°á»£c vÃ  váº«n gá»i hÃ m
+// quÃ©t cá»§a cháº¿ Ä‘á»™ chá»¥p áº£nh khi Ä‘Ã£ sang "Tra cá»©u" -> lá»—i "cauHinh.moc" liÃªn tá»¥c). Chá»‰ 1 lÆ°á»£t báº­t/táº¯t cháº¡y táº¡i 1 thá»i Ä‘iá»ƒm; báº¥m dá»“n dáº­p
+// trong lÃºc Ä‘ang cháº¡y thÃ¬ chá»‰ nhá»› cháº¿ Ä‘á»™ MUá»N cuá»‘i cÃ¹ng, xong lÆ°á»£t hiá»‡n táº¡i má»›i chuyá»ƒn tháº³ng tá»›i Ä‘Ã³ (bá» qua cÃ¡c cháº¿ Ä‘á»™ trung gian).
+// Giá»›i háº¡n: lÆ°á»£t Ä‘ang chá» há»™p xin quyá»n camera (getUserMedia) khÃ´ng huá»· Ä‘Æ°á»£c â€” Ä‘á»•i cháº¿ Ä‘á»™ sáº½ cÃ³ hiá»‡u lá»±c ngay khi ngÆ°á»i dÃ¹ng tráº£ lá»i.
 let cameraMuonChay = null, luotDieuChinhCamera = null;
-// Lỗi khi tắt camera cũ (dungCamera) — gắn vào log MO_CAMERA ngay sau (chiTiet.loiDung) để biết vì sao mở camera mới báo "Cannot clear
-// while scan is ongoing" (Logs_UploadAnh 14/10: đổi chế độ ngay khi camera vừa mở xong).
+// Lá»—i khi táº¯t camera cÅ© (dungCamera) â€” gáº¯n vÃ o log MO_CAMERA ngay sau (chiTiet.loiDung) Ä‘á»ƒ biáº¿t vÃ¬ sao má»Ÿ camera má»›i bÃ¡o "Cannot clear
+// while scan is ongoing" (Logs_UploadAnh 14/10: Ä‘á»•i cháº¿ Ä‘á»™ ngay khi camera vá»«a má»Ÿ xong).
 let loiDungCamera = null;
-const trangThaiScanner = () => { try { return scanner.getState(); } catch (e) { return null; } }; // html5-qrcode: 1 chưa chạy, 2 đang quét, 3 tạm dừng
-const moTaLoi = e => `${(e && e.name) || ''} ${String((e && e.message) || e)}`.trim(); // html5-qrcode hay throw CHUỖI (không có name)
+const trangThaiScanner = () => { try { return scanner.getState(); } catch (e) { return null; } }; // html5-qrcode: 1 chÆ°a cháº¡y, 2 Ä‘ang quÃ©t, 3 táº¡m dá»«ng
+const moTaLoi = e => `${(e && e.name) || ''} ${String((e && e.message) || e)}`.trim(); // html5-qrcode hay throw CHUá»–I (khÃ´ng cÃ³ name)
 function dieuChinhCamera(muonChay) {
   cameraMuonChay = muonChay;
   if (!luotDieuChinhCamera) {
@@ -565,8 +565,8 @@ function dieuChinhCamera(muonChay) {
         let muon;
         do {
           muon = cameraMuonChay;
-          // Lỗi 1 lượt không được làm mất chế độ người dùng bấm TRONG LÚC lượt đó chạy — bắt lỗi từng lượt, vòng vẫn chạy tiếp tới chế độ cuối.
-          try { await dieuChinhCameraThat(muon); } catch (err) { console.error('[Camera] Lỗi đổi camera:', err); }
+          // Lá»—i 1 lÆ°á»£t khÃ´ng Ä‘Æ°á»£c lÃ m máº¥t cháº¿ Ä‘á»™ ngÆ°á»i dÃ¹ng báº¥m TRONG LÃšC lÆ°á»£t Ä‘Ã³ cháº¡y â€” báº¯t lá»—i tá»«ng lÆ°á»£t, vÃ²ng váº«n cháº¡y tiáº¿p tá»›i cháº¿ Ä‘á»™ cuá»‘i.
+          try { await dieuChinhCameraThat(muon); } catch (err) { console.error('[Camera] Lá»—i Ä‘á»•i camera:', err); }
         } while (muon !== cameraMuonChay);
       } finally {
         luotDieuChinhCamera = null;
@@ -577,22 +577,22 @@ function dieuChinhCamera(muonChay) {
 }
 async function dieuChinhCameraThat(muonChay) {
   if (muonChay === cameraDangChayCho) return;
-  loiDungCamera = null; // chỉ gắn lỗi tắt camera của ĐÚNG lượt này vào log MO_CAMERA ngay sau
+  loiDungCamera = null; // chá»‰ gáº¯n lá»—i táº¯t camera cá»§a ÄÃšNG lÆ°á»£t nÃ y vÃ o log MO_CAMERA ngay sau
   if (cameraDangChayCho !== null) await dungCamera();
   cameraDangChayCho = muonChay;
   if (muonChay === 'lookup') await batDauCamera(xuLyQuetTraCuu);
-  // "Quét kịch bản" TỪNG truyền aspectRatio 16/9 riêng (khung camera rộng-thấp) — ĐÃ BỎ 09/09/2026,
-  // dùng chung đúng 1 cỡ khung mặc định (qrbox 260 + khung ngoài ~286px) như mọi chế độ khác.
-  else if (muonChay === 'batch') await batDauCamera(ma => xuLyQuetKichBan(ma)); // html5-qrcode gọi (mã, kếtQuả) — chỉ chuyển mã, tham số 2 dành cho ô nhập
-  // "Chụp ảnh đã sản xuất" — bước quét QR SỐNG để xác định đơn, trước khi cho chụp ảnh
-  // thật (xem docs/superpowers/specs/2026-09-07-tach-quet-chup-anh-design.md).
-  else if (muonChay === 'photo_scan') await batDauCamera(ma => xuLyQuetDeXacDinhDon(ma)); // html5-qrcode truyền thêm decodedResult — không để rơi vào `nguon`
+  // "QuÃ©t ká»‹ch báº£n" Tá»ªNG truyá»n aspectRatio 16/9 riÃªng (khung camera rá»™ng-tháº¥p) â€” ÄÃƒ Bá»Ž 09/09/2026,
+  // dÃ¹ng chung Ä‘Ãºng 1 cá»¡ khung máº·c Ä‘á»‹nh (qrbox 260 + khung ngoÃ i ~286px) nhÆ° má»i cháº¿ Ä‘á»™ khÃ¡c.
+  else if (muonChay === 'batch') await batDauCamera(ma => xuLyQuetKichBan(ma)); // html5-qrcode gá»i (mÃ£, káº¿tQuáº£) â€” chá»‰ chuyá»ƒn mÃ£, tham sá»‘ 2 dÃ nh cho Ã´ nháº­p
+  // "Chá»¥p áº£nh Ä‘Ã£ sáº£n xuáº¥t" â€” bÆ°á»›c quÃ©t QR Sá»NG Ä‘á»ƒ xÃ¡c Ä‘á»‹nh Ä‘Æ¡n, trÆ°á»›c khi cho chá»¥p áº£nh
+  // tháº­t (xem docs/superpowers/specs/2026-09-07-tach-quet-chup-anh-design.md).
+  else if (muonChay === 'photo_scan') await batDauCamera(ma => xuLyQuetDeXacDinhDon(ma)); // html5-qrcode truyá»n thÃªm decodedResult â€” khÃ´ng Ä‘á»ƒ rÆ¡i vÃ o `nguon`
 }
 
-// "NotReadableError: Could not start video source" KHÔNG PHẢI lỗi quyền — trình duyệt/OS chưa kịp
-// nhả hẳn camera từ lượt dừng ngay trước đó (hay gặp khi dừng rồi mở lại camera liên tiếp) HOẶC 1
-// app/tab khác đang giữ camera. Tự thử lại vài lần có chờ trước khi báo lỗi thật — phần lớn trường
-// hợp tự hết sau 1-2 lần thử vì camera vừa được nhả ra.
+// "NotReadableError: Could not start video source" KHÃ”NG PHáº¢I lá»—i quyá»n â€” trÃ¬nh duyá»‡t/OS chÆ°a ká»‹p
+// nháº£ háº³n camera tá»« lÆ°á»£t dá»«ng ngay trÆ°á»›c Ä‘Ã³ (hay gáº·p khi dá»«ng rá»“i má»Ÿ láº¡i camera liÃªn tiáº¿p) HOáº¶C 1
+// app/tab khÃ¡c Ä‘ang giá»¯ camera. Tá»± thá»­ láº¡i vÃ i láº§n cÃ³ chá» trÆ°á»›c khi bÃ¡o lá»—i tháº­t â€” pháº§n lá»›n trÆ°á»ng
+// há»£p tá»± háº¿t sau 1-2 láº§n thá»­ vÃ¬ camera vá»«a Ä‘Æ°á»£c nháº£ ra.
 function laLoiCameraDangBanRoi(err) {
   return /NotReadableError/i.test(String(err));
 }
@@ -601,34 +601,34 @@ async function batDauCamera(onScan, qrboxSize, tuyChon = {}) {
   const { soLanThuLai = 2, facingMode = 'environment', aspectRatio } = tuyChon;
   if (!scanner) scanner = new Html5Qrcode('qr-reader');
 
-  // Ghi ra Console (F12) trạng thái quyền camera THẬT SỰ theo trình duyệt (nếu hỗ trợ Permissions
-  // API) — để phân biệt rõ "chưa cấp quyền/đã bị chặn" (permission) với "có quyền nhưng phần cứng
-  // không mở được" (NotReadableError, xem hàm trên) thay vì đoán mò qua thông báo lỗi chung chung.
+  // Ghi ra Console (F12) tráº¡ng thÃ¡i quyá»n camera THáº¬T Sá»° theo trÃ¬nh duyá»‡t (náº¿u há»— trá»£ Permissions
+  // API) â€” Ä‘á»ƒ phÃ¢n biá»‡t rÃµ "chÆ°a cáº¥p quyá»n/Ä‘Ã£ bá»‹ cháº·n" (permission) vá»›i "cÃ³ quyá»n nhÆ°ng pháº§n cá»©ng
+  // khÃ´ng má»Ÿ Ä‘Æ°á»£c" (NotReadableError, xem hÃ m trÃªn) thay vÃ¬ Ä‘oÃ¡n mÃ² qua thÃ´ng bÃ¡o lá»—i chung chung.
   try {
     const trangThai = await navigator.permissions.query({ name: 'camera' });
-    console.log('[Camera] Trạng thái quyền camera (Permissions API):', trangThai.state);
+    console.log('[Camera] Tráº¡ng thÃ¡i quyá»n camera (Permissions API):', trangThai.state);
   } catch (e) {
-    console.log('[Camera] Trình duyệt không hỗ trợ Permissions API cho camera — bỏ qua bước kiểm tra này (không phải lỗi).');
+    console.log('[Camera] TrÃ¬nh duyá»‡t khÃ´ng há»— trá»£ Permissions API cho camera â€” bá» qua bÆ°á»›c kiá»ƒm tra nÃ y (khÃ´ng pháº£i lá»—i).');
   }
 
   const tMoCamera = performance.now();
   for (let lan = 0; lan <= soLanThuLai; lan++) {
     const gioBatDau = Date.now();
     try {
-      // Mã đọc được lúc đang có hộp thoại mở (api.js#dangMoHopThoai) -> bỏ qua: hộp của app không dừng camera như alert() của
-      // trình duyệt trước đây, không để đơn bị xử lý phía sau hộp người dùng đang đọc. Đóng hộp xong camera đọc lại bình thường.
+      // MÃ£ Ä‘á»c Ä‘Æ°á»£c lÃºc Ä‘ang cÃ³ há»™p thoáº¡i má»Ÿ (api.js#dangMoHopThoai) -> bá» qua: há»™p cá»§a app khÃ´ng dá»«ng camera nhÆ° alert() cá»§a
+      // trÃ¬nh duyá»‡t trÆ°á»›c Ä‘Ã¢y, khÃ´ng Ä‘á»ƒ Ä‘Æ¡n bá»‹ xá»­ lÃ½ phÃ­a sau há»™p ngÆ°á»i dÃ¹ng Ä‘ang Ä‘á»c. ÄÃ³ng há»™p xong camera Ä‘á»c láº¡i bÃ¬nh thÆ°á»ng.
       await scanner.start({ facingMode }, { fps: 10, qrbox: qrboxSize || 260, ...(aspectRatio ? { aspectRatio } : {}) },
         (...thamSo) => { if (!dangMoHopThoai()) onScan(...thamSo); });
       capNhatHoTroFlash();
-      console.log(`[Camera] Mở camera thành công sau ${Date.now() - gioBatDau}ms (facingMode=${facingMode})`);
+      console.log(`[Camera] Má»Ÿ camera thÃ nh cÃ´ng sau ${Date.now() - gioBatDau}ms (facingMode=${facingMode})`);
       tSanSangQuet = performance.now();
       cameraDaMo = true;
       ghiLogQuet({ suKien: 'MO_CAMERA', ketQua: 'OK', tongMs: Math.round(tSanSangQuet - tMoCamera), chiTiet: { soLanThu: lan + 1, ...(loiDungCamera ? { loiDung: loiDungCamera } : {}) } });
       return;
     } catch (err) {
-      console.error(`[Camera] Lỗi mở camera (lần ${lan + 1}/${soLanThuLai + 1}, sau ${Date.now() - gioBatDau}ms) — tên lỗi: "${err && err.name}":`, err);
+      console.error(`[Camera] Lá»—i má»Ÿ camera (láº§n ${lan + 1}/${soLanThuLai + 1}, sau ${Date.now() - gioBatDau}ms) â€” tÃªn lá»—i: "${err && err.name}":`, err);
       if (laLoiCameraDangBanRoi(err) && lan < soLanThuLai) {
-        console.warn(`[Camera] Camera đang bận, đợi rồi thử lại...`);
+        console.warn(`[Camera] Camera Ä‘ang báº­n, Ä‘á»£i rá»“i thá»­ láº¡i...`);
         await new Promise(r => setTimeout(r, 700));
         continue;
       }
@@ -636,48 +636,48 @@ async function batDauCamera(onScan, qrboxSize, tuyChon = {}) {
         tongMs: Math.round(performance.now() - tMoCamera),
         chiTiet: { soLanThu: lan + 1, trangThaiMayQuet: trangThaiScanner(), ...(loiDungCamera ? { loiDung: loiDungCamera } : {}) } });
       const goiY = laLoiCameraDangBanRoi(err)
-        ? 'Camera đang được app/tab khác dùng — đóng hết ứng dụng/tab khác đang mở camera (Zoom, Teams, Windows Camera, tab trình duyệt khác...) rồi thử lại.'
-        : 'Hãy cho phép quyền camera cho trang web này trong trình duyệt.';
+        ? 'Camera Ä‘ang Ä‘Æ°á»£c app/tab khÃ¡c dÃ¹ng â€” Ä‘Ã³ng háº¿t á»©ng dá»¥ng/tab khÃ¡c Ä‘ang má»Ÿ camera (Zoom, Teams, Windows Camera, tab trÃ¬nh duyá»‡t khÃ¡c...) rá»“i thá»­ láº¡i.'
+        : 'HÃ£y cho phÃ©p quyá»n camera cho trang web nÃ y trong trÃ¬nh duyá»‡t.';
       document.getElementById('ket-qua-tra-cuu').innerHTML =
-        `<div class="ket-qua-box loi">${icon('alert')} Không mở được camera: ${escapeHtml(String(err))}. ${goiY}</div>`;
-      cameraDangChayCho = null; // không mở được -> bấm lại đúng chế độ đó sẽ thử mở lại (trước đây coi như đang chạy, bấm không có tác dụng)
+        `<div class="ket-qua-box loi">${icon('alert')} KhÃ´ng má»Ÿ Ä‘Æ°á»£c camera: ${escapeHtml(String(err))}. ${goiY}</div>`;
+      cameraDangChayCho = null; // khÃ´ng má»Ÿ Ä‘Æ°á»£c -> báº¥m láº¡i Ä‘Ãºng cháº¿ Ä‘á»™ Ä‘Ã³ sáº½ thá»­ má»Ÿ láº¡i (trÆ°á»›c Ä‘Ã¢y coi nhÆ° Ä‘ang cháº¡y, báº¥m khÃ´ng cÃ³ tÃ¡c dá»¥ng)
       return;
     }
   }
 }
 
-// html5-qrcode 2.3.8: stop() lỗi giữa chừng (vd camera.close() ném lỗi) thì máy quét KẸT ở "đang quét" -> mọi start() sau đều báo "Cannot
-// clear while scan is ongoing"; stop() còn có thể TREO mãi (close() không bao giờ xong khi luồng video không còn track nào) làm kẹt cả
-// hàng đợi bật/tắt camera. Nên: chờ stop() tối đa 2 giây; sau đó máy quét chưa về "chưa chạy" (1) thì BỎ hẳn bản đó — tự tắt luồng video,
-// dừng vòng quét của nó (shouldScan — thuộc tính nội bộ 2.3.8, để bản cũ không gọi hàm quét của chế độ cũ nữa) — lần mở sau tạo bản mới.
+// html5-qrcode 2.3.8: stop() lá»—i giá»¯a chá»«ng (vd camera.close() nÃ©m lá»—i) thÃ¬ mÃ¡y quÃ©t Káº¸T á»Ÿ "Ä‘ang quÃ©t" -> má»i start() sau Ä‘á»u bÃ¡o "Cannot
+// clear while scan is ongoing"; stop() cÃ²n cÃ³ thá»ƒ TREO mÃ£i (close() khÃ´ng bao giá» xong khi luá»“ng video khÃ´ng cÃ²n track nÃ o) lÃ m káº¹t cáº£
+// hÃ ng Ä‘á»£i báº­t/táº¯t camera. NÃªn: chá» stop() tá»‘i Ä‘a 2 giÃ¢y; sau Ä‘Ã³ mÃ¡y quÃ©t chÆ°a vá» "chÆ°a cháº¡y" (1) thÃ¬ Bá»Ž háº³n báº£n Ä‘Ã³ â€” tá»± táº¯t luá»“ng video,
+// dá»«ng vÃ²ng quÃ©t cá»§a nÃ³ (shouldScan â€” thuá»™c tÃ­nh ná»™i bá»™ 2.3.8, Ä‘á»ƒ báº£n cÅ© khÃ´ng gá»i hÃ m quÃ©t cá»§a cháº¿ Ä‘á»™ cÅ© ná»¯a) â€” láº§n má»Ÿ sau táº¡o báº£n má»›i.
 async function dungCamera() {
   if (scanner) {
     const cu = scanner;
     let hen;
-    // GỐC lỗi Logs 14/10 (thử với thư viện thật): start() xong TRƯỚC khi video phát ("playing") — canvas quét chỉ được tạo lúc "playing";
-    // stop() trong khoảng đó gọi removeChild(canvas null) -> lỗi, máy quét kẹt. Nên chờ "playing" (tối đa 2 giây) rồi mới stop(). Bộ nghe
-    // của html5-qrcode gắn trước nên chạy trước bộ nghe này -> canvas đã có khi stop().
+    // Gá»C lá»—i Logs 14/10 (thá»­ vá»›i thÆ° viá»‡n tháº­t): start() xong TRÆ¯á»šC khi video phÃ¡t ("playing") â€” canvas quÃ©t chá»‰ Ä‘Æ°á»£c táº¡o lÃºc "playing";
+    // stop() trong khoáº£ng Ä‘Ã³ gá»i removeChild(canvas null) -> lá»—i, mÃ¡y quÃ©t káº¹t. NÃªn chá» "playing" (tá»‘i Ä‘a 2 giÃ¢y) rá»“i má»›i stop(). Bá»™ nghe
+    // cá»§a html5-qrcode gáº¯n trÆ°á»›c nÃªn cháº¡y trÆ°á»›c bá»™ nghe nÃ y -> canvas Ä‘Ã£ cÃ³ khi stop().
     const video = document.querySelector('#qr-reader video');
     if (video && !document.querySelector('#qr-reader canvas')) {
       await new Promise(xong => { video.addEventListener('playing', xong, { once: true }); hen = setTimeout(xong, 2000); });
       clearTimeout(hen);
     }
     try {
-      await Promise.race([cu.stop(), new Promise((_, loi) => { hen = setTimeout(() => loi(new Error('stop() quá 2 giây')), 2000); })]);
+      await Promise.race([cu.stop(), new Promise((_, loi) => { hen = setTimeout(() => loi(new Error('stop() quÃ¡ 2 giÃ¢y')), 2000); })]);
     } catch (e) {
-      loiDungCamera = `${moTaLoi(e).slice(0, 150)} (trạng thái ${trangThaiScanner()})`;
+      loiDungCamera = `${moTaLoi(e).slice(0, 150)} (tráº¡ng thÃ¡i ${trangThaiScanner()})`;
     } finally {
       clearTimeout(hen);
     }
     if (trangThaiScanner() !== 1) {
-      // Nâng html5-qrcode mà thuộc tính nội bộ này đổi tên -> ghi rõ vào log thay vì âm thầm không có tác dụng.
+      // NÃ¢ng html5-qrcode mÃ  thuá»™c tÃ­nh ná»™i bá»™ nÃ y Ä‘á»•i tÃªn -> ghi rÃµ vÃ o log thay vÃ¬ Ã¢m tháº§m khÃ´ng cÃ³ tÃ¡c dá»¥ng.
       const conShouldScan = 'shouldScan' in cu;
       cu.shouldScan = false;
       document.querySelectorAll('#qr-reader video').forEach(v => { try { v.srcObject && v.srcObject.getTracks().forEach(t => t.stop()); } catch (e) {} });
-      document.getElementById('qr-reader').innerHTML = ''; // bỏ khung video chết của bản cũ ngay (chế độ sau có thể không mở camera)
+      document.getElementById('qr-reader').innerHTML = ''; // bá» khung video cháº¿t cá»§a báº£n cÅ© ngay (cháº¿ Ä‘á»™ sau cÃ³ thá»ƒ khÃ´ng má»Ÿ camera)
       scanner = null;
-      loiDungCamera = `${loiDungCamera || 'stop() xong nhưng máy quét chưa về "chưa chạy"'} — đã bỏ máy quét cũ, tạo bản mới`
-        + (conShouldScan ? '' : ' [html5-qrcode không còn shouldScan — xem lại dungCamera]');
+      loiDungCamera = `${loiDungCamera || 'stop() xong nhÆ°ng mÃ¡y quÃ©t chÆ°a vá» "chÆ°a cháº¡y"'} â€” Ä‘Ã£ bá» mÃ¡y quÃ©t cÅ©, táº¡o báº£n má»›i`
+        + (conShouldScan ? '' : ' [html5-qrcode khÃ´ng cÃ²n shouldScan â€” xem láº¡i dungCamera]');
     }
   }
   cameraDaMo = false;
@@ -687,8 +687,8 @@ async function dungCamera() {
   capNhatNutFlash();
 }
 
-// Đèn flash chỉ hoạt động qua web trên số ít thiết bị/trình duyệt hỗ trợ "torch" — kiểm tra ngay
-// sau khi mở camera, ẩn hẳn icon nếu không hỗ trợ (thay vì hiện ra rồi báo lỗi khi bấm như trước).
+// ÄÃ¨n flash chá»‰ hoáº¡t Ä‘á»™ng qua web trÃªn sá»‘ Ã­t thiáº¿t bá»‹/trÃ¬nh duyá»‡t há»— trá»£ "torch" â€” kiá»ƒm tra ngay
+// sau khi má»Ÿ camera, áº©n háº³n icon náº¿u khÃ´ng há»— trá»£ (thay vÃ¬ hiá»‡n ra rá»“i bÃ¡o lá»—i khi báº¥m nhÆ° trÆ°á»›c).
 function capNhatHoTroFlash() {
   let hoTro = false;
   try {
@@ -705,7 +705,7 @@ document.getElementById('btn-flash').onclick = async () => {
     await scanner.applyVideoConstraints({ advanced: [{ torch: denFlashBat }] });
   } catch (e) {
     denFlashBat = false;
-    await hopThongBao('Thiết bị hoặc trình duyệt này không hỗ trợ bật đèn flash qua web (thường gặp trên iPhone/Safari).');
+    await hopThongBao('Thiáº¿t bá»‹ hoáº·c trÃ¬nh duyá»‡t nÃ y khÃ´ng há»— trá»£ báº­t Ä‘Ã¨n flash qua web (thÆ°á»ng gáº·p trÃªn iPhone/Safari).');
   }
   capNhatNutFlash();
 };
@@ -713,8 +713,8 @@ document.getElementById('btn-flash').onclick = async () => {
 function capNhatNutFlash() {
   const btn = document.getElementById('btn-flash');
   btn.classList.toggle('dang-bat', denFlashBat);
-  btn.innerHTML = '🔦';
-  btn.setAttribute('aria-label', denFlashBat ? 'Tắt đèn flash' : 'Bật đèn flash');
+  btn.innerHTML = 'ðŸ”¦';
+  btn.setAttribute('aria-label', denFlashBat ? 'Táº¯t Ä‘Ã¨n flash' : 'Báº­t Ä‘Ã¨n flash');
   btn.title = btn.getAttribute('aria-label');
 }
 
@@ -730,9 +730,9 @@ async function xuLyQuetTraCuu(sttKey) {
     el.innerHTML = `<div class="ket-qua-box">
       ${icon('package')}
       <div>
-        <strong>${escapeHtml(don.TieuDeSanPham || don.STT_Key)}</strong> — ${escapeHtml(don.TenKhachHang || '')}<br>
-        Trạng thái: <span class="badge ${lopTrangThai(don.TRANG_THAI_XUONG)}">${escapeHtml(don.TRANG_THAI_XUONG || '')}</span><br>
-        <a href="/order.html?stt=${encodeURIComponent(sttKey)}">Xem chi tiết ${icon('arrowRight', {size:14})}</a>
+        <strong>${escapeHtml(don.TieuDeSanPham || don.STT_Key)}</strong> â€” ${escapeHtml(don.TenKhachHang || '')}<br>
+        Tráº¡ng thÃ¡i: <span class="badge ${lopTrangThai(don.TRANG_THAI_XUONG)}">${escapeHtml(don.TRANG_THAI_XUONG || '')}</span><br>
+        <a href="/order.html?stt=${encodeURIComponent(sttKey)}">Xem chi tiáº¿t ${icon('arrowRight', {size:14})}</a>
       </div>
     </div>`;
   } catch (e) {
@@ -744,9 +744,9 @@ async function xuLyQuetTraCuu(sttKey) {
   setTimeout(() => { dangXuLyQuet = false; tSanSangQuet = performance.now(); }, 1500);
 }
 
-// Ô nhập mã (kịch bản "Cho nhập mã tay", 05/10/2026): Enter = đúng như vừa quét 1 mã bằng camera. Máy quét mã vạch cầm tay
-// gõ rất nhanh — mã nào tới khi mã trước chưa xử lý xong thì XẾP HÀNG chờ (camera thì bỏ qua lượt quét trùng, ô nhập thì
-// không được bỏ mã nào). Xử lý xong con trỏ quay lại ô (alert lỗi mạng cũng làm mất con trỏ).
+// Ã” nháº­p mÃ£ (ká»‹ch báº£n "Cho nháº­p mÃ£ tay", 05/10/2026): Enter = Ä‘Ãºng nhÆ° vá»«a quÃ©t 1 mÃ£ báº±ng camera. MÃ¡y quÃ©t mÃ£ váº¡ch cáº§m tay
+// gÃµ ráº¥t nhanh â€” mÃ£ nÃ o tá»›i khi mÃ£ trÆ°á»›c chÆ°a xá»­ lÃ½ xong thÃ¬ Xáº¾P HÃ€NG chá» (camera thÃ¬ bá» qua lÆ°á»£t quÃ©t trÃ¹ng, Ã´ nháº­p thÃ¬
+// khÃ´ng Ä‘Æ°á»£c bá» mÃ£ nÃ o). Xá»­ lÃ½ xong con trá» quay láº¡i Ã´ (alert lá»—i máº¡ng cÅ©ng lÃ m máº¥t con trá»).
 let hangDoiNhapMa = Promise.resolve();
 function oNhapMaKichBanSanSang() {
   const o = document.getElementById('o-nhap-ma-kich-ban');
@@ -760,30 +760,30 @@ function nhapMaKichBan(e) {
   o.value = '';
   o.focus();
   if (!ma) return;
-  const kichBanLucGo = kichBanDangChon; // ghi nhận NGAY lúc Enter — mã còn chờ trong hàng đợi mà đã đổi kịch bản thì bỏ
-  // .catch: 1 mã lỗi bất ngờ không được làm hỏng cả hàng đợi (promise bị reject -> mọi mã sau bị bỏ im lặng).
+  const kichBanLucGo = kichBanDangChon; // ghi nháº­n NGAY lÃºc Enter â€” mÃ£ cÃ²n chá» trong hÃ ng Ä‘á»£i mÃ  Ä‘Ã£ Ä‘á»•i ká»‹ch báº£n thÃ¬ bá»
+  // .catch: 1 mÃ£ lá»—i báº¥t ngá» khÃ´ng Ä‘Æ°á»£c lÃ m há»ng cáº£ hÃ ng Ä‘á»£i (promise bá»‹ reject -> má»i mÃ£ sau bá»‹ bá» im láº·ng).
   hangDoiNhapMa = hangDoiNhapMa
     .then(() => xuLyQuetKichBan(ma, kichBanLucGo))
     .catch(err => {
       dangXuLyQuet = false;
-      hienThiToast('KHONG_TIM_THAY', `Lỗi khi xử lý mã ${ma}: ${err.message}`);
+      hienThiToast('KHONG_TIM_THAY', `Lá»—i khi xá»­ lÃ½ mÃ£ ${ma}: ${err.message}`);
       phatAmThanhKetQua('KHONG_TIM_THAY');
     })
     .then(() => o.focus());
 }
 
-// kichBanCuaMa: chỉ ô nhập truyền vào (kịch bản lúc gõ mã) — camera để null.
+// kichBanCuaMa: chá»‰ Ã´ nháº­p truyá»n vÃ o (ká»‹ch báº£n lÃºc gÃµ mÃ£) â€” camera Ä‘á»ƒ null.
 async function xuLyQuetKichBan(sttKey, kichBanCuaMa = null) {
   const tuONhap = !!kichBanCuaMa;
-  // Ô nhập: mã đã bị xoá khỏi ô nên KHÔNG được bỏ qua — khoá đang bị chỗ khác giữ (vd thao tác ở màn Xem lại, nhả sau
-  // 700ms) thì chờ nhả rồi xử lý. Camera vẫn bỏ qua như cũ (khung hình sau sẽ đọc lại mã).
+  // Ã” nháº­p: mÃ£ Ä‘Ã£ bá»‹ xoÃ¡ khá»i Ã´ nÃªn KHÃ”NG Ä‘Æ°á»£c bá» qua â€” khoÃ¡ Ä‘ang bá»‹ chá»— khÃ¡c giá»¯ (vd thao tÃ¡c á»Ÿ mÃ n Xem láº¡i, nháº£ sau
+  // 700ms) thÃ¬ chá» nháº£ rá»“i xá»­ lÃ½. Camera váº«n bá» qua nhÆ° cÅ© (khung hÃ¬nh sau sáº½ Ä‘á»c láº¡i mÃ£).
   if (tuONhap) while (dangXuLyQuet) await new Promise(r => setTimeout(r, 50));
   if (dangXuLyQuet) return;
-  if (tuONhap && kichBanCuaMa !== kichBanDangChon) return; // đã đổi sang kịch bản khác trong lúc mã chờ
+  if (tuONhap && kichBanCuaMa !== kichBanDangChon) return; // Ä‘Ã£ Ä‘á»•i sang ká»‹ch báº£n khÃ¡c trong lÃºc mÃ£ chá»
 
   const daCo = dsQuet.find(x => x.sttKey === sttKey);
   if (daCo) {
-    hienThiToast('trung', `Mã ${sttKey} đã có trong danh sách`);
+    hienThiToast('trung', `MÃ£ ${sttKey} Ä‘Ã£ cÃ³ trong danh sÃ¡ch`);
     nhayDong(daCo.key);
     return;
   }
@@ -799,23 +799,23 @@ async function xuLyQuetKichBan(sttKey, kichBanCuaMa = null) {
     });
   } catch (e) {
     logQuet('LOI', { loi: e.message });
-    await hopThongBao('Lỗi khi kiểm tra mã: ' + e.message);
+    await hopThongBao('Lá»—i khi kiá»ƒm tra mÃ£: ' + e.message);
     dangXuLyQuet = false;
     tSanSangQuet = performance.now();
     return;
   }
   logQuet(ketQua.nhom || 'OK', { sttKey: ketQua.sttKey, loi: ketQua.nhom !== 'OK' ? ketQua.lyDo || '' : '' });
-  // Ô nhập: server trả MÃ GỐC (gõ "10son10,1" -> "10SON10.1") — báo trùng theo mã gốc như khi quét camera.
-  // (server trả nhom TRUNG và không ghi nhật ký; vẫn so lại phía này phòng danh sách đổi trong lúc chờ)
+  // Ã” nháº­p: server tráº£ MÃƒ Gá»C (gÃµ "10son10,1" -> "10SON10.1") â€” bÃ¡o trÃ¹ng theo mÃ£ gá»‘c nhÆ° khi quÃ©t camera.
+  // (server tráº£ nhom TRUNG vÃ  khÃ´ng ghi nháº­t kÃ½; váº«n so láº¡i phÃ­a nÃ y phÃ²ng danh sÃ¡ch Ä‘á»•i trong lÃºc chá»)
   const trungMaGoc = tuONhap && ketQua.sttKey && dsQuet.find(x => x.sttKey === ketQua.sttKey);
   if (trungMaGoc || ketQua.nhom === 'TRUNG') {
-    hienThiToast('trung', `Mã ${ketQua.sttKey} đã có trong danh sách`);
+    hienThiToast('trung', `MÃ£ ${ketQua.sttKey} Ä‘Ã£ cÃ³ trong danh sÃ¡ch`);
     if (trungMaGoc) nhayDong(trungMaGoc.key);
     dangXuLyQuet = false;
     tSanSangQuet = performance.now();
     return;
   }
-  // Mã từ ô nhập còn trong hàng đợi lúc người dùng đã đổi sang kịch bản khác -> kết quả không thuộc danh sách hiện tại, bỏ.
+  // MÃ£ tá»« Ã´ nháº­p cÃ²n trong hÃ ng Ä‘á»£i lÃºc ngÆ°á»i dÃ¹ng Ä‘Ã£ Ä‘á»•i sang ká»‹ch báº£n khÃ¡c -> káº¿t quáº£ khÃ´ng thuá»™c danh sÃ¡ch hiá»‡n táº¡i, bá».
   if (tuONhap && kichBanDangChon !== kichBanCuaMa) { dangXuLyQuet = false; return; }
 
   const item = {
@@ -841,24 +841,24 @@ async function xuLyQuetKichBan(sttKey, kichBanCuaMa = null) {
   renderDsDangQuet();
   renderKetQuaVuaQuet();
 
-  // Camera: khoá 700ms chống 1 mã bị đọc nhiều lần liên tiếp. Ô nhập: mở khoá ngay cho mã kế tiếp trong hàng đợi.
+  // Camera: khoÃ¡ 700ms chá»‘ng 1 mÃ£ bá»‹ Ä‘á»c nhiá»u láº§n liÃªn tiáº¿p. Ã” nháº­p: má»Ÿ khoÃ¡ ngay cho mÃ£ káº¿ tiáº¿p trong hÃ ng Ä‘á»£i.
   if (tuONhap) dangXuLyQuet = false;
   else setTimeout(() => { dangXuLyQuet = false; tSanSangQuet = performance.now(); }, 700);
 }
 
-// nut (tuỳ chọn, 16/10/2026): { nhan, bam } — nút bấm ngay trong toast; toast có nút hiện lâu hơn (10 giây) và bấm được.
+// nut (tuá»³ chá»n, 16/10/2026): { nhan, bam } â€” nÃºt báº¥m ngay trong toast; toast cÃ³ nÃºt hiá»‡n lÃ¢u hÆ¡n (10 giÃ¢y) vÃ  báº¥m Ä‘Æ°á»£c.
 function hienThiToast(loai, noiDung, nut) {
   clearTimeout(toastTimer);
   const el = document.getElementById('toast-vua-quet');
   const MAP = {
-    OK: { cls: 'ok', icon: '✅' },
-    SAI_TRANG_THAI: { cls: 'canh-bao', icon: '⚠️' },
-    KHONG_TIM_THAY: { cls: 'loi', icon: '❌' },
-    trung: { cls: 'canh-bao', icon: '🔁' },
+    OK: { cls: 'ok', icon: 'âœ…' },
+    SAI_TRANG_THAI: { cls: 'canh-bao', icon: 'âš ï¸' },
+    KHONG_TIM_THAY: { cls: 'loi', icon: 'âŒ' },
+    trung: { cls: 'canh-bao', icon: 'ðŸ”' },
   };
   const m = MAP[loai] || MAP.trung;
-  // Camera vẫn đọc lại đúng mã lỗi ~0,7 giây/lần: toast có nút đang hiện CÙNG nội dung -> chỉ gia hạn, KHÔNG vẽ lại (vẽ lại thay nút giữa
-  // lúc đang chạm -> lần bấm bị mất).
+  // Camera váº«n Ä‘á»c láº¡i Ä‘Ãºng mÃ£ lá»—i ~0,7 giÃ¢y/láº§n: toast cÃ³ nÃºt Ä‘ang hiá»‡n CÃ™NG ná»™i dung -> chá»‰ gia háº¡n, KHÃ”NG váº½ láº¡i (váº½ láº¡i thay nÃºt giá»¯a
+  // lÃºc Ä‘ang cháº¡m -> láº§n báº¥m bá»‹ máº¥t).
   if (nut && el.classList.contains('co-nut') && el.dataset.noiDung === noiDung) {
     toastTimer = setTimeout(() => { el.classList.remove('hien', 'co-nut'); }, 10000);
     return;
@@ -874,19 +874,19 @@ function hienThiToast(loai, noiDung, nut) {
   toastTimer = setTimeout(() => { el.classList.remove('hien', 'co-nut'); }, nut ? 10000 : 3500);
 }
 
-// Quét đơn "Đã sản xuất" khi đang ở chế độ chụp ảnh SẢN XUẤT (16/10/2026, theo yêu cầu người dùng — log 15/10: cùng đơn bị quét lại
-// 6–9 lần vì đang nhầm chế độ): thông báo lỗi kèm nút chuyển sang chế độ Đã dán tem + tự kiểm tra lại đúng đơn vừa quét (vào thẳng
-// màn chụp). Chỉ khi đơn đang ĐÚNG trạng thái chế độ Đã dán tem yêu cầu.
+// QuÃ©t Ä‘Æ¡n "ÄÃ£ sáº£n xuáº¥t" khi Ä‘ang á»Ÿ cháº¿ Ä‘á»™ chá»¥p áº£nh Sáº¢N XUáº¤T (16/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” log 15/10: cÃ¹ng Ä‘Æ¡n bá»‹ quÃ©t láº¡i
+// 6â€“9 láº§n vÃ¬ Ä‘ang nháº§m cháº¿ Ä‘á»™): thÃ´ng bÃ¡o lá»—i kÃ¨m nÃºt chuyá»ƒn sang cháº¿ Ä‘á»™ ÄÃ£ dÃ¡n tem + tá»± kiá»ƒm tra láº¡i Ä‘Ãºng Ä‘Æ¡n vá»«a quÃ©t (vÃ o tháº³ng
+// mÃ n chá»¥p). Chá»‰ khi Ä‘Æ¡n Ä‘ang ÄÃšNG tráº¡ng thÃ¡i cháº¿ Ä‘á»™ ÄÃ£ dÃ¡n tem yÃªu cáº§u.
 function nutChuyenSangDanTem(ma, trangThaiHienTai) {
-  if (mode !== 'photo_san_xuat' || trangThaiHienTai !== 'Đã sản xuất') return undefined;
+  if (mode !== 'photo_san_xuat' || trangThaiHienTai !== 'ÄÃ£ sáº£n xuáº¥t') return undefined;
   return {
-    nhan: 'Chuyển sang chế độ Đã dán tem',
+    nhan: 'Chuyá»ƒn sang cháº¿ Ä‘á»™ ÄÃ£ dÃ¡n tem',
     bam: async () => {
-      while (dangXuLyQuet) await new Promise(r => setTimeout(r, 200)); // lượt quét trước còn khoá 0,7 giây
-      // Giữ khoá TỪ TRƯỚC khi đổi chế độ: camera vẫn chạy, không để 1 mã khác đọc được giữa chừng chen vào rồi bị lượt của nút ghi đè
-      // (ảnh chụp sau đó gắn nhầm đơn). xuLyQuetDeXacDinhDon tự nhả khoá khi xong.
+      while (dangXuLyQuet) await new Promise(r => setTimeout(r, 200)); // lÆ°á»£t quÃ©t trÆ°á»›c cÃ²n khoÃ¡ 0,7 giÃ¢y
+      // Giá»¯ khoÃ¡ Tá»ª TRÆ¯á»šC khi Ä‘á»•i cháº¿ Ä‘á»™: camera váº«n cháº¡y, khÃ´ng Ä‘á»ƒ 1 mÃ£ khÃ¡c Ä‘á»c Ä‘Æ°á»£c giá»¯a chá»«ng chen vÃ o rá»“i bá»‹ lÆ°á»£t cá»§a nÃºt ghi Ä‘Ã¨
+      // (áº£nh chá»¥p sau Ä‘Ã³ gáº¯n nháº§m Ä‘Æ¡n). xuLyQuetDeXacDinhDon tá»± nháº£ khoÃ¡ khi xong.
       dangXuLyQuet = true;
-      // Đơn ở chế độ chụp sản xuất đang chờ "Xong" (đã có ảnh 1) -> coi như xong lượt, giống "quét sang đơn tiếp theo" (chạy ngầm).
+      // ÄÆ¡n á»Ÿ cháº¿ Ä‘á»™ chá»¥p sáº£n xuáº¥t Ä‘ang chá» "Xong" (Ä‘Ã£ cÃ³ áº£nh 1) -> coi nhÆ° xong lÆ°á»£t, giá»‘ng "quÃ©t sang Ä‘Æ¡n tiáº¿p theo" (cháº¡y ngáº§m).
       if (donChoXong) hoanTatDonChoXong('doi-che-do');
       doiMode('photo_da_dan_tem');
       xuLyQuetDeXacDinhDon(ma, 'NUT_DOI_CHE_DO');
@@ -895,7 +895,7 @@ function nutChuyenSangDanTem(ma, trangThaiHienTai) {
 }
 
 function lopNhom(nhom) { return nhom === 'OK' ? 'ok' : nhom === 'SAI_TRANG_THAI' ? 'canh-bao' : 'loi'; }
-function nhanIconNhom(nhom) { return nhom === 'OK' ? '✅' : nhom === 'SAI_TRANG_THAI' ? '⚠️' : '❌'; }
+function nhanIconNhom(nhom) { return nhom === 'OK' ? 'âœ…' : nhom === 'SAI_TRANG_THAI' ? 'âš ï¸' : 'âŒ'; }
 
 function renderDemNhom() {
   const el = document.getElementById('dem-nhom');
@@ -903,70 +903,70 @@ function renderDemNhom() {
   const soCanhBao = dsQuet.filter(x => x.nhom === 'SAI_TRANG_THAI' && !x.daXuLy).length;
   const soLoi = dsQuet.filter(x => x.nhom === 'KHONG_TIM_THAY' && !x.daXuLy).length;
   el.innerHTML = `
-    <div class="dem-o ok"><div class="hang-tren"><span class="dem-icon">✅</span><span class="dem-so">${soOK}</span></div><div class="dem-nhan">Sẵn sàng</div></div>
-    <div class="dem-o canh-bao"><div class="hang-tren"><span class="dem-icon">⚠️</span><span class="dem-so">${soCanhBao}</span></div><div class="dem-nhan">Sai trạng thái</div></div>
-    <div class="dem-o loi"><div class="hang-tren"><span class="dem-icon">❌</span><span class="dem-so">${soLoi}</span></div><div class="dem-nhan">Không tìm thấy</div></div>`;
+    <div class="dem-o ok"><div class="hang-tren"><span class="dem-icon">âœ…</span><span class="dem-so">${soOK}</span></div><div class="dem-nhan">Sáºµn sÃ ng</div></div>
+    <div class="dem-o canh-bao"><div class="hang-tren"><span class="dem-icon">âš ï¸</span><span class="dem-so">${soCanhBao}</span></div><div class="dem-nhan">Sai tráº¡ng thÃ¡i</div></div>
+    <div class="dem-o loi"><div class="hang-tren"><span class="dem-icon">âŒ</span><span class="dem-so">${soLoi}</span></div><div class="dem-nhan">KhÃ´ng tÃ¬m tháº¥y</div></div>`;
 }
 
-// Nội dung 1 dòng kết quả quét (dùng chung cho "Danh sách đang quét" và "Xem lại", nhóm cảnh báo/
-// lỗi ở dongXemLaiCanBaoLoi bên dưới) — LUÔN hiện dòng tiêu đề `item.tieuDe` (services/orderService.js,
-// tieuDeSanPham, đã tự chứa STT_Key ở đầu) cho MỌI nhóm, kể cả SAI_TRANG_THAI (sửa 12/09/2026, theo
-// yêu cầu người dùng — trước đây nhóm SAI_TRANG_THAI CHỈ hiện `lyDo` (server dựng sẵn, có nhắc mã đơn
-// trong câu) để tránh lặp mã đơn 2 lần trên cùng 1 thẻ, nhưng như vậy lại ẩn mất tên/loại/size/màu thật
-// của đơn — người dùng xác nhận cần thấy rõ tên đơn hơn là tránh lặp đúng mã đơn 1 lần).
+// Ná»™i dung 1 dÃ²ng káº¿t quáº£ quÃ©t (dÃ¹ng chung cho "Danh sÃ¡ch Ä‘ang quÃ©t" vÃ  "Xem láº¡i", nhÃ³m cáº£nh bÃ¡o/
+// lá»—i á»Ÿ dongXemLaiCanBaoLoi bÃªn dÆ°á»›i) â€” LUÃ”N hiá»‡n dÃ²ng tiÃªu Ä‘á» `item.tieuDe` (services/orderService.js,
+// tieuDeSanPham, Ä‘Ã£ tá»± chá»©a STT_Key á»Ÿ Ä‘áº§u) cho Má»ŒI nhÃ³m, ká»ƒ cáº£ SAI_TRANG_THAI (sá»­a 12/09/2026, theo
+// yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” trÆ°á»›c Ä‘Ã¢y nhÃ³m SAI_TRANG_THAI CHá»ˆ hiá»‡n `lyDo` (server dá»±ng sáºµn, cÃ³ nháº¯c mÃ£ Ä‘Æ¡n
+// trong cÃ¢u) Ä‘á»ƒ trÃ¡nh láº·p mÃ£ Ä‘Æ¡n 2 láº§n trÃªn cÃ¹ng 1 tháº», nhÆ°ng nhÆ° váº­y láº¡i áº©n máº¥t tÃªn/loáº¡i/size/mÃ u tháº­t
+// cá»§a Ä‘Æ¡n â€” ngÆ°á»i dÃ¹ng xÃ¡c nháº­n cáº§n tháº¥y rÃµ tÃªn Ä‘Æ¡n hÆ¡n lÃ  trÃ¡nh láº·p Ä‘Ãºng mÃ£ Ä‘Æ¡n 1 láº§n).
 function noiDungDongQuet(item) {
   return `
         <strong>${escapeHtml(item.tieuDe || item.sttKey)}</strong>
-        <div class="ly-do">${escapeHtml(item.lyDo || (item.nhom === 'OK' ? `Sẽ chuyển: ${item.trangThaiHienTai} → ${item.trangThaiSau}` : ''))}</div>
+        <div class="ly-do">${escapeHtml(item.lyDo || (item.nhom === 'OK' ? `Sáº½ chuyá»ƒn: ${item.trangThaiHienTai} â†’ ${item.trangThaiSau}` : ''))}</div>
         ${htmlCanhBaoNhom(item.nhomNhieuAo)}`;
 }
 
-// F1 (11/10/2026): khung vàng "Nhóm 9F13 (3 áo): 9F13.1 ✓ Đã sản xuất · 9F13,2 ✗ Đang chạy máy" — chỉ cảnh báo, không chặn.
-// Màu cố định (vàng đậm/chữ nâu) đọc được cả nền sáng lẫn tối.
+// F1 (11/10/2026): khung vÃ ng "NhÃ³m 9F13 (3 Ã¡o): 9F13.1 âœ“ ÄÃ£ sáº£n xuáº¥t Â· 9F13,2 âœ— Äang cháº¡y mÃ¡y" â€” chá»‰ cáº£nh bÃ¡o, khÃ´ng cháº·n.
+// MÃ u cá»‘ Ä‘á»‹nh (vÃ ng Ä‘áº­m/chá»¯ nÃ¢u) Ä‘á»c Ä‘Æ°á»£c cáº£ ná»n sÃ¡ng láº«n tá»‘i.
 function htmlCanhBaoNhom(n) {
   if (!n) return '';
   return `<div style="margin-top:6px;padding:8px 10px;border:3px solid #eab308;background:#fef9c3;color:#713f12;border-radius:8px;font-weight:600;line-height:1.5">
-    ⚠️ Nhóm ${escapeHtml(n.goc)} (${n.tong} áo) chưa đủ: ${n.thanhVien.map(t => `${escapeHtml(t.sttKey)} ${t.du ? '✓' : '✗'} ${escapeHtml(t.trangThai || '(trống)')}`).join(' · ')}
+    âš ï¸ NhÃ³m ${escapeHtml(n.goc)} (${n.tong} Ã¡o) chÆ°a Ä‘á»§: ${n.thanhVien.map(t => `${escapeHtml(t.sttKey)} ${t.du ? 'âœ“' : 'âœ—'} ${escapeHtml(t.trangThai || '(trá»‘ng)')}`).join(' Â· ')}
   </div>`;
 }
 
 function renderDsDangQuet() {
   const el = document.getElementById('ds-dang-quet');
-  if (dsQuet.length === 0) { el.innerHTML = '<p style="color:var(--color-text-faint)">Chưa quét mã nào.</p>'; return; }
+  if (dsQuet.length === 0) { el.innerHTML = '<p style="color:var(--color-text-faint)">ChÆ°a quÃ©t mÃ£ nÃ o.</p>'; return; }
 
   el.innerHTML = dsQuet.map(item => `
     <div class="dong-quet ${lopNhom(item.nhom)}" id="dong-${item.key}">
       <span style="font-size:1.3rem">${nhanIconNhom(item.nhom)}</span>
       <div class="noi-dung">${noiDungDongQuet(item)}</div>
-      <button class="btn-xoa-dong" onclick="xoaKhoiDsQuet('${item.key}', false)">XÓA</button>
+      <button class="btn-xoa-dong" onclick="xoaKhoiDsQuet('${item.key}', false)">XÃ“A</button>
     </div>`).join('');
 }
 
-function nhanTenNhom(nhom) { return nhom === 'OK' ? 'Sẵn sàng' : nhom === 'SAI_TRANG_THAI' ? 'Sai trạng thái' : 'Không tìm thấy'; }
+function nhanTenNhom(nhom) { return nhom === 'OK' ? 'Sáºµn sÃ ng' : nhom === 'SAI_TRANG_THAI' ? 'Sai tráº¡ng thÃ¡i' : 'KhÃ´ng tÃ¬m tháº¥y'; }
 
-// Khối "Kết quả vừa quét" — luôn hiện ĐÚNG 1 đơn vừa quét gần nhất (dsQuet[0]), KHÔNG tự ẩn như
-// toast-vua-quet (biến mất sau 3.5s) — người quét thường đang thao tác tay ngoài kho, cần đủ thời
-// gian đọc kỹ tình trạng đơn vừa quét thay vì phải nhìn đúng lúc toast còn hiện. Chỉ bị ghi đè khi
-// có lượt quét MỚI (gọi lại hàm này), không tự đổi theo thời gian.
+// Khá»‘i "Káº¿t quáº£ vá»«a quÃ©t" â€” luÃ´n hiá»‡n ÄÃšNG 1 Ä‘Æ¡n vá»«a quÃ©t gáº§n nháº¥t (dsQuet[0]), KHÃ”NG tá»± áº©n nhÆ°
+// toast-vua-quet (biáº¿n máº¥t sau 3.5s) â€” ngÆ°á»i quÃ©t thÆ°á»ng Ä‘ang thao tÃ¡c tay ngoÃ i kho, cáº§n Ä‘á»§ thá»i
+// gian Ä‘á»c ká»¹ tÃ¬nh tráº¡ng Ä‘Æ¡n vá»«a quÃ©t thay vÃ¬ pháº£i nhÃ¬n Ä‘Ãºng lÃºc toast cÃ²n hiá»‡n. Chá»‰ bá»‹ ghi Ä‘Ã¨ khi
+// cÃ³ lÆ°á»£t quÃ©t Má»šI (gá»i láº¡i hÃ m nÃ y), khÃ´ng tá»± Ä‘á»•i theo thá»i gian.
 function renderKetQuaVuaQuet() {
   const el = document.getElementById('ket-qua-vua-quet-kich-ban');
-  // LUÔN giữ "chi-che-do-kich-ban" trong className (không ghi đè mất) — setBatchOnlyVisible() dựa
-  // vào đúng class này để ẩn khối này khi chuyển sang chế độ khác (Tra cứu/Tracking/Chụp ảnh); nếu
-  // mất class này ở đây, khối sẽ bị kẹt hiện luôn kể cả sau khi rời khỏi "Quét kịch bản".
+  // LUÃ”N giá»¯ "chi-che-do-kich-ban" trong className (khÃ´ng ghi Ä‘Ã¨ máº¥t) â€” setBatchOnlyVisible() dá»±a
+  // vÃ o Ä‘Ãºng class nÃ y Ä‘á»ƒ áº©n khá»‘i nÃ y khi chuyá»ƒn sang cháº¿ Ä‘á»™ khÃ¡c (Tra cá»©u/Tracking/Chá»¥p áº£nh); náº¿u
+  // máº¥t class nÃ y á»Ÿ Ä‘Ã¢y, khá»‘i sáº½ bá»‹ káº¹t hiá»‡n luÃ´n ká»ƒ cáº£ sau khi rá»i khá»i "QuÃ©t ká»‹ch báº£n".
   if (dsQuet.length === 0) {
     el.className = 'khoi-ket-qua-vua-quet chi-che-do-kich-ban';
-    el.innerHTML = '<p style="color:var(--color-text-faint);margin:0">Chưa quét mã nào.</p>';
+    el.innerHTML = '<p style="color:var(--color-text-faint);margin:0">ChÆ°a quÃ©t mÃ£ nÃ o.</p>';
     return;
   }
   const item = dsQuet[0];
   el.className = 'khoi-ket-qua-vua-quet chi-che-do-kich-ban ' + lopNhom(item.nhom);
   const dongTrangThai = item.nhom === 'OK'
-    ? `Trạng thái: ${escapeHtml(item.trangThaiHienTai)} → ${escapeHtml(item.trangThaiSau)}`
+    ? `Tráº¡ng thÃ¡i: ${escapeHtml(item.trangThaiHienTai)} â†’ ${escapeHtml(item.trangThaiSau)}`
     : escapeHtml(item.lyDo);
   el.innerHTML = `
     <div class="hang-tren"><span class="icon-lon">${nhanIconNhom(item.nhom)}</span><strong>${escapeHtml(nhanTenNhom(item.nhom))}</strong></div>
     <div class="tieu-de-lon">${escapeHtml(item.tieuDe || item.sttKey)}</div>
-    ${item.tenKhachHang ? `<div class="dong-khach-hang">Khách hàng: ${escapeHtml(item.tenKhachHang)}</div>` : ''}
+    ${item.tenKhachHang ? `<div class="dong-khach-hang">KhÃ¡ch hÃ ng: ${escapeHtml(item.tenKhachHang)}</div>` : ''}
     <div class="dong-trang-thai">${dongTrangThai}</div>
     ${htmlCanhBaoNhom(item.nhomNhieuAo)}`;
 }
@@ -985,8 +985,8 @@ function xoaKhoiDsQuet(key, tuManXemLai) {
 }
 
 document.getElementById('btn-dung-quet').onclick = async () => {
-  // Chờ các mã còn trong hàng đợi của ô nhập xử lý xong rồi mới sang Xem lại — nếu không, mã về muộn sẽ lọt vào bước
-  // "Xác nhận cập nhật" (tính lại từ dsQuet lúc bấm) mà người dùng chưa hề thấy trên màn Xem lại.
+  // Chá» cÃ¡c mÃ£ cÃ²n trong hÃ ng Ä‘á»£i cá»§a Ã´ nháº­p xá»­ lÃ½ xong rá»“i má»›i sang Xem láº¡i â€” náº¿u khÃ´ng, mÃ£ vá» muá»™n sáº½ lá»t vÃ o bÆ°á»›c
+  // "XÃ¡c nháº­n cáº­p nháº­t" (tÃ­nh láº¡i tá»« dsQuet lÃºc báº¥m) mÃ  ngÆ°á»i dÃ¹ng chÆ°a há» tháº¥y trÃªn mÃ n Xem láº¡i.
   await hangDoiNhapMa;
   dangQuetKichBan = false;
   await capNhatManHinh();
@@ -1000,29 +1000,29 @@ function renderXemLai() {
   const coTheThoat = nhomCanhBao.length === 0 && nhomLoi.length === 0;
 
   el.innerHTML = `
-    <h2>Xem lại kết quả quét — ${escapeHtml(kichBanDangChon.label)}</h2>
+    <h2>Xem láº¡i káº¿t quáº£ quÃ©t â€” ${escapeHtml(kichBanDangChon.label)}</h2>
 
     <div class="luoi-3-nhom">
       <div class="nhom-xem-lai ok">
-        <div class="tieu-de-nhom">✅ Sẵn sàng (${nhomOK.length})</div>
+        <div class="tieu-de-nhom">âœ… Sáºµn sÃ ng (${nhomOK.length})</div>
         <div class="danh-sach-nhom">${nhomOK.length ? nhomOK.map(dongXemLaiOK).join('') : dongTrong()}</div>
       </div>
       <div class="nhom-xem-lai canh-bao">
-        <div class="tieu-de-nhom">⚠️ Sai trạng thái (${nhomCanhBao.length})</div>
+        <div class="tieu-de-nhom">âš ï¸ Sai tráº¡ng thÃ¡i (${nhomCanhBao.length})</div>
         <div class="danh-sach-nhom">${nhomCanhBao.length ? nhomCanhBao.map(dongXemLaiCanBaoLoi).join('') : dongTrong()}</div>
       </div>
       <div class="nhom-xem-lai loi">
-        <div class="tieu-de-nhom">❌ Không tìm thấy (${nhomLoi.length})</div>
+        <div class="tieu-de-nhom">âŒ KhÃ´ng tÃ¬m tháº¥y (${nhomLoi.length})</div>
         <div class="danh-sach-nhom">${nhomLoi.length ? nhomLoi.map(dongXemLaiCanBaoLoi).join('') : dongTrong()}</div>
       </div>
     </div>
 
     <button class="btn-xac-nhan-nhom" id="btn-xac-nhan" ${nhomOK.length === 0 ? 'disabled' : ''}>
-      ${icon('check', { size: 48 })} Xác nhận cập nhật (${nhomOK.length})
+      ${icon('check', { size: 48 })} XÃ¡c nháº­n cáº­p nháº­t (${nhomOK.length})
     </button>
 
     <button class="btn-tiep-tuc-quet ${coTheThoat ? 'san-sang' : ''}" id="btn-tiep-tuc" ${coTheThoat ? '' : 'disabled'}>
-      ${coTheThoat ? 'Tiếp tục quét' : 'Cần xử lý hết nhóm Cảnh báo & Lỗi trước khi tiếp tục'}
+      ${coTheThoat ? 'Tiáº¿p tá»¥c quÃ©t' : 'Cáº§n xá»­ lÃ½ háº¿t nhÃ³m Cáº£nh bÃ¡o & Lá»—i trÆ°á»›c khi tiáº¿p tá»¥c'}
     </button>
   `;
 
@@ -1033,14 +1033,14 @@ function renderXemLai() {
 }
 
 function dongTrong() {
-  return '<div class="dong-xem-lai"><span style="color:var(--color-text-faint)">Không có mục nào.</span></div>';
+  return '<div class="dong-xem-lai"><span style="color:var(--color-text-faint)">KhÃ´ng cÃ³ má»¥c nÃ o.</span></div>';
 }
 
 function dongXemLaiOK(item) {
   return `<div class="dong-xem-lai">
     <div class="noi-dung">
       <strong>${escapeHtml(item.tieuDe || item.sttKey)}</strong>
-      <div class="ly-do">${escapeHtml(item.tenKhachHang || '')} · Sẽ chuyển: ${escapeHtml(item.trangThaiHienTai)} → ${escapeHtml(item.trangThaiSau)}</div>
+      <div class="ly-do">${escapeHtml(item.tenKhachHang || '')} Â· Sáº½ chuyá»ƒn: ${escapeHtml(item.trangThaiHienTai)} â†’ ${escapeHtml(item.trangThaiSau)}</div>
     </div>
   </div>`;
 }
@@ -1049,8 +1049,8 @@ function dongXemLaiCanBaoLoi(item) {
   return `<div class="dong-xem-lai">
     <div class="noi-dung">${noiDungDongQuet(item)}</div>
     <div class="nhom-nut">
-      <button class="btn-daxem-xemlai" data-danxem="${item.key}">Đã xem</button>
-      <button class="btn-xoa-xemlai" data-xoa="${item.key}">XÓA</button>
+      <button class="btn-daxem-xemlai" data-danxem="${item.key}">ÄÃ£ xem</button>
+      <button class="btn-xoa-xemlai" data-xoa="${item.key}">XÃ“A</button>
     </div>
   </div>`;
 }
@@ -1068,10 +1068,10 @@ async function xacNhanCapNhatHangLoat() {
 
   const btn = document.getElementById('btn-xac-nhan');
   btn.disabled = true;
-  btn.textContent = 'Đang cập nhật...';
+  btn.textContent = 'Äang cáº­p nháº­t...';
 
-  // Gọi tuần tự từng mã 1 (thay vì gửi cả danh sách trong 1 request) để hiện được tiến độ thật —
-  // xem chayHangLoatCoTienDo()/taoThanhTienDo() trong api.js. API vẫn y hệt, chỉ đổi cách gọi.
+  // Gá»i tuáº§n tá»± tá»«ng mÃ£ 1 (thay vÃ¬ gá»­i cáº£ danh sÃ¡ch trong 1 request) Ä‘á»ƒ hiá»‡n Ä‘Æ°á»£c tiáº¿n Ä‘á»™ tháº­t â€”
+  // xem chayHangLoatCoTienDo()/taoThanhTienDo() trong api.js. API váº«n y há»‡t, chá»‰ Ä‘á»•i cÃ¡ch gá»i.
   let daHuy = false;
   const tXacNhan = performance.now();
   const thanhTienDo = taoThanhTienDo(btn, { onHuy: () => { daHuy = true; } });
@@ -1085,7 +1085,7 @@ async function xacNhanCapNhatHangLoat() {
     { onTienDo: (hienTai, tong) => thanhTienDo.capNhat(hienTai, tong), kiemTraHuy: () => daHuy }
   );
   thanhTienDo.xoa();
-  ghiLogQuet({ suKien: 'XAC_NHAN_HANG_LOAT', ketQua: res.daHuy ? 'HUY' : res.loi.length ? 'CO_DON_LOI' : 'OK', // đơn bị máy chủ từ chối = nghiệp vụ tongMs: Math.round(performance.now() - tXacNhan),
+  ghiLogQuet({ suKien: 'XAC_NHAN_HANG_LOAT', ketQua: res.daHuy ? 'HUY' : res.loi.length ? 'CO_DON_LOI' : 'OK', // Ä‘Æ¡n bá»‹ mÃ¡y chá»§ tá»« chá»‘i = nghiá»‡p vá»¥ tongMs: Math.round(performance.now() - tXacNhan),
     loi: res.loi.slice(0, 3).map(l => `${l.sttKey}: ${l.lyDo}`).join(' | '),
     chiTiet: { kichBan: kichBanDangChon && kichBanDangChon.id, soDon: nhomOK.length, thanhCong: res.thanhCong.length, soLoi: res.loi.length } });
 
@@ -1097,9 +1097,9 @@ async function xacNhanCapNhatHangLoat() {
   });
 
   if (res.daHuy) {
-    await hopThongBao(`Đã HỦY giữa chừng — đã cập nhật ${res.thanhCong.length}/${nhomOK.length} đơn. Các đơn còn lại vẫn ở nhóm "OK", bấm "Xác nhận cập nhật" lại để tiếp tục.`);
+    await hopThongBao(`ÄÃ£ Há»¦Y giá»¯a chá»«ng â€” Ä‘Ã£ cáº­p nháº­t ${res.thanhCong.length}/${nhomOK.length} Ä‘Æ¡n. CÃ¡c Ä‘Æ¡n cÃ²n láº¡i váº«n á»Ÿ nhÃ³m "OK", báº¥m "XÃ¡c nháº­n cáº­p nháº­t" láº¡i Ä‘á»ƒ tiáº¿p tá»¥c.`);
   } else if (res.loi.length > 0) {
-    await hopThongBao(`Đã cập nhật ${res.thanhCong.length} đơn. Có ${res.loi.length} đơn KHÔNG cập nhật được — xem lại nhóm "Sai trạng thái" bên dưới.`);
+    await hopThongBao(`ÄÃ£ cáº­p nháº­t ${res.thanhCong.length} Ä‘Æ¡n. CÃ³ ${res.loi.length} Ä‘Æ¡n KHÃ”NG cáº­p nháº­t Ä‘Æ°á»£c â€” xem láº¡i nhÃ³m "Sai tráº¡ng thÃ¡i" bÃªn dÆ°á»›i.`);
   }
 
   renderDemNhom();
@@ -1112,35 +1112,35 @@ async function tiepTucQuet() {
 }
 
 // ============================================================
-// CHỤP ẢNH HÀNG LOẠT KÈM CHUYỂN GIAI ĐOẠN (bổ sung 26/08/2026, tách 2 mốc riêng 31/08/2026,
-// TÁCH QUÉT/CHỤP THÀNH 2 BƯỚC 07/09/2026)
-// Dùng UI/logic này cho tab "Chụp ảnh đã sản xuất" — lấy cấu hình (mốc ảnh + trạng thái yêu cầu/đích)
-// từ CAU_HINH_ANH[mode] theo biến `mode` đang chọn (trước đây dùng chung với "Chụp ảnh đóng gói", đã
-// xoá 09/09/2026 lần 3 — xem data/pipelineTinhTrang.js).
+// CHá»¤P áº¢NH HÃ€NG LOáº T KÃˆM CHUYá»‚N GIAI ÄOáº N (bá»• sung 26/08/2026, tÃ¡ch 2 má»‘c riÃªng 31/08/2026,
+// TÃCH QUÃ‰T/CHá»¤P THÃ€NH 2 BÆ¯á»šC 07/09/2026)
+// DÃ¹ng UI/logic nÃ y cho tab "Chá»¥p áº£nh Ä‘Ã£ sáº£n xuáº¥t" â€” láº¥y cáº¥u hÃ¬nh (má»‘c áº£nh + tráº¡ng thÃ¡i yÃªu cáº§u/Ä‘Ã­ch)
+// tá»« CAU_HINH_ANH[mode] theo biáº¿n `mode` Ä‘ang chá»n (trÆ°á»›c Ä‘Ã¢y dÃ¹ng chung vá»›i "Chá»¥p áº£nh Ä‘Ã³ng gÃ³i", Ä‘Ã£
+// xoÃ¡ 09/09/2026 láº§n 3 â€” xem data/pipelineTinhTrang.js).
 //
-// Luồng (xem docs/superpowers/specs/2026-09-07-tach-quet-chup-anh-design.md):
-//   [Đang quét] --quét QR sống OK + đơn đủ điều kiện (POST /photos/kiem-tra)--> [Sẵn sàng chụp]
-//   [Đang quét] --quét QR nhưng đơn không đủ điều kiện/không tìm thấy--> báo lỗi, VẪN Ở [Đang quét]
-//   [Sẵn sàng chụp] --bấm "Quét lại"--> [Đang quét] (không upload gì)
-//   [Sẵn sàng chụp] --chụp ảnh, upload OK--> ghi log, TỰ QUAY LẠI [Đang quét] cho đơn tiếp theo
-//   [Sẵn sàng chụp] --chụp ảnh, upload lỗi--> báo lỗi, VẪN Ở [Sẵn sàng chụp] (đơn đã biết, chụp lại
-//                                              ngay không cần quét lại)
+// Luá»“ng (xem docs/superpowers/specs/2026-09-07-tach-quet-chup-anh-design.md):
+//   [Äang quÃ©t] --quÃ©t QR sá»‘ng OK + Ä‘Æ¡n Ä‘á»§ Ä‘iá»u kiá»‡n (POST /photos/kiem-tra)--> [Sáºµn sÃ ng chá»¥p]
+//   [Äang quÃ©t] --quÃ©t QR nhÆ°ng Ä‘Æ¡n khÃ´ng Ä‘á»§ Ä‘iá»u kiá»‡n/khÃ´ng tÃ¬m tháº¥y--> bÃ¡o lá»—i, VáºªN á»ž [Äang quÃ©t]
+//   [Sáºµn sÃ ng chá»¥p] --báº¥m "QuÃ©t láº¡i"--> [Äang quÃ©t] (khÃ´ng upload gÃ¬)
+//   [Sáºµn sÃ ng chá»¥p] --chá»¥p áº£nh, upload OK--> ghi log, Tá»° QUAY Láº I [Äang quÃ©t] cho Ä‘Æ¡n tiáº¿p theo
+//   [Sáºµn sÃ ng chá»¥p] --chá»¥p áº£nh, upload lá»—i--> bÃ¡o lá»—i, VáºªN á»ž [Sáºµn sÃ ng chá»¥p] (Ä‘Æ¡n Ä‘Ã£ biáº¿t, chá»¥p láº¡i
+//                                              ngay khÃ´ng cáº§n quÃ©t láº¡i)
 //
-// TRƯỚC ĐÂY (đến 07/09/2026): đọc mã QR NGAY TỪ ẢNH VỪA CHỤP bằng html5-qrcode.scanFile() — giải mã
-// ẢNH TĨNH, đúng 1 lần thử, không có "khung hình kế tiếp" để cứu như quét sống — tỉ lệ thất bại cao
-// trên thực tế (mờ/loá sáng/góc chụp xấu tại đúng khoảnh khắc bấm chụp, mã QR chỉ chiếm 1 góc nhỏ
-// trong ảnh vì ảnh còn phải chụp cả sản phẩm). Quét QR SỐNG (nhiều khung hình/giây, tự lấy nét) đáng
-// tin cậy hơn hẳn — giờ quét sống TRƯỚC để xác định đơn, ảnh chụp sau không cần đọc được mã QR nữa.
+// TRÆ¯á»šC ÄÃ‚Y (Ä‘áº¿n 07/09/2026): Ä‘á»c mÃ£ QR NGAY Tá»ª áº¢NH Vá»ªA CHá»¤P báº±ng html5-qrcode.scanFile() â€” giáº£i mÃ£
+// áº¢NH TÄ¨NH, Ä‘Ãºng 1 láº§n thá»­, khÃ´ng cÃ³ "khung hÃ¬nh káº¿ tiáº¿p" Ä‘á»ƒ cá»©u nhÆ° quÃ©t sá»‘ng â€” tá»‰ lá»‡ tháº¥t báº¡i cao
+// trÃªn thá»±c táº¿ (má»/loÃ¡ sÃ¡ng/gÃ³c chá»¥p xáº¥u táº¡i Ä‘Ãºng khoáº£nh kháº¯c báº¥m chá»¥p, mÃ£ QR chá»‰ chiáº¿m 1 gÃ³c nhá»
+// trong áº£nh vÃ¬ áº£nh cÃ²n pháº£i chá»¥p cáº£ sáº£n pháº©m). QuÃ©t QR Sá»NG (nhiá»u khung hÃ¬nh/giÃ¢y, tá»± láº¥y nÃ©t) Ä‘Ã¡ng
+// tin cáº­y hÆ¡n háº³n â€” giá» quÃ©t sá»‘ng TRÆ¯á»šC Ä‘á»ƒ xÃ¡c Ä‘á»‹nh Ä‘Æ¡n, áº£nh chá»¥p sau khÃ´ng cáº§n Ä‘á»c Ä‘Æ°á»£c mÃ£ QR ná»¯a.
 // ============================================================
 
-// Cùng mã + cùng chế độ vừa bị máy chủ từ chối (4xx) trong 6 giây -> KHÔNG gọi lại máy chủ, chỉ báo lại lỗi cũ (15/10/2026, người dùng
-// chốt). Camera đọc lại mã lỗi liên tục: log 15/10 có 10LH253 9 lần/32 giây, mã vạch USPS 15 lần. 6 giây tính từ lần hỏi máy chủ gần nhất
-// (lần bị chặn không gia hạn) — quá 6 giây hỏi lại thật, phòng đơn vừa đổi trạng thái. Lỗi mạng/5xx không nhớ: thử lại có ích.
+// CÃ¹ng mÃ£ + cÃ¹ng cháº¿ Ä‘á»™ vá»«a bá»‹ mÃ¡y chá»§ tá»« chá»‘i (4xx) trong 6 giÃ¢y -> KHÃ”NG gá»i láº¡i mÃ¡y chá»§, chá»‰ bÃ¡o láº¡i lá»—i cÅ© (15/10/2026, ngÆ°á»i dÃ¹ng
+// chá»‘t). Camera Ä‘á»c láº¡i mÃ£ lá»—i liÃªn tá»¥c: log 15/10 cÃ³ 10LH253 9 láº§n/32 giÃ¢y, mÃ£ váº¡ch USPS 15 láº§n. 6 giÃ¢y tÃ­nh tá»« láº§n há»i mÃ¡y chá»§ gáº§n nháº¥t
+// (láº§n bá»‹ cháº·n khÃ´ng gia háº¡n) â€” quÃ¡ 6 giÃ¢y há»i láº¡i tháº­t, phÃ²ng Ä‘Æ¡n vá»«a Ä‘á»•i tráº¡ng thÃ¡i. Lá»—i máº¡ng/5xx khÃ´ng nhá»›: thá»­ láº¡i cÃ³ Ã­ch.
 const CHAN_LOI_LAP_MS = 6000;
 let loiQuetGanNhat = null; // { ma, cheDo, loi, ketQuaLog, luc, soLanLap, lapTu, lapDen, trangThaiHienTai }
-// Lần bị chặn vẫn ĐẾM — ghi 1 dòng tổng vào Logs_UploadAnh (chiTiet.soLanLapBiChan) khi lượt chặn kết thúc (lần hỏi máy chủ kế tiếp /
-// rời trang / ẩn trang), để vẫn thấy người quét lặp mã lỗi bao lâu mà không thêm 1 dòng cho mỗi khung hình camera. Dòng tổng được ghi
-// MUỘN hơn lúc quét -> kèm lapTu/lapDen (giờ thật lần chặn đầu/cuối, ms) để Logs_UploadAnh đặt đúng chỗ trên dòng thời gian. -> true nếu có ghi.
+// Láº§n bá»‹ cháº·n váº«n Äáº¾M â€” ghi 1 dÃ²ng tá»•ng vÃ o Logs_UploadAnh (chiTiet.soLanLapBiChan) khi lÆ°á»£t cháº·n káº¿t thÃºc (láº§n há»i mÃ¡y chá»§ káº¿ tiáº¿p /
+// rá»i trang / áº©n trang), Ä‘á»ƒ váº«n tháº¥y ngÆ°á»i quÃ©t láº·p mÃ£ lá»—i bao lÃ¢u mÃ  khÃ´ng thÃªm 1 dÃ²ng cho má»—i khung hÃ¬nh camera. DÃ²ng tá»•ng Ä‘Æ°á»£c ghi
+// MUá»˜N hÆ¡n lÃºc quÃ©t -> kÃ¨m lapTu/lapDen (giá» tháº­t láº§n cháº·n Ä‘áº§u/cuá»‘i, ms) Ä‘á»ƒ Logs_UploadAnh Ä‘áº·t Ä‘Ãºng chá»— trÃªn dÃ²ng thá»i gian. -> true náº¿u cÃ³ ghi.
 function ghiLogLapBiChan() {
   const l = loiQuetGanNhat;
   if (!l || !l.soLanLap) return false;
@@ -1149,34 +1149,34 @@ function ghiLogLapBiChan() {
   l.soLanLap = 0;
   return true;
 }
-// Ẩn trang (khoá máy, chuyển app) — trình duyệt di động có thể tắt hẳn trang mà KHÔNG phát pagehide: gửi luôn dòng tổng (nếu có) bằng sendBeacon.
+// áº¨n trang (khoÃ¡ mÃ¡y, chuyá»ƒn app) â€” trÃ¬nh duyá»‡t di Ä‘á»™ng cÃ³ thá»ƒ táº¯t háº³n trang mÃ  KHÃ”NG phÃ¡t pagehide: gá»­i luÃ´n dÃ²ng tá»•ng (náº¿u cÃ³) báº±ng sendBeacon.
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'hidden' || !ghiLogLapBiChan()) return;
   clearTimeout(henGuiLog);
   while (hangDoiLog.length) guiLogQuet(true);
 });
 
-// Quét được mã trong trạng thái [Đang quét] — kiểm tra đơn đủ điều kiện chụp TRƯỚC khi cho chụp ảnh
-// thật (tránh lãng phí 1 lần chụp cho đơn sai trạng thái/không tồn tại).
-// Quét sai trạng thái lặp lại (22/10/2026, theo yêu cầu người dùng — Logs_UploadAnh 16–22/10: 10LT16 bị máy chủ từ chối 21 lần trong
-// 1,5 phút vì camera cứ để trên mã, người quét không đọc toast). Cùng mã + cùng chế độ bị máy chủ từ chối vì sai trạng thái lần thứ 4 trở
-// đi (lần bị chặn 6 giây không tính) -> màn đỏ che camera, dừng quét tới khi bấm "Đã hiểu". Chỉ đếm các lần cách lần trước không quá 10
-// phút — trang mở cả ngày: sai 3 lần buổi sáng rồi chiều quét nhầm 1 lần không bật màn đỏ.
-const SO_LAN_SAI_HIEN_MAN_DO = 4; // 22/10/2026: người dùng đổi 3 -> 4
+// QuÃ©t Ä‘Æ°á»£c mÃ£ trong tráº¡ng thÃ¡i [Äang quÃ©t] â€” kiá»ƒm tra Ä‘Æ¡n Ä‘á»§ Ä‘iá»u kiá»‡n chá»¥p TRÆ¯á»šC khi cho chá»¥p áº£nh
+// tháº­t (trÃ¡nh lÃ£ng phÃ­ 1 láº§n chá»¥p cho Ä‘Æ¡n sai tráº¡ng thÃ¡i/khÃ´ng tá»“n táº¡i).
+// QuÃ©t sai tráº¡ng thÃ¡i láº·p láº¡i (22/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” Logs_UploadAnh 16â€“22/10: 10LT16 bá»‹ mÃ¡y chá»§ tá»« chá»‘i 21 láº§n trong
+// 1,5 phÃºt vÃ¬ camera cá»© Ä‘á»ƒ trÃªn mÃ£, ngÆ°á»i quÃ©t khÃ´ng Ä‘á»c toast). CÃ¹ng mÃ£ + cÃ¹ng cháº¿ Ä‘á»™ bá»‹ mÃ¡y chá»§ tá»« chá»‘i vÃ¬ sai tráº¡ng thÃ¡i láº§n thá»© 4 trá»Ÿ
+// Ä‘i (láº§n bá»‹ cháº·n 6 giÃ¢y khÃ´ng tÃ­nh) -> mÃ n Ä‘á» che camera, dá»«ng quÃ©t tá»›i khi báº¥m "ÄÃ£ hiá»ƒu". Chá»‰ Ä‘áº¿m cÃ¡c láº§n cÃ¡ch láº§n trÆ°á»›c khÃ´ng quÃ¡ 10
+// phÃºt â€” trang má»Ÿ cáº£ ngÃ y: sai 3 láº§n buá»•i sÃ¡ng rá»“i chiá»u quÃ©t nháº§m 1 láº§n khÃ´ng báº­t mÃ n Ä‘á».
+const SO_LAN_SAI_HIEN_MAN_DO = 4; // 22/10/2026: ngÆ°á»i dÃ¹ng Ä‘á»•i 3 -> 4
 const KHOANG_DEM_SAI_MS = 10 * 60 * 1000;
-const demSaiTrangThai = new Map(); // `${cheDo}|${ma}` -> { so, luc } — số lần máy chủ từ chối vì sai trạng thái, lần gần nhất
+const demSaiTrangThai = new Map(); // `${cheDo}|${ma}` -> { so, luc } â€” sá»‘ láº§n mÃ¡y chá»§ tá»« chá»‘i vÃ¬ sai tráº¡ng thÃ¡i, láº§n gáº§n nháº¥t
 let manDoDangHien = false;
 function hienManDoSaiTrangThai(ma, loi, soLan, nut) {
   manDoDangHien = true;
   const el = document.createElement('div');
   el.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(185,28,28,.96);color:#fff;display:flex;flex-direction:column;'
     + 'align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center';
-  el.innerHTML = `<div style="font-size:3.5rem;line-height:1">⛔</div>
-    <div style="font-size:1.5rem;font-weight:800">${escapeHtml(ma)} — QUÉT SAI ${soLan} LẦN</div>
+  el.innerHTML = `<div style="font-size:3.5rem;line-height:1">â›”</div>
+    <div style="font-size:1.5rem;font-weight:800">${escapeHtml(ma)} â€” QUÃ‰T SAI ${soLan} Láº¦N</div>
     <div style="font-size:1.1rem;max-width:520px">${escapeHtml(loi)}</div>
-    <div style="font-size:1rem;opacity:.9">Đừng quét lại đơn này — kiểm tra chế độ chụp đang chọn và trạng thái của đơn.</div>`;
-  // Còi dài (24/10/2026, theo yêu cầu người dùng): 2 nốt lên xuống + rung, lặp tới khi bấm nút. ponytail: tự tắt sau 2 phút — để quên
-  // máy trên bàn không kêu mãi; màn đỏ vẫn còn tới khi bấm.
+    <div style="font-size:1rem;opacity:.9">Äá»«ng quÃ©t láº¡i Ä‘Æ¡n nÃ y â€” kiá»ƒm tra cháº¿ Ä‘á»™ chá»¥p Ä‘ang chá»n vÃ  tráº¡ng thÃ¡i cá»§a Ä‘Æ¡n.</div>`;
+  // CÃ²i dÃ i (24/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng): 2 ná»‘t lÃªn xuá»‘ng + rung, láº·p tá»›i khi báº¥m nÃºt. ponytail: tá»± táº¯t sau 2 phÃºt â€” Ä‘á»ƒ quÃªn
+  // mÃ¡y trÃªn bÃ n khÃ´ng kÃªu mÃ£i; mÃ n Ä‘á» váº«n cÃ²n tá»›i khi báº¥m.
   const coi = () => { phatBeep(940, 380, 0, 'sawtooth'); phatBeep(640, 380, 420, 'sawtooth'); if (navigator.vibrate) navigator.vibrate([350, 100, 350]); };
   const henCoi = setInterval(coi, 1000);
   const henTatCoi = setTimeout(() => clearInterval(henCoi), 2 * 60 * 1000);
@@ -1185,7 +1185,7 @@ function hienManDoSaiTrangThai(ma, loi, soLan, nut) {
     if (navigator.vibrate) navigator.vibrate(0);
     el.remove();
     manDoDangHien = false;
-    // 6 giây để đưa camera ra khỏi mã — camera đọc lại đúng mã đó trong lúc này chỉ hiện toast, không hỏi máy chủ / không bật lại màn đỏ ngay.
+    // 6 giÃ¢y Ä‘á»ƒ Ä‘Æ°a camera ra khá»i mÃ£ â€” camera Ä‘á»c láº¡i Ä‘Ãºng mÃ£ Ä‘Ã³ trong lÃºc nÃ y chá»‰ hiá»‡n toast, khÃ´ng há»i mÃ¡y chá»§ / khÃ´ng báº­t láº¡i mÃ n Ä‘á» ngay.
     if (loiQuetGanNhat && loiQuetGanNhat.ma === ma) { loiQuetGanNhat.luc = performance.now(); loiQuetGanNhat.soLanLap = 0; }
   };
   const taoNut = (nhan, nen, mau, bam) => {
@@ -1197,16 +1197,16 @@ function hienManDoSaiTrangThai(ma, loi, soLan, nut) {
     el.appendChild(b);
   };
   if (nut) taoNut(nut.nhan, '#fde68a', '#7f1d1d', () => { dong(); nut.bam(); });
-  taoNut('Đã hiểu', '#fff', '#b91c1c', dong);
+  taoNut('ÄÃ£ hiá»ƒu', '#fff', '#b91c1c', dong);
   document.body.appendChild(el);
   coi();
 }
 
 async function xuLyQuetDeXacDinhDon(sttKeyThoDoc, nguon = 'CAMERA') {
   const cauHinh = CAU_HINH_ANH[mode];
-  if (!cauHinh) { if (nguon !== 'CAMERA') dangXuLyQuet = false; return; } // phòng thêm: mã đọc từ camera tới muộn khi đã đổi chế độ — bỏ qua
-  if (manDoDangHien && nguon === 'CAMERA') return; // màn đỏ "quét sai nhiều lần" đang hiện — chờ bấm "Đã hiểu"
-  if (dangXuLyQuet && nguon === 'CAMERA') return; // nút đổi chế độ tự giữ khoá trước khi gọi (nutChuyenSangDanTem)
+  if (!cauHinh) { if (nguon !== 'CAMERA') dangXuLyQuet = false; return; } // phÃ²ng thÃªm: mÃ£ Ä‘á»c tá»« camera tá»›i muá»™n khi Ä‘Ã£ Ä‘á»•i cháº¿ Ä‘á»™ â€” bá» qua
+  if (manDoDangHien && nguon === 'CAMERA') return; // mÃ n Ä‘á» "quÃ©t sai nhiá»u láº§n" Ä‘ang hiá»‡n â€” chá» báº¥m "ÄÃ£ hiá»ƒu"
+  if (dangXuLyQuet && nguon === 'CAMERA') return; // nÃºt Ä‘á»•i cháº¿ Ä‘á»™ tá»± giá»¯ khoÃ¡ trÆ°á»›c khi gá»i (nutChuyenSangDanTem)
   dangXuLyQuet = true;
   const loiCu = loiQuetGanNhat;
   if (loiCu && loiCu.ma === sttKeyThoDoc && loiCu.cheDo === mode && performance.now() - loiCu.luc < CHAN_LOI_LAP_MS) {
@@ -1219,7 +1219,7 @@ async function xuLyQuetDeXacDinhDon(sttKeyThoDoc, nguon = 'CAMERA') {
     return;
   }
   ghiLogLapBiChan();
-  const msTimMa = nguon === 'CAMERA' ? msTimMaHienTai() : null, tKiemTra = performance.now(); // bấm nút: không có "thời gian tìm mã"
+  const msTimMa = nguon === 'CAMERA' ? msTimMaHienTai() : null, tKiemTra = performance.now(); // báº¥m nÃºt: khÃ´ng cÃ³ "thá»i gian tÃ¬m mÃ£"
 
   try {
     const ketQua = await apiFetch('/photos/kiem-tra', {
@@ -1230,19 +1230,19 @@ async function xuLyQuetDeXacDinhDon(sttKeyThoDoc, nguon = 'CAMERA') {
     ghiLogQuet({ suKien: 'QUET_QR', sttKey: ketQua.sttKey || sttKeyThoDoc, ketQua: 'OK', chiTiet: { nguon, msTimMa, msKiemTra } });
     const sttKeyMoi = ketQua.sttKey || sttKeyThoDoc;
     if (cauHinh.haiAnh && donChoXong && donChoXong.sttKey === sttKeyMoi) {
-      // Quét lại đúng đơn đang chờ Xong — giữ nguyên khung chờ, không mở lượt chụp mới (ảnh 1 có thể còn đang tải lên).
-      hienThiToast('OK', `${sttKeyMoi}: đơn này đang chờ — chụp ảnh 2 hoặc bấm Xong`);
+      // QuÃ©t láº¡i Ä‘Ãºng Ä‘Æ¡n Ä‘ang chá» Xong â€” giá»¯ nguyÃªn khung chá», khÃ´ng má»Ÿ lÆ°á»£t chá»¥p má»›i (áº£nh 1 cÃ³ thá»ƒ cÃ²n Ä‘ang táº£i lÃªn).
+      hienThiToast('OK', `${sttKeyMoi}: Ä‘Æ¡n nÃ y Ä‘ang chá» â€” chá»¥p áº£nh 2 hoáº·c báº¥m Xong`);
       phatAmThanhKetQua('OK');
     } else {
-      if (cauHinh.haiAnh && donChoXong) hoanTatDonChoXong('quet-don-sau'); // quét được đơn KHÁC = đơn trước xong lượt (chạy ngầm, không chờ)
+      if (cauHinh.haiAnh && donChoXong) hoanTatDonChoXong('quet-don-sau'); // quÃ©t Ä‘Æ°á»£c Ä‘Æ¡n KHÃC = Ä‘Æ¡n trÆ°á»›c xong lÆ°á»£t (cháº¡y ngáº§m, khÃ´ng chá»)
       if (cauHinh.haiAnh && ketQua.soAnhLuotNay >= 1) {
-        // Đơn đã có ảnh của lượt này từ trước (thoát trang / quên bấm Xong) — người dùng chốt: GIỮ ảnh đã có, chụp tiếp hoặc Xong.
-        const dong = { trangThai: 'cho-xong', sttKey: sttKeyMoi, ghiChu: `Đã có ${ketQua.soAnhLuotNay} ảnh từ lần chụp trước — chưa Xong` };
+        // ÄÆ¡n Ä‘Ã£ cÃ³ áº£nh cá»§a lÆ°á»£t nÃ y tá»« trÆ°á»›c (thoÃ¡t trang / quÃªn báº¥m Xong) â€” ngÆ°á»i dÃ¹ng chá»‘t: GIá»® áº£nh Ä‘Ã£ cÃ³, chá»¥p tiáº¿p hoáº·c Xong.
+        const dong = { trangThai: 'cho-xong', sttKey: sttKeyMoi, ghiChu: `ÄÃ£ cÃ³ ${ketQua.soAnhLuotNay} áº£nh tá»« láº§n chá»¥p trÆ°á»›c â€” chÆ°a Xong` };
         themDongDaChup(dong);
         datDonChoXong({ sttKey: sttKeyMoi, tieuDe: ketQua.tieuDe, tenKhachHang: ketQua.tenKhachHang, soAnh: ketQua.soAnhLuotNay, huaAnh1: Promise.resolve(true), dong });
-        hienThiToast('OK', `${ketQua.tieuDe || sttKeyMoi}: đã có ${ketQua.soAnhLuotNay} ảnh — ${ketQua.soAnhLuotNay < 2 ? 'chụp ảnh 2 hoặc ' : ''}bấm Xong`);
+        hienThiToast('OK', `${ketQua.tieuDe || sttKeyMoi}: Ä‘Ã£ cÃ³ ${ketQua.soAnhLuotNay} áº£nh â€” ${ketQua.soAnhLuotNay < 2 ? 'chá»¥p áº£nh 2 hoáº·c ' : ''}báº¥m Xong`);
       } else {
-        // log: bản ghi CHUP_ANH của lượt này — đi tiếp qua bấm chụp -> có ảnh -> nén -> gửi (taiAnhLenNgam).
+        // log: báº£n ghi CHUP_ANH cá»§a lÆ°á»£t nÃ y â€” Ä‘i tiáº¿p qua báº¥m chá»¥p -> cÃ³ áº£nh -> nÃ©n -> gá»­i (taiAnhLenNgam).
         donDaXacDinhChoAnh = { sttKey: sttKeyMoi, tieuDe: ketQua.tieuDe, tenKhachHang: ketQua.tenKhachHang, nhomNhieuAo: ketQua.nhomNhieuAo || null,
           log: { cheDo: mode, msTimMa, msKiemTra, tXacDinh: performance.now() } };
         hienThiToast('OK', ketQua.tieuDe || sttKeyThoDoc);
@@ -1273,7 +1273,7 @@ async function xuLyQuetDeXacDinhDon(sttKeyThoDoc, nguon = 'CAMERA') {
   setTimeout(() => { dangXuLyQuet = false; tSanSangQuet = performance.now(); }, 700);
 }
 
-// Bấm "Quét lại" ở trạng thái [Sẵn sàng chụp] — quay về [Đang quét], KHÔNG upload gì.
+// Báº¥m "QuÃ©t láº¡i" á»Ÿ tráº¡ng thÃ¡i [Sáºµn sÃ ng chá»¥p] â€” quay vá» [Äang quÃ©t], KHÃ”NG upload gÃ¬.
 document.getElementById('btn-quet-lai-chup-anh').onclick = async () => {
   if (donDaXacDinhChoAnh && donDaXacDinhChoAnh.log) {
     ghiLogQuet({ suKien: 'QUET_LAI', sttKey: donDaXacDinhChoAnh.sttKey, ketQua: 'BO_NGANG', tongMs: Math.round(performance.now() - donDaXacDinhChoAnh.log.tXacDinh),
@@ -1285,7 +1285,7 @@ document.getElementById('btn-quet-lai-chup-anh').onclick = async () => {
 
 document.getElementById('btn-chup-anh').onclick = () => {
   if (donDaXacDinhChoAnh && donDaXacDinhChoAnh.log) donDaXacDinhChoAnh.log.tBamChup = performance.now();
-  document.getElementById('input-chup-anh').value = ''; // reset để chọn lại đúng ảnh mới chụp, kể cả khi trùng tên file với lần trước
+  document.getElementById('input-chup-anh').value = ''; // reset Ä‘á»ƒ chá»n láº¡i Ä‘Ãºng áº£nh má»›i chá»¥p, ká»ƒ cáº£ khi trÃ¹ng tÃªn file vá»›i láº§n trÆ°á»›c
   document.getElementById('input-chup-anh').click();
 };
 
@@ -1295,20 +1295,20 @@ document.getElementById('input-chup-anh').addEventListener('change', async (e) =
   await xuLyChupAnh(file);
 });
 
-// Tải ảnh lên NGẦM (bổ sung 22/09/2026, theo yêu cầu người dùng — quét mã QR + chụp ảnh xong là cho
-// quét đơn TIẾP THEO ngay, không đợi ảnh trước tải xong; server mỗi lượt tải mất thật vài giây do phải
-// đọc dữ liệu đơn trước khi ghi) — hàm này CHẠY NỀN, KHÔNG được await bởi nơi gọi (xuLyChupAnh bên
-// dưới). `dong` là đúng object đã unshift vào dsDaChupTheoMoc[mode] — sửa TRỰC TIẾP field của nó rồi
-// render lại để khối "Danh sách đã chụp" tự cập nhật, dù người dùng có thể đã quét sang đơn khác hoặc
-// đổi mode trong lúc chờ (renderDsDaChup()/renderDemNhomAnh() luôn đọc đúng dsDaChupTheoMoc[mode] hiện
-// tại — vô hại nếu mode đã đổi, chỉ là redraw lại đúng màn hình đang hiện, lịch sử vẫn đúng khi quay lại).
-// Chờ trước mỗi lần tự gửi lại ảnh lỗi mạng (3 lần gửi lại, tổng ~26 giây chờ) — xem vòng gửi trong taiAnhLenNgam.
+// Táº£i áº£nh lÃªn NGáº¦M (bá»• sung 22/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” quÃ©t mÃ£ QR + chá»¥p áº£nh xong lÃ  cho
+// quÃ©t Ä‘Æ¡n TIáº¾P THEO ngay, khÃ´ng Ä‘á»£i áº£nh trÆ°á»›c táº£i xong; server má»—i lÆ°á»£t táº£i máº¥t tháº­t vÃ i giÃ¢y do pháº£i
+// Ä‘á»c dá»¯ liá»‡u Ä‘Æ¡n trÆ°á»›c khi ghi) â€” hÃ m nÃ y CHáº Y Ná»€N, KHÃ”NG Ä‘Æ°á»£c await bá»Ÿi nÆ¡i gá»i (xuLyChupAnh bÃªn
+// dÆ°á»›i). `dong` lÃ  Ä‘Ãºng object Ä‘Ã£ unshift vÃ o dsDaChupTheoMoc[mode] â€” sá»­a TRá»°C TIáº¾P field cá»§a nÃ³ rá»“i
+// render láº¡i Ä‘á»ƒ khá»‘i "Danh sÃ¡ch Ä‘Ã£ chá»¥p" tá»± cáº­p nháº­t, dÃ¹ ngÆ°á»i dÃ¹ng cÃ³ thá»ƒ Ä‘Ã£ quÃ©t sang Ä‘Æ¡n khÃ¡c hoáº·c
+// Ä‘á»•i mode trong lÃºc chá» (renderDsDaChup()/renderDemNhomAnh() luÃ´n Ä‘á»c Ä‘Ãºng dsDaChupTheoMoc[mode] hiá»‡n
+// táº¡i â€” vÃ´ háº¡i náº¿u mode Ä‘Ã£ Ä‘á»•i, chá»‰ lÃ  redraw láº¡i Ä‘Ãºng mÃ n hÃ¬nh Ä‘ang hiá»‡n, lá»‹ch sá»­ váº«n Ä‘Ãºng khi quay láº¡i).
+// Chá» trÆ°á»›c má»—i láº§n tá»± gá»­i láº¡i áº£nh lá»—i máº¡ng (3 láº§n gá»­i láº¡i, tá»•ng ~26 giÃ¢y chá») â€” xem vÃ²ng gá»­i trong taiAnhLenNgam.
 const CHO_GUI_LAI_ANH_MS = [3000, 8000, 15000];
-// Hạn mỗi lần gửi (kết nối di động treo không báo lỗi thì không bao giờ tới lượt gửi lại) = 60 giây + thời gian đẩy file ở 10KB/s —
-// TÍNH THEO DUNG LƯỢNG vì hạn tính cả lúc đang đẩy dữ liệu lên: ảnh đã nén ~250KB -> ~85s; ảnh GỐC 3MB (máy không nén được) -> ~6 phút,
-// vẫn hơn hẳn lượt chậm nhất đã thấy thành công trong Logs 13/10 (3MB mất ~128s, mạng ~25KB/s) — không cắt ngang lượt chậm mà vẫn chạy.
+// Háº¡n má»—i láº§n gá»­i (káº¿t ná»‘i di Ä‘á»™ng treo khÃ´ng bÃ¡o lá»—i thÃ¬ khÃ´ng bao giá» tá»›i lÆ°á»£t gá»­i láº¡i) = 60 giÃ¢y + thá»i gian Ä‘áº©y file á»Ÿ 10KB/s â€”
+// TÃNH THEO DUNG LÆ¯á»¢NG vÃ¬ háº¡n tÃ­nh cáº£ lÃºc Ä‘ang Ä‘áº©y dá»¯ liá»‡u lÃªn: áº£nh Ä‘Ã£ nÃ©n ~250KB -> ~85s; áº£nh Gá»C 3MB (mÃ¡y khÃ´ng nÃ©n Ä‘Æ°á»£c) -> ~6 phÃºt,
+// váº«n hÆ¡n háº³n lÆ°á»£t cháº­m nháº¥t Ä‘Ã£ tháº¥y thÃ nh cÃ´ng trong Logs 13/10 (3MB máº¥t ~128s, máº¡ng ~25KB/s) â€” khÃ´ng cáº¯t ngang lÆ°á»£t cháº­m mÃ  váº«n cháº¡y.
 const hanGuiAnhMs = soByte => 60000 + Math.round(soByte / 10240 * 1000);
-// Qua apiFetch (cùng xử lý lỗi + ghi lỗi API gần nhất cho "Báo lỗi app"); headers rỗng để trình duyệt tự đặt multipart cho FormData.
+// Qua apiFetch (cÃ¹ng xá»­ lÃ½ lá»—i + ghi lá»—i API gáº§n nháº¥t cho "BÃ¡o lá»—i app"); headers rá»—ng Ä‘á»ƒ trÃ¬nh duyá»‡t tá»± Ä‘áº·t multipart cho FormData.
 async function guiAnhMotLan(form, soByte) {
   const han = hanGuiAnhMs(soByte);
   const huy = new AbortController();
@@ -1316,53 +1316,53 @@ async function guiAnhMotLan(form, soByte) {
   try {
     return await apiFetch('/photos/upload', { method: 'POST', body: form, headers: {}, signal: huy.signal });
   } catch (err) {
-    if (huy.signal.aborted) throw new Error(`quá ${Math.round(han / 1000)} giây không phản hồi`); // không có status -> được gửi lại
+    if (huy.signal.aborted) throw new Error(`quÃ¡ ${Math.round(han / 1000)} giÃ¢y khÃ´ng pháº£n há»“i`); // khÃ´ng cÃ³ status -> Ä‘Æ°á»£c gá»­i láº¡i
     throw err;
   } finally {
     clearTimeout(hen);
   }
 }
 
-// tuyChon (14/10/2026, ảnh đã sản xuất 2 ảnh): viTri 1|2, xong (false = lưu ảnh nhưng CHƯA chuyển trạng thái), truocKhiGui (Promise<bool>
-// ảnh 1 đã lưu — ảnh 2 phải chờ). -> Promise<bool> đã lưu.
+// tuyChon (14/10/2026, áº£nh Ä‘Ã£ sáº£n xuáº¥t 2 áº£nh): viTri 1|2, xong (false = lÆ°u áº£nh nhÆ°ng CHÆ¯A chuyá»ƒn tráº¡ng thÃ¡i), truocKhiGui (Promise<bool>
+// áº£nh 1 Ä‘Ã£ lÆ°u â€” áº£nh 2 pháº£i chá»). -> Promise<bool> Ä‘Ã£ lÆ°u.
 async function taiAnhLenNgam(sttKey, cauHinh, file, dong, log, tuyChon = {}) {
   const { viTri = 1, xong = true, truocKhiGui = null } = tuyChon;
-  const khoa = viTri === 2 ? sttKey + '#2' : sttKey; // ảnh 1 và ảnh 2 cùng đơn có thể tải chồng nhau
+  const khoa = viTri === 2 ? sttKey + '#2' : sttKey; // áº£nh 1 vÃ  áº£nh 2 cÃ¹ng Ä‘Æ¡n cÃ³ thá»ƒ táº£i chá»“ng nhau
   log.sttKey = sttKey;
-  // Nén ảnh (bổ sung 21/09/2026) — DỜI VÀO ĐÂY, chạy ngầm cùng upload (bổ sung 23/09/2026, theo yêu
-  // cầu người dùng: quay lại [Đang quét] vẫn còn chậm dù upload đã chạy ngầm). Ảnh gốc từ điện thoại/
-  // iPad đời mới có thể tới 12-48MP — createImageBitmap() phải giải mã NGUYÊN độ phân giải gốc trước
-  // khi canvas mới vẽ xuống kích thước nhỏ hơn, tốn tới vài giây trên máy yếu/đang tải nặng (vừa đóng
-  // camera). Trước đây bước này vẫn await() trong xuLyChupAnh() TRƯỚC KHI cho quét đơn tiếp theo — dời
-  // vào đây để KHÔNG còn bước nào (nén lẫn upload) chặn quay lại màn hình quét sau khi bấm chụp.
+  // NÃ©n áº£nh (bá»• sung 21/09/2026) â€” Dá»œI VÃ€O ÄÃ‚Y, cháº¡y ngáº§m cÃ¹ng upload (bá»• sung 23/09/2026, theo yÃªu
+  // cáº§u ngÆ°á»i dÃ¹ng: quay láº¡i [Äang quÃ©t] váº«n cÃ²n cháº­m dÃ¹ upload Ä‘Ã£ cháº¡y ngáº§m). áº¢nh gá»‘c tá»« Ä‘iá»‡n thoáº¡i/
+  // iPad Ä‘á»i má»›i cÃ³ thá»ƒ tá»›i 12-48MP â€” createImageBitmap() pháº£i giáº£i mÃ£ NGUYÃŠN Ä‘á»™ phÃ¢n giáº£i gá»‘c trÆ°á»›c
+  // khi canvas má»›i váº½ xuá»‘ng kÃ­ch thÆ°á»›c nhá» hÆ¡n, tá»‘n tá»›i vÃ i giÃ¢y trÃªn mÃ¡y yáº¿u/Ä‘ang táº£i náº·ng (vá»«a Ä‘Ã³ng
+  // camera). TrÆ°á»›c Ä‘Ã¢y bÆ°á»›c nÃ y váº«n await() trong xuLyChupAnh() TRÆ¯á»šC KHI cho quÃ©t Ä‘Æ¡n tiáº¿p theo â€” dá»i
+  // vÃ o Ä‘Ã¢y Ä‘á»ƒ KHÃ”NG cÃ²n bÆ°á»›c nÃ o (nÃ©n láº«n upload) cháº·n quay láº¡i mÃ n hÃ¬nh quÃ©t sau khi báº¥m chá»¥p.
   luotDangTai.set(khoa, log);
   const tNen0 = performance.now();
-  const thongSoNen = {}; // object RIÊNG của lượt này (ảnh nén ngầm chồng nhau — không đọc biến toàn cục của api.js)
+  const thongSoNen = {}; // object RIÃŠNG cá»§a lÆ°á»£t nÃ y (áº£nh nÃ©n ngáº§m chá»“ng nhau â€” khÃ´ng Ä‘á»c biáº¿n toÃ n cá»¥c cá»§a api.js)
   const fileDaNen = await nenAnhTruocKhiTaiLen(file, { ...cauHinhNenAnh, thongSo: thongSoNen });
   const tNen1 = performance.now();
-  if (laAnhHeif(thongSoNen.dauFile)) baoAnhHeif(); // máy đang chụp HEIC — nhắc tắt cài đặt (1 lần mỗi lần mở trang)
+  if (laAnhHeif(thongSoNen.dauFile)) baoAnhHeif(); // mÃ¡y Ä‘ang chá»¥p HEIC â€” nháº¯c táº¯t cÃ i Ä‘áº·t (1 láº§n má»—i láº§n má»Ÿ trang)
   log.giaiDoan = 'gui';
-  // Dòng "[đo: nén ..., gửi+chờ ...]" tạm hiện trên màn hình (23/09/2026) ĐÃ BỎ 12/10/2026 — số đo giờ ghi vào Logs_UploadAnh.
+  // DÃ²ng "[Ä‘o: nÃ©n ..., gá»­i+chá» ...]" táº¡m hiá»‡n trÃªn mÃ n hÃ¬nh (23/09/2026) ÄÃƒ Bá»Ž 12/10/2026 â€” sá»‘ Ä‘o giá» ghi vÃ o Logs_UploadAnh.
   const ghiLogChup = (ketQua, them) => {
     luotDangTai.delete(khoa);
-    const msTongGui = Math.round(performance.now() - tGuiDi0); // gồm cả các lần gửi lỗi + thời gian chờ gửi lại
-    const msGuiVaCho = Math.round(performance.now() - tLanGuiCuoi0); // riêng lần gửi cuối
+    const msTongGui = Math.round(performance.now() - tGuiDi0); // gá»“m cáº£ cÃ¡c láº§n gá»­i lá»—i + thá»i gian chá» gá»­i láº¡i
+    const msGuiVaCho = Math.round(performance.now() - tLanGuiCuoi0); // riÃªng láº§n gá»­i cuá»‘i
     const msMayChu = them.thoiGian ? them.thoiGian.tong : null;
     ghiLogQuet({ suKien: 'CHUP_ANH', cheDo: log.cheDo, sttKey, ketQua, loi: them.loi || '', tongMs: Math.round(performance.now() - log.tCoAnh),
       chiTiet: {
         msTimMa: log.msTimMa, msKiemTra: log.msKiemTra,
         msXacDinhDenBamChup: log.tBamChup ? Math.round(log.tBamChup - log.tXacDinh) : null,
-        msCamera: log.tBamChup ? Math.round(log.tCoAnh - log.tBamChup) : null, // mở camera máy + chụp + bấm "Dùng ảnh"
+        msCamera: log.tBamChup ? Math.round(log.tCoAnh - log.tBamChup) : null, // má»Ÿ camera mÃ¡y + chá»¥p + báº¥m "DÃ¹ng áº£nh"
         loaiFile: file.type || '', kbGoc: Math.round(file.size / 1024), kbSauNen: Math.round(fileDaNen.size / 1024),
         msNen: Math.round(tNen1 - tNen0), ...thongSoNen,
-        // Có mốc máy chủ (lượt thành công): tách gửi qua mạng; không có (lượt lỗi) thì chỉ biết tổng gửi + máy chủ xử lý.
+        // CÃ³ má»‘c mÃ¡y chá»§ (lÆ°á»£t thÃ nh cÃ´ng): tÃ¡ch gá»­i qua máº¡ng; khÃ´ng cÃ³ (lÆ°á»£t lá»—i) thÃ¬ chá»‰ biáº¿t tá»•ng gá»­i + mÃ¡y chá»§ xá»­ lÃ½.
         msGui: msMayChu != null ? Math.max(0, msGuiVaCho - msMayChu) : null, msGuiVaCho: msMayChu != null ? null : msTongGui,
         msMayChu, mayChu: them.thoiGian || null,
         kbMoiGiay: msMayChu != null && msGuiVaCho - msMayChu > 0 ? Math.round(fileDaNen.size / 1024 / ((msGuiVaCho - msMayChu) / 1000)) : null,
         mang: mangHienTai(),
-        sauThoat: !!log.daBaoThoat, // đã ghi THOAT lúc trang bị cất rồi quay lại — máy chủ xoá dòng THOAT đó
-        soLanGui, // > 1 = đã tự gửi lại vì lỗi mạng / máy chủ; msGui / kbMoiGiay chỉ tính lần gửi cuối
-        msTongGui: soLanGui > 1 ? msTongGui : null, // từ lần gửi đầu tới khi xong, gồm cả lần lỗi + chờ
+        sauThoat: !!log.daBaoThoat, // Ä‘Ã£ ghi THOAT lÃºc trang bá»‹ cáº¥t rá»“i quay láº¡i â€” mÃ¡y chá»§ xoÃ¡ dÃ²ng THOAT Ä‘Ã³
+        soLanGui, // > 1 = Ä‘Ã£ tá»± gá»­i láº¡i vÃ¬ lá»—i máº¡ng / mÃ¡y chá»§; msGui / kbMoiGiay chá»‰ tÃ­nh láº§n gá»­i cuá»‘i
+        msTongGui: soLanGui > 1 ? msTongGui : null, // tá»« láº§n gá»­i Ä‘áº§u tá»›i khi xong, gá»“m cáº£ láº§n lá»—i + chá»
         ...(cauHinh.haiAnh ? { viTri, xong } : {}),
       } });
   };
@@ -1374,13 +1374,13 @@ async function taiAnhLenNgam(sttKey, cauHinh, file, dong, log, tuyChon = {}) {
 
   const tGuiDi0 = performance.now();
   let soLanGui = 0;
-  let tLanGuiCuoi0 = tGuiDi0; // mốc bắt đầu lần gửi CUỐI — số đo tốc độ mạng chỉ tính lần đó, không tính lần lỗi + thời gian chờ
+  let tLanGuiCuoi0 = tGuiDi0; // má»‘c báº¯t Ä‘áº§u láº§n gá»­i CUá»I â€” sá»‘ Ä‘o tá»‘c Ä‘á»™ máº¡ng chá»‰ tÃ­nh láº§n Ä‘Ã³, khÃ´ng tÃ­nh láº§n lá»—i + thá»i gian chá»
   try {
-    // Tự gửi lại (14/10/2026, theo Logs_UploadAnh 13/10: ảnh 10U88.1 lỗi "Failed to fetch" trên mạng yếu, ảnh tải ngầm nên người dùng
-    // đã sang đơn khác, không chụp lại -> đơn thiếu ảnh). CHỈ lỗi mạng (không có mã HTTP) / máy chủ 5xx (Cloudflare 502/524...);
-    // lỗi nghiệp vụ 4xx (sai trạng thái, hết phiên...) báo ngay như cũ. Gửi lại đúng file đã nén, không nén lại.
+    // Tá»± gá»­i láº¡i (14/10/2026, theo Logs_UploadAnh 13/10: áº£nh 10U88.1 lá»—i "Failed to fetch" trÃªn máº¡ng yáº¿u, áº£nh táº£i ngáº§m nÃªn ngÆ°á»i dÃ¹ng
+    // Ä‘Ã£ sang Ä‘Æ¡n khÃ¡c, khÃ´ng chá»¥p láº¡i -> Ä‘Æ¡n thiáº¿u áº£nh). CHá»ˆ lá»—i máº¡ng (khÃ´ng cÃ³ mÃ£ HTTP) / mÃ¡y chá»§ 5xx (Cloudflare 502/524...);
+    // lá»—i nghiá»‡p vá»¥ 4xx (sai tráº¡ng thÃ¡i, háº¿t phiÃªn...) bÃ¡o ngay nhÆ° cÅ©. Gá»­i láº¡i Ä‘Ãºng file Ä‘Ã£ nÃ©n, khÃ´ng nÃ©n láº¡i.
     if (truocKhiGui && !(await truocKhiGui)) {
-      throw Object.assign(new Error('Ảnh 1 chưa lưu được nên ảnh 2 chưa gửi — quét lại mã đơn để chụp lại.'), { nghiepVu: true });
+      throw Object.assign(new Error('áº¢nh 1 chÆ°a lÆ°u Ä‘Æ°á»£c nÃªn áº£nh 2 chÆ°a gá»­i â€” quÃ©t láº¡i mÃ£ Ä‘Æ¡n Ä‘á»ƒ chá»¥p láº¡i.'), { nghiepVu: true });
     }
     let data;
     for (;;) {
@@ -1390,13 +1390,13 @@ async function taiAnhLenNgam(sttKey, cauHinh, file, dong, log, tuyChon = {}) {
         data = await guiAnhMotLan(form, fileDaNen.size);
         break;
       } catch (err) {
-        // Lần trước thực ra ĐÃ lưu (mất phản hồi giữa đường) -> lần gửi lại bị từ chối vì đơn đã sang đúng trạng thái đích
-        // (routes/photos.js trả trangThaiHienTai — không dò chữ trong câu báo lỗi).
-        // CHỈ khi lần gửi này có chuyển trạng thái (xong): ảnh 1 của "đã sản xuất" (xong=false) không đổi trạng thái nên đơn đã sang đích
-        // KHÔNG chứng minh ảnh này đã lưu (có thể máy khác vừa chụp xong) -> báo lỗi như thường.
+        // Láº§n trÆ°á»›c thá»±c ra ÄÃƒ lÆ°u (máº¥t pháº£n há»“i giá»¯a Ä‘Æ°á»ng) -> láº§n gá»­i láº¡i bá»‹ tá»« chá»‘i vÃ¬ Ä‘Æ¡n Ä‘Ã£ sang Ä‘Ãºng tráº¡ng thÃ¡i Ä‘Ã­ch
+        // (routes/photos.js tráº£ trangThaiHienTai â€” khÃ´ng dÃ² chá»¯ trong cÃ¢u bÃ¡o lá»—i).
+        // CHá»ˆ khi láº§n gá»­i nÃ y cÃ³ chuyá»ƒn tráº¡ng thÃ¡i (xong): áº£nh 1 cá»§a "Ä‘Ã£ sáº£n xuáº¥t" (xong=false) khÃ´ng Ä‘á»•i tráº¡ng thÃ¡i nÃªn Ä‘Æ¡n Ä‘Ã£ sang Ä‘Ã­ch
+        // KHÃ”NG chá»©ng minh áº£nh nÃ y Ä‘Ã£ lÆ°u (cÃ³ thá»ƒ mÃ¡y khÃ¡c vá»«a chá»¥p xong) -> bÃ¡o lá»—i nhÆ° thÆ°á»ng.
         if (xong && soLanGui > 1 && err.nghiepVu && err.duLieu && err.duLieu.trangThaiHienTai === cauHinh.chuyenSang) { data = { daLuuLanTruoc: true }; break; }
         if ((err.status && err.status < 500) || soLanGui > CHO_GUI_LAI_ANH_MS.length) throw err;
-        dong.ghiChu = `Mạng chập chờn — tự gửi lại lần ${soLanGui + 1}/${CHO_GUI_LAI_ANH_MS.length + 1}... (đừng đóng trang)`;
+        dong.ghiChu = `Máº¡ng cháº­p chá»n â€” tá»± gá»­i láº¡i láº§n ${soLanGui + 1}/${CHO_GUI_LAI_ANH_MS.length + 1}... (Ä‘á»«ng Ä‘Ã³ng trang)`;
         renderDsDaChup();
         await new Promise(r => setTimeout(r, CHO_GUI_LAI_ANH_MS[soLanGui - 1]));
       }
@@ -1404,31 +1404,31 @@ async function taiAnhLenNgam(sttKey, cauHinh, file, dong, log, tuyChon = {}) {
 
     const don = data.don || {};
     ghiLogChup('OK', { thoiGian: data.thoiGian });
-    if (data.thoiGian) { // tốc độ tải ảnh thật lên chấm báo mạng + dòng "Ảnh vừa tải" (16/10/2026)
+    if (data.thoiGian) { // tá»‘c Ä‘á»™ táº£i áº£nh tháº­t lÃªn cháº¥m bÃ¡o máº¡ng + dÃ²ng "áº¢nh vá»«a táº£i" (16/10/2026)
       const msGuiMang = Math.max(0, Math.round(performance.now() - tLanGuiCuoi0) - data.thoiGian.tong), kb = Math.round(fileDaNen.size / 1024);
       baoTocDoTaiAnh({ msGui: msGuiMang, kb, kbps: msGuiMang > 0 ? Math.round(kb / (msGuiMang / 1000)) : null });
     }
     if (!xong) {
-      // Ảnh 1 đã lưu, đơn vẫn "Đang chạy máy" — người dùng đã bấm ảnh 2 / Xong trong lúc ảnh 1 đang tải thì để bước đó tự ghi dòng.
-      if (!dong.sauAnh1) { dong.trangThai = 'cho-xong'; dong.ghiChu = 'Đã lưu ảnh 1 — chụp ảnh 2, bấm Xong hoặc quét đơn tiếp theo'; }
+      // áº¢nh 1 Ä‘Ã£ lÆ°u, Ä‘Æ¡n váº«n "Äang cháº¡y mÃ¡y" â€” ngÆ°á»i dÃ¹ng Ä‘Ã£ báº¥m áº£nh 2 / Xong trong lÃºc áº£nh 1 Ä‘ang táº£i thÃ¬ Ä‘á»ƒ bÆ°á»›c Ä‘Ã³ tá»± ghi dÃ²ng.
+      if (!dong.sauAnh1) { dong.trangThai = 'cho-xong'; dong.ghiChu = 'ÄÃ£ lÆ°u áº£nh 1 â€” chá»¥p áº£nh 2, báº¥m Xong hoáº·c quÃ©t Ä‘Æ¡n tiáº¿p theo'; }
       return true;
     }
     dong.trangThai = 'ok';
-    dong.ghiChu = `${don.TenKhachHang || ''} — ${cauHinh.yeuCau} → ${cauHinh.chuyenSang}${viTri === 2 ? ' (2 ảnh)' : ''}${data.daLuuLanTruoc ? ' (đã lưu từ lần gửi trước)' : ''}`;
-    hienThiToastAnh('ok', `${don.STT_Key || sttKey}${don.TenKhachHang ? ' · ' + don.TenKhachHang : ''} — đã chuyển sang "${cauHinh.chuyenSang}"`);
+    dong.ghiChu = `${don.TenKhachHang || ''} â€” ${cauHinh.yeuCau} â†’ ${cauHinh.chuyenSang}${viTri === 2 ? ' (2 áº£nh)' : ''}${data.daLuuLanTruoc ? ' (Ä‘Ã£ lÆ°u tá»« láº§n gá»­i trÆ°á»›c)' : ''}`;
+    hienThiToastAnh('ok', `${don.STT_Key || sttKey}${don.TenKhachHang ? ' Â· ' + don.TenKhachHang : ''} â€” Ä‘Ã£ chuyá»ƒn sang "${cauHinh.chuyenSang}"`);
     phatAmThanhKetQua('OK');
     return true;
   } catch (err) {
-    // Lỗi upload thật (mất mạng, server từ chối vì đơn vừa đổi trạng thái...) — đơn đã quay lại [Đang
-    // quét] từ lúc bấm chụp, người dùng cần quét lại QR đơn này để thử chụp lại (khác hành vi cũ — cũ
-    // giữ nguyên màn hình [Sẵn sàng chụp] để bấm lại ngay, không còn hợp lý khi ảnh đã tải ngầm).
+    // Lá»—i upload tháº­t (máº¥t máº¡ng, server tá»« chá»‘i vÃ¬ Ä‘Æ¡n vá»«a Ä‘á»•i tráº¡ng thÃ¡i...) â€” Ä‘Æ¡n Ä‘Ã£ quay láº¡i [Äang
+    // quÃ©t] tá»« lÃºc báº¥m chá»¥p, ngÆ°á»i dÃ¹ng cáº§n quÃ©t láº¡i QR Ä‘Æ¡n nÃ y Ä‘á»ƒ thá»­ chá»¥p láº¡i (khÃ¡c hÃ nh vi cÅ© â€” cÅ©
+    // giá»¯ nguyÃªn mÃ n hÃ¬nh [Sáºµn sÃ ng chá»¥p] Ä‘á»ƒ báº¥m láº¡i ngay, khÃ´ng cÃ²n há»£p lÃ½ khi áº£nh Ä‘Ã£ táº£i ngáº§m).
     ghiLogChup(ketQuaLoi(err, 'SAI_TRANG_THAI'), { loi: err.message });
     dong.trangThai = 'canh-bao';
-    // Lỗi kỹ thuật sau khi đã tự gửi lại hết lượt: nói rõ ảnh CHƯA lưu (dòng đỏ ở lại trong "Danh sách đã chụp").
-    dong.ghiChu = err.nghiepVu ? err.message : `CHƯA LƯU ẢNH (đã thử ${soLanGui} lần: ${err.message}) — quét lại mã đơn để chụp lại.`;
+    // Lá»—i ká»¹ thuáº­t sau khi Ä‘Ã£ tá»± gá»­i láº¡i háº¿t lÆ°á»£t: nÃ³i rÃµ áº£nh CHÆ¯A lÆ°u (dÃ²ng Ä‘á» á»Ÿ láº¡i trong "Danh sÃ¡ch Ä‘Ã£ chá»¥p").
+    dong.ghiChu = err.nghiepVu ? err.message : `CHÆ¯A LÆ¯U áº¢NH (Ä‘Ã£ thá»­ ${soLanGui} láº§n: ${err.message}) â€” quÃ©t láº¡i mÃ£ Ä‘Æ¡n Ä‘á»ƒ chá»¥p láº¡i.`;
     hienThiToastAnh('canh-bao', `${sttKey}: ${dong.ghiChu}`);
     phatAmThanhKetQua('SAI_TRANG_THAI');
-    // Ảnh 1 không lưu được -> đơn không còn "chờ Xong" (không có ảnh nào để Xong); quét lại mã đơn để chụp lại từ đầu.
+    // áº¢nh 1 khÃ´ng lÆ°u Ä‘Æ°á»£c -> Ä‘Æ¡n khÃ´ng cÃ²n "chá» Xong" (khÃ´ng cÃ³ áº£nh nÃ o Ä‘á»ƒ Xong); quÃ©t láº¡i mÃ£ Ä‘Æ¡n Ä‘á»ƒ chá»¥p láº¡i tá»« Ä‘áº§u.
     if (donChoXong && donChoXong.dong === dong) { datDonChoXong(null); renderDonChoXong(); }
     return false;
   } finally {
@@ -1439,24 +1439,24 @@ async function taiAnhLenNgam(sttKey, cauHinh, file, dong, log, tuyChon = {}) {
 }
 
 async function xuLyChupAnh(file) {
-  if (!donDaXacDinhChoAnh) { await hopThongBao('Chưa xác định được đơn — quét lại mã QR trước khi chụp.'); return; }
+  if (!donDaXacDinhChoAnh) { await hopThongBao('ChÆ°a xÃ¡c Ä‘á»‹nh Ä‘Æ°á»£c Ä‘Æ¡n â€” quÃ©t láº¡i mÃ£ QR trÆ°á»›c khi chá»¥p.'); return; }
   const cauHinh = CAU_HINH_ANH[mode];
   const sttKey = donDaXacDinhChoAnh.sttKey;
   const log = { ...(donDaXacDinhChoAnh.log || { cheDo: mode, tXacDinh: performance.now() }), tCoAnh: performance.now(), giaiDoan: 'nen' };
 
   if (dsUploadDangCho.has(sttKey)) {
-    await hopThongBao(`Đơn ${sttKey} vừa chụp xong, ảnh trước đang tải lên — đợi 1 chút rồi quét lại nếu cần chụp thêm.`);
+    await hopThongBao(`ÄÆ¡n ${sttKey} vá»«a chá»¥p xong, áº£nh trÆ°á»›c Ä‘ang táº£i lÃªn â€” Ä‘á»£i 1 chÃºt rá»“i quÃ©t láº¡i náº¿u cáº§n chá»¥p thÃªm.`);
     return;
   }
 
-  // Thêm dòng "đang tải lên" ngay, rồi QUAY LẠI [Đang quét] cho đơn tiếp theo NGAY — không đợi nén
-  // ảnh lẫn upload xong. Cả 2 việc đó chạy ở taiAnhLenNgam() phía trên, KHÔNG await ở đây (cố ý) —
-  // xuLyChupAnh() giờ không còn bước nào tốn thời gian đáng kể, quay lại quét gần như tức thì.
-  const dong = { trangThai: 'dang-tai', sttKey, ghiChu: 'Đang tải ảnh lên...' };
+  // ThÃªm dÃ²ng "Ä‘ang táº£i lÃªn" ngay, rá»“i QUAY Láº I [Äang quÃ©t] cho Ä‘Æ¡n tiáº¿p theo NGAY â€” khÃ´ng Ä‘á»£i nÃ©n
+  // áº£nh láº«n upload xong. Cáº£ 2 viá»‡c Ä‘Ã³ cháº¡y á»Ÿ taiAnhLenNgam() phÃ­a trÃªn, KHÃ”NG await á»Ÿ Ä‘Ã¢y (cá»‘ Ã½) â€”
+  // xuLyChupAnh() giá» khÃ´ng cÃ²n bÆ°á»›c nÃ o tá»‘n thá»i gian Ä‘Ã¡ng ká»ƒ, quay láº¡i quÃ©t gáº§n nhÆ° tá»©c thÃ¬.
+  const dong = { trangThai: 'dang-tai', sttKey, ghiChu: 'Äang táº£i áº£nh lÃªn...' };
   themDongDaChup(dong);
   dsUploadDangCho.add(sttKey);
 
-  // Ảnh đã sản xuất: ảnh 1 lưu nhưng CHƯA chuyển trạng thái — đơn vào khung "chờ Xong" (chụp ảnh 2 / Xong / quét đơn tiếp theo).
+  // áº¢nh Ä‘Ã£ sáº£n xuáº¥t: áº£nh 1 lÆ°u nhÆ°ng CHÆ¯A chuyá»ƒn tráº¡ng thÃ¡i â€” Ä‘Æ¡n vÃ o khung "chá» Xong" (chá»¥p áº£nh 2 / Xong / quÃ©t Ä‘Æ¡n tiáº¿p theo).
   const hua = taiAnhLenNgam(sttKey, cauHinh, file, dong, log, cauHinh.haiAnh ? { xong: false } : {});
   if (cauHinh.haiAnh) {
     datDonChoXong({ sttKey, tieuDe: donDaXacDinhChoAnh.tieuDe, tenKhachHang: donDaXacDinhChoAnh.tenKhachHang, soAnh: 1, huaAnh1: hua, dong });
@@ -1465,7 +1465,7 @@ async function xuLyChupAnh(file) {
   await capNhatManHinh();
 }
 
-// Khung "đơn chờ Xong" ở màn hình quét (chỉ chế độ Chụp ảnh đã sản xuất, khi chưa xác định đơn mới).
+// Khung "Ä‘Æ¡n chá» Xong" á»Ÿ mÃ n hÃ¬nh quÃ©t (chá»‰ cháº¿ Ä‘á»™ Chá»¥p áº£nh Ä‘Ã£ sáº£n xuáº¥t, khi chÆ°a xÃ¡c Ä‘á»‹nh Ä‘Æ¡n má»›i).
 function renderDonChoXong() {
   const el = document.getElementById('don-cho-xong');
   const hien = !!(donChoXong && CAU_HINH_ANH[mode] && CAU_HINH_ANH[mode].haiAnh && !donDaXacDinhChoAnh);
@@ -1474,18 +1474,18 @@ function renderDonChoXong() {
   const d = donChoXong;
   el.innerHTML = `
     <div class="tieu-de-lon">${escapeHtml(d.tieuDe || d.sttKey)}</div>
-    ${d.tenKhachHang ? `<div class="dong-khach-hang">Khách hàng: ${escapeHtml(d.tenKhachHang)}</div>` : ''}
-    <div style="margin:6px 0">Đã chụp ${d.soAnh} ảnh — chưa chuyển "Đã sản xuất".</div>
+    ${d.tenKhachHang ? `<div class="dong-khach-hang">KhÃ¡ch hÃ ng: ${escapeHtml(d.tenKhachHang)}</div>` : ''}
+    <div style="margin:6px 0">ÄÃ£ chá»¥p ${d.soAnh} áº£nh â€” chÆ°a chuyá»ƒn "ÄÃ£ sáº£n xuáº¥t".</div>
     <div class="hang-nut" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
-      ${d.soAnh < 2 ? `<button type="button" class="btn-hanh-dong" onclick="bamChupAnh2()">${icon('camera', { size: 18 })} Chụp ảnh 2</button>` : ''}
-      <button type="button" class="btn-hanh-dong phu" onclick="hoanTatDonChoXong('nut')">${icon('check', { size: 18 })} Xong đơn này</button>
+      ${d.soAnh < 2 ? `<button type="button" class="btn-hanh-dong" onclick="bamChupAnh2()">${icon('camera', { size: 18 })} Chá»¥p áº£nh 2</button>` : ''}
+      <button type="button" class="btn-hanh-dong phu" onclick="hoanTatDonChoXong('nut')">${icon('check', { size: 18 })} Xong Ä‘Æ¡n nÃ y</button>
     </div>
-    <div style="margin-top:6px;font-size:.9em;opacity:.8">Quét mã đơn tiếp theo cũng tự Xong đơn này.</div>`;
+    <div style="margin-top:6px;font-size:.9em;opacity:.8">QuÃ©t mÃ£ Ä‘Æ¡n tiáº¿p theo cÅ©ng tá»± Xong Ä‘Æ¡n nÃ y.</div>`;
 }
 
 function bamChupAnh2() {
   const input = document.getElementById('input-chup-anh-2');
-  input.value = ''; // chọn lại đúng ảnh mới chụp, kể cả trùng tên file với lần trước
+  input.value = ''; // chá»n láº¡i Ä‘Ãºng áº£nh má»›i chá»¥p, ká»ƒ cáº£ trÃ¹ng tÃªn file vá»›i láº§n trÆ°á»›c
   if (donChoXong) donChoXong.tBamChup2 = performance.now();
   input.click();
 }
@@ -1497,19 +1497,19 @@ document.getElementById('input-chup-anh-2').addEventListener('change', e => {
   renderDonChoXong();
   d.dong.sauAnh1 = true;
   d.dong.trangThai = 'dang-tai';
-  d.dong.ghiChu = 'Đang tải ảnh 2...';
+  d.dong.ghiChu = 'Äang táº£i áº£nh 2...';
   dsUploadDangCho.add(d.sttKey + '#2');
   renderDemNhomAnh(); renderDsDaChup();
   const bay = performance.now();
-  // Ảnh 2 + chuyển "Đã sản xuất" trong cùng 1 lần gửi; chờ ảnh 1 lưu xong trước (máy chủ cần ảnh 1 của lượt này).
+  // áº¢nh 2 + chuyá»ƒn "ÄÃ£ sáº£n xuáº¥t" trong cÃ¹ng 1 láº§n gá»­i; chá» áº£nh 1 lÆ°u xong trÆ°á»›c (mÃ¡y chá»§ cáº§n áº£nh 1 cá»§a lÆ°á»£t nÃ y).
   taiAnhLenNgam(d.sttKey, CAU_HINH_ANH.photo_san_xuat, file, d.dong,
     { cheDo: 'photo_san_xuat', tXacDinh: d.tBamChup2 || bay, tBamChup: d.tBamChup2 || bay, tCoAnh: bay, giaiDoan: 'nen' },
     { viTri: 2, xong: true, truocKhiGui: d.huaAnh1 });
 });
 
-// "Xong đơn này" / quét sang đơn khác — chuyển "Đã sản xuất" với số ảnh đang có. Chạy ngầm; tự gửi lại khi lỗi mạng như ảnh.
-// cach: 'nut' (bấm Xong) | 'quet-don-sau' (tự Xong khi quét đơn khác). MỖI lần đều ghi Logs_UploadAnh (XONG_DON, 15/10/2026) — trước đây
-// không ghi nên không biết đơn kẹt "Đang chạy máy" là do Xong lỗi hay do không hề gửi.
+// "Xong Ä‘Æ¡n nÃ y" / quÃ©t sang Ä‘Æ¡n khÃ¡c â€” chuyá»ƒn "ÄÃ£ sáº£n xuáº¥t" vá»›i sá»‘ áº£nh Ä‘ang cÃ³. Cháº¡y ngáº§m; tá»± gá»­i láº¡i khi lá»—i máº¡ng nhÆ° áº£nh.
+// cach: 'nut' (báº¥m Xong) | 'quet-don-sau' (tá»± Xong khi quÃ©t Ä‘Æ¡n khÃ¡c). Má»–I láº§n Ä‘á»u ghi Logs_UploadAnh (XONG_DON, 15/10/2026) â€” trÆ°á»›c Ä‘Ã¢y
+// khÃ´ng ghi nÃªn khÃ´ng biáº¿t Ä‘Æ¡n káº¹t "Äang cháº¡y mÃ¡y" lÃ  do Xong lá»—i hay do khÃ´ng há» gá»­i.
 async function hoanTatDonChoXong(cach = 'nut') {
   const d = donChoXong;
   if (!d) return;
@@ -1523,40 +1523,40 @@ async function hoanTatDonChoXong(cach = 'nut') {
   const ghiLogXong = (ketQua, them = {}) => ghiLogQuet({ suKien: 'XONG_DON', cheDo: 'photo_san_xuat', sttKey: d.sttKey, ketQua, loi: them.loi || '',
     tongMs: Math.round(performance.now() - t0), chiTiet: { cach, soAnh: d.soAnh, soLanGui: lan, ...(d.khoiPhuc ? { khoiPhuc: true } : {}), ...(them.chiTiet || {}) } });
   try {
-    if (!(await d.huaAnh1)) { ghiLogXong('BO_NGANG', { loi: 'Ảnh 1 không lưu được — không Xong' }); return; } // dòng đã báo lỗi ảnh 1
+    if (!(await d.huaAnh1)) { ghiLogXong('BO_NGANG', { loi: 'áº¢nh 1 khÃ´ng lÆ°u Ä‘Æ°á»£c â€” khÃ´ng Xong' }); return; } // dÃ²ng Ä‘Ã£ bÃ¡o lá»—i áº£nh 1
     d.dong.trangThai = 'dang-tai';
-    d.dong.ghiChu = 'Đang chuyển sang "Đã sản xuất"...';
+    d.dong.ghiChu = 'Äang chuyá»ƒn sang "ÄÃ£ sáº£n xuáº¥t"...';
     renderDemNhomAnh(); renderDsDaChup();
     for (lan = 1; ; lan++) {
       try {
         await apiFetch('/photos/hoan-tat-san-xuat', { method: 'POST', body: JSON.stringify({ sttKey: d.sttKey }) });
         break;
       } catch (err) {
-        // Lần trước thực ra đã chuyển (mất phản hồi) -> lần gửi lại bị từ chối vì đơn đã "Đã sản xuất".
+        // Láº§n trÆ°á»›c thá»±c ra Ä‘Ã£ chuyá»ƒn (máº¥t pháº£n há»“i) -> láº§n gá»­i láº¡i bá»‹ tá»« chá»‘i vÃ¬ Ä‘Æ¡n Ä‘Ã£ "ÄÃ£ sáº£n xuáº¥t".
         if (lan > 1 && err.duLieu && err.duLieu.trangThaiHienTai === CAU_HINH_ANH.photo_san_xuat.chuyenSang) { d.daXongLanTruoc = true; break; }
         if ((err.status && err.status < 500) || lan > CHO_GUI_LAI_ANH_MS.length) throw err;
-        d.dong.ghiChu = `Mạng chập chờn — tự gửi lại lần ${lan + 1}/${CHO_GUI_LAI_ANH_MS.length + 1}... (đừng đóng trang)`;
+        d.dong.ghiChu = `Máº¡ng cháº­p chá»n â€” tá»± gá»­i láº¡i láº§n ${lan + 1}/${CHO_GUI_LAI_ANH_MS.length + 1}... (Ä‘á»«ng Ä‘Ã³ng trang)`;
         renderDsDaChup();
         await new Promise(r => setTimeout(r, CHO_GUI_LAI_ANH_MS[lan - 1]));
       }
     }
     d.dong.trangThai = 'ok';
-    d.dong.ghiChu = `${d.tenKhachHang || ''} — Đang chạy máy → Đã sản xuất (${d.soAnh} ảnh)`;
-    hienThiToastAnh('ok', `${d.sttKey} — đã chuyển sang "Đã sản xuất" (${d.soAnh} ảnh)`);
+    d.dong.ghiChu = `${d.tenKhachHang || ''} â€” Äang cháº¡y mÃ¡y â†’ ÄÃ£ sáº£n xuáº¥t (${d.soAnh} áº£nh)`;
+    hienThiToastAnh('ok', `${d.sttKey} â€” Ä‘Ã£ chuyá»ƒn sang "ÄÃ£ sáº£n xuáº¥t" (${d.soAnh} áº£nh)`);
     phatAmThanhKetQua('OK');
     ghiLogXong('OK', d.daXongLanTruoc ? { chiTiet: { daXongLanTruoc: true } } : {});
   } catch (err) {
     if (err.duLieu && err.duLieu.trangThaiHienTai === CAU_HINH_ANH.photo_san_xuat.chuyenSang) {
       ghiLogXong('OK', { chiTiet: { nguoiKhacDaXong: true } });
-      // Đơn ĐÃ ở "Đã sản xuất" — người khác vừa bấm Xong / chụp xong đơn này trước: không phải lỗi, không kêu báo lỗi (14/10/2026).
+      // ÄÆ¡n ÄÃƒ á»Ÿ "ÄÃ£ sáº£n xuáº¥t" â€” ngÆ°á»i khÃ¡c vá»«a báº¥m Xong / chá»¥p xong Ä‘Æ¡n nÃ y trÆ°á»›c: khÃ´ng pháº£i lá»—i, khÃ´ng kÃªu bÃ¡o lá»—i (14/10/2026).
       d.dong.trangThai = 'ok';
-      d.dong.ghiChu = `${d.tenKhachHang || ''} — đơn đã ở "Đã sản xuất" (người khác vừa bấm Xong / chụp xong đơn này)`;
-      hienThiToastAnh('ok', `${d.sttKey} — đơn đã ở "Đã sản xuất" (người khác vừa xong)`);
+      d.dong.ghiChu = `${d.tenKhachHang || ''} â€” Ä‘Æ¡n Ä‘Ã£ á»Ÿ "ÄÃ£ sáº£n xuáº¥t" (ngÆ°á»i khÃ¡c vá»«a báº¥m Xong / chá»¥p xong Ä‘Æ¡n nÃ y)`;
+      hienThiToastAnh('ok', `${d.sttKey} â€” Ä‘Æ¡n Ä‘Ã£ á»Ÿ "ÄÃ£ sáº£n xuáº¥t" (ngÆ°á»i khÃ¡c vá»«a xong)`);
       return;
     }
     ghiLogXong(ketQuaLoi(err, 'SAI_TRANG_THAI'), { loi: err.message });
     d.dong.trangThai = 'canh-bao';
-    d.dong.ghiChu = err.nghiepVu ? err.message : `CHƯA chuyển "Đã sản xuất" (${err.message}) — quét lại mã đơn rồi bấm Xong.`;
+    d.dong.ghiChu = err.nghiepVu ? err.message : `CHÆ¯A chuyá»ƒn "ÄÃ£ sáº£n xuáº¥t" (${err.message}) â€” quÃ©t láº¡i mÃ£ Ä‘Æ¡n rá»“i báº¥m Xong.`;
     hienThiToastAnh('canh-bao', `${d.sttKey}: ${d.dong.ghiChu}`);
     phatAmThanhKetQua('SAI_TRANG_THAI');
   } finally {
@@ -1565,21 +1565,21 @@ async function hoanTatDonChoXong(cach = 'nut') {
   }
 }
 
-// Hiện thông tin đơn đã xác định ở trạng thái [Sẵn sàng chụp] — dùng lại đúng class
-// .khoi-ket-qua-vua-quet đã có cho khối "Kết quả vừa quét" ở Quét kịch bản, nhất quán hình ảnh.
+// Hiá»‡n thÃ´ng tin Ä‘Æ¡n Ä‘Ã£ xÃ¡c Ä‘á»‹nh á»Ÿ tráº¡ng thÃ¡i [Sáºµn sÃ ng chá»¥p] â€” dÃ¹ng láº¡i Ä‘Ãºng class
+// .khoi-ket-qua-vua-quet Ä‘Ã£ cÃ³ cho khá»‘i "Káº¿t quáº£ vá»«a quÃ©t" á»Ÿ QuÃ©t ká»‹ch báº£n, nháº¥t quÃ¡n hÃ¬nh áº£nh.
 function renderThongTinDonChoAnh() {
   const el = document.getElementById('thong-tin-don-cho-chup');
   if (!donDaXacDinhChoAnh) { el.innerHTML = ''; return; }
   el.innerHTML = `
     <div class="tieu-de-lon">${escapeHtml(donDaXacDinhChoAnh.tieuDe || donDaXacDinhChoAnh.sttKey)}</div>
-    ${donDaXacDinhChoAnh.tenKhachHang ? `<div class="dong-khach-hang">Khách hàng: ${escapeHtml(donDaXacDinhChoAnh.tenKhachHang)}</div>` : ''}
+    ${donDaXacDinhChoAnh.tenKhachHang ? `<div class="dong-khach-hang">KhÃ¡ch hÃ ng: ${escapeHtml(donDaXacDinhChoAnh.tenKhachHang)}</div>` : ''}
     ${htmlCanhBaoNhom(donDaXacDinhChoAnh.nhomNhieuAo)}`;
 }
 
 function hienThiToastAnh(loai, noiDung) {
   clearTimeout(toastAnhTimer);
   const el = document.getElementById('toast-chup-anh');
-  const MAP = { ok: '✅', 'canh-bao': '⚠️', loi: '❌' };
+  const MAP = { ok: 'âœ…', 'canh-bao': 'âš ï¸', loi: 'âŒ' };
   el.className = 'toast-vua-quet hien ' + loai;
   el.innerHTML = `<span style="font-size:1.4rem">${MAP[loai] || ''}</span> ${escapeHtml(noiDung)}`;
   toastAnhTimer = setTimeout(() => { el.classList.remove('hien'); }, 4500);
@@ -1594,37 +1594,37 @@ function themDongDaChup(item) {
 function renderDemNhomAnh() {
   const el = document.getElementById('dem-nhom-anh');
   const ds = dsDaChupTheoMoc[mode];
-  // Ảnh tải ngầm xong / gửi lại khi người dùng đã sang chế độ không chụp ảnh (Tra cứu, Kịch bản) — không có khối này để vẽ (14/10/2026:
-  // trước đây lỗi "reading 'filter'" ở đây, và trong vòng tự gửi lại sẽ làm dừng gửi lại giữa chừng).
+  // áº¢nh táº£i ngáº§m xong / gá»­i láº¡i khi ngÆ°á»i dÃ¹ng Ä‘Ã£ sang cháº¿ Ä‘á»™ khÃ´ng chá»¥p áº£nh (Tra cá»©u, Ká»‹ch báº£n) â€” khÃ´ng cÃ³ khá»‘i nÃ y Ä‘á»ƒ váº½ (14/10/2026:
+  // trÆ°á»›c Ä‘Ã¢y lá»—i "reading 'filter'" á»Ÿ Ä‘Ã¢y, vÃ  trong vÃ²ng tá»± gá»­i láº¡i sáº½ lÃ m dá»«ng gá»­i láº¡i giá»¯a chá»«ng).
   if (!ds) return;
   const soDangTai = ds.filter(x => x.trangThai === 'dang-tai').length;
   const soOK = ds.filter(x => x.trangThai === 'ok').length;
   const soCanhBao = ds.filter(x => x.trangThai === 'canh-bao').length;
-  const soChoXong = ds.filter(x => x.trangThai === 'cho-xong').length; // ảnh đã sản xuất: đã lưu ảnh nhưng chưa Xong (14/10/2026)
-  // Bỏ ô đếm "Không đọc được mã" (07/09/2026) — từ khi tách quét/chụp thành 2 bước, ảnh chụp không
-  // còn cần tự đọc mã QR nữa nên themDongDaChup() không bao giờ còn gọi với trangThai:'loi' (xem
-  // docs/superpowers/specs/2026-09-07-tach-quet-chup-anh-design.md) — ô đếm này sẽ luôn là 0.
-  // Ô "Đang tải" (bổ sung 22/09/2026) — chỉ hiện khi có ít nhất 1 ảnh đang tải ngầm, cho người dùng
-  // biết còn ảnh chưa tải xong, đừng thoát/đóng trang vội.
+  const soChoXong = ds.filter(x => x.trangThai === 'cho-xong').length; // áº£nh Ä‘Ã£ sáº£n xuáº¥t: Ä‘Ã£ lÆ°u áº£nh nhÆ°ng chÆ°a Xong (14/10/2026)
+  // Bá» Ã´ Ä‘áº¿m "KhÃ´ng Ä‘á»c Ä‘Æ°á»£c mÃ£" (07/09/2026) â€” tá»« khi tÃ¡ch quÃ©t/chá»¥p thÃ nh 2 bÆ°á»›c, áº£nh chá»¥p khÃ´ng
+  // cÃ²n cáº§n tá»± Ä‘á»c mÃ£ QR ná»¯a nÃªn themDongDaChup() khÃ´ng bao giá» cÃ²n gá»i vá»›i trangThai:'loi' (xem
+  // docs/superpowers/specs/2026-09-07-tach-quet-chup-anh-design.md) â€” Ã´ Ä‘áº¿m nÃ y sáº½ luÃ´n lÃ  0.
+  // Ã” "Äang táº£i" (bá»• sung 22/09/2026) â€” chá»‰ hiá»‡n khi cÃ³ Ã­t nháº¥t 1 áº£nh Ä‘ang táº£i ngáº§m, cho ngÆ°á»i dÃ¹ng
+  // biáº¿t cÃ²n áº£nh chÆ°a táº£i xong, Ä‘á»«ng thoÃ¡t/Ä‘Ã³ng trang vá»™i.
   el.innerHTML = `
-    ${soDangTai > 0 ? `<div class="dem-o dang-tai"><div class="hang-tren"><span class="dem-icon">${icon('spinner', { className: 'icon-spin', size: 20 })}</span><span class="dem-so">${soDangTai}</span></div><div class="dem-nhan">Đang tải</div></div>` : ''}
-    ${soChoXong > 0 ? `<div class="dem-o dang-tai"><div class="hang-tren"><span class="dem-icon">⏳</span><span class="dem-so">${soChoXong}</span></div><div class="dem-nhan">Chờ Xong</div></div>` : ''}
-    <div class="dem-o ok"><div class="hang-tren"><span class="dem-icon">✅</span><span class="dem-so">${soOK}</span></div><div class="dem-nhan">Thành công</div></div>
-    <div class="dem-o canh-bao"><div class="hang-tren"><span class="dem-icon">⚠️</span><span class="dem-so">${soCanhBao}</span></div><div class="dem-nhan">Lỗi nghiệp vụ</div></div>`;
+    ${soDangTai > 0 ? `<div class="dem-o dang-tai"><div class="hang-tren"><span class="dem-icon">${icon('spinner', { className: 'icon-spin', size: 20 })}</span><span class="dem-so">${soDangTai}</span></div><div class="dem-nhan">Äang táº£i</div></div>` : ''}
+    ${soChoXong > 0 ? `<div class="dem-o dang-tai"><div class="hang-tren"><span class="dem-icon">â³</span><span class="dem-so">${soChoXong}</span></div><div class="dem-nhan">Chá» Xong</div></div>` : ''}
+    <div class="dem-o ok"><div class="hang-tren"><span class="dem-icon">âœ…</span><span class="dem-so">${soOK}</span></div><div class="dem-nhan">ThÃ nh cÃ´ng</div></div>
+    <div class="dem-o canh-bao"><div class="hang-tren"><span class="dem-icon">âš ï¸</span><span class="dem-so">${soCanhBao}</span></div><div class="dem-nhan">Lá»—i nghiá»‡p vá»¥</div></div>`;
 }
 
 function renderDsDaChup() {
   const el = document.getElementById('ds-da-chup');
   const ds = dsDaChupTheoMoc[mode];
-  if (!ds) return; // chế độ không chụp ảnh — xem renderDemNhomAnh
-  if (ds.length === 0) { el.innerHTML = '<p style="color:var(--color-text-faint)">Chưa chụp ảnh nào.</p>'; return; }
+  if (!ds) return; // cháº¿ Ä‘á»™ khÃ´ng chá»¥p áº£nh â€” xem renderDemNhomAnh
+  if (ds.length === 0) { el.innerHTML = '<p style="color:var(--color-text-faint)">ChÆ°a chá»¥p áº£nh nÃ o.</p>'; return; }
   const ICON_THEO_TRANG_THAI = {
-    ok: '✅', 'canh-bao': '⚠️', 'cho-xong': '⏳',
+    ok: 'âœ…', 'canh-bao': 'âš ï¸', 'cho-xong': 'â³',
     'dang-tai': icon('spinner', { className: 'icon-spin', size: 18 }),
   };
   el.innerHTML = ds.map(item => `
     <div class="dong-quet ${item.trangThai}">
-      <span style="font-size:1.3rem">${ICON_THEO_TRANG_THAI[item.trangThai] || '❌'}</span>
+      <span style="font-size:1.3rem">${ICON_THEO_TRANG_THAI[item.trangThai] || 'âŒ'}</span>
       <div class="noi-dung">
         <strong>${escapeHtml(item.sttKey)}</strong>
         <div class="ly-do">${escapeHtml(item.ghiChu || '')}</div>

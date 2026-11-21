@@ -1,24 +1,24 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Thiết lập — Xưởng Thêu</title>
+<title>Thiáº¿t láº­p â€” XÆ°á»Ÿng ThÃªu</title>
 <link rel="stylesheet" href="/css/style.css?v=112">
 <script src="/js/theme.js?v=104"></script>
 <style>
-/* Cấu hình GKE — mượn nguyên bố cục lưới đã có ở tracking.html trước khi chuyển sang đây (bổ sung
-   23/09/2026, theo yêu cầu người dùng), đổi tên tk- -> st- (settings) cho đúng ngữ cảnh trang mới —
-   CSS khai trong <style> riêng từng trang không va chạm nhau nên đổi tên chỉ để dễ đọc, không bắt buộc. */
+/* Cáº¥u hÃ¬nh GKE â€” mÆ°á»£n nguyÃªn bá»‘ cá»¥c lÆ°á»›i Ä‘Ã£ cÃ³ á»Ÿ tracking.html trÆ°á»›c khi chuyá»ƒn sang Ä‘Ã¢y (bá»• sung
+   23/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng), Ä‘á»•i tÃªn tk- -> st- (settings) cho Ä‘Ãºng ngá»¯ cáº£nh trang má»›i â€”
+   CSS khai trong <style> riÃªng tá»«ng trang khÃ´ng va cháº¡m nhau nÃªn Ä‘á»•i tÃªn chá»‰ Ä‘á»ƒ dá»… Ä‘á»c, khÃ´ng báº¯t buá»™c. */
 .st-cau-hinh-gke { max-width: 1400px; }
 .st-luoi-gke { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: var(--space-3); }
 .st-ghi-chu-truong { font-size: 0.78rem; color: var(--color-text-muted); margin: 4px 0 0; }
-/* Thẻ 1 tài khoản GKE (bổ sung 27/09/2026) — .bao-cao-form mặc định flex ngang, xếp dọc lại cho thẻ. */
-.st-the-tk-gke { flex-direction: column; align-items: stretch; flex-wrap: nowrap; } /* wrap (kế thừa .bao-cao-form) kéo giãn các hàng theo cột — 24/10/2026 */
+/* Tháº» 1 tÃ i khoáº£n GKE (bá»• sung 27/09/2026) â€” .bao-cao-form máº·c Ä‘á»‹nh flex ngang, xáº¿p dá»c láº¡i cho tháº». */
+.st-the-tk-gke { flex-direction: column; align-items: stretch; flex-wrap: nowrap; } /* wrap (káº¿ thá»«a .bao-cao-form) kÃ©o giÃ£n cÃ¡c hÃ ng theo cá»™t â€” 24/10/2026 */
 .st-the-tk-gke > div:last-child { align-self: flex-start; }
-/* Quản lý Xưởng (bổ sung 24/09/2026) — mỗi Xưởng 1 dòng: tên + màu + đổi tên + xoá. */
+/* Quáº£n lÃ½ XÆ°á»Ÿng (bá»• sung 24/09/2026) â€” má»—i XÆ°á»Ÿng 1 dÃ²ng: tÃªn + mÃ u + Ä‘á»•i tÃªn + xoÃ¡. */
 .st-danh-sach-xuong { display: flex; flex-direction: column; gap: var(--space-2); }
-/* Giờ nghỉ theo Xưởng (23/10/2026) */
+/* Giá» nghá»‰ theo XÆ°á»Ÿng (23/10/2026) */
 .st-bang-gio-nghi { border-collapse: collapse; width: 100%; min-width: 640px; }
 .st-bang-gio-nghi th, .st-bang-gio-nghi td { padding: 6px 8px; border-bottom: 1px solid var(--color-border, #e2e8f0); text-align: left; vertical-align: middle; }
 .st-bang-gio-nghi th { font-size: 0.8rem; color: var(--color-text-muted); font-weight: 600; }
@@ -27,7 +27,7 @@
   border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 8px 12px;
 }
 .st-dong-xuong .ten-xuong { flex: 1; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* Nhóm hàng (29/09/2026) — dòng loại tự xuống hàng trên màn hẹp; ô keyword chiếm phần còn lại. */
+/* NhÃ³m hÃ ng (29/09/2026) â€” dÃ²ng loáº¡i tá»± xuá»‘ng hÃ ng trÃªn mÃ n háº¹p; Ã´ keyword chiáº¿m pháº§n cÃ²n láº¡i. */
 .st-dong-nhom-hang { flex-wrap: wrap; }
 .st-dong-nhom-hang .st-ten-loai { flex: 0 1 150px; min-width: 110px; }
 .st-dong-nhom-hang textarea { flex: 1 1 260px; min-width: 0; resize: vertical; }
@@ -40,387 +40,387 @@
 <body>
 <div id="nav"></div>
 <div class="page">
-  <h2>Thiết lập</h2>
+  <h2>Thiáº¿t láº­p</h2>
 
-  <!-- Themes gộp vào <details> (bổ sung 23/09/2026, theo yêu cầu người dùng — "chuyển thành 1 nút bấm"
-       để tiết kiệm diện tích cho 2 mục mới bên dưới) — dùng thẻ <details>/<summary> gốc trình duyệt
-       (đã có pattern tương tự ở index.html), không cần JS thu/mở riêng; <summary> mượn class nút bấm
-       .btn-hanh-dong.phu sẵn có (display:inline-flex ghi đè list-item mặc định nên tam giác mở/đóng
-       gốc của <summary> tự biến mất, không cần thêm CSS mới). -->
+  <!-- Themes gá»™p vÃ o <details> (bá»• sung 23/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” "chuyá»ƒn thÃ nh 1 nÃºt báº¥m"
+       Ä‘á»ƒ tiáº¿t kiá»‡m diá»‡n tÃ­ch cho 2 má»¥c má»›i bÃªn dÆ°á»›i) â€” dÃ¹ng tháº» <details>/<summary> gá»‘c trÃ¬nh duyá»‡t
+       (Ä‘Ã£ cÃ³ pattern tÆ°Æ¡ng tá»± á»Ÿ index.html), khÃ´ng cáº§n JS thu/má»Ÿ riÃªng; <summary> mÆ°á»£n class nÃºt báº¥m
+       .btn-hanh-dong.phu sáºµn cÃ³ (display:inline-flex ghi Ä‘Ã¨ list-item máº·c Ä‘á»‹nh nÃªn tam giÃ¡c má»Ÿ/Ä‘Ã³ng
+       gá»‘c cá»§a <summary> tá»± biáº¿n máº¥t, khÃ´ng cáº§n thÃªm CSS má»›i). -->
   <details>
     <summary class="btn-hanh-dong phu">Themes</summary>
-    <h3>Giao diện</h3>
+    <h3>Giao diá»‡n</h3>
     <label class="cong-tac-hang">
-      <span class="cong-tac-nhan"><span id="icon-che-do-toi"></span> Chế độ tối</span>
+      <span class="cong-tac-nhan"><span id="icon-che-do-toi"></span> Cháº¿ Ä‘á»™ tá»‘i</span>
       <span class="cong-tac">
         <input type="checkbox" id="cong-tac-che-do-toi">
         <span class="cong-tac-slider"></span>
       </span>
     </label>
 
-    <h3>Màu chủ đạo</h3>
-    <p>Chọn màu bạn thích — áp dụng ngay cho toàn bộ ứng dụng trên thiết bị này (mỗi máy/trình duyệt lưu riêng).</p>
+    <h3>MÃ u chá»§ Ä‘áº¡o</h3>
+    <p>Chá»n mÃ u báº¡n thÃ­ch â€” Ã¡p dá»¥ng ngay cho toÃ n bá»™ á»©ng dá»¥ng trÃªn thiáº¿t bá»‹ nÃ y (má»—i mÃ¡y/trÃ¬nh duyá»‡t lÆ°u riÃªng).</p>
     <div id="bang-mau" class="bang-chon-mau"></div>
   </details>
 
   <details id="details-ticker" style="margin-top:var(--space-6)">
-    <summary class="btn-hanh-dong phu">Ticker đơn ưu tiên</summary>
-    <p>Dải chữ chạy ngang phía dưới menu, hiển thị các đơn đang được đánh dấu ưu tiên (chỉ superadmin/admin/vẽ file thấy). Thay đổi có hiệu lực sau khi tải lại trang.</p>
+    <summary class="btn-hanh-dong phu">Ticker Ä‘Æ¡n Æ°u tiÃªn</summary>
+    <p>Dáº£i chá»¯ cháº¡y ngang phÃ­a dÆ°á»›i menu, hiá»ƒn thá»‹ cÃ¡c Ä‘Æ¡n Ä‘ang Ä‘Æ°á»£c Ä‘Ã¡nh dáº¥u Æ°u tiÃªn (chá»‰ superadmin/admin/váº½ file tháº¥y). Thay Ä‘á»•i cÃ³ hiá»‡u lá»±c sau khi táº£i láº¡i trang.</p>
     <label style="display:flex;align-items:center;gap:var(--space-3);margin-top:var(--space-3)">
-      <span style="white-space:nowrap">Tốc độ chạy:</span>
+      <span style="white-space:nowrap">Tá»‘c Ä‘á»™ cháº¡y:</span>
       <input type="range" id="ticker-speed-inp" min="10" max="120" step="5" style="flex:1;accent-color:var(--color-primary)">
       <span id="ticker-speed-val" style="min-width:60px;text-align:right;font-weight:600"></span>
     </label>
     <label style="display:flex;align-items:center;gap:var(--space-3);margin-top:var(--space-3)">
-      <span style="white-space:nowrap">Tần suất đọc lại:</span>
+      <span style="white-space:nowrap">Táº§n suáº¥t Ä‘á»c láº¡i:</span>
       <select id="ticker-interval-inp" style="padding:6px 10px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface);color:var(--color-text);font-size:1rem">
-        <option value="5">5 phút</option>
-        <option value="15">15 phút</option>
-        <option value="30">30 phút</option>
-        <option value="60">1 giờ</option>
-        <option value="120">2 giờ</option>
+        <option value="5">5 phÃºt</option>
+        <option value="15">15 phÃºt</option>
+        <option value="30">30 phÃºt</option>
+        <option value="60">1 giá»</option>
+        <option value="120">2 giá»</option>
       </select>
     </label>
-    <button type="button" class="btn-hanh-dong" id="btn-luu-ticker" style="margin-top:var(--space-3)">Lưu</button>
-    <span id="ticker-speed-msg" style="margin-left:var(--space-3);font-size:0.9rem;color:var(--color-success);display:none">Đã lưu, tải lại trang để áp dụng.</span>
+    <button type="button" class="btn-hanh-dong" id="btn-luu-ticker" style="margin-top:var(--space-3)">LÆ°u</button>
+    <span id="ticker-speed-msg" style="margin-left:var(--space-3);font-size:0.9rem;color:var(--color-success);display:none">ÄÃ£ lÆ°u, táº£i láº¡i trang Ä‘á»ƒ Ã¡p dá»¥ng.</span>
   </details>
 
-  <!-- Thời gian cảnh báo tự động (bổ sung 23/09/2026, theo yêu cầu người dùng) — thay 3 ngưỡng ngày
-       hard-code 3/5/7 trong services/alertService.js#tinhMucCanhBao. Gộp vào <details> (23/10/2026, theo yêu cầu người dùng — tiết
-       kiệm diện tích Settings). -->
+  <!-- Thá»i gian cáº£nh bÃ¡o tá»± Ä‘á»™ng (bá»• sung 23/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” thay 3 ngÆ°á»¡ng ngÃ y
+       hard-code 3/5/7 trong services/alertService.js#tinhMucCanhBao. Gá»™p vÃ o <details> (23/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” tiáº¿t
+       kiá»‡m diá»‡n tÃ­ch Settings). -->
   <details style="margin-top:var(--space-6)">
-    <summary class="btn-hanh-dong phu">Thời gian cảnh báo tự động</summary>
-  <p>Đơn đã vào <b>trạng thái đầu vào</b> quá số ngày mà vẫn chưa tới <b>trạng thái đầu ra</b> thì phát cảnh báo (badge trên đơn hàng, ô KPI ở BĐK). Tắt 1 mức = tắt hẳn mức đó ở mọi nơi. Đơn trúng nhiều mức hiện mức cao nhất (Đỏ &gt; Cam &gt; Vàng).</p>
+    <summary class="btn-hanh-dong phu">Thá»i gian cáº£nh bÃ¡o tá»± Ä‘á»™ng</summary>
+  <p>ÄÆ¡n Ä‘Ã£ vÃ o <b>tráº¡ng thÃ¡i Ä‘áº§u vÃ o</b> quÃ¡ sá»‘ ngÃ y mÃ  váº«n chÆ°a tá»›i <b>tráº¡ng thÃ¡i Ä‘áº§u ra</b> thÃ¬ phÃ¡t cáº£nh bÃ¡o (badge trÃªn Ä‘Æ¡n hÃ ng, Ã´ KPI á»Ÿ BÄK). Táº¯t 1 má»©c = táº¯t háº³n má»©c Ä‘Ã³ á»Ÿ má»i nÆ¡i. ÄÆ¡n trÃºng nhiá»u má»©c hiá»‡n má»©c cao nháº¥t (Äá» &gt; Cam &gt; VÃ ng).</p>
   <div id="ds-cau-hinh-canh-bao" style="display:grid; gap:var(--space-3)"></div>
-  <button type="button" class="btn-hanh-dong" id="btn-luu-canh-bao" style="margin-top:var(--space-3)">Lưu</button>
+  <button type="button" class="btn-hanh-dong" id="btn-luu-canh-bao" style="margin-top:var(--space-3)">LÆ°u</button>
   <p id="thong-bao-canh-bao" style="display:none"></p>
   </details>
 
-  <!-- Cảnh báo vận hành (11/10/2026, theo yêu cầu người dùng): Telegram vận hành (C3), Y6 đơn nhận quá lâu, L2 vận chuyển bất thường. Gộp vào <details> (23/10/2026, theo yêu cầu người dùng — tiết kiệm diện tích Settings). -->
+  <!-- Cáº£nh bÃ¡o váº­n hÃ nh (11/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng): Telegram váº­n hÃ nh (C3), Y6 Ä‘Æ¡n nháº­n quÃ¡ lÃ¢u, L2 váº­n chuyá»ƒn báº¥t thÆ°á»ng. Gá»™p vÃ o <details> (23/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” tiáº¿t kiá»‡m diá»‡n tÃ­ch Settings). -->
   <details style="margin-top:var(--space-6)">
-    <summary class="btn-hanh-dong phu">Cảnh báo vận hành</summary>
-  <p>Hiện ở Trung tâm hành động; nếu có chat Telegram vận hành thì gửi 1 tin tổng hợp lúc 8 giờ sáng (báo lỗi app gửi ngay).</p>
+    <summary class="btn-hanh-dong phu">Cáº£nh bÃ¡o váº­n hÃ nh</summary>
+  <p>Hiá»‡n á»Ÿ Trung tÃ¢m hÃ nh Ä‘á»™ng; náº¿u cÃ³ chat Telegram váº­n hÃ nh thÃ¬ gá»­i 1 tin tá»•ng há»£p lÃºc 8 giá» sÃ¡ng (bÃ¡o lá»—i app gá»­i ngay).</p>
   <div class="bao-cao-form">
-    <div class="truong" style="flex:1;min-width:240px"><label for="vh-telegram">Chat Telegram vận hành (để trống = không gửi)</label><input id="vh-telegram" placeholder="vd -1001234567890"></div>
-    <button type="button" class="btn-hanh-dong phu" id="btn-vh-gui-thu">Gửi thử</button>
+    <div class="truong" style="flex:1;min-width:240px"><label for="vh-telegram">Chat Telegram váº­n hÃ nh (Ä‘á»ƒ trá»‘ng = khÃ´ng gá»­i)</label><input id="vh-telegram" placeholder="vd -1001234567890"></div>
+    <button type="button" class="btn-hanh-dong phu" id="btn-vh-gui-thu">Gá»­i thá»­</button>
   </div>
-  <h4>Đơn nhận quá lâu</h4>
+  <h4>ÄÆ¡n nháº­n quÃ¡ lÃ¢u</h4>
   <div class="bao-cao-form">
-    <div class="truong"><label><input type="checkbox" id="vh-bat-ve"> Nhắc "Đang vẽ file" quá (giờ)</label><input type="number" id="vh-gio-ve" min="1" step="1" style="width:7em"></div>
-    <div class="truong"><label><input type="checkbox" id="vh-bat-chay"> Nhắc "Đang chạy máy" quá (giờ)</label><input type="number" id="vh-gio-chay" min="1" step="1" style="width:7em"></div>
+    <div class="truong"><label><input type="checkbox" id="vh-bat-ve"> Nháº¯c "Äang váº½ file" quÃ¡ (giá»)</label><input type="number" id="vh-gio-ve" min="1" step="1" style="width:7em"></div>
+    <div class="truong"><label><input type="checkbox" id="vh-bat-chay"> Nháº¯c "Äang cháº¡y mÃ¡y" quÃ¡ (giá»)</label><input type="number" id="vh-gio-chay" min="1" step="1" style="width:7em"></div>
   </div>
-  <h4>Vận chuyển bất thường</h4>
+  <h4>Váº­n chuyá»ƒn báº¥t thÆ°á»ng</h4>
   <div class="bao-cao-form">
-    <div class="truong"><label><input type="checkbox" id="vh-bat-r1"> Đã mua tracking mà GKE chưa có sự kiện quá (ngày)</label><input type="number" id="vh-ngay-r1" min="1" step="1" style="width:7em"></div>
-    <div class="truong"><label><input type="checkbox" id="vh-bat-r2"> Trạng thái tracking không đổi quá (ngày)</label><input type="number" id="vh-ngay-r2" min="1" step="1" style="width:7em"></div>
+    <div class="truong"><label><input type="checkbox" id="vh-bat-r1"> ÄÃ£ mua tracking mÃ  GKE chÆ°a cÃ³ sá»± kiá»‡n quÃ¡ (ngÃ y)</label><input type="number" id="vh-ngay-r1" min="1" step="1" style="width:7em"></div>
+    <div class="truong"><label><input type="checkbox" id="vh-bat-r2"> Tráº¡ng thÃ¡i tracking khÃ´ng Ä‘á»•i quÃ¡ (ngÃ y)</label><input type="number" id="vh-ngay-r2" min="1" step="1" style="width:7em"></div>
   </div>
-  <p style="margin-bottom:4px"><label><input type="checkbox" id="vh-bat-r3"> Cảnh báo khi trạng thái tracking là một trong các giá trị được tích dưới đây</label>
-    <span style="color:var(--color-text-muted)">(lấy từ dữ liệu thật đang có, kèm số đơn — app không cài sẵn mã GKE nào)</span></p>
+  <p style="margin-bottom:4px"><label><input type="checkbox" id="vh-bat-r3"> Cáº£nh bÃ¡o khi tráº¡ng thÃ¡i tracking lÃ  má»™t trong cÃ¡c giÃ¡ trá»‹ Ä‘Æ°á»£c tÃ­ch dÆ°á»›i Ä‘Ã¢y</label>
+    <span style="color:var(--color-text-muted)">(láº¥y tá»« dá»¯ liá»‡u tháº­t Ä‘ang cÃ³, kÃ¨m sá»‘ Ä‘Æ¡n â€” app khÃ´ng cÃ i sáºµn mÃ£ GKE nÃ o)</span></p>
   <div id="vh-ds-r3" style="display:flex;flex-wrap:wrap;gap:6px 16px;max-height:240px;overflow:auto;padding:8px;border:1px solid var(--color-border);border-radius:var(--radius-md)"></div>
-  <button type="button" class="btn-hanh-dong" id="btn-luu-van-hanh" style="margin-top:var(--space-3)">Lưu</button>
+  <button type="button" class="btn-hanh-dong" id="btn-luu-van-hanh" style="margin-top:var(--space-3)">LÆ°u</button>
   <p id="thong-bao-van-hanh" style="display:none"></p>
   </details>
 
-  <!-- Báo cáo logs hằng ngày qua Telegram (15/10/2026, theo yêu cầu người dùng) — routes/vanHanh.js + services/baoCaoLogService.js. Gộp vào <details> (23/10/2026, theo yêu cầu người dùng — tiết kiệm diện tích Settings). -->
+  <!-- BÃ¡o cÃ¡o logs háº±ng ngÃ y qua Telegram (15/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” routes/vanHanh.js + services/baoCaoLogService.js. Gá»™p vÃ o <details> (23/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” tiáº¿t kiá»‡m diá»‡n tÃ­ch Settings). -->
   <details style="margin-top:var(--space-6)">
-    <summary class="btn-hanh-dong phu">Báo cáo logs hằng ngày (Telegram)</summary>
-  <p>Mỗi ngày đúng giờ đã chọn, gửi 1 tin tóm tắt (phiên bản app, lỗi, tốc độ các thao tác chính) + file log server (.txt) + file
-    Logs_UploadAnh (.csv) của 24 giờ gần nhất + danh sách lỗi dữ liệu cần Seller sửa (theo Team, file Excel — ngày không có lỗi thì không gửi).
-    7 giờ sáng thứ 7: báo cáo vận hành tuần (thời gian từng khâu, đơn kẹt, QC — toàn xưởng và từng Xưởng) vào cùng chat.
-    Log có thông tin khách hàng (tên, địa chỉ) — chỉ dùng chat riêng tư.</p>
+    <summary class="btn-hanh-dong phu">BÃ¡o cÃ¡o logs háº±ng ngÃ y (Telegram)</summary>
+  <p>Má»—i ngÃ y Ä‘Ãºng giá» Ä‘Ã£ chá»n, gá»­i 1 tin tÃ³m táº¯t (phiÃªn báº£n app, lá»—i, tá»‘c Ä‘á»™ cÃ¡c thao tÃ¡c chÃ­nh) + file log server (.txt) + file
+    Logs_UploadAnh (.csv) cá»§a 24 giá» gáº§n nháº¥t + danh sÃ¡ch lá»—i dá»¯ liá»‡u cáº§n Seller sá»­a (theo Team, file Excel â€” ngÃ y khÃ´ng cÃ³ lá»—i thÃ¬ khÃ´ng gá»­i).
+    7 giá» sÃ¡ng thá»© 7: bÃ¡o cÃ¡o váº­n hÃ nh tuáº§n (thá»i gian tá»«ng khÃ¢u, Ä‘Æ¡n káº¹t, QC â€” toÃ n xÆ°á»Ÿng vÃ  tá»«ng XÆ°á»Ÿng) vÃ o cÃ¹ng chat.
+    Log cÃ³ thÃ´ng tin khÃ¡ch hÃ ng (tÃªn, Ä‘á»‹a chá»‰) â€” chá»‰ dÃ¹ng chat riÃªng tÆ°.</p>
   <div class="bao-cao-form">
-    <div class="truong"><label for="bcl-gio">Giờ gửi (để trống = tắt)</label><input type="time" id="bcl-gio" style="width:9em"></div>
-    <div class="truong" style="flex:1;min-width:220px"><label for="bcl-chat">Chat ID nhận báo cáo logs</label><input id="bcl-chat" placeholder="vd -1001234567890"></div>
+    <div class="truong"><label for="bcl-gio">Giá» gá»­i (Ä‘á»ƒ trá»‘ng = táº¯t)</label><input type="time" id="bcl-gio" style="width:9em"></div>
+    <div class="truong" style="flex:1;min-width:220px"><label for="bcl-chat">Chat ID nháº­n bÃ¡o cÃ¡o logs</label><input id="bcl-chat" placeholder="vd -1001234567890"></div>
     <div class="truong" style="flex:1;min-width:220px"><label for="bcl-token">Bot Token <small id="bcl-token-trang-thai" style="color:var(--color-text-muted)"></small></label>
       <input type="password" id="bcl-token" autocomplete="new-password" placeholder="123456789:AAE..."></div>
   </div>
   <div class="bao-cao-form" style="margin-top:var(--space-3)">
-    <button type="button" class="btn-hanh-dong" id="btn-luu-bcl">Lưu</button>
-    <button type="button" class="btn-hanh-dong phu" id="btn-gui-ngay-bcl">Gửi ngay báo cáo 24 giờ</button>
-    <button type="button" class="btn-hanh-dong phu" id="btn-gui-tuan-bcl">Gửi ngay báo cáo tuần</button>
-    <button type="button" class="btn-hanh-dong phu" id="btn-gui-loi-bcl">Gửi ngay lỗi dữ liệu</button>
-    <button type="button" class="btn-hanh-dong phu" id="btn-xoa-token-bcl" style="display:none">Xoá token đã lưu</button>
+    <button type="button" class="btn-hanh-dong" id="btn-luu-bcl">LÆ°u</button>
+    <button type="button" class="btn-hanh-dong phu" id="btn-gui-ngay-bcl">Gá»­i ngay bÃ¡o cÃ¡o 24 giá»</button>
+    <button type="button" class="btn-hanh-dong phu" id="btn-gui-tuan-bcl">Gá»­i ngay bÃ¡o cÃ¡o tuáº§n</button>
+    <button type="button" class="btn-hanh-dong phu" id="btn-gui-loi-bcl">Gá»­i ngay lá»—i dá»¯ liá»‡u</button>
+    <button type="button" class="btn-hanh-dong phu" id="btn-xoa-token-bcl" style="display:none">XoÃ¡ token Ä‘Ã£ lÆ°u</button>
   </div>
   <p id="thong-bao-bcl" style="display:none"></p>
   </details>
 
-  <!-- Tỷ lệ nén ảnh (bổ sung 23/09/2026, theo yêu cầu người dùng) — CHỈ áp dụng cho 2 chế độ chụp ảnh
-       ở scan.html (Chụp ảnh đã sản xuất / Chụp ảnh ĐÃ DÁN TEM), không ảnh hưởng upload ảnh ở order.html
-       (xem public/js/api.js#nenAnhTruocKhiTaiLen). Gộp vào <details> (23/10/2026, theo yêu cầu người dùng — tiết kiệm diện tích Settings). -->
+  <!-- Tá»· lá»‡ nÃ©n áº£nh (bá»• sung 23/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” CHá»ˆ Ã¡p dá»¥ng cho 2 cháº¿ Ä‘á»™ chá»¥p áº£nh
+       á»Ÿ scan.html (Chá»¥p áº£nh Ä‘Ã£ sáº£n xuáº¥t / Chá»¥p áº£nh ÄÃƒ DÃN TEM), khÃ´ng áº£nh hÆ°á»Ÿng upload áº£nh á»Ÿ order.html
+       (xem public/js/api.js#nenAnhTruocKhiTaiLen). Gá»™p vÃ o <details> (23/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” tiáº¿t kiá»‡m diá»‡n tÃ­ch Settings). -->
   <details style="margin-top:var(--space-6)">
-    <summary class="btn-hanh-dong phu">Tỷ lệ nén ảnh (Quét QR)</summary>
-  <p>Áp dụng khi chụp ảnh "Đã sản xuất"/"ĐÃ DÁN TEM" ở menu Quét mã QR. Không ảnh hưởng ảnh tải lên ở trang chi tiết đơn hàng.</p>
+    <summary class="btn-hanh-dong phu">Tá»· lá»‡ nÃ©n áº£nh (QuÃ©t QR)</summary>
+  <p>Ãp dá»¥ng khi chá»¥p áº£nh "ÄÃ£ sáº£n xuáº¥t"/"ÄÃƒ DÃN TEM" á»Ÿ menu QuÃ©t mÃ£ QR. KhÃ´ng áº£nh hÆ°á»Ÿng áº£nh táº£i lÃªn á»Ÿ trang chi tiáº¿t Ä‘Æ¡n hÃ ng.</p>
   <div class="bao-cao-form">
     <div class="truong">
-      <label for="nen-anh-chat-luong">Chất lượng nén JPEG (%)</label>
+      <label for="nen-anh-chat-luong">Cháº¥t lÆ°á»£ng nÃ©n JPEG (%)</label>
       <input type="number" id="nen-anh-chat-luong" min="10" max="100" step="1">
     </div>
     <div class="truong">
-      <label for="nen-anh-canh-dai">Cạnh dài tối đa (px)</label>
+      <label for="nen-anh-canh-dai">Cáº¡nh dÃ i tá»‘i Ä‘a (px)</label>
       <input type="number" id="nen-anh-canh-dai" min="400" max="4000" step="1">
     </div>
-    <button type="button" class="btn-hanh-dong" id="btn-luu-nen-anh" style="justify-self:start">Lưu</button>
+    <button type="button" class="btn-hanh-dong" id="btn-luu-nen-anh" style="justify-self:start">LÆ°u</button>
   </div>
   <p id="thong-bao-nen-anh" style="display:none"></p>
   </details>
 
-  <!-- Quản lý Xưởng (mở rộng 24/09/2026, theo yêu cầu người dùng — trước đây danh sách Xưởng cố định
-       trong code, chỉ đúng 2 Xưởng HN/BN chọn được màu; giờ tạo/đổi tên/xoá Xưởng được qua đây, MỌI
-       Xưởng có tên đều chọn màu được (kể cả "ChuaGanXuong" — giờ là 1 Xưởng bình thường, KHÁC trạng
-       thái "(chưa gán)" THẬT của đơn/nhân viên chưa có Xưởng nào, vẫn luôn giữ nền mặc định). Gộp CHUNG
-       1 khối với màu nền vì 2 việc luôn đi cùng nhau (Xưởng mới tạo cũng cần chọn màu ngay) — thay 2 màu
-       HN/BN hard-code cũ trong style.css bằng ô chọn màu tự do. Áp dụng cho thẻ đơn ở Đơn hàng/Chạy
-       máy/Vẽ file — xem public/js/api.js#lopVaStyleXuong. Gộp vào <details> (23/10/2026, theo yêu cầu người dùng — tiết kiệm diện tích Settings). -->
+  <!-- Quáº£n lÃ½ XÆ°á»Ÿng (má»Ÿ rá»™ng 24/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” trÆ°á»›c Ä‘Ã¢y danh sÃ¡ch XÆ°á»Ÿng cá»‘ Ä‘á»‹nh
+       trong code, chá»‰ Ä‘Ãºng 2 XÆ°á»Ÿng HN/BN chá»n Ä‘Æ°á»£c mÃ u; giá» táº¡o/Ä‘á»•i tÃªn/xoÃ¡ XÆ°á»Ÿng Ä‘Æ°á»£c qua Ä‘Ã¢y, Má»ŒI
+       XÆ°á»Ÿng cÃ³ tÃªn Ä‘á»u chá»n mÃ u Ä‘Æ°á»£c (ká»ƒ cáº£ "ChuaGanXuong" â€” giá» lÃ  1 XÆ°á»Ÿng bÃ¬nh thÆ°á»ng, KHÃC tráº¡ng
+       thÃ¡i "(chÆ°a gÃ¡n)" THáº¬T cá»§a Ä‘Æ¡n/nhÃ¢n viÃªn chÆ°a cÃ³ XÆ°á»Ÿng nÃ o, váº«n luÃ´n giá»¯ ná»n máº·c Ä‘á»‹nh). Gá»™p CHUNG
+       1 khá»‘i vá»›i mÃ u ná»n vÃ¬ 2 viá»‡c luÃ´n Ä‘i cÃ¹ng nhau (XÆ°á»Ÿng má»›i táº¡o cÅ©ng cáº§n chá»n mÃ u ngay) â€” thay 2 mÃ u
+       HN/BN hard-code cÅ© trong style.css báº±ng Ã´ chá»n mÃ u tá»± do. Ãp dá»¥ng cho tháº» Ä‘Æ¡n á»Ÿ ÄÆ¡n hÃ ng/Cháº¡y
+       mÃ¡y/Váº½ file â€” xem public/js/api.js#lopVaStyleXuong. Gá»™p vÃ o <details> (23/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” tiáº¿t kiá»‡m diá»‡n tÃ­ch Settings). -->
   <details style="margin-top:var(--space-6)">
-    <summary class="btn-hanh-dong phu">Quản lý Xưởng</summary>
-  <p style="color:var(--color-text-muted)">Tạo/đổi tên/xoá Xưởng, mỗi Xưởng 1 màu nền riêng cho thẻ đơn ở Đơn hàng/Chạy máy/Vẽ file. Chỉ xoá được Xưởng không còn đơn/nhân viên nào đang gán.</p>
+    <summary class="btn-hanh-dong phu">Quáº£n lÃ½ XÆ°á»Ÿng</summary>
+  <p style="color:var(--color-text-muted)">Táº¡o/Ä‘á»•i tÃªn/xoÃ¡ XÆ°á»Ÿng, má»—i XÆ°á»Ÿng 1 mÃ u ná»n riÃªng cho tháº» Ä‘Æ¡n á»Ÿ ÄÆ¡n hÃ ng/Cháº¡y mÃ¡y/Váº½ file. Chá»‰ xoÃ¡ Ä‘Æ°á»£c XÆ°á»Ÿng khÃ´ng cÃ²n Ä‘Æ¡n/nhÃ¢n viÃªn nÃ o Ä‘ang gÃ¡n.</p>
   <div class="st-danh-sach-xuong" id="khoi-mau-xuong"></div>
   <div class="inline-form" style="margin-top:var(--space-3)">
     <div class="truong">
-      <label for="xuong-moi-ten">Tên Xưởng mới</label>
+      <label for="xuong-moi-ten">TÃªn XÆ°á»Ÿng má»›i</label>
       <input type="text" id="xuong-moi-ten" placeholder="VD: HCM">
     </div>
-    <button type="button" class="btn-hanh-dong phu" id="btn-them-xuong">Thêm Xưởng</button>
+    <button type="button" class="btn-hanh-dong phu" id="btn-them-xuong">ThÃªm XÆ°á»Ÿng</button>
   </div>
   <p id="thong-bao-mau-xuong" style="display:none"></p>
   </details>
 
-  <!-- Team -> Xưởng mặc định (bổ sung 27/09/2026, theo yêu cầu người dùng) — API routes/orders.js /team-xuong. Gộp vào <details>
+  <!-- Team -> XÆ°á»Ÿng máº·c Ä‘á»‹nh (bá»• sung 27/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” API routes/orders.js /team-xuong. Gá»™p vÃ o <details>
        (23/10/2026). -->
   <details style="margin-top:var(--space-6)">
-    <summary class="btn-hanh-dong phu">Xưởng mặc định theo Team</summary>
-  <p style="color:var(--color-text-muted)">Team = phần chữ cái trong mã đơn (9TRA471 → TRA). Mọi đơn đang <em>Chưa gán</em> của Team có cấu hình sẽ tự vào Xưởng đó — cả đơn đang có lẫn đơn mới về. Đổi cấu hình KHÔNG chuyển các đơn đã gán. Team để "Không tự gán" thì đơn vẫn Chưa gán như cũ.</p>
+    <summary class="btn-hanh-dong phu">XÆ°á»Ÿng máº·c Ä‘á»‹nh theo Team</summary>
+  <p style="color:var(--color-text-muted)">Team = pháº§n chá»¯ cÃ¡i trong mÃ£ Ä‘Æ¡n (9TRA471 â†’ TRA). Má»i Ä‘Æ¡n Ä‘ang <em>ChÆ°a gÃ¡n</em> cá»§a Team cÃ³ cáº¥u hÃ¬nh sáº½ tá»± vÃ o XÆ°á»Ÿng Ä‘Ã³ â€” cáº£ Ä‘Æ¡n Ä‘ang cÃ³ láº«n Ä‘Æ¡n má»›i vá». Äá»•i cáº¥u hÃ¬nh KHÃ”NG chuyá»ƒn cÃ¡c Ä‘Æ¡n Ä‘Ã£ gÃ¡n. Team Ä‘á»ƒ "KhÃ´ng tá»± gÃ¡n" thÃ¬ Ä‘Æ¡n váº«n ChÆ°a gÃ¡n nhÆ° cÅ©.</p>
   <div class="st-danh-sach-xuong" id="khoi-team-xuong"></div>
   <div class="inline-form" style="margin-top:var(--space-3)">
     <div class="truong">
-      <label for="team-moi">Team chưa có đơn nào</label>
+      <label for="team-moi">Team chÆ°a cÃ³ Ä‘Æ¡n nÃ o</label>
       <input type="text" id="team-moi" placeholder="VD: TRA" style="text-transform:uppercase">
     </div>
-    <button type="button" class="btn-hanh-dong phu" id="btn-them-team">Thêm Team</button>
+    <button type="button" class="btn-hanh-dong phu" id="btn-them-team">ThÃªm Team</button>
   </div>
   <p id="thong-bao-team-xuong" style="display:none"></p>
   </details>
 
-  <!-- Nhóm hàng (29/09/2026, theo yêu cầu người dùng) — loại/keyword phân loại LOAI cho bộ lọc "Nhóm hàng" ở Danh
-       sách đơn hàng. API routes/orders.js /nhom-hang, kiểm tra/trùng ở services/nhomHangService.js. Gộp vào <details> (23/10/2026). -->
+  <!-- NhÃ³m hÃ ng (29/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” loáº¡i/keyword phÃ¢n loáº¡i LOAI cho bá»™ lá»c "NhÃ³m hÃ ng" á»Ÿ Danh
+       sÃ¡ch Ä‘Æ¡n hÃ ng. API routes/orders.js /nhom-hang, kiá»ƒm tra/trÃ¹ng á»Ÿ services/nhomHangService.js. Gá»™p vÃ o <details> (23/10/2026). -->
   <details style="margin-top:var(--space-6)">
-    <summary class="btn-hanh-dong phu">Nhóm hàng (phân loại theo LOAI)</summary>
-  <p style="color:var(--color-text-muted)">Mỗi loại 1 dòng: tên loại, nhóm, các keyword cách nhau dấu phẩy (hoặc xuống dòng). Đơn thuộc loại khi LOAI của đơn <strong>trùng nguyên</strong> 1 keyword — không phân biệt hoa/thường, dấu tiếng Việt, khoảng trắng, dấu "-" (vd "T-Shirt" = "t shirt" = "tshirt"). Mỗi keyword chỉ được thuộc 1 loại. Lưu xong áp dụng ngay cho bộ lọc Nhóm hàng.</p>
+    <summary class="btn-hanh-dong phu">NhÃ³m hÃ ng (phÃ¢n loáº¡i theo LOAI)</summary>
+  <p style="color:var(--color-text-muted)">Má»—i loáº¡i 1 dÃ²ng: tÃªn loáº¡i, nhÃ³m, cÃ¡c keyword cÃ¡ch nhau dáº¥u pháº©y (hoáº·c xuá»‘ng dÃ²ng). ÄÆ¡n thuá»™c loáº¡i khi LOAI cá»§a Ä‘Æ¡n <strong>trÃ¹ng nguyÃªn</strong> 1 keyword â€” khÃ´ng phÃ¢n biá»‡t hoa/thÆ°á»ng, dáº¥u tiáº¿ng Viá»‡t, khoáº£ng tráº¯ng, dáº¥u "-" (vd "T-Shirt" = "t shirt" = "tshirt"). Má»—i keyword chá»‰ Ä‘Æ°á»£c thuá»™c 1 loáº¡i. LÆ°u xong Ã¡p dá»¥ng ngay cho bá»™ lá»c NhÃ³m hÃ ng.</p>
   <div id="khoi-nhom-hang"></div>
   <div class="inline-form st-dong-nhom-hang" style="margin-top:var(--space-3)">
     <div class="truong">
-      <label for="loai-hang-moi-ten">Tên loại mới</label>
+      <label for="loai-hang-moi-ten">TÃªn loáº¡i má»›i</label>
       <input type="text" id="loai-hang-moi-ten" placeholder="VD: Mug">
     </div>
     <div class="truong">
-      <label for="loai-hang-moi-nhom">Nhóm</label>
-      <select id="loai-hang-moi-nhom"><option value="1">Nhóm 1 - Quần áo</option><option value="2">Nhóm 2 - Không phải quần áo</option></select>
+      <label for="loai-hang-moi-nhom">NhÃ³m</label>
+      <select id="loai-hang-moi-nhom"><option value="1">NhÃ³m 1 - Quáº§n Ã¡o</option><option value="2">NhÃ³m 2 - KhÃ´ng pháº£i quáº§n Ã¡o</option></select>
     </div>
     <div class="truong" style="flex:1 1 260px">
-      <label for="loai-hang-moi-tu-khoa">Keyword (cách nhau dấu phẩy hoặc xuống dòng)</label>
+      <label for="loai-hang-moi-tu-khoa">Keyword (cÃ¡ch nhau dáº¥u pháº©y hoáº·c xuá»‘ng dÃ²ng)</label>
       <input type="text" id="loai-hang-moi-tu-khoa" placeholder="VD: mug, ly su, coc">
     </div>
-    <button type="button" class="btn-hanh-dong phu" id="btn-them-loai-hang">Thêm loại</button>
+    <button type="button" class="btn-hanh-dong phu" id="btn-them-loai-hang">ThÃªm loáº¡i</button>
   </div>
   <p id="thong-bao-nhom-hang" style="display:none"></p>
-  <!-- LOAI trống (30/09/2026) — không đặt được keyword cho ô trống nên có thiết lập riêng: PUT /orders/nhom-hang-loai-trong. -->
+  <!-- LOAI trá»‘ng (30/09/2026) â€” khÃ´ng Ä‘áº·t Ä‘Æ°á»£c keyword cho Ã´ trá»‘ng nÃªn cÃ³ thiáº¿t láº­p riÃªng: PUT /orders/nhom-hang-loai-trong. -->
   <div class="inline-form" style="margin-top:var(--space-3)">
     <div class="truong">
-      <label for="nhom-loai-trong">Đơn có LOAI trống thuộc</label>
+      <label for="nhom-loai-trong">ÄÆ¡n cÃ³ LOAI trá»‘ng thuá»™c</label>
       <select id="nhom-loai-trong" onchange="luuNhomLoaiTrong(this.value)">
-        <option value="">Chưa phân loại</option>
-        <option value="1">Nhóm 1 - Quần áo</option>
-        <option value="2">Nhóm 2 - Không phải quần áo</option>
+        <option value="">ChÆ°a phÃ¢n loáº¡i</option>
+        <option value="1">NhÃ³m 1 - Quáº§n Ã¡o</option>
+        <option value="2">NhÃ³m 2 - KhÃ´ng pháº£i quáº§n Ã¡o</option>
       </select>
     </div>
   </div>
-  <h4 style="margin:var(--space-4) 0 var(--space-2)">LOAI đang chưa phân loại</h4>
+  <h4 style="margin:var(--space-4) 0 var(--space-2)">LOAI Ä‘ang chÆ°a phÃ¢n loáº¡i</h4>
   <div id="khoi-loai-chua-phan-loai"></div>
   </details>
 
-  <!-- Cấu hình GKE — CHUYỂN từ menu Tracking sang đây (bổ sung 23/09/2026, theo yêu cầu người dùng —
-       hạn chế người không phải superadmin đổi được, gồm cả username/password API GKE THẬT + thông tin
-       khai báo hải quan, có thể phát sinh chi phí thật nếu cấu hình sai). Trước đây mở cho admin/
-       ve_file/san_xuat cùng sửa (xem routes/tracking.js) — giờ CHỈ superadmin, khớp đúng phạm vi trang
-       Settings này. Gộp vào <details> (mặc định đóng) — giữ đúng hành vi ẩn-mặc-định tracking.html
-       từng có, dùng lại pattern <details> như Themes ở trên, không cần JS toggle riêng nữa. -->
-  <!-- Giờ nghỉ theo Xưởng (23/10/2026, theo yêu cầu người dùng — services/gioTruyCapService.js, API routes/gioTruyCap.js). Lưu / mở tạm
-       phải nhập mật khẩu xác nhận (máy chủ kiểm tra). -->
+  <!-- Cáº¥u hÃ¬nh GKE â€” CHUYá»‚N tá»« menu Tracking sang Ä‘Ã¢y (bá»• sung 23/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€”
+       háº¡n cháº¿ ngÆ°á»i khÃ´ng pháº£i superadmin Ä‘á»•i Ä‘Æ°á»£c, gá»“m cáº£ username/password API GKE THáº¬T + thÃ´ng tin
+       khai bÃ¡o háº£i quan, cÃ³ thá»ƒ phÃ¡t sinh chi phÃ­ tháº­t náº¿u cáº¥u hÃ¬nh sai). TrÆ°á»›c Ä‘Ã¢y má»Ÿ cho admin/
+       ve_file/san_xuat cÃ¹ng sá»­a (xem routes/tracking.js) â€” giá» CHá»ˆ superadmin, khá»›p Ä‘Ãºng pháº¡m vi trang
+       Settings nÃ y. Gá»™p vÃ o <details> (máº·c Ä‘á»‹nh Ä‘Ã³ng) â€” giá»¯ Ä‘Ãºng hÃ nh vi áº©n-máº·c-Ä‘á»‹nh tracking.html
+       tá»«ng cÃ³, dÃ¹ng láº¡i pattern <details> nhÆ° Themes á»Ÿ trÃªn, khÃ´ng cáº§n JS toggle riÃªng ná»¯a. -->
+  <!-- Giá» nghá»‰ theo XÆ°á»Ÿng (23/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” services/gioTruyCapService.js, API routes/gioTruyCap.js). LÆ°u / má»Ÿ táº¡m
+       pháº£i nháº­p máº­t kháº©u xÃ¡c nháº­n (mÃ¡y chá»§ kiá»ƒm tra). -->
   <details id="khoi-gio-nghi" style="margin-top:var(--space-6)">
-    <summary class="btn-hanh-dong phu">Giờ nghỉ theo Xưởng</summary>
-    <p style="color:var(--color-text-muted)">Trong khung giờ nghỉ, người dùng của Xưởng (mọi vai trò trừ superadmin) không vào được hệ thống. Người thuộc nhiều Xưởng bị chặn khi 1 trong các Xưởng của họ đang nghỉ. Hệ thống báo trước 60 phút và 30 phút; tới giờ, ảnh đang gửi dở được gửi nốt trong 10 phút. Khung vắt qua nửa đêm được (vd 22:00 → 06:00).</p>
+    <summary class="btn-hanh-dong phu">Giá» nghá»‰ theo XÆ°á»Ÿng</summary>
+    <p style="color:var(--color-text-muted)">Trong khung giá» nghá»‰, ngÆ°á»i dÃ¹ng cá»§a XÆ°á»Ÿng (má»i vai trÃ² trá»« superadmin) khÃ´ng vÃ o Ä‘Æ°á»£c há»‡ thá»‘ng. NgÆ°á»i thuá»™c nhiá»u XÆ°á»Ÿng bá»‹ cháº·n khi 1 trong cÃ¡c XÆ°á»Ÿng cá»§a há» Ä‘ang nghá»‰. Há»‡ thá»‘ng bÃ¡o trÆ°á»›c 60 phÃºt vÃ  30 phÃºt; tá»›i giá», áº£nh Ä‘ang gá»­i dá»Ÿ Ä‘Æ°á»£c gá»­i ná»‘t trong 10 phÃºt. Khung váº¯t qua ná»­a Ä‘Ãªm Ä‘Æ°á»£c (vd 22:00 â†’ 06:00).</p>
     <div style="overflow-x:auto">
       <table class="st-bang-gio-nghi">
-        <thead><tr><th>Bật</th><th>Xưởng</th><th>Nghỉ từ</th><th>Mở lại lúc</th><th>Trạng thái</th><th>Mở tạm tới</th></tr></thead>
+        <thead><tr><th>Báº­t</th><th>XÆ°á»Ÿng</th><th>Nghá»‰ tá»«</th><th>Má»Ÿ láº¡i lÃºc</th><th>Tráº¡ng thÃ¡i</th><th>Má»Ÿ táº¡m tá»›i</th></tr></thead>
         <tbody id="gio-nghi-ds"></tbody>
       </table>
     </div>
     <div class="bao-cao-form" style="margin-top:var(--space-3)">
-      <div class="truong"><label for="gio-nghi-mat-khau">Mật khẩu xác nhận</label>
-        <input type="password" id="gio-nghi-mat-khau" inputmode="numeric" autocomplete="off" placeholder="Bắt buộc khi lưu / mở tạm"></div>
-      <button type="button" class="btn-hanh-dong" id="btn-luu-gio-nghi" style="align-self:end">Lưu khung giờ</button>
+      <div class="truong"><label for="gio-nghi-mat-khau">Máº­t kháº©u xÃ¡c nháº­n</label>
+        <input type="password" id="gio-nghi-mat-khau" inputmode="numeric" autocomplete="off" placeholder="Báº¯t buá»™c khi lÆ°u / má»Ÿ táº¡m"></div>
+      <button type="button" class="btn-hanh-dong" id="btn-luu-gio-nghi" style="align-self:end">LÆ°u khung giá»</button>
     </div>
-    <p class="st-ghi-chu-truong">"Mở tạm tới": cho Xưởng làm thêm tới giờ chọn (phải nằm trong khung nghỉ; chọn đúng giờ mở lại = mở cả đêm), hết giờ đó tự nghỉ theo lịch. Mọi lần truy cập bị chặn được ghi ở Lịch sử hoạt động ("truy cập trong giờ đóng").</p>
+    <p class="st-ghi-chu-truong">"Má»Ÿ táº¡m tá»›i": cho XÆ°á»Ÿng lÃ m thÃªm tá»›i giá» chá»n (pháº£i náº±m trong khung nghá»‰; chá»n Ä‘Ãºng giá» má»Ÿ láº¡i = má»Ÿ cáº£ Ä‘Ãªm), háº¿t giá» Ä‘Ã³ tá»± nghá»‰ theo lá»‹ch. Má»i láº§n truy cáº­p bá»‹ cháº·n Ä‘Æ°á»£c ghi á»Ÿ Lá»‹ch sá»­ hoáº¡t Ä‘á»™ng ("truy cáº­p trong giá» Ä‘Ã³ng").</p>
     <p id="thong-bao-gio-nghi" style="display:none"></p>
   </details>
 
-  <!-- Mật khẩu xác nhận (23/10/2026, theo yêu cầu người dùng — services/matKhauXacNhanService.js, API /gio-truy-cap/mat-khau). Lưu dạng
-       hash ở máy chủ, không hiện lại; đổi phải nhập đúng mật khẩu hiện tại. -->
+  <!-- Máº­t kháº©u xÃ¡c nháº­n (23/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” services/matKhauXacNhanService.js, API /gio-truy-cap/mat-khau). LÆ°u dáº¡ng
+       hash á»Ÿ mÃ¡y chá»§, khÃ´ng hiá»‡n láº¡i; Ä‘á»•i pháº£i nháº­p Ä‘Ãºng máº­t kháº©u hiá»‡n táº¡i. -->
   <details style="margin-top:var(--space-6)">
-    <summary class="btn-hanh-dong phu">Mật khẩu xác nhận</summary>
-    <p style="color:var(--color-text-muted)">Mật khẩu phải nhập trước các thao tác nhạy cảm của superadmin (chống bấm nhầm khi máy đang đăng nhập sẵn). Chưa đổi lần nào thì dùng mật khẩu mặc định. Mật khẩu được lưu mã hoá, không xem lại được — quên thì cần sửa trực tiếp cơ sở dữ liệu.</p>
+    <summary class="btn-hanh-dong phu">Máº­t kháº©u xÃ¡c nháº­n</summary>
+    <p style="color:var(--color-text-muted)">Máº­t kháº©u pháº£i nháº­p trÆ°á»›c cÃ¡c thao tÃ¡c nháº¡y cáº£m cá»§a superadmin (chá»‘ng báº¥m nháº§m khi mÃ¡y Ä‘ang Ä‘Äƒng nháº­p sáºµn). ChÆ°a Ä‘á»•i láº§n nÃ o thÃ¬ dÃ¹ng máº­t kháº©u máº·c Ä‘á»‹nh. Máº­t kháº©u Ä‘Æ°á»£c lÆ°u mÃ£ hoÃ¡, khÃ´ng xem láº¡i Ä‘Æ°á»£c â€” quÃªn thÃ¬ cáº§n sá»­a trá»±c tiáº¿p cÆ¡ sá»Ÿ dá»¯ liá»‡u.</p>
     <div id="mkxn-ds" style="display:flex;flex-direction:column;gap:var(--space-4)"></div>
     <p id="thong-bao-mkxn" style="display:none"></p>
   </details>
 
-  <!-- Trợ lý AI (23/10/2026, theo yêu cầu người dùng) — routes/chatbot.js /cau-hinh, services/troLyAiService.js + telegramAiService.js.
-       API key / bot token không bao giờ hiện lại (chỉ 4 ký tự cuối); để trống khi lưu = giữ giá trị cũ. -->
+  <!-- Trá»£ lÃ½ AI (23/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” routes/chatbot.js /cau-hinh, services/troLyAiService.js + telegramAiService.js.
+       API key / bot token khÃ´ng bao giá» hiá»‡n láº¡i (chá»‰ 4 kÃ½ tá»± cuá»‘i); Ä‘á»ƒ trá»‘ng khi lÆ°u = giá»¯ giÃ¡ trá»‹ cÅ©. -->
   <details id="khoi-tro-ly-ai" style="margin-top:var(--space-6)">
-    <summary class="btn-hanh-dong phu">Trợ lý AI</summary>
-    <p style="color:var(--color-text-muted)">Trợ lý dùng Claude (Anthropic), chỉ đọc dữ liệu, chỉ superadmin dùng được (menu "Trợ lý" và Telegram). Câu hỏi và dữ liệu đơn liên quan (kể cả tên, địa chỉ khách) được gửi tới Anthropic để trả lời; chi phí tính theo token trên tài khoản Anthropic của bạn.</p>
+    <summary class="btn-hanh-dong phu">Trá»£ lÃ½ AI</summary>
+    <p style="color:var(--color-text-muted)">Trá»£ lÃ½ dÃ¹ng Claude (Anthropic), chá»‰ Ä‘á»c dá»¯ liá»‡u, chá»‰ superadmin dÃ¹ng Ä‘Æ°á»£c (menu "Trá»£ lÃ½" vÃ  Telegram). CÃ¢u há»i vÃ  dá»¯ liá»‡u Ä‘Æ¡n liÃªn quan (ká»ƒ cáº£ tÃªn, Ä‘á»‹a chá»‰ khÃ¡ch) Ä‘Æ°á»£c gá»­i tá»›i Anthropic Ä‘á»ƒ tráº£ lá»i; chi phÃ­ tÃ­nh theo token trÃªn tÃ i khoáº£n Anthropic cá»§a báº¡n.</p>
     <div class="bao-cao-form">
       <div class="truong" style="flex:1;min-width:240px"><label for="ai-api-key">API key Anthropic <small id="ai-key-trang-thai" style="color:var(--color-text-muted)"></small></label>
         <input type="password" id="ai-api-key" autocomplete="new-password" placeholder="sk-ant-..."></div>
       <div class="truong"><label for="ai-model">Model</label><select id="ai-model"></select></div>
     </div>
-    <h4>Hỏi qua Telegram</h4>
-    <p class="st-ghi-chu-truong">Tạo 1 bot RIÊNG cho Trợ lý: nhắn @BotFather trên Telegram → /newbot → dán token vào đây. Không dùng lại bot đang gửi báo cáo / cảnh báo hay bot đang gắn với n8n.</p>
+    <h4>Há»i qua Telegram</h4>
+    <p class="st-ghi-chu-truong">Táº¡o 1 bot RIÃŠNG cho Trá»£ lÃ½: nháº¯n @BotFather trÃªn Telegram â†’ /newbot â†’ dÃ¡n token vÃ o Ä‘Ã¢y. KhÃ´ng dÃ¹ng láº¡i bot Ä‘ang gá»­i bÃ¡o cÃ¡o / cáº£nh bÃ¡o hay bot Ä‘ang gáº¯n vá»›i n8n.</p>
     <div class="bao-cao-form">
       <div class="truong" style="flex:1;min-width:240px"><label for="ai-tg-token">Bot token <small id="ai-tg-trang-thai-token" style="color:var(--color-text-muted)"></small></label>
         <input type="password" id="ai-tg-token" autocomplete="new-password" placeholder="123456789:AAE..."></div>
     </div>
     <p id="ai-tg-trang-thai" style="margin:var(--space-2) 0"></p>
-    <h4>Tin tự gửi qua bot Trợ lý (chỉ tới tài khoản Telegram đã liên kết)</h4>
-    <p class="st-ghi-chu-truong">Tóm tắt buổi sáng: hệ thống gom số liệu (đơn trễ hạn, việc cần xử lý, tracking, số dư GKE ước tính), Claude viết thành bản tóm tắt + việc nên làm trước — tốn phí token mỗi ngày. Báo cáo tuần theo người (số đơn mỗi người làm, thời gian khâu, quét sai, tải ảnh) gửi 7 giờ sáng thứ 7, không dùng AI.</p>
+    <h4>Tin tá»± gá»­i qua bot Trá»£ lÃ½ (chá»‰ tá»›i tÃ i khoáº£n Telegram Ä‘Ã£ liÃªn káº¿t)</h4>
+    <p class="st-ghi-chu-truong">TÃ³m táº¯t buá»•i sÃ¡ng: há»‡ thá»‘ng gom sá»‘ liá»‡u (Ä‘Æ¡n trá»… háº¡n, viá»‡c cáº§n xá»­ lÃ½, tracking, sá»‘ dÆ° GKE Æ°á»›c tÃ­nh), Claude viáº¿t thÃ nh báº£n tÃ³m táº¯t + viá»‡c nÃªn lÃ m trÆ°á»›c â€” tá»‘n phÃ­ token má»—i ngÃ y. BÃ¡o cÃ¡o tuáº§n theo ngÆ°á»i (sá»‘ Ä‘Æ¡n má»—i ngÆ°á»i lÃ m, thá»i gian khÃ¢u, quÃ©t sai, táº£i áº£nh) gá»­i 7 giá» sÃ¡ng thá»© 7, khÃ´ng dÃ¹ng AI.</p>
     <div class="bao-cao-form">
-      <label style="align-self:end"><input type="checkbox" id="ai-sang-bat"> Gửi tóm tắt buổi sáng</label>
-      <div class="truong"><label for="ai-sang-gio">Giờ gửi</label><input type="time" id="ai-sang-gio"></div>
-      <button type="button" class="btn-hanh-dong phu" onclick="guiThuTinAi('sang', this)">Gửi thử tóm tắt sáng</button>
-      <button type="button" class="btn-hanh-dong phu" onclick="guiThuTinAi('theo-nguoi', this)">Gửi thử báo cáo theo người</button>
+      <label style="align-self:end"><input type="checkbox" id="ai-sang-bat"> Gá»­i tÃ³m táº¯t buá»•i sÃ¡ng</label>
+      <div class="truong"><label for="ai-sang-gio">Giá» gá»­i</label><input type="time" id="ai-sang-gio"></div>
+      <button type="button" class="btn-hanh-dong phu" onclick="guiThuTinAi('sang', this)">Gá»­i thá»­ tÃ³m táº¯t sÃ¡ng</button>
+      <button type="button" class="btn-hanh-dong phu" onclick="guiThuTinAi('theo-nguoi', this)">Gá»­i thá»­ bÃ¡o cÃ¡o theo ngÆ°á»i</button>
     </div>
     <div class="bao-cao-form" style="margin-top:var(--space-3)">
-      <button type="button" class="btn-hanh-dong" id="btn-luu-ai">Lưu</button>
-      <button type="button" class="btn-hanh-dong phu" id="btn-ai-ma-lien-ket">Tạo mã liên kết Telegram</button>
-      <button type="button" class="btn-hanh-dong phu" id="btn-ai-huy-lien-ket" style="display:none">Huỷ liên kết</button>
-      <button type="button" class="btn-hanh-dong phu nguy-hiem" id="btn-ai-xoa-key" style="display:none">Xoá API key</button>
-      <button type="button" class="btn-hanh-dong phu nguy-hiem" id="btn-ai-xoa-tg" style="display:none">Xoá bot token</button>
+      <button type="button" class="btn-hanh-dong" id="btn-luu-ai">LÆ°u</button>
+      <button type="button" class="btn-hanh-dong phu" id="btn-ai-ma-lien-ket">Táº¡o mÃ£ liÃªn káº¿t Telegram</button>
+      <button type="button" class="btn-hanh-dong phu" id="btn-ai-huy-lien-ket" style="display:none">Huá»· liÃªn káº¿t</button>
+      <button type="button" class="btn-hanh-dong phu nguy-hiem" id="btn-ai-xoa-key" style="display:none">XoÃ¡ API key</button>
+      <button type="button" class="btn-hanh-dong phu nguy-hiem" id="btn-ai-xoa-tg" style="display:none">XoÃ¡ bot token</button>
     </div>
     <p id="thong-bao-ai" style="display:none"></p>
   </details>
 
   <details style="margin-top:var(--space-6)">
-    <summary class="btn-hanh-dong phu">Tài khoản GKE</summary>
-    <p style="color:var(--color-text-muted)">Mỗi Xưởng dùng 1 tài khoản GKE riêng để mua tracking/in label. Đơn của Xưởng chưa được gán tài khoản sẽ KHÔNG mua được tracking (hệ thống không tự dùng tài khoản của Xưởng khác). Đơn đã mua tracking luôn in lại tem/tra trạng thái bằng đúng tài khoản đã mua.</p>
-    <h3>Gán tài khoản cho Xưởng</h3>
+    <summary class="btn-hanh-dong phu">TÃ i khoáº£n GKE</summary>
+    <p style="color:var(--color-text-muted)">Má»—i XÆ°á»Ÿng dÃ¹ng 1 tÃ i khoáº£n GKE riÃªng Ä‘á»ƒ mua tracking/in label. ÄÆ¡n cá»§a XÆ°á»Ÿng chÆ°a Ä‘Æ°á»£c gÃ¡n tÃ i khoáº£n sáº½ KHÃ”NG mua Ä‘Æ°á»£c tracking (há»‡ thá»‘ng khÃ´ng tá»± dÃ¹ng tÃ i khoáº£n cá»§a XÆ°á»Ÿng khÃ¡c). ÄÆ¡n Ä‘Ã£ mua tracking luÃ´n in láº¡i tem/tra tráº¡ng thÃ¡i báº±ng Ä‘Ãºng tÃ i khoáº£n Ä‘Ã£ mua.</p>
+    <h3>GÃ¡n tÃ i khoáº£n cho XÆ°á»Ÿng</h3>
     <div class="st-danh-sach-xuong" id="gke-gan-xuong"></div>
-    <h3 style="margin-top:var(--space-5)">Danh sách tài khoản</h3>
+    <h3 style="margin-top:var(--space-5)">Danh sÃ¡ch tÃ i khoáº£n</h3>
     <div id="gke-danh-sach-tk" style="display:flex;flex-direction:column;gap:var(--space-4)"></div>
-    <button type="button" class="btn-hanh-dong phu" id="btn-them-tk-gke" style="margin-top:var(--space-3)">+ Thêm tài khoản GKE</button>
-    <p class="st-ghi-chu-truong">Cân nặng cả kiện = TRONG_LUONG (nếu đơn có) × Số lượng; đơn thiếu TRONG_LUONG thì dùng "Cân nặng mỗi áo" của tài khoản thay thế.</p>
+    <button type="button" class="btn-hanh-dong phu" id="btn-them-tk-gke" style="margin-top:var(--space-3)">+ ThÃªm tÃ i khoáº£n GKE</button>
+    <p class="st-ghi-chu-truong">CÃ¢n náº·ng cáº£ kiá»‡n = TRONG_LUONG (náº¿u Ä‘Æ¡n cÃ³) Ã— Sá»‘ lÆ°á»£ng; Ä‘Æ¡n thiáº¿u TRONG_LUONG thÃ¬ dÃ¹ng "CÃ¢n náº·ng má»—i Ã¡o" cá»§a tÃ i khoáº£n thay tháº¿.</p>
     <p id="thong-bao-gke" style="display:none"></p>
   </details>
 
-  <!-- Tài khoản KL theo Xưởng (22/10/2026, theo yêu cầu người dùng — cùng khuôn Tài khoản GKE). API routes/tracking.js /tai-khoan-kl, CHỈ
-       superadmin. Token KHÔNG bao giờ hiện lại (máy chủ chỉ trả 4 ký tự cuối) — để trống khi lưu = giữ token cũ. -->
+  <!-- TÃ i khoáº£n KL theo XÆ°á»Ÿng (22/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” cÃ¹ng khuÃ´n TÃ i khoáº£n GKE). API routes/tracking.js /tai-khoan-kl, CHá»ˆ
+       superadmin. Token KHÃ”NG bao giá» hiá»‡n láº¡i (mÃ¡y chá»§ chá»‰ tráº£ 4 kÃ½ tá»± cuá»‘i) â€” Ä‘á»ƒ trá»‘ng khi lÆ°u = giá»¯ token cÅ©. -->
   <details style="margin-top:var(--space-6)">
-    <summary class="btn-hanh-dong phu">Tài khoản KL</summary>
-    <p style="color:var(--color-text-muted)">Mỗi Xưởng dùng 1 tài khoản KL để mua tracking / in label KL (KL chỉ nhận đơn giao tới Mỹ). Xưởng chưa gán tài khoản sẽ KHÔNG mua được tracking KL. Đơn đã mua luôn lấy label / tra trạng thái bằng đúng tài khoản đã mua.</p>
-    <h3>Gán tài khoản cho Xưởng</h3>
+    <summary class="btn-hanh-dong phu">TÃ i khoáº£n KL</summary>
+    <p style="color:var(--color-text-muted)">Má»—i XÆ°á»Ÿng dÃ¹ng 1 tÃ i khoáº£n KL Ä‘á»ƒ mua tracking / in label KL (KL chá»‰ nháº­n Ä‘Æ¡n giao tá»›i Má»¹). XÆ°á»Ÿng chÆ°a gÃ¡n tÃ i khoáº£n sáº½ KHÃ”NG mua Ä‘Æ°á»£c tracking KL. ÄÆ¡n Ä‘Ã£ mua luÃ´n láº¥y label / tra tráº¡ng thÃ¡i báº±ng Ä‘Ãºng tÃ i khoáº£n Ä‘Ã£ mua.</p>
+    <h3>GÃ¡n tÃ i khoáº£n cho XÆ°á»Ÿng</h3>
     <div class="st-danh-sach-xuong" id="kl-gan-xuong"></div>
-    <h3 style="margin-top:var(--space-5)">Danh sách tài khoản</h3>
+    <h3 style="margin-top:var(--space-5)">Danh sÃ¡ch tÃ i khoáº£n</h3>
     <div id="kl-danh-sach-tk" style="display:flex;flex-direction:column;gap:var(--space-4)"></div>
-    <button type="button" class="btn-hanh-dong phu" id="btn-them-tk-kl" style="margin-top:var(--space-3)">+ Thêm tài khoản KL</button>
-    <p class="st-ghi-chu-truong">Token: API key tạo ở trang KL (Accounts → Account API keys). Danh sách SKU: tải file Excel xuất từ mục Item Declarations trên trang KL (cột skuNumber, itemWeight). Mỗi đơn dùng SKU "US" + LOAI + KICH_THUOC (vd USHoodie2XL); cân nặng = cân nặng của SKU × Số lượng. Đơn không tìm thấy SKU sẽ KHÔNG mua được — thêm SKU trên trang KL rồi tải lại file.</p>
+    <button type="button" class="btn-hanh-dong phu" id="btn-them-tk-kl" style="margin-top:var(--space-3)">+ ThÃªm tÃ i khoáº£n KL</button>
+    <p class="st-ghi-chu-truong">Token: API key táº¡o á»Ÿ trang KL (Accounts â†’ Account API keys). Danh sÃ¡ch SKU: táº£i file Excel xuáº¥t tá»« má»¥c Item Declarations trÃªn trang KL (cá»™t skuNumber, itemWeight). Má»—i Ä‘Æ¡n dÃ¹ng SKU "US" + LOAI + KICH_THUOC (vd USHoodie2XL); cÃ¢n náº·ng = cÃ¢n náº·ng cá»§a SKU Ã— Sá»‘ lÆ°á»£ng. ÄÆ¡n khÃ´ng tÃ¬m tháº¥y SKU sáº½ KHÃ”NG mua Ä‘Æ°á»£c â€” thÃªm SKU trÃªn trang KL rá»“i táº£i láº¡i file.</p>
     <p id="thong-bao-kl" style="display:none"></p>
   </details>
 
-  <!-- Tài khoản HPW theo Xưởng (22/10/2026, cùng khuôn Tài khoản KL). API routes/tracking.js /tai-khoan-hpw, CHỈ superadmin. Password KHÔNG
-       hiện lại — để trống khi lưu = giữ password cũ. -->
+  <!-- TÃ i khoáº£n HPW theo XÆ°á»Ÿng (22/10/2026, cÃ¹ng khuÃ´n TÃ i khoáº£n KL). API routes/tracking.js /tai-khoan-hpw, CHá»ˆ superadmin. Password KHÃ”NG
+       hiá»‡n láº¡i â€” Ä‘á»ƒ trá»‘ng khi lÆ°u = giá»¯ password cÅ©. -->
   <details style="margin-top:var(--space-6)">
-    <summary class="btn-hanh-dong phu">Tài khoản HPW</summary>
-    <p style="color:var(--color-text-muted)">Mỗi Xưởng dùng 1 tài khoản HPW (VNEpacket) để mua tracking / in label HPW — chỉ đơn giao tới Mỹ (US) hoặc Anh (UK). Xưởng chưa gán tài khoản sẽ KHÔNG mua được tracking HPW.</p>
-    <h3>Gán tài khoản cho Xưởng</h3>
+    <summary class="btn-hanh-dong phu">TÃ i khoáº£n HPW</summary>
+    <p style="color:var(--color-text-muted)">Má»—i XÆ°á»Ÿng dÃ¹ng 1 tÃ i khoáº£n HPW (VNEpacket) Ä‘á»ƒ mua tracking / in label HPW â€” chá»‰ Ä‘Æ¡n giao tá»›i Má»¹ (US) hoáº·c Anh (UK). XÆ°á»Ÿng chÆ°a gÃ¡n tÃ i khoáº£n sáº½ KHÃ”NG mua Ä‘Æ°á»£c tracking HPW.</p>
+    <h3>GÃ¡n tÃ i khoáº£n cho XÆ°á»Ÿng</h3>
     <div class="st-danh-sach-xuong" id="hpw-gan-xuong"></div>
-    <h3 style="margin-top:var(--space-5)">Danh sách tài khoản</h3>
+    <h3 style="margin-top:var(--space-5)">Danh sÃ¡ch tÃ i khoáº£n</h3>
     <div id="hpw-danh-sach-tk" style="display:flex;flex-direction:column;gap:var(--space-4)"></div>
-    <button type="button" class="btn-hanh-dong phu" id="btn-them-tk-hpw" style="margin-top:var(--space-3)">+ Thêm tài khoản HPW</button>
-    <p class="st-ghi-chu-truong">Dịch vụ HPW (LabelService): US Standard, US Premium, Outside US, US Oversize, US Defer, US Pre Track. Kích thước kiện tính cm, cân nặng gram, giá khai báo $ / áo. Cân nặng cả kiện = TRONG_LUONG × Số lượng (đổi sang gram); đơn thiếu TRONG_LUONG dùng "Cân nặng mỗi áo".</p>
+    <button type="button" class="btn-hanh-dong phu" id="btn-them-tk-hpw" style="margin-top:var(--space-3)">+ ThÃªm tÃ i khoáº£n HPW</button>
+    <p class="st-ghi-chu-truong">Dá»‹ch vá»¥ HPW (LabelService): US Standard, US Premium, Outside US, US Oversize, US Defer, US Pre Track. KÃ­ch thÆ°á»›c kiá»‡n tÃ­nh cm, cÃ¢n náº·ng gram, giÃ¡ khai bÃ¡o $ / Ã¡o. CÃ¢n náº·ng cáº£ kiá»‡n = TRONG_LUONG Ã— Sá»‘ lÆ°á»£ng (Ä‘á»•i sang gram); Ä‘Æ¡n thiáº¿u TRONG_LUONG dÃ¹ng "CÃ¢n náº·ng má»—i Ã¡o".</p>
     <datalist id="ds-dich-vu-hpw"></datalist>
     <p id="thong-bao-hpw" style="display:none"></p>
   </details>
 
-  <!-- Đồng bộ Sheet Seller (bổ sung 28/09/2026, theo yêu cầu người dùng) — app ghi ghi chú xưởng / tracking /
-       Delivered vào Sheet của Seller (services/sheetSellerService.js, tra Sheet qua tab CONFIG theo Team). KHÔNG
-       tự thử lại khi lỗi — superadmin theo dõi ở đây (và Trung tâm hành động) rồi bấm Đẩy lại. API:
-       routes/dongBoSheetSeller.js. Tải khi mở khối (đọc CONFIG tốn 1 lượt gọi Google). -->
+  <!-- Äá»“ng bá»™ Sheet Seller (bá»• sung 28/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” app ghi ghi chÃº xÆ°á»Ÿng / tracking /
+       Delivered vÃ o Sheet cá»§a Seller (services/sheetSellerService.js, tra Sheet qua tab CONFIG theo Team). KHÃ”NG
+       tá»± thá»­ láº¡i khi lá»—i â€” superadmin theo dÃµi á»Ÿ Ä‘Ã¢y (vÃ  Trung tÃ¢m hÃ nh Ä‘á»™ng) rá»“i báº¥m Äáº©y láº¡i. API:
+       routes/dongBoSheetSeller.js. Táº£i khi má»Ÿ khá»‘i (Ä‘á»c CONFIG tá»‘n 1 lÆ°á»£t gá»i Google). -->
   <details id="khoi-dong-bo-seller" style="margin-top:var(--space-6)">
-    <summary class="btn-hanh-dong phu">Đồng bộ Sheet Seller</summary>
-    <p style="color:var(--color-text-muted)">App ghi <strong>GHI_CHU_XUONG</strong> (ghi chú xưởng), <strong>TRACKING_ID2 / HANG_VAN_CHUYEN2</strong> (sau khi mua tracking) và <strong>Delivered</strong> (trạng thái vận chuyển) vào đúng dòng của đơn trong Sheet Seller — tìm Sheet qua tab CONFIG (cột TEAM / Spreadsheet ID / Tab) theo Team trong mã đơn. Lỗi không tự thử lại: sửa nguyên nhân rồi bấm Đẩy lại.</p>
+    <summary class="btn-hanh-dong phu">Äá»“ng bá»™ Sheet Seller</summary>
+    <p style="color:var(--color-text-muted)">App ghi <strong>GHI_CHU_XUONG</strong> (ghi chÃº xÆ°á»Ÿng), <strong>TRACKING_ID2 / HANG_VAN_CHUYEN2</strong> (sau khi mua tracking) vÃ  <strong>Delivered</strong> (tráº¡ng thÃ¡i váº­n chuyá»ƒn) vÃ o Ä‘Ãºng dÃ²ng cá»§a Ä‘Æ¡n trong Sheet Seller â€” tÃ¬m Sheet qua tab CONFIG (cá»™t TEAM / Spreadsheet ID / Tab) theo Team trong mÃ£ Ä‘Æ¡n. Lá»—i khÃ´ng tá»± thá»­ láº¡i: sá»­a nguyÃªn nhÃ¢n rá»“i báº¥m Äáº©y láº¡i.</p>
 
-    <h3>Lỗi đang chờ</h3>
+    <h3>Lá»—i Ä‘ang chá»</h3>
     <div id="ds-loi-seller"></div>
 
-    <h3 style="margin-top:var(--space-5)">Nhật ký mọi lần ghi</h3>
+    <h3 style="margin-top:var(--space-5)">Nháº­t kÃ½ má»i láº§n ghi</h3>
     <div class="bao-cao-form" style="margin-bottom:var(--space-3)">
-      <div class="truong"><label for="nk-loai">Loại</label>
-        <select id="nk-loai"><option value="">Tất cả</option><option value="GHI_CHU">Ghi chú xưởng</option><option value="TRACKING">Tracking</option><option value="DELIVERED">Delivered</option></select></div>
-      <div class="truong"><label for="nk-ket-qua">Kết quả</label>
-        <select id="nk-ket-qua"><option value="">Tất cả</option><option value="OK">Thành công</option><option value="LOI">Lỗi</option></select></div>
-      <div class="truong"><label for="nk-stt">Mã đơn</label><input id="nk-stt" placeholder="VD: 9LIEM12" style="text-transform:uppercase"></div>
-      <button type="button" class="btn-hanh-dong phu" id="btn-loc-nhat-ky">Lọc</button>
+      <div class="truong"><label for="nk-loai">Loáº¡i</label>
+        <select id="nk-loai"><option value="">Táº¥t cáº£</option><option value="GHI_CHU">Ghi chÃº xÆ°á»Ÿng</option><option value="TRACKING">Tracking</option><option value="DELIVERED">Delivered</option></select></div>
+      <div class="truong"><label for="nk-ket-qua">Káº¿t quáº£</label>
+        <select id="nk-ket-qua"><option value="">Táº¥t cáº£</option><option value="OK">ThÃ nh cÃ´ng</option><option value="LOI">Lá»—i</option></select></div>
+      <div class="truong"><label for="nk-stt">MÃ£ Ä‘Æ¡n</label><input id="nk-stt" placeholder="VD: 9LIEM12" style="text-transform:uppercase"></div>
+      <button type="button" class="btn-hanh-dong phu" id="btn-loc-nhat-ky">Lá»c</button>
     </div>
     <div id="ds-nhat-ky-seller"></div>
 
-    <h3 style="margin-top:var(--space-5)">Tab CONFIG app đọc được</h3>
-    <button type="button" class="btn-hanh-dong phu" id="btn-kiem-tra-config">Kiểm tra từng Sheet</button>
-    <p class="st-ghi-chu-truong">Kiểm tra chỉ ĐỌC thử dòng tiêu đề từng tab (quyền đọc, tên tab, đủ cột STT_Key / GHI_CHU_XUONG / TRACKING_ID2 / HANG_VAN_CHUYEN2 / Delivered). Thiếu quyền GHI chỉ lộ ra ở lần ghi thật — khi đó xem "Lỗi đang chờ".</p>
+    <h3 style="margin-top:var(--space-5)">Tab CONFIG app Ä‘á»c Ä‘Æ°á»£c</h3>
+    <button type="button" class="btn-hanh-dong phu" id="btn-kiem-tra-config">Kiá»ƒm tra tá»«ng Sheet</button>
+    <p class="st-ghi-chu-truong">Kiá»ƒm tra chá»‰ Äá»ŒC thá»­ dÃ²ng tiÃªu Ä‘á» tá»«ng tab (quyá»n Ä‘á»c, tÃªn tab, Ä‘á»§ cá»™t STT_Key / GHI_CHU_XUONG / TRACKING_ID2 / HANG_VAN_CHUYEN2 / Delivered). Thiáº¿u quyá»n GHI chá»‰ lá»™ ra á»Ÿ láº§n ghi tháº­t â€” khi Ä‘Ã³ xem "Lá»—i Ä‘ang chá»".</p>
     <div id="ds-config-seller"></div>
   </details>
 
-  <!-- Link Google Sheet theo Team Seller (16/11/2026, theo yêu cầu người dùng) — CHỈ superadmin ghi. -->
+  <!-- Link Google Sheet theo Team Seller (16/11/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” CHá»ˆ superadmin ghi. -->
   <details id="khoi-gg-sheet" style="margin-top:var(--space-6)">
     <summary class="btn-hanh-dong phu">Link Google Sheet theo Team</summary>
-    <p style="color:var(--color-text-muted)">Team = nhóm chữ cái trong mã đơn (STT_Key). Ví dụ: đơn 11DUC62 → Team <strong>DUC</strong>. Link hiển thị ở Tab Tracking khi đơn KL lỗi để tra cứu nhanh.</p>
-    <div id="ds-gg-sheet" style="margin-bottom:var(--space-3)">Đang tải...</div>
+    <p style="color:var(--color-text-muted)">Team = nhÃ³m chá»¯ cÃ¡i trong mÃ£ Ä‘Æ¡n (STT_Key). VÃ­ dá»¥: Ä‘Æ¡n 11DUC62 â†’ Team <strong>DUC</strong>. Link hiá»ƒn thá»‹ á»Ÿ Tab Tracking khi Ä‘Æ¡n KL lá»—i Ä‘á»ƒ tra cá»©u nhanh.</p>
+    <div id="ds-gg-sheet" style="margin-bottom:var(--space-3)">Äang táº£i...</div>
     <div class="bao-cao-form" id="form-them-gg-sheet">
       <div class="truong"><label for="gg-team">Team</label><input id="gg-team" placeholder="VD: DUC" maxlength="20" style="width:8em"></div>
       <div class="truong truong-rong"><label for="gg-url">Link Google Sheet</label><input id="gg-url" placeholder="https://docs.google.com/spreadsheets/d/..." style="min-width:260px"></div>
-      <div class="truong truong-rong"><label for="gg-ghi-chu">Ghi chú</label><input id="gg-ghi-chu" placeholder="Tên sheet, nhóm Seller..." style="min-width:160px"></div>
-      <button type="button" class="btn-hanh-dong" onclick="luuGgSheet()">Lưu</button>
+      <div class="truong truong-rong"><label for="gg-ghi-chu">Ghi chÃº</label><input id="gg-ghi-chu" placeholder="TÃªn sheet, nhÃ³m Seller..." style="min-width:160px"></div>
+      <button type="button" class="btn-hanh-dong" onclick="luuGgSheet()">LÆ°u</button>
     </div>
     <p id="thong-bao-gg-sheet" style="display:none"></p>
   </details>
 
-  <!-- "Khôi phục đơn đã xoá dữ liệu" (bổ sung 24/09/2026, theo yêu cầu người dùng) — bản web của
-       scripts/khoi-phuc-don-da-xoa.js (script dòng lệnh gốc vẫn giữ nguyên). CHỈ khôi phục đúng các
-       STT_Key được nhập tay (không có nút "khôi phục tất cả") — chủ động chọn đúng đơn, tránh khôi phục
-       nhầm đơn đã xoá có chủ đích khác. Trang này đã CHỈ superadmin xem được (chặn ở IIFE bên dưới) nên
-       không cần thêm điều kiện hiện/ẩn riêng cho khối này. -->
+  <!-- "KhÃ´i phá»¥c Ä‘Æ¡n Ä‘Ã£ xoÃ¡ dá»¯ liá»‡u" (bá»• sung 24/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” báº£n web cá»§a
+       scripts/khoi-phuc-don-da-xoa.js (script dÃ²ng lá»‡nh gá»‘c váº«n giá»¯ nguyÃªn). CHá»ˆ khÃ´i phá»¥c Ä‘Ãºng cÃ¡c
+       STT_Key Ä‘Æ°á»£c nháº­p tay (khÃ´ng cÃ³ nÃºt "khÃ´i phá»¥c táº¥t cáº£") â€” chá»§ Ä‘á»™ng chá»n Ä‘Ãºng Ä‘Æ¡n, trÃ¡nh khÃ´i phá»¥c
+       nháº§m Ä‘Æ¡n Ä‘Ã£ xoÃ¡ cÃ³ chá»§ Ä‘Ã­ch khÃ¡c. Trang nÃ y Ä‘Ã£ CHá»ˆ superadmin xem Ä‘Æ°á»£c (cháº·n á»Ÿ IIFE bÃªn dÆ°á»›i) nÃªn
+       khÃ´ng cáº§n thÃªm Ä‘iá»u kiá»‡n hiá»‡n/áº©n riÃªng cho khá»‘i nÃ y. -->
   <details style="margin-top:var(--space-6)">
-    <summary class="btn-hanh-dong phu">Khôi phục đơn đã xoá dữ liệu</summary>
-    <p style="color:var(--color-text-muted)">Chỉ xoá cờ ẩn (DA_XOA) cho đúng các mã đơn nhập bên dưới — dữ liệu app đã xoá thật trước đó (lịch sử, ảnh, tư cách nhóm Đơn hàng loạt...) KHÔNG khôi phục lại được. Đơn hiện lại với dữ liệu Sheets nguyên vẹn nhưng trạng thái app hoàn toàn trắng (chưa in mã/chưa lấy phôi/chưa vẽ file...). Chỉ dùng được nếu dòng gốc trên Google Sheets vẫn còn.</p>
+    <summary class="btn-hanh-dong phu">KhÃ´i phá»¥c Ä‘Æ¡n Ä‘Ã£ xoÃ¡ dá»¯ liá»‡u</summary>
+    <p style="color:var(--color-text-muted)">Chá»‰ xoÃ¡ cá» áº©n (DA_XOA) cho Ä‘Ãºng cÃ¡c mÃ£ Ä‘Æ¡n nháº­p bÃªn dÆ°á»›i â€” dá»¯ liá»‡u app Ä‘Ã£ xoÃ¡ tháº­t trÆ°á»›c Ä‘Ã³ (lá»‹ch sá»­, áº£nh, tÆ° cÃ¡ch nhÃ³m ÄÆ¡n hÃ ng loáº¡t...) KHÃ”NG khÃ´i phá»¥c láº¡i Ä‘Æ°á»£c. ÄÆ¡n hiá»‡n láº¡i vá»›i dá»¯ liá»‡u Sheets nguyÃªn váº¹n nhÆ°ng tráº¡ng thÃ¡i app hoÃ n toÃ n tráº¯ng (chÆ°a in mÃ£/chÆ°a láº¥y phÃ´i/chÆ°a váº½ file...). Chá»‰ dÃ¹ng Ä‘Æ°á»£c náº¿u dÃ²ng gá»‘c trÃªn Google Sheets váº«n cÃ²n.</p>
     <div class="bao-cao-form">
       <div class="truong truong-rong">
-        <label for="khoi-phuc-stt-keys">Mã đơn (STT_Key) cần khôi phục</label>
-        <textarea id="khoi-phuc-stt-keys" rows="3" placeholder="Mỗi mã 1 dòng, hoặc cách nhau dấu phẩy — VD: 9LH575, 9LH577.1"></textarea>
+        <label for="khoi-phuc-stt-keys">MÃ£ Ä‘Æ¡n (STT_Key) cáº§n khÃ´i phá»¥c</label>
+        <textarea id="khoi-phuc-stt-keys" rows="3" placeholder="Má»—i mÃ£ 1 dÃ²ng, hoáº·c cÃ¡ch nhau dáº¥u pháº©y â€” VD: 9LH575, 9LH577.1"></textarea>
       </div>
-      <button type="button" class="btn-hanh-dong" id="btn-khoi-phuc-du-lieu-don" style="justify-self:start">Khôi phục</button>
+      <button type="button" class="btn-hanh-dong" id="btn-khoi-phuc-du-lieu-don" style="justify-self:start">KhÃ´i phá»¥c</button>
     </div>
     <p id="thong-bao-khoi-phuc" style="display:none"></p>
   </details>
 </div>
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=140"></script>
+<script src="/js/api.js?v=141"></script>
 <script>
 (async () => {
   const user = await requireLoginOrRedirect();
   if (!user) return;
   renderNav(user, 'settings');
-  // CHỈ superadmin (bổ sung 23/09/2026, theo yêu cầu người dùng — giống hệt guard của users.html vì
-  // Settings giờ có cấu hình ảnh hưởng toàn hệ thống, không còn chỉ là cài đặt giao diện cá nhân).
+  // CHá»ˆ superadmin (bá»• sung 23/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” giá»‘ng há»‡t guard cá»§a users.html vÃ¬
+  // Settings giá» cÃ³ cáº¥u hÃ¬nh áº£nh hÆ°á»Ÿng toÃ n há»‡ thá»‘ng, khÃ´ng cÃ²n chá»‰ lÃ  cÃ i Ä‘áº·t giao diá»‡n cÃ¡ nhÃ¢n).
   if (user.vaiTro !== 'superadmin') {
-    document.querySelector('.page').innerHTML = '<p>Bạn không có quyền truy cập trang này.</p>';
+    document.querySelector('.page').innerHTML = '<p>Báº¡n khÃ´ng cÃ³ quyá»n truy cáº­p trang nÃ y.</p>';
     return;
   }
   renderBangMau();
@@ -449,15 +449,15 @@
   await taiMatKhauXacNhan();
   await taiTroLyAi();
   document.getElementById('btn-luu-ai').onclick = () => luuTroLyAi({});
-  document.getElementById('btn-ai-xoa-key').onclick = () => luuTroLyAi({ apiKey: null }, 'Xoá API key Anthropic? Trợ lý sẽ ngừng trả lời.');
-  document.getElementById('btn-ai-xoa-tg').onclick = () => luuTroLyAi({ tgToken: null }, 'Xoá bot token và huỷ liên kết Telegram?');
+  document.getElementById('btn-ai-xoa-key').onclick = () => luuTroLyAi({ apiKey: null }, 'XoÃ¡ API key Anthropic? Trá»£ lÃ½ sáº½ ngá»«ng tráº£ lá»i.');
+  document.getElementById('btn-ai-xoa-tg').onclick = () => luuTroLyAi({ tgToken: null }, 'XoÃ¡ bot token vÃ  huá»· liÃªn káº¿t Telegram?');
   document.getElementById('btn-ai-ma-lien-ket').onclick = () => hanhDongTelegramAi('ma-lien-ket');
-  document.getElementById('btn-ai-huy-lien-ket').onclick = () => hanhDongTelegramAi('huy-lien-ket', 'Huỷ liên kết Telegram? Bot sẽ không trả lời tài khoản đó nữa.');
+  document.getElementById('btn-ai-huy-lien-ket').onclick = () => hanhDongTelegramAi('huy-lien-ket', 'Huá»· liÃªn káº¿t Telegram? Bot sáº½ khÃ´ng tráº£ lá»i tÃ i khoáº£n Ä‘Ã³ ná»¯a.');
   document.getElementById('btn-them-xuong').onclick = themXuongMoi;
   document.getElementById('btn-them-team').onclick = themTeamMoi;
   await taiDsGgSheet();
   document.getElementById('khoi-gg-sheet').addEventListener('toggle', ev => { if (ev.target.open) taiDsGgSheet(); });
-  // Đồng bộ Sheet Seller — tải khi mở khối lần đầu.
+  // Äá»“ng bá»™ Sheet Seller â€” táº£i khi má»Ÿ khá»‘i láº§n Ä‘áº§u.
   const khoiSeller = document.getElementById('khoi-dong-bo-seller');
   khoiSeller.addEventListener('toggle', () => {
     if (khoiSeller.open && !khoiSeller.dataset.daTai) { khoiSeller.dataset.daTai = '1'; taiDongBoSeller(); }
@@ -472,7 +472,7 @@
     const lbl = document.getElementById('ticker-speed-val');
     const msg = document.getElementById('ticker-speed-msg');
     const selInterval = document.getElementById('ticker-interval-inp');
-    const hienThi = v => { lbl.textContent = v + ' giây'; };
+    const hienThi = v => { lbl.textContent = v + ' giÃ¢y'; };
     const cur = Math.max(10, Math.min(120, parseInt(localStorage.getItem('ticker_toc_do') || '40', 10)));
     inp.value = cur; hienThi(cur);
     inp.oninput = () => hienThi(inp.value);
@@ -488,7 +488,7 @@
   })();
 })();
 
-// ---------- Đồng bộ Sheet Seller (28/09/2026) ----------
+// ---------- Äá»“ng bá»™ Sheet Seller (28/09/2026) ----------
 async function taiDongBoSeller() {
   await Promise.all([taiLoiSeller(), taiNhatKySeller(), taiConfigSeller(false)]);
 }
@@ -498,7 +498,7 @@ async function taiLoiSeller() {
   try {
     el.innerHTML = htmlLoiSheetSeller(await apiFetch('/dong-bo-sheet-seller/loi-dang-cho'), true);
   } catch (e) {
-    el.innerHTML = `<p style="color:var(--color-danger-text)">Không tải được: ${escapeHtml(e.message)}</p>`;
+    el.innerHTML = `<p style="color:var(--color-danger-text)">KhÃ´ng táº£i Ä‘Æ°á»£c: ${escapeHtml(e.message)}</p>`;
   }
 }
 
@@ -511,62 +511,62 @@ async function taiNhatKySeller() {
   if (giaTri('nk-stt')) qs.set('sttKey', giaTri('nk-stt'));
   try {
     const ds = await apiFetch('/dong-bo-sheet-seller/nhat-ky?' + qs.toString());
-    if (!ds.length) { el.innerHTML = '<p style="color:var(--color-text-muted)">Chưa có lần ghi nào khớp bộ lọc.</p>'; return; }
+    if (!ds.length) { el.innerHTML = '<p style="color:var(--color-text-muted)">ChÆ°a cÃ³ láº§n ghi nÃ o khá»›p bá»™ lá»c.</p>'; return; }
     el.innerHTML = `<div class="bang-cuon-ngang"><table class="info-table">
-      <tr><th>Thời gian</th><th>Người</th><th>Đơn</th><th>Loại</th><th>Nơi ghi</th><th>Cột</th><th>Trước → Sau</th><th>Kết quả</th></tr>
+      <tr><th>Thá»i gian</th><th>NgÆ°á»i</th><th>ÄÆ¡n</th><th>Loáº¡i</th><th>NÆ¡i ghi</th><th>Cá»™t</th><th>TrÆ°á»›c â†’ Sau</th><th>Káº¿t quáº£</th></tr>
       ${ds.map(d => `<tr>
         <td>${escapeHtml(tgNgan(d.ThoiGian))}</td>
         <td>${escapeHtml(d.NguoiDung)}</td>
         <td><a href="/order.html?stt=${encodeURIComponent(d.STT_Key)}">${escapeHtml(d.STT_Key)}</a></td>
         <td>${escapeHtml(NHAN_LOAI_SHEET_SELLER[d.Loai] || d.Loai)}</td>
-        <td>${d.Tab ? `tab "${escapeHtml(d.Tab)}"${d.Dong ? ` dòng ${escapeHtml(d.Dong)}` : ''}` : '—'}</td>
+        <td>${d.Tab ? `tab "${escapeHtml(d.Tab)}"${d.Dong ? ` dÃ²ng ${escapeHtml(d.Dong)}` : ''}` : 'â€”'}</td>
         <td>${escapeHtml(d.Cot)}</td>
         <td>${d.KetQua === 'OK'
-          ? `${escapeHtml(d.GiaTriTruoc || '(trống)')} → <strong>${escapeHtml(d.GiaTriSau || '(trống)')}</strong>`
-          : `định ghi: <strong>${escapeHtml(d.GiaTriSau)}</strong>`}</td>
+          ? `${escapeHtml(d.GiaTriTruoc || '(trá»‘ng)')} â†’ <strong>${escapeHtml(d.GiaTriSau || '(trá»‘ng)')}</strong>`
+          : `Ä‘á»‹nh ghi: <strong>${escapeHtml(d.GiaTriSau)}</strong>`}</td>
         <td>${d.KetQua === 'OK'
-          ? '<span style="color:#16a34a;font-weight:700">Thành công</span>'
-          : `<span style="color:var(--color-danger-text);font-weight:700">Lỗi</span><br><small>${escapeHtml(d.LyDo)}</small>`}</td>
+          ? '<span style="color:#16a34a;font-weight:700">ThÃ nh cÃ´ng</span>'
+          : `<span style="color:var(--color-danger-text);font-weight:700">Lá»—i</span><br><small>${escapeHtml(d.LyDo)}</small>`}</td>
       </tr>`).join('')}
     </table></div>`;
   } catch (e) {
-    el.innerHTML = `<p style="color:var(--color-danger-text)">Không tải được: ${escapeHtml(e.message)}</p>`;
+    el.innerHTML = `<p style="color:var(--color-danger-text)">KhÃ´ng táº£i Ä‘Æ°á»£c: ${escapeHtml(e.message)}</p>`;
   }
 }
 
 async function taiConfigSeller(kiemTra) {
   const el = document.getElementById('ds-config-seller');
   const nut = document.getElementById('btn-kiem-tra-config');
-  if (kiemTra) { nut.disabled = true; nut.textContent = 'Đang kiểm tra...'; }
+  if (kiemTra) { nut.disabled = true; nut.textContent = 'Äang kiá»ƒm tra...'; }
   try {
     const kq = await apiFetch('/dong-bo-sheet-seller/config' + (kiemTra ? '?kiemTra=1' : ''));
     const dauEmail = kq.email
-      ? `<p class="st-ghi-chu-truong">Tài khoản dịch vụ cần quyền <strong>Chỉnh sửa</strong> trên mọi Sheet Seller: <strong>${escapeHtml(kq.email)}</strong></p>`
+      ? `<p class="st-ghi-chu-truong">TÃ i khoáº£n dá»‹ch vá»¥ cáº§n quyá»n <strong>Chá»‰nh sá»­a</strong> trÃªn má»i Sheet Seller: <strong>${escapeHtml(kq.email)}</strong></p>`
       : '';
     if (kq.loi) { el.innerHTML = dauEmail + `<p style="color:var(--color-danger-text)">${escapeHtml(kq.loi)}</p>`; return; }
-    if (!kq.dong.length) { el.innerHTML = dauEmail + '<p style="color:var(--color-text-muted)">Tab CONFIG chưa có dòng nào có TEAM.</p>'; return; }
+    if (!kq.dong.length) { el.innerHTML = dauEmail + '<p style="color:var(--color-text-muted)">Tab CONFIG chÆ°a cÃ³ dÃ²ng nÃ o cÃ³ TEAM.</p>'; return; }
     el.innerHTML = dauEmail + `<div class="bang-cuon-ngang"><table class="info-table">
-      <tr><th>Dòng CONFIG</th><th>TEAM</th><th>Tab</th><th>Spreadsheet ID</th>${kiemTra ? '<th>Kiểm tra</th>' : ''}</tr>
+      <tr><th>DÃ²ng CONFIG</th><th>TEAM</th><th>Tab</th><th>Spreadsheet ID</th>${kiemTra ? '<th>Kiá»ƒm tra</th>' : ''}</tr>
       ${kq.dong.map(d => `<tr>
         <td>${escapeHtml(d.dongConfig)}</td><td><strong>${escapeHtml(d.team)}</strong></td><td>${escapeHtml(d.tab)}</td>
         <td><small>${escapeHtml(d.spreadsheetId)}</small></td>
         ${kiemTra ? `<td>${d.ok
           ? '<span style="color:#16a34a;font-weight:700">OK</span>'
-          : `<span style="color:var(--color-danger-text);font-weight:700">${escapeHtml(d.loi || 'Lỗi')}</span>`}${d.canhBao
+          : `<span style="color:var(--color-danger-text);font-weight:700">${escapeHtml(d.loi || 'Lá»—i')}</span>`}${d.canhBao
           ? `<br><small style="color:var(--color-warning-text);font-weight:600">${escapeHtml(d.canhBao)}</small>` : ''}</td>` : ''}
       </tr>`).join('')}
     </table></div>`;
   } catch (e) {
-    el.innerHTML = `<p style="color:var(--color-danger-text)">Không tải được: ${escapeHtml(e.message)}</p>`;
+    el.innerHTML = `<p style="color:var(--color-danger-text)">KhÃ´ng táº£i Ä‘Æ°á»£c: ${escapeHtml(e.message)}</p>`;
   } finally {
-    if (kiemTra) { nut.disabled = false; nut.textContent = 'Kiểm tra từng Sheet'; }
+    if (kiemTra) { nut.disabled = false; nut.textContent = 'Kiá»ƒm tra tá»«ng Sheet'; }
   }
 }
 
-// "Khôi phục đơn đã xoá dữ liệu" (bổ sung 24/09/2026, theo yêu cầu người dùng) — gọi
-// routes/orders.js POST /khoi-phuc-du-lieu-hang-loat, CHỈ xoá cờ DA_XOA cho đúng các STT_Key nhập tay
-// (không "khôi phục tất cả"). Mật khẩu xác nhận kiểm tra Ở SERVER (không so sánh ở đây) — client chỉ
-// hỏi rồi gửi kèm, không lộ giá trị đúng trong mã nguồn.
+// "KhÃ´i phá»¥c Ä‘Æ¡n Ä‘Ã£ xoÃ¡ dá»¯ liá»‡u" (bá»• sung 24/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” gá»i
+// routes/orders.js POST /khoi-phuc-du-lieu-hang-loat, CHá»ˆ xoÃ¡ cá» DA_XOA cho Ä‘Ãºng cÃ¡c STT_Key nháº­p tay
+// (khÃ´ng "khÃ´i phá»¥c táº¥t cáº£"). Máº­t kháº©u xÃ¡c nháº­n kiá»ƒm tra á»ž SERVER (khÃ´ng so sÃ¡nh á»Ÿ Ä‘Ã¢y) â€” client chá»‰
+// há»i rá»“i gá»­i kÃ¨m, khÃ´ng lá»™ giÃ¡ trá»‹ Ä‘Ãºng trong mÃ£ nguá»“n.
 async function khoiPhucDuLieuDon() {
   const raw = document.getElementById('khoi-phuc-stt-keys').value;
   const sttKeys = raw.split(/[\n,]/).map(s => s.trim()).filter(Boolean);
@@ -574,48 +574,48 @@ async function khoiPhucDuLieuDon() {
   thongBao.style.display = 'block';
   if (sttKeys.length === 0) {
     thongBao.style.color = 'var(--color-primary)';
-    thongBao.textContent = 'Chưa nhập mã đơn nào.';
+    thongBao.textContent = 'ChÆ°a nháº­p mÃ£ Ä‘Æ¡n nÃ o.';
     return;
   }
 
-  const matKhau = prompt(`Nhập mật khẩu xác nhận để khôi phục ${sttKeys.length} đơn:`);
+  const matKhau = prompt(`Nháº­p máº­t kháº©u xÃ¡c nháº­n Ä‘á»ƒ khÃ´i phá»¥c ${sttKeys.length} Ä‘Æ¡n:`);
   if (matKhau === null) return;
 
   const nut = document.getElementById('btn-khoi-phuc-du-lieu-don');
   nut.disabled = true;
-  nut.textContent = 'Đang khôi phục...';
+  nut.textContent = 'Äang khÃ´i phá»¥c...';
   try {
     const ketQua = await apiFetch('/orders/khoi-phuc-du-lieu-hang-loat', {
       method: 'POST', body: JSON.stringify({ sttKeys, matKhau }),
     });
-    let text = `Đã khôi phục ${ketQua.thanhCong.length}/${sttKeys.length} đơn.`;
+    let text = `ÄÃ£ khÃ´i phá»¥c ${ketQua.thanhCong.length}/${sttKeys.length} Ä‘Æ¡n.`;
     if (ketQua.loi.length > 0) {
-      text += ' Không khôi phục được: ' + ketQua.loi.map(l => `${l.sttKey} (${l.lyDo})`).join('; ');
+      text += ' KhÃ´ng khÃ´i phá»¥c Ä‘Æ°á»£c: ' + ketQua.loi.map(l => `${l.sttKey} (${l.lyDo})`).join('; ');
     }
     thongBao.style.color = ketQua.loi.length > 0 ? 'var(--color-primary)' : '#16a34a';
     thongBao.textContent = text;
   } catch (e) {
     thongBao.style.color = 'var(--color-primary)';
-    thongBao.textContent = 'Lỗi: ' + e.message;
+    thongBao.textContent = 'Lá»—i: ' + e.message;
   } finally {
     nut.disabled = false;
-    nut.textContent = 'Khôi phục';
+    nut.textContent = 'KhÃ´i phá»¥c';
   }
 }
 
-// Quản lý Xưởng — CRUD + màu nền (mở rộng 24/09/2026, theo yêu cầu người dùng) — trước đây CHỈ HN/BN
-// hard-code chọn được màu, "ChuaGanXuong" bị loại trừ chủ đích (đơn chưa gán Xưởng giữ nguyên nền mặc
-// định). Giờ MỌI Xưởng trong danh sách (kể cả "ChuaGanXuong" — người dùng xác nhận coi đây là 1 Xưởng
-// BÌNH THƯỜNG, đổi tên/xoá/chọn màu được như mọi Xưởng khác) đều hiện ở đây; trạng thái "(chưa gán)"
-// THẬT (XUONG rỗng) không nằm trong danh sách quản lý này, luôn giữ nền mặc định — xem
-// public/js/api.js#lopVaStyleXuong. Màu mặc định HN/BN = ĐÚNG 2 màu hard-code cũ (giữ nguyên hình ảnh
-// hiện có cho Xưởng nào chưa từng tự chọn màu); Xưởng khác chưa chọn màu dùng xám trung tính.
+// Quáº£n lÃ½ XÆ°á»Ÿng â€” CRUD + mÃ u ná»n (má»Ÿ rá»™ng 24/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” trÆ°á»›c Ä‘Ã¢y CHá»ˆ HN/BN
+// hard-code chá»n Ä‘Æ°á»£c mÃ u, "ChuaGanXuong" bá»‹ loáº¡i trá»« chá»§ Ä‘Ã­ch (Ä‘Æ¡n chÆ°a gÃ¡n XÆ°á»Ÿng giá»¯ nguyÃªn ná»n máº·c
+// Ä‘á»‹nh). Giá» Má»ŒI XÆ°á»Ÿng trong danh sÃ¡ch (ká»ƒ cáº£ "ChuaGanXuong" â€” ngÆ°á»i dÃ¹ng xÃ¡c nháº­n coi Ä‘Ã¢y lÃ  1 XÆ°á»Ÿng
+// BÃŒNH THÆ¯á»œNG, Ä‘á»•i tÃªn/xoÃ¡/chá»n mÃ u Ä‘Æ°á»£c nhÆ° má»i XÆ°á»Ÿng khÃ¡c) Ä‘á»u hiá»‡n á»Ÿ Ä‘Ã¢y; tráº¡ng thÃ¡i "(chÆ°a gÃ¡n)"
+// THáº¬T (XUONG rá»—ng) khÃ´ng náº±m trong danh sÃ¡ch quáº£n lÃ½ nÃ y, luÃ´n giá»¯ ná»n máº·c Ä‘á»‹nh â€” xem
+// public/js/api.js#lopVaStyleXuong. MÃ u máº·c Ä‘á»‹nh HN/BN = ÄÃšNG 2 mÃ u hard-code cÅ© (giá»¯ nguyÃªn hÃ¬nh áº£nh
+// hiá»‡n cÃ³ cho XÆ°á»Ÿng nÃ o chÆ°a tá»«ng tá»± chá»n mÃ u); XÆ°á»Ÿng khÃ¡c chÆ°a chá»n mÃ u dÃ¹ng xÃ¡m trung tÃ­nh.
 const MAU_MAC_DINH_XUONG = { HN: '#93c5fd', BN: '#86efac' };
 const MAU_MAC_DINH_CHUNG = '#e5e7eb';
 
-// Nhớ lại danh sách Xưởng của lần tải GẦN NHẤT (bổ sung 24/09/2026) — luuMauXuong() dùng lại, khỏi phải
-// gọi lại /orders/danh-sach-xuong lần nữa (danh sách Xưởng hiển thị trên trang lúc này CHÍNH LÀ danh
-// sách vừa render, không thể lệch nhau giữa 2 lượt gọi liên tiếp trong cùng 1 thao tác của người dùng).
+// Nhá»› láº¡i danh sÃ¡ch XÆ°á»Ÿng cá»§a láº§n táº£i Gáº¦N NHáº¤T (bá»• sung 24/09/2026) â€” luuMauXuong() dÃ¹ng láº¡i, khá»i pháº£i
+// gá»i láº¡i /orders/danh-sach-xuong láº§n ná»¯a (danh sÃ¡ch XÆ°á»Ÿng hiá»ƒn thá»‹ trÃªn trang lÃºc nÃ y CHÃNH LÃ€ danh
+// sÃ¡ch vá»«a render, khÃ´ng thá»ƒ lá»‡ch nhau giá»¯a 2 lÆ°á»£t gá»i liÃªn tiáº¿p trong cÃ¹ng 1 thao tÃ¡c cá»§a ngÆ°á»i dÃ¹ng).
 let danhSachXuongDangHienThi = [];
 
 async function taiMauXuong() {
@@ -629,10 +629,10 @@ async function taiMauXuong() {
     <div class="st-dong-xuong">
       <span class="ten-xuong">${escapeHtml(x)}</span>
       <input type="color" id="mau-xuong-${escapeHtml(x)}" value="${mau[x] || MAU_MAC_DINH_XUONG[x] || MAU_MAC_DINH_CHUNG}">
-      <button type="button" class="btn-hanh-dong phu" data-ten="${escapeHtml(x)}" onclick="doiTenXuongUi(this.dataset.ten)">Đổi tên</button>
-      <button type="button" class="btn-hanh-dong phu nguy-hiem" data-ten="${escapeHtml(x)}" onclick="xoaXuongUi(this.dataset.ten)">Xoá</button>
+      <button type="button" class="btn-hanh-dong phu" data-ten="${escapeHtml(x)}" onclick="doiTenXuongUi(this.dataset.ten)">Äá»•i tÃªn</button>
+      <button type="button" class="btn-hanh-dong phu nguy-hiem" data-ten="${escapeHtml(x)}" onclick="xoaXuongUi(this.dataset.ten)">XoÃ¡</button>
     </div>`).join('');
-  el.innerHTML += `<button type="button" class="btn-hanh-dong" id="btn-luu-mau-xuong" style="justify-self:start;margin-top:var(--space-1)">Lưu màu</button>`;
+  el.innerHTML += `<button type="button" class="btn-hanh-dong" id="btn-luu-mau-xuong" style="justify-self:start;margin-top:var(--space-1)">LÆ°u mÃ u</button>`;
   document.getElementById('btn-luu-mau-xuong').onclick = luuMauXuong;
 }
 
@@ -640,7 +640,7 @@ async function luuMauXuong() {
   const nut = document.getElementById('btn-luu-mau-xuong');
   const thongBao = document.getElementById('thong-bao-mau-xuong');
   nut.disabled = true;
-  nut.textContent = 'Đang lưu...';
+  nut.textContent = 'Äang lÆ°u...';
   try {
     for (const x of danhSachXuongDangHienThi) {
       await apiFetch('/orders/mau-xuong', {
@@ -650,14 +650,14 @@ async function luuMauXuong() {
     }
     thongBao.style.display = 'block';
     thongBao.style.color = '#16a34a';
-    thongBao.textContent = 'Đã lưu.';
+    thongBao.textContent = 'ÄÃ£ lÆ°u.';
   } catch (e) {
     thongBao.style.display = 'block';
     thongBao.style.color = 'var(--color-primary)';
-    thongBao.textContent = 'Lỗi: ' + e.message;
+    thongBao.textContent = 'Lá»—i: ' + e.message;
   } finally {
     nut.disabled = false;
-    nut.textContent = 'Lưu màu';
+    nut.textContent = 'LÆ°u mÃ u';
   }
 }
 
@@ -672,9 +672,9 @@ async function themXuongMoi() {
   } catch (e) { alert(e.message); }
 }
 
-// Cùng khuôn doiTen() ở public/users.html — prompt() đổi tên, PUT rồi tải lại danh sách.
+// CÃ¹ng khuÃ´n doiTen() á»Ÿ public/users.html â€” prompt() Ä‘á»•i tÃªn, PUT rá»“i táº£i láº¡i danh sÃ¡ch.
 async function doiTenXuongUi(tenCu) {
-  const moi = prompt(`Nhập tên mới cho Xưởng "${tenCu}":`, tenCu);
+  const moi = prompt(`Nháº­p tÃªn má»›i cho XÆ°á»Ÿng "${tenCu}":`, tenCu);
   if (moi === null) return;
   const tenMoi = moi.trim();
   if (!tenMoi || tenMoi === tenCu) return;
@@ -685,20 +685,20 @@ async function doiTenXuongUi(tenCu) {
 }
 
 async function xoaXuongUi(ten) {
-  if (!confirm(`Xoá Xưởng "${ten}"? Chỉ xoá được nếu không còn đơn/nhân viên nào đang gán Xưởng này.`)) return;
+  if (!confirm(`XoÃ¡ XÆ°á»Ÿng "${ten}"? Chá»‰ xoÃ¡ Ä‘Æ°á»£c náº¿u khÃ´ng cÃ²n Ä‘Æ¡n/nhÃ¢n viÃªn nÃ o Ä‘ang gÃ¡n XÆ°á»Ÿng nÃ y.`)) return;
   try {
     await apiFetch('/orders/xuong/' + encodeURIComponent(ten), { method: 'DELETE' });
     await taiMauXuong(); await taiTaiKhoanGke(); await taiTaiKhoanKl(); await taiTaiKhoanHpw(); await taiTeamXuong();
   } catch (e) { alert(e.message); }
 }
 
-// Team -> Xưởng mặc định (bổ sung 27/09/2026, theo yêu cầu người dùng). Danh sách = Team đang có trong
-// đơn hàng + Team đã cấu hình + Team vừa thêm tay (chưa lưu cho tới khi chọn Xưởng).
+// Team -> XÆ°á»Ÿng máº·c Ä‘á»‹nh (bá»• sung 27/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng). Danh sÃ¡ch = Team Ä‘ang cÃ³ trong
+// Ä‘Æ¡n hÃ ng + Team Ä‘Ã£ cáº¥u hÃ¬nh + Team vá»«a thÃªm tay (chÆ°a lÆ°u cho tá»›i khi chá»n XÆ°á»Ÿng).
 const teamThemTay = new Set();
 async function taiTeamXuong() {
   let kq;
   try { kq = await apiFetch('/orders/team-xuong'); } catch (e) {
-    thongBaoGke('Không tải được cấu hình Team: ' + e.message, true, 'thong-bao-team-xuong');
+    thongBaoGke('KhÃ´ng táº£i Ä‘Æ°á»£c cáº¥u hÃ¬nh Team: ' + e.message, true, 'thong-bao-team-xuong');
     return;
   }
   const teams = [...new Set([...Object.keys(kq.demTeam), ...Object.keys(kq.banDo), ...teamThemTay])].sort();
@@ -706,19 +706,19 @@ async function taiTeamXuong() {
     const d = kq.demTeam[t] || { tong: 0, chuaGan: 0 };
     return `
     <div class="st-dong-xuong">
-      <span class="ten-xuong">${escapeHtml(t)} <span class="st-ghi-chu-truong">${d.tong} đơn${d.chuaGan ? ` · ${d.chuaGan} chưa gán` : ''}</span></span>
+      <span class="ten-xuong">${escapeHtml(t)} <span class="st-ghi-chu-truong">${d.tong} Ä‘Æ¡n${d.chuaGan ? ` Â· ${d.chuaGan} chÆ°a gÃ¡n` : ''}</span></span>
       <select id="team-xuong-${escapeHtml(t)}" data-team="${escapeHtml(t)}" onchange="ganTeamXuong(this.dataset.team, this.value)">
-        <option value="">— Không tự gán —</option>
+        <option value="">â€” KhÃ´ng tá»± gÃ¡n â€”</option>
         ${kq.danhSachXuong.map(x => `<option value="${escapeHtml(x)}" ${kq.banDo[t] === x ? 'selected' : ''}>${escapeHtml(x)}</option>`).join('')}
       </select>
     </div>`;
-  }).join('') : '<p style="color:var(--color-text-muted)">Chưa có Team nào.</p>';
+  }).join('') : '<p style="color:var(--color-text-muted)">ChÆ°a cÃ³ Team nÃ o.</p>';
 }
 
 async function themTeamMoi() {
   const o = document.getElementById('team-moi');
   const team = o.value.trim().toUpperCase();
-  if (!/^[A-Z]+$/.test(team)) { alert('Team chỉ gồm chữ cái, vd TRA'); return; }
+  if (!/^[A-Z]+$/.test(team)) { alert('Team chá»‰ gá»“m chá»¯ cÃ¡i, vd TRA'); return; }
   teamThemTay.add(team);
   o.value = '';
   await taiTeamXuong();
@@ -728,43 +728,43 @@ async function themTeamMoi() {
 async function ganTeamXuong(team, xuong) {
   try {
     await apiFetch('/orders/team-xuong', { method: 'POST', body: JSON.stringify({ team, xuong }) });
-    thongBaoGke(xuong ? `Team ${team} → Xưởng ${xuong}: đã lưu, các đơn Chưa gán của Team đã được gán.` : `Đã bỏ Xưởng mặc định của Team ${team}.`, false, 'thong-bao-team-xuong');
-  } catch (e) { thongBaoGke('Lỗi khi lưu: ' + e.message, true, 'thong-bao-team-xuong'); }
+    thongBaoGke(xuong ? `Team ${team} â†’ XÆ°á»Ÿng ${xuong}: Ä‘Ã£ lÆ°u, cÃ¡c Ä‘Æ¡n ChÆ°a gÃ¡n cá»§a Team Ä‘Ã£ Ä‘Æ°á»£c gÃ¡n.` : `ÄÃ£ bá» XÆ°á»Ÿng máº·c Ä‘á»‹nh cá»§a Team ${team}.`, false, 'thong-bao-team-xuong');
+  } catch (e) { thongBaoGke('Lá»—i khi lÆ°u: ' + e.message, true, 'thong-bao-team-xuong'); }
   await taiTeamXuong();
 }
 
-// Nhóm hàng (29/09/2026, theo yêu cầu người dùng) — API routes/orders.js /nhom-hang (CHỈ superadmin). Lỗi (trùng keyword,
-// thiếu tên...) do server kiểm tra và trả về nguyên văn trong dòng thông báo.
-const TEN_NHOM_HANG = { 1: 'NHÓM 1 - QUẦN ÁO', 2: 'NHÓM 2 - KHÔNG PHẢI QUẦN ÁO' };
+// NhÃ³m hÃ ng (29/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” API routes/orders.js /nhom-hang (CHá»ˆ superadmin). Lá»—i (trÃ¹ng keyword,
+// thiáº¿u tÃªn...) do server kiá»ƒm tra vÃ  tráº£ vá» nguyÃªn vÄƒn trong dÃ²ng thÃ´ng bÃ¡o.
+const TEN_NHOM_HANG = { 1: 'NHÃ“M 1 - QUáº¦N ÃO', 2: 'NHÃ“M 2 - KHÃ”NG PHáº¢I QUáº¦N ÃO' };
 let dsLoaiHang = [];
 
 async function taiNhomHang() {
   let kq;
   try { kq = await apiFetch('/orders/nhom-hang'); } catch (e) {
-    thongBaoGke('Không tải được Nhóm hàng: ' + e.message, true, 'thong-bao-nhom-hang');
+    thongBaoGke('KhÃ´ng táº£i Ä‘Æ°á»£c NhÃ³m hÃ ng: ' + e.message, true, 'thong-bao-nhom-hang');
     return;
   }
   dsLoaiHang = kq.loai;
   document.getElementById('nhom-loai-trong').value = kq.nhomLoaiTrong;
-  const oNhom = nhom => ['1', '2'].map(n => `<option value="${n}" ${n === nhom ? 'selected' : ''}>Nhóm ${n}</option>`).join('');
+  const oNhom = nhom => ['1', '2'].map(n => `<option value="${n}" ${n === nhom ? 'selected' : ''}>NhÃ³m ${n}</option>`).join('');
   const dong = l => `
     <div class="st-dong-xuong st-dong-nhom-hang">
-      <input type="text" class="st-ten-loai" id="lh-ten-${l.id}" value="${escapeHtml(l.Ten)}" aria-label="Tên loại">
-      <select id="lh-nhom-${l.id}" aria-label="Nhóm">${oNhom(l.Nhom)}</select>
-      <textarea id="lh-tu-khoa-${l.id}" rows="2" aria-label="Keyword của ${escapeHtml(l.Ten)}">${escapeHtml(l.TuKhoa)}</textarea>
-      <button type="button" class="btn-hanh-dong phu" onclick="luuLoaiHang(${l.id})">Lưu</button>
-      <button type="button" class="btn-hanh-dong phu nguy-hiem" onclick="xoaLoaiHang(${l.id})">Xoá</button>
+      <input type="text" class="st-ten-loai" id="lh-ten-${l.id}" value="${escapeHtml(l.Ten)}" aria-label="TÃªn loáº¡i">
+      <select id="lh-nhom-${l.id}" aria-label="NhÃ³m">${oNhom(l.Nhom)}</select>
+      <textarea id="lh-tu-khoa-${l.id}" rows="2" aria-label="Keyword cá»§a ${escapeHtml(l.Ten)}">${escapeHtml(l.TuKhoa)}</textarea>
+      <button type="button" class="btn-hanh-dong phu" onclick="luuLoaiHang(${l.id})">LÆ°u</button>
+      <button type="button" class="btn-hanh-dong phu nguy-hiem" onclick="xoaLoaiHang(${l.id})">XoÃ¡</button>
     </div>`;
   document.getElementById('khoi-nhom-hang').innerHTML = ['1', '2'].map(n => {
     const cacDong = kq.loai.filter(l => l.Nhom === n);
-    return `<h4 style="margin:var(--space-4) 0 var(--space-2)">${TEN_NHOM_HANG[n]} <span class="st-ghi-chu-truong">(${cacDong.length} loại)</span></h4>
-      <div class="st-danh-sach-xuong">${cacDong.map(dong).join('') || '<p style="color:var(--color-text-muted)">Chưa có loại nào.</p>'}</div>`;
+    return `<h4 style="margin:var(--space-4) 0 var(--space-2)">${TEN_NHOM_HANG[n]} <span class="st-ghi-chu-truong">(${cacDong.length} loáº¡i)</span></h4>
+      <div class="st-danh-sach-xuong">${cacDong.map(dong).join('') || '<p style="color:var(--color-text-muted)">ChÆ°a cÃ³ loáº¡i nÃ o.</p>'}</div>`;
   }).join('');
   document.getElementById('khoi-loai-chua-phan-loai').innerHTML = kq.chuaPhanLoai.length
-    ? `<p class="st-ghi-chu-truong" style="margin-bottom:var(--space-2)">Thêm keyword trùng đúng giá trị này vào loại phù hợp (hoặc thêm loại mới) để đơn được phân nhóm.</p>
+    ? `<p class="st-ghi-chu-truong" style="margin-bottom:var(--space-2)">ThÃªm keyword trÃ¹ng Ä‘Ãºng giÃ¡ trá»‹ nÃ y vÃ o loáº¡i phÃ¹ há»£p (hoáº·c thÃªm loáº¡i má»›i) Ä‘á»ƒ Ä‘Æ¡n Ä‘Æ°á»£c phÃ¢n nhÃ³m.</p>
        <div class="st-danh-sach-xuong">${kq.chuaPhanLoai.map(c => `
-        <div class="st-dong-xuong"><span class="ten-xuong">${c.loai ? escapeHtml(c.loai) : '<em>(LOAI trống)</em>'}</span><span class="st-ghi-chu-truong" style="margin:0">${c.soDon} đơn</span></div>`).join('')}</div>`
-    : '<p style="color:var(--color-text-muted)">Không có — mọi đơn đều đã thuộc Nhóm 1 hoặc Nhóm 2.</p>';
+        <div class="st-dong-xuong"><span class="ten-xuong">${c.loai ? escapeHtml(c.loai) : '<em>(LOAI trá»‘ng)</em>'}</span><span class="st-ghi-chu-truong" style="margin:0">${c.soDon} Ä‘Æ¡n</span></div>`).join('')}</div>`
+    : '<p style="color:var(--color-text-muted)">KhÃ´ng cÃ³ â€” má»i Ä‘Æ¡n Ä‘á»u Ä‘Ã£ thuá»™c NhÃ³m 1 hoáº·c NhÃ³m 2.</p>';
 }
 
 async function luuLoaiHang(id) {
@@ -775,26 +775,26 @@ async function luuLoaiHang(id) {
   };
   try {
     await apiFetch('/orders/nhom-hang/' + id, { method: 'PUT', body: JSON.stringify(duLieu) });
-    thongBaoGke(`Đã lưu loại "${duLieu.Ten.trim()}".`, false, 'thong-bao-nhom-hang');
+    thongBaoGke(`ÄÃ£ lÆ°u loáº¡i "${duLieu.Ten.trim()}".`, false, 'thong-bao-nhom-hang');
     await taiNhomHang();
-  } catch (e) { thongBaoGke('Chưa lưu: ' + e.message, true, 'thong-bao-nhom-hang'); } // giữ nguyên nội dung đang gõ để sửa tiếp
+  } catch (e) { thongBaoGke('ChÆ°a lÆ°u: ' + e.message, true, 'thong-bao-nhom-hang'); } // giá»¯ nguyÃªn ná»™i dung Ä‘ang gÃµ Ä‘á»ƒ sá»­a tiáº¿p
 }
 
 async function luuNhomLoaiTrong(nhom) {
   try {
     await apiFetch('/orders/nhom-hang-loai-trong', { method: 'PUT', body: JSON.stringify({ nhom }) });
-    thongBaoGke(`Đơn có LOAI trống giờ thuộc: ${nhom ? `Nhóm ${nhom}` : 'Chưa phân loại'}.`, false, 'thong-bao-nhom-hang');
-  } catch (e) { thongBaoGke('Chưa lưu: ' + e.message, true, 'thong-bao-nhom-hang'); }
+    thongBaoGke(`ÄÆ¡n cÃ³ LOAI trá»‘ng giá» thuá»™c: ${nhom ? `NhÃ³m ${nhom}` : 'ChÆ°a phÃ¢n loáº¡i'}.`, false, 'thong-bao-nhom-hang');
+  } catch (e) { thongBaoGke('ChÆ°a lÆ°u: ' + e.message, true, 'thong-bao-nhom-hang'); }
   await taiNhomHang();
 }
 
 async function xoaLoaiHang(id) {
   const l = dsLoaiHang.find(x => x.id === id);
-  if (!l || !confirm(`Xoá loại "${l.Ten}" (Nhóm ${l.Nhom})?\n\nĐơn có LOAI khớp keyword của loại này sẽ thành CHƯA PHÂN LOẠI.`)) return;
+  if (!l || !confirm(`XoÃ¡ loáº¡i "${l.Ten}" (NhÃ³m ${l.Nhom})?\n\nÄÆ¡n cÃ³ LOAI khá»›p keyword cá»§a loáº¡i nÃ y sáº½ thÃ nh CHÆ¯A PHÃ‚N LOáº I.`)) return;
   try {
     await apiFetch('/orders/nhom-hang/' + id, { method: 'DELETE' });
-    thongBaoGke(`Đã xoá loại "${l.Ten}".`, false, 'thong-bao-nhom-hang');
-  } catch (e) { thongBaoGke('Lỗi khi xoá: ' + e.message, true, 'thong-bao-nhom-hang'); }
+    thongBaoGke(`ÄÃ£ xoÃ¡ loáº¡i "${l.Ten}".`, false, 'thong-bao-nhom-hang');
+  } catch (e) { thongBaoGke('Lá»—i khi xoÃ¡: ' + e.message, true, 'thong-bao-nhom-hang'); }
   await taiNhomHang();
 }
 
@@ -803,23 +803,23 @@ async function themLoaiHangMoi() {
   const duLieu = { Ten: o('loai-hang-moi-ten').value, Nhom: o('loai-hang-moi-nhom').value, TuKhoa: o('loai-hang-moi-tu-khoa').value };
   try {
     await apiFetch('/orders/nhom-hang', { method: 'POST', body: JSON.stringify(duLieu) });
-    thongBaoGke(`Đã thêm loại "${duLieu.Ten.trim()}" vào Nhóm ${duLieu.Nhom}.`, false, 'thong-bao-nhom-hang');
+    thongBaoGke(`ÄÃ£ thÃªm loáº¡i "${duLieu.Ten.trim()}" vÃ o NhÃ³m ${duLieu.Nhom}.`, false, 'thong-bao-nhom-hang');
     o('loai-hang-moi-ten').value = ''; o('loai-hang-moi-tu-khoa').value = '';
     await taiNhomHang();
-  } catch (e) { thongBaoGke('Chưa thêm: ' + e.message, true, 'thong-bao-nhom-hang'); }
+  } catch (e) { thongBaoGke('ChÆ°a thÃªm: ' + e.message, true, 'thong-bao-nhom-hang'); }
 }
 
-// Tài khoản GKE theo Xưởng (bổ sung 27/09/2026, theo yêu cầu người dùng — thay form "Cấu hình GKE" 1 bộ
-// chung cũ) — API ở routes/tracking.js (/tai-khoan-gke, /gan-tai-khoan-gke, CHỈ superadmin). Khoá field
-// khớp đúng services/gkeService.js#CAC_TRUONG_CAU_HINH_GKE.
+// TÃ i khoáº£n GKE theo XÆ°á»Ÿng (bá»• sung 27/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” thay form "Cáº¥u hÃ¬nh GKE" 1 bá»™
+// chung cÅ©) â€” API á»Ÿ routes/tracking.js (/tai-khoan-gke, /gan-tai-khoan-gke, CHá»ˆ superadmin). KhoÃ¡ field
+// khá»›p Ä‘Ãºng services/gkeService.js#CAC_TRUONG_CAU_HINH_GKE.
 const TRUONG_TK_GKE = [
-  ['ten', 'Tên tài khoản', 'text'], ['username', 'Username', 'text'], ['password', 'Password', 'password'],
-  ['serviceCode', 'Mã dịch vụ (service_code)', 'text'],
-  ['customsCurrency', 'Đơn vị tiền tệ khai báo', 'text', 'USD'], ['customsItemName', 'Tên hàng khai báo', 'text', 'Embroidered garment'],
-  ['customsHsCode', 'Mã HS', 'text'], ['customsDeclaredPrice', 'Giá trị khai báo (mỗi kiện)', 'number'],
-  ['shipperName', 'Tên xưởng (người gửi)', 'text', 'Maxthread VN'], ['shipperPhone', 'Số điện thoại', 'text'],
-  ['shipperAddress', 'Địa chỉ', 'text'], ['shipperCity', 'Thành phố', 'text'], ['shipperProvince', 'Tỉnh/Bang', 'text'],
-  ['shipperPostcode', 'Mã bưu điện', 'text'], ['canNangMoiAoKg', 'Cân nặng mỗi áo (kg)', 'number'],
+  ['ten', 'TÃªn tÃ i khoáº£n', 'text'], ['username', 'Username', 'text'], ['password', 'Password', 'password'],
+  ['serviceCode', 'MÃ£ dá»‹ch vá»¥ (service_code)', 'text'],
+  ['customsCurrency', 'ÄÆ¡n vá»‹ tiá»n tá»‡ khai bÃ¡o', 'text', 'USD'], ['customsItemName', 'TÃªn hÃ ng khai bÃ¡o', 'text', 'Embroidered garment'],
+  ['customsHsCode', 'MÃ£ HS', 'text'], ['customsDeclaredPrice', 'GiÃ¡ trá»‹ khai bÃ¡o (má»—i kiá»‡n)', 'number'],
+  ['shipperName', 'TÃªn xÆ°á»Ÿng (ngÆ°á»i gá»­i)', 'text', 'Maxthread VN'], ['shipperPhone', 'Sá»‘ Ä‘iá»‡n thoáº¡i', 'text'],
+  ['shipperAddress', 'Äá»‹a chá»‰', 'text'], ['shipperCity', 'ThÃ nh phá»‘', 'text'], ['shipperProvince', 'Tá»‰nh/Bang', 'text'],
+  ['shipperPostcode', 'MÃ£ bÆ°u Ä‘iá»‡n', 'text'], ['canNangMoiAoKg', 'CÃ¢n náº·ng má»—i Ã¡o (kg)', 'number'],
 ];
 
 function thongBaoGke(chu, loi, id = 'thong-bao-gke') {
@@ -829,14 +829,14 @@ function thongBaoGke(chu, loi, id = 'thong-bao-gke') {
   el.textContent = chu;
 }
 
-// `id` = id tài khoản ('moi' cho thẻ đang thêm mới chưa lưu).
+// `id` = id tÃ i khoáº£n ('moi' cho tháº» Ä‘ang thÃªm má»›i chÆ°a lÆ°u).
 function theTaiKhoanGke(tk, id, dungCho) {
   return `
     <div class="bao-cao-form st-cau-hinh-gke st-the-tk-gke" data-tk="${escapeHtml(id)}">
-      <strong>${id === 'moi' ? 'Tài khoản mới' : escapeHtml(tk.ten || '(chưa đặt tên)')}</strong>
-      <span class="st-ghi-chu-truong">${id === 'moi' ? '' : (dungCho.length ? 'Đang dùng cho Xưởng: ' + dungCho.map(escapeHtml).join(', ') : 'Chưa gán cho Xưởng nào')}</span>
-      ${tk.hetTienLuc ? `<div style="color:var(--color-danger-text);font-weight:600">⚠️ GKE báo HẾT TIỀN lúc ${escapeHtml(new Date(tk.hetTienLuc).toLocaleString('vi-VN'))} — tự động mua tracking đang DỪNG (${escapeHtml(tk.hetTienLyDo)}).
-        <button type="button" class="btn-hanh-dong" data-tk="${escapeHtml(id)}" onclick="daNapTienGke(this.dataset.tk, this)">Đã nạp tiền — bật lại tự mua</button></div>` : ''}
+      <strong>${id === 'moi' ? 'TÃ i khoáº£n má»›i' : escapeHtml(tk.ten || '(chÆ°a Ä‘áº·t tÃªn)')}</strong>
+      <span class="st-ghi-chu-truong">${id === 'moi' ? '' : (dungCho.length ? 'Äang dÃ¹ng cho XÆ°á»Ÿng: ' + dungCho.map(escapeHtml).join(', ') : 'ChÆ°a gÃ¡n cho XÆ°á»Ÿng nÃ o')}</span>
+      ${tk.hetTienLuc ? `<div style="color:var(--color-danger-text);font-weight:600">âš ï¸ GKE bÃ¡o Háº¾T TIá»€N lÃºc ${escapeHtml(new Date(tk.hetTienLuc).toLocaleString('vi-VN'))} â€” tá»± Ä‘á»™ng mua tracking Ä‘ang Dá»ªNG (${escapeHtml(tk.hetTienLyDo)}).
+        <button type="button" class="btn-hanh-dong" data-tk="${escapeHtml(id)}" onclick="daNapTienGke(this.dataset.tk, this)">ÄÃ£ náº¡p tiá»n â€” báº­t láº¡i tá»± mua</button></div>` : ''}
       ${id === 'moi' ? '' : htmlSoDuGke(tk, id)}
       <div class="st-luoi-gke">
         ${TRUONG_TK_GKE.map(([khoa, nhan, loai, goiY]) => `
@@ -845,10 +845,10 @@ function theTaiKhoanGke(tk, id, dungCho) {
           </div>`).join('')}
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button type="button" class="btn-hanh-dong" data-tk="${escapeHtml(id)}" onclick="luuTaiKhoanGke(this.dataset.tk)">Lưu tài khoản</button>
+        <button type="button" class="btn-hanh-dong" data-tk="${escapeHtml(id)}" onclick="luuTaiKhoanGke(this.dataset.tk)">LÆ°u tÃ i khoáº£n</button>
         ${id === 'moi'
-          ? `<button type="button" class="btn-hanh-dong phu" onclick="taiTaiKhoanGke()">Huỷ</button>`
-          : `<button type="button" class="btn-hanh-dong phu nguy-hiem" data-tk="${escapeHtml(id)}" onclick="xoaTaiKhoanGke(this.dataset.tk)">Xoá tài khoản</button>`}
+          ? `<button type="button" class="btn-hanh-dong phu" onclick="taiTaiKhoanGke()">Huá»·</button>`
+          : `<button type="button" class="btn-hanh-dong phu nguy-hiem" data-tk="${escapeHtml(id)}" onclick="xoaTaiKhoanGke(this.dataset.tk)">XoÃ¡ tÃ i khoáº£n</button>`}
       </div>
     </div>`;
 }
@@ -858,7 +858,7 @@ async function taiTaiKhoanGke() {
   try {
     kq = await apiFetch('/tracking/tai-khoan-gke');
   } catch (e) {
-    thongBaoGke('Không tải được tài khoản GKE: ' + e.message, true);
+    thongBaoGke('KhÃ´ng táº£i Ä‘Æ°á»£c tÃ i khoáº£n GKE: ' + e.message, true);
     return;
   }
   const tenTk = Object.fromEntries(kq.taiKhoan.map(t => [t.id, t.ten]));
@@ -866,14 +866,14 @@ async function taiTaiKhoanGke() {
     <div class="st-dong-xuong">
       <span class="ten-xuong">${escapeHtml(x)}</span>
       <select data-xuong="${escapeHtml(x)}" onchange="ganTaiKhoanGke(this.dataset.xuong, this.value)">
-        <option value="">— Chưa gán (không mua được tracking) —</option>
+        <option value="">â€” ChÆ°a gÃ¡n (khÃ´ng mua Ä‘Æ°á»£c tracking) â€”</option>
         ${kq.taiKhoan.map(t => `<option value="${t.id}" ${kq.ganXuong[x] === t.id ? 'selected' : ''}>${escapeHtml(t.ten || '#' + t.id)}</option>`).join('')}
       </select>
-      ${kq.ganXuong[x] && !tenTk[kq.ganXuong[x]] ? '<span style="color:var(--color-danger-text)">Tài khoản đã gán không còn tồn tại</span>' : ''}
+      ${kq.ganXuong[x] && !tenTk[kq.ganXuong[x]] ? '<span style="color:var(--color-danger-text)">TÃ i khoáº£n Ä‘Ã£ gÃ¡n khÃ´ng cÃ²n tá»“n táº¡i</span>' : ''}
     </div>`).join('');
   document.getElementById('gke-danh-sach-tk').innerHTML = kq.taiKhoan.length
     ? kq.taiKhoan.map(t => theTaiKhoanGke(t, t.id, kq.danhSachXuong.filter(x => kq.ganXuong[x] === t.id))).join('')
-    : '<p style="color:var(--color-text-muted)">Chưa có tài khoản GKE nào — bấm "Thêm tài khoản GKE".</p>';
+    : '<p style="color:var(--color-text-muted)">ChÆ°a cÃ³ tÃ i khoáº£n GKE nÃ o â€” báº¥m "ThÃªm tÃ i khoáº£n GKE".</p>';
 }
 
 function themTheTaiKhoanGke() {
@@ -885,37 +885,37 @@ function themTheTaiKhoanGke() {
 async function luuTaiKhoanGke(id) {
   const giaTri = {};
   TRUONG_TK_GKE.forEach(([khoa]) => { giaTri[khoa] = document.getElementById(`gke-${id}-${khoa}`).value.trim(); });
-  if (!giaTri.ten) { alert('Nhập tên tài khoản'); return; }
+  if (!giaTri.ten) { alert('Nháº­p tÃªn tÃ i khoáº£n'); return; }
   try {
     await apiFetch('/tracking/tai-khoan-gke' + (id === 'moi' ? '' : '/' + encodeURIComponent(id)), {
       method: id === 'moi' ? 'POST' : 'PUT', body: JSON.stringify(giaTri),
     });
-    thongBaoGke(`Đã lưu tài khoản "${giaTri.ten}".`);
+    thongBaoGke(`ÄÃ£ lÆ°u tÃ i khoáº£n "${giaTri.ten}".`);
     await taiTaiKhoanGke();
-  } catch (e) { thongBaoGke('Lỗi khi lưu: ' + e.message, true); }
+  } catch (e) { thongBaoGke('Lá»—i khi lÆ°u: ' + e.message, true); }
 }
 
-// ---- Giờ nghỉ theo Xưởng (23/10/2026) — API /gio-truy-cap (CHỈ superadmin, lưu / mở tạm cần mật khẩu xác nhận) ----
+// ---- Giá» nghá»‰ theo XÆ°á»Ÿng (23/10/2026) â€” API /gio-truy-cap (CHá»ˆ superadmin, lÆ°u / má»Ÿ táº¡m cáº§n máº­t kháº©u xÃ¡c nháº­n) ----
 function veGioNghi(ds) {
   document.getElementById('gio-nghi-ds').innerHTML = ds.map((d, i) => `
     <tr data-xuong="${escapeHtml(d.ten)}">
-      <td><input type="checkbox" id="gn-bat-${i}" ${d.bat ? 'checked' : ''} aria-label="Bật giờ nghỉ cho Xưởng ${escapeHtml(d.ten)}"></td>
+      <td><input type="checkbox" id="gn-bat-${i}" ${d.bat ? 'checked' : ''} aria-label="Báº­t giá» nghá»‰ cho XÆ°á»Ÿng ${escapeHtml(d.ten)}"></td>
       <td><strong>${escapeHtml(d.ten)}</strong></td>
-      <td><input type="time" id="gn-tu-${i}" value="${escapeHtml(d.tu)}" aria-label="Nghỉ từ"></td>
-      <td><input type="time" id="gn-den-${i}" value="${escapeHtml(d.den)}" aria-label="Mở lại lúc"></td>
-      <td>${escapeHtml(d.trangThai || (d.bat ? '' : 'Không giới hạn'))}${d.moTamDen ? `<br><span style="color:var(--color-warning-text,#92400e)">Mở tạm tới ${escapeHtml(d.moTamDen)}</span>` : ''}</td>
-      <td style="white-space:nowrap">${d.bat ? `<input type="time" id="gn-mo-tam-${i}" aria-label="Mở tạm tới">
-        <button type="button" class="btn-hanh-dong phu" onclick="moTamGioNghi(${i}, false)">Mở tạm</button>
-        ${d.moTamDen ? `<button type="button" class="btn-hanh-dong phu" onclick="moTamGioNghi(${i}, true)">Huỷ mở tạm</button>` : ''}` : ''}</td>
+      <td><input type="time" id="gn-tu-${i}" value="${escapeHtml(d.tu)}" aria-label="Nghá»‰ tá»«"></td>
+      <td><input type="time" id="gn-den-${i}" value="${escapeHtml(d.den)}" aria-label="Má»Ÿ láº¡i lÃºc"></td>
+      <td>${escapeHtml(d.trangThai || (d.bat ? '' : 'KhÃ´ng giá»›i háº¡n'))}${d.moTamDen ? `<br><span style="color:var(--color-warning-text,#92400e)">Má»Ÿ táº¡m tá»›i ${escapeHtml(d.moTamDen)}</span>` : ''}</td>
+      <td style="white-space:nowrap">${d.bat ? `<input type="time" id="gn-mo-tam-${i}" aria-label="Má»Ÿ táº¡m tá»›i">
+        <button type="button" class="btn-hanh-dong phu" onclick="moTamGioNghi(${i}, false)">Má»Ÿ táº¡m</button>
+        ${d.moTamDen ? `<button type="button" class="btn-hanh-dong phu" onclick="moTamGioNghi(${i}, true)">Huá»· má»Ÿ táº¡m</button>` : ''}` : ''}</td>
     </tr>`).join('');
 }
 async function taiGioNghi() {
   try { veGioNghi(await apiFetch('/gio-truy-cap')); }
-  catch (e) { thongBaoGke('Không tải được giờ nghỉ: ' + e.message, true, 'thong-bao-gio-nghi'); }
+  catch (e) { thongBaoGke('KhÃ´ng táº£i Ä‘Æ°á»£c giá» nghá»‰: ' + e.message, true, 'thong-bao-gio-nghi'); }
 }
 function matKhauGioNghi() {
   const mk = document.getElementById('gio-nghi-mat-khau').value.trim();
-  if (!mk) thongBaoGke('Nhập mật khẩu xác nhận trước.', true, 'thong-bao-gio-nghi');
+  if (!mk) thongBaoGke('Nháº­p máº­t kháº©u xÃ¡c nháº­n trÆ°á»›c.', true, 'thong-bao-gio-nghi');
   return mk;
 }
 async function luuGioNghi() {
@@ -928,34 +928,34 @@ async function luuGioNghi() {
   try {
     veGioNghi(await apiFetch('/gio-truy-cap', { method: 'PUT', body: JSON.stringify({ matKhau, ds }) }));
     document.getElementById('gio-nghi-mat-khau').value = '';
-    thongBaoGke('Đã lưu khung giờ nghỉ.', false, 'thong-bao-gio-nghi');
-  } catch (e) { thongBaoGke('Chưa lưu: ' + e.message, true, 'thong-bao-gio-nghi'); }
+    thongBaoGke('ÄÃ£ lÆ°u khung giá» nghá»‰.', false, 'thong-bao-gio-nghi');
+  } catch (e) { thongBaoGke('ChÆ°a lÆ°u: ' + e.message, true, 'thong-bao-gio-nghi'); }
 }
 async function moTamGioNghi(i, huy) {
   const matKhau = matKhauGioNghi();
   if (!matKhau) return;
   const xuong = document.querySelectorAll('#gio-nghi-ds tr')[i].dataset.xuong;
   const den = huy ? '' : document.getElementById(`gn-mo-tam-${i}`).value;
-  if (!huy && !den) { thongBaoGke('Chọn giờ mở tạm tới.', true, 'thong-bao-gio-nghi'); return; }
+  if (!huy && !den) { thongBaoGke('Chá»n giá» má»Ÿ táº¡m tá»›i.', true, 'thong-bao-gio-nghi'); return; }
   try {
     veGioNghi(await apiFetch('/gio-truy-cap/mo-tam', { method: 'POST', body: JSON.stringify({ matKhau, xuong, den }) }));
     document.getElementById('gio-nghi-mat-khau').value = '';
-    thongBaoGke(huy ? `Đã huỷ mở tạm Xưởng ${xuong}.` : `Đã mở tạm Xưởng ${xuong} tới ${den}.`, false, 'thong-bao-gio-nghi');
-  } catch (e) { thongBaoGke('Chưa lưu: ' + e.message, true, 'thong-bao-gio-nghi'); }
+    thongBaoGke(huy ? `ÄÃ£ huá»· má»Ÿ táº¡m XÆ°á»Ÿng ${xuong}.` : `ÄÃ£ má»Ÿ táº¡m XÆ°á»Ÿng ${xuong} tá»›i ${den}.`, false, 'thong-bao-gio-nghi');
+  } catch (e) { thongBaoGke('ChÆ°a lÆ°u: ' + e.message, true, 'thong-bao-gio-nghi'); }
 }
 
-// ---- Trợ lý AI (23/10/2026) — API /chatbot/cau-hinh (CHỈ superadmin) ----
+// ---- Trá»£ lÃ½ AI (23/10/2026) â€” API /chatbot/cau-hinh (CHá»ˆ superadmin) ----
 function veTroLyAi(kq) {
   const { ai, telegram: tg } = kq;
   document.getElementById('ai-model').innerHTML = ai.dsModel.map(m => `<option value="${escapeHtml(m.id)}" ${m.id === ai.model ? 'selected' : ''}>${escapeHtml(m.ten)}</option>`).join('');
-  document.getElementById('ai-key-trang-thai').textContent = ai.coApiKey ? `(đã lưu …${ai.apiKeyCuoi} — để trống = giữ)` : '(chưa có)';
-  document.getElementById('ai-tg-trang-thai-token').textContent = tg.coToken ? `(đã lưu …${tg.tokenCuoi} — để trống = giữ)` : '(chưa có)';
+  document.getElementById('ai-key-trang-thai').textContent = ai.coApiKey ? `(Ä‘Ã£ lÆ°u â€¦${ai.apiKeyCuoi} â€” Ä‘á»ƒ trá»‘ng = giá»¯)` : '(chÆ°a cÃ³)';
+  document.getElementById('ai-tg-trang-thai-token').textContent = tg.coToken ? `(Ä‘Ã£ lÆ°u â€¦${tg.tokenCuoi} â€” Ä‘á»ƒ trá»‘ng = giá»¯)` : '(chÆ°a cÃ³)';
   const dong = [];
-  if (tg.coToken) dong.push(tg.botTen ? `Bot: @${escapeHtml(tg.botTen)}` : 'Bot: đang kết nối…');
+  if (tg.coToken) dong.push(tg.botTen ? `Bot: @${escapeHtml(tg.botTen)}` : 'Bot: Ä‘ang káº¿t ná»‘iâ€¦');
   if (tg.loi) dong.push(`<span style="color:var(--color-danger-text)">${escapeHtml(tg.loi)}</span>`);
-  if (tg.daLienKet) dong.push(`Đã liên kết Telegram ID ${escapeHtml(tg.telegramId)} (quyền của tài khoản ${escapeHtml(tg.appUser)})`);
-  else if (tg.coToken) dong.push('Chưa liên kết tài khoản Telegram nào.');
-  if (tg.maDangCho) dong.push(`<strong>Nhắn cho bot: /lienket ${escapeHtml(tg.maDangCho.ma)}</strong> (mã hết hạn lúc ${escapeHtml(new Date(tg.maDangCho.het).toLocaleTimeString('vi-VN'))})`);
+  if (tg.daLienKet) dong.push(`ÄÃ£ liÃªn káº¿t Telegram ID ${escapeHtml(tg.telegramId)} (quyá»n cá»§a tÃ i khoáº£n ${escapeHtml(tg.appUser)})`);
+  else if (tg.coToken) dong.push('ChÆ°a liÃªn káº¿t tÃ i khoáº£n Telegram nÃ o.');
+  if (tg.maDangCho) dong.push(`<strong>Nháº¯n cho bot: /lienket ${escapeHtml(tg.maDangCho.ma)}</strong> (mÃ£ háº¿t háº¡n lÃºc ${escapeHtml(new Date(tg.maDangCho.het).toLocaleTimeString('vi-VN'))})`);
   document.getElementById('ai-tg-trang-thai').innerHTML = dong.join('<br>');
   document.getElementById('btn-ai-ma-lien-ket').style.display = tg.coToken ? '' : 'none';
   document.getElementById('btn-ai-huy-lien-ket').style.display = tg.daLienKet ? '' : 'none';
@@ -966,16 +966,16 @@ function veTroLyAi(kq) {
 }
 async function guiThuTinAi(loai, btn) {
   btn.disabled = true;
-  thongBaoGke('Đang gửi…', false, 'thong-bao-ai');
+  thongBaoGke('Äang gá»­iâ€¦', false, 'thong-bao-ai');
   try {
     const kq = await apiFetch('/chatbot/gui-thu/' + loai, { method: 'POST' });
-    thongBaoGke(kq.ok ? 'Đã gửi — xem trong Telegram.' : 'Chưa gửi được: ' + kq.loi, !kq.ok, 'thong-bao-ai');
-  } catch (e) { thongBaoGke('Lỗi: ' + e.message, true, 'thong-bao-ai'); }
+    thongBaoGke(kq.ok ? 'ÄÃ£ gá»­i â€” xem trong Telegram.' : 'ChÆ°a gá»­i Ä‘Æ°á»£c: ' + kq.loi, !kq.ok, 'thong-bao-ai');
+  } catch (e) { thongBaoGke('Lá»—i: ' + e.message, true, 'thong-bao-ai'); }
   finally { btn.disabled = false; }
 }
 async function taiTroLyAi() {
   try { veTroLyAi(await apiFetch('/chatbot/cau-hinh')); }
-  catch (e) { thongBaoGke('Không tải được Trợ lý AI: ' + e.message, true, 'thong-bao-ai'); }
+  catch (e) { thongBaoGke('KhÃ´ng táº£i Ä‘Æ°á»£c Trá»£ lÃ½ AI: ' + e.message, true, 'thong-bao-ai'); }
 }
 async function luuTroLyAi(them, hoi) {
   if (hoi && !await hopXacNhan(hoi)) return;
@@ -985,8 +985,8 @@ async function luuTroLyAi(them, hoi) {
   try {
     veTroLyAi(await apiFetch('/chatbot/cau-hinh', { method: 'PUT', body: JSON.stringify(body) }));
     document.getElementById('ai-api-key').value = ''; document.getElementById('ai-tg-token').value = '';
-    thongBaoGke('Đã lưu. Bot Telegram mới cần khoảng 30 giây để bắt đầu nhận tin.', false, 'thong-bao-ai');
-  } catch (e) { thongBaoGke('Chưa lưu: ' + e.message, true, 'thong-bao-ai'); }
+    thongBaoGke('ÄÃ£ lÆ°u. Bot Telegram má»›i cáº§n khoáº£ng 30 giÃ¢y Ä‘á»ƒ báº¯t Ä‘áº§u nháº­n tin.', false, 'thong-bao-ai');
+  } catch (e) { thongBaoGke('ChÆ°a lÆ°u: ' + e.message, true, 'thong-bao-ai'); }
 }
 async function hanhDongTelegramAi(viec, hoi) {
   if (hoi && !await hopXacNhan(hoi)) return;
@@ -994,49 +994,49 @@ async function hanhDongTelegramAi(viec, hoi) {
   catch (e) { thongBaoGke(e.message, true, 'thong-bao-ai'); }
 }
 
-// ---- Mật khẩu xác nhận (23/10/2026) — API /gio-truy-cap/mat-khau (CHỈ superadmin) ----
+// ---- Máº­t kháº©u xÃ¡c nháº­n (23/10/2026) â€” API /gio-truy-cap/mat-khau (CHá»ˆ superadmin) ----
 function veMatKhauXacNhan(ds) {
   document.getElementById('mkxn-ds').innerHTML = ds.map(d => `
     <div>
     <strong>${escapeHtml(d.ten)}</strong>
-    <span class="st-ghi-chu-truong" style="display:block">${d.daDoi ? `Đã đổi lúc ${escapeHtml(new Date(d.capNhatLuc).toLocaleString('vi-VN'))} bởi ${escapeHtml(d.capNhatBoi)}` : 'Đang dùng mật khẩu mặc định'}</span>
+    <span class="st-ghi-chu-truong" style="display:block">${d.daDoi ? `ÄÃ£ Ä‘á»•i lÃºc ${escapeHtml(new Date(d.capNhatLuc).toLocaleString('vi-VN'))} bá»Ÿi ${escapeHtml(d.capNhatBoi)}` : 'Äang dÃ¹ng máº­t kháº©u máº·c Ä‘á»‹nh'}</span>
     <form class="bao-cao-form" data-khoa="${escapeHtml(d.khoa)}" onsubmit="doiMatKhauXacNhan(event)" style="margin-top:var(--space-2)">
-      <div class="truong"><label for="mkxn-cu-${d.khoa}">Mật khẩu hiện tại</label><input type="password" id="mkxn-cu-${d.khoa}" autocomplete="off" required></div>
-      <div class="truong"><label for="mkxn-moi-${d.khoa}">Mật khẩu mới</label><input type="password" id="mkxn-moi-${d.khoa}" autocomplete="new-password" minlength="4" maxlength="64" required></div>
-      <div class="truong"><label for="mkxn-lai-${d.khoa}">Nhập lại mật khẩu mới</label><input type="password" id="mkxn-lai-${d.khoa}" autocomplete="new-password" required></div>
-      <button type="submit" class="btn-hanh-dong" style="align-self:end">Đổi mật khẩu</button>
+      <div class="truong"><label for="mkxn-cu-${d.khoa}">Máº­t kháº©u hiá»‡n táº¡i</label><input type="password" id="mkxn-cu-${d.khoa}" autocomplete="off" required></div>
+      <div class="truong"><label for="mkxn-moi-${d.khoa}">Máº­t kháº©u má»›i</label><input type="password" id="mkxn-moi-${d.khoa}" autocomplete="new-password" minlength="4" maxlength="64" required></div>
+      <div class="truong"><label for="mkxn-lai-${d.khoa}">Nháº­p láº¡i máº­t kháº©u má»›i</label><input type="password" id="mkxn-lai-${d.khoa}" autocomplete="new-password" required></div>
+      <button type="submit" class="btn-hanh-dong" style="align-self:end">Äá»•i máº­t kháº©u</button>
     </form>
     </div>`).join('');
 }
 async function taiMatKhauXacNhan() {
   try { veMatKhauXacNhan(await apiFetch('/gio-truy-cap/mat-khau')); }
-  catch (e) { thongBaoGke('Không tải được: ' + e.message, true, 'thong-bao-mkxn'); }
+  catch (e) { thongBaoGke('KhÃ´ng táº£i Ä‘Æ°á»£c: ' + e.message, true, 'thong-bao-mkxn'); }
 }
 async function doiMatKhauXacNhan(e) {
   e.preventDefault();
   const khoa = e.target.dataset.khoa, gt = id => document.getElementById(`mkxn-${id}-${khoa}`).value;
-  if (gt('moi') !== gt('lai')) { thongBaoGke('Mật khẩu mới nhập lại không khớp — chưa đổi.', true, 'thong-bao-mkxn'); return; }
+  if (gt('moi') !== gt('lai')) { thongBaoGke('Máº­t kháº©u má»›i nháº­p láº¡i khÃ´ng khá»›p â€” chÆ°a Ä‘á»•i.', true, 'thong-bao-mkxn'); return; }
   try {
     veMatKhauXacNhan(await apiFetch('/gio-truy-cap/mat-khau', { method: 'POST', body: JSON.stringify({ khoa, cu: gt('cu'), moi: gt('moi') }) }));
-    thongBaoGke('Đã đổi mật khẩu xác nhận.', false, 'thong-bao-mkxn');
+    thongBaoGke('ÄÃ£ Ä‘á»•i máº­t kháº©u xÃ¡c nháº­n.', false, 'thong-bao-mkxn');
   } catch (err) { thongBaoGke(err.message, true, 'thong-bao-mkxn'); }
 }
 
-// Số dư ước tính (24/10/2026) — GKE không có API số dư: nhập số dư lúc nạp + giá ước tính 1 đơn; mỗi vận đơn mới tự trừ, còn dưới mức báo
-// thì báo Telegram nhóm Vận hành (gkeService#ghiNhanDaMuaGke). Đơn vị tiền tự quy ước (cùng đơn vị cho cả 3 ô).
+// Sá»‘ dÆ° Æ°á»›c tÃ­nh (24/10/2026) â€” GKE khÃ´ng cÃ³ API sá»‘ dÆ°: nháº­p sá»‘ dÆ° lÃºc náº¡p + giÃ¡ Æ°á»›c tÃ­nh 1 Ä‘Æ¡n; má»—i váº­n Ä‘Æ¡n má»›i tá»± trá»«, cÃ²n dÆ°á»›i má»©c bÃ¡o
+// thÃ¬ bÃ¡o Telegram nhÃ³m Váº­n hÃ nh (gkeService#ghiNhanDaMuaGke). ÄÆ¡n vá»‹ tiá»n tá»± quy Æ°á»›c (cÃ¹ng Ä‘Æ¡n vá»‹ cho cáº£ 3 Ã´).
 function htmlSoDuGke(tk, id) {
   const so = v => (v == null ? '' : String(v));
-  const dong = tk.soDu == null ? 'Chưa nhập số dư — chưa theo dõi.'
-    : `Số dư ước tính: <b>${escapeHtml(so(tk.soDu))}</b>${tk.conKhoangDon != null ? ` (≈ ${tk.conKhoangDon} đơn)` : ''}`
-      + (tk.nguongSoDu != null && tk.soDu <= tk.nguongSoDu ? ' <span style="color:var(--color-danger-text);font-weight:600">— dưới mức báo</span>' : '');
+  const dong = tk.soDu == null ? 'ChÆ°a nháº­p sá»‘ dÆ° â€” chÆ°a theo dÃµi.'
+    : `Sá»‘ dÆ° Æ°á»›c tÃ­nh: <b>${escapeHtml(so(tk.soDu))}</b>${tk.conKhoangDon != null ? ` (â‰ˆ ${tk.conKhoangDon} Ä‘Æ¡n)` : ''}`
+      + (tk.nguongSoDu != null && tk.soDu <= tk.nguongSoDu ? ' <span style="color:var(--color-danger-text);font-weight:600">â€” dÆ°á»›i má»©c bÃ¡o</span>' : '');
   return `<div style="border-top:1px dashed var(--color-border);padding-top:var(--space-2)">
       <div>${dong}</div>
       <div class="st-luoi-gke">
-        <div class="truong"><label for="gke-${id}-so-du">Số dư hiện tại</label><input type="number" step="0.01" id="gke-${id}-so-du" value="${escapeHtml(so(tk.soDu))}" oninput="this.dataset.daSua = '1'"></div>
-        <div class="truong"><label for="gke-${id}-gia">Giá ước tính 1 đơn</label><input type="number" min="0" step="0.01" id="gke-${id}-gia" value="${escapeHtml(so(tk.giaMotDon))}"></div>
-        <div class="truong"><label for="gke-${id}-nguong">Báo khi số dư còn ≤</label><input type="number" min="0" step="0.01" id="gke-${id}-nguong" value="${escapeHtml(so(tk.nguongSoDu))}"></div>
+        <div class="truong"><label for="gke-${id}-so-du">Sá»‘ dÆ° hiá»‡n táº¡i</label><input type="number" step="0.01" id="gke-${id}-so-du" value="${escapeHtml(so(tk.soDu))}" oninput="this.dataset.daSua = '1'"></div>
+        <div class="truong"><label for="gke-${id}-gia">GiÃ¡ Æ°á»›c tÃ­nh 1 Ä‘Æ¡n</label><input type="number" min="0" step="0.01" id="gke-${id}-gia" value="${escapeHtml(so(tk.giaMotDon))}"></div>
+        <div class="truong"><label for="gke-${id}-nguong">BÃ¡o khi sá»‘ dÆ° cÃ²n â‰¤</label><input type="number" min="0" step="0.01" id="gke-${id}-nguong" value="${escapeHtml(so(tk.nguongSoDu))}"></div>
       </div>
-      <button type="button" class="btn-hanh-dong phu" data-tk="${escapeHtml(id)}" onclick="luuSoDuGke(this.dataset.tk, this)">Lưu số dư</button>
+      <button type="button" class="btn-hanh-dong phu" data-tk="${escapeHtml(id)}" onclick="luuSoDuGke(this.dataset.tk, this)">LÆ°u sá»‘ dÆ°</button>
     </div>`;
 }
 async function luuSoDuGke(id, btn) {
@@ -1044,31 +1044,31 @@ async function luuSoDuGke(id, btn) {
   btn.disabled = true;
   try {
     await apiFetch('/tracking/tai-khoan-gke/' + encodeURIComponent(id) + '/so-du', { method: 'PUT',
-      // Số dư CHỈ gửi khi người dùng có gõ vào ô đó (kể cả gõ lại đúng số cũ): ô hiện số lúc tải trang — gửi lại sẽ xoá các lần trừ từ đó
-      // tới giờ và bật lại cảnh báo.
+      // Sá»‘ dÆ° CHá»ˆ gá»­i khi ngÆ°á»i dÃ¹ng cÃ³ gÃµ vÃ o Ã´ Ä‘Ã³ (ká»ƒ cáº£ gÃµ láº¡i Ä‘Ãºng sá»‘ cÅ©): Ã´ hiá»‡n sá»‘ lÃºc táº£i trang â€” gá»­i láº¡i sáº½ xoÃ¡ cÃ¡c láº§n trá»« tá»« Ä‘Ã³
+      // tá»›i giá» vÃ  báº­t láº¡i cáº£nh bÃ¡o.
       body: JSON.stringify({ giaMotDon: gt('gia'), nguongSoDu: gt('nguong'),
         ...(document.getElementById(`gke-${id}-so-du`).dataset.daSua ? { soDu: gt('so-du') } : {}) }) });
-    thongBaoGke('Đã lưu số dư ước tính.');
+    thongBaoGke('ÄÃ£ lÆ°u sá»‘ dÆ° Æ°á»›c tÃ­nh.');
     await taiTaiKhoanGke();
-  } catch (e) { btn.disabled = false; thongBaoGke('Lỗi: ' + e.message, true); }
+  } catch (e) { btn.disabled = false; thongBaoGke('Lá»—i: ' + e.message, true); }
 }
 
 async function daNapTienGke(id, btn) {
-  const soDu = await hopNhap('Số dư tài khoản GKE sau khi nạp (để trống nếu không theo dõi số dư):');
+  const soDu = await hopNhap('Sá»‘ dÆ° tÃ i khoáº£n GKE sau khi náº¡p (Ä‘á»ƒ trá»‘ng náº¿u khÃ´ng theo dÃµi sá»‘ dÆ°):');
   if (soDu === null) return;
   btn.disabled = true;
   try {
     await apiFetch('/tracking/tai-khoan-gke/' + encodeURIComponent(id) + '/da-nap-tien', { method: 'POST', body: JSON.stringify({ soDu: soDu.trim() }) });
-    thongBaoGke('Đã bật lại tự động mua tracking cho tài khoản này.');
+    thongBaoGke('ÄÃ£ báº­t láº¡i tá»± Ä‘á»™ng mua tracking cho tÃ i khoáº£n nÃ y.');
     await taiTaiKhoanGke();
-  } catch (e) { btn.disabled = false; thongBaoGke('Lỗi: ' + e.message, true); }
+  } catch (e) { btn.disabled = false; thongBaoGke('Lá»—i: ' + e.message, true); }
 }
 
 async function xoaTaiKhoanGke(id) {
-  if (!confirm('Xoá tài khoản GKE này? Đơn ĐÃ mua tracking bằng tài khoản này sẽ không in lại tem/tra trạng thái vận chuyển được nữa.')) return;
+  if (!confirm('XoÃ¡ tÃ i khoáº£n GKE nÃ y? ÄÆ¡n ÄÃƒ mua tracking báº±ng tÃ i khoáº£n nÃ y sáº½ khÃ´ng in láº¡i tem/tra tráº¡ng thÃ¡i váº­n chuyá»ƒn Ä‘Æ°á»£c ná»¯a.')) return;
   try {
     await apiFetch('/tracking/tai-khoan-gke/' + encodeURIComponent(id), { method: 'DELETE' });
-    thongBaoGke('Đã xoá tài khoản.');
+    thongBaoGke('ÄÃ£ xoÃ¡ tÃ i khoáº£n.');
     await taiTaiKhoanGke();
   } catch (e) { thongBaoGke(e.message, true); }
 }
@@ -1076,80 +1076,80 @@ async function xoaTaiKhoanGke(id) {
 async function ganTaiKhoanGke(xuong, taiKhoanId) {
   try {
     await apiFetch('/tracking/gan-tai-khoan-gke', { method: 'POST', body: JSON.stringify({ xuong, taiKhoanId }) });
-    thongBaoGke(taiKhoanId ? `Đã gán tài khoản cho Xưởng ${xuong}.` : `Đã bỏ gán tài khoản của Xưởng ${xuong}.`);
+    thongBaoGke(taiKhoanId ? `ÄÃ£ gÃ¡n tÃ i khoáº£n cho XÆ°á»Ÿng ${xuong}.` : `ÄÃ£ bá» gÃ¡n tÃ i khoáº£n cá»§a XÆ°á»Ÿng ${xuong}.`);
     await taiTaiKhoanGke();
-  } catch (e) { thongBaoGke('Lỗi khi gán: ' + e.message, true); await taiTaiKhoanGke(); }
+  } catch (e) { thongBaoGke('Lá»—i khi gÃ¡n: ' + e.message, true); await taiTaiKhoanGke(); }
 }
 
-// ---- Tài khoản KL theo Xưởng (22/10/2026) — cùng khuôn tài khoản GKE ở trên; token không hiện lại, để trống = giữ token cũ ----
+// ---- TÃ i khoáº£n KL theo XÆ°á»Ÿng (22/10/2026) â€” cÃ¹ng khuÃ´n tÃ i khoáº£n GKE á»Ÿ trÃªn; token khÃ´ng hiá»‡n láº¡i, Ä‘á»ƒ trá»‘ng = giá»¯ token cÅ© ----
 const TRUONG_TK_KL = [
-  ['ten', 'Tên tài khoản', 'text'], ['token', 'Token (API key)', 'password'],
+  ['ten', 'TÃªn tÃ i khoáº£n', 'text'], ['token', 'Token (API key)', 'password'],
 ];
-// Danh sách SKU KL (28/10/2026) — nạp file Item Declarations (routes/tracking.js POST /tai-khoan-kl/:id/sku), thay toàn bộ.
+// Danh sÃ¡ch SKU KL (28/10/2026) â€” náº¡p file Item Declarations (routes/tracking.js POST /tai-khoan-kl/:id/sku), thay toÃ n bá»™.
 function htmlSkuKl(tk, id) {
   const luc = tk.skuNapLuc ? new Date(tk.skuNapLuc).toLocaleString('vi-VN') : '';
   return `<div style="border-top:1px dashed var(--color-border);padding-top:var(--space-2)">
-      <div>Danh sách SKU: ${tk.soSku ? `<b>${tk.soSku} SKU</b> · nạp lúc ${escapeHtml(luc)}${tk.skuNapBoi ? ` bởi ${escapeHtml(tk.skuNapBoi)}` : ''}`
-        : '<span style="color:var(--color-danger-text);font-weight:600">CHƯA NẠP — chưa mua được tracking KL</span>'}</div>
+      <div>Danh sÃ¡ch SKU: ${tk.soSku ? `<b>${tk.soSku} SKU</b> Â· náº¡p lÃºc ${escapeHtml(luc)}${tk.skuNapBoi ? ` bá»Ÿi ${escapeHtml(tk.skuNapBoi)}` : ''}`
+        : '<span style="color:var(--color-danger-text);font-weight:600">CHÆ¯A Náº P â€” chÆ°a mua Ä‘Æ°á»£c tracking KL</span>'}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px">
         <input type="file" accept=".xlsx" id="kl-${id}-file-sku" aria-label="File Item Declarations (.xlsx)">
-        <button type="button" class="btn-hanh-dong phu" data-tk="${escapeHtml(id)}" onclick="napSkuKl(this.dataset.tk, this)">Tải lên danh sách SKU</button>
+        <button type="button" class="btn-hanh-dong phu" data-tk="${escapeHtml(id)}" onclick="napSkuKl(this.dataset.tk, this)">Táº£i lÃªn danh sÃ¡ch SKU</button>
       </div>
     </div>`;
 }
 async function napSkuKl(id, btn) {
   const o = document.getElementById(`kl-${id}-file-sku`);
-  if (!o.files[0]) { thongBaoGke('Chọn file .xlsx (Item Declarations) trước.', true, 'thong-bao-kl'); return; }
-  if (!await hopXacNhan('Thay TOÀN BỘ danh sách SKU của tài khoản này bằng file vừa chọn?')) return;
+  if (!o.files[0]) { thongBaoGke('Chá»n file .xlsx (Item Declarations) trÆ°á»›c.', true, 'thong-bao-kl'); return; }
+  if (!await hopXacNhan('Thay TOÃ€N Bá»˜ danh sÃ¡ch SKU cá»§a tÃ i khoáº£n nÃ y báº±ng file vá»«a chá»n?')) return;
   const fd = new FormData();
   fd.append('file', o.files[0]);
   btn.disabled = true;
   try {
     const res = await fetch(`${API}/tracking/tai-khoan-kl/${encodeURIComponent(id)}/sku`, { method: 'POST', body: fd, credentials: 'include' });
     const kq = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(kq.error || `Máy chủ trả ${res.status}`);
-    thongBaoGke(`Đã nạp ${kq.soSku} SKU.${kq.canhBao && kq.canhBao.length ? ` (${kq.canhBao.length} dòng lặp lại đã bỏ qua)` : ''}`, false, 'thong-bao-kl');
+    if (!res.ok) throw new Error(kq.error || `MÃ¡y chá»§ tráº£ ${res.status}`);
+    thongBaoGke(`ÄÃ£ náº¡p ${kq.soSku} SKU.${kq.canhBao && kq.canhBao.length ? ` (${kq.canhBao.length} dÃ²ng láº·p láº¡i Ä‘Ã£ bá» qua)` : ''}`, false, 'thong-bao-kl');
     await taiTaiKhoanKl();
-  } catch (e) { btn.disabled = false; thongBaoGke('Chưa nạp: ' + e.message, true, 'thong-bao-kl'); }
+  } catch (e) { btn.disabled = false; thongBaoGke('ChÆ°a náº¡p: ' + e.message, true, 'thong-bao-kl'); }
 }
 function theTaiKhoanKl(tk, id, dungCho) {
   return `
     <div class="bao-cao-form st-cau-hinh-gke st-the-tk-gke" data-tk-kl="${escapeHtml(id)}">
-      <strong>${id === 'moi' ? 'Tài khoản mới' : escapeHtml(tk.ten || '(chưa đặt tên)')}</strong>
-      <span class="st-ghi-chu-truong">${id === 'moi' ? '' : (dungCho.length ? 'Đang dùng cho Xưởng: ' + dungCho.map(escapeHtml).join(', ') : 'Chưa gán cho Xưởng nào')}</span>
+      <strong>${id === 'moi' ? 'TÃ i khoáº£n má»›i' : escapeHtml(tk.ten || '(chÆ°a Ä‘áº·t tÃªn)')}</strong>
+      <span class="st-ghi-chu-truong">${id === 'moi' ? '' : (dungCho.length ? 'Äang dÃ¹ng cho XÆ°á»Ÿng: ' + dungCho.map(escapeHtml).join(', ') : 'ChÆ°a gÃ¡n cho XÆ°á»Ÿng nÃ o')}</span>
       <div class="st-luoi-gke">
         ${TRUONG_TK_KL.map(([khoa, nhan, loai, goiY]) => `
           <div class="truong"><label for="kl-${id}-${khoa}">${nhan}</label>
             <input type="${loai}" id="kl-${id}-${khoa}" value="${khoa === 'token' ? '' : escapeHtml(tk[khoa] ?? '')}"
-              placeholder="${khoa === 'token' ? (tk.coToken ? `Đã có (…${escapeHtml(tk.duoiToken)}) — để trống = giữ nguyên` : 'Dán API key KL') : (goiY || '')}"
+              placeholder="${khoa === 'token' ? (tk.coToken ? `ÄÃ£ cÃ³ (â€¦${escapeHtml(tk.duoiToken)}) â€” Ä‘á»ƒ trá»‘ng = giá»¯ nguyÃªn` : 'DÃ¡n API key KL') : (goiY || '')}"
               ${loai === 'number' ? 'min="1" step="1"' : ''} autocomplete="${loai === 'password' ? 'new-password' : 'off'}">
           </div>`).join('')}
       </div>
-      ${id === 'moi' ? '<p class="st-ghi-chu-truong" style="margin:0">Lưu tài khoản trước, rồi tải lên danh sách SKU.</p>' : htmlSkuKl(tk, id)}
+      ${id === 'moi' ? '<p class="st-ghi-chu-truong" style="margin:0">LÆ°u tÃ i khoáº£n trÆ°á»›c, rá»“i táº£i lÃªn danh sÃ¡ch SKU.</p>' : htmlSkuKl(tk, id)}
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button type="button" class="btn-hanh-dong" data-tk="${escapeHtml(id)}" onclick="luuTaiKhoanKl(this.dataset.tk)">Lưu tài khoản</button>
+        <button type="button" class="btn-hanh-dong" data-tk="${escapeHtml(id)}" onclick="luuTaiKhoanKl(this.dataset.tk)">LÆ°u tÃ i khoáº£n</button>
         ${id === 'moi'
-          ? `<button type="button" class="btn-hanh-dong phu" onclick="taiTaiKhoanKl()">Huỷ</button>`
-          : `<button type="button" class="btn-hanh-dong phu nguy-hiem" data-tk="${escapeHtml(id)}" onclick="xoaTaiKhoanKl(this.dataset.tk)">Xoá tài khoản</button>`}
+          ? `<button type="button" class="btn-hanh-dong phu" onclick="taiTaiKhoanKl()">Huá»·</button>`
+          : `<button type="button" class="btn-hanh-dong phu nguy-hiem" data-tk="${escapeHtml(id)}" onclick="xoaTaiKhoanKl(this.dataset.tk)">XoÃ¡ tÃ i khoáº£n</button>`}
       </div>
     </div>`;
 }
 async function taiTaiKhoanKl() {
   let kq;
-  try { kq = await apiFetch('/tracking/tai-khoan-kl'); } catch (e) { thongBaoGke('Không tải được tài khoản KL: ' + e.message, true, 'thong-bao-kl'); return; }
+  try { kq = await apiFetch('/tracking/tai-khoan-kl'); } catch (e) { thongBaoGke('KhÃ´ng táº£i Ä‘Æ°á»£c tÃ i khoáº£n KL: ' + e.message, true, 'thong-bao-kl'); return; }
   const tenTk = Object.fromEntries(kq.taiKhoan.map(t => [t.id, t.ten]));
   document.getElementById('kl-gan-xuong').innerHTML = kq.danhSachXuong.map(x => `
     <div class="st-dong-xuong">
       <span class="ten-xuong">${escapeHtml(x)}</span>
       <select data-xuong="${escapeHtml(x)}" onchange="ganTaiKhoanKl(this.dataset.xuong, this.value)">
-        <option value="">— Chưa gán (không mua được tracking KL) —</option>
+        <option value="">â€” ChÆ°a gÃ¡n (khÃ´ng mua Ä‘Æ°á»£c tracking KL) â€”</option>
         ${kq.taiKhoan.map(t => `<option value="${t.id}" ${kq.ganXuong[x] === t.id ? 'selected' : ''}>${escapeHtml(t.ten || '#' + t.id)}</option>`).join('')}
       </select>
-      ${kq.ganXuong[x] && !tenTk[kq.ganXuong[x]] ? '<span style="color:var(--color-danger-text)">Tài khoản đã gán không còn tồn tại</span>' : ''}
+      ${kq.ganXuong[x] && !tenTk[kq.ganXuong[x]] ? '<span style="color:var(--color-danger-text)">TÃ i khoáº£n Ä‘Ã£ gÃ¡n khÃ´ng cÃ²n tá»“n táº¡i</span>' : ''}
     </div>`).join('');
   document.getElementById('kl-danh-sach-tk').innerHTML = kq.taiKhoan.length
     ? kq.taiKhoan.map(t => theTaiKhoanKl(t, t.id, kq.danhSachXuong.filter(x => kq.ganXuong[x] === t.id))).join('')
-    : '<p style="color:var(--color-text-muted)">Chưa có tài khoản KL nào — bấm "Thêm tài khoản KL".</p>';
+    : '<p style="color:var(--color-text-muted)">ChÆ°a cÃ³ tÃ i khoáº£n KL nÃ o â€” báº¥m "ThÃªm tÃ i khoáº£n KL".</p>';
 }
 function themTheTaiKhoanKl() {
   if (document.querySelector('[data-tk-kl="moi"]')) return;
@@ -1161,77 +1161,77 @@ async function luuTaiKhoanKl(id) {
   TRUONG_TK_KL.forEach(([khoa]) => { giaTri[khoa] = document.getElementById(`kl-${id}-${khoa}`).value.trim(); });
   try {
     await apiFetch('/tracking/tai-khoan-kl' + (id === 'moi' ? '' : '/' + encodeURIComponent(id)), { method: id === 'moi' ? 'POST' : 'PUT', body: JSON.stringify(giaTri) });
-    thongBaoGke(`Đã lưu tài khoản KL "${giaTri.ten}".`, false, 'thong-bao-kl');
+    thongBaoGke(`ÄÃ£ lÆ°u tÃ i khoáº£n KL "${giaTri.ten}".`, false, 'thong-bao-kl');
     await taiTaiKhoanKl();
-  } catch (e) { thongBaoGke('Lỗi khi lưu: ' + e.message, true, 'thong-bao-kl'); }
+  } catch (e) { thongBaoGke('Lá»—i khi lÆ°u: ' + e.message, true, 'thong-bao-kl'); }
 }
 async function xoaTaiKhoanKl(id) {
-  if (!await hopXacNhan('Xoá tài khoản KL này? Đơn ĐÃ mua tracking bằng tài khoản này sẽ không lấy lại label / tra trạng thái được nữa.')) return;
+  if (!await hopXacNhan('XoÃ¡ tÃ i khoáº£n KL nÃ y? ÄÆ¡n ÄÃƒ mua tracking báº±ng tÃ i khoáº£n nÃ y sáº½ khÃ´ng láº¥y láº¡i label / tra tráº¡ng thÃ¡i Ä‘Æ°á»£c ná»¯a.')) return;
   try {
     await apiFetch('/tracking/tai-khoan-kl/' + encodeURIComponent(id), { method: 'DELETE' });
-    thongBaoGke('Đã xoá tài khoản KL.', false, 'thong-bao-kl');
+    thongBaoGke('ÄÃ£ xoÃ¡ tÃ i khoáº£n KL.', false, 'thong-bao-kl');
     await taiTaiKhoanKl();
   } catch (e) { thongBaoGke(e.message, true, 'thong-bao-kl'); }
 }
 async function ganTaiKhoanKl(xuong, taiKhoanId) {
   try {
     await apiFetch('/tracking/gan-tai-khoan-kl', { method: 'POST', body: JSON.stringify({ xuong, taiKhoanId }) });
-    thongBaoGke(taiKhoanId ? `Đã gán tài khoản KL cho Xưởng ${xuong}.` : `Đã bỏ gán tài khoản KL của Xưởng ${xuong}.`, false, 'thong-bao-kl');
+    thongBaoGke(taiKhoanId ? `ÄÃ£ gÃ¡n tÃ i khoáº£n KL cho XÆ°á»Ÿng ${xuong}.` : `ÄÃ£ bá» gÃ¡n tÃ i khoáº£n KL cá»§a XÆ°á»Ÿng ${xuong}.`, false, 'thong-bao-kl');
     await taiTaiKhoanKl();
-  } catch (e) { thongBaoGke('Lỗi khi gán: ' + e.message, true, 'thong-bao-kl'); await taiTaiKhoanKl(); }
+  } catch (e) { thongBaoGke('Lá»—i khi gÃ¡n: ' + e.message, true, 'thong-bao-kl'); await taiTaiKhoanKl(); }
 }
 
-// ---- Tài khoản HPW theo Xưởng (22/10/2026) — cùng khuôn KL; password không hiện lại, để trống = giữ password cũ ----
-const DICH_VU_HPW = ['US Standard', 'US Premium', 'Outside US', 'US Oversize', 'US Defer', 'US Pre Track']; // gợi ý theo tài liệu HPW
+// ---- TÃ i khoáº£n HPW theo XÆ°á»Ÿng (22/10/2026) â€” cÃ¹ng khuÃ´n KL; password khÃ´ng hiá»‡n láº¡i, Ä‘á»ƒ trá»‘ng = giá»¯ password cÅ© ----
+const DICH_VU_HPW = ['US Standard', 'US Premium', 'Outside US', 'US Oversize', 'US Defer', 'US Pre Track']; // gá»£i Ã½ theo tÃ i liá»‡u HPW
 const TRUONG_TK_HPW = [
-  ['ten', 'Tên tài khoản', 'text'], ['username', 'Username', 'text'], ['password', 'Password', 'password'],
-  ['labelServiceUs', 'Dịch vụ cho đơn US', 'chon', 'US Standard'], ['labelServiceUk', 'Dịch vụ cho đơn UK', 'chon', 'Outside US'],
-  ['daiCm', 'Dài kiện (cm)', 'number'], ['rongCm', 'Rộng kiện (cm)', 'number'], ['caoCm', 'Cao kiện (cm)', 'number'],
-  ['hsCode', 'HSCODE', 'text'], ['tenHang', 'Tên hàng', 'text', 'Embroidered garment'], ['skuHang', 'SKU', 'text', 'EMB-GARMENT'],
-  ['giaHangUsd', 'Giá khai báo ($ / áo)', 'number'], ['canNangMoiAoGram', 'Cân nặng mỗi áo (gram)', 'number', '300'],
+  ['ten', 'TÃªn tÃ i khoáº£n', 'text'], ['username', 'Username', 'text'], ['password', 'Password', 'password'],
+  ['labelServiceUs', 'Dá»‹ch vá»¥ cho Ä‘Æ¡n US', 'chon', 'US Standard'], ['labelServiceUk', 'Dá»‹ch vá»¥ cho Ä‘Æ¡n UK', 'chon', 'Outside US'],
+  ['daiCm', 'DÃ i kiá»‡n (cm)', 'number'], ['rongCm', 'Rá»™ng kiá»‡n (cm)', 'number'], ['caoCm', 'Cao kiá»‡n (cm)', 'number'],
+  ['hsCode', 'HSCODE', 'text'], ['tenHang', 'TÃªn hÃ ng', 'text', 'Embroidered garment'], ['skuHang', 'SKU', 'text', 'EMB-GARMENT'],
+  ['giaHangUsd', 'GiÃ¡ khai bÃ¡o ($ / Ã¡o)', 'number'], ['canNangMoiAoGram', 'CÃ¢n náº·ng má»—i Ã¡o (gram)', 'number', '300'],
 ];
 function theTaiKhoanHpw(tk, id, dungCho) {
   const o = (khoa, loai, goiY) => {
     const idO = `hpw-${id}-${khoa}`;
-    if (loai === 'chon') { // ô tự nhập + gợi ý: HPW có thể xác nhận tên dịch vụ ngoài danh sách tài liệu (vd cho đơn UK)
+    if (loai === 'chon') { // Ã´ tá»± nháº­p + gá»£i Ã½: HPW cÃ³ thá»ƒ xÃ¡c nháº­n tÃªn dá»‹ch vá»¥ ngoÃ i danh sÃ¡ch tÃ i liá»‡u (vd cho Ä‘Æ¡n UK)
       return `<input type="text" id="${idO}" list="ds-dich-vu-hpw" value="${escapeHtml(tk[khoa] || goiY)}" autocomplete="off">`;
     }
     const gt = khoa === 'password' ? '' : (tk[khoa] ?? '');
-    const ph = khoa === 'password' ? (tk.coPassword ? 'Đã có — để trống = giữ nguyên' : 'Password đăng nhập HPW') : (goiY || '');
+    const ph = khoa === 'password' ? (tk.coPassword ? 'ÄÃ£ cÃ³ â€” Ä‘á»ƒ trá»‘ng = giá»¯ nguyÃªn' : 'Password Ä‘Äƒng nháº­p HPW') : (goiY || '');
     return `<input type="${loai}" id="${idO}" value="${escapeHtml(gt)}" placeholder="${escapeHtml(ph)}" ${loai === 'number' ? 'min="0" step="0.01"' : ''} autocomplete="${loai === 'password' ? 'new-password' : 'off'}">`;
   };
   return `
     <div class="bao-cao-form st-cau-hinh-gke st-the-tk-gke" data-tk-hpw="${escapeHtml(id)}">
-      <strong>${id === 'moi' ? 'Tài khoản mới' : escapeHtml(tk.ten || '(chưa đặt tên)')}</strong>
-      <span class="st-ghi-chu-truong">${id === 'moi' ? '' : (dungCho.length ? 'Đang dùng cho Xưởng: ' + dungCho.map(escapeHtml).join(', ') : 'Chưa gán cho Xưởng nào')}</span>
+      <strong>${id === 'moi' ? 'TÃ i khoáº£n má»›i' : escapeHtml(tk.ten || '(chÆ°a Ä‘áº·t tÃªn)')}</strong>
+      <span class="st-ghi-chu-truong">${id === 'moi' ? '' : (dungCho.length ? 'Äang dÃ¹ng cho XÆ°á»Ÿng: ' + dungCho.map(escapeHtml).join(', ') : 'ChÆ°a gÃ¡n cho XÆ°á»Ÿng nÃ o')}</span>
       <div class="st-luoi-gke">
         ${TRUONG_TK_HPW.map(([khoa, nhan, loai, goiY]) => `<div class="truong"><label for="hpw-${id}-${khoa}">${nhan}</label>${o(khoa, loai, goiY)}</div>`).join('')}
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button type="button" class="btn-hanh-dong" data-tk="${escapeHtml(id)}" onclick="luuTaiKhoanHpw(this.dataset.tk)">Lưu tài khoản</button>
+        <button type="button" class="btn-hanh-dong" data-tk="${escapeHtml(id)}" onclick="luuTaiKhoanHpw(this.dataset.tk)">LÆ°u tÃ i khoáº£n</button>
         ${id === 'moi'
-          ? `<button type="button" class="btn-hanh-dong phu" onclick="taiTaiKhoanHpw()">Huỷ</button>`
-          : `<button type="button" class="btn-hanh-dong phu nguy-hiem" data-tk="${escapeHtml(id)}" onclick="xoaTaiKhoanHpw(this.dataset.tk)">Xoá tài khoản</button>`}
+          ? `<button type="button" class="btn-hanh-dong phu" onclick="taiTaiKhoanHpw()">Huá»·</button>`
+          : `<button type="button" class="btn-hanh-dong phu nguy-hiem" data-tk="${escapeHtml(id)}" onclick="xoaTaiKhoanHpw(this.dataset.tk)">XoÃ¡ tÃ i khoáº£n</button>`}
       </div>
     </div>`;
 }
 async function taiTaiKhoanHpw() {
   document.getElementById('ds-dich-vu-hpw').innerHTML = DICH_VU_HPW.map(d => `<option value="${escapeHtml(d)}">`).join('');
   let kq;
-  try { kq = await apiFetch('/tracking/tai-khoan-hpw'); } catch (e) { thongBaoGke('Không tải được tài khoản HPW: ' + e.message, true, 'thong-bao-hpw'); return; }
+  try { kq = await apiFetch('/tracking/tai-khoan-hpw'); } catch (e) { thongBaoGke('KhÃ´ng táº£i Ä‘Æ°á»£c tÃ i khoáº£n HPW: ' + e.message, true, 'thong-bao-hpw'); return; }
   const tenTk = Object.fromEntries(kq.taiKhoan.map(t => [t.id, t.ten]));
   document.getElementById('hpw-gan-xuong').innerHTML = kq.danhSachXuong.map(x => `
     <div class="st-dong-xuong">
       <span class="ten-xuong">${escapeHtml(x)}</span>
       <select data-xuong="${escapeHtml(x)}" onchange="ganTaiKhoanHpw(this.dataset.xuong, this.value)">
-        <option value="">— Chưa gán (không mua được tracking HPW) —</option>
+        <option value="">â€” ChÆ°a gÃ¡n (khÃ´ng mua Ä‘Æ°á»£c tracking HPW) â€”</option>
         ${kq.taiKhoan.map(t => `<option value="${t.id}" ${kq.ganXuong[x] === t.id ? 'selected' : ''}>${escapeHtml(t.ten || '#' + t.id)}</option>`).join('')}
       </select>
-      ${kq.ganXuong[x] && !tenTk[kq.ganXuong[x]] ? '<span style="color:var(--color-danger-text)">Tài khoản đã gán không còn tồn tại</span>' : ''}
+      ${kq.ganXuong[x] && !tenTk[kq.ganXuong[x]] ? '<span style="color:var(--color-danger-text)">TÃ i khoáº£n Ä‘Ã£ gÃ¡n khÃ´ng cÃ²n tá»“n táº¡i</span>' : ''}
     </div>`).join('');
   document.getElementById('hpw-danh-sach-tk').innerHTML = kq.taiKhoan.length
     ? kq.taiKhoan.map(t => theTaiKhoanHpw(t, t.id, kq.danhSachXuong.filter(x => kq.ganXuong[x] === t.id))).join('')
-    : '<p style="color:var(--color-text-muted)">Chưa có tài khoản HPW nào — bấm "Thêm tài khoản HPW".</p>';
+    : '<p style="color:var(--color-text-muted)">ChÆ°a cÃ³ tÃ i khoáº£n HPW nÃ o â€” báº¥m "ThÃªm tÃ i khoáº£n HPW".</p>';
 }
 function themTheTaiKhoanHpw() {
   if (document.querySelector('[data-tk-hpw="moi"]')) return;
@@ -1244,29 +1244,29 @@ async function luuTaiKhoanHpw(id) {
   try {
     const kq = await apiFetch('/tracking/tai-khoan-hpw' + (id === 'moi' ? '' : '/' + encodeURIComponent(id)), { method: id === 'moi' ? 'POST' : 'PUT', body: JSON.stringify(giaTri) });
     await taiTaiKhoanHpw();
-    // Dịch vụ ngoài danh sách tài liệu -> vẫn lưu, hiện cảnh báo (màu lỗi) để kiểm tra chính tả.
-    thongBaoGke(`Đã lưu tài khoản HPW "${giaTri.ten}".${kq.canhBao ? ' ' + kq.canhBao : ''}`, !!kq.canhBao, 'thong-bao-hpw');
-  } catch (e) { thongBaoGke('Lỗi khi lưu: ' + e.message, true, 'thong-bao-hpw'); }
+    // Dá»‹ch vá»¥ ngoÃ i danh sÃ¡ch tÃ i liá»‡u -> váº«n lÆ°u, hiá»‡n cáº£nh bÃ¡o (mÃ u lá»—i) Ä‘á»ƒ kiá»ƒm tra chÃ­nh táº£.
+    thongBaoGke(`ÄÃ£ lÆ°u tÃ i khoáº£n HPW "${giaTri.ten}".${kq.canhBao ? ' ' + kq.canhBao : ''}`, !!kq.canhBao, 'thong-bao-hpw');
+  } catch (e) { thongBaoGke('Lá»—i khi lÆ°u: ' + e.message, true, 'thong-bao-hpw'); }
 }
 async function xoaTaiKhoanHpw(id) {
-  if (!await hopXacNhan('Xoá tài khoản HPW này? Đơn ĐÃ mua tracking bằng tài khoản này sẽ không lấy lại label / tra trạng thái được nữa.')) return;
+  if (!await hopXacNhan('XoÃ¡ tÃ i khoáº£n HPW nÃ y? ÄÆ¡n ÄÃƒ mua tracking báº±ng tÃ i khoáº£n nÃ y sáº½ khÃ´ng láº¥y láº¡i label / tra tráº¡ng thÃ¡i Ä‘Æ°á»£c ná»¯a.')) return;
   try {
     await apiFetch('/tracking/tai-khoan-hpw/' + encodeURIComponent(id), { method: 'DELETE' });
-    thongBaoGke('Đã xoá tài khoản HPW.', false, 'thong-bao-hpw');
+    thongBaoGke('ÄÃ£ xoÃ¡ tÃ i khoáº£n HPW.', false, 'thong-bao-hpw');
     await taiTaiKhoanHpw();
   } catch (e) { thongBaoGke(e.message, true, 'thong-bao-hpw'); }
 }
 async function ganTaiKhoanHpw(xuong, taiKhoanId) {
   try {
     await apiFetch('/tracking/gan-tai-khoan-hpw', { method: 'POST', body: JSON.stringify({ xuong, taiKhoanId }) });
-    thongBaoGke(taiKhoanId ? `Đã gán tài khoản HPW cho Xưởng ${xuong}.` : `Đã bỏ gán tài khoản HPW của Xưởng ${xuong}.`, false, 'thong-bao-hpw');
+    thongBaoGke(taiKhoanId ? `ÄÃ£ gÃ¡n tÃ i khoáº£n HPW cho XÆ°á»Ÿng ${xuong}.` : `ÄÃ£ bá» gÃ¡n tÃ i khoáº£n HPW cá»§a XÆ°á»Ÿng ${xuong}.`, false, 'thong-bao-hpw');
     await taiTaiKhoanHpw();
-  } catch (e) { thongBaoGke('Lỗi khi gán: ' + e.message, true, 'thong-bao-hpw'); await taiTaiKhoanHpw(); }
+  } catch (e) { thongBaoGke('Lá»—i khi gÃ¡n: ' + e.message, true, 'thong-bao-hpw'); await taiTaiKhoanHpw(); }
 }
 
-// 07/10/2026: mỗi mức = bật/tắt + đầu vào ('' = từ ngày lên đơn) + đầu ra + số ngày. Server kiểm tra lại (routes/canhBao.js).
-const MUC_CANH_BAO_CAI_DAT = [['VANG', 'Vàng'], ['CAM', 'Cam'], ['DO', 'Đỏ']];
-// Cảnh báo vận hành (11/10/2026) — routes/vanHanh.js. R3: danh sách = trạng thái thật đang có + các giá trị đã tích trước đó (dù hiện 0 đơn).
+// 07/10/2026: má»—i má»©c = báº­t/táº¯t + Ä‘áº§u vÃ o ('' = tá»« ngÃ y lÃªn Ä‘Æ¡n) + Ä‘áº§u ra + sá»‘ ngÃ y. Server kiá»ƒm tra láº¡i (routes/canhBao.js).
+const MUC_CANH_BAO_CAI_DAT = [['VANG', 'VÃ ng'], ['CAM', 'Cam'], ['DO', 'Äá»']];
+// Cáº£nh bÃ¡o váº­n hÃ nh (11/10/2026) â€” routes/vanHanh.js. R3: danh sÃ¡ch = tráº¡ng thÃ¡i tháº­t Ä‘ang cÃ³ + cÃ¡c giÃ¡ trá»‹ Ä‘Ã£ tÃ­ch trÆ°á»›c Ä‘Ã³ (dÃ¹ hiá»‡n 0 Ä‘Æ¡n).
 async function taiCauHinhVanHanh() {
   const { cauHinh: c, trangThaiTracking } = await apiFetch('/van-hanh/cau-hinh');
   document.getElementById('vh-telegram').value = c.telegramChat;
@@ -1278,7 +1278,7 @@ async function taiCauHinhVanHanh() {
   const ds = [...trangThaiTracking];
   for (const g of c.l2.trangThaiR3) if (!ds.some(x => x.giaTri === g)) ds.push({ giaTri: g, soDon: 0 });
   document.getElementById('vh-ds-r3').innerHTML = ds.length ? ds.map(x => `<label style="font-weight:400"><input type="checkbox" class="vh-r3" value="${escapeHtml(x.giaTri)}" ${c.l2.trangThaiR3.includes(x.giaTri) ? 'checked' : ''}> ${escapeHtml(x.giaTri)} <span style="color:var(--color-text-muted)">(${x.soDon})</span></label>`).join('')
-    : '<span style="color:var(--color-text-muted)">Chưa có đơn nào có trạng thái tracking.</span>';
+    : '<span style="color:var(--color-text-muted)">ChÆ°a cÃ³ Ä‘Æ¡n nÃ o cÃ³ tráº¡ng thÃ¡i tracking.</span>';
 }
 function thongBaoVanHanh(chu, loi) {
   const tb = document.getElementById('thong-bao-van-hanh');
@@ -1294,32 +1294,32 @@ async function luuCauHinhVanHanh() {
       l2: { batR1: bat('vh-bat-r1'), ngayR1: so('vh-ngay-r1'), batR2: bat('vh-bat-r2'), ngayR2: so('vh-ngay-r2'), batR3: bat('vh-bat-r3'),
         trangThaiR3: [...document.querySelectorAll('.vh-r3:checked')].map(x => x.value) },
     }) });
-    thongBaoVanHanh('Đã lưu.');
-  } catch (e) { thongBaoVanHanh('Lỗi: ' + e.message, true); }
+    thongBaoVanHanh('ÄÃ£ lÆ°u.');
+  } catch (e) { thongBaoVanHanh('Lá»—i: ' + e.message, true); }
 }
 async function guiThuVanHanh() {
-  try { await apiFetch('/van-hanh/gui-thu', { method: 'POST' }); thongBaoVanHanh('Đã gửi tin thử — kiểm tra chat Telegram (nhớ bấm Lưu trước nếu vừa đổi Chat ID).'); }
-  catch (e) { thongBaoVanHanh('Lỗi: ' + e.message, true); }
+  try { await apiFetch('/van-hanh/gui-thu', { method: 'POST' }); thongBaoVanHanh('ÄÃ£ gá»­i tin thá»­ â€” kiá»ƒm tra chat Telegram (nhá»› báº¥m LÆ°u trÆ°á»›c náº¿u vá»«a Ä‘á»•i Chat ID).'); }
+  catch (e) { thongBaoVanHanh('Lá»—i: ' + e.message, true); }
 }
 
-// Báo cáo logs hằng ngày (15/10/2026) — routes/vanHanh.js /bao-cao-log. Token không bao giờ trả về trình duyệt, chỉ bản che.
+// BÃ¡o cÃ¡o logs háº±ng ngÃ y (15/10/2026) â€” routes/vanHanh.js /bao-cao-log. Token khÃ´ng bao giá» tráº£ vá» trÃ¬nh duyá»‡t, chá»‰ báº£n che.
 async function taiBaoCaoLog() {
   const c = await apiFetch('/van-hanh/bao-cao-log');
   document.getElementById('bcl-gio').value = c.gio;
   document.getElementById('bcl-chat').value = c.chat;
   const o = document.getElementById('bcl-token');
   o.value = '';
-  o.placeholder = c.nguonToken === 'app' ? 'Để trống = giữ token cũ' : '123456789:AAE...';
+  o.placeholder = c.nguonToken === 'app' ? 'Äá»ƒ trá»‘ng = giá»¯ token cÅ©' : '123456789:AAE...';
   document.getElementById('btn-xoa-token-bcl').style.display = c.nguonToken === 'app' ? '' : 'none';
-  document.getElementById('bcl-token-trang-thai').textContent = c.nguonToken === 'app' ? `(đang lưu: ${c.tokenChe})`
-    : c.nguonToken === 'env' ? '(đang dùng TELEGRAM_BOT_TOKEN trong .env)' : '(chưa có — chưa gửi được)';
+  document.getElementById('bcl-token-trang-thai').textContent = c.nguonToken === 'app' ? `(Ä‘ang lÆ°u: ${c.tokenChe})`
+    : c.nguonToken === 'env' ? '(Ä‘ang dÃ¹ng TELEGRAM_BOT_TOKEN trong .env)' : '(chÆ°a cÃ³ â€” chÆ°a gá»­i Ä‘Æ°á»£c)';
 }
 function thongBaoBaoCaoLog(chu, loi) {
   const tb = document.getElementById('thong-bao-bcl');
   tb.style.display = 'block'; tb.style.color = loi ? 'var(--color-primary)' : '#16a34a'; tb.textContent = chu;
 }
 async function luuBaoCaoLog(xoaToken) {
-  if (xoaToken && !confirm('Xoá Bot Token đã lưu? (Sẽ dùng TELEGRAM_BOT_TOKEN trong .env nếu có.)')) return;
+  if (xoaToken && !confirm('XoÃ¡ Bot Token Ä‘Ã£ lÆ°u? (Sáº½ dÃ¹ng TELEGRAM_BOT_TOKEN trong .env náº¿u cÃ³.)')) return;
   try {
     await apiFetch('/van-hanh/bao-cao-log', { method: 'POST', body: JSON.stringify({
       gio: document.getElementById('bcl-gio').value, chat: document.getElementById('bcl-chat').value.trim(),
@@ -1327,33 +1327,33 @@ async function luuBaoCaoLog(xoaToken) {
     }) });
     await taiBaoCaoLog();
     const gio = document.getElementById('bcl-gio').value;
-    thongBaoBaoCaoLog(xoaToken ? 'Đã xoá token.' : gio ? `Đã lưu — gửi mỗi ngày lúc ${gio}.` : 'Đã lưu — đang TẮT gửi hằng ngày (chưa có giờ gửi).');
-  } catch (e) { thongBaoBaoCaoLog('Lỗi: ' + e.message, true); }
+    thongBaoBaoCaoLog(xoaToken ? 'ÄÃ£ xoÃ¡ token.' : gio ? `ÄÃ£ lÆ°u â€” gá»­i má»—i ngÃ y lÃºc ${gio}.` : 'ÄÃ£ lÆ°u â€” Ä‘ang Táº®T gá»­i háº±ng ngÃ y (chÆ°a cÃ³ giá» gá»­i).');
+  } catch (e) { thongBaoBaoCaoLog('Lá»—i: ' + e.message, true); }
 }
-// duongDan: 'gui-ngay' (báo cáo 24 giờ) | 'gui-tuan' (báo cáo vận hành tuần) | 'gui-loi-du-lieu' — gửi theo cấu hình ĐÃ LƯU.
+// duongDan: 'gui-ngay' (bÃ¡o cÃ¡o 24 giá») | 'gui-tuan' (bÃ¡o cÃ¡o váº­n hÃ nh tuáº§n) | 'gui-loi-du-lieu' â€” gá»­i theo cáº¥u hÃ¬nh ÄÃƒ LÆ¯U.
 async function guiNgayBaoCaoLog(idNut, duongDan) {
   const nut = document.getElementById(idNut);
   nut.disabled = true;
-  thongBaoBaoCaoLog('Đang gửi...');
+  thongBaoBaoCaoLog('Äang gá»­i...');
   try {
     const kq = await apiFetch('/van-hanh/bao-cao-log/' + duongDan, { method: 'POST' });
-    thongBaoBaoCaoLog(duongDan === 'gui-loi-du-lieu' && !kq.soLoi ? 'Không có lỗi dữ liệu nào — không gửi gì.' : 'Đã gửi — kiểm tra chat Telegram (gửi theo cấu hình ĐÃ LƯU).');
-  } catch (e) { thongBaoBaoCaoLog('Lỗi: ' + e.message, true); }
+    thongBaoBaoCaoLog(duongDan === 'gui-loi-du-lieu' && !kq.soLoi ? 'KhÃ´ng cÃ³ lá»—i dá»¯ liá»‡u nÃ o â€” khÃ´ng gá»­i gÃ¬.' : 'ÄÃ£ gá»­i â€” kiá»ƒm tra chat Telegram (gá»­i theo cáº¥u hÃ¬nh ÄÃƒ LÆ¯U).');
+  } catch (e) { thongBaoBaoCaoLog('Lá»—i: ' + e.message, true); }
   nut.disabled = false;
 }
 
 async function taiNguongCanhBao() {
   const { cauHinh, trangThai } = await apiFetch('/canh-bao/nguong');
-  const tuyChon = (chon, coNgayLenDon) => (coNgayLenDon ? [['', '(Từ ngày lên đơn)']] : []).concat(trangThai.map(t => [t, t]))
+  const tuyChon = (chon, coNgayLenDon) => (coNgayLenDon ? [['', '(Tá»« ngÃ y lÃªn Ä‘Æ¡n)']] : []).concat(trangThai.map(t => [t, t]))
     .map(([v, nhan]) => `<option value="${escapeHtml(v)}" ${v === chon ? 'selected' : ''}>${escapeHtml(nhan)}</option>`).join('');
   document.getElementById('ds-cau-hinh-canh-bao').innerHTML = MUC_CANH_BAO_CAI_DAT.map(([m, ten]) => {
     const ch = cauHinh[m];
     return `<div class="bao-cao-form">
       <div class="truong"><label for="canh-bao-bat-${m}">${ten}</label>
-        <label style="font-weight:400"><input type="checkbox" id="canh-bao-bat-${m}" ${ch.bat ? 'checked' : ''}> Bật</label></div>
-      <div class="truong"><label for="canh-bao-vao-${m}">Trạng thái đầu vào</label><select id="canh-bao-vao-${m}">${tuyChon(ch.vao, true)}</select></div>
-      <div class="truong"><label for="canh-bao-ra-${m}">Trạng thái đầu ra</label><select id="canh-bao-ra-${m}">${tuyChon(ch.ra, false)}</select></div>
-      <div class="truong"><label for="canh-bao-ngay-${m}">Số ngày</label><input type="number" id="canh-bao-ngay-${m}" min="1" step="1" value="${ch.soNgay}" style="width:6em"></div>
+        <label style="font-weight:400"><input type="checkbox" id="canh-bao-bat-${m}" ${ch.bat ? 'checked' : ''}> Báº­t</label></div>
+      <div class="truong"><label for="canh-bao-vao-${m}">Tráº¡ng thÃ¡i Ä‘áº§u vÃ o</label><select id="canh-bao-vao-${m}">${tuyChon(ch.vao, true)}</select></div>
+      <div class="truong"><label for="canh-bao-ra-${m}">Tráº¡ng thÃ¡i Ä‘áº§u ra</label><select id="canh-bao-ra-${m}">${tuyChon(ch.ra, false)}</select></div>
+      <div class="truong"><label for="canh-bao-ngay-${m}">Sá»‘ ngÃ y</label><input type="number" id="canh-bao-ngay-${m}" min="1" step="1" value="${ch.soNgay}" style="width:6em"></div>
     </div>`;
   }).join('');
 }
@@ -1362,7 +1362,7 @@ async function luuNguongCanhBao() {
   const nut = document.getElementById('btn-luu-canh-bao');
   const thongBao = document.getElementById('thong-bao-canh-bao');
   nut.disabled = true;
-  nut.textContent = 'Đang lưu...';
+  nut.textContent = 'Äang lÆ°u...';
   try {
     await apiFetch('/canh-bao/nguong', {
       method: 'POST',
@@ -1375,14 +1375,14 @@ async function luuNguongCanhBao() {
     });
     thongBao.style.display = 'block';
     thongBao.style.color = '#16a34a';
-    thongBao.textContent = 'Đã lưu.';
+    thongBao.textContent = 'ÄÃ£ lÆ°u.';
   } catch (e) {
     thongBao.style.display = 'block';
     thongBao.style.color = 'var(--color-primary)';
-    thongBao.textContent = 'Lỗi: ' + e.message;
+    thongBao.textContent = 'Lá»—i: ' + e.message;
   } finally {
     nut.disabled = false;
-    nut.textContent = 'Lưu';
+    nut.textContent = 'LÆ°u';
   }
 }
 
@@ -1396,7 +1396,7 @@ async function luuCauHinhNenAnh() {
   const nut = document.getElementById('btn-luu-nen-anh');
   const thongBao = document.getElementById('thong-bao-nen-anh');
   nut.disabled = true;
-  nut.textContent = 'Đang lưu...';
+  nut.textContent = 'Äang lÆ°u...';
   try {
     await apiFetch('/photos/cau-hinh-nen', {
       method: 'POST',
@@ -1407,14 +1407,14 @@ async function luuCauHinhNenAnh() {
     });
     thongBao.style.display = 'block';
     thongBao.style.color = '#16a34a';
-    thongBao.textContent = 'Đã lưu.';
+    thongBao.textContent = 'ÄÃ£ lÆ°u.';
   } catch (e) {
     thongBao.style.display = 'block';
     thongBao.style.color = 'var(--color-primary)';
-    thongBao.textContent = 'Lỗi: ' + e.message;
+    thongBao.textContent = 'Lá»—i: ' + e.message;
   } finally {
     nut.disabled = false;
-    nut.textContent = 'Lưu';
+    nut.textContent = 'LÆ°u';
   }
 }
 
@@ -1434,43 +1434,43 @@ async function taiDsGgSheet() {
   const el = document.getElementById('ds-gg-sheet');
   try {
     const ds = await apiFetch('/google-sheet-team');
-    if (!ds.length) { el.innerHTML = '<p style="color:var(--color-text-muted)">Chưa có link nào được lưu.</p>'; return; }
+    if (!ds.length) { el.innerHTML = '<p style="color:var(--color-text-muted)">ChÆ°a cÃ³ link nÃ o Ä‘Æ°á»£c lÆ°u.</p>'; return; }
     el.innerHTML = `<table style="border-collapse:collapse;width:100%">
       <thead><tr>
         <th style="text-align:left;padding:4px 8px;font-size:0.82rem;color:var(--color-text-muted)">Team</th>
         <th style="text-align:left;padding:4px 8px;font-size:0.82rem;color:var(--color-text-muted)">Link Google Sheet</th>
-        <th style="text-align:left;padding:4px 8px;font-size:0.82rem;color:var(--color-text-muted)">Ghi chú</th>
+        <th style="text-align:left;padding:4px 8px;font-size:0.82rem;color:var(--color-text-muted)">Ghi chÃº</th>
         <th></th>
       </tr></thead>
       <tbody>${ds.map(r => `<tr>
         <td style="padding:4px 8px;font-weight:700">${escapeHtml(r.team)}</td>
         <td style="padding:4px 8px"><a href="${escapeHtml(r.sheet_url)}" target="_blank" rel="noopener" style="word-break:break-all">${escapeHtml(r.sheet_url)}</a></td>
-        <td style="padding:4px 8px;color:var(--color-text-muted)">${escapeHtml(r.ghi_chu || '—')}</td>
-        <td style="padding:4px 8px"><button class="btn-hanh-dong phu nguy-hiem" style="padding:3px 8px;font-size:0.78rem" onclick="xoaGgSheet('${escapeHtml(r.team)}')">Xoá</button></td>
+        <td style="padding:4px 8px;color:var(--color-text-muted)">${escapeHtml(r.ghi_chu || 'â€”')}</td>
+        <td style="padding:4px 8px"><button class="btn-hanh-dong phu nguy-hiem" style="padding:3px 8px;font-size:0.78rem" onclick="xoaGgSheet('${escapeHtml(r.team)}')">XoÃ¡</button></td>
       </tr>`).join('')}</tbody></table>`;
-  } catch (e) { el.innerHTML = '<p style="color:var(--color-danger-text)">Lỗi tải: ' + escapeHtml(e.message) + '</p>'; }
+  } catch (e) { el.innerHTML = '<p style="color:var(--color-danger-text)">Lá»—i táº£i: ' + escapeHtml(e.message) + '</p>'; }
 }
 async function luuGgSheet() {
   const team = document.getElementById('gg-team').value.trim();
   const url = document.getElementById('gg-url').value.trim();
   const ghiChu = document.getElementById('gg-ghi-chu').value.trim();
   const tb = document.getElementById('thong-bao-gg-sheet');
-  if (!team || !url) { tb.style.display = 'block'; tb.style.color = 'var(--color-primary)'; tb.textContent = 'Nhập đủ Team và Link.'; return; }
+  if (!team || !url) { tb.style.display = 'block'; tb.style.color = 'var(--color-primary)'; tb.textContent = 'Nháº­p Ä‘á»§ Team vÃ  Link.'; return; }
   try {
     await apiFetch('/google-sheet-team', { method: 'POST', body: JSON.stringify({ team, sheet_url: url, ghi_chu: ghiChu }) });
     document.getElementById('gg-team').value = '';
     document.getElementById('gg-url').value = '';
     document.getElementById('gg-ghi-chu').value = '';
-    tb.style.display = 'block'; tb.style.color = '#16a34a'; tb.textContent = 'Đã lưu.';
+    tb.style.display = 'block'; tb.style.color = '#16a34a'; tb.textContent = 'ÄÃ£ lÆ°u.';
     await taiDsGgSheet();
-  } catch (e) { tb.style.display = 'block'; tb.style.color = 'var(--color-primary)'; tb.textContent = 'Lỗi: ' + e.message; }
+  } catch (e) { tb.style.display = 'block'; tb.style.color = 'var(--color-primary)'; tb.textContent = 'Lá»—i: ' + e.message; }
 }
 async function xoaGgSheet(team) {
-  if (!confirm(`Xoá link Google Sheet của Team ${team}?`)) return;
+  if (!confirm(`XoÃ¡ link Google Sheet cá»§a Team ${team}?`)) return;
   try {
     await apiFetch('/google-sheet-team/' + encodeURIComponent(team), { method: 'DELETE' });
     await taiDsGgSheet();
-  } catch (e) { alert('Lỗi: ' + e.message); }
+  } catch (e) { alert('Lá»—i: ' + e.message); }
 }
 
 function renderBangMau() {
@@ -1486,7 +1486,7 @@ function renderBangMau() {
     btn.onclick = () => {
       luuMauDaChon(btn.dataset.id);
       apDungMauChuDao(btn.dataset.id);
-      renderBangMau(); // vẽ lại để cập nhật dấu tích + viền đang chọn
+      renderBangMau(); // váº½ láº¡i Ä‘á»ƒ cáº­p nháº­t dáº¥u tÃ­ch + viá»n Ä‘ang chá»n
     };
   });
 }

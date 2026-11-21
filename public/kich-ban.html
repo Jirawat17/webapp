@@ -1,59 +1,59 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kịch bản quét — Xưởng Thêu</title>
+<title>Ká»‹ch báº£n quÃ©t â€” XÆ°á»Ÿng ThÃªu</title>
 <link rel="stylesheet" href="/css/style.css?v=112">
 <script src="/js/theme.js?v=104"></script>
 </head>
 <body>
 <div id="nav"></div>
 <div class="page">
-  <h2>Kịch bản quét QR</h2>
-  <p>Mỗi kịch bản là 1 lựa chọn hiện ra khi quét mã QR — quy định đơn cần đang ở trạng thái nào mới
-    quét được (để trống = không yêu cầu), và sẽ chuyển sang trạng thái nào sau khi quét.</p>
+  <h2>Ká»‹ch báº£n quÃ©t QR</h2>
+  <p>Má»—i ká»‹ch báº£n lÃ  1 lá»±a chá»n hiá»‡n ra khi quÃ©t mÃ£ QR â€” quy Ä‘á»‹nh Ä‘Æ¡n cáº§n Ä‘ang á»Ÿ tráº¡ng thÃ¡i nÃ o má»›i
+    quÃ©t Ä‘Æ°á»£c (Ä‘á»ƒ trá»‘ng = khÃ´ng yÃªu cáº§u), vÃ  sáº½ chuyá»ƒn sang tráº¡ng thÃ¡i nÃ o sau khi quÃ©t.</p>
 
   <form id="form-kich-ban" class="inline-form">
     <div class="truong">
-      <label for="ten-kich-ban">Tên kịch bản</label>
-      <input id="ten-kich-ban" required placeholder="VD: Đã lấy phôi">
+      <label for="ten-kich-ban">TÃªn ká»‹ch báº£n</label>
+      <input id="ten-kich-ban" required placeholder="VD: ÄÃ£ láº¥y phÃ´i">
     </div>
     <div class="truong">
-      <label for="cot-kich-ban">Cột thao tác</label>
+      <label for="cot-kich-ban">Cá»™t thao tÃ¡c</label>
       <select id="cot-kich-ban">
-        <option value="">Mặc định (Trạng thái chung)</option>
-        <option value="TRANG_THAI_XUONG">Trạng thái chung</option>
-        <option value="TRANG_THAI_PHOI">Phôi</option>
-        <option value="TRANG_THAI_VE_FILE">Vẽ file</option>
+        <option value="">Máº·c Ä‘á»‹nh (Tráº¡ng thÃ¡i chung)</option>
+        <option value="TRANG_THAI_XUONG">Tráº¡ng thÃ¡i chung</option>
+        <option value="TRANG_THAI_PHOI">PhÃ´i</option>
+        <option value="TRANG_THAI_VE_FILE">Váº½ file</option>
       </select>
     </div>
     <div class="truong">
-      <label for="trang-thai-yeu-cau">Trạng thái yêu cầu (trước khi quét)</label>
-      <input id="trang-thai-yeu-cau" placeholder="Để trống = không yêu cầu">
+      <label for="trang-thai-yeu-cau">Tráº¡ng thÃ¡i yÃªu cáº§u (trÆ°á»›c khi quÃ©t)</label>
+      <input id="trang-thai-yeu-cau" placeholder="Äá»ƒ trá»‘ng = khÃ´ng yÃªu cáº§u">
     </div>
     <div class="truong">
-      <label for="trang-thai-sau">Trạng thái sau (bắt buộc)</label>
-      <input id="trang-thai-sau" required placeholder="VD: Đã lấy phôi">
+      <label for="trang-thai-sau">Tráº¡ng thÃ¡i sau (báº¯t buá»™c)</label>
+      <input id="trang-thai-sau" required placeholder="VD: ÄÃ£ láº¥y phÃ´i">
     </div>
     <div class="truong">
-      <label for="nguoi-thuc-hien">Vai trò được dùng</label>
-      <input id="nguoi-thuc-hien" placeholder="VD: nguoi_lay_phoi, ve_file — để trống = mọi vai trò">
-      <small style="color:var(--color-text-muted)">admin tự dùng được mọi kịch bản, trừ khi ô này có ghi <strong>superadmin</strong> — khi đó chỉ đúng các vai trò được ghi mới dùng được (vd ghi <code>superadmin</code> = chỉ superadmin).</small>
+      <label for="nguoi-thuc-hien">Vai trÃ² Ä‘Æ°á»£c dÃ¹ng</label>
+      <input id="nguoi-thuc-hien" placeholder="VD: nguoi_lay_phoi, ve_file â€” Ä‘á»ƒ trá»‘ng = má»i vai trÃ²">
+      <small style="color:var(--color-text-muted)">admin tá»± dÃ¹ng Ä‘Æ°á»£c má»i ká»‹ch báº£n, trá»« khi Ã´ nÃ y cÃ³ ghi <strong>superadmin</strong> â€” khi Ä‘Ã³ chá»‰ Ä‘Ãºng cÃ¡c vai trÃ² Ä‘Æ°á»£c ghi má»›i dÃ¹ng Ä‘Æ°á»£c (vd ghi <code>superadmin</code> = chá»‰ superadmin).</small>
     </div>
     <div class="truong">
-      <label><input type="checkbox" id="nhap-ma-tay"> Cho nhập mã tay (thay camera)</label>
-      <small style="color:var(--color-text-muted)">Bật thì màn Quét mã QR của kịch bản này KHÔNG mở camera mà hiện ô nhập mã đơn: gõ tay hoặc dùng máy quét mã vạch cầm tay, Enter là quét.</small>
+      <label><input type="checkbox" id="nhap-ma-tay"> Cho nháº­p mÃ£ tay (thay camera)</label>
+      <small style="color:var(--color-text-muted)">Báº­t thÃ¬ mÃ n QuÃ©t mÃ£ QR cá»§a ká»‹ch báº£n nÃ y KHÃ”NG má»Ÿ camera mÃ  hiá»‡n Ã´ nháº­p mÃ£ Ä‘Æ¡n: gÃµ tay hoáº·c dÃ¹ng mÃ¡y quÃ©t mÃ£ váº¡ch cáº§m tay, Enter lÃ  quÃ©t.</small>
     </div>
-    <button type="submit" class="btn-hanh-dong" id="nut-luu-kich-ban">Thêm kịch bản</button>
-    <button type="button" class="btn-hanh-dong phu" id="nut-huy-sua" style="display:none">Huỷ sửa</button>
+    <button type="submit" class="btn-hanh-dong" id="nut-luu-kich-ban">ThÃªm ká»‹ch báº£n</button>
+    <button type="button" class="btn-hanh-dong phu" id="nut-huy-sua" style="display:none">Huá»· sá»­a</button>
   </form>
 
   <table id="bang-kich-ban" class="info-table"></table>
 </div>
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=140"></script>
+<script src="/js/api.js?v=141"></script>
 <script>
 let dangSuaId = null;
 
@@ -61,8 +61,8 @@ let dangSuaId = null;
   const user = await requireLoginOrRedirect();
   if (!user) return;
   renderNav(user, 'kich-ban');
-  if (user.vaiTro !== 'superadmin') { // CHỈ superadmin (29/09/2026)
-    document.querySelector('.page').innerHTML = '<p>Bạn không có quyền truy cập trang này.</p>';
+  if (user.vaiTro !== 'superadmin') { // CHá»ˆ superadmin (29/09/2026)
+    document.querySelector('.page').innerHTML = '<p>Báº¡n khÃ´ng cÃ³ quyá»n truy cáº­p trang nÃ y.</p>';
     return;
   }
   await taiDanhSach();
@@ -94,30 +94,30 @@ document.getElementById('nut-huy-sua').onclick = huySua;
 function huySua() {
   dangSuaId = null;
   document.getElementById('form-kich-ban').reset();
-  document.getElementById('nut-luu-kich-ban').textContent = 'Thêm kịch bản';
+  document.getElementById('nut-luu-kich-ban').textContent = 'ThÃªm ká»‹ch báº£n';
   document.getElementById('nut-huy-sua').style.display = 'none';
 }
 
-const NHAN_COT = { TRANG_THAI_XUONG: 'Trạng thái chung', TRANG_THAI_PHOI: 'Phôi', TRANG_THAI_VE_FILE: 'Vẽ file' };
+const NHAN_COT = { TRANG_THAI_XUONG: 'Tráº¡ng thÃ¡i chung', TRANG_THAI_PHOI: 'PhÃ´i', TRANG_THAI_VE_FILE: 'Váº½ file' };
 
-// Ten_Kich_Ban dùng data-* + this.dataset (KHÔNG nội suy chuỗi thẳng vào onclick, bổ sung 20/09/2026,
-// phát hiện qua rà soát bảo mật — xem cùng khuôn public/don-hang-loat.html/users.html): tên kịch bản là
-// text tự do, encodeURIComponent() từng dùng ở đây KHÔNG escape dấu ' nên không an toàn khi nội suy vào
-// JS string trong thuộc tính onclick. k.id là khoá số của DB nên vẫn interpolate thẳng, an toàn.
+// Ten_Kich_Ban dÃ¹ng data-* + this.dataset (KHÃ”NG ná»™i suy chuá»—i tháº³ng vÃ o onclick, bá»• sung 20/09/2026,
+// phÃ¡t hiá»‡n qua rÃ  soÃ¡t báº£o máº­t â€” xem cÃ¹ng khuÃ´n public/don-hang-loat.html/users.html): tÃªn ká»‹ch báº£n lÃ 
+// text tá»± do, encodeURIComponent() tá»«ng dÃ¹ng á»Ÿ Ä‘Ã¢y KHÃ”NG escape dáº¥u ' nÃªn khÃ´ng an toÃ n khi ná»™i suy vÃ o
+// JS string trong thuá»™c tÃ­nh onclick. k.id lÃ  khoÃ¡ sá»‘ cá»§a DB nÃªn váº«n interpolate tháº³ng, an toÃ n.
 async function taiDanhSach() {
   const list = await apiFetch('/kich-ban');
   document.getElementById('bang-kich-ban').innerHTML = `
-    <tr><th>Tên kịch bản</th><th>Cột</th><th>Trạng thái yêu cầu</th><th>Trạng thái sau</th><th>Vai trò</th><th>Nhập mã tay</th><th></th><th></th></tr>
+    <tr><th>TÃªn ká»‹ch báº£n</th><th>Cá»™t</th><th>Tráº¡ng thÃ¡i yÃªu cáº§u</th><th>Tráº¡ng thÃ¡i sau</th><th>Vai trÃ²</th><th>Nháº­p mÃ£ tay</th><th></th><th></th></tr>
     ${list.map(k => `
       <tr>
         <td>${escapeHtml(k.Ten_Kich_Ban)}</td>
         <td>${escapeHtml(NHAN_COT[k.Cot] || NHAN_COT.TRANG_THAI_XUONG)}</td>
-        <td>${escapeHtml(k.Trang_Thai_Yeu_Cau || '(không yêu cầu)')}</td>
+        <td>${escapeHtml(k.Trang_Thai_Yeu_Cau || '(khÃ´ng yÃªu cáº§u)')}</td>
         <td>${escapeHtml(k.Trang_Thai_Sau)}</td>
-        <td>${escapeHtml(k.Nguoi_Thuc_Hien || '(mọi vai trò)')}</td>
-        <td>${k.Nhap_Ma_Tay === 'TRUE' ? 'Có' : ''}</td>
-        <td><button class="btn-hanh-dong phu" onclick="suaKichBan(${k.id})">Sửa</button></td>
-        <td><button class="btn-hanh-dong phu" data-ten="${escapeHtml(k.Ten_Kich_Ban)}" onclick="xoaKichBan(${k.id}, this.dataset.ten)">Xoá</button></td>
+        <td>${escapeHtml(k.Nguoi_Thuc_Hien || '(má»i vai trÃ²)')}</td>
+        <td>${k.Nhap_Ma_Tay === 'TRUE' ? 'CÃ³' : ''}</td>
+        <td><button class="btn-hanh-dong phu" onclick="suaKichBan(${k.id})">Sá»­a</button></td>
+        <td><button class="btn-hanh-dong phu" data-ten="${escapeHtml(k.Ten_Kich_Ban)}" onclick="xoaKichBan(${k.id}, this.dataset.ten)">XoÃ¡</button></td>
       </tr>`).join('')}`;
 }
 
@@ -132,14 +132,14 @@ function suaKichBan(id) {
     document.getElementById('trang-thai-sau').value = k.Trang_Thai_Sau;
     document.getElementById('nguoi-thuc-hien').value = k.Nguoi_Thuc_Hien || '';
     document.getElementById('nhap-ma-tay').checked = k.Nhap_Ma_Tay === 'TRUE';
-    document.getElementById('nut-luu-kich-ban').textContent = 'Cập nhật kịch bản';
+    document.getElementById('nut-luu-kich-ban').textContent = 'Cáº­p nháº­t ká»‹ch báº£n';
     document.getElementById('nut-huy-sua').style.display = '';
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 }
 
 async function xoaKichBan(id, ten) {
-  if (!confirm(`Xoá hẳn kịch bản "${ten}"? Không thể hoàn tác.`)) return;
+  if (!confirm(`XoÃ¡ háº³n ká»‹ch báº£n "${ten}"? KhÃ´ng thá»ƒ hoÃ n tÃ¡c.`)) return;
   try {
     await apiFetch('/kich-ban/' + id, { method: 'DELETE' });
     if (dangSuaId === id) huySua();

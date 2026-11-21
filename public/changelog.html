@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ghi chú cập nhật</title>
+  <title>Ghi chÃº cáº­p nháº­t</title>
   <link rel="stylesheet" href="/css/style.css?v=1">
   <style>
     .changelog-wrap {
@@ -87,12 +87,12 @@
 <div id="nav"></div>
 <main class="page">
   <div class="changelog-wrap">
-    <h2>Ghi chú cập nhật</h2>
-    <div id="ds-cap-nhat"><p class="cl-loading">Đang tải…</p></div>
+    <h2>Ghi chÃº cáº­p nháº­t</h2>
+    <div id="ds-cap-nhat"><p class="cl-loading">Äang táº£iâ€¦</p></div>
   </div>
 </main>
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=140"></script>
+<script src="/js/api.js?v=141"></script>
 <script>
 (async () => {
   const user = await requireLoginOrRedirect();
@@ -101,7 +101,7 @@
 
   const res = await apiFetch('/changelog').catch(() => null);
   if (!res) {
-    document.getElementById('ds-cap-nhat').innerHTML = '<p class="cl-loading">Không tải được dữ liệu.</p>';
+    document.getElementById('ds-cap-nhat').innerHTML = '<p class="cl-loading">KhÃ´ng táº£i Ä‘Æ°á»£c dá»¯ liá»‡u.</p>';
     return;
   }
   const ds = res;
@@ -117,7 +117,7 @@
         </div>
       </div>
     </div>
-  `).join('') || '<p class="cl-loading">Chưa có ghi chú nào.</p>';
+  `).join('') || '<p class="cl-loading">ChÆ°a cÃ³ ghi chÃº nÃ o.</p>';
 })();
 </script>
 </body>

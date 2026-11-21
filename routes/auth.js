@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const taiKhoanService = require('../services/taiKhoanService');
+const { tachXuong } = taiKhoanService;
 const { ghiLog } = require('../services/logService');
 const { layDangHoatDong } = require('../services/presenceService');
 const { laAdmin } = require('../middleware/auth');
@@ -10,8 +11,8 @@ const { laAdmin } = require('../middleware/auth');
 // trong bộ nhớ (mất khi restart server, chấp nhận được) — giống mô hình _congViecHangLoat ở
 // routes/orders.js, không cần thêm bảng/cột nào trong Sheet cho việc này.
 const _lanSaiMatKhau = new Map(); // ten -> { soLanSai, khoaDenLucNao }
-const SO_LAN_SAI_TOI_DA = 10;
-const THOI_GIAN_KHOA_MS = 60 * 1000;
+const SO_LAN_SAI_TOI_DA = 15;
+const THOI_GIAN_KHOA_MS = 60 * 60 * 1000;
 
 function kiemTraDangBiKhoa(ten) {
   const trang = _lanSaiMatKhau.get(ten);
@@ -53,22 +54,37 @@ router.post('/dang-nhap', async (req, res) => {
 
   const giaySoConLai = kiemTraDangBiKhoa(ten);
   if (giaySoConLai > 0) {
-    return res.status(429).json({ error: `Tài khoản tạm khoá do nhập sai mật khẩu quá nhiều lần — thử lại sau ${giaySoConLai} giây.` });
+    const phutsConLai = Math.ceil(giaySoConLai / 60);
+    const hienThi = giaySoConLai >= 60 ? `${phutsConLai} phút` : `${giaySoConLai} giây`;
+    return res.status(429).json({ error: `Tài khoản tạm khoá do nhập sai mật khẩu quá nhiều lần — thử lại sau ${hienThi}.` });
   }
 
   const rowThat = taiKhoanService.layTheoTen(ten);
   const user = (rowThat && String(rowThat.KichHoat).toUpperCase() === 'TRUE') ? rowThat : null;
   if (!user) return res.status(404).json({ error: 'Không tìm thấy nhân viên hoặc tài khoản đã bị khoá' });
 
-  // Tài khoản CHƯA đặt mật khẩu (cột MatKhau rỗng) — vẫn đăng nhập bằng tên như trước, KHÔNG bắt
-  // buộc nhập PIN (tạm thời, cho tới khi admin đặt mật khẩu cho tài khoản này qua trang Quản lý
-  // nhân viên). Tài khoản ĐÃ có mật khẩu thì bắt buộc khớp chính xác.
-  if (user.MatKhau) {
-    if (String(matKhau || '') !== String(user.MatKhau)) {
+  // Nhân viên xưởng HN: 6 chữ số bắt buộc; mặc định '000000' khi chưa đặt (đăng nhập được nhưng phải
+  // đổi PIN ngay trước khi vào app — req.session.user.doiPin = true, middleware/auth.js chặn mọi route
+  // khác cho đến khi đổi xong qua POST /auth/doi-pin-hn).
+  // Nhân viên khác: hành vi cũ (MatKhau rỗng = không cần nhập, có MatKhau = phải khớp).
+  const laHN = tachXuong(user.Xuong).includes('HN');
+  let canDoiPin = false;
+  if (laHN) {
+    const pinHienTai = user.MatKhau || '000000';
+    if (String(matKhau || '') !== pinHienTai) {
       ghiNhanSaiMatKhau(ten);
-      return res.status(401).json({ error: 'Sai mật khẩu' });
+      return res.status(401).json({ error: 'Sai PIN' });
     }
     _lanSaiMatKhau.delete(ten);
+    if (pinHienTai === '000000') canDoiPin = true;
+  } else {
+    if (user.MatKhau) {
+      if (String(matKhau || '') !== String(user.MatKhau)) {
+        ghiNhanSaiMatKhau(ten);
+        return res.status(401).json({ error: 'Sai mật khẩu' });
+      }
+      _lanSaiMatKhau.delete(ten);
+    }
   }
 
   // Giờ đóng truy cập theo Xưởng (23/10/2026): đang đóng -> không tạo phiên (services/gioTruyCapService.js).
@@ -80,9 +96,27 @@ router.post('/dang-nhap', async (req, res) => {
     return res.status(423).json({ error: tt.thongBao, dongTruyCap: tt });
   }
 
-  req.session.user = nguoi;
+  req.session.user = canDoiPin ? { ...nguoi, doiPin: true } : nguoi;
   await ghiLog({ nguoiDung: user.Ten, vaiTro: user.VaiTro, hanhDong: 'DANG_NHAP' });
   res.json(req.session.user);
+});
+
+// Đổi PIN HN — chỉ dành cho tài khoản xưởng HN đang đăng nhập (kể cả khi doiPin = true).
+// 6 chữ số, không phải '000000' — sau khi đổi xong, xóa doiPin khỏi phiên.
+router.post('/doi-pin-hn', async (req, res) => {
+  if (!req.session.user) return res.status(401).json({ error: 'Chưa đăng nhập' });
+  if (!tachXuong(req.session.user.xuong).includes('HN')) {
+    return res.status(403).json({ error: 'Chỉ tài khoản xưởng HN mới dùng được route này' });
+  }
+  const { pinMoi } = req.body || {};
+  if (!/^\d{6}$/.test(String(pinMoi || '')) || pinMoi === '000000') {
+    return res.status(400).json({ error: 'PIN mới phải là đúng 6 chữ số và không phải 000000' });
+  }
+  taiKhoanService.capNhat(req.session.user.ten, { MatKhau: String(pinMoi) });
+  // Gán lại toàn bộ object — express-session chỉ detect thay đổi qua assignment trực tiếp vào
+  // req.session, không detect mutation nested (delete req.session.user.doiPin sẽ không được lưu).
+  req.session.user = { ten: req.session.user.ten, vaiTro: req.session.user.vaiTro, xuong: req.session.user.xuong };
+  res.json({ ok: true });
 });
 
 router.post('/dang-xuat', (req, res) => {

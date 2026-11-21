@@ -29,6 +29,7 @@ function kiemTraLaiTaiKhoan(req, res, next) {
 
 function requireLogin(req, res, next) {
   if (!req.session.user) return res.status(401).json({ error: 'Chưa đăng nhập' });
+  if (req.session.user.doiPin) return res.status(403).json({ error: 'Cần đổi PIN trước khi tiếp tục', doiPin: true });
   next();
 }
 
@@ -36,6 +37,7 @@ function requireLogin(req, res, next) {
 function requireRole(...roles) {
   return (req, res, next) => {
     if (!req.session.user) return res.status(401).json({ error: 'Chưa đăng nhập' });
+    if (req.session.user.doiPin) return res.status(403).json({ error: 'Cần đổi PIN trước khi tiếp tục', doiPin: true });
     if (laAdmin(req.session.user.vaiTro)) return next();
     if (!roles.includes(req.session.user.vaiTro)) {
       return res.status(403).json({ error: 'Bạn không có quyền thực hiện thao tác này' });
@@ -51,6 +53,7 @@ function requireRole(...roles) {
 function requireExactRole(...roles) {
   return (req, res, next) => {
     if (!req.session.user) return res.status(401).json({ error: 'Chưa đăng nhập' });
+    if (req.session.user.doiPin) return res.status(403).json({ error: 'Cần đổi PIN trước khi tiếp tục', doiPin: true });
     if (!roles.includes(req.session.user.vaiTro)) {
       return res.status(403).json({ error: 'Bạn không có quyền thực hiện thao tác này' });
     }

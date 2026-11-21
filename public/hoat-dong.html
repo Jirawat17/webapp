@@ -1,125 +1,125 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hoạt động của tôi — Xưởng Thêu</title>
+<title>Hoáº¡t Ä‘á»™ng cá»§a tÃ´i â€” XÆ°á»Ÿng ThÃªu</title>
 <link rel="stylesheet" href="/css/style.css?v=112">
 <script src="/js/theme.js?v=104"></script>
 </head>
 <body>
 <div id="nav"></div>
 <div class="page">
-  <h2 id="tieu-de-hoat-dong">Hoạt động của tôi</h2>
-  <p id="mo-ta-hoat-dong" style="color:var(--color-text-muted);margin:-8px 0 20px">Nhật ký thao tác của chính bạn — quét QR, đổi trạng thái, upload ảnh — để tự đối soát cuối ngày/tuần.</p>
+  <h2 id="tieu-de-hoat-dong">Hoáº¡t Ä‘á»™ng cá»§a tÃ´i</h2>
+  <p id="mo-ta-hoat-dong" style="color:var(--color-text-muted);margin:-8px 0 20px">Nháº­t kÃ½ thao tÃ¡c cá»§a chÃ­nh báº¡n â€” quÃ©t QR, Ä‘á»•i tráº¡ng thÃ¡i, upload áº£nh â€” Ä‘á»ƒ tá»± Ä‘á»‘i soÃ¡t cuá»‘i ngÃ y/tuáº§n.</p>
 
-  <!-- Chỉ admin thấy (bổ sung 09/09/2026, theo yêu cầu người dùng — dễ theo dõi hoạt động của bất kỳ
-       ai). Gồm CẢ tài khoản admin khác, không chỉ 3 vai trò công nhân (xác nhận với người dùng). -->
+  <!-- Chá»‰ admin tháº¥y (bá»• sung 09/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” dá»… theo dÃµi hoáº¡t Ä‘á»™ng cá»§a báº¥t ká»³
+       ai). Gá»“m Cáº¢ tÃ i khoáº£n admin khÃ¡c, khÃ´ng chá»‰ 3 vai trÃ² cÃ´ng nhÃ¢n (xÃ¡c nháº­n vá»›i ngÆ°á»i dÃ¹ng). -->
   <div class="thanh-cong-cu-danh-sach" id="khoi-chon-nguoi" style="display:none">
     <label for="chon-nguoi-xem" style="display:flex;align-items:center;gap:8px;font-weight:600">
-      Xem hoạt động của:
+      Xem hoáº¡t Ä‘á»™ng cá»§a:
       <select id="chon-nguoi-xem" style="min-width:220px">
-        <option value="">Chính tôi (Admin)</option>
+        <option value="">ChÃ­nh tÃ´i (Admin)</option>
       </select>
     </label>
   </div>
 
   <div class="thanh-cong-cu-danh-sach" id="thanh-chon-ky">
-    <button type="button" class="btn-hanh-dong phu dang-mo" data-ky="hom_nay">Hôm nay</button>
-    <button type="button" class="btn-hanh-dong phu" data-ky="tuan_nay">Tuần này</button>
-    <button type="button" class="btn-hanh-dong phu" data-ky="thang_nay">Tháng này</button>
-    <button type="button" class="btn-hanh-dong phu" data-ky="toan_bo">Toàn bộ</button>
-    <button type="button" class="btn-hanh-dong phu" data-ky="tuy_chon">Tuỳ chọn...</button>
+    <button type="button" class="btn-hanh-dong phu dang-mo" data-ky="hom_nay">HÃ´m nay</button>
+    <button type="button" class="btn-hanh-dong phu" data-ky="tuan_nay">Tuáº§n nÃ y</button>
+    <button type="button" class="btn-hanh-dong phu" data-ky="thang_nay">ThÃ¡ng nÃ y</button>
+    <button type="button" class="btn-hanh-dong phu" data-ky="toan_bo">ToÃ n bá»™</button>
+    <button type="button" class="btn-hanh-dong phu" data-ky="tuy_chon">Tuá»³ chá»n...</button>
   </div>
 
   <div id="panel-khoang-ngay" class="panel-dieu-khien" style="display:none">
     <div class="inline-form">
       <div class="truong">
-        <label for="hd-tu-ngay">Từ ngày</label>
+        <label for="hd-tu-ngay">Tá»« ngÃ y</label>
         <input type="date" id="hd-tu-ngay">
       </div>
       <div class="truong">
-        <label for="hd-den-ngay">Đến ngày</label>
+        <label for="hd-den-ngay">Äáº¿n ngÃ y</label>
         <input type="date" id="hd-den-ngay">
       </div>
-      <button type="button" class="btn-hanh-dong" id="btn-ap-dung-khoang">Áp dụng</button>
+      <button type="button" class="btn-hanh-dong" id="btn-ap-dung-khoang">Ãp dá»¥ng</button>
     </div>
   </div>
 
-  <!-- Biểu đồ "Tất cả mọi người" (17/10/2026, theo yêu cầu người dùng — chỉ admin/superadmin): mỗi người 1 đường, dùng chung bộ chọn
-       thời gian ở trên; trục thời gian tự động (1 ngày theo giờ, tới 62 ngày theo ngày, dài hơn theo tuần). -->
+  <!-- Biá»ƒu Ä‘á»“ "Táº¥t cáº£ má»i ngÆ°á»i" (17/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” chá»‰ admin/superadmin): má»—i ngÆ°á»i 1 Ä‘Æ°á»ng, dÃ¹ng chung bá»™ chá»n
+       thá»i gian á»Ÿ trÃªn; trá»¥c thá»i gian tá»± Ä‘á»™ng (1 ngÃ y theo giá», tá»›i 62 ngÃ y theo ngÃ y, dÃ i hÆ¡n theo tuáº§n). -->
   <div id="khoi-bieu-do" style="display:none">
     <p id="mo-ta-bieu-do" style="color:var(--color-text-muted);margin:0 0 12px"></p>
-    <div class="chart-card" style="margin-bottom:var(--space-4)"><h3 style="margin-top:0">Vẽ file — số file đã vẽ</h3><canvas id="bd-ve-file"></canvas></div>
-    <div class="chart-card" style="margin-bottom:var(--space-4)"><h3 style="margin-top:0">Sản xuất — lượt đổi trạng thái</h3><canvas id="bd-doi-trang-thai"></canvas></div>
-    <div class="chart-card" style="margin-bottom:var(--space-4)"><h3 style="margin-top:0">Sản xuất — số đơn chạy máy xong</h3><canvas id="bd-chay-may-xong"></canvas></div>
+    <div class="chart-card" style="margin-bottom:var(--space-4)"><h3 style="margin-top:0">Váº½ file â€” sá»‘ file Ä‘Ã£ váº½</h3><canvas id="bd-ve-file"></canvas></div>
+    <div class="chart-card" style="margin-bottom:var(--space-4)"><h3 style="margin-top:0">Sáº£n xuáº¥t â€” lÆ°á»£t Ä‘á»•i tráº¡ng thÃ¡i</h3><canvas id="bd-doi-trang-thai"></canvas></div>
+    <div class="chart-card" style="margin-bottom:var(--space-4)"><h3 style="margin-top:0">Sáº£n xuáº¥t â€” sá»‘ Ä‘Æ¡n cháº¡y mÃ¡y xong</h3><canvas id="bd-chay-may-xong"></canvas></div>
   </div>
 
-  <!-- Thống kê hiện tại (16/11/2026, theo yêu cầu người dùng): admin/superadmin thấy số đơn đang chạy máy + đã vẽ file tách theo người. -->
+  <!-- Thá»‘ng kÃª hiá»‡n táº¡i (16/11/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng): admin/superadmin tháº¥y sá»‘ Ä‘Æ¡n Ä‘ang cháº¡y mÃ¡y + Ä‘Ã£ váº½ file tÃ¡ch theo ngÆ°á»i. -->
   <div id="khoi-hien-tai" style="display:none;margin-bottom:var(--space-4)">
-    <h3 style="margin-top:var(--space-4)">Trạng thái hiện tại</h3>
+    <h3 style="margin-top:var(--space-4)">Tráº¡ng thÃ¡i hiá»‡n táº¡i</h3>
     <div id="the-hien-tai" class="thong-ke-nhanh"></div>
   </div>
 
   <div id="khoi-ca-nhan">
   <div id="khoi-chi-tieu-vai-tro" style="display:none">
-    <h3 style="margin-top:0">Chỉ tiêu công việc</h3>
+    <h3 style="margin-top:0">Chá»‰ tiÃªu cÃ´ng viá»‡c</h3>
     <div id="the-chi-tieu-vai-tro" class="thong-ke-nhanh"></div>
   </div>
 
-  <div id="thong-ke-nhanh" class="thong-ke-nhanh">Đang tải...</div>
+  <div id="thong-ke-nhanh" class="thong-ke-nhanh">Äang táº£i...</div>
 
-  <!-- Toàn bộ thao tác (bổ sung 27/09/2026, theo yêu cầu người dùng) — MỌI hành động trong khoảng thời gian,
-       kèm mô tả đầy đủ + giá trị trước/sau (server dựng sẵn, services/moTaLichSu.js — cùng nội dung với
-       lịch sử ở Chi tiết đơn). Các khối bên dưới giữ nguyên để đối soát/đếm chỉ tiêu như cũ. -->
+  <!-- ToÃ n bá»™ thao tÃ¡c (bá»• sung 27/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” Má»ŒI hÃ nh Ä‘á»™ng trong khoáº£ng thá»i gian,
+       kÃ¨m mÃ´ táº£ Ä‘áº§y Ä‘á»§ + giÃ¡ trá»‹ trÆ°á»›c/sau (server dá»±ng sáºµn, services/moTaLichSu.js â€” cÃ¹ng ná»™i dung vá»›i
+       lá»‹ch sá»­ á»Ÿ Chi tiáº¿t Ä‘Æ¡n). CÃ¡c khá»‘i bÃªn dÆ°á»›i giá»¯ nguyÃªn Ä‘á»ƒ Ä‘á»‘i soÃ¡t/Ä‘áº¿m chá»‰ tiÃªu nhÆ° cÅ©. -->
   <div>
-    <h3>Toàn bộ thao tác</h3>
+    <h3>ToÃ n bá»™ thao tÃ¡c</h3>
     <div id="ds-toan-bo" class="timeline"></div>
   </div>
 
   <div>
-    <h3>Lượt quét QR thành công</h3>
+    <h3>LÆ°á»£t quÃ©t QR thÃ nh cÃ´ng</h3>
     <div id="ds-quet" class="timeline"></div>
   </div>
 
   <div>
-    <h3>Lượt quét bị từ chối</h3>
-    <p style="color:var(--color-text-muted);margin:-8px 0 12px">Quét kịch bản nhưng đơn sai trạng thái hoặc không tìm thấy — chưa đổi gì, chỉ để đối soát lại đã quét nhầm đơn nào.</p>
+    <h3>LÆ°á»£t quÃ©t bá»‹ tá»« chá»‘i</h3>
+    <p style="color:var(--color-text-muted);margin:-8px 0 12px">QuÃ©t ká»‹ch báº£n nhÆ°ng Ä‘Æ¡n sai tráº¡ng thÃ¡i hoáº·c khÃ´ng tÃ¬m tháº¥y â€” chÆ°a Ä‘á»•i gÃ¬, chá»‰ Ä‘á»ƒ Ä‘á»‘i soÃ¡t láº¡i Ä‘Ã£ quÃ©t nháº§m Ä‘Æ¡n nÃ o.</p>
     <div id="ds-quet-bi-tu-choi" class="timeline"></div>
   </div>
 
   <div>
-    <h3>Đổi trạng thái đơn</h3>
+    <h3>Äá»•i tráº¡ng thÃ¡i Ä‘Æ¡n</h3>
     <div id="ds-doi-trang-thai" class="timeline"></div>
   </div>
 
   <div>
-    <h3>Ảnh đã upload</h3>
+    <h3>áº¢nh Ä‘Ã£ upload</h3>
     <div id="ds-upload-anh" class="timeline"></div>
   </div>
   </div><!-- /khoi-ca-nhan -->
 </div>
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=140"></script>
+<script src="/js/api.js?v=141"></script>
 <script>
 let kyHienTai = 'hom_nay';
-let user; // dùng lại ở taiHoatDong() (biết vaiTro để hiện đúng nhóm chỉ tiêu công việc)
-let nguoiDangXem = ''; // rỗng = xem hoạt động của chính người đăng nhập; admin có thể đổi sang người khác
+let user; // dÃ¹ng láº¡i á»Ÿ taiHoatDong() (biáº¿t vaiTro Ä‘á»ƒ hiá»‡n Ä‘Ãºng nhÃ³m chá»‰ tiÃªu cÃ´ng viá»‡c)
+let nguoiDangXem = ''; // rá»—ng = xem hoáº¡t Ä‘á»™ng cá»§a chÃ­nh ngÆ°á»i Ä‘Äƒng nháº­p; admin cÃ³ thá»ƒ Ä‘á»•i sang ngÆ°á»i khÃ¡c
 
-const NHAN_COT_TRANG_THAI = { TRANG_THAI_XUONG: 'Trạng thái chung', TRANG_THAI_PHOI: 'Phôi', TRANG_THAI_VE_FILE: 'Vẽ file' };
-const NHAN_MOC_ANH = { mau: 'Ảnh mẫu (PNG)', mockup: 'Ảnh Mockup', ve_file: 'Ảnh file thêu', ve_file_2: 'Ảnh File Thêu 2', ve_file_3: 'Ảnh File Thêu 3', da_san_xuat: 'Ảnh đã sản xuất', dong_goi: 'Ảnh đóng gói' };
+const NHAN_COT_TRANG_THAI = { TRANG_THAI_XUONG: 'Tráº¡ng thÃ¡i chung', TRANG_THAI_PHOI: 'PhÃ´i', TRANG_THAI_VE_FILE: 'Váº½ file' };
+const NHAN_MOC_ANH = { mau: 'áº¢nh máº«u (PNG)', mockup: 'áº¢nh Mockup', ve_file: 'áº¢nh file thÃªu', ve_file_2: 'áº¢nh File ThÃªu 2', ve_file_3: 'áº¢nh File ThÃªu 3', da_san_xuat: 'áº¢nh Ä‘Ã£ sáº£n xuáº¥t', dong_goi: 'áº¢nh Ä‘Ã³ng gÃ³i' };
 
 (async () => {
   user = await requireLoginOrRedirect();
   if (!user) return;
   renderNav(user, 'hoat-dong');
 
-  // "Xem hoạt động của bất kỳ ai" — chỉ admin. Dùng lại NHAN_VAI_TRO đã có sẵn từ api.js (KHÔNG khai
-  // báo lại — 2 thẻ <script> thường dùng chung 1 scope cho const, khai báo trùng tên là SyntaxError
-  // lúc parse, hỏng cả trang — gặp thật ở bang-dieu-khien.html 08/09/2026).
-  // Tải SONG SONG với taiHoatDong() bên dưới thay vì đợi xong mới bắt đầu (bổ sung 22/09/2026, theo yêu
-  // cầu người dùng cải thiện tốc độ tải trang) — độc lập hoàn toàn.
+  // "Xem hoáº¡t Ä‘á»™ng cá»§a báº¥t ká»³ ai" â€” chá»‰ admin. DÃ¹ng láº¡i NHAN_VAI_TRO Ä‘Ã£ cÃ³ sáºµn tá»« api.js (KHÃ”NG khai
+  // bÃ¡o láº¡i â€” 2 tháº» <script> thÆ°á»ng dÃ¹ng chung 1 scope cho const, khai bÃ¡o trÃ¹ng tÃªn lÃ  SyntaxError
+  // lÃºc parse, há»ng cáº£ trang â€” gáº·p tháº­t á»Ÿ bang-dieu-khien.html 08/09/2026).
+  // Táº£i SONG SONG vá»›i taiHoatDong() bÃªn dÆ°á»›i thay vÃ¬ Ä‘á»£i xong má»›i báº¯t Ä‘áº§u (bá»• sung 22/09/2026, theo yÃªu
+  // cáº§u ngÆ°á»i dÃ¹ng cáº£i thiá»‡n tá»‘c Ä‘á»™ táº£i trang) â€” Ä‘á»™c láº­p hoÃ n toÃ n.
   let taiDsNhanVien = Promise.resolve();
   if (laAdmin(user.vaiTro)) {
     taiDsNhanVien = (async () => {
@@ -128,10 +128,10 @@ const NHAN_MOC_ANH = { mau: 'Ảnh mẫu (PNG)', mockup: 'Ảnh Mockup', ve_file
         const dsChoChon = dsNhanVien.filter(u => String(u.KichHoat).toUpperCase() === 'TRUE' && u.Ten !== user.ten);
         document.getElementById('khoi-chon-nguoi').style.display = 'flex';
         const chon = document.getElementById('chon-nguoi-xem');
-        chon.innerHTML = '<option value="">Chính tôi (Admin)</option><option value="__TAT_CA__">Tất cả mọi người (biểu đồ)</option>' +
+        chon.innerHTML = '<option value="">ChÃ­nh tÃ´i (Admin)</option><option value="__TAT_CA__">Táº¥t cáº£ má»i ngÆ°á»i (biá»ƒu Ä‘á»“)</option>' +
           dsChoChon.map(u => `<option value="${escapeHtml(u.Ten)}">${escapeHtml(u.Ten)} (${escapeHtml(NHAN_VAI_TRO[u.VaiTro] || u.VaiTro)})</option>`).join('');
         chon.onchange = () => { nguoiDangXem = chon.value; taiHoatDong(); };
-      } catch (e) { /* không tải được danh sách nhân viên — ẩn ô chọn, admin vẫn xem được hoạt động chính mình */ }
+      } catch (e) { /* khÃ´ng táº£i Ä‘Æ°á»£c danh sÃ¡ch nhÃ¢n viÃªn â€” áº©n Ã´ chá»n, admin váº«n xem Ä‘Æ°á»£c hoáº¡t Ä‘á»™ng chÃ­nh mÃ¬nh */ }
     })();
   }
 
@@ -151,8 +151,8 @@ const NHAN_MOC_ANH = { mau: 'Ảnh mẫu (PNG)', mockup: 'Ảnh Mockup', ve_file
   await Promise.all([taiHoatDong(), taiDsNhanVien]);
 })();
 
-// Giống hệt logic ở dashboard.html (tinhKhoangTheoKy/dinhDangYMD) — mỗi trang tự chứa, không dùng
-// chung module vì dự án này không có bước build để chia sẻ code giữa các trang tĩnh.
+// Giá»‘ng há»‡t logic á»Ÿ dashboard.html (tinhKhoangTheoKy/dinhDangYMD) â€” má»—i trang tá»± chá»©a, khÃ´ng dÃ¹ng
+// chung module vÃ¬ dá»± Ã¡n nÃ y khÃ´ng cÃ³ bÆ°á»›c build Ä‘á»ƒ chia sáº» code giá»¯a cÃ¡c trang tÄ©nh.
 function tinhKhoangTheoKy(ky) {
   const homNay = new Date();
   homNay.setHours(0, 0, 0, 0);
@@ -169,7 +169,7 @@ function tinhKhoangTheoKy(ky) {
     const cuoi = new Date(homNay.getFullYear(), homNay.getMonth() + 1, 0);
     return { tu: dau, den: cuoi };
   }
-  return null; // toan_bo — không giới hạn
+  return null; // toan_bo â€” khÃ´ng giá»›i háº¡n
 }
 
 function dinhDangYMD(d) {
@@ -177,8 +177,8 @@ function dinhDangYMD(d) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-// Format timestamp ngắn gọn "DD-MM HH:mm:ss" — copy từ order.html (tsDep), giữ nhất quán cách hiển
-// thị thời gian trên toàn app.
+// Format timestamp ngáº¯n gá»n "DD-MM HH:mm:ss" â€” copy tá»« order.html (tsDep), giá»¯ nháº¥t quÃ¡n cÃ¡ch hiá»ƒn
+// thá»‹ thá»i gian trÃªn toÃ n app.
 function tsDep(isoStr) {
   if (!isoStr) return '';
   const d = new Date(isoStr);
@@ -188,7 +188,7 @@ function tsDep(isoStr) {
   return `${fmt(vn.getDate())}-${fmt(vn.getMonth()+1)} ${fmt(vn.getHours())}:${fmt(vn.getMinutes())}:${fmt(vn.getSeconds())}`;
 }
 
-// Khoảng thời gian đang chọn -> tuNgay/denNgay (dùng chung cho hoạt động 1 người và biểu đồ mọi người).
+// Khoáº£ng thá»i gian Ä‘ang chá»n -> tuNgay/denNgay (dÃ¹ng chung cho hoáº¡t Ä‘á»™ng 1 ngÆ°á»i vÃ  biá»ƒu Ä‘á»“ má»i ngÆ°á»i).
 function datKhoangThoiGian(qs) {
   if (kyHienTai === 'tuy_chon') {
     const tu = document.getElementById('hd-tu-ngay').value;
@@ -211,7 +211,7 @@ async function taiHoatDong() {
   document.getElementById('khoi-ca-nhan').style.display = laTatCa ? 'none' : '';
   document.getElementById('khoi-bieu-do').style.display = laTatCa ? '' : 'none';
   if (laTatCa) return taiBieuDo();
-  document.getElementById('thong-ke-nhanh').textContent = 'Đang tải...';
+  document.getElementById('thong-ke-nhanh').textContent = 'Äang táº£i...';
 
   const qs = new URLSearchParams();
   if (nguoiDangXem) qs.set('nguoiDung', nguoiDangXem);
@@ -221,24 +221,24 @@ async function taiHoatDong() {
   try {
     data = await apiFetch('/hoat-dong/cua-toi?' + qs.toString());
   } catch (e) {
-    document.getElementById('thong-ke-nhanh').textContent = 'Không tải được: ' + e.message;
+    document.getElementById('thong-ke-nhanh').textContent = 'KhÃ´ng táº£i Ä‘Æ°á»£c: ' + e.message;
     return;
   }
 
-  // Tiêu đề/mô tả đổi theo đúng người đang xem (bổ sung 09/09/2026 — admin có thể xem người khác) —
-  // đọc data.nguoiXem.ten do SERVER trả về (đúng tên thật đã validate), không đọc thẳng biến
-  // nguoiDangXem ở client để tránh lệch nếu server từ chối tên gõ sai.
+  // TiÃªu Ä‘á»/mÃ´ táº£ Ä‘á»•i theo Ä‘Ãºng ngÆ°á»i Ä‘ang xem (bá»• sung 09/09/2026 â€” admin cÃ³ thá»ƒ xem ngÆ°á»i khÃ¡c) â€”
+  // Ä‘á»c data.nguoiXem.ten do SERVER tráº£ vá» (Ä‘Ãºng tÃªn tháº­t Ä‘Ã£ validate), khÃ´ng Ä‘á»c tháº³ng biáº¿n
+  // nguoiDangXem á»Ÿ client Ä‘á»ƒ trÃ¡nh lá»‡ch náº¿u server tá»« chá»‘i tÃªn gÃµ sai.
   const dangXemNguoiKhac = data.nguoiXem && data.nguoiXem.ten !== user.ten;
   document.getElementById('tieu-de-hoat-dong').textContent = dangXemNguoiKhac
-    ? `Hoạt động của ${data.nguoiXem.ten}` : 'Hoạt động của tôi';
+    ? `Hoáº¡t Ä‘á»™ng cá»§a ${data.nguoiXem.ten}` : 'Hoáº¡t Ä‘á»™ng cá»§a tÃ´i';
   document.getElementById('mo-ta-hoat-dong').textContent = dangXemNguoiKhac
-    ? `Nhật ký mọi thao tác của ${data.nguoiXem.ten} — ai làm gì, trên đơn nào, trước và sau thay đổi.`
-    : 'Nhật ký mọi thao tác của chính bạn — làm gì, trên đơn nào, trước và sau thay đổi — để tự đối soát cuối ngày/tuần.';
+    ? `Nháº­t kÃ½ má»i thao tÃ¡c cá»§a ${data.nguoiXem.ten} â€” ai lÃ m gÃ¬, trÃªn Ä‘Æ¡n nÃ o, trÆ°á»›c vÃ  sau thay Ä‘á»•i.`
+    : 'Nháº­t kÃ½ má»i thao tÃ¡c cá»§a chÃ­nh báº¡n â€” lÃ m gÃ¬, trÃªn Ä‘Æ¡n nÃ o, trÆ°á»›c vÃ  sau thay Ä‘á»•i â€” Ä‘á»ƒ tá»± Ä‘á»‘i soÃ¡t cuá»‘i ngÃ y/tuáº§n.';
 
   document.getElementById('thong-ke-nhanh').innerHTML = `
-    <div class="the-nhanh"><div class="so">${data.tongSoQuet}</div><div class="nhan">${icon('scan', {size:14})} Lượt quét thành công</div></div>
-    <div class="the-nhanh"><div class="so">${data.tongSoDoiTrangThai}</div><div class="nhan">${icon('arrowRight', {size:14})} Lượt đổi trạng thái</div></div>
-    <div class="the-nhanh"><div class="so">${data.tongSoUpload}</div><div class="nhan">${icon('camera', {size:14})} Ảnh đã upload</div></div>
+    <div class="the-nhanh"><div class="so">${data.tongSoQuet}</div><div class="nhan">${icon('scan', {size:14})} LÆ°á»£t quÃ©t thÃ nh cÃ´ng</div></div>
+    <div class="the-nhanh"><div class="so">${data.tongSoDoiTrangThai}</div><div class="nhan">${icon('arrowRight', {size:14})} LÆ°á»£t Ä‘á»•i tráº¡ng thÃ¡i</div></div>
+    <div class="the-nhanh"><div class="so">${data.tongSoUpload}</div><div class="nhan">${icon('camera', {size:14})} áº¢nh Ä‘Ã£ upload</div></div>
   `;
 
   renderChiTieuVaiTro(data.chiTieu, data.nguoiXem ? data.nguoiXem.vaiTro : user.vaiTro);
@@ -249,21 +249,21 @@ async function taiHoatDong() {
   renderDsUploadAnh(data.uploadAnh);
 }
 
-// ---------- Biểu đồ "Tất cả mọi người" (17/10/2026) ----------
-// Chart.js tải KHI CẦN (chỉ admin chọn "Tất cả mọi người") — trang của nhân viên không phải tải thêm thư viện. Ghim phiên bản.
+// ---------- Biá»ƒu Ä‘á»“ "Táº¥t cáº£ má»i ngÆ°á»i" (17/10/2026) ----------
+// Chart.js táº£i KHI Cáº¦N (chá»‰ admin chá»n "Táº¥t cáº£ má»i ngÆ°á»i") â€” trang cá»§a nhÃ¢n viÃªn khÃ´ng pháº£i táº£i thÃªm thÆ° viá»‡n. Ghim phiÃªn báº£n.
 let _taiChartJs = null;
 function taiChartJs() {
   if (window.Chart) return Promise.resolve();
   if (!_taiChartJs) _taiChartJs = new Promise((xong, loi) => {
     const s = document.createElement('script');
     s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js';
-    s.onload = xong; s.onerror = () => { _taiChartJs = null; loi(new Error('Không tải được thư viện biểu đồ')); };
+    s.onload = xong; s.onerror = () => { _taiChartJs = null; loi(new Error('KhÃ´ng táº£i Ä‘Æ°á»£c thÆ° viá»‡n biá»ƒu Ä‘á»“')); };
     document.head.appendChild(s);
   });
   return _taiChartJs;
 }
 const MAU_DUONG = ['#e11d48', '#2563eb', '#16a34a', '#d97706', '#7c3aed', '#0891b2', '#db2777', '#65a30d', '#ea580c', '#4f46e5', '#0d9488', '#a16207'];
-const NHAN_DON_VI = { gio: 'theo giờ', ngay: 'theo ngày', tuan: 'theo tuần (bắt đầu thứ Hai)' };
+const NHAN_DON_VI = { gio: 'theo giá»', ngay: 'theo ngÃ y', tuan: 'theo tuáº§n (báº¯t Ä‘áº§u thá»© Hai)' };
 const _bieuDo = {};
 function veDuong(idCanvas, nhan, dsDuong) {
   if (_bieuDo[idCanvas]) _bieuDo[idCanvas].destroy();
@@ -276,41 +276,41 @@ function veDuong(idCanvas, nhan, dsDuong) {
       datasets: dsDuong.map((d, i) => ({
         label: `${d.ten} (${d.so.reduce((a, b) => a + b, 0)})`, data: d.so,
         borderColor: MAU_DUONG[i % MAU_DUONG.length], backgroundColor: MAU_DUONG[i % MAU_DUONG.length],
-        tension: 0.25, cubicInterpolationMode: 'monotone', pointRadius: 2, borderWidth: 2, // monotone: đường cong không vọt xuống dưới 0
+        tension: 0.25, cubicInterpolationMode: 'monotone', pointRadius: 2, borderWidth: 2, // monotone: Ä‘Æ°á»ng cong khÃ´ng vá»t xuá»‘ng dÆ°á»›i 0
       })),
     },
     options: {
       responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
-      plugins: { legend: { position: 'bottom', labels: { color: mauChu, boxWidth: 12 } } }, // bấm tên ở chú thích để ẩn/hiện đường
+      plugins: { legend: { position: 'bottom', labels: { color: mauChu, boxWidth: 12 } } }, // báº¥m tÃªn á»Ÿ chÃº thÃ­ch Ä‘á»ƒ áº©n/hiá»‡n Ä‘Æ°á»ng
       scales: { x: { ticks: { color: mauChu } }, y: { beginAtZero: true, ticks: { color: mauChu, precision: 0 } } },
     },
   });
   canvas.parentElement.style.height = '320px';
 }
 async function taiBieuDo() {
-  document.getElementById('tieu-de-hoat-dong').textContent = 'Hoạt động của tất cả mọi người';
+  document.getElementById('tieu-de-hoat-dong').textContent = 'Hoáº¡t Ä‘á»™ng cá»§a táº¥t cáº£ má»i ngÆ°á»i';
   const moTa = document.getElementById('mo-ta-bieu-do');
-  moTa.textContent = 'Đang tải...';
-  document.getElementById('mo-ta-hoat-dong').textContent = 'Mỗi người 1 đường — bấm tên ở chú thích dưới biểu đồ để ẩn/hiện. Số trong ngoặc là tổng cả khoảng thời gian.';
+  moTa.textContent = 'Äang táº£i...';
+  document.getElementById('mo-ta-hoat-dong').textContent = 'Má»—i ngÆ°á»i 1 Ä‘Æ°á»ng â€” báº¥m tÃªn á»Ÿ chÃº thÃ­ch dÆ°á»›i biá»ƒu Ä‘á»“ Ä‘á»ƒ áº©n/hiá»‡n. Sá»‘ trong ngoáº·c lÃ  tá»•ng cáº£ khoáº£ng thá»i gian.';
   try {
     const [data] = await Promise.all([apiFetch('/hoat-dong/bieu-do?' + datKhoangThoiGian(new URLSearchParams()).toString()), taiChartJs()]);
-    if (nguoiDangXem !== XEM_TAT_CA) return; // đã đổi lựa chọn trong lúc tải
-    moTa.textContent = `Từ ${data.tuNgay.split('-').reverse().join('/')} đến ${data.denNgay.split('-').reverse().join('/')} · ${NHAN_DON_VI[data.donVi]}`
-      + (data.veFile.length + data.doiTrangThai.length ? '' : ' · không có người vẽ file / sản xuất nào thuộc Xưởng bạn phụ trách');
+    if (nguoiDangXem !== XEM_TAT_CA) return; // Ä‘Ã£ Ä‘á»•i lá»±a chá»n trong lÃºc táº£i
+    moTa.textContent = `Tá»« ${data.tuNgay.split('-').reverse().join('/')} Ä‘áº¿n ${data.denNgay.split('-').reverse().join('/')} Â· ${NHAN_DON_VI[data.donVi]}`
+      + (data.veFile.length + data.doiTrangThai.length ? '' : ' Â· khÃ´ng cÃ³ ngÆ°á»i váº½ file / sáº£n xuáº¥t nÃ o thuá»™c XÆ°á»Ÿng báº¡n phá»¥ trÃ¡ch');
     veDuong('bd-ve-file', data.nhan, data.veFile);
     veDuong('bd-doi-trang-thai', data.nhan, data.doiTrangThai);
     veDuong('bd-chay-may-xong', data.nhan, data.chayMayXong);
   } catch (e) {
-    moTa.textContent = 'Không tải được biểu đồ: ' + e.message;
+    moTa.textContent = 'KhÃ´ng táº£i Ä‘Æ°á»£c biá»ƒu Ä‘á»“: ' + e.message;
   }
 }
 
-// Chỉ tiêu công việc theo vai trò (bổ sung 08/09/2026, xem
-// docs/superpowers/specs/2026-09-08-chi-tieu-hoat-dong-theo-vai-tro-design.md) — backend luôn trả đủ
-// cả 3 nhóm, ở đây chỉ chọn đúng nhóm khớp vaiTroXem để hiện (rỗng/admin không thuộc nhóm nào nên ẩn
-// hẳn khối này). Nhận vaiTroXem làm tham số (bổ sung 09/09/2026) thay vì luôn đọc user.vaiTro — khi
-// admin xem người khác, vaiTroXem là vai trò của NGƯỜI ĐƯỢC XEM, không phải vai trò admin. Mỗi việc
-// có 2 thẻ đi cùng nhau: số đơn + tổng số lượng.
+// Chá»‰ tiÃªu cÃ´ng viá»‡c theo vai trÃ² (bá»• sung 08/09/2026, xem
+// docs/superpowers/specs/2026-09-08-chi-tieu-hoat-dong-theo-vai-tro-design.md) â€” backend luÃ´n tráº£ Ä‘á»§
+// cáº£ 3 nhÃ³m, á»Ÿ Ä‘Ã¢y chá»‰ chá»n Ä‘Ãºng nhÃ³m khá»›p vaiTroXem Ä‘á»ƒ hiá»‡n (rá»—ng/admin khÃ´ng thuá»™c nhÃ³m nÃ o nÃªn áº©n
+// háº³n khá»‘i nÃ y). Nháº­n vaiTroXem lÃ m tham sá»‘ (bá»• sung 09/09/2026) thay vÃ¬ luÃ´n Ä‘á»c user.vaiTro â€” khi
+// admin xem ngÆ°á»i khÃ¡c, vaiTroXem lÃ  vai trÃ² cá»§a NGÆ¯á»œI ÄÆ¯á»¢C XEM, khÃ´ng pháº£i vai trÃ² admin. Má»—i viá»‡c
+// cÃ³ 2 tháº» Ä‘i cÃ¹ng nhau: sá»‘ Ä‘Æ¡n + tá»•ng sá»‘ lÆ°á»£ng.
 function renderChiTieuVaiTro(ct, vaiTroXem) {
   const khoi = document.getElementById('khoi-chi-tieu-vai-tro');
   if (!ct || !['san_xuat', 've_file', 'nguoi_lay_phoi'].includes(vaiTroXem)) { khoi.style.display = 'none'; return; }
@@ -318,12 +318,12 @@ function renderChiTieuVaiTro(ct, vaiTroXem) {
   const the = (so, nhan, tenIcon) => `<div class="the-nhanh"><div class="so">${so}</div><div class="nhan">${icon(tenIcon, {size:14})} ${nhan}</div></div>`;
   let html = '';
   if (vaiTroXem === 'san_xuat') {
-    html = the(ct.soDonDaChayMay, 'Đơn đã chạy máy', 'check') + the(ct.tongSlDaChayMay, 'Tổng SL sản phẩm đã chạy', 'check');
+    html = the(ct.soDonDaChayMay, 'ÄÆ¡n Ä‘Ã£ cháº¡y mÃ¡y', 'check') + the(ct.tongSlDaChayMay, 'Tá»•ng SL sáº£n pháº©m Ä‘Ã£ cháº¡y', 'check');
   } else if (vaiTroXem === 've_file') {
-    html = the(ct.soFileDaVe, 'File đã vẽ', 'file') + the(ct.tongSlDaVe, 'Tổng SL sản phẩm đã vẽ file', 'file');
+    html = the(ct.soFileDaVe, 'File Ä‘Ã£ váº½', 'file') + the(ct.tongSlDaVe, 'Tá»•ng SL sáº£n pháº©m Ä‘Ã£ váº½ file', 'file');
   } else if (vaiTroXem === 'nguoi_lay_phoi') {
-    html = the(ct.soDonDaLayPhoi, 'Đơn đã lấy phôi', 'package') + the(ct.tongSlPhoiDaLay, 'Tổng SL phôi đã lấy', 'package')
-      + the(ct.soDonDaDongGoi, 'Đơn đã đóng gói', 'check') + the(ct.tongSlDaDongGoi, 'Tổng SL sản phẩm đã đóng gói', 'check');
+    html = the(ct.soDonDaLayPhoi, 'ÄÆ¡n Ä‘Ã£ láº¥y phÃ´i', 'package') + the(ct.tongSlPhoiDaLay, 'Tá»•ng SL phÃ´i Ä‘Ã£ láº¥y', 'package')
+      + the(ct.soDonDaDongGoi, 'ÄÆ¡n Ä‘Ã£ Ä‘Ã³ng gÃ³i', 'check') + the(ct.tongSlDaDongGoi, 'Tá»•ng SL sáº£n pháº©m Ä‘Ã£ Ä‘Ã³ng gÃ³i', 'check');
   }
   khoi.style.display = '';
   document.getElementById('the-chi-tieu-vai-tro').innerHTML = html;
@@ -340,12 +340,12 @@ function renderHienTai(ht) {
   const the = (so, nhan, ten) => `<div class="the-nhanh" style="min-width:120px"><div class="so">${so}</div><div class="nhan" style="font-size:0.78rem">${escapeHtml(ten)}<br><span style="font-size:0.72rem;opacity:0.75">${escapeHtml(nhan)}</span></div></div>`;
   let html = '';
   if (ht.dangChayMay.length) {
-    html += '<div style="font-size:0.82rem;font-weight:600;color:var(--color-text-muted);margin:4px 0 2px">Đang chạy máy</div>';
-    html += ht.dangChayMay.map(r => the(r.soDon, 'đơn đang chạy', r.ten)).join('');
+    html += '<div style="font-size:0.82rem;font-weight:600;color:var(--color-text-muted);margin:4px 0 2px">Äang cháº¡y mÃ¡y</div>';
+    html += ht.dangChayMay.map(r => the(r.soDon, 'Ä‘Æ¡n Ä‘ang cháº¡y', r.ten)).join('');
   }
   if (ht.daVeFile.length) {
-    html += '<div style="font-size:0.82rem;font-weight:600;color:var(--color-text-muted);margin:8px 0 2px">Đã vẽ file</div>';
-    html += ht.daVeFile.map(r => the(r.soDon, 'đơn đã vẽ file', r.ten)).join('');
+    html += '<div style="font-size:0.82rem;font-weight:600;color:var(--color-text-muted);margin:8px 0 2px">ÄÃ£ váº½ file</div>';
+    html += ht.daVeFile.map(r => the(r.soDon, 'Ä‘Æ¡n Ä‘Ã£ váº½ file', r.ten)).join('');
   }
   document.getElementById('the-hien-tai').innerHTML = html;
   khoi.style.display = '';
@@ -355,31 +355,31 @@ function dongRong(chuThich) {
   return `<div class="trang-thai-rong">${icon('package')}<p>${escapeHtml(chuThich)}</p></div>`;
 }
 
-// Phân trang 4 timeline hoạt động (bổ sung 22/09/2026, theo yêu cầu người dùng cải thiện hiệu năng —
-// chọn kỳ "Toàn bộ" có thể trả về log rất dài, render hết 1 lần vừa chậm vừa tốn bộ nhớ trên điện
-// thoại). Mỗi hàm renderDs*() tự nhớ ĐẦY ĐỦ mảng gốc (biến moi-danh-sach-*Day) + số đang hiển thị —
-// gọi renderDsX(list) khi có dữ liệu MỚI (từ taiHoatDong()), gọi renderDsX() không tham số để render
-// lại đúng cỡ đã tăng (nút "Xem thêm"). 2 hàm dùng chung dưới đây tránh lặp lại y hệt logic cắt/nút
-// 4 lần — mỗi timeline vẫn tự giữ HTML mục riêng (không gộp thành 1 hàm chung khó đọc).
+// PhÃ¢n trang 4 timeline hoáº¡t Ä‘á»™ng (bá»• sung 22/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng cáº£i thiá»‡n hiá»‡u nÄƒng â€”
+// chá»n ká»³ "ToÃ n bá»™" cÃ³ thá»ƒ tráº£ vá» log ráº¥t dÃ i, render háº¿t 1 láº§n vá»«a cháº­m vá»«a tá»‘n bá»™ nhá»› trÃªn Ä‘iá»‡n
+// thoáº¡i). Má»—i hÃ m renderDs*() tá»± nhá»› Äáº¦Y Äá»¦ máº£ng gá»‘c (biáº¿n moi-danh-sach-*Day) + sá»‘ Ä‘ang hiá»ƒn thá»‹ â€”
+// gá»i renderDsX(list) khi cÃ³ dá»¯ liá»‡u Má»šI (tá»« taiHoatDong()), gá»i renderDsX() khÃ´ng tham sá»‘ Ä‘á»ƒ render
+// láº¡i Ä‘Ãºng cá»¡ Ä‘Ã£ tÄƒng (nÃºt "Xem thÃªm"). 2 hÃ m dÃ¹ng chung dÆ°á»›i Ä‘Ã¢y trÃ¡nh láº·p láº¡i y há»‡t logic cáº¯t/nÃºt
+// 4 láº§n â€” má»—i timeline váº«n tá»± giá»¯ HTML má»¥c riÃªng (khÃ´ng gá»™p thÃ nh 1 hÃ m chung khÃ³ Ä‘á»c).
 const SO_MOI_LUOT_HOAT_DONG = 60;
 function phanTrangTimeline(danhSachDay, soDangHienThi) {
   const dsDeRender = danhSachDay.slice(0, soDangHienThi);
   return { dsDeRender, conLai: danhSachDay.length - dsDeRender.length };
 }
 function nutXemThemTimeline(conLai, goiLai) {
-  return conLai > 0 ? `<button type="button" class="btn-hanh-dong phu" onclick="${goiLai}">Xem thêm (còn ${conLai})</button>` : '';
+  return conLai > 0 ? `<button type="button" class="btn-hanh-dong phu" onclick="${goiLai}">Xem thÃªm (cÃ²n ${conLai})</button>` : '';
 }
 
 let dsToanBoDay = [], soDangHienThiToanBo = SO_MOI_LUOT_HOAT_DONG;
 function renderDsToanBo(list) {
   if (list !== undefined) { dsToanBoDay = list; soDangHienThiToanBo = SO_MOI_LUOT_HOAT_DONG; }
   const el = document.getElementById('ds-toan-bo');
-  if (dsToanBoDay.length === 0) { el.innerHTML = dongRong('Chưa có thao tác nào trong khoảng này.'); return; }
+  if (dsToanBoDay.length === 0) { el.innerHTML = dongRong('ChÆ°a cÃ³ thao tÃ¡c nÃ o trong khoáº£ng nÃ y.'); return; }
   const { dsDeRender, conLai } = phanTrangTimeline(dsToanBoDay, soDangHienThiToanBo);
   el.innerHTML = dsDeRender.map(x => `
     <div class="timeline-item${x.Mo ? ' lich-su-mo' : ''}">
       <div class="timeline-info">
-        ${x.STT_Key ? `<strong><a href="/order.html?stt=${encodeURIComponent(x.STT_Key)}">${escapeHtml(x.STT_Key)}</a></strong> · ` : ''}${escapeHtml(x.MoTa || x.HanhDong)}
+        ${x.STT_Key ? `<strong><a href="/order.html?stt=${encodeURIComponent(x.STT_Key)}">${escapeHtml(x.STT_Key)}</a></strong> Â· ` : ''}${escapeHtml(x.MoTa || x.HanhDong)}
         ${htmlThayDoiLichSu(x.ThayDoi)}
       </div>
       <div class="timeline-time">${tsDep(x.ThoiGian)}</div>
@@ -390,37 +390,37 @@ let dsQuetDay = [], soDangHienThiQuet = SO_MOI_LUOT_HOAT_DONG;
 function renderDsQuet(list) {
   if (list !== undefined) { dsQuetDay = list; soDangHienThiQuet = SO_MOI_LUOT_HOAT_DONG; }
   const el = document.getElementById('ds-quet');
-  if (dsQuetDay.length === 0) { el.innerHTML = dongRong('Chưa có lượt quét thành công nào trong khoảng này.'); return; }
+  if (dsQuetDay.length === 0) { el.innerHTML = dongRong('ChÆ°a cÃ³ lÆ°á»£t quÃ©t thÃ nh cÃ´ng nÃ o trong khoáº£ng nÃ y.'); return; }
   const { dsDeRender, conLai } = phanTrangTimeline(dsQuetDay, soDangHienThiQuet);
   el.innerHTML = dsDeRender.map(x => `
     <div class="timeline-item">
       <div class="timeline-info">
         <strong><a href="/order.html?stt=${encodeURIComponent(x.sttKey)}">${escapeHtml(x.sttKey)}</a></strong>
         <div style="font-size:0.85rem;color:var(--color-text-muted);margin-top:2px">
-          ${escapeHtml(x.kichBan || NHAN_COT_TRANG_THAI[x.cot] || x.cot)}${x.tu ? `: ${escapeHtml(x.tu)} → ${escapeHtml(x.sang)}` : (x.sang ? ` → ${escapeHtml(x.sang)}` : '')}
+          ${escapeHtml(x.kichBan || NHAN_COT_TRANG_THAI[x.cot] || x.cot)}${x.tu ? `: ${escapeHtml(x.tu)} â†’ ${escapeHtml(x.sang)}` : (x.sang ? ` â†’ ${escapeHtml(x.sang)}` : '')}
         </div>
       </div>
       <div class="timeline-time">${tsDep(x.thoiGian)}</div>
     </div>`).join('') + nutXemThemTimeline(conLai, 'soDangHienThiQuet+=SO_MOI_LUOT_HOAT_DONG;renderDsQuet()');
 }
 
-// "Lượt quét bị từ chối" — bổ sung 12/09/2026, theo yêu cầu người dùng: các lượt quét kịch bản KHÔNG
-// đổi được gì (sai trạng thái hoặc không tìm thấy đơn) trước đây hoàn toàn không xuất hiện ở tab này,
-// dù đã ghi log đầy đủ (xem HANH_DONG_QUET_BI_TU_CHOI trong services/logService.js) — người dùng
-// không có cách nào đối soát lại đã quét nhầm đơn nào. `x.lyDo` do server dựng sẵn (routes/qr.js), đã
-// tự chứa mã đơn nên không cần lặp lại <strong>{sttKey}</strong> riêng như 3 khối còn lại.
+// "LÆ°á»£t quÃ©t bá»‹ tá»« chá»‘i" â€” bá»• sung 12/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng: cÃ¡c lÆ°á»£t quÃ©t ká»‹ch báº£n KHÃ”NG
+// Ä‘á»•i Ä‘Æ°á»£c gÃ¬ (sai tráº¡ng thÃ¡i hoáº·c khÃ´ng tÃ¬m tháº¥y Ä‘Æ¡n) trÆ°á»›c Ä‘Ã¢y hoÃ n toÃ n khÃ´ng xuáº¥t hiá»‡n á»Ÿ tab nÃ y,
+// dÃ¹ Ä‘Ã£ ghi log Ä‘áº§y Ä‘á»§ (xem HANH_DONG_QUET_BI_TU_CHOI trong services/logService.js) â€” ngÆ°á»i dÃ¹ng
+// khÃ´ng cÃ³ cÃ¡ch nÃ o Ä‘á»‘i soÃ¡t láº¡i Ä‘Ã£ quÃ©t nháº§m Ä‘Æ¡n nÃ o. `x.lyDo` do server dá»±ng sáºµn (routes/qr.js), Ä‘Ã£
+// tá»± chá»©a mÃ£ Ä‘Æ¡n nÃªn khÃ´ng cáº§n láº·p láº¡i <strong>{sttKey}</strong> riÃªng nhÆ° 3 khá»‘i cÃ²n láº¡i.
 let dsQuetBiTuChoiDay = [], soDangHienThiQuetBiTuChoi = SO_MOI_LUOT_HOAT_DONG;
 function renderDsQuetBiTuChoi(list) {
   if (list !== undefined) { dsQuetBiTuChoiDay = list; soDangHienThiQuetBiTuChoi = SO_MOI_LUOT_HOAT_DONG; }
   const el = document.getElementById('ds-quet-bi-tu-choi');
-  if (dsQuetBiTuChoiDay.length === 0) { el.innerHTML = dongRong('Chưa có lượt quét nào bị từ chối trong khoảng này.'); return; }
+  if (dsQuetBiTuChoiDay.length === 0) { el.innerHTML = dongRong('ChÆ°a cÃ³ lÆ°á»£t quÃ©t nÃ o bá»‹ tá»« chá»‘i trong khoáº£ng nÃ y.'); return; }
   const { dsDeRender, conLai } = phanTrangTimeline(dsQuetBiTuChoiDay, soDangHienThiQuetBiTuChoi);
   el.innerHTML = dsDeRender.map(x => `
     <div class="timeline-item">
       <div class="timeline-info">
-        <span style="font-size:1.1rem">${x.nhom === 'KHONG_TIM_THAY' ? '❌' : '⚠️'}</span>
+        <span style="font-size:1.1rem">${x.nhom === 'KHONG_TIM_THAY' ? 'âŒ' : 'âš ï¸'}</span>
         ${x.lyDo ? escapeHtml(x.lyDo) : `<a href="/order.html?stt=${encodeURIComponent(x.sttKey)}">${escapeHtml(x.sttKey)}</a>`}
-        ${x.kichBan ? `<div style="font-size:0.85rem;color:var(--color-text-muted);margin-top:2px">Kịch bản: ${escapeHtml(x.kichBan)}</div>` : ''}
+        ${x.kichBan ? `<div style="font-size:0.85rem;color:var(--color-text-muted);margin-top:2px">Ká»‹ch báº£n: ${escapeHtml(x.kichBan)}</div>` : ''}
       </div>
       <div class="timeline-time">${tsDep(x.thoiGian)}</div>
     </div>`).join('') + nutXemThemTimeline(conLai, 'soDangHienThiQuetBiTuChoi+=SO_MOI_LUOT_HOAT_DONG;renderDsQuetBiTuChoi()');
@@ -430,14 +430,14 @@ let dsDoiTrangThaiDay = [], soDangHienThiDoiTrangThai = SO_MOI_LUOT_HOAT_DONG;
 function renderDsDoiTrangThai(list) {
   if (list !== undefined) { dsDoiTrangThaiDay = list; soDangHienThiDoiTrangThai = SO_MOI_LUOT_HOAT_DONG; }
   const el = document.getElementById('ds-doi-trang-thai');
-  if (dsDoiTrangThaiDay.length === 0) { el.innerHTML = dongRong('Chưa có thay đổi trạng thái nào trong khoảng này.'); return; }
+  if (dsDoiTrangThaiDay.length === 0) { el.innerHTML = dongRong('ChÆ°a cÃ³ thay Ä‘á»•i tráº¡ng thÃ¡i nÃ o trong khoáº£ng nÃ y.'); return; }
   const { dsDeRender, conLai } = phanTrangTimeline(dsDoiTrangThaiDay, soDangHienThiDoiTrangThai);
   el.innerHTML = dsDeRender.map(x => `
     <div class="timeline-item">
       <div class="timeline-info">
         <strong><a href="/order.html?stt=${encodeURIComponent(x.sttKey)}">${escapeHtml(x.sttKey)}</a></strong>
         <div style="font-size:0.85rem;color:var(--color-text-muted);margin-top:2px">
-          ${escapeHtml(NHAN_COT_TRANG_THAI[x.cot] || x.cot)} (${escapeHtml(x.nguon)}): ${x.tu ? `${escapeHtml(x.tu)} → ` : ''}${escapeHtml(x.sang)}
+          ${escapeHtml(NHAN_COT_TRANG_THAI[x.cot] || x.cot)} (${escapeHtml(x.nguon)}): ${x.tu ? `${escapeHtml(x.tu)} â†’ ` : ''}${escapeHtml(x.sang)}
         </div>
       </div>
       <div class="timeline-time">${tsDep(x.thoiGian)}</div>
@@ -448,14 +448,14 @@ let dsUploadAnhDay = [], soDangHienThiUploadAnh = SO_MOI_LUOT_HOAT_DONG;
 function renderDsUploadAnh(list) {
   if (list !== undefined) { dsUploadAnhDay = list; soDangHienThiUploadAnh = SO_MOI_LUOT_HOAT_DONG; }
   const el = document.getElementById('ds-upload-anh');
-  if (dsUploadAnhDay.length === 0) { el.innerHTML = dongRong('Chưa có ảnh nào được tải lên trong khoảng này.'); return; }
+  if (dsUploadAnhDay.length === 0) { el.innerHTML = dongRong('ChÆ°a cÃ³ áº£nh nÃ o Ä‘Æ°á»£c táº£i lÃªn trong khoáº£ng nÃ y.'); return; }
   const { dsDeRender, conLai } = phanTrangTimeline(dsUploadAnhDay, soDangHienThiUploadAnh);
   el.innerHTML = dsDeRender.map(x => `
     <div class="timeline-item">
       <div class="timeline-info">
         <strong><a href="/order.html?stt=${encodeURIComponent(x.sttKey)}">${escapeHtml(x.sttKey)}</a></strong>
         <div style="font-size:0.85rem;color:var(--color-text-muted);margin-top:2px">
-          ${escapeHtml(NHAN_MOC_ANH[x.moc] || x.moc)}${x.tuDongChuyenSang ? ` — tự động chuyển đơn sang "${escapeHtml(x.tuDongChuyenSang)}"` : ''}
+          ${escapeHtml(NHAN_MOC_ANH[x.moc] || x.moc)}${x.tuDongChuyenSang ? ` â€” tá»± Ä‘á»™ng chuyá»ƒn Ä‘Æ¡n sang "${escapeHtml(x.tuDongChuyenSang)}"` : ''}
         </div>
       </div>
       <div class="timeline-time">${tsDep(x.thoiGian)}</div>

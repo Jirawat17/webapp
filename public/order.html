@@ -1,25 +1,25 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chi tiết đơn hàng — Xưởng Thêu</title>
+<title>Chi tiáº¿t Ä‘Æ¡n hÃ ng â€” XÆ°á»Ÿng ThÃªu</title>
 <link rel="stylesheet" href="/css/style.css?v=112">
 <script src="/js/theme.js?v=104"></script>
 <style>
-/* Ô "Nhập mã đơn" (04/10/2026, theo yêu cầu người dùng): gấp 3 cỡ cũ (160x21px, chữ 13,3px) cả rộng, cao, cỡ chữ; chữ gõ vào
-   xanh dương đậm CỐ ĐỊNH (không dùng --color-primary vì mỗi máy tự chọn màu chủ đạo, có thể là cam/hồng); chữ gợi ý giữ
-   xám thường; nút "Mở" cao bằng ô. Điện thoại: ô co vừa bề ngang trang (trừ lề .page 16px mỗi bên). */
+/* Ã” "Nháº­p mÃ£ Ä‘Æ¡n" (04/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng): gáº¥p 3 cá»¡ cÅ© (160x21px, chá»¯ 13,3px) cáº£ rá»™ng, cao, cá»¡ chá»¯; chá»¯ gÃµ vÃ o
+   xanh dÆ°Æ¡ng Ä‘áº­m Cá» Äá»ŠNH (khÃ´ng dÃ¹ng --color-primary vÃ¬ má»—i mÃ¡y tá»± chá»n mÃ u chá»§ Ä‘áº¡o, cÃ³ thá»ƒ lÃ  cam/há»“ng); chá»¯ gá»£i Ã½ giá»¯
+   xÃ¡m thÆ°á»ng; nÃºt "Má»Ÿ" cao báº±ng Ã´. Äiá»‡n thoáº¡i: Ã´ co vá»«a bá» ngang trang (trá»« lá» .page 16px má»—i bÃªn). */
 #tim-ma-don { width: 480px; max-width: calc(100vw - 2 * var(--space-4)); height: 63px; font-size: 40px; font-weight: 700; color: #1d4ed8; }
 #tim-ma-don::placeholder { color: #757575; font-weight: 400; opacity: 1; }
 #tim-ma-don + button { height: 63px; }
-/* Đơn HOLD: khối đầu trang có thêm lề trong 12px mỗi bên (style.css .dau-don.vong-hold) — trừ tiếp để ô không tràn ra ngoài vòng đỏ. */
+/* ÄÆ¡n HOLD: khá»‘i Ä‘áº§u trang cÃ³ thÃªm lá» trong 12px má»—i bÃªn (style.css .dau-don.vong-hold) â€” trá»« tiáº¿p Ä‘á»ƒ Ã´ khÃ´ng trÃ n ra ngoÃ i vÃ²ng Ä‘á». */
 .dau-don.vong-hold #tim-ma-don { max-width: calc(100vw - 2 * var(--space-4) - 24px); }
-/* U2 Đối chiếu ảnh (11/10/2026): khung lưới 5 mục (Thiết kế, Mockup, File thêu, Đã sản xuất, Dán tem). 12/10/2026 (theo yêu cầu người dùng):
-   ảnh to hơn 50% — cột tối thiểu 315px (~1,5 x cột cũ ~210px ở khung 1110px), cao tối đa 540px (cũ 360px); màn không đủ rộng cho 5 cột
-   thì tự xuống hàng thay vì thu nhỏ ảnh (điện thoại: 1 cột). 12/10/2026 lần 2 (người dùng chốt): khung RỘNG HẾT màn hình (chừa lề 16px),
-   cột giãn đều theo bề ngang (auto-fit — không để cột trống); mỗi ảnh cao tối đa bằng chiều cao màn hình trừ phần tiêu đề, để luôn thấy
-   trọn 1 ảnh mà không phải cuộn. Nhiều ảnh thiết kế vẫn xếp dọc trong cột (cuộn khung để xem tiếp). */
+/* U2 Äá»‘i chiáº¿u áº£nh (11/10/2026): khung lÆ°á»›i 5 má»¥c (Thiáº¿t káº¿, Mockup, File thÃªu, ÄÃ£ sáº£n xuáº¥t, DÃ¡n tem). 12/10/2026 (theo yÃªu cáº§u ngÆ°á»i dÃ¹ng):
+   áº£nh to hÆ¡n 50% â€” cá»™t tá»‘i thiá»ƒu 315px (~1,5 x cá»™t cÅ© ~210px á»Ÿ khung 1110px), cao tá»‘i Ä‘a 540px (cÅ© 360px); mÃ n khÃ´ng Ä‘á»§ rá»™ng cho 5 cá»™t
+   thÃ¬ tá»± xuá»‘ng hÃ ng thay vÃ¬ thu nhá» áº£nh (Ä‘iá»‡n thoáº¡i: 1 cá»™t). 12/10/2026 láº§n 2 (ngÆ°á»i dÃ¹ng chá»‘t): khung Rá»˜NG Háº¾T mÃ n hÃ¬nh (chá»«a lá» 16px),
+   cá»™t giÃ£n Ä‘á»u theo bá» ngang (auto-fit â€” khÃ´ng Ä‘á»ƒ cá»™t trá»‘ng); má»—i áº£nh cao tá»‘i Ä‘a báº±ng chiá»u cao mÃ n hÃ¬nh trá»« pháº§n tiÃªu Ä‘á», Ä‘á»ƒ luÃ´n tháº¥y
+   trá»n 1 áº£nh mÃ  khÃ´ng pháº£i cuá»™n. Nhiá»u áº£nh thiáº¿t káº¿ váº«n xáº¿p dá»c trong cá»™t (cuá»™n khung Ä‘á»ƒ xem tiáº¿p). */
 #hop-doi-chieu { width: calc(100vw - 2 * var(--space-4)); max-width: none; max-height: calc(100vh - 2 * var(--space-4)); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); }
 #hop-doi-chieu::backdrop { background: rgba(0, 0, 0, 0.55); }
 .luoi-doi-chieu { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 315px), 1fr)); gap: var(--space-3); }
@@ -35,119 +35,119 @@
 </div>
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=140"></script>
+<script src="/js/api.js?v=141"></script>
 <script>
 const sttKey = new URLSearchParams(location.search).get('stt');
-// Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
-// settings.html (superadmin), số cứng không còn luôn đúng nên không hard-code vào nhãn hiển thị nữa.
-// 07/10/2026: điều kiện từng mức chỉnh được ở Settings -> nhãn không ghi điều kiện cố định nữa.
-const NHAN_CANH_BAO = { VANG: 'Cảnh báo Vàng', CAM: 'Cảnh báo Cam', DO: 'Cảnh báo Đỏ' };
-// PHẢI khớp TINH_TRANG_VALUES trong data/pipelineTinhTrang.js
-// (bổ sung 26/08/2026) Đơn "Đang chạy máy" nhưng không tra được người vận hành (vd sửa thẳng trên
-// Sheet, log bị thiếu) — vẫn cho xem (an toàn hơn) nhưng cảnh báo TO, RÕ thay vì chỉ ghi "Không xác định".
-const NHAN_NGUOI_VAN_HANH_KHONG_RO = 'ĐƠN SỬA TRONG GGSHEET, KHÔNG RÕ TÀI KHOẢN SẢN XUẤT NÀO ĐANG CHẠY';
+// Sá»‘ ngÃ y bá» khá»i nhÃ£n (bá»• sung 23/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” ngÆ°á»¡ng giá» chá»‰nh Ä‘Æ°á»£c á»Ÿ
+// settings.html (superadmin), sá»‘ cá»©ng khÃ´ng cÃ²n luÃ´n Ä‘Ãºng nÃªn khÃ´ng hard-code vÃ o nhÃ£n hiá»ƒn thá»‹ ná»¯a.
+// 07/10/2026: Ä‘iá»u kiá»‡n tá»«ng má»©c chá»‰nh Ä‘Æ°á»£c á»Ÿ Settings -> nhÃ£n khÃ´ng ghi Ä‘iá»u kiá»‡n cá»‘ Ä‘á»‹nh ná»¯a.
+const NHAN_CANH_BAO = { VANG: 'Cáº£nh bÃ¡o VÃ ng', CAM: 'Cáº£nh bÃ¡o Cam', DO: 'Cáº£nh bÃ¡o Äá»' };
+// PHáº¢I khá»›p TINH_TRANG_VALUES trong data/pipelineTinhTrang.js
+// (bá»• sung 26/08/2026) ÄÆ¡n "Äang cháº¡y mÃ¡y" nhÆ°ng khÃ´ng tra Ä‘Æ°á»£c ngÆ°á»i váº­n hÃ nh (vd sá»­a tháº³ng trÃªn
+// Sheet, log bá»‹ thiáº¿u) â€” váº«n cho xem (an toÃ n hÆ¡n) nhÆ°ng cáº£nh bÃ¡o TO, RÃ• thay vÃ¬ chá»‰ ghi "KhÃ´ng xÃ¡c Ä‘á»‹nh".
+const NHAN_NGUOI_VAN_HANH_KHONG_RO = 'ÄÆ N Sá»¬A TRONG GGSHEET, KHÃ”NG RÃ• TÃ€I KHOáº¢N Sáº¢N XUáº¤T NÃ€O ÄANG CHáº Y';
 const DANH_SACH_TINH_TRANG = [
-  'Chưa in mã', 'Đã in mã', 'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đang chạy máy', 'Đã sản xuất', 'LỖI SẢN XUẤT CẦN LÀM LẠI',
-  'ĐÃ DÁN TEM', 'DELIVERED_Đã giao đến khách', 'CANCELLED_Đã hủy', 'REFUNDED_Hoàn đơn',
+  'ChÆ°a in mÃ£', 'ÄÃ£ in mÃ£', 'ÄÃƒ Sáº´N SÃ€NG CHáº Y MÃY', 'Äang cháº¡y mÃ¡y', 'ÄÃ£ sáº£n xuáº¥t', 'Lá»–I Sáº¢N XUáº¤T Cáº¦N LÃ€M Láº I',
+  'ÄÃƒ DÃN TEM', 'DELIVERED_ÄÃ£ giao Ä‘áº¿n khÃ¡ch', 'CANCELLED_ÄÃ£ há»§y', 'REFUNDED_HoÃ n Ä‘Æ¡n',
 ];
 
-// Format timestamp ngắn gọn "DD-MM HH:mm:ss" — nhất quán với backend dinhDangNgayGioNgan()
-// Không dùng toLocaleString('vi-VN') vì output phụ thuộc cài đặt trình duyệt và dài hơn cần thiết
+// Format timestamp ngáº¯n gá»n "DD-MM HH:mm:ss" â€” nháº¥t quÃ¡n vá»›i backend dinhDangNgayGioNgan()
+// KhÃ´ng dÃ¹ng toLocaleString('vi-VN') vÃ¬ output phá»¥ thuá»™c cÃ i Ä‘áº·t trÃ¬nh duyá»‡t vÃ  dÃ i hÆ¡n cáº§n thiáº¿t
 function tsDep(isoStr) {
   if (!isoStr) return '';
   const d = new Date(isoStr);
-  if (isNaN(d)) return isoStr; // fallback: hiện nguyên chuỗi gốc
+  if (isNaN(d)) return isoStr; // fallback: hiá»‡n nguyÃªn chuá»—i gá»‘c
   const fmt = (n) => String(n).padStart(2, '0');
-  // Chuyển sang giờ GMT+7 Việt Nam
+  // Chuyá»ƒn sang giá» GMT+7 Viá»‡t Nam
   const vn = new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' }));
   return `${fmt(vn.getDate())}-${fmt(vn.getMonth()+1)} ${fmt(vn.getHours())}:${fmt(vn.getMinutes())}:${fmt(vn.getSeconds())}`;
 }
 
 let user;
-let donHienTai = null; // đơn đang xem (lần tải gần nhất) — nút mua tracking kiểm tra đơn đã huỷ trước khi hỏi xác nhận
-let dsSanXuatDangHoatDong = []; // chỉ admin cần, nạp 1 lần lúc vào trang (xem renderKhuVucThaoTac)
-let dsVeFileDangHoatDong = []; // chỉ admin cần, nạp 1 lần lúc vào trang (xem renderKhuVucThaoTac)
+let donHienTai = null; // Ä‘Æ¡n Ä‘ang xem (láº§n táº£i gáº§n nháº¥t) â€” nÃºt mua tracking kiá»ƒm tra Ä‘Æ¡n Ä‘Ã£ huá»· trÆ°á»›c khi há»i xÃ¡c nháº­n
+let dsSanXuatDangHoatDong = []; // chá»‰ admin cáº§n, náº¡p 1 láº§n lÃºc vÃ o trang (xem renderKhuVucThaoTac)
+let dsVeFileDangHoatDong = []; // chá»‰ admin cáº§n, náº¡p 1 láº§n lÃºc vÃ o trang (xem renderKhuVucThaoTac)
 
 (async () => {
   user = await requireLoginOrRedirect();
   if (!user) return;
   renderNav(user, 'orders');
 
-  // "Chỉ định người chạy máy" (bổ sung 07/09/2026, xem docs/superpowers/specs/2026-09-07-nguoi-chay-may-design.md)
-  // + "Chỉ định người vẽ file" (bổ sung 09/09/2026, cùng khuôn — route POST /orders/chi-dinh-nguoi-ve-file
-  // đã có sẵn từ trước) — CHỈ admin. /users vốn đã chỉ mở cho admin (requireRole trong routes/users.js).
+  // "Chá»‰ Ä‘á»‹nh ngÆ°á»i cháº¡y mÃ¡y" (bá»• sung 07/09/2026, xem docs/superpowers/specs/2026-09-07-nguoi-chay-may-design.md)
+  // + "Chá»‰ Ä‘á»‹nh ngÆ°á»i váº½ file" (bá»• sung 09/09/2026, cÃ¹ng khuÃ´n â€” route POST /orders/chi-dinh-nguoi-ve-file
+  // Ä‘Ã£ cÃ³ sáºµn tá»« trÆ°á»›c) â€” CHá»ˆ admin. /users vá»‘n Ä‘Ã£ chá»‰ má»Ÿ cho admin (requireRole trong routes/users.js).
   if (laAdmin(user.vaiTro)) {
     try {
       const dsNhanVien = await apiFetch('/users/tom-tat');
       dsSanXuatDangHoatDong = dsNhanVien.filter(u => u.VaiTro === 'san_xuat' && String(u.KichHoat).toUpperCase() === 'TRUE');
       dsVeFileDangHoatDong = dsNhanVien.filter(u => u.VaiTro === 've_file' && String(u.KichHoat).toUpperCase() === 'TRUE');
-    } catch (e) { /* không tải được danh sách — ô chọn sẽ hiện rỗng, không chặn tải trang */ }
+    } catch (e) { /* khÃ´ng táº£i Ä‘Æ°á»£c danh sÃ¡ch â€” Ã´ chá»n sáº½ hiá»‡n rá»—ng, khÃ´ng cháº·n táº£i trang */ }
   }
 
   await taiChiTiet();
   oTimMaDonSanSang();
 })();
 
-// Địa chỉ giao hàng (02/10/2026, theo yêu cầu người dùng): **TEN** (đậm) · SDT, rồi DIA_CHI_TEN_DUONG, DIA_CHI_TEN_DUONG_2,
-// DIA_CHI_TEN_TP, DIA_CHI_BANG, MA_ZIPCODE, DIA_CHI_NUOC — KHÔNG dùng TEN_DIA_CHI nữa (hàng "Người nhận" đã gộp vào đây).
-// Trả HTML đã escape.
+// Äá»‹a chá»‰ giao hÃ ng (02/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng): **TEN** (Ä‘áº­m) Â· SDT, rá»“i DIA_CHI_TEN_DUONG, DIA_CHI_TEN_DUONG_2,
+// DIA_CHI_TEN_TP, DIA_CHI_BANG, MA_ZIPCODE, DIA_CHI_NUOC â€” KHÃ”NG dÃ¹ng TEN_DIA_CHI ná»¯a (hÃ ng "NgÆ°á»i nháº­n" Ä‘Ã£ gá»™p vÃ o Ä‘Ã¢y).
+// Tráº£ HTML Ä‘Ã£ escape.
 function dongDiaChi(don) {
-  const nguoi = [don.TEN && `<strong>${escapeHtml(don.TEN)}</strong>`, don.SDT && escapeHtml(don.SDT)].filter(Boolean).join(' · ');
+  const nguoi = [don.TEN && `<strong>${escapeHtml(don.TEN)}</strong>`, don.SDT && escapeHtml(don.SDT)].filter(Boolean).join(' Â· ');
   const diaChi = [don.DIA_CHI_TEN_DUONG, don.DIA_CHI_TEN_DUONG_2, don.DIA_CHI_TEN_TP, don.DIA_CHI_BANG, don.MA_ZIPCODE, don.DIA_CHI_NUOC]
     .filter(Boolean).map(escapeHtml);
   const phan = [nguoi, ...diaChi].filter(Boolean);
-  if (!phan.length) return '(chưa có địa chỉ)';
-  // Sao chép: mỗi thông tin 1 dòng, đúng thứ tự trên nhãn gửi hàng (04/10/2026)
+  if (!phan.length) return '(chÆ°a cÃ³ Ä‘á»‹a chá»‰)';
+  // Sao chÃ©p: má»—i thÃ´ng tin 1 dÃ²ng, Ä‘Ãºng thá»© tá»± trÃªn nhÃ£n gá»­i hÃ ng (04/10/2026)
   const banChep = [don.TEN, don.SDT, don.DIA_CHI_TEN_DUONG, don.DIA_CHI_TEN_DUONG_2, don.DIA_CHI_TEN_TP, don.DIA_CHI_BANG, don.MA_ZIPCODE, don.DIA_CHI_NUOC]
     .filter(Boolean).join('\n');
-  return phan.join(', ') + nutSaoChep(banChep, 'Sao chép địa chỉ');
+  return phan.join(', ') + nutSaoChep(banChep, 'Sao chÃ©p Ä‘á»‹a chá»‰');
 }
 
-// nguoi_san_xuat (bổ sung 12/09/2026, theo yêu cầu người dùng): chỉ hiện ĐÚNG 3 trường (Số lượng,
-// Ngày lên đơn, Ghi chú — bôi đậm) thay vì đủ 14 trường như trước — hạn chế thông tin khách hàng/địa
-// chỉ/tracking/IOSS... không cần thiết cho việc chạy máy, dễ gây nhiễu hoặc bỏ sót thông tin quan
-// trọng. admin/ve_file vẫn thấy đủ như cũ.
-// Ghi chú xưởng (28/09/2026): bản chính là cột GHI_CHU_XUONG trong Sheet Seller (app ghi ngược vào đó, đọc lại
-// qua RAW -> Don_Hang_ALL). Bản lưu trong app (GHI_CHU_XUONG_NOI_BO) KHÁC bản Sheet = chưa ghi được sang Sheet
-// hoặc Sheet chưa cập nhật lại -> hiện thêm 1 dòng màu cam để không ai tưởng đã có trên Sheet Seller.
-// Bản trong app chỉ được ưu tiên hơn bản Sheet khi (a) lần ghi gần nhất sang Sheet BỊ LỖI, hoặc (b) vừa ghi thành
-// công < 15 phút (IMPORTRANGE/QUERY chưa kịp cập nhật). Ngoài 2 trường hợp đó Sheet là bản chính — Seller có thể
-// đã sửa cột Q SAU lần lưu gần nhất; điền bản app cũ vào ô sửa sẽ khiến bấm Lưu GHI ĐÈ mất ghi chú mới của Seller.
+// nguoi_san_xuat (bá»• sung 12/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng): chá»‰ hiá»‡n ÄÃšNG 3 trÆ°á»ng (Sá»‘ lÆ°á»£ng,
+// NgÃ y lÃªn Ä‘Æ¡n, Ghi chÃº â€” bÃ´i Ä‘áº­m) thay vÃ¬ Ä‘á»§ 14 trÆ°á»ng nhÆ° trÆ°á»›c â€” háº¡n cháº¿ thÃ´ng tin khÃ¡ch hÃ ng/Ä‘á»‹a
+// chá»‰/tracking/IOSS... khÃ´ng cáº§n thiáº¿t cho viá»‡c cháº¡y mÃ¡y, dá»… gÃ¢y nhiá»…u hoáº·c bá» sÃ³t thÃ´ng tin quan
+// trá»ng. admin/ve_file váº«n tháº¥y Ä‘á»§ nhÆ° cÅ©.
+// Ghi chÃº xÆ°á»Ÿng (28/09/2026): báº£n chÃ­nh lÃ  cá»™t GHI_CHU_XUONG trong Sheet Seller (app ghi ngÆ°á»£c vÃ o Ä‘Ã³, Ä‘á»c láº¡i
+// qua RAW -> Don_Hang_ALL). Báº£n lÆ°u trong app (GHI_CHU_XUONG_NOI_BO) KHÃC báº£n Sheet = chÆ°a ghi Ä‘Æ°á»£c sang Sheet
+// hoáº·c Sheet chÆ°a cáº­p nháº­t láº¡i -> hiá»‡n thÃªm 1 dÃ²ng mÃ u cam Ä‘á»ƒ khÃ´ng ai tÆ°á»Ÿng Ä‘Ã£ cÃ³ trÃªn Sheet Seller.
+// Báº£n trong app chá»‰ Ä‘Æ°á»£c Æ°u tiÃªn hÆ¡n báº£n Sheet khi (a) láº§n ghi gáº§n nháº¥t sang Sheet Bá»Š Lá»–I, hoáº·c (b) vá»«a ghi thÃ nh
+// cÃ´ng < 15 phÃºt (IMPORTRANGE/QUERY chÆ°a ká»‹p cáº­p nháº­t). NgoÃ i 2 trÆ°á»ng há»£p Ä‘Ã³ Sheet lÃ  báº£n chÃ­nh â€” Seller cÃ³ thá»ƒ
+// Ä‘Ã£ sá»­a cá»™t Q SAU láº§n lÆ°u gáº§n nháº¥t; Ä‘iá»n báº£n app cÅ© vÃ o Ã´ sá»­a sáº½ khiáº¿n báº¥m LÆ°u GHI ÄÃˆ máº¥t ghi chÃº má»›i cá»§a Seller.
 function trangThaiGhiChuXuong(don) {
   const noiBo = don.GHI_CHU_XUONG_NOI_BO || '';
   const sheet = don.GHI_CHU_XUONG || '';
   const gan = don.DongBoGhiChuXuong;
   if (!gan || noiBo === sheet) return { oSua: sheet, canhBao: '' };
-  if (gan.KetQua === 'LOI') return { oSua: noiBo, canhBao: `CHƯA ghi được sang Sheet Seller — ${gan.LyDo}` };
+  if (gan.KetQua === 'LOI') return { oSua: noiBo, canhBao: `CHÆ¯A ghi Ä‘Æ°á»£c sang Sheet Seller â€” ${gan.LyDo}` };
   if (Date.now() - new Date(gan.ThoiGian).getTime() < 15 * 60 * 1000) {
-    return { oSua: noiBo, canhBao: `Đã ghi sang Sheet Seller lúc ${tsDep(gan.ThoiGian)} — đang chờ Sheet cập nhật lại.` };
+    return { oSua: noiBo, canhBao: `ÄÃ£ ghi sang Sheet Seller lÃºc ${tsDep(gan.ThoiGian)} â€” Ä‘ang chá» Sheet cáº­p nháº­t láº¡i.` };
   }
   return { oSua: sheet, canhBao: '' };
 }
 function dongGhiChuNoiBo(don) {
   const { canhBao } = trangThaiGhiChuXuong(don);
   if (!canhBao) return '';
-  return `<tr><td>Ghi chú xưởng<br><small>(bản lưu trong app)</small></td><td style="color:var(--color-warning-text)"><strong>${escapeHtml(don.GHI_CHU_XUONG_NOI_BO)}</strong><br><small>${escapeHtml(canhBao)}</small></td></tr>`;
+  return `<tr><td>Ghi chÃº xÆ°á»Ÿng<br><small>(báº£n lÆ°u trong app)</small></td><td style="color:var(--color-warning-text)"><strong>${escapeHtml(don.GHI_CHU_XUONG_NOI_BO)}</strong><br><small>${escapeHtml(canhBao)}</small></td></tr>`;
 }
 
-// Ghi chú + Ghi chú xưởng luôn ở đầu bảng, in đậm cả tên trường lẫn giá trị (30/09/2026).
+// Ghi chÃº + Ghi chÃº xÆ°á»Ÿng luÃ´n á»Ÿ Ä‘áº§u báº£ng, in Ä‘áº­m cáº£ tÃªn trÆ°á»ng láº«n giÃ¡ trá»‹ (30/09/2026).
 function dongGhiChu(don) {
-  return `<tr><td><strong>Ghi chú</strong></td><td><strong>${escapeHtml(don.GHI_CHU || '')}</strong></td></tr>
-    <tr><td><strong>Ghi chú xưởng</strong></td><td><strong>${escapeHtml(don.GHI_CHU_XUONG || '')}</strong></td></tr>
+  return `<tr><td><strong>Ghi chÃº</strong></td><td><strong>${escapeHtml(don.GHI_CHU || '')}</strong></td></tr>
+    <tr><td><strong>Ghi chÃº xÆ°á»Ÿng</strong></td><td><strong>${escapeHtml(don.GHI_CHU_XUONG || '')}</strong></td></tr>
     ${dongGhiChuNoiBo(don)}
     ${dongSoLuong(don)}
     ${dongSoMuiChi(don)}`;
 }
 
-// Số mũi chỉ (07/10/2026, theo yêu cầu người dùng) — 1 dòng ngay dưới "Ghi chú xưởng" trong bảng thông tin, ô nhập + Lưu ngay trong dòng.
-// CHỈ admin/superadmin/ve_file (server routes/orders.js POST /:sttKey/so-mui-chi cũng chặn); vai trò khác không có dòng này.
+// Sá»‘ mÅ©i chá»‰ (07/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” 1 dÃ²ng ngay dÆ°á»›i "Ghi chÃº xÆ°á»Ÿng" trong báº£ng thÃ´ng tin, Ã´ nháº­p + LÆ°u ngay trong dÃ²ng.
+// CHá»ˆ admin/superadmin/ve_file (server routes/orders.js POST /:sttKey/so-mui-chi cÅ©ng cháº·n); vai trÃ² khÃ¡c khÃ´ng cÃ³ dÃ²ng nÃ y.
 function dongSoMuiChi(don) {
   if (!['admin', 'superadmin', 've_file'].includes(user.vaiTro)) return '';
-  return `<tr><td><strong>Số mũi chỉ</strong></td><td>
+  return `<tr><td><strong>Sá»‘ mÅ©i chá»‰</strong></td><td>
       <form onsubmit="luuSoMuiChi(event)" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <input type="text" id="so-mui-chi" inputmode="numeric" maxlength="7" autocomplete="off" placeholder="Nhập số mũi chỉ..." aria-label="Số mũi chỉ"
+        <input type="text" id="so-mui-chi" inputmode="numeric" maxlength="7" autocomplete="off" placeholder="Nháº­p sá»‘ mÅ©i chá»‰..." aria-label="Sá»‘ mÅ©i chá»‰"
           value="${escapeHtml(soMuiChiHienThi(don))}" style="width:160px;padding:6px 10px;border-radius:8px;border:1px solid var(--color-border);font:inherit;font-weight:700">
-        <button type="submit" class="btn-hanh-dong phu">${icon('check')} Lưu</button>
+        <button type="submit" class="btn-hanh-dong phu">${icon('check')} LÆ°u</button>
       </form>
       <small id="so-mui-chi-tb" role="status" style="color:${don.SoMuiChiLoiSheet ? 'var(--color-danger-text)' : 'var(--color-text-muted)'}">${don.SoMuiChiLoiSheet ? CHUA_GHI_SHEET_SO_MUI : ''}</small>
     </td></tr>`;
@@ -155,51 +155,51 @@ function dongSoMuiChi(don) {
 
 function dongSoLuong(don) {
   if (!don.SO_LUONG) return '';
-  return `<tr><td>Số lượng</td><td style="font-size:3em;font-weight:700;line-height:1.1;color:var(--color-danger)">${escapeHtml(String(don.SO_LUONG))}${don.SO_LUONG_AO_TREN_DON ? `<span style="font-size:0.45em;font-weight:400"> (áo trên đơn: ${escapeHtml(don.SO_LUONG_AO_TREN_DON)})</span>` : ''}</td></tr>`;
+  return `<tr><td>Sá»‘ lÆ°á»£ng</td><td style="font-size:3em;font-weight:700;line-height:1.1;color:var(--color-danger)">${escapeHtml(String(don.SO_LUONG))}${don.SO_LUONG_AO_TREN_DON ? `<span style="font-size:0.45em;font-weight:400"> (Ã¡o trÃªn Ä‘Æ¡n: ${escapeHtml(don.SO_LUONG_AO_TREN_DON)})</span>` : ''}</td></tr>`;
 }
 
 function renderBangThongTin(don, viTri) {
   if (user.vaiTro === 'san_xuat') {
     return `
       ${dongGhiChu(don)}
-      <tr><td><strong>Vị trí thêu</strong></td><td>${don.ViTriTheu?.length ? `<strong>${viTri}</strong>` : viTri}</td></tr>
-      <tr><td>Ngày lên đơn</td><td>${don.NGAY_LEN_DON ? dinhDangNgay(don.NGAY_LEN_DON) : ''}</td></tr>`;
+      <tr><td><strong>Vá»‹ trÃ­ thÃªu</strong></td><td>${don.ViTriTheu?.length ? `<strong>${viTri}</strong>` : viTri}</td></tr>
+      <tr><td>NgÃ y lÃªn Ä‘Æ¡n</td><td>${don.NGAY_LEN_DON ? dinhDangNgay(don.NGAY_LEN_DON) : ''}</td></tr>`;
   }
   return `
     ${dongGhiChu(don)}
     ${dongNhomNhieuAo(don.NhomNhieuAo)}
-    <tr><td>Vị trí thêu</td><td>${viTri}</td></tr>
-    <tr><td>Ngày lên đơn</td><td>${don.NGAY_LEN_DON ? dinhDangNgay(don.NGAY_LEN_DON) : ''}</td></tr>
-    <tr><td>Địa chỉ giao hàng</td><td>${dongDiaChi(don)}</td></tr>
-    <tr><td>Hãng vận chuyển</td><td>${escapeHtml(don.HANG_VAN_CHUYEN || '')}</td></tr>
-    <tr><td>Mã tracking</td><td>${escapeHtml(don.TRACKING_ID || '')}${don.TRACKING_ID ? nutSaoChep(don.TRACKING_ID, 'Sao chép mã tracking') : ''}${don.TRACKING_CHUNG_CUA ? ` <span style="color:var(--color-text-faint)">(dùng chung của ${escapeHtml(don.TRACKING_CHUNG_CUA)})</span>` : ''}${don.TRACKING_ID && don.NGUON_TRACKING === 'SELLER' ? ' <span style="color:var(--color-text-faint)">(Seller cung cấp — lấy từ TRACKING_ID2)</span>' : ''}</td></tr>
+    <tr><td>Vá»‹ trÃ­ thÃªu</td><td>${viTri}</td></tr>
+    <tr><td>NgÃ y lÃªn Ä‘Æ¡n</td><td>${don.NGAY_LEN_DON ? dinhDangNgay(don.NGAY_LEN_DON) : ''}</td></tr>
+    <tr><td>Äá»‹a chá»‰ giao hÃ ng</td><td>${dongDiaChi(don)}</td></tr>
+    <tr><td>HÃ£ng váº­n chuyá»ƒn</td><td>${escapeHtml(don.HANG_VAN_CHUYEN || '')}</td></tr>
+    <tr><td>MÃ£ tracking</td><td>${escapeHtml(don.TRACKING_ID || '')}${don.TRACKING_ID ? nutSaoChep(don.TRACKING_ID, 'Sao chÃ©p mÃ£ tracking') : ''}${don.TRACKING_CHUNG_CUA ? ` <span style="color:var(--color-text-faint)">(dÃ¹ng chung cá»§a ${escapeHtml(don.TRACKING_CHUNG_CUA)})</span>` : ''}${don.TRACKING_ID && don.NGUON_TRACKING === 'SELLER' ? ' <span style="color:var(--color-text-faint)">(Seller cung cáº¥p â€” láº¥y tá»« TRACKING_ID2)</span>' : ''}</td></tr>
     ${don.BO_QUA_CANH_BAO_THU_CONG && user.vaiTro === 'superadmin' ? `
-    <tr><td>Cảnh báo mua thủ công</td><td>Đã bỏ qua (${escapeHtml(String(don.BO_QUA_CANH_BAO_THU_CONG).split('|')[0])}, ${escapeHtml(String(don.BO_QUA_CANH_BAO_THU_CONG).split('|')[1] || '').slice(0, 16).replace('T', ' ')})
-      <button type="button" class="btn-hanh-dong phu" style="padding:4px 10px;font-size:0.82rem" onclick='boQuaCanhBaoThuCong(this, ${escapeHtml(JSON.stringify(don.STT_Key))}, false)'>Hiện lại cảnh báo</button></td></tr>` : ''}
-    <tr><td>Đã mua Tracking</td><td><strong>${escapeHtml(don.DA_MUA_TRACKING || '')}</strong> <span style="color:var(--color-text-faint)">— ${escapeHtml(don.LyDoDaMuaTracking || '')}</span></td></tr>
-    <tr><td>Mã IOSS</td><td>${escapeHtml(don.MA_IOSS || '')}</td></tr>
+    <tr><td>Cáº£nh bÃ¡o mua thá»§ cÃ´ng</td><td>ÄÃ£ bá» qua (${escapeHtml(String(don.BO_QUA_CANH_BAO_THU_CONG).split('|')[0])}, ${escapeHtml(String(don.BO_QUA_CANH_BAO_THU_CONG).split('|')[1] || '').slice(0, 16).replace('T', ' ')})
+      <button type="button" class="btn-hanh-dong phu" style="padding:4px 10px;font-size:0.82rem" onclick='boQuaCanhBaoThuCong(this, ${escapeHtml(JSON.stringify(don.STT_Key))}, false)'>Hiá»‡n láº¡i cáº£nh bÃ¡o</button></td></tr>` : ''}
+    <tr><td>ÄÃ£ mua Tracking</td><td><strong>${escapeHtml(don.DA_MUA_TRACKING || '')}</strong> <span style="color:var(--color-text-faint)">â€” ${escapeHtml(don.LyDoDaMuaTracking || '')}</span></td></tr>
+    <tr><td>MÃ£ IOSS</td><td>${escapeHtml(don.MA_IOSS || '')}</td></tr>
     ${don.TRACKING_ID && don.TRANG_THAI_TRACKING ? `
-    <tr><td>Trạng thái vận chuyển</td><td>${escapeHtml(don.TRANG_THAI_TRACKING)}${don.THOI_GIAN_CAP_NHAT_TRACKING ? ` <span style="color:var(--color-text-faint)">(cập nhật ${escapeHtml(don.THOI_GIAN_CAP_NHAT_TRACKING)})</span>` : ''}</td></tr>` : ''}
-    <tr><td>Mã đơn (sàn TMĐT)</td><td>${escapeHtml(don.MA_DON_HANG_ORDERID || '')}</td></tr>
-    <tr><td>Xưởng</td><td>${escapeHtml(don.XUONG || '(chưa gán)')}</td></tr>
-    <tr><td>Cập nhật lần cuối</td><td>${escapeHtml(don.NguoiCapNhatCuoi || '')}${don.ThoiGianCapNhatCuoi ? ' · ' + tsDep(don.ThoiGianCapNhatCuoi) : ''}</td></tr>`;
+    <tr><td>Tráº¡ng thÃ¡i váº­n chuyá»ƒn</td><td>${escapeHtml(don.TRANG_THAI_TRACKING)}${don.THOI_GIAN_CAP_NHAT_TRACKING ? ` <span style="color:var(--color-text-faint)">(cáº­p nháº­t ${escapeHtml(don.THOI_GIAN_CAP_NHAT_TRACKING)})</span>` : ''}</td></tr>` : ''}
+    <tr><td>MÃ£ Ä‘Æ¡n (sÃ n TMÄT)</td><td>${escapeHtml(don.MA_DON_HANG_ORDERID || '')}</td></tr>
+    <tr><td>XÆ°á»Ÿng</td><td>${escapeHtml(don.XUONG || '(chÆ°a gÃ¡n)')}</td></tr>
+    <tr><td>Cáº­p nháº­t láº§n cuá»‘i</td><td>${escapeHtml(don.NguoiCapNhatCuoi || '')}${don.ThoiGianCapNhatCuoi ? ' Â· ' + tsDep(don.ThoiGianCapNhatCuoi) : ''}</td></tr>`;
 }
 
-// DonNhieuAo (bổ sung 26/09/2026) — liệt kê cả nhóm (link từng đơn + trạng thái + tracking) và lỗi dữ
-// liệu của nhóm, nếu có. Xem services/donNhieuAoService.js#tomTatChoDon.
+// DonNhieuAo (bá»• sung 26/09/2026) â€” liá»‡t kÃª cáº£ nhÃ³m (link tá»«ng Ä‘Æ¡n + tráº¡ng thÃ¡i + tracking) vÃ  lá»—i dá»¯
+// liá»‡u cá»§a nhÃ³m, náº¿u cÃ³. Xem services/donNhieuAoService.js#tomTatChoDon.
 function dongNhomNhieuAo(n) {
   if (!n) return '';
-  const cacDon = n.thanhVien.map(t => `<div><a href="/order.html?stt=${encodeURIComponent(t.sttKey)}">${escapeHtml(t.sttKey)}</a>${t.sttKey === n.donMua ? ' <strong>(mua tracking)</strong>' : ''}${t.sttKey === n.donIn && n.donIn !== n.donMua ? ' <strong>(in label)</strong>' : ''} · ${escapeHtml(t.trangThai)}${t.trackingId ? ' · ' + escapeHtml(t.trackingId) : ''}</div>`).join('');
+  const cacDon = n.thanhVien.map(t => `<div><a href="/order.html?stt=${encodeURIComponent(t.sttKey)}">${escapeHtml(t.sttKey)}</a>${t.sttKey === n.donMua ? ' <strong>(mua tracking)</strong>' : ''}${t.sttKey === n.donIn && n.donIn !== n.donMua ? ' <strong>(in label)</strong>' : ''} Â· ${escapeHtml(t.trangThai)}${t.trackingId ? ' Â· ' + escapeHtml(t.trackingId) : ''}</div>`).join('');
   const loi = [...n.loiChan, ...n.canhBao];
-  return `<tr><td>Nhóm DonNhieuAo</td><td>${nhanNhomNhieuAo(n)}<div style="margin-top:6px">${cacDon}</div>${loi.length ? `<p style="margin:6px 0 0;color:var(--color-danger-text)">${loi.map(escapeHtml).join('<br>')}</p>` : ''}</td></tr>`;
+  return `<tr><td>NhÃ³m DonNhieuAo</td><td>${nhanNhomNhieuAo(n)}<div style="margin-top:6px">${cacDon}</div>${loi.length ? `<p style="margin:6px 0 0;color:var(--color-danger-text)">${loi.map(escapeHtml).join('<br>')}</p>` : ''}</td></tr>`;
 }
 
-// Ô "Nhập mã đơn" (04/10/2026, theo yêu cầu người dùng): gõ ĐÚNG mã (không phân biệt hoa/thường, "," = "." — 05/10/2026) + Enter -> mở chi tiết
-// đơn đó; sai -> báo không tìm thấy. Server tra và trả mã gốc (routes/orders.js GET /tra-ma). Hiện cả khi đơn đang mở báo lỗi.
+// Ã” "Nháº­p mÃ£ Ä‘Æ¡n" (04/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng): gÃµ ÄÃšNG mÃ£ (khÃ´ng phÃ¢n biá»‡t hoa/thÆ°á»ng, "," = "." â€” 05/10/2026) + Enter -> má»Ÿ chi tiáº¿t
+// Ä‘Æ¡n Ä‘Ã³; sai -> bÃ¡o khÃ´ng tÃ¬m tháº¥y. Server tra vÃ  tráº£ mÃ£ gá»‘c (routes/orders.js GET /tra-ma). Hiá»‡n cáº£ khi Ä‘Æ¡n Ä‘ang má»Ÿ bÃ¡o lá»—i.
 function htmlOTimMaDon() {
   return `<form onsubmit="moDonTheoMa(event)" style="display:inline-flex;gap:4px;align-items:center;flex-wrap:wrap">
-      <input type="search" id="tim-ma-don" placeholder="Nhập mã đơn..." aria-label="Mở chi tiết đơn theo mã" autocomplete="off" enterkeyhint="go">
-      <button type="submit" class="btn-hanh-dong phu">Mở</button>
+      <input type="search" id="tim-ma-don" placeholder="Nháº­p mÃ£ Ä‘Æ¡n..." aria-label="Má»Ÿ chi tiáº¿t Ä‘Æ¡n theo mÃ£" autocomplete="off" enterkeyhint="go">
+      <button type="submit" class="btn-hanh-dong phu">Má»Ÿ</button>
       <span id="loi-tim-ma-don" role="alert" style="color:var(--color-danger-text);font-size:0.85rem"></span>
     </form>`;
 }
@@ -209,31 +209,31 @@ async function moDonTheoMa(e) {
   const ma = o.value.trim();
   loi.textContent = '';
   if (!ma) return;
-  // Xoá ô NGAY khi gửi (23/10/2026, theo yêu cầu người dùng — log 22/10: 7 lần mã bị nối nhau, vd "10SON28810SON288"): mã quét/gõ
-  // tiếp trong lúc đang tra hoặc đang mở trang (mạng chậm) bắt đầu từ ô trống. Trước đây chỉ chọn lại chữ khi lỗi — trên điện thoại
-  // ô thường đã mất focus sau phím "Đi" nên select() không có tác dụng.
+  // XoÃ¡ Ã´ NGAY khi gá»­i (23/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” log 22/10: 7 láº§n mÃ£ bá»‹ ná»‘i nhau, vd "10SON28810SON288"): mÃ£ quÃ©t/gÃµ
+  // tiáº¿p trong lÃºc Ä‘ang tra hoáº·c Ä‘ang má»Ÿ trang (máº¡ng cháº­m) báº¯t Ä‘áº§u tá»« Ã´ trá»‘ng. TrÆ°á»›c Ä‘Ã¢y chá»‰ chá»n láº¡i chá»¯ khi lá»—i â€” trÃªn Ä‘iá»‡n thoáº¡i
+  // Ã´ thÆ°á»ng Ä‘Ã£ máº¥t focus sau phÃ­m "Äi" nÃªn select() khÃ´ng cÃ³ tÃ¡c dá»¥ng.
   o.value = '';
   o.placeholder = ma;
   try {
     const { sttKey: maGoc } = await apiFetch('/orders/tra-ma?ma=' + encodeURIComponent(ma));
     location.href = '/order.html?stt=' + encodeURIComponent(maGoc);
   } catch (err) {
-    // Ô đã xoá -> lỗi luôn kèm mã vừa tra (lỗi mạng "Load failed" không tự ghi mã), biết quét lại mã nào.
+    // Ã” Ä‘Ã£ xoÃ¡ -> lá»—i luÃ´n kÃ¨m mÃ£ vá»«a tra (lá»—i máº¡ng "Load failed" khÃ´ng tá»± ghi mÃ£), biáº¿t quÃ©t láº¡i mÃ£ nÃ o.
     loi.textContent = String(err.message).includes(ma) ? err.message : `${ma}: ${err.message}`;
-    o.placeholder = 'Nhập mã đơn...';
+    o.placeholder = 'Nháº­p mÃ£ Ä‘Æ¡n...';
     o.focus();
   }
 }
-// Mở trang chi tiết đơn -> ô "Nhập mã đơn" trống, con trỏ sẵn trong ô để gõ mã tiếp (04/10/2026, theo yêu cầu người dùng).
-// Chỉ lúc mở trang và khi quay lại bằng nút Back (trình duyệt có thể giữ mã cũ trong ô); thao tác trên đơn làm vẽ lại
-// trang thì KHÔNG giật con trỏ về đây.
+// Má»Ÿ trang chi tiáº¿t Ä‘Æ¡n -> Ã´ "Nháº­p mÃ£ Ä‘Æ¡n" trá»‘ng, con trá» sáºµn trong Ã´ Ä‘á»ƒ gÃµ mÃ£ tiáº¿p (04/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng).
+// Chá»‰ lÃºc má»Ÿ trang vÃ  khi quay láº¡i báº±ng nÃºt Back (trÃ¬nh duyá»‡t cÃ³ thá»ƒ giá»¯ mÃ£ cÅ© trong Ã´); thao tÃ¡c trÃªn Ä‘Æ¡n lÃ m váº½ láº¡i
+// trang thÃ¬ KHÃ”NG giáº­t con trá» vá» Ä‘Ã¢y.
 function oTimMaDonSanSang() {
   const o = document.getElementById('tim-ma-don');
   if (!o) return;
   o.value = '';
-  o.placeholder = 'Nhập mã đơn...'; // Back về trang cũ: bỏ mã đang tra hiện tạm ở placeholder (moDonTheoMa)
-  document.getElementById('loi-tim-ma-don').textContent = ''; // Back về trang cũ: bỏ cả dòng báo lỗi cũ
-  o.focus(); // để trình duyệt tự cuộn tới ô nếu đang khuất (Back về trang đã cuộn) — gõ/quét mã tiếp là thấy ngay
+  o.placeholder = 'Nháº­p mÃ£ Ä‘Æ¡n...'; // Back vá» trang cÅ©: bá» mÃ£ Ä‘ang tra hiá»‡n táº¡m á»Ÿ placeholder (moDonTheoMa)
+  document.getElementById('loi-tim-ma-don').textContent = ''; // Back vá» trang cÅ©: bá» cáº£ dÃ²ng bÃ¡o lá»—i cÅ©
+  o.focus(); // Ä‘á»ƒ trÃ¬nh duyá»‡t tá»± cuá»™n tá»›i Ã´ náº¿u Ä‘ang khuáº¥t (Back vá» trang Ä‘Ã£ cuá»™n) â€” gÃµ/quÃ©t mÃ£ tiáº¿p lÃ  tháº¥y ngay
 }
 window.addEventListener('pageshow', e => { if (e.persisted) oTimMaDonSanSang(); });
 
@@ -248,29 +248,29 @@ async function taiChiTiet() {
   }
 
   const dsAnh = urlAnhHienThiList(don.DUONG_DAN_URL || don.MOCKUP, CHIEU_RONG_ANH_CHI_TIET);
-  const viTri = (don.ViTriTheu || []).map(escapeHtml).join(' · ') || '—';
+  const viTri = (don.ViTriTheu || []).map(escapeHtml).join(' Â· ') || 'â€”';
 
   document.getElementById('don-hang').innerHTML = `
     <div class="dau-don ${don.DonHold ? 'vong-hold' : ''} ${don.TinhTrangDacBiet ? 'the-canh-bao-vang' : ''}" style="margin-bottom:16px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-      <h2 style="margin:0" class="${don.DonUuTien ? 'uu-tien' : ''}">${escapeHtml(don.STT_Key)}${don.SO_LUONG ? `<strong style="font-size:2em;line-height:1;vertical-align:middle;margin:0 6px"> SL:${escapeHtml(String(don.SO_LUONG))}</strong>` : ''}${don.TieuDeSanPham && don.TieuDeSanPham !== don.STT_Key ? escapeHtml(don.TieuDeSanPham.slice(don.STT_Key.length)) : ''}${nutSaoChep(don.STT_Key, 'Sao chép mã đơn')}</h2>
+      <h2 style="margin:0" class="${don.DonUuTien ? 'uu-tien' : ''}">${escapeHtml(don.STT_Key)}${don.SO_LUONG ? `<strong style="font-size:2em;line-height:1;vertical-align:middle;margin:0 6px"> SL:${escapeHtml(String(don.SO_LUONG))}</strong>` : ''}${don.TieuDeSanPham && don.TieuDeSanPham !== don.STT_Key ? escapeHtml(don.TieuDeSanPham.slice(don.STT_Key.length)) : ''}${nutSaoChep(don.STT_Key, 'Sao chÃ©p mÃ£ Ä‘Æ¡n')}</h2>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         ${htmlOTimMaDon()}
-        <button type="button" class="btn-hanh-dong phu" onclick="moDoiChieuAnh(this)">${icon('file')} Đối chiếu ảnh</button>
-        <button type="button" class="btn-hanh-dong phu" onclick="inDonHang(this)">${icon('printer')} IN ĐƠN</button>
+        <button type="button" class="btn-hanh-dong phu" onclick="moDoiChieuAnh(this)">${icon('file')} Äá»‘i chiáº¿u áº£nh</button>
+        <button type="button" class="btn-hanh-dong phu" onclick="inDonHang(this)">${icon('printer')} IN ÄÆ N</button>
       </div>
     </div>
     <div class="badge-row">
       ${nhanHold(don)}
-      ${don.DonUuTien ? `<span class="badge trang-thai-danger">${icon('star', {size:14})} Đơn ưu tiên</span>` : ''}
+      ${don.DonUuTien ? `<span class="badge trang-thai-danger">${icon('star', {size:14})} ÄÆ¡n Æ°u tiÃªn</span>` : ''}
       ${nhanNhomNhieuAo(don.NhomNhieuAo)}
       <span class="badge ${lopTrangThai(don.TRANG_THAI_XUONG)}">${escapeHtml(don.TRANG_THAI_XUONG || '')}</span>
-      ${don.TRANG_THAI_XUONG === 'Đang chạy máy' ? `
-        <span class="badge trang-thai-info">${icon('users', {size:14})} Đang vận hành: <strong>${escapeHtml(don.NguoiVanHanh || NHAN_NGUOI_VAN_HANH_KHONG_RO)}</strong></span>` : ''}
-      ${['Chưa in mã', 'Đã in mã'].includes(don.TRANG_THAI_XUONG) ? `
+      ${don.TRANG_THAI_XUONG === 'Äang cháº¡y mÃ¡y' ? `
+        <span class="badge trang-thai-info">${icon('users', {size:14})} Äang váº­n hÃ nh: <strong>${escapeHtml(don.NguoiVanHanh || NHAN_NGUOI_VAN_HANH_KHONG_RO)}</strong></span>` : ''}
+      ${['ChÆ°a in mÃ£', 'ÄÃ£ in mÃ£'].includes(don.TRANG_THAI_XUONG) ? `
         <span class="badge ${lopTrangThai(don.TRANG_THAI_PHOI)}">${escapeHtml(don.TRANG_THAI_PHOI || '')}</span>
         <span class="badge ${lopTrangThai(don.TRANG_THAI_VE_FILE)}">${escapeHtml(don.TRANG_THAI_VE_FILE || '')}</span>` : ''}
-      ${don.DANH_DAU_IN ? `<span class="badge trang-thai-info">${icon('check', {size:14})} Đã đánh dấu in</span>` : ''}
+      ${don.DANH_DAU_IN ? `<span class="badge trang-thai-info">${icon('check', {size:14})} ÄÃ£ Ä‘Ã¡nh dáº¥u in</span>` : ''}
       ${don.CanhBao ? `
         <span class="badge badge-canh-bao ${don.CanhBao.toLowerCase()}">
           ${icon('alert')} ${escapeHtml(NHAN_CANH_BAO[don.CanhBao] || don.CanhBao)}
@@ -280,18 +280,18 @@ async function taiChiTiet() {
 
     <div class="${user.vaiTro === 'superadmin' ? 'chi-tiet-layout' : ''}">
       <div>
-        ${dsAnh.length ? `<div class="nhom-anh-mau">${dsAnh.map(src => `<img class="anh-mau" src="${escapeHtml(src)}" alt="Ảnh mẫu/mockup" loading="lazy" onerror="this.remove()">`).join('')}</div>` : ''}
+        ${dsAnh.length ? `<div class="nhom-anh-mau">${dsAnh.map(src => `<img class="anh-mau" src="${escapeHtml(src)}" alt="áº¢nh máº«u/mockup" loading="lazy" onerror="this.remove()">`).join('')}</div>` : ''}
         ${(user.vaiTro !== 'nguoi_lay_phoi' && (don.DUONG_DAN_URL || don.MOCKUP)) || don.Anh_File_Theu_URL || don.Anh_File_Theu_URL_2 || don.Anh_File_Theu_URL_3 || don.Anh_Da_San_Xuat_URL || don.Anh_Da_San_Xuat_URL_2 || don.Anh_Dong_Goi_URL ? `
         <div class="danh-sach-link-anh">
-          ${user.vaiTro !== 'nguoi_lay_phoi' && don.DUONG_DAN_URL ? linkAnToan(don.DUONG_DAN_URL, `${icon('file', {size:14})} Ảnh PNG`) : ''}
-          ${user.vaiTro !== 'nguoi_lay_phoi' && don.MOCKUP ? linkAnToan(don.MOCKUP, `${icon('file', {size:14})} Ảnh Mockup`) : ''}
-          ${don.Anh_File_Theu_URL ? linkAnToan(don.Anh_File_Theu_URL, `${icon('file', {size:14})} Ảnh file thêu`) : ''}
-          ${don.Anh_File_Theu_URL_2 ? linkAnToan(don.Anh_File_Theu_URL_2, `${icon('file', {size:14})} Ảnh File Thêu 2`) : ''}
-          ${don.Anh_File_Theu_URL_3 ? linkAnToan(don.Anh_File_Theu_URL_3, `${icon('file', {size:14})} Ảnh File Thêu 3`) : ''}
-          ${don.Anh_Da_San_Xuat_URL ? linkAnToan(don.Anh_Da_San_Xuat_URL, `${icon('file', {size:14})} Ảnh đã sản xuất`) : ''}
-          ${don.Anh_Da_San_Xuat_URL_2 ? linkAnToan(don.Anh_Da_San_Xuat_URL_2, `${icon('file', {size:14})} Ảnh đã sản xuất 2`) : ''}
-          ${don.Anh_Da_Dan_Tem_URL ? linkAnToan(don.Anh_Da_Dan_Tem_URL, `${icon('file', {size:14})} Ảnh ĐÃ DÁN TEM`) : ''}
-          ${don.Anh_Dong_Goi_URL ? linkAnToan(don.Anh_Dong_Goi_URL, `${icon('file', {size:14})} Ảnh đóng gói`) : ''}
+          ${user.vaiTro !== 'nguoi_lay_phoi' && don.DUONG_DAN_URL ? linkAnToan(don.DUONG_DAN_URL, `${icon('file', {size:14})} áº¢nh PNG`) : ''}
+          ${user.vaiTro !== 'nguoi_lay_phoi' && don.MOCKUP ? linkAnToan(don.MOCKUP, `${icon('file', {size:14})} áº¢nh Mockup`) : ''}
+          ${don.Anh_File_Theu_URL ? linkAnToan(don.Anh_File_Theu_URL, `${icon('file', {size:14})} áº¢nh file thÃªu`) : ''}
+          ${don.Anh_File_Theu_URL_2 ? linkAnToan(don.Anh_File_Theu_URL_2, `${icon('file', {size:14})} áº¢nh File ThÃªu 2`) : ''}
+          ${don.Anh_File_Theu_URL_3 ? linkAnToan(don.Anh_File_Theu_URL_3, `${icon('file', {size:14})} áº¢nh File ThÃªu 3`) : ''}
+          ${don.Anh_Da_San_Xuat_URL ? linkAnToan(don.Anh_Da_San_Xuat_URL, `${icon('file', {size:14})} áº¢nh Ä‘Ã£ sáº£n xuáº¥t`) : ''}
+          ${don.Anh_Da_San_Xuat_URL_2 ? linkAnToan(don.Anh_Da_San_Xuat_URL_2, `${icon('file', {size:14})} áº¢nh Ä‘Ã£ sáº£n xuáº¥t 2`) : ''}
+          ${don.Anh_Da_Dan_Tem_URL ? linkAnToan(don.Anh_Da_Dan_Tem_URL, `${icon('file', {size:14})} áº¢nh ÄÃƒ DÃN TEM`) : ''}
+          ${don.Anh_Dong_Goi_URL ? linkAnToan(don.Anh_Dong_Goi_URL, `${icon('file', {size:14})} áº¢nh Ä‘Ã³ng gÃ³i`) : ''}
         </div>` : ''}
         <div id="khu-vuc-emb" style="margin:8px 0"></div>
         <div id="khu-thiet-ke-giong"></div>
@@ -303,7 +303,7 @@ async function taiChiTiet() {
 
       ${user.vaiTro !== 'superadmin' ? '' : `
       <div>
-        <h3>Lịch sử thay đổi</h3>
+        <h3>Lá»‹ch sá»­ thay Ä‘á»•i</h3>
         <div class="timeline">
           ${(don.lichSu || []).map(l => `
             <div class="timeline-item${l.Mo ? ' lich-su-mo' : ''}">
@@ -313,7 +313,7 @@ async function taiChiTiet() {
                 ${htmlThayDoiLichSu(l.ThayDoi)}
               </div>
               <div class="timeline-time">${tsDep(l.ThoiGian)}</div>
-            </div>`).join('') || '<p>Chưa có lịch sử.</p>'}
+            </div>`).join('') || '<p>ChÆ°a cÃ³ lá»‹ch sá»­.</p>'}
         </div>
       </div>`}
     </div>
@@ -323,10 +323,10 @@ async function taiChiTiet() {
   hienThietKeGiong();
 }
 
-// U2 Đối chiếu ảnh (11/10/2026, theo yêu cầu người dùng — spec 2026-10-04-21-tinh-nang-design.md mục 11): xem cạnh nhau mọi ảnh của
-// đơn. Không thêm API: ảnh đi qua proxy sẵn có (kiểm quyền như cũ). Thiết kế: ảnh thu nhỏ trong thư viện Tìm ảnh (tối đa 6, chỉ
-// vai trò dùng thư viện) nếu có, không thì DUONG_DAN_URL qua anh-ngoai. nguoi_lay_phoi thấy ảnh thiết kế/mockup nhưng KHÔNG có
-// link mở bản gốc (giữ quy tắc hiện có). Bấm ảnh = mở bản gốc ở tab mới.
+// U2 Äá»‘i chiáº¿u áº£nh (11/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” spec 2026-10-04-21-tinh-nang-design.md má»¥c 11): xem cáº¡nh nhau má»i áº£nh cá»§a
+// Ä‘Æ¡n. KhÃ´ng thÃªm API: áº£nh Ä‘i qua proxy sáºµn cÃ³ (kiá»ƒm quyá»n nhÆ° cÅ©). Thiáº¿t káº¿: áº£nh thu nhá» trong thÆ° viá»‡n TÃ¬m áº£nh (tá»‘i Ä‘a 6, chá»‰
+// vai trÃ² dÃ¹ng thÆ° viá»‡n) náº¿u cÃ³, khÃ´ng thÃ¬ DUONG_DAN_URL qua anh-ngoai. nguoi_lay_phoi tháº¥y áº£nh thiáº¿t káº¿/mockup nhÆ°ng KHÃ”NG cÃ³
+// link má»Ÿ báº£n gá»‘c (giá»¯ quy táº¯c hiá»‡n cÃ³). Báº¥m áº£nh = má»Ÿ báº£n gá»‘c á»Ÿ tab má»›i.
 async function moDoiChieuAnh(nut) {
   const don = donHienTai;
   if (!don) return;
@@ -339,26 +339,26 @@ async function moDoiChieuAnh(nut) {
       const d = await layDonThuVien();
       const png = d.png.filter(f => f.coThumb).slice(0, 6);
       if (png.length) thietKe = png.map(f => ({ src: '/api/thu-vien/thumb/' + f.id, goc: '/api/thu-vien/file/' + f.id }));
-    } catch (e) { /* thư viện lỗi -> dùng link Sheet */ }
+    } catch (e) { /* thÆ° viá»‡n lá»—i -> dÃ¹ng link Sheet */ }
     nut.disabled = false;
   }
   const cot = [
-    ['Thiết kế', thietKe],
+    ['Thiáº¿t káº¿', thietKe],
     ['Mockup', tuLink(don.MOCKUP, duocMoGocThietKe)],
-    ['File thêu', [don.Anh_File_Theu_URL, don.Anh_File_Theu_URL_2, don.Anh_File_Theu_URL_3].flatMap(u => tuLink(u))],
-    ['Đã sản xuất', [don.Anh_Da_San_Xuat_URL, don.Anh_Da_San_Xuat_URL_2].flatMap(u => tuLink(u))],
-    ['Đã dán tem / đóng gói', [don.Anh_Da_Dan_Tem_URL, don.Anh_Dong_Goi_URL].flatMap(u => tuLink(u))],
+    ['File thÃªu', [don.Anh_File_Theu_URL, don.Anh_File_Theu_URL_2, don.Anh_File_Theu_URL_3].flatMap(u => tuLink(u))],
+    ['ÄÃ£ sáº£n xuáº¥t', [don.Anh_Da_San_Xuat_URL, don.Anh_Da_San_Xuat_URL_2].flatMap(u => tuLink(u))],
+    ['ÄÃ£ dÃ¡n tem / Ä‘Ã³ng gÃ³i', [don.Anh_Da_Dan_Tem_URL, don.Anh_Dong_Goi_URL].flatMap(u => tuLink(u))],
   ];
   const anh = a => {
-    const img = `<img src="${escapeHtml(a.src)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;o-trong&quot;>Không tải được ảnh</div>'">`;
+    const img = `<img src="${escapeHtml(a.src)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;o-trong&quot;>KhÃ´ng táº£i Ä‘Æ°á»£c áº£nh</div>'">`;
     return a.goc ? `<a href="${escapeHtml(a.goc)}" target="_blank" rel="noopener">${img}</a>` : img;
   };
   let hop = document.getElementById('hop-doi-chieu');
   if (!hop) {
     hop = document.createElement('dialog');
     hop.id = 'hop-doi-chieu';
-    // Bấm ra NGOÀI khung = đóng. Không so e.target === hop: bấm vào lề trong (padding) của khung cũng có target là hop.
-    // Kéo chuột (vd bôi đen chữ) từ trong khung ra ngoài rồi thả cũng sinh "click" ngoài khung -> chỉ đóng khi lúc BẤM XUỐNG cũng ở ngoài.
+    // Báº¥m ra NGOÃ€I khung = Ä‘Ã³ng. KhÃ´ng so e.target === hop: báº¥m vÃ o lá» trong (padding) cá»§a khung cÅ©ng cÃ³ target lÃ  hop.
+    // KÃ©o chuá»™t (vd bÃ´i Ä‘en chá»¯) tá»« trong khung ra ngoÃ i rá»“i tháº£ cÅ©ng sinh "click" ngoÃ i khung -> chá»‰ Ä‘Ã³ng khi lÃºc Báº¤M XUá»NG cÅ©ng á»Ÿ ngoÃ i.
     const ngoaiKhung = e => { const r = hop.getBoundingClientRect(); return e.target === hop && (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom); };
     let bamXuongNgoai = false;
     hop.addEventListener('mousedown', e => { bamXuongNgoai = ngoaiKhung(e); });
@@ -367,18 +367,18 @@ async function moDoiChieuAnh(nut) {
   }
   hop.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:var(--space-3)">
-      <h3 style="margin:0">Đối chiếu ảnh · ${escapeHtml(don.STT_Key)}</h3>
-      <button type="button" class="btn-hanh-dong phu" onclick="document.getElementById('hop-doi-chieu').close()">Đóng</button>
+      <h3 style="margin:0">Äá»‘i chiáº¿u áº£nh Â· ${escapeHtml(don.STT_Key)}</h3>
+      <button type="button" class="btn-hanh-dong phu" onclick="document.getElementById('hop-doi-chieu').close()">ÄÃ³ng</button>
     </div>
     <div class="luoi-doi-chieu">
-      ${cot.map(([ten, ds]) => `<div><h4>${ten}</h4>${ds.length ? ds.map(anh).join('') : '<div class="o-trong">Chưa có ảnh</div>'}</div>`).join('')}
+      ${cot.map(([ten, ds]) => `<div><h4>${ten}</h4>${ds.length ? ds.map(anh).join('') : '<div class="o-trong">ChÆ°a cÃ³ áº£nh</div>'}</div>`).join('')}
     </div>`;
   hop.showModal();
 }
 
-// Khối "File EMB" (03/10/2026, thư viện "Tìm ảnh" — docs/superpowers/specs/2026-10-03-thu-vien-tim-anh-design.md mục 13).
-// Ai xem được đơn đều thấy trạng thái; tải về / tải lên chỉ ve_file, admin, superadmin (server kiểm lại). Không gắn với đổi trạng thái.
-let luotKhoiEmb = 0; // taiKhoiEmb gọi chồng nhau (mở trang + sau tải lên) -> chỉ lượt mới nhất được vẽ
+// Khá»‘i "File EMB" (03/10/2026, thÆ° viá»‡n "TÃ¬m áº£nh" â€” docs/superpowers/specs/2026-10-03-thu-vien-tim-anh-design.md má»¥c 13).
+// Ai xem Ä‘Æ°á»£c Ä‘Æ¡n Ä‘á»u tháº¥y tráº¡ng thÃ¡i; táº£i vá» / táº£i lÃªn chá»‰ ve_file, admin, superadmin (server kiá»ƒm láº¡i). KhÃ´ng gáº¯n vá»›i Ä‘á»•i tráº¡ng thÃ¡i.
+let luotKhoiEmb = 0; // taiKhoiEmb gá»i chá»“ng nhau (má»Ÿ trang + sau táº£i lÃªn) -> chá»‰ lÆ°á»£t má»›i nháº¥t Ä‘Æ°á»£c váº½
 async function taiKhoiEmb() {
   const el = document.getElementById('khu-vuc-emb');
   if (!el) return;
@@ -387,51 +387,51 @@ async function taiKhoiEmb() {
   try { d = await apiFetch('/thu-vien/emb/' + encodeURIComponent(sttKey)); } catch (e) { if (luot === luotKhoiEmb) el.innerHTML = ''; return; }
   if (luot !== luotKhoiEmb) return;
   const ngay = s => String(s || '').slice(0, 16).replace('T', ' ');
-  // Đơn có thể có NHIỀU file EMB chính (tải lên cùng 1 lượt, 12/10/2026) — mỗi file 1 dòng, có nút Tải về/Download riêng.
+  // ÄÆ¡n cÃ³ thá»ƒ cÃ³ NHIá»€U file EMB chÃ­nh (táº£i lÃªn cÃ¹ng 1 lÆ°á»£t, 12/10/2026) â€” má»—i file 1 dÃ²ng, cÃ³ nÃºt Táº£i vá»/Download riÃªng.
   const ds = d.dsChinh || (d.chinh ? [d.chinh] : []);
   embChinhHienTai = ds;
   el.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:0.9rem">
     <span>${icon('file', {size:14})} <strong>File EMB:</strong>
-      ${ds.length ? `<span style="color:var(--color-success-text);font-weight:700">ĐÃ CÓ${ds.length > 1 ? ` ${ds.length} file` : ''}</span>`
-        : '<span style="color:var(--color-danger-text);font-weight:700">Chưa tìm thấy file EMB liên kết</span>'}</span>
-    ${ds.map(c => `<span>${escapeHtml(c.ten)} · phiên bản ${c.so_thu_tu} · ${escapeHtml(ngay(c.ngay_luu))}${c.nguoi_tai_len ? ' · ' + escapeHtml(c.nguoi_tai_len) : ''}
-      ${d.duocTai ? ` · <a href="/api/thu-vien/file/${c.id}?tai=1">${icon('download', {size:14})} Tải về/Download</a>` : ''}</span>`).join('')}
-    ${d.duocTaiLen ? `<button type="button" class="btn-hanh-dong phu" onclick="document.getElementById('chon-emb').click()" title="Chọn 1 hoặc nhiều file .emb (giữ Ctrl để chọn nhiều)">${icon('upload', {size:14})} Tải lên/Upload</button>
+      ${ds.length ? `<span style="color:var(--color-success-text);font-weight:700">ÄÃƒ CÃ“${ds.length > 1 ? ` ${ds.length} file` : ''}</span>`
+        : '<span style="color:var(--color-danger-text);font-weight:700">ChÆ°a tÃ¬m tháº¥y file EMB liÃªn káº¿t</span>'}</span>
+    ${ds.map(c => `<span>${escapeHtml(c.ten)} Â· phiÃªn báº£n ${c.so_thu_tu} Â· ${escapeHtml(ngay(c.ngay_luu))}${c.nguoi_tai_len ? ' Â· ' + escapeHtml(c.nguoi_tai_len) : ''}
+      ${d.duocTai ? ` Â· <a href="/api/thu-vien/file/${c.id}?tai=1">${icon('download', {size:14})} Táº£i vá»/Download</a>` : ''}</span>`).join('')}
+    ${d.duocTaiLen ? `<button type="button" class="btn-hanh-dong phu" onclick="document.getElementById('chon-emb').click()" title="Chá»n 1 hoáº·c nhiá»u file .emb (giá»¯ Ctrl Ä‘á»ƒ chá»n nhiá»u)">${icon('upload', {size:14})} Táº£i lÃªn/Upload</button>
       <input type="file" id="chon-emb" accept=".emb" multiple hidden onchange="taiLenEmb(this)">
       <input type="file" id="chon-emb-thu-muc" webkitdirectory multiple hidden onchange="taiLenEmb(this)">
-      <a href="javascript:void(0)" onclick="document.getElementById('chon-emb-thu-muc').click()">Chọn cả thư mục</a>
-      <a href="/tim-anh.html?stt=${encodeURIComponent(sttKey)}">Tìm thiết kế tương tự</a>` : ''}
-    ${d.cu.length && d.duocTai ? `<span style="color:var(--color-text-muted)">Bản cũ (Tải về/Download): ${d.cu.map(x => `<a href="/api/thu-vien/file/${x.id}?tai=1" title="${escapeHtml(x.ten)}">v${x.so_thu_tu}</a> (${escapeHtml(ngay(x.ngay_luu))})`).join(', ')}</span>` : ''}
+      <a href="javascript:void(0)" onclick="document.getElementById('chon-emb-thu-muc').click()">Chá»n cáº£ thÆ° má»¥c</a>
+      <a href="/tim-anh.html?stt=${encodeURIComponent(sttKey)}">TÃ¬m thiáº¿t káº¿ tÆ°Æ¡ng tá»±</a>` : ''}
+    ${d.cu.length && d.duocTai ? `<span style="color:var(--color-text-muted)">Báº£n cÅ© (Táº£i vá»/Download): ${d.cu.map(x => `<a href="/api/thu-vien/file/${x.id}?tai=1" title="${escapeHtml(x.ten)}">v${x.so_thu_tu}</a> (${escapeHtml(ngay(x.ngay_luu))})`).join(', ')}</span>` : ''}
   </div>`;
-  // A1 (11/10/2026): đơn chưa có EMB mà có gợi ý "Có EMB sẵn" -> hiện ngay dưới (chỉ vai trò dùng thư viện). Gợi ý Trùng file / Ảnh
-  // giống đã nằm trong khối "Thiết kế giống đã có" bên dưới -> ở đây chỉ còn hiện gợi ý Cùng hình dạng.
+  // A1 (11/10/2026): Ä‘Æ¡n chÆ°a cÃ³ EMB mÃ  cÃ³ gá»£i Ã½ "CÃ³ EMB sáºµn" -> hiá»‡n ngay dÆ°á»›i (chá»‰ vai trÃ² dÃ¹ng thÆ° viá»‡n). Gá»£i Ã½ TrÃ¹ng file / áº¢nh
+  // giá»‘ng Ä‘Ã£ náº±m trong khá»‘i "Thiáº¿t káº¿ giá»‘ng Ä‘Ã£ cÃ³" bÃªn dÆ°á»›i -> á»Ÿ Ä‘Ã¢y chá»‰ cÃ²n hiá»‡n gá»£i Ã½ CÃ¹ng hÃ¬nh dáº¡ng.
   if (!ds.length && d.duocTaiLen) {
     const ma = maDonThat();
     try {
       const kq = await apiFetch('/thu-vien/tom-tat-don', { method: 'POST', body: JSON.stringify({ keys: [ma] }) });
       const g = kq[ma] && kq[ma].goiY;
       if (g && g.nhom === 'CUNG_HINH_DANG' && luot === luotKhoiEmb) el.insertAdjacentHTML('beforeend', htmlGoiYEmb(ma, g));
-    } catch (e) { /* không có gợi ý cũng không sao */ }
+    } catch (e) { /* khÃ´ng cÃ³ gá»£i Ã½ cÅ©ng khÃ´ng sao */ }
   }
 }
 
 const laVaiTroThuVien = () => ['ve_file', 'admin', 'superadmin'].includes(user.vaiTro);
 const maDonThat = () => (donHienTai && donHienTai.STT_Key) || sttKey;
-// 1 lượt gọi thư viện cho cả trang (tìm tương tự tốn CPU): dùng chung cho "Thiết kế giống đã có" và "Đối chiếu ảnh"; tải lên EMB
-// không đổi kết quả tìm nên không gọi lại. ?tuDong=1: máy chủ không ghi log mỗi lần mở trang.
+// 1 lÆ°á»£t gá»i thÆ° viá»‡n cho cáº£ trang (tÃ¬m tÆ°Æ¡ng tá»± tá»‘n CPU): dÃ¹ng chung cho "Thiáº¿t káº¿ giá»‘ng Ä‘Ã£ cÃ³" vÃ  "Äá»‘i chiáº¿u áº£nh"; táº£i lÃªn EMB
+// khÃ´ng Ä‘á»•i káº¿t quáº£ tÃ¬m nÃªn khÃ´ng gá»i láº¡i. ?tuDong=1: mÃ¡y chá»§ khÃ´ng ghi log má»—i láº§n má»Ÿ trang.
 let _donThuVien = null;
 function layDonThuVien() {
   const ma = maDonThat();
   if (!_donThuVien || _donThuVien.ma !== ma) {
     const p = apiFetch('/thu-vien/don/' + encodeURIComponent(ma) + '?tuDong=1');
     _donThuVien = { ma, p };
-    p.catch(() => { if (_donThuVien && _donThuVien.p === p) _donThuVien = null; }); // lỗi thì lần sau gọi lại
+    p.catch(() => { if (_donThuVien && _donThuVien.p === p) _donThuVien = null; }); // lá»—i thÃ¬ láº§n sau gá»i láº¡i
   }
   return _donThuVien.p;
 }
 
-// "Thiết kế giống đã có" (24/10/2026, theo yêu cầu người dùng): đơn cũ TRÙNG FILE / ẢNH GIỐNG — kể cả khi đơn đó chưa có EMB.
-// Cùng lượt tìm như "Tìm thiết kế tương tự"; mỗi đơn cũ 1 ô, tối đa 4 (Trùng file trước, rồi đơn có EMB).
+// "Thiáº¿t káº¿ giá»‘ng Ä‘Ã£ cÃ³" (24/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng): Ä‘Æ¡n cÅ© TRÃ™NG FILE / áº¢NH GIá»NG â€” ká»ƒ cáº£ khi Ä‘Æ¡n Ä‘Ã³ chÆ°a cÃ³ EMB.
+// CÃ¹ng lÆ°á»£t tÃ¬m nhÆ° "TÃ¬m thiáº¿t káº¿ tÆ°Æ¡ng tá»±"; má»—i Ä‘Æ¡n cÅ© 1 Ã´, tá»‘i Ä‘a 4 (TrÃ¹ng file trÆ°á»›c, rá»“i Ä‘Æ¡n cÃ³ EMB).
 async function hienThietKeGiong() {
   if (!laVaiTroThuVien()) return;
   let d;
@@ -441,30 +441,30 @@ async function hienThietKeGiong() {
   const theoDon = new Map();
   for (const r of d.tuongTu || []) {
     if (r.nhom !== 'TRUNG_FILE' && r.nhom !== 'ANH_GIONG') continue;
-    const cu = theoDon.get(r.stt_key); // 1 đơn nhiều file: giữ dòng Trùng file nếu có
+    const cu = theoDon.get(r.stt_key); // 1 Ä‘Æ¡n nhiá»u file: giá»¯ dÃ²ng TrÃ¹ng file náº¿u cÃ³
     if (!cu || (r.nhom === 'TRUNG_FILE' && cu.nhom !== 'TRUNG_FILE')) theoDon.set(r.stt_key, r);
   }
   if (!theoDon.size) { el.innerHTML = ''; return; }
   const ds = [...theoDon.values()].sort((a, b) => (b.nhom === 'TRUNG_FILE') - (a.nhom === 'TRUNG_FILE') || !!b.emb - !!a.emb).slice(0, 4);
   const pct = v => String(v).replace('.', ',') + '%';
-  // Máy chủ cắt kết quả theo số FILE (d.duGioiHan) -> có thể còn đơn giống chưa đếm.
+  // MÃ¡y chá»§ cáº¯t káº¿t quáº£ theo sá»‘ FILE (d.duGioiHan) -> cÃ³ thá»ƒ cÃ²n Ä‘Æ¡n giá»‘ng chÆ°a Ä‘áº¿m.
   el.innerHTML = `<div style="margin:0 0 8px;font-size:0.9rem">
-    <strong>Thiết kế giống đã có (${theoDon.size}${d.duGioiHan ? '+' : ''} đơn):</strong>
+    <strong>Thiáº¿t káº¿ giá»‘ng Ä‘Ã£ cÃ³ (${theoDon.size}${d.duGioiHan ? '+' : ''} Ä‘Æ¡n):</strong>
     <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">
     ${ds.map(r => `<div style="display:flex;gap:6px;align-items:center;border:1px solid var(--color-border);border-radius:6px;padding:4px 8px">
       ${r.coThumb ? `<img src="/api/thu-vien/thumb/${Number(r.id)}" alt="" loading="lazy" style="width:48px;height:48px;object-fit:contain">` : ''}
       <span>${r.trongSheet !== false ? `<a href="/order.html?stt=${encodeURIComponent(r.stt_key)}" target="_blank" rel="noopener">${escapeHtml(r.stt_key)}</a>` : escapeHtml(r.stt_key)}<br>
-        ${r.nhom === 'TRUNG_FILE' ? 'Trùng file' : `Ảnh ${pct(r.phanTramAnh)}`} ·
-        ${r.emb ? `<a href="/api/thu-vien/file/${Number(r.emb.id)}?tai=1">${icon('download', {size:14})} EMB</a>` : '<span style="color:var(--color-text-muted)">chưa có EMB</span>'}</span>
+        ${r.nhom === 'TRUNG_FILE' ? 'TrÃ¹ng file' : `áº¢nh ${pct(r.phanTramAnh)}`} Â·
+        ${r.emb ? `<a href="/api/thu-vien/file/${Number(r.emb.id)}?tai=1">${icon('download', {size:14})} EMB</a>` : '<span style="color:var(--color-text-muted)">chÆ°a cÃ³ EMB</span>'}</span>
     </div>`).join('')}
-    ${theoDon.size > ds.length || d.duGioiHan ? `<a href="/tim-anh.html?stt=${encodeURIComponent(maDonThat())}" style="align-self:center">Xem tất cả</a>` : ''}
+    ${theoDon.size > ds.length || d.duGioiHan ? `<a href="/tim-anh.html?stt=${encodeURIComponent(maDonThat())}" style="align-self:center">Xem táº¥t cáº£</a>` : ''}
     </div></div>`;
 }
 
-// Tải lên EMB (12/10/2026, theo yêu cầu người dùng): chọn 1 file -> như cũ (tên file tuỳ ý). Chọn NHIỀU file hoặc cả thư mục ->
-// chỉ nhận file .emb có TÊN FILE khớp đúng mã đơn này (khớp ở server, cùng quy tắc menu Tìm ảnh), các file khác bỏ qua + báo
-// danh sách; các file nhận cùng thành file chính của đơn (1 lượt — lượt EMB đang có thành bản cũ, không xoá).
-let embChinhHienTai = []; // các file EMB chính đang hiện (taiKhoiEmb) — để câu xác nhận tải 1 file nói đúng điều sẽ xảy ra
+// Táº£i lÃªn EMB (12/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng): chá»n 1 file -> nhÆ° cÅ© (tÃªn file tuá»³ Ã½). Chá»n NHIá»€U file hoáº·c cáº£ thÆ° má»¥c ->
+// chá»‰ nháº­n file .emb cÃ³ TÃŠN FILE khá»›p Ä‘Ãºng mÃ£ Ä‘Æ¡n nÃ y (khá»›p á»Ÿ server, cÃ¹ng quy táº¯c menu TÃ¬m áº£nh), cÃ¡c file khÃ¡c bá» qua + bÃ¡o
+// danh sÃ¡ch; cÃ¡c file nháº­n cÃ¹ng thÃ nh file chÃ­nh cá»§a Ä‘Æ¡n (1 lÆ°á»£t â€” lÆ°á»£t EMB Ä‘ang cÃ³ thÃ nh báº£n cÅ©, khÃ´ng xoÃ¡).
+let embChinhHienTai = []; // cÃ¡c file EMB chÃ­nh Ä‘ang hiá»‡n (taiKhoiEmb) â€” Ä‘á»ƒ cÃ¢u xÃ¡c nháº­n táº£i 1 file nÃ³i Ä‘Ãºng Ä‘iá»u sáº½ xáº£y ra
 async function taiLenEmb(input) {
   const files = [...input.files];
   const laThuMuc = input.id === 'chon-emb-thu-muc';
@@ -472,19 +472,19 @@ async function taiLenEmb(input) {
   if (!files.length) return;
   if (files.length > 1 || laThuMuc) return taiLenNhieuEmb(files);
   const f = files[0];
-  if (!/\.emb$/i.test(f.name)) { await hopThongBao('Chỉ nhận file .emb'); return; }
-  if (f.size > 30 * 1048576) { await hopThongBao('File quá lớn (tối đa 30MB).'); return; }
-  // Đọc lại bộ file chính NGAY trước khi hỏi (người khác có thể vừa đổi bộ sau khi trang mở); lỗi thì dùng bản đang hiện.
-  try { const d = await apiFetch('/thu-vien/emb/' + encodeURIComponent(sttKey)); embChinhHienTai = d.dsChinh || []; } catch (e) { /* dùng bản đang hiện */ }
-  const ss = s => String(s || '').normalize('NFC').trim().toLowerCase(); // cùng cách so tên với server (xuLyService#tenSoSanh)
+  if (!/\.emb$/i.test(f.name)) { await hopThongBao('Chá»‰ nháº­n file .emb'); return; }
+  if (f.size > 30 * 1048576) { await hopThongBao('File quÃ¡ lá»›n (tá»‘i Ä‘a 30MB).'); return; }
+  // Äá»c láº¡i bá»™ file chÃ­nh NGAY trÆ°á»›c khi há»i (ngÆ°á»i khÃ¡c cÃ³ thá»ƒ vá»«a Ä‘á»•i bá»™ sau khi trang má»Ÿ); lá»—i thÃ¬ dÃ¹ng báº£n Ä‘ang hiá»‡n.
+  try { const d = await apiFetch('/thu-vien/emb/' + encodeURIComponent(sttKey)); embChinhHienTai = d.dsChinh || []; } catch (e) { /* dÃ¹ng báº£n Ä‘ang hiá»‡n */ }
+  const ss = s => String(s || '').normalize('NFC').trim().toLowerCase(); // cÃ¹ng cÃ¡ch so tÃªn vá»›i server (xuLyService#tenSoSanh)
   const n = embChinhHienTai.length, dsCungTen = embChinhHienTai.filter(c => ss(c.ten) === ss(f.name)), cungTen = dsCungTen[0];
-  if (n >= 2 && dsCungTen.length >= 2) { // cùng quy tắc với server (xuLyService#luuEmb) — không biết thay file nào
-    await hopThongBao(`Bộ file chính của đơn ${sttKey} đang có ${dsCungTen.length} file cùng tên "${f.name}" — không biết thay file nào. Tải lại CẢ BỘ (chọn nhiều file cùng lúc) để thay.`);
+  if (n >= 2 && dsCungTen.length >= 2) { // cÃ¹ng quy táº¯c vá»›i server (xuLyService#luuEmb) â€” khÃ´ng biáº¿t thay file nÃ o
+    await hopThongBao(`Bá»™ file chÃ­nh cá»§a Ä‘Æ¡n ${sttKey} Ä‘ang cÃ³ ${dsCungTen.length} file cÃ¹ng tÃªn "${f.name}" â€” khÃ´ng biáº¿t thay file nÃ o. Táº£i láº¡i Cáº¢ Bá»˜ (chá»n nhiá»u file cÃ¹ng lÃºc) Ä‘á»ƒ thay.`);
     return;
   }
   if (!await hopXacNhan(n >= 2
-    ? `Đơn ${sttKey} đang có ${n} file EMB chính. "${f.name}" sẽ ${cungTen ? `THAY file cùng tên "${cungTen.ten}" (file đó thành bản cũ)` : 'được THÊM vào bộ'}; các file chính khác giữ nguyên.`
-    : `Tải "${f.name}" lên làm file EMB của đơn ${sttKey}? Bản EMB cũ (nếu có) vẫn được giữ lại.`)) return;
+    ? `ÄÆ¡n ${sttKey} Ä‘ang cÃ³ ${n} file EMB chÃ­nh. "${f.name}" sáº½ ${cungTen ? `THAY file cÃ¹ng tÃªn "${cungTen.ten}" (file Ä‘Ã³ thÃ nh báº£n cÅ©)` : 'Ä‘Æ°á»£c THÃŠM vÃ o bá»™'}; cÃ¡c file chÃ­nh khÃ¡c giá»¯ nguyÃªn.`
+    : `Táº£i "${f.name}" lÃªn lÃ m file EMB cá»§a Ä‘Æ¡n ${sttKey}? Báº£n EMB cÅ© (náº¿u cÃ³) váº«n Ä‘Æ°á»£c giá»¯ láº¡i.`)) return;
   const gui = xacNhan => {
     const fd = new FormData();
     fd.append('file', f, f.name);
@@ -493,40 +493,40 @@ async function taiLenEmb(input) {
   };
   try {
     let kq = await gui(false);
-    // mã chưa có trong Sheet lẫn thư viện (hoặc không đọc được Sheet) -> server hỏi lại trước khi lưu
+    // mÃ£ chÆ°a cÃ³ trong Sheet láº«n thÆ° viá»‡n (hoáº·c khÃ´ng Ä‘á»c Ä‘Æ°á»£c Sheet) -> server há»i láº¡i trÆ°á»›c khi lÆ°u
     if (kq.ketQua === 'CAN_XAC_NHAN') {
-      if (!await hopXacNhan(`${kq.lyDo} Vẫn lưu file EMB vào đơn ${sttKey}?`)) return;
+      if (!await hopXacNhan(`${kq.lyDo} Váº«n lÆ°u file EMB vÃ o Ä‘Æ¡n ${sttKey}?`)) return;
       kq = await gui(true);
     }
-    await hopThongBao(kq.ketQua === 'DA_LUU' ? (kq.lyDo || 'Đã lưu file EMB.') : (kq.lyDo || 'Không lưu.'));
-  } catch (e) { await hopThongBao('Tải lên EMB lỗi: ' + e.message); }
+    await hopThongBao(kq.ketQua === 'DA_LUU' ? (kq.lyDo || 'ÄÃ£ lÆ°u file EMB.') : (kq.lyDo || 'KhÃ´ng lÆ°u.'));
+  } catch (e) { await hopThongBao('Táº£i lÃªn EMB lá»—i: ' + e.message); }
   taiKhoiEmb();
 }
 
 async function taiLenNhieuEmb(files) {
   const ma = (donHienTai && donHienTai.STT_Key) || sttKey;
   const dsEmb = files.filter(f => /\.emb$/i.test(f.name));
-  if (!dsEmb.length) { await hopThongBao('Không có file .emb nào trong các file đã chọn.'); return; }
-  if (dsEmb.length > 500) { await hopThongBao('Tối đa 500 file .emb mỗi lần.'); return; }
+  if (!dsEmb.length) { await hopThongBao('KhÃ´ng cÃ³ file .emb nÃ o trong cÃ¡c file Ä‘Ã£ chá»n.'); return; }
+  if (dsEmb.length > 500) { await hopThongBao('Tá»‘i Ä‘a 500 file .emb má»—i láº§n.'); return; }
   let khop;
-  try { // chỉ gửi TÊN file (không gửi thư mục) — đúng quy tắc "tên file chứa mã đơn"
+  try { // chá»‰ gá»­i TÃŠN file (khÃ´ng gá»­i thÆ° má»¥c) â€” Ä‘Ãºng quy táº¯c "tÃªn file chá»©a mÃ£ Ä‘Æ¡n"
     khop = await apiFetch('/thu-vien/xem-truoc', { method: 'POST', body: JSON.stringify({ files: dsEmb.map(f => ({ ten: f.name, duongDan: f.name, kichThuoc: f.size })) }) });
-  } catch (e) { await hopThongBao('Không kiểm tra được tên file: ' + e.message); return; }
+  } catch (e) { await hopThongBao('KhÃ´ng kiá»ƒm tra Ä‘Æ°á»£c tÃªn file: ' + e.message); return; }
   const nhan = [], boQua = [], nhieuMa = [];
-  const GHI_CHU_BO_QUA = { QUA_LON: ' (quá 30MB)', KHONG_QUYEN: ' (mã đơn ngoài phạm vi Xưởng của bạn)', KHOP: ' (mang mã đơn khác)', TRUNG: ' (mang mã đơn khác)' };
+  const GHI_CHU_BO_QUA = { QUA_LON: ' (quÃ¡ 30MB)', KHONG_QUYEN: ' (mÃ£ Ä‘Æ¡n ngoÃ i pháº¡m vi XÆ°á»Ÿng cá»§a báº¡n)', KHOP: ' (mang mÃ£ Ä‘Æ¡n khÃ¡c)', TRUNG: ' (mang mÃ£ Ä‘Æ¡n khÃ¡c)' };
   dsEmb.forEach((f, i) => {
     const k = khop.ketQua[i] || {};
     if (k.sttKey === ma && (k.trangThai === 'KHOP' || k.trangThai === 'TRUNG')) nhan.push(f);
-    else if (k.trangThai === 'NHIEU') nhieuMa.push(f.name); // tên khớp nhiều mã đơn — không đoán, báo đổi tên cho rõ
+    else if (k.trangThai === 'NHIEU') nhieuMa.push(f.name); // tÃªn khá»›p nhiá»u mÃ£ Ä‘Æ¡n â€” khÃ´ng Ä‘oÃ¡n, bÃ¡o Ä‘á»•i tÃªn cho rÃµ
     else boQua.push(f.name + (GHI_CHU_BO_QUA[k.trangThai] || ''));
   });
   const soKhongPhaiEmb = files.length - dsEmb.length;
-  const dongBoQua = (boQua.length ? `\n\nBỏ qua ${boQua.length} file không mang mã ${ma}: ${boQua.slice(0, 15).join(', ')}${boQua.length > 15 ? ', …' : ''}` : '')
-    + (nhieuMa.length ? `\n\nBỏ qua ${nhieuMa.length} file có tên khớp NHIỀU mã đơn (đổi tên file cho rõ mã rồi chọn lại): ${nhieuMa.slice(0, 15).join(', ')}${nhieuMa.length > 15 ? ', …' : ''}` : '');
-  if (!nhan.length) { await hopThongBao(`Không có file .emb nào có tên chứa mã đơn ${ma}.${dongBoQua}`); return; }
-  if (!await hopXacNhan(`Tải lên ${nhan.length} file EMB vào đơn ${ma}: ${nhan.map(f => f.name).join(', ')}.\n`
-    + `${nhan.length > 1 ? 'Các file này cùng là file chính của đơn; ' : ''}EMB đang có (nếu có) chuyển thành bản cũ, không bị xoá.${dongBoQua}`
-    + `${soKhongPhaiEmb ? `\n(${soKhongPhaiEmb} file không phải .emb cũng bỏ qua.)` : ''}`)) return;
+  const dongBoQua = (boQua.length ? `\n\nBá» qua ${boQua.length} file khÃ´ng mang mÃ£ ${ma}: ${boQua.slice(0, 15).join(', ')}${boQua.length > 15 ? ', â€¦' : ''}` : '')
+    + (nhieuMa.length ? `\n\nBá» qua ${nhieuMa.length} file cÃ³ tÃªn khá»›p NHIá»€U mÃ£ Ä‘Æ¡n (Ä‘á»•i tÃªn file cho rÃµ mÃ£ rá»“i chá»n láº¡i): ${nhieuMa.slice(0, 15).join(', ')}${nhieuMa.length > 15 ? ', â€¦' : ''}` : '');
+  if (!nhan.length) { await hopThongBao(`KhÃ´ng cÃ³ file .emb nÃ o cÃ³ tÃªn chá»©a mÃ£ Ä‘Æ¡n ${ma}.${dongBoQua}`); return; }
+  if (!await hopXacNhan(`Táº£i lÃªn ${nhan.length} file EMB vÃ o Ä‘Æ¡n ${ma}: ${nhan.map(f => f.name).join(', ')}.\n`
+    + `${nhan.length > 1 ? 'CÃ¡c file nÃ y cÃ¹ng lÃ  file chÃ­nh cá»§a Ä‘Æ¡n; ' : ''}EMB Ä‘ang cÃ³ (náº¿u cÃ³) chuyá»ƒn thÃ nh báº£n cÅ©, khÃ´ng bá»‹ xoÃ¡.${dongBoQua}`
+    + `${soKhongPhaiEmb ? `\n(${soKhongPhaiEmb} file khÃ´ng pháº£i .emb cÅ©ng bá» qua.)` : ''}`)) return;
   const loTai = nhan.length > 1 ? 'emb' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8) : '';
   const ketQua = [];
   let xacNhan = false, coLoi = false;
@@ -541,239 +541,239 @@ async function taiLenNhieuEmb(files) {
     try {
       let kq = await gui();
       if (kq.ketQua === 'CAN_XAC_NHAN') {
-        if (!await hopXacNhan(`${kq.lyDo} Vẫn lưu file EMB vào đơn ${ma}?`)) break;
+        if (!await hopXacNhan(`${kq.lyDo} Váº«n lÆ°u file EMB vÃ o Ä‘Æ¡n ${ma}?`)) break;
         xacNhan = true;
         kq = await gui();
       }
-      ketQua.push(`${f.name}: ${kq.ketQua === 'DA_LUU' ? 'đã lưu' : (kq.lyDo || 'không lưu')}`);
-    } catch (e) { coLoi = true; ketQua.push(`${f.name}: LỖI — ${e.message}`); }
+      ketQua.push(`${f.name}: ${kq.ketQua === 'DA_LUU' ? 'Ä‘Ã£ lÆ°u' : (kq.lyDo || 'khÃ´ng lÆ°u')}`);
+    } catch (e) { coLoi = true; ketQua.push(`${f.name}: Lá»–I â€” ${e.message}`); }
   }
-  // Lượt nhiều file lỗi giữa chừng: bộ file chính của đơn đang THIẾU (bộ cũ đã thành bản cũ) — báo rõ cách sửa.
-  await hopThongBao(`Kết quả tải lên EMB đơn ${ma}:\n${ketQua.join('\n')}`
-    + (coLoi && loTai ? `\n\n⚠ BỘ FILE CHÍNH CHƯA ĐỦ — chọn lại TOÀN BỘ ${nhan.length} file và tải lên lần nữa (file đã lưu được dùng lại, không lưu trùng).` : ''));
+  // LÆ°á»£t nhiá»u file lá»—i giá»¯a chá»«ng: bá»™ file chÃ­nh cá»§a Ä‘Æ¡n Ä‘ang THIáº¾U (bá»™ cÅ© Ä‘Ã£ thÃ nh báº£n cÅ©) â€” bÃ¡o rÃµ cÃ¡ch sá»­a.
+  await hopThongBao(`Káº¿t quáº£ táº£i lÃªn EMB Ä‘Æ¡n ${ma}:\n${ketQua.join('\n')}`
+    + (coLoi && loTai ? `\n\nâš  Bá»˜ FILE CHÃNH CHÆ¯A Äá»¦ â€” chá»n láº¡i TOÃ€N Bá»˜ ${nhan.length} file vÃ  táº£i lÃªn láº§n ná»¯a (file Ä‘Ã£ lÆ°u Ä‘Æ°á»£c dÃ¹ng láº¡i, khÃ´ng lÆ°u trÃ¹ng).` : ''));
   taiKhoiEmb();
 }
 
-// Tô màu <select> Phôi/Vẽ file theo giá trị đang chọn — xanh lá cho "Đã..." (positive), cam cho
-// "Chưa..." (negative), khớp đúng ý nghĩa với badge trạng thái đang dùng ở nơi khác trong app.
+// TÃ´ mÃ u <select> PhÃ´i/Váº½ file theo giÃ¡ trá»‹ Ä‘ang chá»n â€” xanh lÃ¡ cho "ÄÃ£..." (positive), cam cho
+// "ChÆ°a..." (negative), khá»›p Ä‘Ãºng Ã½ nghÄ©a vá»›i badge tráº¡ng thÃ¡i Ä‘ang dÃ¹ng á»Ÿ nÆ¡i khÃ¡c trong app.
 function capNhatMauChonTrangThai(select) {
-  const laTichCuc = select.value.startsWith('Đã ');
+  const laTichCuc = select.value.startsWith('ÄÃ£ ');
   select.classList.toggle('chon-trang-thai-tich-cuc', laTichCuc);
   select.classList.toggle('chon-trang-thai-tieu-cuc', !laTichCuc);
 }
 
-// Chú thích 1 dòng; bấm (hoặc rê chuột) để xem đầy đủ (11/10/2026, theo yêu cầu người dùng — đỡ phải kéo trang).
+// ChÃº thÃ­ch 1 dÃ²ng; báº¥m (hoáº·c rÃª chuá»™t) Ä‘á»ƒ xem Ä‘áº§y Ä‘á»§ (11/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” Ä‘á»¡ pháº£i kÃ©o trang).
 function chuThich(ngan, day) {
-  return `<details class="chu-thich"><summary title="${escapeHtml(day)}">${escapeHtml(ngan)} ⓘ</summary>${escapeHtml(day)}</details>`;
+  return `<details class="chu-thich"><summary title="${escapeHtml(day)}">${escapeHtml(ngan)} â“˜</summary>${escapeHtml(day)}</details>`;
 }
 
-// Các loại ảnh tải ở trang chi tiết — moc khớp routes/photos.js. chiAdmin: ve_file không thấy (giữ đúng quyền cũ).
-// "Ảnh file thêu" (26/08/2026) chỉ lưu ảnh, không đụng trạng thái; 2/3 thêm 24/09/2026 (không bắt buộc).
-// 3 nút riêng (24/10/2026, theo yêu cầu người dùng — trước là 1 khối chọn loại ảnh): bấm nút -> chọn ảnh -> tự tải lên.
-// toiDa = số ảnh chọn được 1 lần; camera = mở thẳng camera trên điện thoại (nút nhiều ảnh thì cho chọn Camera hoặc Thư viện).
+// CÃ¡c loáº¡i áº£nh táº£i á»Ÿ trang chi tiáº¿t â€” moc khá»›p routes/photos.js. chiAdmin: ve_file khÃ´ng tháº¥y (giá»¯ Ä‘Ãºng quyá»n cÅ©).
+// "áº¢nh file thÃªu" (26/08/2026) chá»‰ lÆ°u áº£nh, khÃ´ng Ä‘á»¥ng tráº¡ng thÃ¡i; 2/3 thÃªm 24/09/2026 (khÃ´ng báº¯t buá»™c).
+// 3 nÃºt riÃªng (24/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” trÆ°á»›c lÃ  1 khá»‘i chá»n loáº¡i áº£nh): báº¥m nÃºt -> chá»n áº£nh -> tá»± táº£i lÃªn.
+// toiDa = sá»‘ áº£nh chá»n Ä‘Æ°á»£c 1 láº§n; camera = má»Ÿ tháº³ng camera trÃªn Ä‘iá»‡n thoáº¡i (nÃºt nhiá»u áº£nh thÃ¬ cho chá»n Camera hoáº·c ThÆ° viá»‡n).
 const LOAI_ANH_TAI_LEN = [
-  { moc: 've_file', ten: 'Tải ảnh file thêu', toiDa: 3, ghiChu: 'chọn 1–3 ảnh cùng lúc; chỉ lưu ảnh, không đổi trạng thái đơn. Mỗi lần tải là THAY CẢ BỘ ảnh file thêu cũ (chọn 1 ảnh thì ảnh 2, 3 cũ bị bỏ).' },
-  { moc: 'da_san_xuat', ten: 'Tải ảnh Đã sản xuất', toiDa: 2, chiAdmin: true, chuyenSang: 'Đã sản xuất', ghiChu: 'chọn 1 hoặc 2 ảnh cùng lúc (tối đa 2 ảnh/đơn). Đơn đang ở "Đang chạy máy": tải xong cả lượt sẽ TỰ ĐỘNG chuyển đơn sang "Đã sản xuất". Đơn đang ở "Đã sản xuất": THAY toàn bộ ảnh đã sản xuất cũ (không đổi trạng thái; link ảnh cũ vẫn xem được trong lịch sử đơn). san_xuat/nguoi_lay_phoi nên dùng màn "Chụp ảnh đã sản xuất" ở trang Quét QR thay vì đây (nhanh hơn, không cần mở từng đơn).' },
-  { moc: 'da_dan_tem', ten: 'Tải ảnh ĐÃ DÁN TEM', toiDa: 1, camera: true, chiAdmin: true, chuyenSang: 'ĐÃ DÁN TEM', ghiChu: 'chỉ dùng được khi đơn đang ở "Đã sản xuất" VÀ đã có thông tin Tracking (mua trước ở khối "Vận chuyển (GKE)" ở trên hoặc menu Tracking) — tải ảnh xong sẽ TỰ ĐỘNG chuyển đơn sang "ĐÃ DÁN TEM". Bản thân việc tải ảnh này không tạo mã tracking. san_xuat/nguoi_lay_phoi nên dùng màn "Chụp ảnh ĐÃ DÁN TEM" ở trang Quét QR thay vì đây (nhanh hơn, không cần mở từng đơn).' },
+  { moc: 've_file', ten: 'Táº£i áº£nh file thÃªu', toiDa: 3, ghiChu: 'chá»n 1â€“3 áº£nh cÃ¹ng lÃºc; chá»‰ lÆ°u áº£nh, khÃ´ng Ä‘á»•i tráº¡ng thÃ¡i Ä‘Æ¡n. Má»—i láº§n táº£i lÃ  THAY Cáº¢ Bá»˜ áº£nh file thÃªu cÅ© (chá»n 1 áº£nh thÃ¬ áº£nh 2, 3 cÅ© bá»‹ bá»).' },
+  { moc: 'da_san_xuat', ten: 'Táº£i áº£nh ÄÃ£ sáº£n xuáº¥t', toiDa: 2, chiAdmin: true, chuyenSang: 'ÄÃ£ sáº£n xuáº¥t', ghiChu: 'chá»n 1 hoáº·c 2 áº£nh cÃ¹ng lÃºc (tá»‘i Ä‘a 2 áº£nh/Ä‘Æ¡n). ÄÆ¡n Ä‘ang á»Ÿ "Äang cháº¡y mÃ¡y": táº£i xong cáº£ lÆ°á»£t sáº½ Tá»° Äá»˜NG chuyá»ƒn Ä‘Æ¡n sang "ÄÃ£ sáº£n xuáº¥t". ÄÆ¡n Ä‘ang á»Ÿ "ÄÃ£ sáº£n xuáº¥t": THAY toÃ n bá»™ áº£nh Ä‘Ã£ sáº£n xuáº¥t cÅ© (khÃ´ng Ä‘á»•i tráº¡ng thÃ¡i; link áº£nh cÅ© váº«n xem Ä‘Æ°á»£c trong lá»‹ch sá»­ Ä‘Æ¡n). san_xuat/nguoi_lay_phoi nÃªn dÃ¹ng mÃ n "Chá»¥p áº£nh Ä‘Ã£ sáº£n xuáº¥t" á»Ÿ trang QuÃ©t QR thay vÃ¬ Ä‘Ã¢y (nhanh hÆ¡n, khÃ´ng cáº§n má»Ÿ tá»«ng Ä‘Æ¡n).' },
+  { moc: 'da_dan_tem', ten: 'Táº£i áº£nh ÄÃƒ DÃN TEM', toiDa: 1, camera: true, chiAdmin: true, chuyenSang: 'ÄÃƒ DÃN TEM', ghiChu: 'chá»‰ dÃ¹ng Ä‘Æ°á»£c khi Ä‘Æ¡n Ä‘ang á»Ÿ "ÄÃ£ sáº£n xuáº¥t" VÃ€ Ä‘Ã£ cÃ³ thÃ´ng tin Tracking (mua trÆ°á»›c á»Ÿ khá»‘i "Váº­n chuyá»ƒn (GKE)" á»Ÿ trÃªn hoáº·c menu Tracking) â€” táº£i áº£nh xong sáº½ Tá»° Äá»˜NG chuyá»ƒn Ä‘Æ¡n sang "ÄÃƒ DÃN TEM". Báº£n thÃ¢n viá»‡c táº£i áº£nh nÃ y khÃ´ng táº¡o mÃ£ tracking. san_xuat/nguoi_lay_phoi nÃªn dÃ¹ng mÃ n "Chá»¥p áº£nh ÄÃƒ DÃN TEM" á»Ÿ trang QuÃ©t QR thay vÃ¬ Ä‘Ã¢y (nhanh hÆ¡n, khÃ´ng cáº§n má»Ÿ tá»«ng Ä‘Æ¡n).' },
 ];
 
 function renderKhuVucThaoTac(don) {
   const el = document.getElementById('khu-vuc-thao-tac');
   let html = '';
 
-  // 2 nút lớn (28/09/2026, theo yêu cầu người dùng — routes/orders.js POST /:sttKey/nut-trang-thai):
-  // xanh "BẮT ĐẦU CHẠY MÁY" chỉ san_xuat, khi đơn "ĐÃ SẴN SÀNG CHẠY MÁY"; đỏ "BÁO LỖI" cho mọi vai trò
-  // xem được đơn, khi đơn "Đang chạy máy" (hỏi xác nhận trước — theo yêu cầu, chỉ nút này).
-  if (user.vaiTro === 'san_xuat' && don.TRANG_THAI_XUONG === 'ĐÃ SẴN SÀNG CHẠY MÁY') {
-    html += `<button type="button" class="nut-trang-thai-lon xanh" onclick="bamNutTrangThai('BAT_DAU_CHAY_MAY', this)">${icon('arrowRight', { size: 28 })} BẮT ĐẦU CHẠY MÁY</button>`;
+  // 2 nÃºt lá»›n (28/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” routes/orders.js POST /:sttKey/nut-trang-thai):
+  // xanh "Báº®T Äáº¦U CHáº Y MÃY" chá»‰ san_xuat, khi Ä‘Æ¡n "ÄÃƒ Sáº´N SÃ€NG CHáº Y MÃY"; Ä‘á» "BÃO Lá»–I" cho má»i vai trÃ²
+  // xem Ä‘Æ°á»£c Ä‘Æ¡n, khi Ä‘Æ¡n "Äang cháº¡y mÃ¡y" (há»i xÃ¡c nháº­n trÆ°á»›c â€” theo yÃªu cáº§u, chá»‰ nÃºt nÃ y).
+  if (user.vaiTro === 'san_xuat' && don.TRANG_THAI_XUONG === 'ÄÃƒ Sáº´N SÃ€NG CHáº Y MÃY') {
+    html += `<button type="button" class="nut-trang-thai-lon xanh" onclick="bamNutTrangThai('BAT_DAU_CHAY_MAY', this)">${icon('arrowRight', { size: 28 })} Báº®T Äáº¦U CHáº Y MÃY</button>`;
   }
-  // san_xuat: nút BÁO LỖI nằm CUỐI trang, cỡ thường (xem cuối hàm) — tránh bấm nhầm (29/09/2026).
-  if (don.TRANG_THAI_XUONG === 'Đang chạy máy' && user.vaiTro !== 'san_xuat') {
-    html += `<button type="button" class="nut-trang-thai-lon do" onclick="bamNutTrangThai('BAO_LOI_SAN_XUAT', this)">${icon('alert', { size: 28 })} BÁO LỖI SẢN XUẤT – CẦN LÀM LẠI</button>`;
+  // san_xuat: nÃºt BÃO Lá»–I náº±m CUá»I trang, cá»¡ thÆ°á»ng (xem cuá»‘i hÃ m) â€” trÃ¡nh báº¥m nháº§m (29/09/2026).
+  if (don.TRANG_THAI_XUONG === 'Äang cháº¡y mÃ¡y' && user.vaiTro !== 'san_xuat') {
+    html += `<button type="button" class="nut-trang-thai-lon do" onclick="bamNutTrangThai('BAO_LOI_SAN_XUAT', this)">${icon('alert', { size: 28 })} BÃO Lá»–I Sáº¢N XUáº¤T â€“ Cáº¦N LÃ€M Láº I</button>`;
   }
 
-  // nguoi_san_xuat (bổ sung 12/09/2026, theo yêu cầu người dùng — hạn chế thông tin/thao tác không
-  // cần thiết dễ gây nhiễu khi chỉ tập trung chạy máy): ẩn nút chuyển giai đoạn theo kịch bản + ô ghi
-  // chú xưởng. Báo lỗi sản xuất giờ qua nút đỏ ở trên (khối "Sửa trạng thái thủ công" chỉ còn admin).
+  // nguoi_san_xuat (bá»• sung 12/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” háº¡n cháº¿ thÃ´ng tin/thao tÃ¡c khÃ´ng
+  // cáº§n thiáº¿t dá»… gÃ¢y nhiá»…u khi chá»‰ táº­p trung cháº¡y mÃ¡y): áº©n nÃºt chuyá»ƒn giai Ä‘oáº¡n theo ká»‹ch báº£n + Ã´ ghi
+  // chÃº xÆ°á»Ÿng. BÃ¡o lá»—i sáº£n xuáº¥t giá» qua nÃºt Ä‘á» á»Ÿ trÃªn (khá»‘i "Sá»­a tráº¡ng thÃ¡i thá»§ cÃ´ng" chá»‰ cÃ²n admin).
   if (user.vaiTro !== 'san_xuat') {
-    // Nút chuyển giai đoạn — đọc từ chính tab CauHinhKichBan (dùng chung logic với quét QR),
-    // không hardcode nút theo vai trò vì Sheet không định nghĩa vai trò cho từng kịch bản.
+    // NÃºt chuyá»ƒn giai Ä‘oáº¡n â€” Ä‘á»c tá»« chÃ­nh tab CauHinhKichBan (dÃ¹ng chung logic vá»›i quÃ©t QR),
+    // khÃ´ng hardcode nÃºt theo vai trÃ² vÃ¬ Sheet khÃ´ng Ä‘á»‹nh nghÄ©a vai trÃ² cho tá»«ng ká»‹ch báº£n.
     if (don.kichBanKeTiep && don.kichBanKeTiep.length > 0) {
       html += `<div class="hang-nut">${don.kichBanKeTiep.map(kb => `
         <button class="btn-hanh-dong" onclick="chuyenGiaiDoan('${kb.id}', this)">
-          ${icon('arrowRight')} Chuyển sang: ${escapeHtml(kb.label)}
+          ${icon('arrowRight')} Chuyá»ƒn sang: ${escapeHtml(kb.label)}
         </button>`).join('')}</div>`;
     } else {
-      html += '<p>Không có kịch bản nào áp dụng được cho trạng thái hiện tại (kiểm tra tab CauHinhKichBan).</p>';
+      html += '<p>KhÃ´ng cÃ³ ká»‹ch báº£n nÃ o Ã¡p dá»¥ng Ä‘Æ°á»£c cho tráº¡ng thÃ¡i hiá»‡n táº¡i (kiá»ƒm tra tab CauHinhKichBan).</p>';
     }
 
     html += `
       <div class="upload-box">
-        <label for="ghi-chu-moi">Ghi chú xưởng</label>
+        <label for="ghi-chu-moi">Ghi chÃº xÆ°á»Ÿng</label>
         <textarea id="ghi-chu-moi" rows="3" style="padding:10px;border-radius:8px;border:1px solid var(--color-border);font:inherit">${escapeHtml(trangThaiGhiChuXuong(don).oSua)}</textarea>
-        <button class="btn-hanh-dong phu" onclick="luuGhiChu()">${icon('check')} Lưu ghi chú</button>
+        <button class="btn-hanh-dong phu" onclick="luuGhiChu()">${icon('check')} LÆ°u ghi chÃº</button>
       </div>`;
   }
 
-  // Sửa trạng thái THỦ CÔNG — admin/superadmin (28/09/2026, theo yêu cầu người dùng; trước đây mọi vai trò) + ve_file
-  // (mở lại 30/09/2026, theo yêu cầu người dùng — đủ 3 ô như admin, đúng quyền ve_file vốn có ở trang Đơn hàng).
-  // Server (routes/orders.js, TRUONG_DUOC_SUA) vẫn là nơi chặn thật sự nếu vai trò không đủ quyền sửa cột nào đó.
+  // Sá»­a tráº¡ng thÃ¡i THá»¦ CÃ”NG â€” admin/superadmin (28/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng; trÆ°á»›c Ä‘Ã¢y má»i vai trÃ²) + ve_file
+  // (má»Ÿ láº¡i 30/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” Ä‘á»§ 3 Ã´ nhÆ° admin, Ä‘Ãºng quyá»n ve_file vá»‘n cÃ³ á»Ÿ trang ÄÆ¡n hÃ ng).
+  // Server (routes/orders.js, TRUONG_DUOC_SUA) váº«n lÃ  nÆ¡i cháº·n tháº­t sá»± náº¿u vai trÃ² khÃ´ng Ä‘á»§ quyá»n sá»­a cá»™t nÃ o Ä‘Ã³.
   if (laAdmin(user.vaiTro) || user.vaiTro === 've_file') html += `
     <div class="upload-box">
-      <label>Sửa trạng thái thủ công</label>
-      <label for="sua-tinh-trang" style="font-size:0.85rem;font-weight:400">Trạng thái chung (TRANG_THAI_XUONG)</label>
+      <label>Sá»­a tráº¡ng thÃ¡i thá»§ cÃ´ng</label>
+      <label for="sua-tinh-trang" style="font-size:0.85rem;font-weight:400">Tráº¡ng thÃ¡i chung (TRANG_THAI_XUONG)</label>
       <select id="sua-tinh-trang" onchange="canhBaoToHopSai()">${DANH_SACH_TINH_TRANG.map(t => `<option value="${escapeHtml(t)}" ${t === don.TRANG_THAI_XUONG ? 'selected' : ''}>${escapeHtml(t)}</option>`).join('')}</select>
-      <label for="sua-phoi" style="font-size:0.85rem;font-weight:400">Phôi</label>
+      <label for="sua-phoi" style="font-size:0.85rem;font-weight:400">PhÃ´i</label>
       <select id="sua-phoi" onchange="canhBaoToHopSai(); capNhatMauChonTrangThai(this)">
-        <option value="Chưa lấy phôi" ${don.TRANG_THAI_PHOI === 'Chưa lấy phôi' ? 'selected' : ''}>Chưa lấy phôi</option>
-        <option value="Đã lấy phôi" ${don.TRANG_THAI_PHOI === 'Đã lấy phôi' ? 'selected' : ''}>Đã lấy phôi</option>
+        <option value="ChÆ°a láº¥y phÃ´i" ${don.TRANG_THAI_PHOI === 'ChÆ°a láº¥y phÃ´i' ? 'selected' : ''}>ChÆ°a láº¥y phÃ´i</option>
+        <option value="ÄÃ£ láº¥y phÃ´i" ${don.TRANG_THAI_PHOI === 'ÄÃ£ láº¥y phÃ´i' ? 'selected' : ''}>ÄÃ£ láº¥y phÃ´i</option>
       </select>
-      <label for="sua-ve-file" style="font-size:0.85rem;font-weight:400">Vẽ file</label>
+      <label for="sua-ve-file" style="font-size:0.85rem;font-weight:400">Váº½ file</label>
       <select id="sua-ve-file" onchange="canhBaoToHopSai(); capNhatMauChonTrangThai(this)">
-        <option value="Chưa vẽ file" ${don.TRANG_THAI_VE_FILE === 'Chưa vẽ file' ? 'selected' : ''}>Chưa vẽ file</option>
-        <option value="Đang vẽ file" ${don.TRANG_THAI_VE_FILE === 'Đang vẽ file' ? 'selected' : ''}>Đang vẽ file</option>
-        <option value="Đã vẽ file" ${don.TRANG_THAI_VE_FILE === 'Đã vẽ file' ? 'selected' : ''}>Đã vẽ file</option>
+        <option value="ChÆ°a váº½ file" ${don.TRANG_THAI_VE_FILE === 'ChÆ°a váº½ file' ? 'selected' : ''}>ChÆ°a váº½ file</option>
+        <option value="Äang váº½ file" ${don.TRANG_THAI_VE_FILE === 'Äang váº½ file' ? 'selected' : ''}>Äang váº½ file</option>
+        <option value="ÄÃ£ váº½ file" ${don.TRANG_THAI_VE_FILE === 'ÄÃ£ váº½ file' ? 'selected' : ''}>ÄÃ£ váº½ file</option>
       </select>
       <div id="canh-bao-to-hop"></div>
-      <button id="nut-luu-trang-thai" class="btn-hanh-dong phu" onclick="luuTrangThaiThuCong()">${icon('check')} Lưu trạng thái</button>
-      ${chuThich('Đủ Phôi + Vẽ file khi "Đã in mã" → tự sang SẴN SÀNG', 'Nếu cả Phôi và Vẽ file cùng chuyển sang "Đã..." trong khi Trạng thái chung đang là "Đã in mã", hệ thống tự chuyển Trạng thái chung sang "ĐÃ SẴN SÀNG CHẠY MÁY".')}
+      <button id="nut-luu-trang-thai" class="btn-hanh-dong phu" onclick="luuTrangThaiThuCong()">${icon('check')} LÆ°u tráº¡ng thÃ¡i</button>
+      ${chuThich('Äá»§ PhÃ´i + Váº½ file khi "ÄÃ£ in mÃ£" â†’ tá»± sang Sáº´N SÃ€NG', 'Náº¿u cáº£ PhÃ´i vÃ  Váº½ file cÃ¹ng chuyá»ƒn sang "ÄÃ£..." trong khi Tráº¡ng thÃ¡i chung Ä‘ang lÃ  "ÄÃ£ in mÃ£", há»‡ thá»‘ng tá»± chuyá»ƒn Tráº¡ng thÃ¡i chung sang "ÄÃƒ Sáº´N SÃ€NG CHáº Y MÃY".')}
     </div>`;
 
-  // Admin chỉ định người chạy máy NGAY tại trang chi tiết — cơ chế thứ 2 song song với việc chọn
-  // nhiều đơn ở trang Đơn hàng (routes/orders.js POST /chi-dinh-nguoi-chay-may, dùng chung route).
-  // Không giới hạn đơn phải đang ở "ĐÃ SẴN SÀNG CHẠY MÁY" — cùng triết lý "chọn tự do" như bên đó,
-  // orderService.update()'s kiemTraTinhHopLy() vẫn chặn nếu phôi/vẽ file chưa xong.
+  // Admin chá»‰ Ä‘á»‹nh ngÆ°á»i cháº¡y mÃ¡y NGAY táº¡i trang chi tiáº¿t â€” cÆ¡ cháº¿ thá»© 2 song song vá»›i viá»‡c chá»n
+  // nhiá»u Ä‘Æ¡n á»Ÿ trang ÄÆ¡n hÃ ng (routes/orders.js POST /chi-dinh-nguoi-chay-may, dÃ¹ng chung route).
+  // KhÃ´ng giá»›i háº¡n Ä‘Æ¡n pháº£i Ä‘ang á»Ÿ "ÄÃƒ Sáº´N SÃ€NG CHáº Y MÃY" â€” cÃ¹ng triáº¿t lÃ½ "chá»n tá»± do" nhÆ° bÃªn Ä‘Ã³,
+  // orderService.update()'s kiemTraTinhHopLy() váº«n cháº·n náº¿u phÃ´i/váº½ file chÆ°a xong.
   if (laAdmin(user.vaiTro)) {
     html += `
       <div class="upload-box">
-        <label>${icon('users', { size: 18 })} Chỉ định người</label>
+        <label>${icon('users', { size: 18 })} Chá»‰ Ä‘á»‹nh ngÆ°á»i</label>
         <div class="hang-chon">
-          <select id="chi-dinh-nguoi-chay-may" aria-label="Người chạy máy">
-            <option value="">Chọn người chạy máy...</option>
+          <select id="chi-dinh-nguoi-chay-may" aria-label="NgÆ°á»i cháº¡y mÃ¡y">
+            <option value="">Chá»n ngÆ°á»i cháº¡y mÃ¡y...</option>
             ${dsSanXuatDangHoatDong.map(u => `<option value="${escapeHtml(u.Ten)}" ${u.Ten === don.NGUOI_CHAY_MAY ? 'selected' : ''}>${escapeHtml(u.Ten)}</option>`).join('')}
           </select>
-          <button class="btn-hanh-dong" onclick="apDungChiDinhNguoiChayMayChiTiet(this)">${icon('check')} Chạy máy</button>
+          <button class="btn-hanh-dong" onclick="apDungChiDinhNguoiChayMayChiTiet(this)">${icon('check')} Cháº¡y mÃ¡y</button>
         </div>
         <div class="hang-chon">
-          <select id="chi-dinh-nguoi-ve-file" aria-label="Người vẽ file">
-            <option value="">Chọn người vẽ file...</option>
+          <select id="chi-dinh-nguoi-ve-file" aria-label="NgÆ°á»i váº½ file">
+            <option value="">Chá»n ngÆ°á»i váº½ file...</option>
             ${dsVeFileDangHoatDong.map(u => `<option value="${escapeHtml(u.Ten)}" ${u.Ten === don.NGUOI_VE_FILE ? 'selected' : ''}>${escapeHtml(u.Ten)}</option>`).join('')}
           </select>
-          <button class="btn-hanh-dong" onclick="apDungChiDinhNguoiVeFileChiTiet(this)">${icon('check')} Vẽ file</button>
+          <button class="btn-hanh-dong" onclick="apDungChiDinhNguoiVeFileChiTiet(this)">${icon('check')} Váº½ file</button>
         </div>
-        ${chuThich('Chuyển đơn sang "Đang chạy máy" / "Đang vẽ file"', 'Nút "Chạy máy": chuyển đơn này sang "Đang chạy máy" và ghi nhận người được chỉ định. Nút "Vẽ file": chuyển đơn này sang "Đang vẽ file" và ghi nhận người được chỉ định. Cả hai đều ghi chú "Admin chỉ định".')}
+        ${chuThich('Chuyá»ƒn Ä‘Æ¡n sang "Äang cháº¡y mÃ¡y" / "Äang váº½ file"', 'NÃºt "Cháº¡y mÃ¡y": chuyá»ƒn Ä‘Æ¡n nÃ y sang "Äang cháº¡y mÃ¡y" vÃ  ghi nháº­n ngÆ°á»i Ä‘Æ°á»£c chá»‰ Ä‘á»‹nh. NÃºt "Váº½ file": chuyá»ƒn Ä‘Æ¡n nÃ y sang "Äang váº½ file" vÃ  ghi nháº­n ngÆ°á»i Ä‘Æ°á»£c chá»‰ Ä‘á»‹nh. Cáº£ hai Ä‘á»u ghi chÃº "Admin chá»‰ Ä‘á»‹nh".')}
       </div>`;
   }
 
-  // Khối "Vận chuyển (GKE)" (gộp 11/10/2026, theo yêu cầu người dùng — trước là 2 khối riêng "Mua tracking GKE thủ công"
-  // và "In label vận chuyển (GKE)"); điều kiện hiện từng phần GIỮ NGUYÊN như cũ.
+  // Khá»‘i "Váº­n chuyá»ƒn (GKE)" (gá»™p 11/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” trÆ°á»›c lÃ  2 khá»‘i riÃªng "Mua tracking GKE thá»§ cÃ´ng"
+  // vÃ  "In label váº­n chuyá»ƒn (GKE)"); Ä‘iá»u kiá»‡n hiá»‡n tá»«ng pháº§n GIá»® NGUYÃŠN nhÆ° cÅ©.
   let vanChuyen = '', chuThichVanChuyen = [], tomTatVanChuyen = [];
   if (laAdmin(user.vaiTro)) {
 
-    // Mua tracking GKE THỦ CÔNG (bổ sung 09/09/2026) — chỉ hiện khi đơn CHƯA có tracking thật. Không
-    // cần đợi đủ giờ sau "Đã sản xuất" như job tự động — bấm là mua
-    // ngay cho đơn ĐANG XEM. Dùng chung API /tracking/mua-thu-cong với nút tương tự ở tracking.html
-    // (danh sách đơn tự động mua tracking). Từ 12/09/2026 lần 14, TRACKING_ID không còn khi nào mang giá
-    // trị placeholder "chờ tem" nữa (chuyển sang cột TAM_THOI) nên chỉ cần kiểm tra rỗng/không rỗng.
+    // Mua tracking GKE THá»¦ CÃ”NG (bá»• sung 09/09/2026) â€” chá»‰ hiá»‡n khi Ä‘Æ¡n CHÆ¯A cÃ³ tracking tháº­t. KhÃ´ng
+    // cáº§n Ä‘á»£i Ä‘á»§ giá» sau "ÄÃ£ sáº£n xuáº¥t" nhÆ° job tá»± Ä‘á»™ng â€” báº¥m lÃ  mua
+    // ngay cho Ä‘Æ¡n ÄANG XEM. DÃ¹ng chung API /tracking/mua-thu-cong vá»›i nÃºt tÆ°Æ¡ng tá»± á»Ÿ tracking.html
+    // (danh sÃ¡ch Ä‘Æ¡n tá»± Ä‘á»™ng mua tracking). Tá»« 12/09/2026 láº§n 14, TRACKING_ID khÃ´ng cÃ²n khi nÃ o mang giÃ¡
+    // trá»‹ placeholder "chá» tem" ná»¯a (chuyá»ƒn sang cá»™t TAM_THOI) nÃªn chá»‰ cáº§n kiá»ƒm tra rá»—ng/khÃ´ng rá»—ng.
     if (!don.TRACKING_ID && laDonConNhieuAo(don)) {
-      vanChuyen += `<p style="margin:0;font-size:0.85rem">Đơn thuộc nhóm DonNhieuAo ${escapeHtml(don.NhomNhieuAo.goc)} — dùng chung tracking của <strong>${escapeHtml(don.NhomNhieuAo.donMua || '(chưa xác định)')}</strong>, không mua riêng. Tracking tự gán sau khi đơn đó mua.</p>`;
+      vanChuyen += `<p style="margin:0;font-size:0.85rem">ÄÆ¡n thuá»™c nhÃ³m DonNhieuAo ${escapeHtml(don.NhomNhieuAo.goc)} â€” dÃ¹ng chung tracking cá»§a <strong>${escapeHtml(don.NhomNhieuAo.donMua || '(chÆ°a xÃ¡c Ä‘á»‹nh)')}</strong>, khÃ´ng mua riÃªng. Tracking tá»± gÃ¡n sau khi Ä‘Æ¡n Ä‘Ã³ mua.</p>`;
     } else if (!don.TRACKING_ID) {
       vanChuyen += `<div class="hang-nut"><button class="btn-hanh-dong" onclick="muaTrackingThuCongChiTiet(this)">${icon('package')} Mua tracking ngay</button></div>`;
-      tomTatVanChuyen.push('Mua ngay, không cần đợi tự động');
-      chuThichVanChuyen.push('"Mua tracking ngay": tạo vận đơn GKE thật + lấy mã tracking cho đơn này ngay bây giờ, không cần đợi tự động hoặc quét QR. Cấu hình GKE chỉnh ở menu "Tracking".');
+      tomTatVanChuyen.push('Mua ngay, khÃ´ng cáº§n Ä‘á»£i tá»± Ä‘á»™ng');
+      chuThichVanChuyen.push('"Mua tracking ngay": táº¡o váº­n Ä‘Æ¡n GKE tháº­t + láº¥y mÃ£ tracking cho Ä‘Æ¡n nÃ y ngay bÃ¢y giá», khÃ´ng cáº§n Ä‘á»£i tá»± Ä‘á»™ng hoáº·c quÃ©t QR. Cáº¥u hÃ¬nh GKE chá»‰nh á»Ÿ menu "Tracking".');
     }
   }
 
-  // "IN LABEL"/"MUA TRACKING và IN LABEL" (bổ sung 09/09/2026 lần 2, theo yêu cầu người dùng) — mở
-  // RỘNG hơn phần "Mua tracking ngay" ở trên (chỉ admin): admin/ve_file, CHỈ chặn
-  // nguoi_lay_phoi (nguoi_lay_phoi thực ra không vào được trang này qua menu — chặn thêm ở đây cho
-  // chắc). "IN LABEL" (chỉ in, không mua) CHỈ hiện khi đơn ĐÃ có tracking thật — đơn chưa có thì chỉ
-  // hiện nút gộp (tránh bấm nhầm vào nút không chạy được, đã xác nhận với người dùng). Bỏ san_xuat
-  // khỏi khối này 12/09/2026 (theo yêu cầu người dùng, gộp cùng lúc ẩn khu vực thao tác không cần
-  // thiết cho vai trò này) — trước đó san_xuat cũng thấy được.
+  // "IN LABEL"/"MUA TRACKING vÃ  IN LABEL" (bá»• sung 09/09/2026 láº§n 2, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” má»Ÿ
+  // Rá»˜NG hÆ¡n pháº§n "Mua tracking ngay" á»Ÿ trÃªn (chá»‰ admin): admin/ve_file, CHá»ˆ cháº·n
+  // nguoi_lay_phoi (nguoi_lay_phoi thá»±c ra khÃ´ng vÃ o Ä‘Æ°á»£c trang nÃ y qua menu â€” cháº·n thÃªm á»Ÿ Ä‘Ã¢y cho
+  // cháº¯c). "IN LABEL" (chá»‰ in, khÃ´ng mua) CHá»ˆ hiá»‡n khi Ä‘Æ¡n ÄÃƒ cÃ³ tracking tháº­t â€” Ä‘Æ¡n chÆ°a cÃ³ thÃ¬ chá»‰
+  // hiá»‡n nÃºt gá»™p (trÃ¡nh báº¥m nháº§m vÃ o nÃºt khÃ´ng cháº¡y Ä‘Æ°á»£c, Ä‘Ã£ xÃ¡c nháº­n vá»›i ngÆ°á»i dÃ¹ng). Bá» san_xuat
+  // khá»i khá»‘i nÃ y 12/09/2026 (theo yÃªu cáº§u ngÆ°á»i dÃ¹ng, gá»™p cÃ¹ng lÃºc áº©n khu vá»±c thao tÃ¡c khÃ´ng cáº§n
+  // thiáº¿t cho vai trÃ² nÃ y) â€” trÆ°á»›c Ä‘Ã³ san_xuat cÅ©ng tháº¥y Ä‘Æ°á»£c.
   if (user.vaiTro !== 'nguoi_lay_phoi' && user.vaiTro !== 'san_xuat' && don.NhomNhieuAo && !don.NhomNhieuAo.laDonIn) {
-    vanChuyen += `<p style="margin:0;font-size:0.85rem">Cả nhóm DonNhieuAo ${escapeHtml(don.NhomNhieuAo.goc)} dùng 1 tem — in label ở đơn <strong>${escapeHtml(don.NhomNhieuAo.donIn || '(chưa xác định)')}</strong> khi cả nhóm đã "Đã sản xuất".</p>`;
+    vanChuyen += `<p style="margin:0;font-size:0.85rem">Cáº£ nhÃ³m DonNhieuAo ${escapeHtml(don.NhomNhieuAo.goc)} dÃ¹ng 1 tem â€” in label á»Ÿ Ä‘Æ¡n <strong>${escapeHtml(don.NhomNhieuAo.donIn || '(chÆ°a xÃ¡c Ä‘á»‹nh)')}</strong> khi cáº£ nhÃ³m Ä‘Ã£ "ÄÃ£ sáº£n xuáº¥t".</p>`;
   } else if (user.vaiTro !== 'nguoi_lay_phoi' && user.vaiTro !== 'san_xuat') {
     const daCoTrackingThat = !!don.TRACKING_ID;
     vanChuyen += `
         <div class="hang-nut">
           ${daCoTrackingThat ? `<button class="btn-hanh-dong phu" onclick="apDungInLabelChiTiet(this)">${icon('printer')} IN LABEL</button>` : ''}
-          <button class="btn-hanh-dong" onclick="apDungMuaVaInLabelChiTiet(this)">${icon('printer')} MUA TRACKING và IN LABEL</button>
+          <button class="btn-hanh-dong" onclick="apDungMuaVaInLabelChiTiet(this)">${icon('printer')} MUA TRACKING vÃ  IN LABEL</button>
         </div>`;
-    tomTatVanChuyen.push('In label khi đơn "Đã sản xuất" / "ĐÃ DÁN TEM"');
-    chuThichVanChuyen.push('In label: chỉ dùng được khi đơn đang "Đã sản xuất" hoặc "ĐÃ DÁN TEM". Khổ giấy mặc định 100x150mm theo máy in đang đặt mặc định trên máy tính này.');
+    tomTatVanChuyen.push('In label khi Ä‘Æ¡n "ÄÃ£ sáº£n xuáº¥t" / "ÄÃƒ DÃN TEM"');
+    chuThichVanChuyen.push('In label: chá»‰ dÃ¹ng Ä‘Æ°á»£c khi Ä‘Æ¡n Ä‘ang "ÄÃ£ sáº£n xuáº¥t" hoáº·c "ÄÃƒ DÃN TEM". Khá»• giáº¥y máº·c Ä‘á»‹nh 100x150mm theo mÃ¡y in Ä‘ang Ä‘áº·t máº·c Ä‘á»‹nh trÃªn mÃ¡y tÃ­nh nÃ y.');
   }
-  // Đơn mua tracking qua hãng khác (KL / HPW) hoặc đang mua dở (22/10/2026): khối GKE chỉ ghi chú — thao tác ở khối của hãng đó bên dưới.
+  // ÄÆ¡n mua tracking qua hÃ£ng khÃ¡c (KL / HPW) hoáº·c Ä‘ang mua dá»Ÿ (22/10/2026): khá»‘i GKE chá»‰ ghi chÃº â€” thao tÃ¡c á»Ÿ khá»‘i cá»§a hÃ£ng Ä‘Ã³ bÃªn dÆ°á»›i.
   const hangKhac = don.DON_VI_VAN_CHUYEN || (don.KL_DANG_TAO ? 'KL' : dangMuaHpwUi(don) ? 'HPW' : '');
   if (hangKhac) {
-    vanChuyen = vanChuyen ? `<p style="margin:0;font-size:0.85rem">Đơn mua tracking qua <strong>${escapeHtml(hangKhac)}</strong> — thao tác ở khối "Vận chuyển (${escapeHtml(hangKhac)})" bên dưới.</p>` : '';
+    vanChuyen = vanChuyen ? `<p style="margin:0;font-size:0.85rem">ÄÆ¡n mua tracking qua <strong>${escapeHtml(hangKhac)}</strong> â€” thao tÃ¡c á»Ÿ khá»‘i "Váº­n chuyá»ƒn (${escapeHtml(hangKhac)})" bÃªn dÆ°á»›i.</p>` : '';
     chuThichVanChuyen = [];
   }
   if (vanChuyen) html += `
       <div class="upload-box">
-        <label>${icon('package', { size: 18 })} Vận chuyển (GKE)</label>
+        <label>${icon('package', { size: 18 })} Váº­n chuyá»ƒn (GKE)</label>
         ${vanChuyen}
-        ${chuThichVanChuyen.length ? chuThich(tomTatVanChuyen.join(' · '), chuThichVanChuyen.join(' ')) : ''}
+        ${chuThichVanChuyen.length ? chuThich(tomTatVanChuyen.join(' Â· '), chuThichVanChuyen.join(' ')) : ''}
       </div>`;
   if (user.vaiTro !== 'nguoi_lay_phoi' && user.vaiTro !== 'san_xuat') html += htmlKhoiKl(don) + htmlKhoiHpw(don);
 
-  // Ảnh file thêu 1/2/3 (ve_file + admin; thuần lưu ảnh, KHÔNG đụng trạng thái) và ảnh Đã sản xuất / ĐÃ DÁN TEM (chỉ admin;
-  // tự chuyển trạng thái) — mỗi loại 1 nút (xem LOAI_ANH_TAI_LEN).
+  // áº¢nh file thÃªu 1/2/3 (ve_file + admin; thuáº§n lÆ°u áº£nh, KHÃ”NG Ä‘á»¥ng tráº¡ng thÃ¡i) vÃ  áº£nh ÄÃ£ sáº£n xuáº¥t / ÄÃƒ DÃN TEM (chá»‰ admin;
+  // tá»± chuyá»ƒn tráº¡ng thÃ¡i) â€” má»—i loáº¡i 1 nÃºt (xem LOAI_ANH_TAI_LEN).
   if (user.vaiTro === 've_file' || laAdmin(user.vaiTro)) {
     const dsLoaiAnh = LOAI_ANH_TAI_LEN.filter(l => !l.chiAdmin || laAdmin(user.vaiTro));
     html += `
       <div class="upload-box">
-        <label>${icon('camera', { size: 18 })} Tải ảnh</label>
+        <label>${icon('camera', { size: 18 })} Táº£i áº£nh</label>
         <div class="hang-nut">${dsLoaiAnh.map(l => `<button type="button" class="btn-hanh-dong nut-tai-anh" onclick="document.getElementById('anh-${l.moc}').click()"
-            title="Tối đa ${l.toiDa} ảnh">${icon('download')} ${escapeHtml(l.ten)}</button>
+            title="Tá»‘i Ä‘a ${l.toiDa} áº£nh">${icon('download')} ${escapeHtml(l.ten)}</button>
           <input type="file" accept="image/*" id="anh-${l.moc}" hidden ${l.toiDa > 1 ? 'multiple' : ''} ${l.camera ? 'capture="environment"' : ''}
             aria-label="${escapeHtml(l.ten)}" onchange="taiAnh('${l.moc}', this)">`).join('')}</div>
-        ${chuThich(dsLoaiAnh.some(l => l.chiAdmin) ? 'Ảnh Đã sản xuất / ĐÃ DÁN TEM tự chuyển trạng thái đơn' : 'Chỉ lưu ảnh, không đổi trạng thái đơn', dsLoaiAnh.map(l => `${l.ten}: ${l.ghiChu}`).join(' · '))}
+        ${chuThich(dsLoaiAnh.some(l => l.chiAdmin) ? 'áº¢nh ÄÃ£ sáº£n xuáº¥t / ÄÃƒ DÃN TEM tá»± chuyá»ƒn tráº¡ng thÃ¡i Ä‘Æ¡n' : 'Chá»‰ lÆ°u áº£nh, khÃ´ng Ä‘á»•i tráº¡ng thÃ¡i Ä‘Æ¡n', dsLoaiAnh.map(l => `${l.ten}: ${l.ghiChu}`).join(' Â· '))}
       </div>`;
-    // Khối "Ảnh đóng gói" (Anh_Dong_Goi_URL) ĐÃ XOÁ 09/09/2026 lần 3 cùng lúc xoá trạng thái "Đã đóng
-    // gói" (theo yêu cầu người dùng).
+    // Khá»‘i "áº¢nh Ä‘Ã³ng gÃ³i" (Anh_Dong_Goi_URL) ÄÃƒ XOÃ 09/09/2026 láº§n 3 cÃ¹ng lÃºc xoÃ¡ tráº¡ng thÃ¡i "ÄÃ£ Ä‘Ã³ng
+    // gÃ³i" (theo yÃªu cáº§u ngÆ°á»i dÃ¹ng).
   }
 
-  // Nút BÁO LỖI cho san_xuat (29/09/2026, theo yêu cầu người dùng — hạn chế bấm nhầm): CUỐI trang, cỡ nút thường
-  // (không còn nút lớn), bấm phải nhập mật khẩu xác nhận (kiểm tra ở server, xem bamNutTrangThai).
-  if (don.TRANG_THAI_XUONG === 'Đang chạy máy' && user.vaiTro === 'san_xuat') {
+  // NÃºt BÃO Lá»–I cho san_xuat (29/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” háº¡n cháº¿ báº¥m nháº§m): CUá»I trang, cá»¡ nÃºt thÆ°á»ng
+  // (khÃ´ng cÃ²n nÃºt lá»›n), báº¥m pháº£i nháº­p máº­t kháº©u xÃ¡c nháº­n (kiá»ƒm tra á»Ÿ server, xem bamNutTrangThai).
+  if (don.TRANG_THAI_XUONG === 'Äang cháº¡y mÃ¡y' && user.vaiTro === 'san_xuat') {
     html += `<div style="margin-top:var(--space-6);padding-top:var(--space-4);border-top:1px dashed var(--color-border);text-align:center">
-      <button type="button" class="btn-hanh-dong phu nguy-hiem" onclick="bamNutTrangThai('BAO_LOI_SAN_XUAT', this)">${icon('alert', { size: 16 })} Báo lỗi sản xuất – cần làm lại</button>
+      <button type="button" class="btn-hanh-dong phu nguy-hiem" onclick="bamNutTrangThai('BAO_LOI_SAN_XUAT', this)">${icon('alert', { size: 16 })} BÃ¡o lá»—i sáº£n xuáº¥t â€“ cáº§n lÃ m láº¡i</button>
     </div>`;
   }
 
   el.innerHTML = html;
   if (document.getElementById('kl-sku-du-doan')) taiSkuDuDoanKl(don.STT_Key);
-  if (document.getElementById('sua-tinh-trang')) { // khối "Sửa trạng thái thủ công" chỉ có với admin/superadmin
+  if (document.getElementById('sua-tinh-trang')) { // khá»‘i "Sá»­a tráº¡ng thÃ¡i thá»§ cÃ´ng" chá»‰ cÃ³ vá»›i admin/superadmin
     canhBaoToHopSai();
     capNhatMauChonTrangThai(document.getElementById('sua-phoi'));
     capNhatMauChonTrangThai(document.getElementById('sua-ve-file'));
   }
 }
 
-// Cảnh báo TRƯỚC khi lưu, ngay khi người dùng đổi 1 trong 3 dropdown — soi gương lại đúng 2 quy tắc
-// trong services/orderService.js (kiemTraTinhHopLy) để người dùng thấy lỗi ngay, không phải bấm Lưu
-// mới biết bị từ chối. Đây CHỈ là gợi ý trên giao diện — server vẫn kiểm tra lại đầy đủ (không thể
-// bỏ qua bằng cách sửa JS trên trình duyệt), đây không phải là chốt bảo mật.
+// Cáº£nh bÃ¡o TRÆ¯á»šC khi lÆ°u, ngay khi ngÆ°á»i dÃ¹ng Ä‘á»•i 1 trong 3 dropdown â€” soi gÆ°Æ¡ng láº¡i Ä‘Ãºng 2 quy táº¯c
+// trong services/orderService.js (kiemTraTinhHopLy) Ä‘á»ƒ ngÆ°á»i dÃ¹ng tháº¥y lá»—i ngay, khÃ´ng pháº£i báº¥m LÆ°u
+// má»›i biáº¿t bá»‹ tá»« chá»‘i. ÄÃ¢y CHá»ˆ lÃ  gá»£i Ã½ trÃªn giao diá»‡n â€” server váº«n kiá»ƒm tra láº¡i Ä‘áº§y Ä‘á»§ (khÃ´ng thá»ƒ
+// bá» qua báº±ng cÃ¡ch sá»­a JS trÃªn trÃ¬nh duyá»‡t), Ä‘Ã¢y khÃ´ng pháº£i lÃ  chá»‘t báº£o máº­t.
 function loiToHopTrangThai(tinhTrang, phoi, veFile) {
-  // Vẽ file độc lập với in mã; chỉ chặn khi CHÍNH lần lưu này tạo ra "Chưa in mã + Đã lấy phôi" (đơn cũ lỡ lấy phôi
-  // trước khi in mã vẫn lưu được thay đổi khác) — cùng quy tắc với kiemTraTinhHopLy (28/09/2026).
+  // Váº½ file Ä‘á»™c láº­p vá»›i in mÃ£; chá»‰ cháº·n khi CHÃNH láº§n lÆ°u nÃ y táº¡o ra "ChÆ°a in mÃ£ + ÄÃ£ láº¥y phÃ´i" (Ä‘Æ¡n cÅ© lá»¡ láº¥y phÃ´i
+  // trÆ°á»›c khi in mÃ£ váº«n lÆ°u Ä‘Æ°á»£c thay Ä‘á»•i khÃ¡c) â€” cÃ¹ng quy táº¯c vá»›i kiemTraTinhHopLy (28/09/2026).
   const truoc = donHienTai || {};
-  if (tinhTrang === 'Chưa in mã' && phoi === 'Đã lấy phôi' &&
-      (truoc.TRANG_THAI_PHOI !== 'Đã lấy phôi' || truoc.TRANG_THAI_XUONG !== 'Chưa in mã')) {
-    return 'Đơn đang "Chưa in mã" thì chưa thể "Đã lấy phôi" — in mã đơn trước.';
+  if (tinhTrang === 'ChÆ°a in mÃ£' && phoi === 'ÄÃ£ láº¥y phÃ´i' &&
+      (truoc.TRANG_THAI_PHOI !== 'ÄÃ£ láº¥y phÃ´i' || truoc.TRANG_THAI_XUONG !== 'ChÆ°a in mÃ£')) {
+    return 'ÄÆ¡n Ä‘ang "ChÆ°a in mÃ£" thÃ¬ chÆ°a thá»ƒ "ÄÃ£ láº¥y phÃ´i" â€” in mÃ£ Ä‘Æ¡n trÆ°á»›c.';
   }
-  // Cùng danh sách với THU_TU_TINH_TRANG trong data/pipelineTinhTrang.js (bỏ 2 bước đầu "Chưa/Đã in
-  // mã", xử lý riêng ở trên) — sửa 1 chỗ thì nhớ sửa chỗ kia. Đã bỏ "Đã đóng gói", thêm "ĐÃ DÁN TEM"
-  // (09/09/2026 lần 3 — trước đó thiếu "ĐÃ DÁN TEM" trong danh sách này, 1 lỗ hổng cảnh báo có sẵn từ
-  // trước, tiện sửa luôn).
+  // CÃ¹ng danh sÃ¡ch vá»›i THU_TU_TINH_TRANG trong data/pipelineTinhTrang.js (bá» 2 bÆ°á»›c Ä‘áº§u "ChÆ°a/ÄÃ£ in
+  // mÃ£", xá»­ lÃ½ riÃªng á»Ÿ trÃªn) â€” sá»­a 1 chá»— thÃ¬ nhá»› sá»­a chá»— kia. ÄÃ£ bá» "ÄÃ£ Ä‘Ã³ng gÃ³i", thÃªm "ÄÃƒ DÃN TEM"
+  // (09/09/2026 láº§n 3 â€” trÆ°á»›c Ä‘Ã³ thiáº¿u "ÄÃƒ DÃN TEM" trong danh sÃ¡ch nÃ y, 1 lá»— há»•ng cáº£nh bÃ¡o cÃ³ sáºµn tá»«
+  // trÆ°á»›c, tiá»‡n sá»­a luÃ´n).
   const CAC_TRANG_THAI_TU_SAN_SANG_TRO_DI = [
-    'ĐÃ SẴN SÀNG CHẠY MÁY', 'Đang chạy máy', 'Đã sản xuất', 'ĐÃ DÁN TEM',
-    'DELIVERED_Đã giao đến khách',
+    'ÄÃƒ Sáº´N SÃ€NG CHáº Y MÃY', 'Äang cháº¡y mÃ¡y', 'ÄÃ£ sáº£n xuáº¥t', 'ÄÃƒ DÃN TEM',
+    'DELIVERED_ÄÃ£ giao Ä‘áº¿n khÃ¡ch',
   ];
   if (CAC_TRANG_THAI_TU_SAN_SANG_TRO_DI.includes(tinhTrang)) {
-    if (phoi !== 'Đã lấy phôi') return `Đang ở "${tinhTrang}" nhưng phôi vẫn "${phoi}" — phải có đủ phôi mới tới được giai đoạn này.`;
-    if (veFile !== 'Đã vẽ file') return `Đang ở "${tinhTrang}" nhưng file vẽ vẫn "${veFile}" — phải vẽ xong file mới tới được giai đoạn này.`;
+    if (phoi !== 'ÄÃ£ láº¥y phÃ´i') return `Äang á»Ÿ "${tinhTrang}" nhÆ°ng phÃ´i váº«n "${phoi}" â€” pháº£i cÃ³ Ä‘á»§ phÃ´i má»›i tá»›i Ä‘Æ°á»£c giai Ä‘oáº¡n nÃ y.`;
+    if (veFile !== 'ÄÃ£ váº½ file') return `Äang á»Ÿ "${tinhTrang}" nhÆ°ng file váº½ váº«n "${veFile}" â€” pháº£i váº½ xong file má»›i tá»›i Ä‘Æ°á»£c giai Ä‘oáº¡n nÃ y.`;
   }
   return null;
 }
@@ -809,23 +809,23 @@ async function luuTrangThaiThuCong() {
 
 async function apDungChiDinhNguoiChayMayChiTiet(btn) {
   const nguoiSanXuat = document.getElementById('chi-dinh-nguoi-chay-may').value;
-  if (!nguoiSanXuat) { await hopThongBao('Hãy chọn người sản xuất muốn chỉ định'); return; }
-  if (!await hopXacNhan(`Chỉ định "${nguoiSanXuat}" chạy máy cho đơn này (chuyển sang "Đang chạy máy")?`)) return;
+  if (!nguoiSanXuat) { await hopThongBao('HÃ£y chá»n ngÆ°á»i sáº£n xuáº¥t muá»‘n chá»‰ Ä‘á»‹nh'); return; }
+  if (!await hopXacNhan(`Chá»‰ Ä‘á»‹nh "${nguoiSanXuat}" cháº¡y mÃ¡y cho Ä‘Æ¡n nÃ y (chuyá»ƒn sang "Äang cháº¡y mÃ¡y")?`)) return;
 
   const nhanGoc = btn.innerHTML;
   btn.disabled = true;
-  btn.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Đang xử lý...';
+  btn.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Äang xá»­ lÃ½...';
 
   try {
     const ketQua = await apiFetch('/orders/chi-dinh-nguoi-chay-may', {
       method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], nguoiSanXuat }),
     });
     if (ketQua.loi && ketQua.loi.length > 0) {
-      await hopThongBao('Không chỉ định được: ' + ketQua.loi[0].lyDo);
+      await hopThongBao('KhÃ´ng chá»‰ Ä‘á»‹nh Ä‘Æ°á»£c: ' + ketQua.loi[0].lyDo);
       btn.disabled = false;
       btn.innerHTML = nhanGoc;
     } else {
-      await taiChiTiet(); // vẽ lại toàn bộ khu vực thao tác — không cần tự khôi phục nút cũ
+      await taiChiTiet(); // váº½ láº¡i toÃ n bá»™ khu vá»±c thao tÃ¡c â€” khÃ´ng cáº§n tá»± khÃ´i phá»¥c nÃºt cÅ©
     }
   } catch (e) {
     await hopThongBao(e.message);
@@ -836,19 +836,19 @@ async function apDungChiDinhNguoiChayMayChiTiet(btn) {
 
 async function apDungChiDinhNguoiVeFileChiTiet(btn) {
   const nguoiVeFile = document.getElementById('chi-dinh-nguoi-ve-file').value;
-  if (!nguoiVeFile) { await hopThongBao('Hãy chọn người vẽ file muốn chỉ định'); return; }
-  if (!await hopXacNhan(`Chỉ định "${nguoiVeFile}" vẽ file cho đơn này (chuyển sang "Đang vẽ file")?`)) return;
+  if (!nguoiVeFile) { await hopThongBao('HÃ£y chá»n ngÆ°á»i váº½ file muá»‘n chá»‰ Ä‘á»‹nh'); return; }
+  if (!await hopXacNhan(`Chá»‰ Ä‘á»‹nh "${nguoiVeFile}" váº½ file cho Ä‘Æ¡n nÃ y (chuyá»ƒn sang "Äang váº½ file")?`)) return;
 
   const nhanGoc = btn.innerHTML;
   btn.disabled = true;
-  btn.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Đang xử lý...';
+  btn.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Äang xá»­ lÃ½...';
 
   try {
     const ketQua = await apiFetch('/orders/chi-dinh-nguoi-ve-file', {
       method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], nguoiVeFile }),
     });
     if (ketQua.loi && ketQua.loi.length > 0) {
-      await hopThongBao('Không chỉ định được: ' + ketQua.loi[0].lyDo);
+      await hopThongBao('KhÃ´ng chá»‰ Ä‘á»‹nh Ä‘Æ°á»£c: ' + ketQua.loi[0].lyDo);
       btn.disabled = false;
       btn.innerHTML = nhanGoc;
     } else {
@@ -869,22 +869,22 @@ const laDonDaHuy = () => donHienTai && donHienTai.TRANG_THAI_XUONG === TRANG_THA
 
 async function muaTrackingThuCongChiTiet(btn) {
   if (laDonDaHuy()) return hienThongBaoDonDaHuy([sttKey]);
-  if (!await hopXacNhan(`Mua tracking GKE thủ công cho đơn ${sttKey} ngay bây giờ? Đây là thao tác tạo vận đơn THẬT, có thể phát sinh chi phí.`)) return;
+  if (!await hopXacNhan(`Mua tracking GKE thá»§ cÃ´ng cho Ä‘Æ¡n ${sttKey} ngay bÃ¢y giá»? ÄÃ¢y lÃ  thao tÃ¡c táº¡o váº­n Ä‘Æ¡n THáº¬T, cÃ³ thá»ƒ phÃ¡t sinh chi phÃ­.`)) return;
 
   const nhanGoc = btn.innerHTML;
   btn.disabled = true;
-  btn.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Đang mua...';
+  btn.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Äang mua...';
 
   try {
     const ketQua = await apiFetch('/tracking/mua-thu-cong', { method: 'POST', body: JSON.stringify({ sttKeys: [sttKey] }) });
     if (ketQua.loi && ketQua.loi.length > 0) {
       const loiKhac = await tachVaBaoDonDaHuy(ketQua.loi);
-      if (loiKhac.length) await hopThongBao('Không mua được tracking: ' + loiKhac[0].lyDo);
+      if (loiKhac.length) await hopThongBao('KhÃ´ng mua Ä‘Æ°á»£c tracking: ' + loiKhac[0].lyDo);
       btn.disabled = false;
       btn.innerHTML = nhanGoc;
     } else {
-      // Đẩy tracking sang Sheet khách hàng (bổ sung 21/09/2026, theo yêu cầu người dùng) — tracking
-      // THẬT đã mua thành công, chỉ báo riêng nếu bước đồng bộ ra Sheet khách hàng thất bại.
+      // Äáº©y tracking sang Sheet khÃ¡ch hÃ ng (bá»• sung 21/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” tracking
+      // THáº¬T Ä‘Ã£ mua thÃ nh cÃ´ng, chá»‰ bÃ¡o riÃªng náº¿u bÆ°á»›c Ä‘á»“ng bá»™ ra Sheet khÃ¡ch hÃ ng tháº¥t báº¡i.
       await baoLoiSheetSeller(ketQua.loiDaySheetKh);
       await taiChiTiet();
     }
@@ -895,71 +895,71 @@ async function muaTrackingThuCongChiTiet(btn) {
   }
 }
 
-// "IN LABEL"/"MUA TRACKING và IN LABEL" (bổ sung 09/09/2026 lần 2, theo yêu cầu người dùng) — 1 đơn
-// duy nhất nên gửi mảng sttKeys 1 phần tử, cùng khuôn muaTrackingThuCongChiTiet() ở trên. Khác chỗ:
-// thành công thì MỞ LUÔN hộp thoại in (moHopThoaiInPdf(), định nghĩa trong js/api.js) trước khi tải
-// lại trang — không đợi taiChiTiet() xong mới in, vì lúc đó labelBase64 đã mất khỏi bộ nhớ.
+// "IN LABEL"/"MUA TRACKING vÃ  IN LABEL" (bá»• sung 09/09/2026 láº§n 2, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng) â€” 1 Ä‘Æ¡n
+// duy nháº¥t nÃªn gá»­i máº£ng sttKeys 1 pháº§n tá»­, cÃ¹ng khuÃ´n muaTrackingThuCongChiTiet() á»Ÿ trÃªn. KhÃ¡c chá»—:
+// thÃ nh cÃ´ng thÃ¬ Má»ž LUÃ”N há»™p thoáº¡i in (moHopThoaiInPdf(), Ä‘á»‹nh nghÄ©a trong js/api.js) trÆ°á»›c khi táº£i
+// láº¡i trang â€” khÃ´ng Ä‘á»£i taiChiTiet() xong má»›i in, vÃ¬ lÃºc Ä‘Ã³ labelBase64 Ä‘Ã£ máº¥t khá»i bá»™ nhá»›.
 async function apDungInLabelChiTiet(btn) {
-  if (!await hopXacNhan(`In label cho đơn ${sttKey}?`)) return;
+  if (!await hopXacNhan(`In label cho Ä‘Æ¡n ${sttKey}?`)) return;
   await xuLyInLabelChiTiet(btn, '/tracking/in-label');
 }
 
 async function apDungMuaVaInLabelChiTiet(btn) {
   if (laDonDaHuy()) return hienThongBaoDonDaHuy([sttKey]);
-  if (!await hopXacNhan(`Mua tracking (nếu chưa có) và in label cho đơn ${sttKey}? Có thể phát sinh phí thật với đơn chưa có tracking.`)) return;
+  if (!await hopXacNhan(`Mua tracking (náº¿u chÆ°a cÃ³) vÃ  in label cho Ä‘Æ¡n ${sttKey}? CÃ³ thá»ƒ phÃ¡t sinh phÃ­ tháº­t vá»›i Ä‘Æ¡n chÆ°a cÃ³ tracking.`)) return;
   await xuLyInLabelChiTiet(btn, '/tracking/mua-va-in-label');
 }
 
-// ---- Khối "Vận chuyển (KL)" (22/10/2026, theo yêu cầu người dùng — services/trackingKlService.js) ----
-// Quyền: "Mua Tracking KL ngay" admin/superadmin + vẽ file (29/10/2026, người dùng chốt — cùng quyền nút "Mua Tracking KL" hàng loạt ở Danh sách
-// đơn hàng; trước đó chỉ admin); "Mua Tracking KL và In Label KL" admin/superadmin/vẽ file
-// (máy chủ cũng chặn — trackingKlService#duocMuaHangKhac). Khối này chỉ hiện cho các vai trò đó.
-// 1 đơn chỉ 1 tracking: đơn đã có tracking hãng khác (GKE / Seller) không mua KL.
+// ---- Khá»‘i "Váº­n chuyá»ƒn (KL)" (22/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” services/trackingKlService.js) ----
+// Quyá»n: "Mua Tracking KL ngay" admin/superadmin + váº½ file (29/10/2026, ngÆ°á»i dÃ¹ng chá»‘t â€” cÃ¹ng quyá»n nÃºt "Mua Tracking KL" hÃ ng loáº¡t á»Ÿ Danh sÃ¡ch
+// Ä‘Æ¡n hÃ ng; trÆ°á»›c Ä‘Ã³ chá»‰ admin); "Mua Tracking KL vÃ  In Label KL" admin/superadmin/váº½ file
+// (mÃ¡y chá»§ cÅ©ng cháº·n â€” trackingKlService#duocMuaHangKhac). Khá»‘i nÃ y chá»‰ hiá»‡n cho cÃ¡c vai trÃ² Ä‘Ã³.
+// 1 Ä‘Æ¡n chá»‰ 1 tracking: Ä‘Æ¡n Ä‘Ã£ cÃ³ tracking hÃ£ng khÃ¡c (GKE / Seller) khÃ´ng mua KL.
 function htmlKhoiKl(don) {
   const laKl = don.DON_VI_VAN_CHUYEN === 'KL';
   const nhom = don.NhomNhieuAo;
   let nd = '';
   if (don.TRACKING_ID && laKl) {
-    const phi = [don.KL_PHI_USD ? `$${don.KL_PHI_USD}` : '', don.KL_PHI_VND ? `${Number(don.KL_PHI_VND).toLocaleString('vi-VN')}₫` : ''].filter(Boolean).join(' · ');
-    nd = `<p style="margin:0 0 8px">Tracking KL: <strong>${escapeHtml(don.TRACKING_ID)}</strong>${nutSaoChep(don.TRACKING_ID, 'Sao chép mã tracking')}`
-      + `${don.HANG_VAN_CHUYEN ? ` (${escapeHtml(don.HANG_VAN_CHUYEN)})` : ' <span style="color:var(--color-warning-text)">(KL chưa cho biết hãng giao)</span>'}${phi ? ` · Phí: ${escapeHtml(phi)}` : ''}${don.TRACKING_CHUNG_CUA ? ` <span style="color:var(--color-text-faint)">(dùng chung của ${escapeHtml(don.TRACKING_CHUNG_CUA)})</span>` : ''}</p>`;
+    const phi = [don.KL_PHI_USD ? `$${don.KL_PHI_USD}` : '', don.KL_PHI_VND ? `${Number(don.KL_PHI_VND).toLocaleString('vi-VN')}â‚«` : ''].filter(Boolean).join(' Â· ');
+    nd = `<p style="margin:0 0 8px">Tracking KL: <strong>${escapeHtml(don.TRACKING_ID)}</strong>${nutSaoChep(don.TRACKING_ID, 'Sao chÃ©p mÃ£ tracking')}`
+      + `${don.HANG_VAN_CHUYEN ? ` (${escapeHtml(don.HANG_VAN_CHUYEN)})` : ' <span style="color:var(--color-warning-text)">(KL chÆ°a cho biáº¿t hÃ£ng giao)</span>'}${phi ? ` Â· PhÃ­: ${escapeHtml(phi)}` : ''}${don.TRACKING_CHUNG_CUA ? ` <span style="color:var(--color-text-faint)">(dÃ¹ng chung cá»§a ${escapeHtml(don.TRACKING_CHUNG_CUA)})</span>` : ''}</p>`;
     nd += nhom && !nhom.laDonIn
-      ? `<p style="margin:0;font-size:0.85rem">Cả nhóm DonNhieuAo ${escapeHtml(nhom.goc)} dùng 1 tem — in label KL ở đơn <strong>${escapeHtml(nhom.donIn || '(chưa xác định)')}</strong>.</p>`
+      ? `<p style="margin:0;font-size:0.85rem">Cáº£ nhÃ³m DonNhieuAo ${escapeHtml(nhom.goc)} dÃ¹ng 1 tem â€” in label KL á»Ÿ Ä‘Æ¡n <strong>${escapeHtml(nhom.donIn || '(chÆ°a xÃ¡c Ä‘á»‹nh)')}</strong>.</p>`
       : `<div class="hang-nut"><button class="btn-hanh-dong" onclick="apDungMuaVaInLabelKl(this)">${icon('printer')} In Label KL</button></div>`;
   } else if (don.TRACKING_ID) {
-    nd = `<p style="margin:0;font-size:0.85rem">Đơn đã có tracking <strong>${escapeHtml(don.TRACKING_ID)}</strong> (${escapeHtml(nguonTracking(don))}) — không mua KL.</p>`;
+    nd = `<p style="margin:0;font-size:0.85rem">ÄÆ¡n Ä‘Ã£ cÃ³ tracking <strong>${escapeHtml(don.TRACKING_ID)}</strong> (${escapeHtml(nguonTracking(don))}) â€” khÃ´ng mua KL.</p>`;
   } else if (don.TAM_THOI === 'DANG_CHO_GKE_TAO_TEM') {
-    nd = '<p style="margin:0;font-size:0.85rem">Đơn đã tạo vận đơn GKE (đang chờ tem GKE) — không mua KL.</p>';
+    nd = '<p style="margin:0;font-size:0.85rem">ÄÆ¡n Ä‘Ã£ táº¡o váº­n Ä‘Æ¡n GKE (Ä‘ang chá» tem GKE) â€” khÃ´ng mua KL.</p>';
   } else if (dangMuaHpwUi(don)) {
-    nd = '<p style="margin:0;font-size:0.85rem">Đơn đang mua tracking HPW — không mua KL. Xem khối "Vận chuyển (HPW)".</p>';
+    nd = '<p style="margin:0;font-size:0.85rem">ÄÆ¡n Ä‘ang mua tracking HPW â€” khÃ´ng mua KL. Xem khá»‘i "Váº­n chuyá»ƒn (HPW)".</p>';
   } else if (laDonConNhieuAo(don)) {
-    nd = `<p style="margin:0;font-size:0.85rem">Đơn thuộc nhóm DonNhieuAo ${escapeHtml(nhom.goc)} — mua tracking ở đơn <strong>${escapeHtml(nhom.donMua || '(chưa xác định)')}</strong>, đơn này dùng chung.</p>`;
+    nd = `<p style="margin:0;font-size:0.85rem">ÄÆ¡n thuá»™c nhÃ³m DonNhieuAo ${escapeHtml(nhom.goc)} â€” mua tracking á»Ÿ Ä‘Æ¡n <strong>${escapeHtml(nhom.donMua || '(chÆ°a xÃ¡c Ä‘á»‹nh)')}</strong>, Ä‘Æ¡n nÃ y dÃ¹ng chung.</p>`;
   } else {
     if (don.KL_DANG_TAO) {
-      nd += '<p style="margin:0 0 8px;font-size:0.85rem;color:var(--color-warning-text)">Lần mua KL trước chưa nhận được kết quả từ KL. Bấm mua lại: app tra KL theo mã đơn trước — KHÔNG tạo đơn trùng.'
-        + (user.vaiTro === 'superadmin' ? ` Muốn mua GKE thay: <button type="button" class="btn-hanh-dong phu" style="padding:4px 10px;font-size:0.82rem" onclick="boDauDangMuaKl(this)">Bỏ dấu đang mua KL</button>` : '')
+      nd += '<p style="margin:0 0 8px;font-size:0.85rem;color:var(--color-warning-text)">Láº§n mua KL trÆ°á»›c chÆ°a nháº­n Ä‘Æ°á»£c káº¿t quáº£ tá»« KL. Báº¥m mua láº¡i: app tra KL theo mÃ£ Ä‘Æ¡n trÆ°á»›c â€” KHÃ”NG táº¡o Ä‘Æ¡n trÃ¹ng.'
+        + (user.vaiTro === 'superadmin' ? ` Muá»‘n mua GKE thay: <button type="button" class="btn-hanh-dong phu" style="padding:4px 10px;font-size:0.82rem" onclick="boDauDangMuaKl(this)">Bá» dáº¥u Ä‘ang mua KL</button>` : '')
         + '</p>';
     }
     nd += '<div id="kl-sku-du-doan" style="font-size:0.85rem;margin:0 0 8px"></div>';
     nd += `<div class="hang-nut">
         ${laAdmin(user.vaiTro) || user.vaiTro === 've_file' ? `<button class="btn-hanh-dong phu" onclick="muaTrackingKlNgay(this)">${icon('package')} Mua Tracking KL ngay</button>` : ''}
-        ${nhom && !nhom.laDonIn ? '' : `<button class="btn-hanh-dong" onclick="apDungMuaVaInLabelKl(this)">${icon('printer')} Mua Tracking KL và In Label KL</button>`}
+        ${nhom && !nhom.laDonIn ? '' : `<button class="btn-hanh-dong" onclick="apDungMuaVaInLabelKl(this)">${icon('printer')} Mua Tracking KL vÃ  In Label KL</button>`}
       </div>`;
   }
   return `
       <div class="upload-box">
-        <label>${icon('package', { size: 18 })} Vận chuyển (KL)</label>
+        <label>${icon('package', { size: 18 })} Váº­n chuyá»ƒn (KL)</label>
         ${nd}
-        ${chuThich('KL chỉ nhận đơn giao tới Mỹ (US)', 'Mua Tracking KL: tạo đơn vận chuyển THẬT bên KL (có thể phát sinh phí), lấy mã tracking. Mua và In Label: chỉ khi đơn "Đã sản xuất" / "ĐÃ DÁN TEM", mua (nếu chưa có) rồi in label KL. Tài khoản KL theo Xưởng chỉnh ở Settings.')}
+        ${chuThich('KL chá»‰ nháº­n Ä‘Æ¡n giao tá»›i Má»¹ (US)', 'Mua Tracking KL: táº¡o Ä‘Æ¡n váº­n chuyá»ƒn THáº¬T bÃªn KL (cÃ³ thá»ƒ phÃ¡t sinh phÃ­), láº¥y mÃ£ tracking. Mua vÃ  In Label: chá»‰ khi Ä‘Æ¡n "ÄÃ£ sáº£n xuáº¥t" / "ÄÃƒ DÃN TEM", mua (náº¿u chÆ°a cÃ³) rá»“i in label KL. TÃ i khoáº£n KL theo XÆ°á»Ÿng chá»‰nh á»Ÿ Settings.')}
       </div>`;
 }
 
-// Dùng chung khối KL / HPW (22/10/2026).
+// DÃ¹ng chung khá»‘i KL / HPW (22/10/2026).
 const dangMuaHpwUi = don => !!(don.HPW_DANG_TAO || (don.HPW_REFERENCE_ID && !don.TRACKING_ID));
-const nguonTracking = don => don.DON_VI_VAN_CHUYEN || (don.NGUON_TRACKING === 'SELLER' ? 'Seller cung cấp' : 'GKE');
+const nguonTracking = don => don.DON_VI_VAN_CHUYEN || (don.NGUON_TRACKING === 'SELLER' ? 'Seller cung cáº¥p' : 'GKE');
 
-// ---- Khối "Vận chuyển (HPW)" (22/10/2026, theo yêu cầu người dùng — services/trackingHpwService.js) ----
-// Cùng quyền / cách hiển thị như khối KL. Chỉ đơn US / UK. Thêm thao tác superadmin: huỷ lô chưa mua label, gắn mã lô tay, bỏ dấu.
+// ---- Khá»‘i "Váº­n chuyá»ƒn (HPW)" (22/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” services/trackingHpwService.js) ----
+// CÃ¹ng quyá»n / cÃ¡ch hiá»ƒn thá»‹ nhÆ° khá»‘i KL. Chá»‰ Ä‘Æ¡n US / UK. ThÃªm thao tÃ¡c superadmin: huá»· lÃ´ chÆ°a mua label, gáº¯n mÃ£ lÃ´ tay, bá» dáº¥u.
 function htmlKhoiHpw(don) {
   const laHpw = don.DON_VI_VAN_CHUYEN === 'HPW';
   const nhom = don.NhomNhieuAo;
@@ -967,44 +967,44 @@ function htmlKhoiHpw(don) {
   const nutNho = (nhan, onclick) => `<button type="button" class="btn-hanh-dong phu" style="padding:4px 10px;font-size:0.82rem" onclick="${onclick}">${nhan}</button>`;
   let nd = '';
   if (don.TRACKING_ID && laHpw) {
-    nd = `<p style="margin:0 0 8px">Tracking HPW: <strong>${escapeHtml(don.TRACKING_ID)}</strong>${nutSaoChep(don.TRACKING_ID, 'Sao chép mã tracking')}`
-      + `${don.HANG_VAN_CHUYEN ? ` (${escapeHtml(don.HANG_VAN_CHUYEN)})` : ''}${don.HPW_PHI_USD ? ` · Phí: $${escapeHtml(don.HPW_PHI_USD)}` : ''}`
-      + `${don.HPW_REFERENCE_ID ? ` · Lô ${escapeHtml(don.HPW_REFERENCE_ID)}` : ''}${don.TRACKING_CHUNG_CUA ? ` <span style="color:var(--color-text-faint)">(dùng chung của ${escapeHtml(don.TRACKING_CHUNG_CUA)})</span>` : ''}</p>`;
+    nd = `<p style="margin:0 0 8px">Tracking HPW: <strong>${escapeHtml(don.TRACKING_ID)}</strong>${nutSaoChep(don.TRACKING_ID, 'Sao chÃ©p mÃ£ tracking')}`
+      + `${don.HANG_VAN_CHUYEN ? ` (${escapeHtml(don.HANG_VAN_CHUYEN)})` : ''}${don.HPW_PHI_USD ? ` Â· PhÃ­: $${escapeHtml(don.HPW_PHI_USD)}` : ''}`
+      + `${don.HPW_REFERENCE_ID ? ` Â· LÃ´ ${escapeHtml(don.HPW_REFERENCE_ID)}` : ''}${don.TRACKING_CHUNG_CUA ? ` <span style="color:var(--color-text-faint)">(dÃ¹ng chung cá»§a ${escapeHtml(don.TRACKING_CHUNG_CUA)})</span>` : ''}</p>`;
     nd += nhom && !nhom.laDonIn
-      ? `<p style="margin:0;font-size:0.85rem">Cả nhóm DonNhieuAo ${escapeHtml(nhom.goc)} dùng 1 tem — in label HPW ở đơn <strong>${escapeHtml(nhom.donIn || '(chưa xác định)')}</strong>.</p>`
+      ? `<p style="margin:0;font-size:0.85rem">Cáº£ nhÃ³m DonNhieuAo ${escapeHtml(nhom.goc)} dÃ¹ng 1 tem â€” in label HPW á»Ÿ Ä‘Æ¡n <strong>${escapeHtml(nhom.donIn || '(chÆ°a xÃ¡c Ä‘á»‹nh)')}</strong>.</p>`
       : `<div class="hang-nut"><button class="btn-hanh-dong" onclick="apDungMuaVaInLabelHpw(this)">${icon('printer')} In Label HPW</button></div>`;
   } else if (don.TRACKING_ID) {
-    nd = `<p style="margin:0;font-size:0.85rem">Đơn đã có tracking <strong>${escapeHtml(don.TRACKING_ID)}</strong> (${escapeHtml(nguonTracking(don))}) — không mua HPW.</p>`;
+    nd = `<p style="margin:0;font-size:0.85rem">ÄÆ¡n Ä‘Ã£ cÃ³ tracking <strong>${escapeHtml(don.TRACKING_ID)}</strong> (${escapeHtml(nguonTracking(don))}) â€” khÃ´ng mua HPW.</p>`;
   } else if (don.TAM_THOI === 'DANG_CHO_GKE_TAO_TEM') {
-    nd = '<p style="margin:0;font-size:0.85rem">Đơn đã tạo vận đơn GKE (đang chờ tem GKE) — không mua HPW.</p>';
+    nd = '<p style="margin:0;font-size:0.85rem">ÄÆ¡n Ä‘Ã£ táº¡o váº­n Ä‘Æ¡n GKE (Ä‘ang chá» tem GKE) â€” khÃ´ng mua HPW.</p>';
   } else if (don.KL_DANG_TAO) {
-    nd = '<p style="margin:0;font-size:0.85rem">Đơn đang mua tracking KL — không mua HPW. Xem khối "Vận chuyển (KL)".</p>';
+    nd = '<p style="margin:0;font-size:0.85rem">ÄÆ¡n Ä‘ang mua tracking KL â€” khÃ´ng mua HPW. Xem khá»‘i "Váº­n chuyá»ƒn (KL)".</p>';
   } else if (laDonConNhieuAo(don)) {
-    nd = `<p style="margin:0;font-size:0.85rem">Đơn thuộc nhóm DonNhieuAo ${escapeHtml(nhom.goc)} — mua tracking ở đơn <strong>${escapeHtml(nhom.donMua || '(chưa xác định)')}</strong>, đơn này dùng chung.</p>`;
+    nd = `<p style="margin:0;font-size:0.85rem">ÄÆ¡n thuá»™c nhÃ³m DonNhieuAo ${escapeHtml(nhom.goc)} â€” mua tracking á»Ÿ Ä‘Æ¡n <strong>${escapeHtml(nhom.donMua || '(chÆ°a xÃ¡c Ä‘á»‹nh)')}</strong>, Ä‘Æ¡n nÃ y dÃ¹ng chung.</p>`;
   } else {
     let goiY = [];
     try { goiY = don.HPW_GOI_Y_DIA_CHI ? JSON.parse(don.HPW_GOI_Y_DIA_CHI) : []; } catch { goiY = []; }
     if (don.HPW_REFERENCE_ID) {
-      nd += `<p style="margin:0 0 8px;font-size:0.85rem;color:var(--color-warning-text)">Đã tạo lô <strong>${escapeHtml(don.HPW_REFERENCE_ID)}</strong>${don.HPW_PHI_USD ? ` (dự tính $${escapeHtml(don.HPW_PHI_USD)})` : ''} nhưng CHƯA mua label.`
-        + (goiY.length ? ` HPW gợi ý sửa địa chỉ: <strong>${goiY.map(escapeHtml).join(' | ')}</strong>.` : '')
-        + ' Bấm mua = mua label cho lô này (địa chỉ như lúc tạo).'
-        + (laSa ? ` Muốn đổi địa chỉ: ${nutNho('Huỷ lô hàng HPW', 'huyLoHangHpw(this)')} rồi sửa dữ liệu đơn và mua lại.` : '') + '</p>';
+      nd += `<p style="margin:0 0 8px;font-size:0.85rem;color:var(--color-warning-text)">ÄÃ£ táº¡o lÃ´ <strong>${escapeHtml(don.HPW_REFERENCE_ID)}</strong>${don.HPW_PHI_USD ? ` (dá»± tÃ­nh $${escapeHtml(don.HPW_PHI_USD)})` : ''} nhÆ°ng CHÆ¯A mua label.`
+        + (goiY.length ? ` HPW gá»£i Ã½ sá»­a Ä‘á»‹a chá»‰: <strong>${goiY.map(escapeHtml).join(' | ')}</strong>.` : '')
+        + ' Báº¥m mua = mua label cho lÃ´ nÃ y (Ä‘á»‹a chá»‰ nhÆ° lÃºc táº¡o).'
+        + (laSa ? ` Muá»‘n Ä‘á»•i Ä‘á»‹a chá»‰: ${nutNho('Huá»· lÃ´ hÃ ng HPW', 'huyLoHangHpw(this)')} rá»“i sá»­a dá»¯ liá»‡u Ä‘Æ¡n vÃ  mua láº¡i.` : '') + '</p>';
     } else if (don.HPW_DANG_TAO) {
-      nd += '<p style="margin:0 0 8px;font-size:0.85rem;color:var(--color-warning-text)">Lần tạo lô HPW trước chưa nhận được kết quả. Bấm mua lại: HPW không cho trùng mã đơn nên KHÔNG tạo được lô thứ 2.'
-        + (laSa ? `<br>Nếu HPW báo trùng mã: tìm mã lô (HPW...) trên trang HPW rồi gắn vào đơn
+      nd += '<p style="margin:0 0 8px;font-size:0.85rem;color:var(--color-warning-text)">Láº§n táº¡o lÃ´ HPW trÆ°á»›c chÆ°a nháº­n Ä‘Æ°á»£c káº¿t quáº£. Báº¥m mua láº¡i: HPW khÃ´ng cho trÃ¹ng mÃ£ Ä‘Æ¡n nÃªn KHÃ”NG táº¡o Ä‘Æ°á»£c lÃ´ thá»© 2.'
+        + (laSa ? `<br>Náº¿u HPW bÃ¡o trÃ¹ng mÃ£: tÃ¬m mÃ£ lÃ´ (HPW...) trÃªn trang HPW rá»“i gáº¯n vÃ o Ä‘Æ¡n
             <input type="text" id="hpw-ma-lo" placeholder="HPW..." style="width:150px;padding:4px 8px;border-radius:8px;border:1px solid var(--color-border);font:inherit">
-            ${nutNho('Gắn mã lô hàng HPW', 'ganMaLoHangHpw(this)')} — hoặc ${nutNho('Bỏ dấu đang mua HPW', 'boDauDangMuaHpw(this)')} nếu chắc chắn HPW chưa có lô.` : '') + '</p>';
+            ${nutNho('Gáº¯n mÃ£ lÃ´ hÃ ng HPW', 'ganMaLoHangHpw(this)')} â€” hoáº·c ${nutNho('Bá» dáº¥u Ä‘ang mua HPW', 'boDauDangMuaHpw(this)')} náº¿u cháº¯c cháº¯n HPW chÆ°a cÃ³ lÃ´.` : '') + '</p>';
     }
     nd += `<div class="hang-nut">
         ${laAdmin(user.vaiTro) ? `<button class="btn-hanh-dong phu" onclick="muaTrackingHpwNgay(this)">${icon('package')} Mua Tracking HPW ngay</button>` : ''}
-        ${nhom && !nhom.laDonIn ? '' : `<button class="btn-hanh-dong" onclick="apDungMuaVaInLabelHpw(this)">${icon('printer')} Mua Tracking HPW và In Label HPW</button>`}
+        ${nhom && !nhom.laDonIn ? '' : `<button class="btn-hanh-dong" onclick="apDungMuaVaInLabelHpw(this)">${icon('printer')} Mua Tracking HPW vÃ  In Label HPW</button>`}
       </div>`;
   }
   return `
       <div class="upload-box">
-        <label>${icon('package', { size: 18 })} Vận chuyển (HPW)</label>
+        <label>${icon('package', { size: 18 })} Váº­n chuyá»ƒn (HPW)</label>
         ${nd}
-        ${chuThich('HPW chỉ mua cho đơn giao tới Mỹ (US) hoặc Anh (UK)', 'Mua Tracking HPW: tạo lô hàng rồi mua label THẬT bên HPW (có thể phát sinh phí), lấy mã tracking. HPW gợi ý sửa địa chỉ thì app dừng trước bước mua label. Mua và In Label: chỉ khi đơn "Đã sản xuất" / "ĐÃ DÁN TEM". Tài khoản HPW theo Xưởng chỉnh ở Settings.')}
+        ${chuThich('HPW chá»‰ mua cho Ä‘Æ¡n giao tá»›i Má»¹ (US) hoáº·c Anh (UK)', 'Mua Tracking HPW: táº¡o lÃ´ hÃ ng rá»“i mua label THáº¬T bÃªn HPW (cÃ³ thá»ƒ phÃ¡t sinh phÃ­), láº¥y mÃ£ tracking. HPW gá»£i Ã½ sá»­a Ä‘á»‹a chá»‰ thÃ¬ app dá»«ng trÆ°á»›c bÆ°á»›c mua label. Mua vÃ  In Label: chá»‰ khi Ä‘Æ¡n "ÄÃ£ sáº£n xuáº¥t" / "ÄÃƒ DÃN TEM". TÃ i khoáº£n HPW theo XÆ°á»Ÿng chá»‰nh á»Ÿ Settings.')}
       </div>`;
 }
 
@@ -1012,12 +1012,12 @@ const muaTrackingHpwNgay = btn => muaTrackingHangNgay(btn, 'hpw', 'HPW');
 async function apDungMuaVaInLabelHpw(btn) {
   if (laDonDaHuy()) return hienThongBaoDonDaHuy([sttKey]);
   const daCo = donHienTai && donHienTai.TRACKING_ID && donHienTai.DON_VI_VAN_CHUYEN === 'HPW';
-  // Đã có tracking HPW -> in luôn, không hỏi (28/10/2026, như KL). Chưa có -> vẫn hỏi vì sẽ mua thật.
-  if (!daCo && !await hopXacNhan(`Mua tracking HPW và in label cho đơn ${sttKey}? Tạo lô hàng + mua label THẬT bên HPW, có thể phát sinh phí.`)) return;
-  // Không hỏi -> gọi route CHỈ IN (/tracking/in-label, không bao giờ mua): dữ liệu trang cũ (tracking vừa bị gỡ) cũng không mua mà không hỏi.
+  // ÄÃ£ cÃ³ tracking HPW -> in luÃ´n, khÃ´ng há»i (28/10/2026, nhÆ° KL). ChÆ°a cÃ³ -> váº«n há»i vÃ¬ sáº½ mua tháº­t.
+  if (!daCo && !await hopXacNhan(`Mua tracking HPW vÃ  in label cho Ä‘Æ¡n ${sttKey}? Táº¡o lÃ´ hÃ ng + mua label THáº¬T bÃªn HPW, cÃ³ thá»ƒ phÃ¡t sinh phÃ­.`)) return;
+  // KhÃ´ng há»i -> gá»i route CHá»ˆ IN (/tracking/in-label, khÃ´ng bao giá» mua): dá»¯ liá»‡u trang cÅ© (tracking vá»«a bá»‹ gá»¡) cÅ©ng khÃ´ng mua mÃ  khÃ´ng há»i.
   await xuLyInLabelChiTiet(btn, daCo ? '/tracking/in-label' : '/tracking/hpw/mua-va-in-label');
 }
-// Thao tác superadmin HPW: gửi rồi tải lại đơn.
+// Thao tÃ¡c superadmin HPW: gá»­i rá»“i táº£i láº¡i Ä‘Æ¡n.
 async function thaoTacHpw(btn, duongDan, cauHoi, them = {}) {
   if (!await hopXacNhan(cauHoi)) return;
   btn.disabled = true;
@@ -1029,48 +1029,48 @@ async function thaoTacHpw(btn, duongDan, cauHoi, them = {}) {
     btn.disabled = false;
   }
 }
-const huyLoHangHpw = btn => thaoTacHpw(btn, '/tracking/hpw/huy-lo-hang', `Huỷ lô hàng HPW ${donHienTai.HPW_REFERENCE_ID} (chưa mua label) của đơn ${sttKey}? Lần mua sau sẽ tạo lô MỚI với mã đơn có đuôi (vd ${sttKey}-2).`);
-const boDauDangMuaHpw = btn => thaoTacHpw(btn, '/tracking/hpw/bo-dau', `Bỏ dấu "đang mua HPW" của đơn ${sttKey}? Chỉ làm khi đã kiểm tra trên trang HPW là KHÔNG có lô hàng cho đơn này (app không tra được theo mã đơn).`);
+const huyLoHangHpw = btn => thaoTacHpw(btn, '/tracking/hpw/huy-lo-hang', `Huá»· lÃ´ hÃ ng HPW ${donHienTai.HPW_REFERENCE_ID} (chÆ°a mua label) cá»§a Ä‘Æ¡n ${sttKey}? Láº§n mua sau sáº½ táº¡o lÃ´ Má»šI vá»›i mÃ£ Ä‘Æ¡n cÃ³ Ä‘uÃ´i (vd ${sttKey}-2).`);
+const boDauDangMuaHpw = btn => thaoTacHpw(btn, '/tracking/hpw/bo-dau', `Bá» dáº¥u "Ä‘ang mua HPW" cá»§a Ä‘Æ¡n ${sttKey}? Chá»‰ lÃ m khi Ä‘Ã£ kiá»ƒm tra trÃªn trang HPW lÃ  KHÃ”NG cÃ³ lÃ´ hÃ ng cho Ä‘Æ¡n nÃ y (app khÃ´ng tra Ä‘Æ°á»£c theo mÃ£ Ä‘Æ¡n).`);
 function ganMaLoHangHpw(btn) {
   const ma = (document.getElementById('hpw-ma-lo') || {}).value || '';
-  if (!ma.trim()) return hopThongBao('Nhập mã lô hàng HPW (vd HPW0224123456).');
-  return thaoTacHpw(btn, '/tracking/hpw/gan-ma-lo-hang', `Gắn lô HPW ${ma.trim()} vào đơn ${sttKey}? App kiểm tra lô trên HPW trước khi gắn.`, { maLoHang: ma.trim() });
+  if (!ma.trim()) return hopThongBao('Nháº­p mÃ£ lÃ´ hÃ ng HPW (vd HPW0224123456).');
+  return thaoTacHpw(btn, '/tracking/hpw/gan-ma-lo-hang', `Gáº¯n lÃ´ HPW ${ma.trim()} vÃ o Ä‘Æ¡n ${sttKey}? App kiá»ƒm tra lÃ´ trÃªn HPW trÆ°á»›c khi gáº¯n.`, { maLoHang: ma.trim() });
 }
 
 const muaTrackingKlNgay = btn => muaTrackingHangNgay(btn, 'kl', 'KL');
-// SKU KL dự kiến (28/10/2026 — routes/tracking.js GET /tracking/kl/sku/:sttKey): đơn nào thiếu SKU thì thấy ngay, chưa cần bấm mua.
+// SKU KL dá»± kiáº¿n (28/10/2026 â€” routes/tracking.js GET /tracking/kl/sku/:sttKey): Ä‘Æ¡n nÃ o thiáº¿u SKU thÃ¬ tháº¥y ngay, chÆ°a cáº§n báº¥m mua.
 async function taiSkuDuDoanKl(ma) {
   const el = document.getElementById('kl-sku-du-doan');
   let kq;
   try { kq = await apiFetch('/tracking/kl/sku/' + encodeURIComponent(ma)); } catch (e) { el.textContent = ''; return; }
   const loi = s => `<span style="color:var(--color-danger-text);font-weight:600">${s}</span>`;
   if (kq.loi) { el.innerHTML = loi(escapeHtml(kq.loi)); return; }
-  if (!kq.soSku) { el.innerHTML = loi(`Tài khoản KL "${escapeHtml(kq.taiKhoan)}" chưa nạp danh sách SKU — chưa mua được (Settings > Tài khoản KL).`); return; }
+  if (!kq.soSku) { el.innerHTML = loi(`TÃ i khoáº£n KL "${escapeHtml(kq.taiKhoan)}" chÆ°a náº¡p danh sÃ¡ch SKU â€” chÆ°a mua Ä‘Æ°á»£c (Settings > TÃ i khoáº£n KL).`); return; }
   const nhieu = kq.ds.length > 1;
-  el.innerHTML = kq.ds.map(d => (nhieu ? `${escapeHtml(d.sttKey)}: ` : '') + (d.thieu ? loi('thiếu LOAI / KICH_THUOC — không ghép được SKU')
-    : d.sku ? `SKU KL: <b>${escapeHtml(d.sku)}</b> · ${d.canNangGram} g × ${d.soLuong}`
-      : loi(`không có SKU "${escapeHtml(d.ma)}" trong danh sách KL — chưa mua được KL (thêm SKU trên trang KL rồi nạp lại)`))).join('<br>');
+  el.innerHTML = kq.ds.map(d => (nhieu ? `${escapeHtml(d.sttKey)}: ` : '') + (d.thieu ? loi('thiáº¿u LOAI / KICH_THUOC â€” khÃ´ng ghÃ©p Ä‘Æ°á»£c SKU')
+    : d.sku ? `SKU KL: <b>${escapeHtml(d.sku)}</b> Â· ${d.canNangGram} g Ã— ${d.soLuong}`
+      : loi(`khÃ´ng cÃ³ SKU "${escapeHtml(d.ma)}" trong danh sÃ¡ch KL â€” chÆ°a mua Ä‘Æ°á»£c KL (thÃªm SKU trÃªn trang KL rá»“i náº¡p láº¡i)`))).join('<br>');
 }
-// "Mua Tracking <hãng> ngay" — dùng chung KL / HPW (22/10/2026).
+// "Mua Tracking <hÃ£ng> ngay" â€” dÃ¹ng chung KL / HPW (22/10/2026).
 async function muaTrackingHangNgay(btn, ma, ten) {
   if (laDonDaHuy()) return hienThongBaoDonDaHuy([sttKey]);
-  if (!await hopXacNhan(`Mua tracking ${ten} cho đơn ${sttKey} ngay bây giờ? Đây là thao tác tạo đơn vận chuyển THẬT bên ${ten}, có thể phát sinh phí.`)) return;
+  if (!await hopXacNhan(`Mua tracking ${ten} cho Ä‘Æ¡n ${sttKey} ngay bÃ¢y giá»? ÄÃ¢y lÃ  thao tÃ¡c táº¡o Ä‘Æ¡n váº­n chuyá»ƒn THáº¬T bÃªn ${ten}, cÃ³ thá»ƒ phÃ¡t sinh phÃ­.`)) return;
   const nhanGoc = btn.innerHTML;
   btn.disabled = true;
-  btn.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Đang mua...';
+  btn.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Äang mua...';
   try {
     const kq = await apiFetch(`/tracking/${ma}/mua`, { method: 'POST', body: JSON.stringify({ sttKeys: [sttKey] }) });
     if (kq.loi && kq.loi.length) {
       const loiKhac = await tachVaBaoDonDaHuy(kq.loi);
-      if (loiKhac.length) await hopThongBao(`Không mua được tracking ${ten}: ` + loiKhac[0].lyDo);
-      if (kq.loi.some(l => l.goiYDiaChi)) { await taiChiTiet(); return; } // HPW: đã tạo lô, dừng vì gợi ý địa chỉ -> hiện lô + gợi ý
+      if (loiKhac.length) await hopThongBao(`KhÃ´ng mua Ä‘Æ°á»£c tracking ${ten}: ` + loiKhac[0].lyDo);
+      if (kq.loi.some(l => l.goiYDiaChi)) { await taiChiTiet(); return; } // HPW: Ä‘Ã£ táº¡o lÃ´, dá»«ng vÃ¬ gá»£i Ã½ Ä‘á»‹a chá»‰ -> hiá»‡n lÃ´ + gá»£i Ã½
       btn.disabled = false;
       btn.innerHTML = nhanGoc;
       return;
     }
     const t = kq.thanhCong[0] || {};
-    const phi = [t.phiUsd != null ? `$${t.phiUsd}` : '', t.phiVnd != null ? `${Number(t.phiVnd).toLocaleString('vi-VN')}₫` : ''].filter(Boolean).join(' · ');
-    await hopThongBao(`Đã mua tracking ${ten}: ${t.tracking}${t.hang ? ` (${t.hang})` : ''}${phi ? ` · phí ${phi}` : ''}${t.canhBao ? `\n\nLưu ý: ${t.canhBao}` : ''}`);
+    const phi = [t.phiUsd != null ? `$${t.phiUsd}` : '', t.phiVnd != null ? `${Number(t.phiVnd).toLocaleString('vi-VN')}â‚«` : ''].filter(Boolean).join(' Â· ');
+    await hopThongBao(`ÄÃ£ mua tracking ${ten}: ${t.tracking}${t.hang ? ` (${t.hang})` : ''}${phi ? ` Â· phÃ­ ${phi}` : ''}${t.canhBao ? `\n\nLÆ°u Ã½: ${t.canhBao}` : ''}`);
     await baoLoiSheetSeller(kq.loiDaySheetKh);
     await taiChiTiet();
   } catch (e) {
@@ -1080,9 +1080,9 @@ async function muaTrackingHangNgay(btn, ma, ten) {
   }
 }
 
-// Superadmin: bỏ dấu "đang mua KL" (máy chủ tra KL trước; không tra được thì hỏi xác nhận đã tự kiểm tra trên trang KL).
+// Superadmin: bá» dáº¥u "Ä‘ang mua KL" (mÃ¡y chá»§ tra KL trÆ°á»›c; khÃ´ng tra Ä‘Æ°á»£c thÃ¬ há»i xÃ¡c nháº­n Ä‘Ã£ tá»± kiá»ƒm tra trÃªn trang KL).
 async function boDauDangMuaKl(btn) {
-  if (!await hopXacNhan(`Bỏ dấu "đang mua KL" của đơn ${sttKey}? App tra KL theo mã đơn trước — chỉ bỏ khi KL không có đơn này.`)) return;
+  if (!await hopXacNhan(`Bá» dáº¥u "Ä‘ang mua KL" cá»§a Ä‘Æ¡n ${sttKey}? App tra KL theo mÃ£ Ä‘Æ¡n trÆ°á»›c â€” chá»‰ bá» khi KL khÃ´ng cÃ³ Ä‘Æ¡n nÃ y.`)) return;
   btn.disabled = true;
   const gui = (them = {}) => apiFetch('/tracking/kl/bo-dau', { method: 'POST', body: JSON.stringify({ sttKey, ...them }) });
   let maLoi = '';
@@ -1093,13 +1093,13 @@ async function boDauDangMuaKl(btn) {
       maLoi = e.duLieu && e.duLieu.maLoi;
       if (maLoi !== 'KHONG_TRA_DUOC_KL' && maLoi !== 'KL_DON_CHUA_DU') throw e;
       if (!await hopXacNhan(maLoi === 'KL_DON_CHUA_DU'
-        ? `${e.message}\nBạn ĐÃ kiểm tra trên trang KL và đơn ${sttKey} đã bị HUỶ / không dùng được? Bỏ dấu để MUA GKE thay (KL không cho tạo đơn thứ 2 cùng mã). Bỏ dấu khi đơn KL vẫn còn hiệu lực thì có thể bị mua 2 lần (KL + GKE).`
-        : `${e.message}\nBạn ĐÃ tự kiểm tra trên trang KL và chắc chắn KHÔNG có đơn ${sttKey}? Bỏ dấu mà KL thật ra đã tạo đơn thì có thể bị mua 2 lần (KL + GKE).`)) { btn.disabled = false; return; }
+        ? `${e.message}\nBáº¡n ÄÃƒ kiá»ƒm tra trÃªn trang KL vÃ  Ä‘Æ¡n ${sttKey} Ä‘Ã£ bá»‹ HUá»¶ / khÃ´ng dÃ¹ng Ä‘Æ°á»£c? Bá» dáº¥u Ä‘á»ƒ MUA GKE thay (KL khÃ´ng cho táº¡o Ä‘Æ¡n thá»© 2 cÃ¹ng mÃ£). Bá» dáº¥u khi Ä‘Æ¡n KL váº«n cÃ²n hiá»‡u lá»±c thÃ¬ cÃ³ thá»ƒ bá»‹ mua 2 láº§n (KL + GKE).`
+        : `${e.message}\nBáº¡n ÄÃƒ tá»± kiá»ƒm tra trÃªn trang KL vÃ  cháº¯c cháº¯n KHÃ”NG cÃ³ Ä‘Æ¡n ${sttKey}? Bá» dáº¥u mÃ  KL tháº­t ra Ä‘Ã£ táº¡o Ä‘Æ¡n thÃ¬ cÃ³ thá»ƒ bá»‹ mua 2 láº§n (KL + GKE).`)) { btn.disabled = false; return; }
       await gui(maLoi === 'KL_DON_CHUA_DU' ? { boQuaDonChuaDu: true } : { boQuaKiemTra: true });
     }
     await hopThongBao(maLoi === 'KL_DON_CHUA_DU'
-      ? 'Đã bỏ dấu đang mua KL — mua tracking GKE cho đơn này (KL không cho tạo đơn mới cùng mã).'
-      : 'Đã bỏ dấu đang mua KL — có thể mua GKE hoặc mua KL lại.');
+      ? 'ÄÃ£ bá» dáº¥u Ä‘ang mua KL â€” mua tracking GKE cho Ä‘Æ¡n nÃ y (KL khÃ´ng cho táº¡o Ä‘Æ¡n má»›i cÃ¹ng mÃ£).'
+      : 'ÄÃ£ bá» dáº¥u Ä‘ang mua KL â€” cÃ³ thá»ƒ mua GKE hoáº·c mua KL láº¡i.');
     await taiChiTiet();
   } catch (e) {
     await hopThongBao(e.message);
@@ -1110,23 +1110,23 @@ async function boDauDangMuaKl(btn) {
 async function apDungMuaVaInLabelKl(btn) {
   if (laDonDaHuy()) return hienThongBaoDonDaHuy([sttKey]);
   const daCo = donHienTai && donHienTai.TRACKING_ID && donHienTai.DON_VI_VAN_CHUYEN === 'KL';
-  // Đã có tracking KL -> chỉ in, không tốn phí: in luôn, không hỏi (28/10/2026, theo yêu cầu người dùng). Chưa có -> vẫn hỏi vì sẽ mua thật.
-  if (!daCo && !await hopXacNhan(`Mua tracking KL và in label cho đơn ${sttKey}? Tạo đơn vận chuyển THẬT bên KL, có thể phát sinh phí.`)) return;
-  await xuLyInLabelChiTiet(btn, daCo ? '/tracking/in-label' : '/tracking/kl/mua-va-in-label'); // không hỏi -> CHỈ IN (xem HPW)
+  // ÄÃ£ cÃ³ tracking KL -> chá»‰ in, khÃ´ng tá»‘n phÃ­: in luÃ´n, khÃ´ng há»i (28/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng). ChÆ°a cÃ³ -> váº«n há»i vÃ¬ sáº½ mua tháº­t.
+  if (!daCo && !await hopXacNhan(`Mua tracking KL vÃ  in label cho Ä‘Æ¡n ${sttKey}? Táº¡o Ä‘Æ¡n váº­n chuyá»ƒn THáº¬T bÃªn KL, cÃ³ thá»ƒ phÃ¡t sinh phÃ­.`)) return;
+  await xuLyInLabelChiTiet(btn, daCo ? '/tracking/in-label' : '/tracking/kl/mua-va-in-label'); // khÃ´ng há»i -> CHá»ˆ IN (xem HPW)
 }
 
 async function xuLyInLabelChiTiet(btn, duongDan) {
   const nhanGoc = btn.innerHTML;
   btn.disabled = true;
-  btn.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Đang xử lý...';
+  btn.innerHTML = icon('spinner', { className: 'icon-spin', size: 16 }) + ' Äang xá»­ lÃ½...';
 
   try {
     const ketQua = await apiFetch(duongDan, { method: 'POST', body: JSON.stringify({ sttKeys: [sttKey] }) });
     if (ketQua.loi && ketQua.loi.length > 0) {
       const loiKhac = await tachVaBaoDonDaHuy(ketQua.loi);
-      if (loiKhac.length) await hopThongBao('Lỗi: ' + loiKhac[0].lyDo);
-      // KL (22/10/2026): đã mua tracking nhưng lấy label lỗi -> báo lỗi Sheet Seller (nếu có) + tải lại đơn để hiện tracking vừa mua.
-      if (ketQua.loi.some(l => l.daMua || l.goiYDiaChi)) { // + HPW: đã tạo lô, dừng vì gợi ý địa chỉ
+      if (loiKhac.length) await hopThongBao('Lá»—i: ' + loiKhac[0].lyDo);
+      // KL (22/10/2026): Ä‘Ã£ mua tracking nhÆ°ng láº¥y label lá»—i -> bÃ¡o lá»—i Sheet Seller (náº¿u cÃ³) + táº£i láº¡i Ä‘Æ¡n Ä‘á»ƒ hiá»‡n tracking vá»«a mua.
+      if (ketQua.loi.some(l => l.daMua || l.goiYDiaChi)) { // + HPW: Ä‘Ã£ táº¡o lÃ´, dá»«ng vÃ¬ gá»£i Ã½ Ä‘á»‹a chá»‰
         await baoLoiSheetSeller(ketQua.loiDaySheetKh);
         await taiChiTiet();
         return;
@@ -1142,7 +1142,7 @@ async function xuLyInLabelChiTiet(btn, duongDan) {
     await baoLoiSheetSeller(ketQua.loiDaySheetKh);
     await taiChiTiet();
   } catch (e) {
-    await hopThongBao('Lỗi: ' + e.message);
+    await hopThongBao('Lá»—i: ' + e.message);
     btn.disabled = false;
     btn.innerHTML = nhanGoc;
   }
@@ -1159,17 +1159,17 @@ async function chuyenGiaiDoan(scenarioId, btn) {
   }
 }
 
-// Ghi chú xưởng (28/09/2026): server LUÔN lưu bản trong app rồi ghi vào ô GHI_CHU_XUONG của Sheet Seller
-// (routes/orders.js POST /:sttKey/ghi-chu-xuong). Ghi Sheet lỗi -> hộp đỏ; nội dung vẫn còn trong ô (tải lại
-// trang điền sẵn bản trong app) để sửa nguyên nhân rồi Lưu lại / superadmin Đẩy lại.
+// Ghi chÃº xÆ°á»Ÿng (28/09/2026): server LUÃ”N lÆ°u báº£n trong app rá»“i ghi vÃ o Ã´ GHI_CHU_XUONG cá»§a Sheet Seller
+// (routes/orders.js POST /:sttKey/ghi-chu-xuong). Ghi Sheet lá»—i -> há»™p Ä‘á»; ná»™i dung váº«n cÃ²n trong Ã´ (táº£i láº¡i
+// trang Ä‘iá»n sáºµn báº£n trong app) Ä‘á»ƒ sá»­a nguyÃªn nhÃ¢n rá»“i LÆ°u láº¡i / superadmin Äáº©y láº¡i.
 async function bamNutTrangThai(nut, btn) {
   let matKhau;
   if (nut === 'BAO_LOI_SAN_XUAT') {
-    // san_xuat: nhập mật khẩu xác nhận (29/09/2026) — so ở SERVER (routes/orders.js), không lộ giá trị đúng ở đây.
+    // san_xuat: nháº­p máº­t kháº©u xÃ¡c nháº­n (29/09/2026) â€” so á»Ÿ SERVER (routes/orders.js), khÃ´ng lá»™ giÃ¡ trá»‹ Ä‘Ãºng á»Ÿ Ä‘Ã¢y.
     if (user.vaiTro === 'san_xuat') {
-      matKhau = await hopNhap(`Báo lỗi sản xuất đơn ${sttKey}?\n"Đang chạy máy" → "LỖI SẢN XUẤT CẦN LÀM LẠI"\n\nNhập mật khẩu xác nhận:`);
+      matKhau = await hopNhap(`BÃ¡o lá»—i sáº£n xuáº¥t Ä‘Æ¡n ${sttKey}?\n"Äang cháº¡y mÃ¡y" â†’ "Lá»–I Sáº¢N XUáº¤T Cáº¦N LÃ€M Láº I"\n\nNháº­p máº­t kháº©u xÃ¡c nháº­n:`);
       if (matKhau === null) return;
-    } else if (!await hopXacNhan(`Báo lỗi sản xuất đơn ${sttKey}?\n\n"Đang chạy máy" → "LỖI SẢN XUẤT CẦN LÀM LẠI"`)) return;
+    } else if (!await hopXacNhan(`BÃ¡o lá»—i sáº£n xuáº¥t Ä‘Æ¡n ${sttKey}?\n\n"Äang cháº¡y mÃ¡y" â†’ "Lá»–I Sáº¢N XUáº¤T Cáº¦N LÃ€M Láº I"`)) return;
   }
   btn.disabled = true;
   try {
@@ -1180,19 +1180,19 @@ async function bamNutTrangThai(nut, btn) {
   await taiChiTiet();
 }
 
-// Số mũi chỉ (07/10/2026): bản chính là ô GhiChuTinhGia trong Sheet Seller (đọc lại qua RAW -> Don_Hang_ALL, trễ vài phút). Vừa lưu
-// xong (< 30 phút) mà Sheet chưa kịp đổi -> hiện bản trong app (SO_MUI_CHI_NOI_BO); sau đó luôn theo Sheet (ai sửa thẳng trên Sheet
-// vẫn thấy đúng).
+// Sá»‘ mÅ©i chá»‰ (07/10/2026): báº£n chÃ­nh lÃ  Ã´ GhiChuTinhGia trong Sheet Seller (Ä‘á»c láº¡i qua RAW -> Don_Hang_ALL, trá»… vÃ i phÃºt). Vá»«a lÆ°u
+// xong (< 30 phÃºt) mÃ  Sheet chÆ°a ká»‹p Ä‘á»•i -> hiá»‡n báº£n trong app (SO_MUI_CHI_NOI_BO); sau Ä‘Ã³ luÃ´n theo Sheet (ai sá»­a tháº³ng trÃªn Sheet
+// váº«n tháº¥y Ä‘Ãºng).
 const SO_MUI_CHO_SHEET_MS = 30 * 60 * 1000;
-// Lưu số mũi giờ báo "đã lưu" ngay, ghi Sheet Seller chạy nền (16/10/2026) — ghi lỗi thì báo ở đây (lúc mở đơn + ngay sau khi lưu).
-const CHUA_GHI_SHEET_SO_MUI = 'Đã lưu trong app nhưng CHƯA ghi được vào Sheet Seller — đã báo superadmin (Trung tâm hành động → Đẩy lại).';
-// Hỏi lại kết quả ghi Sheet chạy nền: mỗi 3 giây, tối đa 1 phút (Google quá tải có thể tự thử lại gần 2 phút), tới khi có lần ghi MỚI HƠN
-// mốc lưu (luc, giờ VN do máy chủ trả) VÀ đúng số vừa lưu (lần ghi của lượt lưu TRƯỚC còn xếp hàng có thể xong sau mốc này). Lưu lượt mới
-// -> vòng của lượt cũ tự dừng (_luotChoSoMui), không ghi đè dòng báo của lượt mới.
+// LÆ°u sá»‘ mÅ©i giá» bÃ¡o "Ä‘Ã£ lÆ°u" ngay, ghi Sheet Seller cháº¡y ná»n (16/10/2026) â€” ghi lá»—i thÃ¬ bÃ¡o á»Ÿ Ä‘Ã¢y (lÃºc má»Ÿ Ä‘Æ¡n + ngay sau khi lÆ°u).
+const CHUA_GHI_SHEET_SO_MUI = 'ÄÃ£ lÆ°u trong app nhÆ°ng CHÆ¯A ghi Ä‘Æ°á»£c vÃ o Sheet Seller â€” Ä‘Ã£ bÃ¡o superadmin (Trung tÃ¢m hÃ nh Ä‘á»™ng â†’ Äáº©y láº¡i).';
+// Há»i láº¡i káº¿t quáº£ ghi Sheet cháº¡y ná»n: má»—i 3 giÃ¢y, tá»‘i Ä‘a 1 phÃºt (Google quÃ¡ táº£i cÃ³ thá»ƒ tá»± thá»­ láº¡i gáº§n 2 phÃºt), tá»›i khi cÃ³ láº§n ghi Má»šI HÆ N
+// má»‘c lÆ°u (luc, giá» VN do mÃ¡y chá»§ tráº£) VÃ€ Ä‘Ãºng sá»‘ vá»«a lÆ°u (láº§n ghi cá»§a lÆ°á»£t lÆ°u TRÆ¯á»šC cÃ²n xáº¿p hÃ ng cÃ³ thá»ƒ xong sau má»‘c nÃ y). LÆ°u lÆ°á»£t má»›i
+// -> vÃ²ng cá»§a lÆ°á»£t cÅ© tá»± dá»«ng (_luotChoSoMui), khÃ´ng ghi Ä‘Ã¨ dÃ²ng bÃ¡o cá»§a lÆ°á»£t má»›i.
 let _luotChoSoMui = 0;
 async function choKetQuaGhiSheetSoMui(luc, soMui, tb, chuDaLuu) {
   const luot = _luotChoSoMui;
-  const conLaLuotNay = () => luot === _luotChoSoMui && tb.isConnected; // đã lưu lượt khác / tải lại / rời trang -> dừng
+  const conLaLuotNay = () => luot === _luotChoSoMui && tb.isConnected; // Ä‘Ã£ lÆ°u lÆ°á»£t khÃ¡c / táº£i láº¡i / rá»i trang -> dá»«ng
   for (let lan = 0; lan < 20; lan++) {
     await new Promise(r => setTimeout(r, 3000));
     if (!conLaLuotNay()) return;
@@ -1200,15 +1200,15 @@ async function choKetQuaGhiSheetSoMui(luc, soMui, tb, chuDaLuu) {
     try { d = await apiFetch('/orders/' + encodeURIComponent(sttKey) + '/so-mui-chi/dong-bo'); } catch (e) { continue; }
     if (!conLaLuotNay()) return;
     if (!d || String(d.ThoiGian || '') < luc || String(d.GiaTriSau ?? '') !== soMui) continue;
-    if (d.KetQua === 'OK') { tb.textContent = chuDaLuu + ' · đã ghi vào Sheet Seller.'; return; }
+    if (d.KetQua === 'OK') { tb.textContent = chuDaLuu + ' Â· Ä‘Ã£ ghi vÃ o Sheet Seller.'; return; }
     tb.style.color = 'var(--color-danger-text)';
-    tb.textContent = `${chuDaLuu}. ${CHUA_GHI_SHEET_SO_MUI}${d.LyDo ? ' Lý do: ' + d.LyDo : ''}`;
+    tb.textContent = `${chuDaLuu}. ${CHUA_GHI_SHEET_SO_MUI}${d.LyDo ? ' LÃ½ do: ' + d.LyDo : ''}`;
     return;
   }
-  if (conLaLuotNay()) tb.textContent = chuDaLuu + ' · chưa có kết quả ghi Sheet Seller (Google đang chậm) — tải lại trang sau ít phút: nếu ghi lỗi sẽ hiện chữ đỏ ở đây.';
+  if (conLaLuotNay()) tb.textContent = chuDaLuu + ' Â· chÆ°a cÃ³ káº¿t quáº£ ghi Sheet Seller (Google Ä‘ang cháº­m) â€” táº£i láº¡i trang sau Ã­t phÃºt: náº¿u ghi lá»—i sáº½ hiá»‡n chá»¯ Ä‘á» á»Ÿ Ä‘Ã¢y.';
 }
 function soMuiChiHienThi(don) {
-  return don.SoMuiChiNguyenVan || ''; // server tính (services/orderService.js#docSoMuiChi) — 1 quy tắc cho cả danh sách/bộ lọc
+  return don.SoMuiChiNguyenVan || ''; // server tÃ­nh (services/orderService.js#docSoMuiChi) â€” 1 quy táº¯c cho cáº£ danh sÃ¡ch/bá»™ lá»c
 }
 async function luuSoMuiChi(e) {
   e.preventDefault();
@@ -1216,25 +1216,25 @@ async function luuSoMuiChi(e) {
   const nhap = o.value.trim();
   if (nhap && !(/^\d+$/.test(nhap) && Number(nhap) >= 1 && Number(nhap) <= 1000000)) {
     tb.style.color = 'var(--color-danger-text)';
-    tb.textContent = 'Số mũi chỉ phải là số nguyên từ 1 đến 1.000.000 (không chữ, không số âm, không số lẻ).';
+    tb.textContent = 'Sá»‘ mÅ©i chá»‰ pháº£i lÃ  sá»‘ nguyÃªn tá»« 1 Ä‘áº¿n 1.000.000 (khÃ´ng chá»¯, khÃ´ng sá»‘ Ã¢m, khÃ´ng sá»‘ láº»).';
     o.focus();
     return;
   }
   const nut = e.target.querySelector('button');
   nut.disabled = true;
-  _luotChoSoMui++; // dừng vòng hỏi kết quả ghi Sheet của lượt lưu trước
+  _luotChoSoMui++; // dá»«ng vÃ²ng há»i káº¿t quáº£ ghi Sheet cá»§a lÆ°á»£t lÆ°u trÆ°á»›c
   try {
     const kq = await apiFetch('/orders/' + encodeURIComponent(sttKey) + '/so-mui-chi', { method: 'POST', body: JSON.stringify({ soMui: nhap }) });
     donHienTai.SO_MUI_CHI_NOI_BO = kq.soMui;
     donHienTai.SO_MUI_CHI_LUC = new Date().toISOString();
     o.value = kq.soMui;
     tb.style.color = 'var(--color-success-text)';
-    const chuDaLuu = kq.soMui ? `Đã lưu số mũi chỉ: ${Number(kq.soMui).toLocaleString('en-US')}` : 'Đã xoá số mũi chỉ';
-    tb.textContent = chuDaLuu + ' · đang ghi vào Sheet Seller...';
+    const chuDaLuu = kq.soMui ? `ÄÃ£ lÆ°u sá»‘ mÅ©i chá»‰: ${Number(kq.soMui).toLocaleString('en-US')}` : 'ÄÃ£ xoÃ¡ sá»‘ mÅ©i chá»‰';
+    tb.textContent = chuDaLuu + ' Â· Ä‘ang ghi vÃ o Sheet Seller...';
     if (kq.luc) choKetQuaGhiSheetSoMui(kq.luc, String(kq.soMui ?? ''), tb, chuDaLuu);
   } catch (err) {
     tb.style.color = 'var(--color-danger-text)';
-    tb.textContent = /Không thể lưu số mũi chỉ/.test(err.message || '') ? err.message : `Không thể lưu số mũi chỉ. Vui lòng thử lại. (${err.message})`;
+    tb.textContent = /KhÃ´ng thá»ƒ lÆ°u sá»‘ mÅ©i chá»‰/.test(err.message || '') ? err.message : `KhÃ´ng thá»ƒ lÆ°u sá»‘ mÅ©i chá»‰. Vui lÃ²ng thá»­ láº¡i. (${err.message})`;
   } finally {
     nut.disabled = false;
   }
@@ -1245,11 +1245,11 @@ async function luuGhiChu() {
   try {
     const kq = await apiFetch('/orders/' + encodeURIComponent(sttKey) + '/ghi-chu-xuong', { method: 'POST', body: JSON.stringify({ ghiChu }) });
     if (kq.sheet.ok) {
-      await hopThongBao(`Đã lưu ghi chú vào Sheet Seller (tab "${kq.sheet.tab}", dòng ${kq.sheet.dong}). Ghi chú sẽ hiện lại ở đây sau khi Sheet cập nhật (vài giây tới vài phút).`);
+      await hopThongBao(`ÄÃ£ lÆ°u ghi chÃº vÃ o Sheet Seller (tab "${kq.sheet.tab}", dÃ²ng ${kq.sheet.dong}). Ghi chÃº sáº½ hiá»‡n láº¡i á»Ÿ Ä‘Ã¢y sau khi Sheet cáº­p nháº­t (vÃ i giÃ¢y tá»›i vÃ i phÃºt).`);
     } else {
       await hienHopDo({
-        tieuDe: ['CHƯA GHI ĐƯỢC GHI CHÚ', 'VÀO SHEET SELLER'],
-        moTa: 'Ghi chú đã lưu trong app nhưng CHƯA có trên Sheet Seller. Đơn đã vào danh sách "Chưa ghi được sang Sheet Seller" (Trung tâm hành động / Settings). Lý do:',
+        tieuDe: ['CHÆ¯A GHI ÄÆ¯á»¢C GHI CHÃš', 'VÃ€O SHEET SELLER'],
+        moTa: 'Ghi chÃº Ä‘Ã£ lÆ°u trong app nhÆ°ng CHÆ¯A cÃ³ trÃªn Sheet Seller. ÄÆ¡n Ä‘Ã£ vÃ o danh sÃ¡ch "ChÆ°a ghi Ä‘Æ°á»£c sang Sheet Seller" (Trung tÃ¢m hÃ nh Ä‘á»™ng / Settings). LÃ½ do:',
         danhSach: [kq.sheet.lyDo],
       });
     }
@@ -1257,19 +1257,19 @@ async function luuGhiChu() {
   } catch (e) { await hopThongBao(e.message); }
 }
 
-// Giống hệt inNhanh('don_can_in', ...) ở orders.html nhưng chỉ in đúng 1 đơn — dùng 'stt' (khớp
-// chính xác STT_Key ở routes/reports.js locDon()) thay vì 'tuKhoa' (khớp chuỗi con, dễ dính nhầm
-// đơn khác nếu STT_Key này là chuỗi con của 1 STT_Key khác).
+// Giá»‘ng há»‡t inNhanh('don_can_in', ...) á»Ÿ orders.html nhÆ°ng chá»‰ in Ä‘Ãºng 1 Ä‘Æ¡n â€” dÃ¹ng 'stt' (khá»›p
+// chÃ­nh xÃ¡c STT_Key á»Ÿ routes/reports.js locDon()) thay vÃ¬ 'tuKhoa' (khá»›p chuá»—i con, dá»… dÃ­nh nháº§m
+// Ä‘Æ¡n khÃ¡c náº¿u STT_Key nÃ y lÃ  chuá»—i con cá»§a 1 STT_Key khÃ¡c).
 async function inDonHang(btn) {
   const nhanGoc = btn.innerHTML;
   btn.disabled = true;
-  btn.innerHTML = icon('spinner', { className: 'icon-spin', size: 18 }) + ' Đang tạo file...';
+  btn.innerHTML = icon('spinner', { className: 'icon-spin', size: 18 }) + ' Äang táº¡o file...';
 
   try {
     const res = await fetch('/api/reports/pdf?mau=don_can_in&stt=' + encodeURIComponent(sttKey), { credentials: 'include' });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      throw new Error(data.error || 'Không xuất được file');
+      throw new Error(data.error || 'KhÃ´ng xuáº¥t Ä‘Æ°á»£c file');
     }
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
@@ -1281,27 +1281,27 @@ async function inDonHang(btn) {
     document.body.appendChild(a);
     a.click();
     a.remove();
-    // KHÔNG revoke ngay — cùng lỗi Safari iPad/iPhone đã sửa ở taiFileTuBlob() bên orders.html: Safari
-    // tự mở tab mới trỏ tới blob: URL này (bất đồng bộ) thay vì tải file, revoke ngay khiến tab đó gặp
-    // lỗi "Lỗi WebKitBlobResource 1" vì blob đã bị huỷ trước khi kịp đọc. Trễ 1 giây cho an toàn.
+    // KHÃ”NG revoke ngay â€” cÃ¹ng lá»—i Safari iPad/iPhone Ä‘Ã£ sá»­a á»Ÿ taiFileTuBlob() bÃªn orders.html: Safari
+    // tá»± má»Ÿ tab má»›i trá» tá»›i blob: URL nÃ y (báº¥t Ä‘á»“ng bá»™) thay vÃ¬ táº£i file, revoke ngay khiáº¿n tab Ä‘Ã³ gáº·p
+    // lá»—i "Lá»—i WebKitBlobResource 1" vÃ¬ blob Ä‘Ã£ bá»‹ huá»· trÆ°á»›c khi ká»‹p Ä‘á»c. Trá»… 1 giÃ¢y cho an toÃ n.
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   } catch (e) {
-    await hopThongBao('Lỗi: ' + e.message);
-    return; // in lỗi -> KHÔNG đổi trạng thái
+    await hopThongBao('Lá»—i: ' + e.message);
+    return; // in lá»—i -> KHÃ”NG Ä‘á»•i tráº¡ng thÃ¡i
   } finally {
     btn.disabled = false;
     btn.innerHTML = nhanGoc;
   }
-  // In xong -> "Chưa in mã" sang "Đã in mã" (07/10/2026, theo yêu cầu người dùng — giống nút IN ĐƠN ở Danh sách đơn hàng). Server
-  // chỉ đổi khi đơn ĐANG "Chưa in mã" (chiKhiDangLa, đọc trạng thái mới nhất); đơn ở bước sau giữ nguyên.
-  if (donHienTai && donHienTai.TRANG_THAI_XUONG === 'Chưa in mã') {
+  // In xong -> "ChÆ°a in mÃ£" sang "ÄÃ£ in mÃ£" (07/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” giá»‘ng nÃºt IN ÄÆ N á»Ÿ Danh sÃ¡ch Ä‘Æ¡n hÃ ng). Server
+  // chá»‰ Ä‘á»•i khi Ä‘Æ¡n ÄANG "ChÆ°a in mÃ£" (chiKhiDangLa, Ä‘á»c tráº¡ng thÃ¡i má»›i nháº¥t); Ä‘Æ¡n á»Ÿ bÆ°á»›c sau giá»¯ nguyÃªn.
+  if (donHienTai && donHienTai.TRANG_THAI_XUONG === 'ChÆ°a in mÃ£') {
     try {
       const kq = await apiFetch('/orders/chuyen-trang-thai-hang-loat', {
-        method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], cot: 'TRANG_THAI_XUONG', trangThaiMoi: 'Đã in mã', chiKhiDangLa: 'Chưa in mã' }),
+        method: 'POST', body: JSON.stringify({ sttKeys: [sttKey], cot: 'TRANG_THAI_XUONG', trangThaiMoi: 'ÄÃ£ in mÃ£', chiKhiDangLa: 'ChÆ°a in mÃ£' }),
       });
-      if (kq.loi.length) await hopThongBao(`Đã in xong nhưng CHƯA chuyển được "Đã in mã": ${kq.loi[0].lyDo}`);
+      if (kq.loi.length) await hopThongBao(`ÄÃ£ in xong nhÆ°ng CHÆ¯A chuyá»ƒn Ä‘Æ°á»£c "ÄÃ£ in mÃ£": ${kq.loi[0].lyDo}`);
     } catch (e) {
-      await hopThongBao(`Đã in xong nhưng CHƯA chuyển được "Đã in mã": ${e.message}`);
+      await hopThongBao(`ÄÃ£ in xong nhÆ°ng CHÆ¯A chuyá»ƒn Ä‘Æ°á»£c "ÄÃ£ in mÃ£": ${e.message}`);
     }
     await taiChiTiet();
   }
@@ -1309,20 +1309,20 @@ async function inDonHang(btn) {
 
 async function taiAnh(moc, input) {
   const dsFile = [...input.files];
-  input.value = ''; // chọn lại đúng ảnh đó lần sau vẫn kích hoạt onchange
+  input.value = ''; // chá»n láº¡i Ä‘Ãºng áº£nh Ä‘Ã³ láº§n sau váº«n kÃ­ch hoáº¡t onchange
   const loai = LOAI_ANH_TAI_LEN.find(l => l.moc === moc);
   if (!loai || !dsFile.length) return;
-  if (dsFile.length > loai.toiDa) return await hopThongBao(`"${loai.ten}": chỉ chọn tối đa ${loai.toiDa} ảnh (đang chọn ${dsFile.length}).`);
-  if (dangTaiAnh) return await hopThongBao('Đang tải ảnh lượt trước — đợi xong rồi chọn lại.');
-  // Thay ảnh đã sản xuất (14/10/2026, theo yêu cầu người dùng — chỉ ở đây, chỉ admin, đơn đang "Đã sản xuất"): thay CẢ lượt ảnh cũ.
-  const thay = moc === 'da_san_xuat' && donHienTai && donHienTai.TRANG_THAI_XUONG === 'Đã sản xuất';
-  if (thay && !await hopXacNhan(`Đơn đã ở "Đã sản xuất". THAY toàn bộ ảnh đã sản xuất hiện có bằng ${dsFile.length} ảnh mới?`
-    + (dsFile.length === 1 && donHienTai.Anh_Da_San_Xuat_URL_2 ? '\n(Đơn đang có 2 ảnh — ảnh thứ 2 cũ sẽ bị bỏ.)' : '')
-    + '\nTrạng thái đơn không đổi; link ảnh cũ vẫn xem được trong lịch sử đơn.')) return;
-  // Bấm 1 nút là tải luôn -> ảnh tự chuyển trạng thái phải hỏi lại (chống bấm nhầm nút bên cạnh).
-  if (!thay && loai.chuyenSang && !await hopXacNhan(`Tải ${dsFile.length} ảnh "${loai.ten.replace('Tải ảnh ', '')}" cho đơn ${maDonThat()}?`
-    + `\nTải xong, đơn sẽ TỰ CHUYỂN sang "${loai.chuyenSang}".`)) return;
-  dangTaiAnh = true; // cờ cấp trang — nút bị vẽ lại (taiChiTiet) giữa chừng vẫn không mở được lượt thứ 2
+  if (dsFile.length > loai.toiDa) return await hopThongBao(`"${loai.ten}": chá»‰ chá»n tá»‘i Ä‘a ${loai.toiDa} áº£nh (Ä‘ang chá»n ${dsFile.length}).`);
+  if (dangTaiAnh) return await hopThongBao('Äang táº£i áº£nh lÆ°á»£t trÆ°á»›c â€” Ä‘á»£i xong rá»“i chá»n láº¡i.');
+  // Thay áº£nh Ä‘Ã£ sáº£n xuáº¥t (14/10/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” chá»‰ á»Ÿ Ä‘Ã¢y, chá»‰ admin, Ä‘Æ¡n Ä‘ang "ÄÃ£ sáº£n xuáº¥t"): thay Cáº¢ lÆ°á»£t áº£nh cÅ©.
+  const thay = moc === 'da_san_xuat' && donHienTai && donHienTai.TRANG_THAI_XUONG === 'ÄÃ£ sáº£n xuáº¥t';
+  if (thay && !await hopXacNhan(`ÄÆ¡n Ä‘Ã£ á»Ÿ "ÄÃ£ sáº£n xuáº¥t". THAY toÃ n bá»™ áº£nh Ä‘Ã£ sáº£n xuáº¥t hiá»‡n cÃ³ báº±ng ${dsFile.length} áº£nh má»›i?`
+    + (dsFile.length === 1 && donHienTai.Anh_Da_San_Xuat_URL_2 ? '\n(ÄÆ¡n Ä‘ang cÃ³ 2 áº£nh â€” áº£nh thá»© 2 cÅ© sáº½ bá»‹ bá».)' : '')
+    + '\nTráº¡ng thÃ¡i Ä‘Æ¡n khÃ´ng Ä‘á»•i; link áº£nh cÅ© váº«n xem Ä‘Æ°á»£c trong lá»‹ch sá»­ Ä‘Æ¡n.')) return;
+  // Báº¥m 1 nÃºt lÃ  táº£i luÃ´n -> áº£nh tá»± chuyá»ƒn tráº¡ng thÃ¡i pháº£i há»i láº¡i (chá»‘ng báº¥m nháº§m nÃºt bÃªn cáº¡nh).
+  if (!thay && loai.chuyenSang && !await hopXacNhan(`Táº£i ${dsFile.length} áº£nh "${loai.ten.replace('Táº£i áº£nh ', '')}" cho Ä‘Æ¡n ${maDonThat()}?`
+    + `\nTáº£i xong, Ä‘Æ¡n sáº½ Tá»° CHUYá»‚N sang "${loai.chuyenSang}".`)) return;
+  dangTaiAnh = true; // cá» cáº¥p trang â€” nÃºt bá»‹ váº½ láº¡i (taiChiTiet) giá»¯a chá»«ng váº«n khÃ´ng má»Ÿ Ä‘Æ°á»£c lÆ°á»£t thá»© 2
   document.querySelectorAll('.nut-tai-anh').forEach(n => { n.disabled = true; });
   try { await guiAnh(moc, dsFile, thay); } finally {
     dangTaiAnh = false;
@@ -1330,23 +1330,23 @@ async function taiAnh(moc, input) {
   }
 }
 let dangTaiAnh = false;
-let daBaoHeif = false; // cảnh báo ảnh HEIC 1 lần mỗi lần mở trang
+let daBaoHeif = false; // cáº£nh bÃ¡o áº£nh HEIC 1 láº§n má»—i láº§n má»Ÿ trang
 async function guiAnh(moc, dsFile, thay = false) {
-  // Ảnh đã sản xuất 2 ảnh: gửi ảnh 1 (chưa chuyển trạng thái) rồi ảnh 2 (chuyển "Đã sản xuất") — xem routes/photos.js#soAnhSanXuatLuotNay.
+  // áº¢nh Ä‘Ã£ sáº£n xuáº¥t 2 áº£nh: gá»­i áº£nh 1 (chÆ°a chuyá»ƒn tráº¡ng thÃ¡i) rá»“i áº£nh 2 (chuyá»ƒn "ÄÃ£ sáº£n xuáº¥t") â€” xem routes/photos.js#soAnhSanXuatLuotNay.
   let daLuu = 0;
   try {
     for (let i = 0; i < dsFile.length; i++) {
-      // Nén ảnh trước khi upload (bổ sung 21/09/2026, theo yêu cầu người dùng — xem api.js#nenAnhTruocKhiTaiLen)
-      // — cùng lý do đã áp dụng ở scan.html: ảnh camera gốc thường vài MB, nén trước giúp upload nhanh hơn.
+      // NÃ©n áº£nh trÆ°á»›c khi upload (bá»• sung 21/09/2026, theo yÃªu cáº§u ngÆ°á»i dÃ¹ng â€” xem api.js#nenAnhTruocKhiTaiLen)
+      // â€” cÃ¹ng lÃ½ do Ä‘Ã£ Ã¡p dá»¥ng á»Ÿ scan.html: áº£nh camera gá»‘c thÆ°á»ng vÃ i MB, nÃ©n trÆ°á»›c giÃºp upload nhanh hÆ¡n.
       const thongSo = {};
       const fileDaNen = await nenAnhTruocKhiTaiLen(dsFile[i], { thongSo });
-      if (laAnhHeif(thongSo.dauFile) && !daBaoHeif) { daBaoHeif = true; await hopThongBao(CANH_BAO_FILE_HEIF); } // file HEIC — nhắc chuyển JPG / tắt HEIC
+      if (laAnhHeif(thongSo.dauFile) && !daBaoHeif) { daBaoHeif = true; await hopThongBao(CANH_BAO_FILE_HEIF); } // file HEIC â€” nháº¯c chuyá»ƒn JPG / táº¯t HEIC
       const form = new FormData();
       form.append('photo', fileDaNen);
       form.append('sttKey', sttKey);
       form.append('moc', moc);
       form.append('viTri', String(i + 1));
-      // File thêu: tong = số ảnh của bộ mới, máy chủ xoá cột thừa khi nhận ảnh cuối (routes/photos.js); Đã sản xuất: xong ở ảnh cuối.
+      // File thÃªu: tong = sá»‘ áº£nh cá»§a bá»™ má»›i, mÃ¡y chá»§ xoÃ¡ cá»™t thá»«a khi nháº­n áº£nh cuá»‘i (routes/photos.js); ÄÃ£ sáº£n xuáº¥t: xong á»Ÿ áº£nh cuá»‘i.
       if (moc === 've_file') form.append('tong', String(dsFile.length));
       else form.append('xong', i === dsFile.length - 1 ? '1' : '0');
       if (thay) form.append('thay', '1');
@@ -1355,15 +1355,15 @@ async function guiAnh(moc, dsFile, thay = false) {
       if (!res.ok) throw Object.assign(new Error(data.error), { trangThaiHienTai: data.trangThaiHienTai });
       daLuu++;
     }
-    await hopThongBao(thay ? `Đã thay ${dsFile.length} ảnh đã sản xuất!` : dsFile.length > 1 ? `Đã tải ${dsFile.length} ảnh lên!` : 'Đã tải ảnh lên!');
+    await hopThongBao(thay ? `ÄÃ£ thay ${dsFile.length} áº£nh Ä‘Ã£ sáº£n xuáº¥t!` : dsFile.length > 1 ? `ÄÃ£ táº£i ${dsFile.length} áº£nh lÃªn!` : 'ÄÃ£ táº£i áº£nh lÃªn!');
   } catch (e) {
-    // Trang mở lúc đơn còn "Đang chạy máy" nhưng đơn vừa được chụp xong ở nơi khác -> giờ là "thay ảnh": tải lại trang, bấm lại.
-    if (!daLuu && !thay && moc === 'da_san_xuat' && e.trangThaiHienTai === 'Đã sản xuất') {
-      await hopThongBao('Đơn vừa được chuyển sang "Đã sản xuất" (có người vừa chụp xong ảnh). Trang sẽ tải lại thông tin đơn — chọn lại ảnh rồi bấm "Tải ảnh lên" nếu muốn THAY ảnh đã sản xuất.');
+    // Trang má»Ÿ lÃºc Ä‘Æ¡n cÃ²n "Äang cháº¡y mÃ¡y" nhÆ°ng Ä‘Æ¡n vá»«a Ä‘Æ°á»£c chá»¥p xong á»Ÿ nÆ¡i khÃ¡c -> giá» lÃ  "thay áº£nh": táº£i láº¡i trang, báº¥m láº¡i.
+    if (!daLuu && !thay && moc === 'da_san_xuat' && e.trangThaiHienTai === 'ÄÃ£ sáº£n xuáº¥t') {
+      await hopThongBao('ÄÆ¡n vá»«a Ä‘Æ°á»£c chuyá»ƒn sang "ÄÃ£ sáº£n xuáº¥t" (cÃ³ ngÆ°á»i vá»«a chá»¥p xong áº£nh). Trang sáº½ táº£i láº¡i thÃ´ng tin Ä‘Æ¡n â€” chá»n láº¡i áº£nh rá»“i báº¥m "Táº£i áº£nh lÃªn" náº¿u muá»‘n THAY áº£nh Ä‘Ã£ sáº£n xuáº¥t.');
     } else await hopThongBao(!daLuu ? e.message
-      : moc === 've_file' ? `Đã lưu ${daLuu}/${dsFile.length} ảnh file thêu, ảnh ${daLuu + 1} lỗi: ${e.message}\nẢnh cũ chưa được thay vẫn giữ nguyên — chọn lại cả ${dsFile.length} ảnh rồi tải lại.`
-      : thay ? `Đã thay ảnh 1 nhưng ảnh 2 lỗi: ${e.message}\nĐơn hiện chỉ còn 1 ảnh mới — chọn lại cả 2 ảnh rồi thay lại.`
-      : `Đã lưu ảnh 1 nhưng ảnh 2 lỗi: ${e.message}\nĐơn CHƯA chuyển trạng thái — chọn lại cả 2 ảnh rồi tải lại.`);
+      : moc === 've_file' ? `ÄÃ£ lÆ°u ${daLuu}/${dsFile.length} áº£nh file thÃªu, áº£nh ${daLuu + 1} lá»—i: ${e.message}\náº¢nh cÅ© chÆ°a Ä‘Æ°á»£c thay váº«n giá»¯ nguyÃªn â€” chá»n láº¡i cáº£ ${dsFile.length} áº£nh rá»“i táº£i láº¡i.`
+      : thay ? `ÄÃ£ thay áº£nh 1 nhÆ°ng áº£nh 2 lá»—i: ${e.message}\nÄÆ¡n hiá»‡n chá»‰ cÃ²n 1 áº£nh má»›i â€” chá»n láº¡i cáº£ 2 áº£nh rá»“i thay láº¡i.`
+      : `ÄÃ£ lÆ°u áº£nh 1 nhÆ°ng áº£nh 2 lá»—i: ${e.message}\nÄÆ¡n CHÆ¯A chuyá»ƒn tráº¡ng thÃ¡i â€” chá»n láº¡i cáº£ 2 áº£nh rá»“i táº£i láº¡i.`);
   }
   await taiChiTiet();
 }
