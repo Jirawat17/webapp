@@ -379,6 +379,30 @@ router.post('/upload', requireRole(...VAI_TRO_MENU), uploadFile.single('file'), 
   res.json({ ketQua: kq.ketQua, lyDo: kq.lyDo || '', sttKey, loai, id: kq.id || null });
 });
 
+// Upload PNG trực tiếp cho 1 đơn từ nút "Upload Ảnh PNG" ở chi tiết đơn — sttKey đã biết, không cần đoán từ tên file.
+router.post('/png-don/:sttKey', requireRole(...VAI_TRO_MENU), uploadFile.single('file'), async (req, res) => {
+  if (!req.file) return loi(res, 'Chưa chọn file PNG.');
+  const ten = tenGoc(req.file);
+  if (loaiTheoTen(ten) !== 'PNG') return loi(res, 'Chỉ nhận file .png, .jpg hoặc .jpeg.');
+  const xem = duocXemDon(req.session.user);
+  const m = xacDinhMa(req.params.sttKey, await layTapMa(), req.body?.xacNhanNgoaiSheet === '1', xem);
+  if (m.loi) return loi(res, m.loi);
+  if (m.canXacNhan) return res.json({ ketQua: 'CAN_XAC_NHAN', lyDo: m.canXacNhan });
+  if (!xem(m.sttKey)) return loi(res, `Đơn ${m.sttKey} ngoài phạm vi Xưởng của bạn.`, 403);
+  let kq;
+  try {
+    kq = await xuLy.luuMotFile({ buffer: req.file.buffer, sttKey: m.sttKey, tenFileGoc: ten, nguon: 'UPLOAD', nguoiTaiLen: req.session.user.ten });
+  } catch (err) {
+    console.error('[ThuVien] Upload PNG cho đơn thất bại:', m.sttKey, '-', err.message);
+    return loi(res, err.message, 502);
+  }
+  if (kq.ketQua === 'DA_LUU') {
+    ghiNhanMaMoi(m.sttKey);
+    ghiLog({ nguoiDung: req.session.user.ten, vaiTro: req.session.user.vaiTro, hanhDong: 'Upload PNG cho đơn thiếu ảnh', sttKey: m.sttKey, chiTiet: { ten } });
+  }
+  res.json({ ketQua: kq.ketQua, lyDo: kq.lyDo || '', id: kq.id || null });
+});
+
 // ---------- EMB của 1 đơn (chi tiết đơn) ----------
 // Xem trạng thái: ai xem được đơn (theo Xưởng) đều thấy; tải về / tải lên: ve_file, admin, superadmin.
 router.get('/emb/:sttKey', (req, res) => {

@@ -295,6 +295,7 @@ async function taiChiTiet() {
         </div>` : ''}
         <div id="khu-vuc-emb" style="margin:8px 0"></div>
         <div id="khu-thiet-ke-giong"></div>
+        <div id="canh-bao-png"></div>
         <table class="info-table">
           ${renderBangThongTin(don, viTri)}
         </table>
@@ -321,6 +322,7 @@ async function taiChiTiet() {
   renderKhuVucThaoTac(don);
   taiKhoiEmb();
   hienThietKeGiong();
+  hienCanhBaoPng();
 }
 
 // U2 Đối chiếu ảnh (11/10/2026, theo yêu cầu người dùng — spec 2026-10-04-21-tinh-nang-design.md mục 11): xem cạnh nhau mọi ảnh của
@@ -459,6 +461,54 @@ async function hienThietKeGiong() {
     </div>`).join('')}
     ${theoDon.size > ds.length || d.duGioiHan ? `<a href="/tim-anh.html?stt=${encodeURIComponent(maDonThat())}" style="align-self:center">Xem tất cả</a>` : ''}
     </div></div>`;
+}
+
+// Cảnh báo đơn thiếu PNG thiết kế: hiển thị cho ve_file/admin/superadmin khi DUONG_DAN_URL trống và chưa có PNG trong thư viện.
+async function hienCanhBaoPng() {
+  const el = document.getElementById('canh-bao-png');
+  if (!el || !laVaiTroThuVien()) return;
+  if (!donHienTai || donHienTai.DUONG_DAN_URL) { el.innerHTML = ''; return; }
+  let d;
+  try { d = await layDonThuVien(); } catch (e) { return; }
+  if (d.png && d.png.length > 0) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div style="margin:8px 0;padding:10px 12px;background:var(--color-warning-bg,#fff7ed);border:1px solid var(--color-warning,#f59e0b);border-radius:6px;font-size:0.9rem">
+    <strong>Đơn này chưa có ảnh PNG thiết kế trong thư viện.</strong>
+    Tải lên ảnh PNG để hệ thống tìm được thiết kế tương tự.<br>
+    <label style="display:inline-flex;gap:8px;align-items:center;margin-top:8px">
+      <input type="file" id="file-png-don" accept=".png,.jpg,.jpeg">
+      <button type="button" class="btn-hanh-dong" onclick="uploadPngChoDon(this)">Upload Ảnh PNG</button>
+    </label>
+    <span id="tt-upload-png" style="margin-left:8px;font-size:0.85rem;color:var(--color-text-muted)"></span>
+  </div>`;
+}
+
+async function uploadPngChoDon(btn) {
+  const input = document.getElementById('file-png-don');
+  const status = document.getElementById('tt-upload-png');
+  if (!input?.files.length) { alert('Chưa chọn file.'); return; }
+  btn.disabled = true;
+  status.textContent = 'Đang tải lên…';
+  const fd = new FormData();
+  fd.append('file', input.files[0], input.files[0].name);
+  try {
+    const kq = await apiFetch('/thu-vien/png-don/' + encodeURIComponent(maDonThat()), { method: 'POST', body: fd, headers: {} });
+    if (kq.ketQua === 'CAN_XAC_NHAN') {
+      if (!await hopXacNhan(`${kq.lyDo} Vẫn lưu PNG vào đơn ${maDonThat()}?`)) { btn.disabled = false; status.textContent = ''; return; }
+      fd.append('xacNhanNgoaiSheet', '1');
+      const kq2 = await apiFetch('/thu-vien/png-don/' + encodeURIComponent(maDonThat()), { method: 'POST', body: fd, headers: {} });
+      if (kq2.ketQua !== 'DA_LUU') { status.textContent = kq2.lyDo || 'Không lưu được.'; btn.disabled = false; return; }
+    } else if (kq.ketQua !== 'DA_LUU') {
+      status.textContent = kq.lyDo || 'Không lưu được.';
+      btn.disabled = false;
+      return;
+    }
+    _donThuVien = null;
+    hienCanhBaoPng();
+    hienThietKeGiong();
+  } catch (e) {
+    status.textContent = e.message;
+    btn.disabled = false;
+  }
 }
 
 // Tải lên EMB (12/10/2026, theo yêu cầu người dùng): chọn 1 file -> như cũ (tên file tuỳ ý). Chọn NHIỀU file hoặc cả thư mục ->
