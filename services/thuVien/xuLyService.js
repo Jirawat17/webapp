@@ -49,6 +49,17 @@ function lyDoBoQuaTheoDrive({ mimeType, kichThuoc }) {
   return '';
 }
 
+// Kiểm tra buffer có phải PNG không (magic bytes), và có nền trong suốt không (IHDR byte 25: colorType 4=Grayscale+A, 6=RGBA).
+// PNG spec: IHDR luôn là chunk đầu tiên, colorType luôn ở byte 25 — đọc thuần buffer, không cần sharp.
+function laPngBuffer(buf) {
+  return buf && buf.length >= 4 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47;
+}
+function coAlphaPng(buf) {
+  if (!laPngBuffer(buf) || buf.length < 26) return false;
+  const colorType = buf[25];
+  return colorType === 4 || colorType === 6;
+}
+
 // ---------- tiến trình con xử lý ảnh (xuLyAnhWorker.js) ----------
 // Quá THOI_GIAN_TOI_DA_XU_LY_ANH_MS -> SIGKILL tiến trình con (sharp treo native không giữ lại luồng nào của server chính),
 // mọi yêu cầu đang chờ trong tiến trình đó bị từ chối (-> file LOI_HASH, có nút Tính lại); lần sau tự tạo tiến trình mới.
@@ -179,8 +190,13 @@ async function luuMotFile({ buffer, sttKey, nguon, tenFileGoc = '', urlGoc = '',
   // Đã có trên MinIO — từ đây là file thật (không còn DANG_LUU). DANG_TINH = đang tính hash/thumbnail: KHÔNG dùng LOI_HASH làm trạng
   // thái tạm như bản đầu (thống kê/Cần xử lý đếm nhầm file đang xử lý dở là lỗi — gặp khi thử 03/10/2026).
   db.capNhatFile(id, { trang_thai: 'DANG_TINH' });
-  await tinhChiMuc(id, buffer, sha256, { demLoiLienTiep });
-  db.capNhatFile(id, { ms_xu_ly: Date.now() - batDau });
+  if (contentType === 'image/jpeg') {
+    // JPEG: lưu MinIO để hiển thị, không tính hash — không tham gia tìm ảnh tương tự
+    db.capNhatFile(id, { trang_thai: 'XONG', ms_xu_ly: Date.now() - batDau });
+  } else {
+    await tinhChiMuc(id, buffer, sha256, { demLoiLienTiep });
+    db.capNhatFile(id, { ms_xu_ly: Date.now() - batDau });
+  }
   baoHoatDong();
   kiemTraDiemDo();
   require('./goiYEmbService').tinhLaiSau(sttKey); // A1: require muộn — goiYEmbService kéo theo orderService
@@ -307,17 +323,60 @@ async function _xuLyViec(viec, conHieuLuc = () => true) {
     const tt = driveFileId && !daCoFile ? await layThongTinFileDrive(driveFileId) : null;
     const dsFile = !laMinio && !daCoFile ? await layChiTietAnhThuMucDrive(viec.url) : null; // lỗi liệt kê -> throw (khác thư mục rỗng)
     if (dsFile) {
-      if (!dsFile.length) boQua.push('Thư mục Drive không có ảnh nào');
-      for (const f of dsFile) {
-        if (!conHieuLuc()) return;
-        if (dangTamDung()) { dungGiuaChung = true; break; }
-        baoHoatDong();
-        const lyDo = lyDoBoQuaTheoDrive(f);
-        if (lyDo) { boQua.push(`${f.ten}: ${lyDo}`); continue; }
-        if (db.daCoDriveFile(viec.stt_key, f.id)) continue;
-        const buffer = await taiFileDriveTheoId(f.id);
-        if (!buffer) { loiTam.push(`${f.ten}: không tải được từ Drive`); continue; }
-        try { ghiNhan(f.ten, await luuMotFile({ ...chung, buffer, tenFileGoc: f.ten, driveFileId: f.id })); } catch (err) { loiTam.push(`${f.ten}: ${err.message}`); }
+      if (!dsFile.length) {
+        boQua.push('Thư mục Drive không có ảnh nào');
+      } else {
+        // Lượt 1: tải file PNG (image/png + application/octet-stream), phân nhóm theo alpha.
+        // Lượt 2: chỉ chạy khi lượt 1 không tìm thấy PNG nào — tải JPEG còn lại.
+        const laNhomPng = f => f.mimeType === 'image/png' || f.mimeType === 'application/octet-stream' || !f.mimeType;
+        const nhom1 = [], nhom2 = [], nhom3Tai = []; // nhom1: PNG+alpha, nhom2: PNG-alpha, nhom3Tai: octet-stream hoá ra JPEG (đã tải)
+        for (const f of dsFile.filter(laNhomPng)) {
+          if (!conHieuLuc()) return;
+          if (dangTamDung()) { dungGiuaChung = true; break; }
+          baoHoatDong();
+          const lyDo = lyDoBoQuaTheoDrive(f);
+          if (lyDo) { boQua.push(`${f.ten}: ${lyDo}`); continue; }
+          if (db.daCoDriveFile(viec.stt_key, f.id)) continue;
+          const buf = await taiFileDriveTheoId(f.id);
+          if (!buf) { loiTam.push(`${f.ten}: không tải được từ Drive`); continue; }
+          if (coAlphaPng(buf)) nhom1.push({ f, buf });
+          else if (laPngBuffer(buf)) nhom2.push({ f, buf });
+          else nhom3Tai.push({ f, buf }); // octet-stream nhưng thực ra là JPEG
+        }
+        if (!dungGiuaChung) {
+          const dsLuu = nhom1.length ? nhom1 : nhom2.length ? nhom2 : null;
+          if (dsLuu) {
+            // Có PNG — bỏ qua toàn bộ JPEG trong folder
+            [...(nhom1.length ? nhom2 : []), ...nhom3Tai].forEach(({ f }) =>
+              boQua.push(`${f.ten}: JPEG/PNG không alpha (bỏ qua — đã có PNG${nhom1.length ? ' thiết kế' : ''})`)
+            );
+            dsFile.filter(f => !laNhomPng(f)).forEach(f =>
+              boQua.push(`${f.ten}: JPEG (bỏ qua — đã có PNG${nhom1.length ? ' thiết kế' : ''})`)
+            );
+            for (const { f, buf } of dsLuu) {
+              if (!conHieuLuc()) return;
+              try { ghiNhan(f.ten, await luuMotFile({ ...chung, buffer: buf, tenFileGoc: f.ten, driveFileId: f.id })); } catch (err) { loiTam.push(`${f.ten}: ${err.message}`); }
+            }
+          } else {
+            // Không có PNG — lượt 2: lưu JPEG (đã tải từ nhom3Tai + còn chưa tải từ dsJpegDrive)
+            for (const { f, buf } of nhom3Tai) {
+              if (!conHieuLuc()) return;
+              if (dangTamDung()) { dungGiuaChung = true; break; }
+              try { ghiNhan(f.ten, await luuMotFile({ ...chung, buffer: buf, tenFileGoc: f.ten, driveFileId: f.id })); } catch (err) { loiTam.push(`${f.ten}: ${err.message}`); }
+            }
+            for (const f of dsFile.filter(f => !laNhomPng(f))) {
+              if (!conHieuLuc()) return;
+              if (dangTamDung()) { dungGiuaChung = true; break; }
+              baoHoatDong();
+              const lyDo = lyDoBoQuaTheoDrive(f);
+              if (lyDo) { boQua.push(`${f.ten}: ${lyDo}`); continue; }
+              if (db.daCoDriveFile(viec.stt_key, f.id)) continue;
+              const buf = await taiFileDriveTheoId(f.id);
+              if (!buf) { loiTam.push(`${f.ten}: không tải được từ Drive`); continue; }
+              try { ghiNhan(f.ten, await luuMotFile({ ...chung, buffer: buf, tenFileGoc: f.ten, driveFileId: f.id })); } catch (err) { loiTam.push(`${f.ten}: ${err.message}`); }
+            }
+          }
+        }
       }
     } else {
       if (driveFileId) {

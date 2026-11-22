@@ -383,7 +383,7 @@ router.post('/upload', requireRole(...VAI_TRO_MENU), uploadFile.single('file'), 
 router.post('/png-don/:sttKey', requireRole(...VAI_TRO_MENU), uploadFile.single('file'), async (req, res) => {
   if (!req.file) return loi(res, 'Chưa chọn file PNG.');
   const ten = tenGoc(req.file);
-  if (loaiTheoTen(ten) !== 'PNG') return loi(res, 'Chỉ nhận file .png, .jpg hoặc .jpeg.');
+  if (nhanDangKieuAnh(req.file.buffer) !== 'image/png') return loi(res, 'Chỉ nhận file PNG (ảnh JPG/JPEG không tính hash và không tham gia tìm ảnh tương tự).');
   const xem = duocXemDon(req.session.user);
   const m = xacDinhMa(req.params.sttKey, await layTapMa(), req.body?.xacNhanNgoaiSheet === '1', xem);
   if (m.loi) return loi(res, m.loi);
