@@ -1012,6 +1012,31 @@ router.post('/danh-dau-uu-tien', async (req, res) => {
   res.json({ ok: true, thanhCong, loi });
 });
 
+// Superadmin nhập mã đơn để đánh dấu ưu tiên có timestamp (dùng cho ticker T1/T2). Chỉ set TRUE (không
+// bỏ ưu tiên), không gọi orderService.update() để tránh side-effect phức tạp — ghi thẳng trangThaiDbService.
+router.post('/them-uu-tien', async (req, res) => {
+  const user = req.session.user;
+  if (!laSuperAdmin(user.vaiTro)) return res.status(403).json({ error: 'Chỉ superadmin' });
+  const { ma } = req.body || {};
+  if (!ma || typeof ma !== 'string') return res.status(400).json({ error: 'Thiếu mã đơn' });
+  const sttKey = ma.trim().toUpperCase();
+  if (!sttKey) return res.status(400).json({ error: 'Mã đơn không hợp lệ' });
+
+  const { banDoTheoKey } = await orderService.getManyByKeys([sttKey], { fresh: true });
+  const row = banDoTheoKey.get(sttKey);
+  if (!row) return res.status(404).json({ error: `Không tìm thấy đơn ${sttKey}` });
+
+  const now = new Date().toISOString();
+  trangThaiDbService.ghiDe(sttKey, {
+    DON_UU_TIEN: 'TRUE',
+    THOI_GIAN_DANH_UU_TIEN: now,
+    NguoiCapNhatCuoi: user.ten,
+    ThoiGianCapNhatCuoi: now,
+  });
+  ghiLog({ nguoiDung: user.ten, vaiTro: user.vaiTro, hanhDong: 'DANH_DAU_UU_TIEN', sttKey, chiTiet: { uuTien: true, thoiGian: now, nguon: 'them-uu-tien' } }).catch(() => {});
+  res.json({ ok: true, ma: sttKey });
+});
+
 // Mật khẩu xác nhận riêng cho 2 thao tác PHÁ HUỶ/KHÔI PHỤC dữ liệu đơn hàng (bổ sung 24/09/2026, theo
 // yêu cầu người dùng) — CHỈ là 1 lớp xác nhận CHỦ ĐÍCH thêm (đứng SAU laSuperAdmin(), vốn đã là lớp
 // phân quyền thật qua session), không phải mật khẩu tài khoản: mục đích là chặn bấm nhầm/dùng ẩu khi

@@ -157,7 +157,7 @@ function boSungKetQua(ketQua, maSheet) {
   const theoId = new Map(db.layFileTheoIds(ketQua.map(r => r.id)).map(f => [f.id, f]));
   const emb = db.embChinhCuaCacDon(ketQua.map(r => r.stt_key));
   const nguong = nguongService.layNguong(); // null = chưa chọn ngưỡng -> chỉ nhóm Trùng file
-  return ketQua.filter(r => theoId.has(r.id)).map(r => {
+  const ket = ketQua.filter(r => theoId.has(r.id)).map(r => {
     const e = emb.get(r.stt_key);
     return {
       ...r, ...hienThiFile(theoId.get(r.id)), nhom: nguongService.phanNhom(r, nguong),
@@ -165,6 +165,11 @@ function boSungKetQua(ketQua, maSheet) {
       trongSheet: maSheet ? maSheet.has(r.stt_key) : null,
     };
   });
+  // Trùng file: đơn có EMB đứng trước đơn không có EMB (cùng sha256 — biết ngay đơn nào đã có file EMB để tái sử dụng)
+  const trung = ket.filter(r => r.trungFile);
+  const khac = ket.filter(r => !r.trungFile);
+  trung.sort((a, b) => (b.emb ? 1 : 0) - (a.emb ? 1 : 0));
+  return [...trung, ...khac];
 }
 
 // ---------- tìm kiếm (ve_file, admin, superadmin) ----------
@@ -235,7 +240,7 @@ router.post('/tim-theo-anh', requireRole(...VAI_TRO_MENU), uploadFile.single('an
 });
 
 // A3 (11/10/2026, theo yêu cầu người dùng — spec 2026-10-04-21-tinh-nang-design.md mục 3): tìm theo LINK ảnh khách gửi (Drive file/thư
-// mục, Gemini, URL thường). Tải qua anhNguonService (đã chặn địa chỉ nội bộ, trần 50MB, hạn 60 giây/ảnh); thư mục lấy tối đa 5 ảnh,
+// mục, Gemini, URL thường). Tải qua anhNguonService (đã chặn địa chỉ nội bộ, trần 50MB, hạn 60 giây/ảnh); thư mục lấy tối đa 15 ảnh,
 // mỗi ảnh là 1 mẫu so sánh. Ảnh không phải PNG/JPEG hoặc > 30MB bỏ qua kèm lý do. Hạn tổng 90 giây (dưới mức 100 giây của
 // Cloudflare). Ảnh chỉ nằm trong bộ nhớ, KHÔNG lưu vào thư viện. Link ảnh của chính app (/api/photos/file/...) bị từ chối: đường
 // tải đó đọc thẳng MinIO, không qua kiểm tra Xưởng của người xem.
@@ -251,13 +256,13 @@ router.post('/tim-theo-link', requireRole(...VAI_TRO_MENU), async (req, res) => 
   if (sttKeyMoi === undefined) return;
   let hen;
   const ds = await Promise.race([
-    taiDsAnh(url, { gioiHan: 5 }),
+    taiDsAnh(url, { gioiHan: 15 }),
     new Promise(r => { hen = setTimeout(() => r(null), HAN_TIM_THEO_LINK_MS); }),
   ]).finally(() => clearTimeout(hen));
   if (ds === null) return loi(res, 'Link tải quá lâu, hãy tải ảnh về rồi dán vào.');
   if (!ds.length) return loi(res, 'Không tải được ảnh nào từ link này (link hỏng, chưa chia sẻ quyền xem, hoặc không phải ảnh).');
   const mau = [], boQua = [];
-  for (const [i, buf] of ds.slice(0, 5).entries()) {
+  for (const [i, buf] of ds.slice(0, 15).entries()) {
     const nhan = ds.length > 1 ? `Ảnh ${i + 1}` : 'Ảnh từ link';
     if (!nhanDangKieuAnh(buf)) { boQua.push(`${nhan}: không phải PNG/JPEG`); continue; }
     if (buf.length > KICH_THUOC_ANH_TIM_TOI_DA) { boQua.push(`${nhan}: lớn hơn 30MB`); continue; }

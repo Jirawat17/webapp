@@ -617,6 +617,23 @@ function xoaGoogleSheet(team) {
   db.prepare(`DELETE FROM google_sheet_team WHERE team = ?`).run(String(team).toUpperCase());
 }
 
+// ---------- CaiDatCanhBaoUuTien — T1/T2 (giờ) cho ticker cảnh báo đơn ưu tiên ----------
+db.exec(`CREATE TABLE IF NOT EXISTS cai_dat_canh_bao_uu_tien (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  T1_Gio TEXT NOT NULL DEFAULT '12',
+  T2_Gio TEXT NOT NULL DEFAULT '24'
+)`);
+function layCaiDatCanhBaoUuTien() {
+  return db.prepare(`SELECT T1_Gio, T2_Gio FROM cai_dat_canh_bao_uu_tien WHERE id = 1`).get()
+    || { T1_Gio: '12', T2_Gio: '24' };
+}
+function datCaiDatCanhBaoUuTien({ T1_Gio, T2_Gio }) {
+  db.prepare(`
+    INSERT INTO cai_dat_canh_bao_uu_tien (id, T1_Gio, T2_Gio) VALUES (1, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET T1_Gio = excluded.T1_Gio, T2_Gio = excluded.T2_Gio
+  `).run(String(T1_Gio ?? '12'), String(T2_Gio ?? '24'));
+}
+
 module.exports = {
   layGioDongXuong, datGioDongXuong, datMoTamXuong, layMatKhauXacNhan, datMatKhauXacNhan,
   danhDauGkeHetTien, boDanhDauGkeHetTien, ghiDaBaoGkeHetTien, datSoDuGke, truSoDuGke, giuBaoSoDuGke, ketThucBaoSoDuGke,
@@ -631,6 +648,7 @@ module.exports = {
   layCauHinhTracking, datCauHinhTracking, CAC_COT_CAU_HINH_TRACKING,
   layCaiDatCanhBao, datCaiDatCanhBao,
   layCaiDatNenAnh, datCaiDatNenAnh,
+  layCaiDatCanhBaoUuTien, datCaiDatCanhBaoUuTien,
   layMauTheoXuong, datMauXuong,
   layDanhSachXuong, themXuong, xoaXuong, doiTenXuong,
   layTeamXuongMacDinh, ganTeamXuongMacDinh,

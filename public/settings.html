@@ -65,7 +65,7 @@
 
   <details id="details-ticker" style="margin-top:var(--space-6)">
     <summary class="btn-hanh-dong phu">Ticker đơn ưu tiên</summary>
-    <p>Dải chữ chạy ngang phía dưới menu, hiển thị các đơn đang được đánh dấu ưu tiên (chỉ superadmin/admin/vẽ file thấy). Thay đổi có hiệu lực sau khi tải lại trang.</p>
+    <p>Dải chữ chạy ngang phía dưới menu, hiển thị các đơn đang được đánh dấu ưu tiên (mọi tài khoản đã đăng nhập đều thấy). Thay đổi có hiệu lực sau khi tải lại trang.</p>
     <label style="display:flex;align-items:center;gap:var(--space-3);margin-top:var(--space-3)">
       <span style="white-space:nowrap">Tốc độ chạy:</span>
       <input type="range" id="ticker-speed-inp" min="10" max="120" step="5" style="flex:1;accent-color:var(--color-primary)">
@@ -83,6 +83,21 @@
     </label>
     <button type="button" class="btn-hanh-dong" id="btn-luu-ticker" style="margin-top:var(--space-3)">Lưu</button>
     <span id="ticker-speed-msg" style="margin-left:var(--space-3);font-size:0.9rem;color:var(--color-success);display:none">Đã lưu, tải lại trang để áp dụng.</span>
+    <div id="khoi-t1-t2-ticker" style="display:none;margin-top:var(--space-4);padding-top:var(--space-4);border-top:1px solid var(--color-border)">
+      <p style="margin:0 0 var(--space-3)">Thời gian cảnh báo đơn ưu tiên (tính từ khi đánh dấu ưu tiên, chỉ superadmin thay đổi được):</p>
+      <label style="display:flex;align-items:center;gap:var(--space-3)">
+        <span style="white-space:nowrap;min-width:260px">Thời gian cảnh báo đơn ưu tiên - T1:</span>
+        <input type="number" id="t1-gio-inp" min="0.5" step="0.5" style="width:7em;padding:4px 8px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface);color:var(--color-text)">
+        <span>giờ</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:var(--space-3);margin-top:var(--space-2)">
+        <span style="white-space:nowrap;min-width:260px">Thời gian cảnh báo đơn ưu tiên lần 2 - T2:</span>
+        <input type="number" id="t2-gio-inp" min="0.5" step="0.5" style="width:7em;padding:4px 8px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface);color:var(--color-text)">
+        <span>giờ</span>
+      </label>
+      <button type="button" class="btn-hanh-dong" id="btn-luu-t1-t2" style="margin-top:var(--space-3)">Lưu T1/T2</button>
+      <span id="t1-t2-msg" style="margin-left:var(--space-3);font-size:0.9rem;display:none"></span>
+    </div>
   </details>
 
   <!-- Thời gian cảnh báo tự động (bổ sung 23/09/2026, theo yêu cầu người dùng) — thay 3 ngưỡng ngày
@@ -411,7 +426,7 @@
 </div>
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=141"></script>
+<script src="/js/api.js?v=142"></script>
 <script>
 (async () => {
   const user = await requireLoginOrRedirect();
@@ -486,6 +501,32 @@
       setTimeout(() => { msg.style.display = 'none'; }, 3000);
     };
   })();
+
+  // T1/T2 cảnh báo đơn ưu tiên — CHỈ superadmin
+  if (laSuperAdmin(user.vaiTro)) {
+    const khoiT1T2 = document.getElementById('khoi-t1-t2-ticker');
+    if (khoiT1T2) {
+      khoiT1T2.style.display = '';
+      apiFetch('/canh-bao/uu-tien').then(d => {
+        document.getElementById('t1-gio-inp').value = d.T1_Gio || '12';
+        document.getElementById('t2-gio-inp').value = d.T2_Gio || '24';
+      }).catch(() => {});
+      document.getElementById('btn-luu-t1-t2').onclick = async () => {
+        const msgEl = document.getElementById('t1-t2-msg');
+        try {
+          await apiFetch('/canh-bao/uu-tien', { method: 'POST', body: JSON.stringify({
+            T1_Gio: document.getElementById('t1-gio-inp').value,
+            T2_Gio: document.getElementById('t2-gio-inp').value,
+          }) });
+          msgEl.textContent = 'Đã lưu.'; msgEl.style.color = 'var(--color-success)';
+        } catch (e) {
+          msgEl.textContent = e.message || 'Lỗi'; msgEl.style.color = 'var(--color-danger-text)';
+        }
+        msgEl.style.display = '';
+        setTimeout(() => { msgEl.style.display = 'none'; }, 3000);
+      };
+    }
+  }
 })();
 
 // ---------- Đồng bộ Sheet Seller (28/09/2026) ----------

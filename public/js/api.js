@@ -965,7 +965,7 @@ function renderNav(user, active) {
 }
 // Ticker đơn ưu tiên — hiển thị ở Đơn hàng / Chạy máy / Vẽ file, sau #nav
 async function khoiDongTicker(user) {
-  if (!laAdmin(user.vaiTro) && user.vaiTro !== 've_file' && user.vaiTro !== 'san_xuat') return;
+  if (!user) return;
   if (window._tickerDaKhoiDong) return; // tránh gọi lại khi renderNav chạy nhiều lần
   window._tickerDaKhoiDong = true;
 
@@ -998,9 +998,10 @@ async function khoiDongTicker(user) {
     try { data = await apiFetch('/ticker'); } catch (e) { console.error('[ticker] lỗi API:', e.message, e.status); return; }
     if (!data.donUuTien || !data.donUuTien.length) { wrap.style.display = 'none'; return; }
     const tongSL = data.donUuTien.reduce((s, { sl }) => s + (parseInt(sl, 10) || 0), 0);
-    const nhan = data.donUuTien.map(({ ma }) =>
-      `<span class="ticker-ma" onclick="location.href='/order.html?stt=${encodeURIComponent(ma)}'">${escapeHtml(ma)}</span>`
-    ).join('');
+    const nhan = data.donUuTien.map(({ ma, cap, thongBao }) => {
+      const noi = (cap === 1 || cap === 2) ? escapeHtml(thongBao) : escapeHtml(ma);
+      return `<span class="ticker-ma" onclick="location.href='/order.html?stt=${encodeURIComponent(ma)}'">${noi}</span>`;
+    }).join('   ');
     // Duplicate để CSS -50% loop mượt
     const mot = `🔴 Đơn ưu tiên${tongSL ? ` · Tổng SL: ${tongSL}` : ''}: ${nhan}    `;
     wrap.innerHTML = `<span class="ticker-track">${mot}${mot}</span>`;

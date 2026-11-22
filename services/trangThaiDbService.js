@@ -32,7 +32,7 @@ const CAC_COT = [
   // chuyển "Đã sản xuất" khi chụp xong cả lượt): ảnh thứ 2 + lúc lưu ẢNH 1 của lượt đang chụp (routes/photos.js#soAnhSanXuatLuotNay).
   'Anh_Da_San_Xuat_URL_2', 'THOI_GIAN_ANH_SAN_XUAT',
   'NGUOI_VE_FILE', 'GHI_CHU_VE_FILE', 'NGUOI_CHAY_MAY', 'GHI_CHU_CHAY_MAY', 'HASH_ANH_MAU', 'NHOM_HANG_LOAT',
-  'AUTO_TRACKING', 'THOI_GIAN_IN_MA', 'IN_LABEL', 'THOI_GIAN_IN_LABEL', 'DON_UU_TIEN', 'TAM_THOI',
+  'AUTO_TRACKING', 'THOI_GIAN_IN_MA', 'IN_LABEL', 'THOI_GIAN_IN_LABEL', 'DON_UU_TIEN', 'THOI_GIAN_DANH_UU_TIEN', 'TAM_THOI',
   // THOI_GIAN_SAN_XUAT (29/09/2026) — lần gần nhất đơn chuyển sang "Đã sản xuất"; mốc tính giờ tự động mua
   // tracking (services/trackingAutoService.js). AUTO_TRACKING giữ cột cũ nhưng không còn dùng trong logic.
   // (THOI_GIAN_CHAY_MAY — mốc cũ bản trước, đã bỏ; cột có thể còn trong DB, không ảnh hưởng.)

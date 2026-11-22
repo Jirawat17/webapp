@@ -50,12 +50,25 @@
       <button type="button" class="btn-hanh-dong btn-thue-team-khac" id="btn-thue-team-khac" onclick="xuatThueTeamKhac(this)" style="display:none">THUÊ TEAM KHÁC</button>
       <!-- CHUYỂN TRẠNG THÁI THỦ CÔNG SUPERADMIN (bổ sung 25/09/2026) — CHỈ superadmin, hiện qua JS. -->
       <button type="button" class="btn-hanh-dong phu nguy-hiem" id="btn-mo-superadmin" onclick="batTatPanelSuperadmin()" style="display:none">CHUYỂN TRẠNG THÁI THỦ CÔNG SUPERADMIN</button>
+      <!-- ĐÁNH DẤU ƯU TIÊN (bổ sung 21/11/2026) — CHỈ superadmin, hiện qua JS. -->
+      <button type="button" class="btn-hanh-dong phu" id="btn-mo-danh-uu-tien" onclick="batTatPanelDanhUuTien()" style="display:none">ĐÁNH DẤU ƯU TIÊN</button>
     </div>
   </div>
 
   <!-- Cảnh báo đơn đã thử TỰ ĐỘNG mua tracking 10 lần không được -> chuyển mua thủ công (30/09/2026) — chỉ vai trò có menu
        Tracking; API tự chặn vai trò khác (routes/tracking.js GET /canh-bao-thu-cong). -->
   <div id="canh-bao-thu-cong" style="display:none"></div>
+
+  <div id="panel-danh-uu-tien" class="panel-dieu-khien" style="display:none">
+    <div class="inline-form" style="align-items:flex-end">
+      <div class="truong" style="flex:1;min-width:200px">
+        <label for="uu-tien-ma-don">Mã đơn</label>
+        <input type="text" id="uu-tien-ma-don" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()" placeholder="Ví dụ: 11MYA01">
+      </div>
+      <button type="button" class="btn-hanh-dong" id="btn-xac-nhan-uu-tien">Đánh dấu</button>
+    </div>
+    <div id="uu-tien-ket-qua" style="margin-top:8px;font-size:0.9rem"></div>
+  </div>
 
   <div id="panel-superadmin" class="panel-dieu-khien" style="display:none">
     <div style="background:var(--color-danger-bg);color:var(--color-danger-text);border:3px solid var(--color-danger-text);border-radius:8px;padding:16px;margin-bottom:12px;font-size:1.15rem;font-weight:700;line-height:1.5">
@@ -355,7 +368,7 @@
 </div>
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=141"></script>
+<script src="/js/api.js?v=142"></script>
 <script src="/js/suaThongTinGke.js?v=2"></script>
 <script>
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
@@ -600,6 +613,7 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
   if (laSuperAdmin(user.vaiTro)) {
     document.getElementById('khoi-xoa-du-lieu-don').style.display = 'contents';
     document.getElementById('btn-mo-superadmin').style.display = '';
+    document.getElementById('btn-mo-danh-uu-tien').style.display = '';
     document.getElementById('sa-trang-thai').innerHTML = DANH_SACH_TRANG_THAI_DAY_DU
       .map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
   }
@@ -672,6 +686,32 @@ function batTatPanelSuperadmin() {
   const el = document.getElementById('panel-superadmin');
   el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
+
+function batTatPanelDanhUuTien() {
+  const el = document.getElementById('panel-danh-uu-tien');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+(function khoiDongDanhUuTien() {
+  const btn = document.getElementById('btn-xac-nhan-uu-tien');
+  if (!btn) return;
+  btn.onclick = async () => {
+    const ma = (document.getElementById('uu-tien-ma-don').value || '').trim().toUpperCase();
+    const kq = document.getElementById('uu-tien-ket-qua');
+    if (!ma) { kq.textContent = 'Hãy nhập mã đơn'; kq.style.color = 'var(--color-danger-text)'; return; }
+    btn.disabled = true;
+    try {
+      await apiFetch('/orders/them-uu-tien', { method: 'POST', body: JSON.stringify({ ma }) });
+      kq.textContent = `Đã đánh dấu ưu tiên: ${ma}`;
+      kq.style.color = 'var(--color-success)';
+      document.getElementById('uu-tien-ma-don').value = '';
+    } catch (e) {
+      kq.textContent = e.message || 'Lỗi';
+      kq.style.color = 'var(--color-danger-text)';
+    }
+    btn.disabled = false;
+  };
+})();
 
 async function apDungChuyenSuperadmin(btn) {
   const danhSachDon = document.getElementById('sa-danh-sach-don').value.toUpperCase();
