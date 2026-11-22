@@ -469,7 +469,10 @@ async function hienCanhBaoPng() {
   if (!el || !laVaiTroThuVien()) return;
   if (!donHienTai || donHienTai.DUONG_DAN_URL) { el.innerHTML = ''; return; }
   let d;
-  try { d = await layDonThuVien(); } catch (e) { return; }
+  try { d = await layDonThuVien(); } catch (e) {
+    el.innerHTML = '<div style="margin:8px 0;padding:6px 12px;background:var(--color-warning-bg,#fff7ed);border:1px solid var(--color-warning,#f59e0b);border-radius:6px;font-size:0.85rem">Không tải được thư viện; kiểm tra lại sau.</div>';
+    return;
+  }
   if (d.png && d.png.length > 0) { el.innerHTML = ''; return; }
   el.innerHTML = `<div style="margin:8px 0;padding:10px 12px;background:var(--color-warning-bg,#fff7ed);border:1px solid var(--color-warning,#f59e0b);border-radius:6px;font-size:0.9rem">
     <strong>Đơn này chưa có ảnh PNG thiết kế trong thư viện.</strong>
@@ -494,8 +497,10 @@ async function uploadPngChoDon(btn) {
     const kq = await apiFetch('/thu-vien/png-don/' + encodeURIComponent(maDonThat()), { method: 'POST', body: fd, headers: {} });
     if (kq.ketQua === 'CAN_XAC_NHAN') {
       if (!await hopXacNhan(`${kq.lyDo} Vẫn lưu PNG vào đơn ${maDonThat()}?`)) { btn.disabled = false; status.textContent = ''; return; }
-      fd.append('xacNhanNgoaiSheet', '1');
-      const kq2 = await apiFetch('/thu-vien/png-don/' + encodeURIComponent(maDonThat()), { method: 'POST', body: fd, headers: {} });
+      const fd2 = new FormData();
+      fd2.append('file', input.files[0], input.files[0].name);
+      fd2.append('xacNhanNgoaiSheet', '1');
+      const kq2 = await apiFetch('/thu-vien/png-don/' + encodeURIComponent(maDonThat()), { method: 'POST', body: fd2, headers: {} });
       if (kq2.ketQua !== 'DA_LUU') { status.textContent = kq2.lyDo || 'Không lưu được.'; btn.disabled = false; return; }
     } else if (kq.ketQua !== 'DA_LUU') {
       status.textContent = kq.lyDo || 'Không lưu được.';
