@@ -302,7 +302,7 @@ async function taiChiTiet() {
         <div id="khu-vuc-thao-tac"></div>
       </div>
 
-      ${user.vaiTro !== 'superadmin' ? '' : `
+      ${(user.vaiTro !== 'superadmin' && user.vaiTro !== 'admin') ? '' : `
       <div>
         <h3>Lịch sử thay đổi</h3>
         <div class="timeline">
