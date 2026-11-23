@@ -52,9 +52,9 @@ const VAI_TRO_THAY_GIOI_HAN_THU = ['admin', 'superadmin', 've_file'];
 
 async function layLichSuTheoDon(sttKey, nguoiXem) {
   const vaiTro = nguoiXem && typeof nguoiXem === 'object' ? nguoiXem.vaiTro : nguoiXem;
-  // Lịch sử thay đổi của đơn CHỈ superadmin xem (22/10/2026, theo yêu cầu người dùng) — chặn ở đây nên mọi nơi gọi đều theo:
-  // Chi tiết đơn (routes/orders.js), tra cứu QR (routes/qr.js), chatbot (routes/chatbot.js). Vai trò khác nhận mảng rỗng.
-  if (vaiTro !== 'superadmin') return [];
+  // Lịch sử thay đổi của đơn: superadmin và admin xem được (admin thấy phiên bản đã lọc tên Xưởng qua ganMoTa).
+  // Vai trò khác nhận mảng rỗng.
+  if (vaiTro !== 'superadmin' && vaiTro !== 'admin') return [];
   const rows = nhatKyDbService.layTatCaLichSuHoatDong();
   const duocThayGioiHan = VAI_TRO_THAY_GIOI_HAN_THU.includes(vaiTro);
   const coDon = r => (r.STT_Key === sttKey
