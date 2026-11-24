@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Đơn hàng — Xưởng Thêu</title>
-<link rel="stylesheet" href="/css/style.css?v=112">
+<link rel="stylesheet" href="/css/style.css?v=113">
 <script src="/js/theme.js?v=104"></script>
 </head>
 <body>
@@ -1030,13 +1030,12 @@ function renderDanhSachDon() {
       ${(() => {
         const mockupSrc = o.MOCKUP ? (urlAnhHienThiList(o.MOCKUP)[0] || '') : '';
         if (!o.DUONG_DAN_URL && !mockupSrc) return '';
-        const imgs = [];
-        if (o.DUONG_DAN_URL) {
-          const fallbackPng = escapeHtml(urlAnhHienThiList(o.DUONG_DAN_URL)[0] || '');
-          imgs.push(`<img class="anh-png-don" src="" alt="" loading="lazy" onerror="this.remove()" style="display:none"${fallbackPng ? ` data-src-fallback="${fallbackPng}"` : ''}>`);
-        }
-        if (mockupSrc) imgs.push(`<img src="${escapeHtml(mockupSrc)}" alt="" loading="lazy" onerror="this.remove()">`);
-        return `<div class="nhom-anh-dai-dien">${imgs.join('')}</div>`;
+        const fallbackPng = o.DUONG_DAN_URL ? escapeHtml(urlAnhHienThiList(o.DUONG_DAN_URL)[0] || '') : '';
+        const pngImg = o.DUONG_DAN_URL
+          ? `<img class="anh-png-don" src="" alt="" loading="lazy" onerror="this.style.display='none'" style="display:none"${fallbackPng ? ` data-src-fallback="${fallbackPng}"` : ''}>`
+          : '';
+        const mockupImg = mockupSrc ? `<img src="${escapeHtml(mockupSrc)}" alt="" loading="lazy" onerror="this.style.display='none'">` : '';
+        return `<div class="nhom-anh-dai-dien"><div class="slot-anh">${pngImg}</div><div class="slot-anh">${mockupImg}</div></div>`;
       })()}
       <div class="thong-tin">
         ${htmlTieuDeThe(o)}
@@ -1085,8 +1084,7 @@ async function taiAnhPngDaiDien() {
   try {
     kq = await apiFetch('/thu-vien/anh-dai-dien-don', { method: 'POST', body: JSON.stringify({ keys }) });
   } catch (e) {
-    imgs.forEach(img => img.remove());
-    return;
+    return; // .slot-anh tự hiển thị nền trắng
   }
   for (const [sttKey, url] of Object.entries(kq || {})) {
     document.querySelectorAll(`.order-card[data-stt="${CSS.escape(sttKey)}"] .anh-png-don`).forEach(img => {
@@ -1094,12 +1092,11 @@ async function taiAnhPngDaiDien() {
       else {
         const fb = img.dataset.srcFallback;
         if (fb) { img.src = fb; img.style.display = ''; }
-        else img.remove();
+        // null + no fallback: .slot-anh giữ nền trắng
       }
     });
   }
-  // Xoá ảnh PNG nào vẫn còn src="" (không có trong kết quả, vd vai trò không có quyền thư viện)
-  imgs.forEach(img => { if (img.getAttribute('src') === '') img.remove(); });
+  // src="" còn lại (key không có trong kết quả): .slot-anh đã có nền trắng, không cần remove
 }
 
 function taiThemDon() {
