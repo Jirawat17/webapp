@@ -271,6 +271,27 @@ function layFileTheoIds(ids) {
 function dsFileCuaDon(sttKey) {
   return db.prepare(`SELECT ${COT_HIEN_THI} FROM tv_file WHERE stt_key = ? AND trang_thai != 'DANG_LUU' ORDER BY loai DESC, so_thu_tu`).all(sttKey);
 }
+// PNG đại diện cho nhiều đơn 1 lần (dùng cho ảnh xem trước danh sách đơn) — ảnh đầu tiên theo so_thu_tu
+// (alpha PNG được lưu trước theo 2-pass logic, nên so_thu_tu thấp nhất = ưu tiên nền trong).
+// -> { sttKey: object_key }
+function pngDaiDienCacDon(sttKeys) {
+  if (!sttKeys.length) return {};
+  const ph = sttKeys.map(() => '?').join(',');
+  const rows = db.prepare(`
+    SELECT t.stt_key, t.object_key
+    FROM tv_file t
+    INNER JOIN (
+      SELECT stt_key, MIN(so_thu_tu) AS min_stt
+      FROM tv_file
+      WHERE stt_key IN (${ph}) AND loai = 'PNG' AND trang_thai = 'XONG'
+      GROUP BY stt_key
+    ) m ON t.stt_key = m.stt_key AND t.so_thu_tu = m.min_stt
+       AND t.loai = 'PNG' AND t.trang_thai = 'XONG'
+  `).all(...sttKeys);
+  const kq = {};
+  for (const r of rows) kq[r.stt_key] = r.object_key;
+  return kq;
+}
 // EMB bản chính của nhiều đơn 1 lần -> Map stt_key -> { id, ten_file_goc, so_thu_tu, ngay_luu }.
 function embChinhCuaCacDon(sttKeys) {
   const kq = new Map();
@@ -483,6 +504,7 @@ module.exports = {
   ghiGoiYEmb, xoaGoiYEmb, xoaGoiYEmbNgoai, layGoiYEmbCacDon, dsMaCoEmbXong,
   layPhienBanChiMuc, layIdDoiSauPhienBan, dsChiMucPng, layFileTheoIds, dsFileCuaDon, embChinhCuaCacDon, dsMaTrongThuVien, demViecChuaXongCuaDon,
   datBanChinhEmb, duaEmbVaoLoTai, dsEmbChinh, tenSoSanh, themQuyetDinh, dsQuyetDinhCuaDon,
+  pngDaiDienCacDon,
   layNguonDon, ghiNguonDon, luuCapDanhGia, dsCapDanhGia, xoaCapDanhGia, layPngNgauNhien,
   thongKeTheoDon, shaTrungNhieuDon, viecChuaXongTheoDon,
   layCaiDat, datCaiDat,

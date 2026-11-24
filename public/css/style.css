@@ -399,7 +399,7 @@ body.trang-dang-nhap {
    cùng ngày, theo yêu cầu người dùng — ảnh dễ nhìn hơn). Mỗi ảnh dùng flex:1 để tự chia đều bề rộng
    khung — 1 ảnh thì chiếm trọn, 2 ảnh thì chia đôi, không cần biết trước là 1 hay 2 ảnh mới tính được
    kích thước. */
-.order-card .nhom-anh-dai-dien { display: flex; gap: 3px; width: 132px; height: 132px; flex-shrink: 0; }
+.order-card .nhom-anh-dai-dien { display: flex; gap: 3px; width: 145px; height: 145px; flex-shrink: 0; }
 /* background CỐ ĐỊNH sáng (không dùng var(--color-bg)) — nền này chỉ lộ ra khi ảnh PNG có nền TRONG
    SUỐT (nhiều mẫu thêu chỉ có chữ/hoạ tiết, không tô nền). Ở Chế độ Tối, var(--color-bg) đổi thành xám
    tối, khiến ảnh có hoạ tiết tối màu (VD chữ nâu đỏ đậm) chìm vào nền, khó nhìn (phát hiện 13/09/2026,
