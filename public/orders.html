@@ -1031,7 +1031,10 @@ function renderDanhSachDon() {
         const mockupSrc = o.MOCKUP ? (urlAnhHienThiList(o.MOCKUP)[0] || '') : '';
         if (!o.DUONG_DAN_URL && !mockupSrc) return '';
         const imgs = [];
-        if (o.DUONG_DAN_URL) imgs.push(`<img class="anh-png-don" src="" alt="" loading="lazy" onerror="this.remove()" style="display:none">`);
+        if (o.DUONG_DAN_URL) {
+          const fallbackPng = escapeHtml(urlAnhHienThiList(o.DUONG_DAN_URL)[0] || '');
+          imgs.push(`<img class="anh-png-don" src="" alt="" loading="lazy" onerror="this.remove()" style="display:none"${fallbackPng ? ` data-src-fallback="${fallbackPng}"` : ''}>`);
+        }
         if (mockupSrc) imgs.push(`<img src="${escapeHtml(mockupSrc)}" alt="" loading="lazy" onerror="this.remove()">`);
         return `<div class="nhom-anh-dai-dien">${imgs.join('')}</div>`;
       })()}
@@ -1088,11 +1091,15 @@ async function taiAnhPngDaiDien() {
   for (const [sttKey, url] of Object.entries(kq || {})) {
     document.querySelectorAll(`.order-card[data-stt="${CSS.escape(sttKey)}"] .anh-png-don`).forEach(img => {
       if (url) { img.src = url; img.style.display = ''; }
-      else img.remove();
+      else {
+        const fb = img.dataset.srcFallback;
+        if (fb) { img.src = fb; img.style.display = ''; }
+        else img.remove();
+      }
     });
   }
   // Xoá ảnh PNG nào vẫn còn src="" (không có trong kết quả, vd vai trò không có quyền thư viện)
-  document.querySelectorAll('.order-card .anh-png-don[src=""]').forEach(img => img.remove());
+  imgs.forEach(img => { if (img.getAttribute('src') === '') img.remove(); });
 }
 
 function taiThemDon() {
