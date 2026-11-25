@@ -400,15 +400,12 @@ body.trang-dang-nhap {
    khung — 1 ảnh thì chiếm trọn, 2 ảnh thì chia đôi, không cần biết trước là 1 hay 2 ảnh mới tính được
    kích thước. */
 .order-card .nhom-anh-dai-dien { display: flex; gap: 3px; width: 145px; height: 145px; flex-shrink: 0; }
-/* Mỗi slot luôn chiếm 50% bề ngang — hiển thị nền trắng khi chưa có ảnh (ảnh PNG đang tải, hoặc bên
-   Mockup không có ảnh). background CỐ ĐỊNH sáng — xem giải thích ở dòng img bên dưới. */
-.order-card .nhom-anh-dai-dien .slot-anh { flex: 1; min-width: 0; height: 100%; background: #f8f8f9; border-radius: var(--radius-sm); overflow: hidden; }
 /* background CỐ ĐỊNH sáng (không dùng var(--color-bg)) — nền này chỉ lộ ra khi ảnh PNG có nền TRONG
    SUỐT (nhiều mẫu thêu chỉ có chữ/hoạ tiết, không tô nền). Ở Chế độ Tối, var(--color-bg) đổi thành xám
    tối, khiến ảnh có hoạ tiết tối màu (VD chữ nâu đỏ đậm) chìm vào nền, khó nhìn (phát hiện 13/09/2026,
    theo ảnh chụp thực tế người dùng). Hardcode #f8f8f9 (đúng giá trị --color-bg cũ ở Chế độ Sáng) để nền
    LUÔN sáng, giữ đúng độ tương phản cho ảnh dù trang đang ở theme nào. */
-.order-card .nhom-anh-dai-dien .slot-anh img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.25s ease; }
+.order-card .nhom-anh-dai-dien img { flex: 1; min-width: 0; height: 100%; object-fit: cover; border-radius: var(--radius-sm); background: #f8f8f9; transition: transform 0.25s ease; }
 .order-card:hover .nhom-anh-dai-dien img { transform: scale(1.06); }
 .order-card .thong-tin { min-width: 0; flex: 1; }
 /* Cỡ chữ tiêu đề/meta GIẢM DẦN (16px->14px->13px, 0.85rem->0.78rem->0.72rem, bổ sung 13/09/2026, theo
