@@ -171,6 +171,23 @@ function datMauXuong(xuong, mau) {
   `).run(xuong, mau);
 }
 
+// ---------- Cấu hình tự mua tracking theo Xưởng (bổ sung 25/11/2026) — mỗi Xưởng 1 hãng cố định
+// (GKE/KL/HPW) hoặc rỗng (tắt). Xưởng không có dòng = tắt.
+db.exec(`CREATE TABLE IF NOT EXISTS cau_hinh_tu_mua_theo_xuong (
+  Xuong TEXT PRIMARY KEY,
+  Hang TEXT NOT NULL DEFAULT ''
+)`);
+function layTuMuaTheoXuong() {
+  const rows = db.prepare(`SELECT Xuong, Hang FROM cau_hinh_tu_mua_theo_xuong`).all();
+  return Object.fromEntries(rows.map(r => [r.Xuong, r.Hang]));
+}
+function datTuMuaTheoXuong(xuong, hang) {
+  db.prepare(`
+    INSERT INTO cau_hinh_tu_mua_theo_xuong (Xuong, Hang) VALUES (?, ?)
+    ON CONFLICT(Xuong) DO UPDATE SET Hang = excluded.Hang
+  `).run(xuong, hang);
+}
+
 // ---------- DanhSachXuong — danh sách CÁC Xưởng (bổ sung 24/09/2026, theo yêu cầu người dùng) — trước
 // đây DANH_SACH_XUONG cố định trong code (services/orderService.js), lặp lại thủ công ở 2 nơi khác
 // (public/orders.html, public/users.html, mỗi nơi tự ghi chú "PHẢI khớp") — giờ quản lý được qua
@@ -204,6 +221,7 @@ function xoaXuong(ten) {
   db.prepare(`DELETE FROM danh_sach_xuong WHERE Ten = ?`).run(ten);
   db.prepare(`DELETE FROM cai_dat_mau_xuong WHERE Xuong = ?`).run(ten);
   db.prepare(`DELETE FROM team_xuong_mac_dinh WHERE Xuong = ?`).run(ten);
+  db.prepare(`DELETE FROM cau_hinh_tu_mua_theo_xuong WHERE Xuong = ?`).run(ten);
 }
 // Đổi tên CẢ Ở ĐÂY lẫn màu đã gán (giữ màu gắn liền với đúng Xưởng, không "mất màu" khi đổi tên) —
 // nơi gọi (routes/orders.js) chịu trách nhiệm cascade sang trang_thai_don.XUONG/nguoi_dung.Xuong
@@ -212,6 +230,7 @@ function doiTenXuong(tenCu, tenMoi) {
   db.prepare(`UPDATE danh_sach_xuong SET Ten = ? WHERE Ten = ?`).run(tenMoi, tenCu);
   db.prepare(`UPDATE cai_dat_mau_xuong SET Xuong = ? WHERE Xuong = ?`).run(tenMoi, tenCu);
   db.prepare(`UPDATE team_xuong_mac_dinh SET Xuong = ? WHERE Xuong = ?`).run(tenMoi, tenCu);
+  db.prepare(`UPDATE cau_hinh_tu_mua_theo_xuong SET Xuong = ? WHERE Xuong = ?`).run(tenMoi, tenCu);
 }
 
 // ---------- Team -> Xưởng mặc định (bổ sung 27/09/2026, theo yêu cầu người dùng) ----------
@@ -650,6 +669,7 @@ module.exports = {
   layCaiDatNenAnh, datCaiDatNenAnh,
   layCaiDatCanhBaoUuTien, datCaiDatCanhBaoUuTien,
   layMauTheoXuong, datMauXuong,
+  layTuMuaTheoXuong, datTuMuaTheoXuong,
   layDanhSachXuong, themXuong, xoaXuong, doiTenXuong,
   layTeamXuongMacDinh, ganTeamXuongMacDinh,
   layDanhSachLoaiHang, themLoaiHang, suaLoaiHang, xoaLoaiHang,

@@ -200,6 +200,14 @@
   <p id="thong-bao-mau-xuong" style="display:none"></p>
   </details>
 
+  <!-- Tự động mua tracking theo Xưởng (25/11/2026) — mỗi Xưởng chọn 1 hãng cố định hoặc Tắt. -->
+  <details style="margin-top:var(--space-6)" id="details-tu-mua-xuong">
+    <summary class="btn-hanh-dong phu">Tự động mua Tracking theo Xưởng</summary>
+  <p style="color:var(--color-text-muted)">Mỗi Xưởng dùng 1 hãng cố định. Xưởng để "Tắt" sẽ không tự mua tracking. Lưu từng dòng sau khi chọn.</p>
+  <div class="st-danh-sach-xuong" id="khoi-tu-mua-xuong"></div>
+  <p id="thong-bao-tu-mua-xuong" style="display:none"></p>
+  </details>
+
   <!-- Team -> Xưởng mặc định (bổ sung 27/09/2026, theo yêu cầu người dùng) — API routes/orders.js /team-xuong. Gộp vào <details>
        (23/10/2026). -->
   <details style="margin-top:var(--space-6)">
@@ -426,7 +434,7 @@
 </div>
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=142"></script>
+<script src="/js/api.js?v=143"></script>
 <script>
 (async () => {
   const user = await requireLoginOrRedirect();
@@ -451,7 +459,7 @@
   document.getElementById('btn-gui-tuan-bcl').onclick = () => guiNgayBaoCaoLog('btn-gui-tuan-bcl', 'gui-tuan');
   document.getElementById('btn-gui-loi-bcl').onclick = () => guiNgayBaoCaoLog('btn-gui-loi-bcl', 'gui-loi-du-lieu');
   await taiCauHinhNenAnh();
-  await taiMauXuong(); await taiTaiKhoanGke(); await taiTaiKhoanKl(); await taiTaiKhoanHpw(); await taiTeamXuong(); await taiNhomHang();
+  await taiMauXuong(); await taiTaiKhoanGke(); await taiTaiKhoanKl(); await taiTaiKhoanHpw(); await taiTeamXuong(); await taiNhomHang(); await taiTuMuaTheoXuong();
   document.getElementById('btn-them-loai-hang').onclick = themLoaiHangMoi;
   document.getElementById('btn-luu-canh-bao').onclick = luuNguongCanhBao;
   document.getElementById('btn-luu-nen-anh').onclick = luuCauHinhNenAnh;
@@ -709,7 +717,7 @@ async function themXuongMoi() {
   try {
     await apiFetch('/orders/xuong', { method: 'POST', body: JSON.stringify({ ten }) });
     o.value = '';
-    await taiMauXuong(); await taiTaiKhoanGke(); await taiTaiKhoanKl(); await taiTaiKhoanHpw(); await taiTeamXuong();
+    await taiMauXuong(); await taiTaiKhoanGke(); await taiTaiKhoanKl(); await taiTaiKhoanHpw(); await taiTeamXuong(); await taiTuMuaTheoXuong();
   } catch (e) { alert(e.message); }
 }
 
@@ -721,7 +729,7 @@ async function doiTenXuongUi(tenCu) {
   if (!tenMoi || tenMoi === tenCu) return;
   try {
     await apiFetch('/orders/xuong/' + encodeURIComponent(tenCu), { method: 'PUT', body: JSON.stringify({ tenMoi }) });
-    await taiMauXuong(); await taiTaiKhoanGke(); await taiTaiKhoanKl(); await taiTaiKhoanHpw(); await taiTeamXuong();
+    await taiMauXuong(); await taiTaiKhoanGke(); await taiTaiKhoanKl(); await taiTaiKhoanHpw(); await taiTeamXuong(); await taiTuMuaTheoXuong();
   } catch (e) { alert(e.message); }
 }
 
@@ -729,8 +737,46 @@ async function xoaXuongUi(ten) {
   if (!confirm(`Xoá Xưởng "${ten}"? Chỉ xoá được nếu không còn đơn/nhân viên nào đang gán Xưởng này.`)) return;
   try {
     await apiFetch('/orders/xuong/' + encodeURIComponent(ten), { method: 'DELETE' });
-    await taiMauXuong(); await taiTaiKhoanGke(); await taiTaiKhoanKl(); await taiTaiKhoanHpw(); await taiTeamXuong();
+    await taiMauXuong(); await taiTaiKhoanGke(); await taiTaiKhoanKl(); await taiTaiKhoanHpw(); await taiTeamXuong(); await taiTuMuaTheoXuong();
   } catch (e) { alert(e.message); }
+}
+
+// Tự động mua Tracking theo Xưởng (25/11/2026). GET /tracking/tu-mua-theo-xuong → { BN:'GKE', HN:'KL' }.
+async function taiTuMuaTheoXuong() {
+  let cauHinh, danhSach;
+  try {
+    [cauHinh, danhSach] = await Promise.all([
+      apiFetch('/tracking/tu-mua-theo-xuong'),
+      apiFetch('/orders/danh-sach-xuong'),
+    ]);
+  } catch (e) {
+    document.getElementById('thong-bao-tu-mua-xuong').style.display = 'block';
+    document.getElementById('thong-bao-tu-mua-xuong').textContent = 'Không tải được cấu hình: ' + e.message;
+    return;
+  }
+  const HANG_TU_MUA = ['GKE', 'KL', 'HPW'];
+  document.getElementById('khoi-tu-mua-xuong').innerHTML = danhSach.map(x => `
+    <div class="st-dong-xuong">
+      <span class="ten-xuong">${escapeHtml(x)}</span>
+      <select id="tu-mua-hang-${escapeHtml(x)}" data-xuong="${escapeHtml(x)}" onchange="luuTuMuaXuong(this.dataset.xuong, this.value)">
+        <option value="">— Tắt —</option>
+        ${HANG_TU_MUA.map(h => `<option value="${h}" ${cauHinh[x] === h ? 'selected' : ''}>${h}</option>`).join('')}
+      </select>
+    </div>`).join('');
+}
+async function luuTuMuaXuong(xuong, hang) {
+  const tb = document.getElementById('thong-bao-tu-mua-xuong');
+  try {
+    await apiFetch('/tracking/tu-mua-theo-xuong', { method: 'POST', body: JSON.stringify({ xuong, hang }) });
+    tb.textContent = `Đã lưu: ${xuong} → ${hang || 'Tắt'}`;
+    tb.style.color = '';
+    tb.style.display = 'block';
+    setTimeout(() => { tb.style.display = 'none'; }, 3000);
+  } catch (e) {
+    tb.textContent = 'Lỗi lưu: ' + e.message;
+    tb.style.color = 'var(--color-danger)';
+    tb.style.display = 'block';
+  }
 }
 
 // Team -> Xưởng mặc định (bổ sung 27/09/2026, theo yêu cầu người dùng). Danh sách = Team đang có trong

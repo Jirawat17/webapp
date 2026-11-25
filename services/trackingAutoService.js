@@ -902,9 +902,20 @@ async function muaTuDongTheoHang(hang, don) {
   }
 }
 
+// Xây cauHinh hiệu lực cho 1 đơn theo cấu hình Xưởng. Xưởng không có config → tắt hoàn toàn (bat: false).
+// Giữ nguyên timing (soPhutCho, soGioSauInMa, mocApDungTheoInMa) từ cauHinhGlobal vì chúng không phụ thuộc hãng.
+function cauHinhChoDon(row, cauHinhGlobal, tuMuaXuong) {
+  const hang = tuMuaXuong[row.XUONG || ''];
+  if (!hang) return { ...cauHinhGlobal, batHang: { GKE: false, KL: false, HPW: false } };
+  return { ...cauHinhGlobal, batHang: { GKE: hang === 'GKE', KL: hang === 'KL', HPW: hang === 'HPW' }, thuTu: [hang] };
+}
+
 async function chayQuetTuDongMuaTracking() {
-  const cauHinh = await layCauHinh();
-  if (!cauHinh.bat) return { daQuet: false, soDonDaMua: 0 };
+  const cauHinhGlobal = await layCauHinh();
+  const tuMuaXuong = caiDatDbService.layTuMuaTheoXuong();
+  const coXuongNaoBat = Object.values(tuMuaXuong).some(h => h);
+  if (!coXuongNaoBat) return { daQuet: false, soDonDaMua: 0 };
+  const cauHinh = cauHinhGlobal; // dùng cho thoiDiemDenHan (timing toàn cục)
 
   const { rows } = await orderService.getAll();
   const bayGio = Date.now();
@@ -934,7 +945,7 @@ async function chayQuetTuDongMuaTracking() {
   const loiTaiKhoan = new Map();
   const donMua = [];
   for (const r of donDuDieuKien) {
-    const { hang, lyDo } = chonHangTuMua(r, cauHinh, banDoNhom.get(r.STT_Key), true);
+    const { hang, lyDo } = chonHangTuMua(r, cauHinhChoDon(r, cauHinhGlobal, tuMuaXuong), banDoNhom.get(r.STT_Key), true);
     if (hang) donMua.push({ don: r, hang });
     else loiTaiKhoan.set(lyDo, (loiTaiKhoan.get(lyDo) || 0) + 1);
   }

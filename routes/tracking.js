@@ -7,6 +7,7 @@ const {
   layCauHinhQuetTrangThai, luuCauHinhQuetTrangThai, SO_PHUT_QUET_TRANG_THAI_TOI_THIEU,
   layDonChuyenThuCong, layDonBatThuongTracking, choTuDongThuLai, suaThongTinGke, suaThongTinKl,
 } = require('../services/trackingAutoService');
+const caiDatDbService = require('../services/caiDatDbService');
 const {
   gopCacTemPdf, layDanhSachTaiKhoanGke, luuTaiKhoanGke, xoaTaiKhoanGke, ganTaiKhoanGkeChoXuong, daNapTienGke, luuSoDuGke,
 } = require('../services/gkeService');
@@ -528,6 +529,20 @@ router.post('/cap-nhat-trang-thai-thu-cong', async (req, res) => {
   const loiDaySheetKh = (await sheetSellerService.ghiHangLoat(gomDelivered, user))
     .filter(k => !k.ok).map(k => ({ sttKey: k.sttKey, lyDo: `Delivered: ${k.lyDo}` }));
   res.json({ ok: true, thanhCong, loi, loiDaySheetKh });
+});
+
+// Cấu hình tự mua tracking theo Xưởng (25/11/2026) — CHỈ superadmin.
+// GET: { BN: 'GKE', HN: 'KL', ... }. POST: { xuong, hang } — hang rỗng = tắt.
+router.get('/tu-mua-theo-xuong', requireExactRole('superadmin'), (req, res) => {
+  res.json(caiDatDbService.layTuMuaTheoXuong());
+});
+router.post('/tu-mua-theo-xuong', requireExactRole('superadmin'), (req, res) => {
+  const xuong = String(req.body.xuong || '').trim();
+  const hang = String(req.body.hang || '').trim();
+  if (!xuong) return res.status(400).json({ error: 'Thiếu tên Xưởng' });
+  if (hang && !HANG_TU_MUA.includes(hang)) return res.status(400).json({ error: 'Hãng không hợp lệ' });
+  caiDatDbService.datTuMuaTheoXuong(xuong, hang);
+  res.json({ ok: true });
 });
 
 module.exports = router;
