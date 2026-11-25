@@ -1027,14 +1027,9 @@ function renderDanhSachDon() {
             ${icon('star', { size: 16 })}
           </button>` : ''}
       </div>
-      ${(() => {
-        const mockupSrc = o.MOCKUP ? (urlAnhHienThiList(o.MOCKUP)[0] || '') : '';
-        if (!o.DUONG_DAN_URL && !mockupSrc) return '';
-        const imgs = [];
-        if (o.DUONG_DAN_URL) imgs.push(`<img class="anh-png-don" src="" alt="" loading="lazy" onerror="this.remove()" style="display:none">`);
-        if (mockupSrc) imgs.push(`<img src="${escapeHtml(mockupSrc)}" alt="" loading="lazy" onerror="this.remove()">`);
-        return `<div class="nhom-anh-dai-dien">${imgs.join('')}</div>`;
-      })()}
+      ${o.DUONG_DAN_URL || o.MOCKUP
+        ? `<div class="nhom-anh-dai-dien">${urlAnhHienThiList(o.DUONG_DAN_URL || o.MOCKUP).map(src => `<img src="${escapeHtml(src)}" alt="" loading="lazy" onerror="this.remove()">`).join('')}</div>`
+        : ''}
       <div class="thong-tin">
         ${htmlTieuDeThe(o)}
         <div style="font-size:1.8rem;font-weight:700;line-height:1.1;margin:2px 0;color:var(--color-text)" title="Số lượng áo">SL: ${escapeHtml(o.SO_LUONG || '—')}</div>
@@ -1071,28 +1066,6 @@ function renderDanhSachDon() {
 
   capNhatCheckboxChonTatCa();
   capNhatThanhHanhDong();
-  taiAnhPngDaiDien();
-}
-
-async function taiAnhPngDaiDien() {
-  const imgs = [...document.querySelectorAll('.order-card .anh-png-don[src=""]')];
-  if (!imgs.length) return;
-  const keys = [...new Set(imgs.map(img => img.closest('.order-card').dataset.stt).filter(Boolean))];
-  let kq;
-  try {
-    kq = await apiFetch('/thu-vien/anh-dai-dien-don', { method: 'POST', body: JSON.stringify({ keys }) });
-  } catch (e) {
-    imgs.forEach(img => img.remove());
-    return;
-  }
-  for (const [sttKey, url] of Object.entries(kq || {})) {
-    document.querySelectorAll(`.order-card[data-stt="${CSS.escape(sttKey)}"] .anh-png-don`).forEach(img => {
-      if (url) { img.src = url; img.style.display = ''; }
-      else img.remove();
-    });
-  }
-  // Xoá ảnh PNG nào vẫn còn src="" (không có trong kết quả, vd vai trò không có quyền thư viện)
-  document.querySelectorAll('.order-card .anh-png-don[src=""]').forEach(img => img.remove());
 }
 
 function taiThemDon() {

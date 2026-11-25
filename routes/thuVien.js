@@ -296,19 +296,6 @@ router.post('/tom-tat-don', requireRole(...VAI_TRO_MENU), (req, res) => {
   res.json(kq);
 });
 
-// Ảnh PNG đại diện cho nhiều đơn 1 lần — dùng cho xem trước ở danh sách đơn hàng.
-// -> { sttKey: "/api/photos/file/..." | null }
-router.post('/anh-dai-dien-don', requireRole(...VAI_TRO_MENU), (req, res) => {
-  const keys = Array.isArray(req.body?.keys) ? req.body.keys.map(k => String(k).trim()).filter(Boolean) : [];
-  if (!keys.length) return res.json({});
-  if (keys.length > 500) return loi(res, 'Tối đa 500 mã mỗi lần.');
-  const { objectKeyToProxyUrl } = require('../services/storageService');
-  const map = db.pngDaiDienCacDon(keys);
-  const kq = {};
-  for (const k of keys) kq[k] = map[k] ? objectKeyToProxyUrl(map[k]) : null;
-  res.json(kq);
-});
-
 // Ghi quyết định của người vẽ cho 1 thiết kế cũ — CHỈ ghi nhận, không đổi đơn hay file nào.
 router.post('/quyet-dinh', requireRole(...VAI_TRO_MENU), async (req, res) => {
   const { sttKeyMoi, fileId, quyetDinh } = req.body || {};
