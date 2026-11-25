@@ -1029,7 +1029,10 @@ function renderDanhSachDon() {
       </div>
       ${(() => {
         const mockupSrc = o.MOCKUP ? (urlAnhHienThiList(o.MOCKUP)[0] || '') : '';
+        if (!o.DUONG_DAN_URL && !mockupSrc) return '';
         const fallbackPng = o.DUONG_DAN_URL ? escapeHtml(urlAnhHienThiList(o.DUONG_DAN_URL)[0] || '') : '';
+        // Luôn render placeholder để taiAnhPngDaiDien query thư viện cho mọi đơn hiển thị —
+        // kể cả khi DUONG_DAN_URL rỗng (thư viện có thể vẫn có PNG cho đơn này).
         const pngImg = `<img class="anh-png-don" alt="" loading="lazy" onerror="this.style.display='none'"${fallbackPng ? ` data-src-fallback="${fallbackPng}"` : ''}>`;
         const mockupImg = mockupSrc ? `<img src="${escapeHtml(mockupSrc)}" alt="" loading="lazy" onerror="this.style.display='none'">` : '';
         return `<div class="nhom-anh-dai-dien"><div class="slot-anh">${pngImg}</div><div class="slot-anh">${mockupImg}</div></div>`;
