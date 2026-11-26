@@ -122,14 +122,6 @@
     <span class="cong-tac-nhan" style="font-weight:600">HPW
       <span class="cong-tac"><input type="checkbox" id="cong-tac-tu-mua-HPW"><span class="cong-tac-slider"></span></span>
     </span>
-    <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap" title="Đơn mua ở hãng đầu tiên (theo thứ tự này) đang bật mà đơn đủ điều kiện: quốc gia, tài khoản theo Xưởng, GKE còn tiền, KL có SKU...">
-      <span style="font-size:0.85rem;color:var(--color-text-muted)">Ưu tiên</span>
-      <select id="thu-tu-hang-1" aria-label="Ưu tiên 1"></select>
-      <span aria-hidden="true">→</span>
-      <select id="thu-tu-hang-2" aria-label="Ưu tiên 2"></select>
-      <span aria-hidden="true">→</span>
-      <select id="thu-tu-hang-3" aria-label="Ưu tiên 3"></select>
-    </span>
     <span style="flex-basis:100%;height:0" aria-hidden="true"></span><!-- xuống dòng: thời gian chờ chung 1 khung với công tắc -->
     <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap" title="Chờ bao lâu kể từ lúc đơn chuyển &quot;Đã sản xuất&quot; thì mua (giờ + phút cộng dồn)">
       <span style="font-size:0.85rem;color:var(--color-text-muted)">Chờ</span>
@@ -208,7 +200,7 @@
      quy trình mua và bảng "Danh sách đơn tự động mua tracking" giữ nguyên. -->
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=142"></script>
+<script src="/js/api.js?v=143"></script>
 <script src="/js/suaThongTinGke.js?v=2"></script>
 <script src="/js/suaThongTinKl.js?v=1"></script>
 <script>
@@ -412,9 +404,6 @@ async function taiCauHinh() {
   try {
     const cauHinh = await apiFetch('/tracking/cau-hinh');
     HANG_TU_MUA.forEach(h => { document.getElementById('cong-tac-tu-mua-' + h).checked = !!cauHinh.batHang[h]; });
-    cauHinh.thuTu.forEach((h, i) => {
-      document.getElementById('thu-tu-hang-' + (i + 1)).innerHTML = HANG_TU_MUA.map(x => `<option value="${x}"${x === h ? ' selected' : ''}>${x}</option>`).join('');
-    });
     // Tách tổng số phút lưu ở Sheet thành giờ + phút để hiện lên 2 ô riêng — xem luuCauHinh() bên dưới.
     document.getElementById('so-gio-cho').value = Math.floor(cauHinh.soPhutCho / 60);
     document.getElementById('so-phut-cho').value = cauHinh.soPhutCho % 60;
@@ -428,7 +417,6 @@ async function taiCauHinh() {
 
 async function luuCauHinh() {
   const batHang = Object.fromEntries(HANG_TU_MUA.map(h => [h, document.getElementById('cong-tac-tu-mua-' + h).checked]));
-  const thuTu = [1, 2, 3].map(i => document.getElementById('thu-tu-hang-' + i).value);
   const soGio = Number(document.getElementById('so-gio-cho').value) || 0;
   const soPhut = Number(document.getElementById('so-phut-cho').value) || 0;
   const soPhutCho = soGio * 60 + soPhut; // Sheet vẫn chỉ lưu 1 tổng số phút, không đổi schema
@@ -448,17 +436,10 @@ async function luuCauHinh() {
     thongBao.textContent = 'Số giờ sau "Đã in mã" phải lớn hơn 0.';
     return;
   }
-  if (new Set(thuTu).size !== HANG_TU_MUA.length) {
-    thongBao.style.display = 'block';
-    thongBao.style.color = 'var(--color-primary)';
-    thongBao.textContent = 'Thứ tự ưu tiên phải gồm đủ GKE, KL, HPW — không chọn trùng hãng.';
-    return;
-  }
-
   nut.disabled = true;
   nut.textContent = 'Đang lưu...';
   try {
-    await apiFetch('/tracking/cau-hinh', { method: 'POST', body: JSON.stringify({ batHang, thuTu, soPhutCho, soGioSauInMa }) });
+    await apiFetch('/tracking/cau-hinh', { method: 'POST', body: JSON.stringify({ batHang, soPhutCho, soGioSauInMa }) });
     thongBao.style.display = 'block';
     thongBao.style.color = '#16a34a';
     thongBao.textContent = 'Đã lưu cấu hình.';

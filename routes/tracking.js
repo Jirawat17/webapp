@@ -39,11 +39,8 @@ router.get('/cau-hinh', async (req, res) => {
 });
 
 router.post('/cau-hinh', async (req, res) => {
-  const { batHang, thuTu, soPhutCho, soGioSauInMa } = req.body;
+  const { batHang, soPhutCho, soGioSauInMa } = req.body;
   if (!batHang || HANG_TU_MUA.some(h => typeof batHang[h] !== 'boolean')) return res.status(400).json({ error: 'Thiếu giá trị bật/tắt của từng hãng' });
-  if (!Array.isArray(thuTu) || thuTu.length !== HANG_TU_MUA.length || new Set(thuTu).size !== thuTu.length || !thuTu.every(h => HANG_TU_MUA.includes(h))) {
-    return res.status(400).json({ error: 'Thứ tự ưu tiên phải gồm đủ GKE, KL, HPW, không trùng' });
-  }
   const soPhut = Number(soPhutCho);
   if (!Number.isFinite(soPhut) || soPhut <= 0) {
     return res.status(400).json({ error: 'Số phút chờ phải là số dương' });
@@ -52,7 +49,7 @@ router.post('/cau-hinh', async (req, res) => {
   if (!Number.isFinite(soGio) || soGio <= 0) {
     return res.status(400).json({ error: 'Số giờ sau "Đã in mã" phải là số dương' });
   }
-  await luuCauHinh({ batHang: { GKE: batHang.GKE, KL: batHang.KL, HPW: batHang.HPW }, thuTu, soPhutCho: soPhut, soGioSauInMa: soGio });
+  await luuCauHinh({ batHang: { GKE: batHang.GKE, KL: batHang.KL, HPW: batHang.HPW }, soPhutCho: soPhut, soGioSauInMa: soGio });
   res.json({ ok: true });
 });
 

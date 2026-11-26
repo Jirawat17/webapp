@@ -303,10 +303,10 @@ async function layCauHinh() {
 // Ghi cấu hình — UPSERT ghi 1 phần (chỉ BatTuDongMuaTracking/SoPhutCho/SoGioSauInMa, không đụng các cột Gke* mà
 // gkeService.js#luuCauHinhGke ghi riêng trên CÙNG dòng — xem caiDatDbService.js#datCauHinhTracking).
 // batHang {GKE, KL, HPW: boolean}, thuTu: hoán vị của HANG_TU_MUA — nơi gọi (routes/tracking.js) đã kiểm tra.
-async function luuCauHinh({ batHang, thuTu, soPhutCho, soGioSauInMa }) {
+async function luuCauHinh({ batHang, soPhutCho, soGioSauInMa }) {
   const tf = v => (v ? 'TRUE' : 'FALSE');
   caiDatDbService.datCauHinhTracking({
-    BatTuDongMuaTracking: tf(batHang.GKE), TuMuaKl: tf(batHang.KL), TuMuaHpw: tf(batHang.HPW), ThuTuHangTuMua: thuTu.join(','),
+    BatTuDongMuaTracking: tf(batHang.GKE), TuMuaKl: tf(batHang.KL), TuMuaHpw: tf(batHang.HPW),
     SoPhutCho: soPhutCho, SoGioSauInMa: soGioSauInMa,
   });
 }

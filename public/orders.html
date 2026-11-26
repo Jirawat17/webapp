@@ -344,15 +344,15 @@
   </span>
   <span id="khoi-mua-tracking-thu-cong" style="display:none">
     <span class="thanh-hanh-dong-cach"></span>
-    <button id="nut-mua-tracking-thu-cong" class="btn-hanh-dong" onclick="apDungMuaTrackingThuCong()">Mua tracking</button>
+    <button id="nut-mua-tracking-thu-cong" class="btn-hanh-dong" onclick="apDungMuaTrackingThuCong()">Mua Tracking GKE</button>
   </span>
   <span id="khoi-in-label" style="display:none">
     <span class="thanh-hanh-dong-cach"></span>
-    <button id="nut-in-label" class="btn-hanh-dong phu" onclick="apDungInLabel()">IN LABEL</button>
+    <button id="nut-in-label" class="btn-hanh-dong phu" onclick="apDungInLabel()">IN LABEL GKE</button>
   </span>
   <span id="khoi-mua-va-in-label" style="display:none">
     <span class="thanh-hanh-dong-cach"></span>
-    <button id="nut-mua-va-in-label" class="btn-hanh-dong" onclick="apDungMuaVaInLabel()">MUA TRACKING và IN LABEL</button>
+    <button id="nut-mua-va-in-label" class="btn-hanh-dong" onclick="apDungMuaVaInLabel()">Mua GKE và IN LABEL GKE</button>
   </span>
   <!-- KL hàng loạt (29/10/2026, theo yêu cầu người dùng): admin / superadmin / vẽ file. -->
   <span id="khoi-kl-hang-loat" style="display:none">
@@ -368,7 +368,7 @@
 </div>
 
 <script src="/js/icons.js?v=106"></script>
-<script src="/js/api.js?v=142"></script>
+<script src="/js/api.js?v=143"></script>
 <script src="/js/suaThongTinGke.js?v=2"></script>
 <script>
 // Số ngày bỏ khỏi nhãn (bổ sung 23/09/2026, theo yêu cầu người dùng) — ngưỡng giờ chỉnh được ở
@@ -628,16 +628,14 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
     document.getElementById('btn-bo-uu-tien').innerHTML = icon('undo', { size: 16 }) + ' Bỏ Ưu tiên';
   }
 
-  // "IN LABEL" (bổ sung 09/09/2026 lần 2, theo yêu cầu người dùng) — mọi vai trò TRỪ nguoi_lay_phoi (server routes/tracking.js#/in-label chặn lại
-  // y hệt nếu lỡ gọi trực tiếp API — nguoi_lay_phoi thực ra không có menu vào được trang này nên chỉ là phòng hờ).
-  // ẨN 2 nút mua GKE "Mua tracking" + "MUA TRACKING và IN LABEL" với MỌI vai trò (30/10/2026, theo yêu cầu người dùng — đang ưu tiên dùng KL).
-  // Chỉ ẩn nút: máy chủ (/mua-thu-cong, /mua-va-in-label), trang Tracking, Chi tiết đơn và job tự mua GKE giữ nguyên. Hiện lại: thêm lại dòng
-  // display cho khoi-mua-tracking-thu-cong (mọi vai trò trừ nguoi_lay_phoi) và khoi-mua-va-in-label (chỉ admin).
+  // 3 nút GKE: mọi vai trò trừ nguoi_lay_phoi. "Mua GKE và IN LABEL GKE" chỉ admin/vẽ file (cùng quyền KL).
   if (user.vaiTro !== 'nguoi_lay_phoi') {
     document.getElementById('khoi-in-label').style.display = 'contents';
+    document.getElementById('khoi-mua-tracking-thu-cong').style.display = 'contents';
   }
-  // KL hàng loạt (29/10/2026): cùng quyền mua KL ở máy chủ (hangVanChuyenKhacService#duocMuaHangKhac).
+  // KL + "Mua GKE và IN LABEL GKE": cùng quyền mua KL ở máy chủ (hangVanChuyenKhacService#duocMuaHangKhac).
   if (duocMuaKl()) {
+    document.getElementById('khoi-mua-va-in-label').style.display = 'contents';
     document.getElementById('khoi-kl-hang-loat').style.display = 'contents';
   }
 
@@ -1453,8 +1451,7 @@ async function apDungChiDinhNguoiVeFile() {
 // đơn cộng dồn có thể khá lâu). Gọi CHUNG route POST /tracking/mua-thu-cong với nút đơn lẻ ở
 // tracking.html/order.html (route nhận `sttKeys` dạng mảng, ở đây chỉ khác là gọi lặp mỗi lần 1 phần
 // tử để lấy được tiến độ từng đơn một — xem routes/tracking.js).
-// apDungMuaTrackingThuCong / apDungMuaVaInLabel: nút GKE ĐANG ẨN (30/10/2026 — xem khối hiển thị nút ở đầu trang). Giữ lại để hiện lại khi cần;
-// sửa muaTrackingHangLoat / xuLyInLabel thì giữ 2 hàm này còn chạy được.
+// apDungMuaTrackingThuCong / apDungMuaVaInLabel: nút GKE hiện đã BẬT LẠI (27/11/2026, theo yêu cầu người dùng) — tên mới "Mua Tracking GKE" / "Mua GKE và IN LABEL GKE".
 async function apDungMuaTrackingThuCong() {
   await muaTrackingHangLoat('/tracking/mua-thu-cong', 'nut-mua-tracking-thu-cong', 'GKE');
 }
