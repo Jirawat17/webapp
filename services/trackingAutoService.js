@@ -302,7 +302,7 @@ async function layCauHinh() {
 
 // Ghi cấu hình — UPSERT ghi 1 phần (chỉ BatTuDongMuaTracking/SoPhutCho/SoGioSauInMa, không đụng các cột Gke* mà
 // gkeService.js#luuCauHinhGke ghi riêng trên CÙNG dòng — xem caiDatDbService.js#datCauHinhTracking).
-// batHang {GKE, KL, HPW: boolean}, thuTu: hoán vị của HANG_TU_MUA — nơi gọi (routes/tracking.js) đã kiểm tra.
+// batHang {GKE, KL, HPW: boolean}.
 async function luuCauHinh({ batHang, soPhutCho, soGioSauInMa }) {
   const tf = v => (v ? 'TRUE' : 'FALSE');
   caiDatDbService.datCauHinhTracking({
@@ -907,7 +907,7 @@ async function muaTuDongTheoHang(hang, don) {
 function cauHinhChoDon(row, cauHinhGlobal, tuMuaXuong) {
   const hang = tuMuaXuong[row.XUONG || ''];
   if (!hang) return { ...cauHinhGlobal, batHang: { GKE: false, KL: false, HPW: false } };
-  return { ...cauHinhGlobal, batHang: { GKE: hang === 'GKE', KL: hang === 'KL', HPW: hang === 'HPW' }, thuTu: [hang] };
+  return { ...cauHinhGlobal, batHang: { GKE: hang === 'GKE' && cauHinhGlobal.batHang.GKE, KL: hang === 'KL' && cauHinhGlobal.batHang.KL, HPW: hang === 'HPW' && cauHinhGlobal.batHang.HPW }, thuTu: [hang] };
 }
 
 async function chayQuetTuDongMuaTracking() {

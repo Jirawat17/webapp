@@ -633,7 +633,8 @@ let user; // promote lên module-level (bổ sung 13/09/2026) — renderDanhSach
     document.getElementById('khoi-in-label').style.display = 'contents';
     document.getElementById('khoi-mua-tracking-thu-cong').style.display = 'contents';
   }
-  // KL + "Mua GKE và IN LABEL GKE": cùng quyền mua KL ở máy chủ (hangVanChuyenKhacService#duocMuaHangKhac).
+  // KL + "Mua GKE và IN LABEL GKE": dùng cùng quyền KL vì combo này thực hiện cả mua tracking lẫn in label
+  // trong một thao tác — cùng mức đặc quyền với mua KL hàng loạt (admin/superadmin/vẽ file).
   if (duocMuaKl()) {
     document.getElementById('khoi-mua-va-in-label').style.display = 'contents';
     document.getElementById('khoi-kl-hang-loat').style.display = 'contents';
